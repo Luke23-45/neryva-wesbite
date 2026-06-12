@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NERYVA Research — Identity Explorations</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:wght@300;400;500&family=Bebas+Neue&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════
+   ROOT VARIABLES
+═══════════════════════════════════════════════════════════════════ */
+    :root {
+      --bg: #040709;
+      --bg-2: #060B12;
+      --panel-dark: #080D14;
+      --panel-mid: #0C1420;
+      --panel-light: #F1F3F5;
+      --panel-bone: #E8EAEC;
+
+      --teal: #0ECFBE;
+      --teal-glow: rgba(14, 207, 190, 0.18);
+      --teal-dim: rgba(14, 207, 190, 0.45);
+      --teal-pale: rgba(14, 207, 190, 0.08);
+      --teal-line: rgba(14, 207, 190, 0.12);
+
+      --white: #EDF3FA;
+      --white-dim: rgba(237, 243, 250, 0.75);
+      --muted: #4D606E;
+      --faint: rgba(255, 255, 255, 0.04);
+      --line: rgba(255, 255, 255, 0.06);
+
+      --red-warn: #E8524A;
+
+      --font-display: 'Cormorant Garamond', 'Palatino Linotype', Georgia, serif;
+      --font-mono: 'DM Mono', 'Courier New', monospace;
+      --font-body: 'Instrument Sans', 'Segoe UI', Tahoma, sans-serif;
+      --font-brand: 'Bebas Neue', 'Century Gothic', 'Futura', Trebuchet MS, sans-serif;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   RESET & FOUNDATION
+═══════════════════════════════════════════════════════════════════ */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      scroll-behavior: smooth;
+    }
+
+    /* Subtle horizontal scanlines */
+    body {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 48px 180px;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(14, 207, 190, 0.012) 1px, transparent 1px);
+      background-size: 100% 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   TYPOGRAPHY SCALE
+═══════════════════════════════════════════════════════════════════ */
+    .kicker {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 400;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--teal);
+      opacity: 0.75;
+    }
+
+    .concept-number {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 300;
+      font-size: 100px;
+      line-height: 0.85;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(14, 207, 190, 0.15);
+      letter-spacing: -0.04em;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .concept-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 40px;
+      letter-spacing: -0.01em;
+      line-height: 1.05;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .concept-subtitle {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--teal-dim);
+      margin-bottom: 28px;
+    }
+
+    .body-text {
+      font-size: 14px;
+      line-height: 1.85;
+      color: var(--muted);
+      max-width: 440px;
+    }
+
+    .body-text strong {
+      color: var(--white-dim);
+      font-weight: 500;
+    }
+
+    .body-text.dark-bg {
+      color: #888;
+    }
+
+    .section-rule {
+      height: 1px;
+      background: linear-gradient(90deg, var(--teal-line), transparent);
+      margin: 60px 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════════════════════════ */
+    header {
+      padding: 90px 0 70px;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 110px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 120px;
+      height: 1px;
+      background: var(--teal);
+      opacity: 0.6;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-wordmark {
+      font-family: var(--font-brand);
+      font-size: 18px;
+      letter-spacing: 0.2em;
+      color: var(--white);
+    }
+
+    .header-wordmark span {
+      color: var(--teal);
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 28px;
+      background: var(--line);
+    }
+
+    .header-sub {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      text-align: right;
+    }
+
+    .page-title {
+      font-family: var(--font-display);
+      font-weight: 300;
+      font-style: italic;
+      font-size: 52px;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .page-subtitle {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   INTRO BLOCK
+═══════════════════════════════════════════════════════════════════ */
+    .intro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      margin-bottom: 140px;
+      align-items: start;
+    }
+
+    .intro-heading {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 28px;
+      line-height: 1.4;
+      color: var(--white);
+      margin-bottom: 20px;
+    }
+
+    .source-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--teal-pale);
+      border: 1px solid var(--teal-line);
+      padding: 6px 14px;
+      margin-bottom: 6px;
+    }
+
+    .source-tag-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+
+    .source-tags-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 28px;
+    }
+
+    .source-description {
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   CONCEPT BLOCK LAYOUT
+═══════════════════════════════════════════════════════════════════ */
+    .concept-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin-bottom: 1px;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+      position: relative;
+    }
+
+    .concept-block.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .concept-block.reverse {
+      direction: rtl;
+    }
+
+    .concept-block.reverse>* {
+      direction: ltr;
+    }
+
+    .concept-stage {
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .concept-stage.dark {
+      background: var(--panel-dark);
+    }
+
+    .concept-stage.light {
+      background: var(--panel-light);
+    }
+
+    .concept-stage.midnight {
+      background: #020408;
+    }
+
+    /* Stage inner glow for dark versions */
+    .concept-stage.dark::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 50%, var(--teal-glow), transparent);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Logo hover effect */
+    .logo-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.4s ease;
+      cursor: default;
+    }
+
+    .logo-wrapper:hover {
+      transform: scale(1.04);
+    }
+
+    .logo-wrapper:hover .logo-svg {
+      filter: drop-shadow(0 0 12px rgba(14, 207, 190, 0.5));
+    }
+
+    .logo-wrapper:hover .logo-svg-dark {
+      filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Concept content panel */
+    .concept-content {
+      padding: 64px 56px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+    }
+
+    .concept-content.on-light {
+      background: #FCFDFE;
+      border-color: rgba(0, 0, 0, 0.07);
+    }
+
+    .concept-number-bg {
+      position: absolute;
+      top: 32px;
+      right: 40px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   SPEC TABLE
+═══════════════════════════════════════════════════════════════════ */
+    .spec-table {
+      margin-top: 36px;
+      border-top: 1px solid var(--line);
+      padding-top: 24px;
+    }
+
+    .spec-table.on-light {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .spec-row {
+      display: flex;
+      gap: 16px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--faint);
+    }
+
+    .spec-row.on-light {
+      border-color: rgba(0, 0, 0, 0.04);
+    }
+
+    .spec-key {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      width: 90px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .spec-key.on-light {
+      color: #888;
+    }
+
+    .spec-val {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--white-dim);
+    }
+
+    .spec-val.on-light {
+      color: #333;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   LOCKUP ROW (SMALL LOGO + WORDMARK)
+═══════════════════════════════════════════════════════════════════ */
+    .lockup {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-top: 36px;
+    }
+
+    .lockup-divider {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, var(--teal-dim), transparent);
+    }
+
+    .lockup-divider.dark {
+      background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.25), transparent);
+    }
+
+    .lockup-wordmark {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .lockup-name {
+      font-family: var(--font-brand);
+      font-size: 20px;
+      letter-spacing: 0.22em;
+      line-height: 1;
+      color: var(--white);
+    }
+
+    .lockup-name.teal {
+      color: var(--teal);
+    }
+
+    .lockup-name.black {
+      color: #111;
+    }
+
+    .lockup-sub {
+      font-family: var(--font-mono);
+      font-size: 7px;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .lockup-sub.on-light {
+      color: #888;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   VARIANT STRIP (LIGHT/DARK MINI VERSIONS)
+═══════════════════════════════════════════════════════════════════ */
+    .variant-strip {
+      display: flex;
+      margin-top: 1px;
+      height: 140px;
+    }
+
+    .variant-cell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .variant-cell.v-dark {
+      background: #020305;
+    }
+
+    .variant-cell.v-teal {
+      background: var(--teal);
+    }
+
+    .variant-cell.v-light {
+      background: #F0F2F4;
+    }
+
+    .variant-cell.v-white {
+      background: #FFFFFF;
+    }
+
+    .variant-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .variant-label.dark-text {
+      color: rgba(0, 0, 0, 0.35);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   COMPARISON GRID (BOTTOM)
+═══════════════════════════════════════════════════════════════════ */
+    .comparison-section {
+      margin-top: 140px;
+    }
+
+    .comparison-heading {
+      margin-bottom: 48px;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--line);
+      border: 1px solid var(--line);
+    }
+
+    .comparison-cell {
+      background: var(--panel-dark);
+      padding: 48px 0 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .comparison-label {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .comparison-sub {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: rgba(14, 207, 190, 0.4);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════════════════════════════ */
+    .footer {
+      margin-top: 120px;
+      padding-top: 40px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-copy {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════════════════ */
+    @keyframes pulse-glow {
+
+      0%,
+      100% {
+        opacity: 0.5;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.9;
+        transform: scale(1.015);
+      }
+    }
+
+    @keyframes header-fade {
+      from {
+        opacity: 0;
+        transform: translateY(-16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes intro-fade {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    header {
+      animation: header-fade 0.9s ease both;
+    }
+
+    .intro-grid {
+      animation: intro-fade 1s 0.25s ease both;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       GLOBAL SVG DEFINITIONS (The "Retina" Core)
+    ═══════════════════════════════════════════════════════════════════ */
+    .svg-defs-container {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Shared SVG Definitions for Gradients, Glows, and Filters -->
+  <div class="svg-defs-container">
+    <svg>
+      <defs>
+        <!-- The Meridian Gradient -->
+        <linearGradient id="meridian-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#0ECFBE" />
+          <stop offset="40%" stop-color="#2DFFE2" />
+          <stop offset="60%" stop-color="#2DFFE2" />
+          <stop offset="100%" stop-color="#0ECFBE" />
+        </linearGradient>
+
+        <!-- The Glassmorphism Semicircle -->
+        <radialGradient id="glass-radial" cx="50%" cy="50%" r="50%" fx="50%" fy="100%">
+          <stop offset="0%" stop-color="rgba(14, 207, 190, 0.25)" />
+          <stop offset="80%" stop-color="rgba(14, 207, 190, 0.04)" />
+          <stop offset="100%" stop-color="transparent" />
+        </radialGradient>
+
+        <!-- Premium Signal Glow -->
+        <filter id="signal-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+          <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.05   0 0 0 0 0.81   0 0 0 0 0.75  0 0 0 0.8 0"
+            result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <!-- Subtle Drop Shadow for Contrast -->
+        <filter id="subtle-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.3" />
+        </filter>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════════════════ -->
+  <header>
+    <div>
+      <div class="kicker" style="margin-bottom: 16px;">Brand Identity System · Explorations</div>
+      <div class="header-brand">
+        <div class="header-wordmark">NERYVA <span>RESEARCH</span></div>
+        <div class="header-divider"></div>
+        <div class="header-sub">Strictly Confidential</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="page-title">New<br>Directions</div>
+      <div class="page-subtitle">Four Identity Concepts · v2.0 · 2026</div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     INTRO / SOURCE ANALYSIS
+═══════════════════════════════════════════════════════════════════ -->
+  <div class="intro-grid">
+    <div>
+      <div class="intro-heading">Evolved from two founding visions,<br>toward a single decisive mark.</div>
+      <p class="body-text">
+        The following explorations synthesize the genetic material of both source concepts —
+        taking the <strong>medical precision</strong> of the Waveform and the
+        <strong>geometric authority</strong> of the Institutional Framework — and evolving them
+        into four new candidates. Each concept is a distinct philosophical position.
+      </p>
+    </div>
+
+    <div>
+      <div style="margin-bottom: 24px;">
+        <div class="kicker" style="margin-bottom: 10px;">Source Concepts</div>
+        <div class="source-tags-row">
+
+          <div class="source-tag">
+            <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 100 100" width="22" height="22">
+                <path d="M 0,50 L 20,50 L 25,52 L 33,15 L 39,72 L 44,51 L 50,50 L 100,50" stroke="#0ECFBE"
+                  stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="50" cy="50" r="32" stroke="#0ECFBE" stroke-width="1.8" fill="none" />
+                <circle cx="33" cy="15" r="4" fill="#0ECFBE" />
+              </svg>
+            </div>
+            <div class="source-tag-label">V1 — The Waveform &nbsp;·&nbsp; Action Potential · Medical</div>
+          </div>
+
+          <div class="source-tag">
+            <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 100 100" width="22" height="22">
+                <path d="M 15,65 A 35,35 0 0,0 85,65 Z" fill="#0ECFBE" />
+                <rect x="42" y="32" width="16" height="33" fill="#0ECFBE" />
+                <circle cx="50" cy="16" r="8" fill="#0ECFBE" />
+              </svg>
+            </div>
+            <div class="source-tag-label">V2A — The Horizon &nbsp;·&nbsp; OOD Guardian · Monumental</div>
+          </div>
+
+          <div class="source-tag">
+            <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 100 100" width="22" height="22">
+                <defs>
+                  <mask id="src-mask">
+                    <rect width="100" height="100" fill="white" />
+                    <circle cx="50" cy="50" r="14" fill="black" />
+                  </mask>
+                </defs>
+                <g mask="url(#src-mask)" fill="#0ECFBE">
+                  <rect x="12" y="12" width="24" height="76" />
+                  <rect x="64" y="12" width="24" height="76" />
+                  <polygon points="12,12 44,12 88,88 56,88" />
+                </g>
+                <circle cx="50" cy="50" r="7" fill="#0ECFBE" />
+              </svg>
+            </div>
+            <div class="source-tag-label">V2B — The Monolith &nbsp;·&nbsp; N-Core · Algorithmic</div>
+          </div>
+
+        </div>
+      </div>
+      <p class="source-description">
+        Each exploration below carries forward a measurable inheritance from these three marks —
+        their geometry, their conceptual metaphors, their silhouette logic — while staking
+        a new position in the brand's visual vocabulary.
+      </p>
+    </div>
+  </div>
+
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     CONCEPT III: THE MERIDIAN
+     A direct synthesis: V1's full circle + V2A's distribution
+     semicircle base + V1's action potential waveform + propagation rings.
+     The most complete and narrative of the four concepts.
+═══════════════════════════════════════════════════════════════════ -->
+  <div class="concept-block" id="concept-3">
+
+    <div class="concept-stage midnight">
+      <div class="logo-wrapper">
+        <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="320" height="320">
+          <!-- 
+          THE MERIDIAN (REFINED):
+          - Precision pathing with G2-simulated continuity
+          - Proportional emission arcs
+          - Layered focal light
+        -->
+
+          <!-- Outer boundary circle (Atmospheric Layer) -->
+          <circle cx="50" cy="50" r="46.5" fill="none" stroke="#0ECFBE" stroke-width="0.4" opacity="0.12" />
+
+          <!-- Concentric propagation arcs (Bottom layer - Harmonic Spacing) -->
+          <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="0.6" opacity="0.08" />
+          <path d="M 22,50 A 28,28 0 0,0 78,50" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.15" />
+          <path d="M 32,50 A 18,18 0 0,0 68,50" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.25" />
+
+          <!-- Distribution Zone (The Lens) -->
+          <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+          <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.4" />
+
+          <!-- Master Orbit (The Anchor) -->
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="0.6" opacity="0.25"
+            stroke-dasharray="0.5 2.5" />
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.2" />
+
+          <!-- Waveform (The Pulse - G2-Retina Refinement with Inner-Arc "Tension Bridge") -->
+          <!-- 
+            - Horizontal stability until x=22
+            - Tension curve from 22 to 32 (bridges the inner-arc start)
+            - G2 smooth ascent to peak (x=40)
+          -->
+          <path
+            d="M 12,50 H 22 C 26,50 30,50.6 32,50 C 35,50 36,44 37,36 C 38.5,24 39,8.96 40,8.96 C 41,8.96 43.5,46 45,78 C 46,92 48.5,92.25 50,92.25 C 51.5,92.25 53.5,90 54.5,78 C 55.5,66 57,51 60,50 H 88"
+            fill="none" stroke="url(#meridian-gradient)" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round" />
+
+          <g filter="url(#signal-glow)">
+            <circle cx="40" cy="8.96" r="3.2" fill="#0ECFBE" />
+          </g>
+
+          <!-- Center Reference Mark -->
+          <circle cx="50" cy="50" r="1.5" fill="#0ECFBE" opacity="0.6" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="concept-content">
+      <div class="concept-number-bg">
+        <div class="concept-number">III</div>
+      </div>
+      <div class="kicker" style="margin-bottom: 16px; color: var(--teal);">Concept III</div>
+      <div class="concept-title">The Meridian</div>
+      <div class="concept-subtitle">Unity · Propagation · Synthesis</div>
+
+      <p class="body-text">
+        The definitive synthesis. This mark inherits the <strong>full circle and action potential
+          waveform from V1</strong>, the <strong>distribution semicircle base from V2A's Horizon</strong>,
+        and adds a new element: <strong>three concentric propagation rings</strong> below the baseline,
+        representing signal emission and reach.
+      </p>
+      <p class="body-text" style="margin-top: 16px;">
+        The baseline at y=50 is the meridian — the threshold between Known and Unknown.
+        The semicircle below is the Known Distribution. The waveform breaches it. The apex dot
+        hovers in the territory above all boundaries. Most narrative; most complete.
+      </p>
+
+      <div class="spec-table">
+        <div class="spec-row">
+          <div class="spec-key">DNA From</div>
+          <div class="spec-val">V1 Circle + Waveform + V2A Horizon base. Plus new: propagation arcs.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-key">Aesthetic</div>
+          <div class="spec-val">Scientific. Cosmological. Complete. Narrative-rich.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-key">Geometry</div>
+          <div class="spec-val">Circular symmetry. Three distinct depth layers. Multiple readings.</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec-key">Best Use</div>
+          <div class="spec-val">Primary brand mark. Conference materials. White papers. Keynote stages.</div>
+        </div>
+      </div>
+
+      <div class="lockup">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="48" height="48">
+          <circle cx="50" cy="50" r="46.5" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.1" />
+          <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+          <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.5" />
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.25" />
+          <path
+            d="M 12,50 H 30 C 32,50 33,48 34,40 C 36,25 38,8 40,8 C 42,8 44,45 46,75 C 47,90 49,92 50,92 C 51,92 53,88 54,75 C 55,65 57,50 60,50 H 88"
+            fill="none" stroke="url(#meridian-gradient)" stroke-width="3" stroke-linecap="round" />
+          <circle cx="40" cy="8" r="4.5" fill="#0ECFBE" filter="url(#signal-glow)" />
+        </svg>
+        <div class="lockup-divider"></div>
+        <div class="lockup-wordmark">
+          <div class="lockup-name">NERYVA</div>
+          <div class="lockup-sub">Research</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Variant strip: Concept III -->
+  <div class="variant-strip">
+    <div class="variant-cell v-dark">
+      <svg viewBox="0 0 100 100" width="50" height="50">
+        <circle cx="50" cy="50" r="46.5" fill="none" stroke="white" stroke-width="0.6" opacity="0.1" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="white" opacity="0.05" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="white" stroke-width="1.2" opacity="0.4" />
+        <circle cx="50" cy="50" r="38" fill="none" stroke="white" stroke-width="0.8" opacity="0.2" />
+        <path
+          d="M 12,50 H 30 C 32,50 33,48 34,40 C 36,25 38,8 40,8 C 42,8 44,45 46,75 C 47,90 49,92 50,92 C 51,92 53,88 54,75 C 55,65 57,50 60,50 H 88"
+          fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" />
+        <circle cx="40" cy="8" r="4.5" fill="white" filter="url(#signal-glow)" />
+      </svg>
+      <div class="variant-label">On Pure Black</div>
+    </div>
+    <div class="variant-cell" style="background: #050D1A;">
+      <svg viewBox="0 0 100 100" width="50" height="50">
+        <circle cx="50" cy="50" r="46.5" fill="none" stroke="#0ECFBE" stroke-width="0.6" opacity="0.15" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.6" />
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="0.9" opacity="0.3" />
+        <path
+          d="M 12,50 H 30 C 32,50 33,48 34,40 C 36,25 38,8 40,8 C 42,8 44,45 46,75 C 47,90 49,92 50,92 C 51,92 53,88 54,75 C 55,65 57,50 60,50 H 88"
+          fill="none" stroke="url(#meridian-gradient)" stroke-width="2.2" stroke-linecap="round" />
+        <circle cx="40" cy="8" r="4.5" fill="#0ECFBE" filter="url(#signal-glow)" />
+      </svg>
+      <div class="variant-label">On Deep Navy</div>
+    </div>
+    <div class="variant-cell v-light">
+      <svg viewBox="0 0 100 100" width="50" height="50">
+        <circle cx="50" cy="50" r="46.5" fill="none" stroke="#000" stroke-width="0.6" opacity="0.08" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="#000" opacity="0.03" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#000" stroke-width="1.2" opacity="0.1" />
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#000" stroke-width="0.8" opacity="0.15" />
+        <path
+          d="M 12,50 H 30 C 32,50 33,48 34,40 C 36,25 38,8 40,8 C 42,8 44,45 46,75 C 47,90 49,92 50,92 C 51,92 53,88 54,75 C 55,65 57,50 60,50 H 88"
+          fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" />
+        <circle cx="40" cy="8" r="4" fill="#0ECFBE" filter="url(#signal-glow)" />
+      </svg>
+      <div class="variant-label dark-text">On Light Grey</div>
+    </div>
+    <div class="variant-cell v-white">
+      <svg viewBox="0 0 100 100" width="50" height="50">
+        <circle cx="50" cy="50" r="46.5" fill="none" stroke="#0ECFBE" stroke-width="0.6" opacity="0.25" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="#0ECFBE" opacity="0.1" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#000" stroke-width="1.2" opacity="0.15" />
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#000" stroke-width="0.8" opacity="0.1" />
+        <path
+          d="M 12,50 H 30 C 32,50 33,48 34,40 C 36,25 38,8 40,8 C 42,8 44,45 46,75 C 47,90 49,92 50,92 C 51,92 53,88 54,75 C 55,65 57,50 60,50 H 88"
+          fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" />
+        <circle cx="40" cy="8" r="4.5" fill="#0ECFBE" filter="url(#signal-glow)" />
+      </svg>
+      <div class="variant-label dark-text">On Pure White</div>
+    </div>
+  </div>
+
+  <div style="height: 80px;"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     CONCEPT IV: THE AXIOM
+     Radical reductionism. Zero container. Zero enclosure.
+     Only the waveform itself — rendered with extreme weight contrast:
+     thick baselines, hairline spike. The mark you cannot simplify further.
+═══════════════════════════════════════════════════════════════════ -->
+  <div class="concept-block reverse" id="concept-4">
+
+    <div class="concept-content on-light">
+      <div class="concept-number-bg">
+        <div class="concept-number" style="-webkit-text-stroke-color: rgba(0,0,0,0.06);">IV</div>
+      </div>
+      <div class="kicker" style="margin-bottom: 16px; color: #0ECFBE;">Concept IV</div>
+      <div class="concept-title" style="color: #111;">The Axiom</div>
+      <div class="concept-subtitle" style="color: rgba(0,0,0,0.3);">Truth · Reduction · Essence</div>
+
+      <p class="body-text" style="color: #666;">
+        Radical reductionism. This mark contains <strong style="color: #222;">no circle,
+          no container, no enclosure of any kind</strong>. Just the waveform.
+        But executed with extreme stroke weight contrast: the baseline segments are
+        heavy (3px), while the spike itself is a hairline (0.8px).
+      </p>
+      <p class="body-text" style="margin-top: 16px; color: #666;">
+        The <strong style="color: #222;">weight contrast is the meaning</strong>: the thick
+        baseline is the world of the Known; the hairline spike is the signal that cannot be
+        captured in conventional measurement — only glimpsed, at extreme precision. A mark of
+        pure scientific philosophy.
+      </p>
+
+      <div class="spec-table on-light">
+        <div class="spec-row on-light">
+          <div class="spec-key on-light">DNA From</div>
+          <div class="spec-val on-light">V1 Waveform, stripped to absolute essence.</div>
+        </div>
+        <div class="spec-row on-light">
+          <div class="spec-key on-light">Aesthetic</div>
+          <div class="spec-val on-light">Brutally minimal. Haiku-like. Philosophical.</div>
+        </div>
+        <div class="spec-row on-light">
+          <div class="spec-key on-light">Geometry</div>
+          <div class="spec-val on-light">Stroke-weight contrast as the sole compositional tool. Zero filled shapes.
+          </div>
+        </div>
+        <div class="spec-row on-light">
+          <div class="spec-key on-light">Best Use</div>
+          <div class="spec-val on-light">Data dashboards, watermarks, digital interfaces, embossed stationery.</div>
+        </div>
+      </div>
+
+      <div class="lockup">
+        <!-- Small axiom logo (on light) -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="54" height="42">
+          <!-- Thick baseline left -->
+          <line x1="4" y1="52" x2="28" y2="52" stroke="#111" stroke-width="3.5" stroke-linecap="square" />
+          <!-- Hairline spike segment -->
+          <path d="M 28,52 L 32,50 L 37,9 L 43,78 L 48,52" fill="none" stroke="#111" stroke-width="1"
+            stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Thick baseline right -->
+          <line x1="48" y1="52" x2="96" y2="52" stroke="#111" stroke-width="3.5" stroke-linecap="square" />
+          <!-- Apex dot (teal, small) -->
+          <circle cx="37" cy="9" r="3" fill="#0ECFBE" />
+        </svg>
+        <div class="lockup-divider dark"></div>
+        <div class="lockup-wordmark">
+          <div class="lockup-name black">NERYVA</div>
+          <div class="lockup-sub on-light">Research</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="concept-stage" style="background: #F8F9FA;">
+      <div class="logo-wrapper" style="padding: 40px;">
+        <!--
+        THE AXIOM: No enclosure. Pure waveform with stroke weight contrast.
+        Viewbox wider than tall to give it horizontal breathing room.
+      -->
+        <svg class="logo-svg-dark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="380" height="240">
+          <!-- Heavy baseline (left segment) — represents Known -->
+          <line x1="4" y1="54" x2="48" y2="54" stroke="#111111" stroke-width="4" stroke-linecap="square" />
+
+          <!-- Hairline pre-spike rise -->
+          <line x1="48" y1="54" x2="53" y2="51" stroke="#111111" stroke-width="0.8" stroke-linecap="round" />
+
+          <!-- Hairline spike: upstroke -->
+          <line x1="53" y1="51" x2="60" y2="8" stroke="#111111" stroke-width="0.8" stroke-linecap="round" />
+
+          <!-- Hairline overshoot: downstroke past baseline -->
+          <line x1="60" y1="8" x2="68" y2="84" stroke="#111111" stroke-width="0.8" stroke-linecap="round" />
+
+          <!-- Hairline recovery: back to baseline -->
+          <line x1="68" y1="84" x2="74" y2="54" stroke="#111111" stroke-width="0.8" stroke-linecap="round" />
+
+          <!-- Hairline post-spike join -->
+          <line x1="74" y1="54" x2="80" y2="54" stroke="#111111" stroke-width="0.8" stroke-linecap="round" />
+
+          <!-- Heavy baseline (right segment) — represents Known continues -->
+          <line x1="80" y1="54" x2="156" y2="54" stroke="#111111" stroke-width="4" stroke-linecap="square" />
+
+          <!-- Apex dot: the Noble Standard -->
+          <circle cx="60" cy="8" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+
+          <!-- Subtle baseline extension markers (tick marks) at each transition -->
+          <line x1="48" y1="50" x2="48" y2="58" stroke="#111" stroke-width="0.6" opacity="0.25" />
+          <line x1="80" y1="50" x2="80" y2="58" stroke="#111" stroke-width="0.6" opacity="0.25" />
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Variant strip: Concept IV -->
+  <div class="variant-strip">
+    <div class="variant-cell v-dark">
+      <svg viewBox="0 0 160 100" width="90" height="56">
+        <line x1="4" y1="54" x2="48" y2="54" stroke="white" stroke-width="4" stroke-linecap="square" />
+        <line x1="48" y1="54" x2="53" y2="51" stroke="white" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="53" y1="51" x2="60" y2="8" stroke="white" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="60" y1="8" x2="68" y2="84" stroke="white" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="68" y1="84" x2="74" y2="54" stroke="white" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="74" y1="54" x2="80" y2="54" stroke="white" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="80" y1="54" x2="156" y2="54" stroke="white" stroke-width="4" stroke-linecap="square" />
+        <circle cx="60" cy="8" r="3.2" fill="#0ECFBE" />
+      </svg>
+      <div class="variant-label">On Pure Black</div>
+    </div>
+    <div class="variant-cell v-teal">
+      <svg viewBox="0 0 160 100" width="90" height="56">
+        <line x1="4" y1="54" x2="48" y2="54" stroke="rgba(0,0,0,0.7)" stroke-width="4" stroke-linecap="square" />
+        <line x1="48" y1="54" x2="53" y2="51" stroke="rgba(0,0,0,0.7)" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="53" y1="51" x2="60" y2="8" stroke="rgba(0,0,0,0.7)" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="60" y1="8" x2="68" y2="84" stroke="rgba(0,0,0,0.7)" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="68" y1="84" x2="74" y2="54" stroke="rgba(0,0,0,0.7)" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="74" y1="54" x2="80" y2="54" stroke="rgba(0,0,0,0.7)" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="80" y1="54" x2="156" y2="54" stroke="rgba(0,0,0,0.7)" stroke-width="4" stroke-linecap="square" />
+        <circle cx="60" cy="8" r="3.2" fill="white" />
+      </svg>
+      <div class="variant-label" style="color: rgba(0,0,0,0.45);">On Brand Teal</div>
+    </div>
+    <div class="variant-cell v-light">
+      <svg viewBox="0 0 160 100" width="90" height="56">
+        <line x1="4" y1="54" x2="48" y2="54" stroke="#111" stroke-width="4" stroke-linecap="square" />
+        <line x1="48" y1="54" x2="53" y2="51" stroke="#111" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="53" y1="51" x2="60" y2="8" stroke="#111" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="60" y1="8" x2="68" y2="84" stroke="#111" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="68" y1="84" x2="74" y2="54" stroke="#111" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="74" y1="54" x2="80" y2="54" stroke="#111" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="80" y1="54" x2="156" y2="54" stroke="#111" stroke-width="4" stroke-linecap="square" />
+        <circle cx="60" cy="8" r="3.2" fill="#0ECFBE" />
+      </svg>
+      <div class="variant-label dark-text">On Light Grey</div>
+    </div>
+    <div class="variant-cell v-white">
+      <svg viewBox="0 0 160 100" width="90" height="56">
+        <line x1="4" y1="54" x2="48" y2="54" stroke="#0ECFBE" stroke-width="4" stroke-linecap="square" />
+        <line x1="48" y1="54" x2="53" y2="51" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="53" y1="51" x2="60" y2="8" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="60" y1="8" x2="68" y2="84" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="68" y1="84" x2="74" y2="54" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="74" y1="54" x2="80" y2="54" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+        <line x1="80" y1="54" x2="156" y2="54" stroke="#0ECFBE" stroke-width="4" stroke-linecap="square" />
+        <circle cx="60" cy="8" r="3.2" fill="#111" filter="url(#signal-glow)" />
+      </svg>
+      <div class="variant-label dark-text">On Pure White</div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     COMPARISON GRID — ALL FOUR AT A GLANCE
+═══════════════════════════════════════════════════════════════════ -->
+  <div class="comparison-section">
+    <div class="section-rule"></div>
+    <div class="comparison-heading">
+      <div class="kicker" style="margin-bottom: 14px;">Summary</div>
+      <div class="concept-title" style="font-size: 28px;">Four Candidates at a Glance</div>
+    </div>
+
+    <div class="comparison-grid">
+
+
+      <!-- CONCEPT I: THE POLYGON -->
+      <div class="comparison-cell">
+        <svg viewBox="0 0 100 100" width="72" height="72">
+          <polygon points="50,15 75,25 85,50 75,75 50,85 25,75 15,50 25,25" fill="none" stroke="#0ECFBE"
+            stroke-width="0.8" opacity="0.3" />
+          <path d="M 25,50 L 35,50 L 38,48 L 41,18 L 45,82 L 48,50 L 75,50" fill="none" stroke="#0ECFBE"
+            stroke-width="2" stroke-linecap="square" />
+          <circle cx="41" cy="18" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+        </svg>
+        <div class="comparison-label">The Polygon</div>
+        <div class="comparison-sub">Concept I</div>
+      </div>
+
+      <!-- CONCEPT II: THE MONOLITH -->
+      <div class="comparison-cell">
+        <svg viewBox="0 0 100 100" width="72" height="72">
+          <g fill="#0ECFBE" opacity="0.25">
+            <rect x="20" y="20" width="12" height="60" />
+            <rect x="68" y="20" width="12" height="60" />
+            <polygon points="20,20 40,20 80,80 60,80" />
+          </g>
+          <path d="M 10,50 L 30,50 L 33,48 L 36,15 L 40,85 L 44,50 L 90,50" fill="none" stroke="#0ECFBE"
+            stroke-width="2.2" stroke-linecap="round" />
+          <circle cx="50" cy="50" r="10" fill="none" stroke="#0ECFBE" stroke-width="1.2" />
+        </svg>
+        <div class="comparison-label">The Monolith</div>
+        <div class="comparison-sub">Concept II</div>
+      </div>
+
+      <!-- THE MERIDIAN -->
+      <div class="comparison-cell">
+        <svg viewBox="0 0 100 100" width="80" height="80">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.15" />
+          <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+          <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="1.4" opacity="0.6" />
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="1" opacity="0.3" />
+          <path
+            d="M 12,50 H 22 C 26,50 30,50.6 32,50 C 35,50 36,44 37,36 C 38.5,24 39,8.96 40,8.96 C 41,8.96 43.5,46 45,78 C 46,92 48.5,92.25 50,92.25 C 51.5,92.25 53.5,90 54.5,78 C 55.5,66 57,51 60,50 H 88"
+            fill="none" stroke="url(#meridian-gradient)" stroke-width="2.8" stroke-linecap="round" />
+          <circle cx="40" cy="8.96" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+        </svg>
+        <div class="comparison-label">The Meridian</div>
+        <div class="comparison-sub">Concept III</div>
+      </div>
+
+      <!-- THE AXIOM -->
+      <div class="comparison-cell">
+        <svg viewBox="0 0 160 100" width="110" height="68">
+          <line x1="4" y1="54" x2="48" y2="54" stroke="#0ECFBE" stroke-width="4" stroke-linecap="square" />
+          <line x1="48" y1="54" x2="53" y2="51" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+          <line x1="53" y1="51" x2="60" y2="8" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+          <line x1="60" y1="8" x2="68" y2="84" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+          <line x1="68" y1="84" x2="74" y2="54" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+          <line x1="74" y1="54" x2="80" y2="54" stroke="#0ECFBE" stroke-width="0.8" stroke-linecap="round" />
+          <line x1="80" y1="54" x2="156" y2="54" stroke="#0ECFBE" stroke-width="4" stroke-linecap="square" />
+          <circle cx="60" cy="8" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+        </svg>
+        <div class="comparison-label">The Axiom</div>
+        <div class="comparison-sub">Concept IV</div>
+      </div>
+
+    </div>
+
+    <!-- Descriptor row beneath comparison -->
+    <div
+      style="display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--line); margin-top: 1px;">
+      <div style="background: var(--bg-2); padding: 20px 24px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 6px;">
+          Technical · Angular</div>
+        <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">Octagonal discipline. Engineering
+          precision. Zero softness.</div>
+      </div>
+      <div style="background: var(--bg-2); padding: 20px 24px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 6px;">
+          Typographic · Dual</div>
+        <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">The letter IS the signal. Structure
+          contains life. Instantly institutional.</div>
+      </div>
+      <div style="background: var(--bg-2); padding: 20px 24px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 6px;">
+          Narrative · Complete</div>
+        <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">Most layers. Most meaning. The signal, the
+          boundary, the field.</div>
+      </div>
+      <div style="background: var(--bg-2); padding: 20px 24px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; color: var(--teal); text-transform: uppercase; margin-bottom: 6px;">
+          Minimal · Elemental</div>
+        <div style="font-size: 12px; color: var(--muted); line-height: 1.6;">Cannot be reduced further. Weight contrast
+          as the only language.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════════════════ -->
+  <div class="footer">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <!-- Footer wordmark using Refined Meridian (The Master Mark) -->
+      <svg viewBox="0 0 100 100" width="28" height="28">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.15" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+        <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.6" />
+        <path
+          d="M 12,50 H 22 C 26,50 30,50.6 32,50 C 35,50 36,44 37,36 C 38.5,24 39,8.96 40,8.96 C 41,8.96 43.5,46 45,78 C 46,92 48.5,92.25 50,92.25 C 51.5,92.25 53.5,90 54.5,78 C 55.5,66 57,51 60,50 H 88"
+          fill="none" stroke="#0ECFBE" stroke-width="3" stroke-linecap="round" />
+        <circle cx="40" cy="8.96" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+      </svg>
+      <div style="font-family: var(--font-brand); font-size: 14px; letter-spacing: 0.22em; color: var(--white);">NERYVA
+        <span style="color: var(--teal);">RESEARCH</span>
+      </div>
+    </div>
+    <div class="footer-copy">Identity Explorations · v2.0 · 2026 · Strictly Confidential</div>
+  </div>
+
+
+  <script>
+    // Intersection Observer for concept block reveal animations
+    const blocks = document.querySelectorAll('.concept-block');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -60px 0px'
+    });
+
+    blocks.forEach(block => observer.observe(block));
+  </script>
+
+</body>
+
+</html>

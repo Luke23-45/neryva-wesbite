@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100">
+  <defs>
+    <linearGradient id="meridian-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0ECFBE" />
+      <stop offset="40%" stop-color="#2DFFE2" />
+      <stop offset="60%" stop-color="#2DFFE2" />
+      <stop offset="100%" stop-color="#0ECFBE" />
+    </linearGradient>
+    <radialGradient id="glass-radial" cx="50%" cy="50%" r="50%" fx="50%" fy="100%">
+      <stop offset="0%" stop-color="rgba(14, 207, 190, 0.25)" />
+      <stop offset="80%" stop-color="rgba(14, 207, 190, 0.04)" />
+      <stop offset="100%" stop-color="transparent" />
+    </radialGradient>
+    <filter id="signal-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.05   0 0 0 0 0.81   0 0 0 0 0.75  0 0 0 0 0.8 0" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="320" height="100" fill="#000000" />
+  
+  <!-- Meridian Mark (Condensed) -->
+  <g transform="translate(10, 10) scale(0.8)">
+    <circle cx="50" cy="50" r="46.5" fill="none" stroke="#0ECFBE" stroke-width="0.4" opacity="0.12" />
+    <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="0.6" opacity="0.08" />
+    <path d="M 22,50 A 28,28 0 0,0 78,50" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.15" />
+    <path d="M 32,50 A 18,18 0 0,0 68,50" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.25" />
+    <path d="M 12,50 A 38,38 0 0,0 88,50 Z" fill="url(#glass-radial)" />
+    <path d="M 12,50 A 38,38 0 0,0 88,50" fill="none" stroke="#0ECFBE" stroke-width="0.8" opacity="0.4" />
+    <circle cx="50" cy="50" r="38" fill="none" stroke="#0ECFBE" stroke-width="1.2" opacity="0.2" />
+    <path d="M 12,50 H 22 C 26,50 30,50.6 32,50 C 35,50 36,44 37,36 C 38.5,24 39,8.96 40,8.96 C 41,8.96 43.5,46 45,78 C 46,92 48.5,92.25 50,92.25 C 51.5,92.25 53.5,90 54.5,78 C 55.5,66 57,51 60,50 H 88" fill="none" stroke="url(#meridian-gradient)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="40" cy="8.96" r="3.2" fill="#0ECFBE" filter="url(#signal-glow)" />
+  </g>
+
+  <!-- Divider -->
+  <rect x="100" y="25" width="1" height="50" fill="#0ECFBE" opacity="0.3" />
+
+  <!-- NERYVA RESEARCH -->
+  <text x="120" y="55" font-family="'Bebas Neue', 'Segoe UI', Arial, sans-serif" font-size="28" letter-spacing="0.22em" fill="#FFFFFF">NERYVA <tspan fill="#0ECFBE">RESEARCH</tspan></text>
+  <text x="120" y="70" font-family="monospace" font-size="7" letter-spacing="0.4em" fill="#4D606E" text-transform="uppercase">IDENTITY SYSTEM · CONCEPT III</text>
+</svg>

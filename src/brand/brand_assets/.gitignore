@@ -1,0 +1,149 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+.
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+APEX_MoE_Colab_Master.ipynb
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.tox/
+.nox/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+.spyderproject
+.spyproject
+.ropeproject
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Project Specific Data & Outputs
+
+multirun/
+lightning_logs/
+wandb/
+*.lmdb
+*.lmdb-lock
+
+# Model Weights (Ignoring large binaries by default)
+*.pt
+*.pth
+*.ckpt
+
+# Temporary/Log files
+*.log
+*.tmp
+all_py_files.txt
+deleted_files.txt
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+
+.agent
+
+.redhot
+docs/
+
+data/
+ready/
+checkpoints/
+outputs/
+sepsis_clinical_28
+run.bat
+
+apex_moar_v20.db
+audit_physics_v20.json
+
+legacy
+
+
+
+plan
+sepsis_clinical_28
+
+verify_patches.py
+icu/models_backup_z14
+
+verify_end_to_end_sota_v3.py
+icu/models/wrapper_generalist copy.py
+patches_snippit_and_plan.md
+timing_report.md
+patches_snippet.md
+logs_.md
+patches_snippet.md
+logs.md
+suggestion.md
+patch_report.md
+Surgical_Optimization_Proposal_Z8.md
+ui.md
+working
+icu/models/wrapper_generalist copy 2.py
+error_1.md
+Z8_vs_Z14_Comparative_Research_Report.md
+errors.md
+logs_2.md
+logs1.md
+t2.md
+temp.md
+logs
+reports
+logs_errors.md
+brand_assets
+l.md
+l2.md
+errror.md
+README.md
+tests/
+
+
+debug_
+scripts/
+report.md
+error.md
+# temp_logs.md
+# temp_logs1.md
+# temp_logs2.md
+# temp_logs3.md
+# temp_logs4.md
+# temp_logs5.md
+# temp_logs6.md
