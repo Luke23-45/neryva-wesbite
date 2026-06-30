@@ -1,0 +1,40 @@
+{
+  "slug": "energy-engineering-optimization",
+  "number": 4,
+  "title": "Energy and Engineering Optimization",
+  "summary": "Applying optimization and decision support methods to energy systems and engineering problems, focusing on waste reduction, resource efficiency, and design improvement.",
+  "accent": "#D99100",
+  "description": "This program focuses on optimization, efficiency, and decision support in energy and engineering contexts. The work examines how AI can reduce waste, improve resource use, and support better technical decisions. This includes improving the efficiencies of renewable energy sources like solar farms, turbine farms, and other systems.\n\nThe connection to the lab's core agenda is through the shared concern with optimization under real constraints. Energy and engineering problems share the same fundamental challenge as AI systems research: making limited resources produce better outcomes through more intelligent allocation and decision-making.",
+  "focusAreas": [
+    "Resource efficiency",
+    "Energy waste reduction",
+    "Renewable system planning",
+    "Engineering design support",
+    "Optimization under physical and operational constraints"
+  ],
+  "keyQuestions": [
+    { "id": 1, "question": "How can AI methods measurably reduce energy waste in renewable generation systems such as solar and wind farms?" },
+    { "id": 2, "question": "Can optimization models help plan better energy usage across systems with variable supply and demand?" },
+    { "id": 3, "question": "How can AI-driven optimization improve engineering design processes while respecting physical and operational constraints?" },
+    { "id": 4, "question": "What tools and methods are most effective for supporting engineering design decisions under uncertainty?" }
+  ],
+  "currentWork": "Current work is focused on literature review and problem formulation. The program is surveying optimization approaches for renewable energy systems and engineering design support.",
+  "relatedReading": [
+    {
+      "title": "Machine Learning for Combinatorial Optimization: A Methodological Tour d'Horizon",
+      "source": "Bengio et al., 2021",
+      "reason": "Comprehensive survey of ML methods for optimization problems relevant to energy and engineering."
+    },
+    {
+      "title": "Tackling Climate Change with Machine Learning",
+      "source": "Rolnick et al., 2022",
+      "reason": "Identifies specific opportunities for ML to improve energy efficiency and reduce emissions."
+    },
+    {
+      "title": "A Review of AI Methods for Wind Farm Optimization",
+      "source": "Various, 2023",
+      "reason": "Reviews practical applications of AI in renewable energy system optimization."
+    }
+  ],
+  "svgMotif": "EnergyOptimizationField"
+}

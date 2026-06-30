@@ -1,14 +1,13 @@
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
-import { QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
-
-// Components
-import { Header, Footer } from '@components/organisms';
-import { PageTransition } from '@components/shared';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Header } from '@components/common/layout/Header';
+import { Footer } from '@components/common/layout/Footer';
 
 interface RouterContext {
-    queryClient: QueryClient;
+  queryClient: QueryClient;
 }
 
 const LayoutWrapper = styled.div`
@@ -17,24 +16,42 @@ const LayoutWrapper = styled.div`
   min-height: 100vh;
 `;
 
-const MainContent = styled.main`
+const MainContent = styled(motion.main)`
   flex: 1;
   display: flex;
   flex-direction: column;
 `;
 
-// Create Root Route
+const pageVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
+const pageTransition: any = {
+  duration: 0.24,
+  ease: [0.2, 0, 0, 1],
+};
+
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
-    component: () => (
-        <LayoutWrapper>
-            <Header />
-            <MainContent>
-                <PageTransition>
-                    <Outlet />
-                </PageTransition>
-            </MainContent>
-            <Footer />
-            {process.env.NODE_ENV === 'development' && <TanStackRouterDevtools />}
-        </LayoutWrapper>
-    ),
+  component: function RootLayout() {
+    return (
+      <LayoutWrapper>
+        <Header />
+        <AnimatePresence mode="wait">
+          <MainContent
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
+          >
+            <Outlet />
+          </MainContent>
+        </AnimatePresence>
+        <Footer />
+        {import.meta.env.DEV && <TanStackRouterDevtools />}
+      </LayoutWrapper>
+    );
+  },
 });

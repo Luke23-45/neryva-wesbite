@@ -1,0 +1,1 @@
+export { LabHero } from './LabHero';

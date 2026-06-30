@@ -1,0 +1,1 @@
+export { ResourcesHero } from './ResourcesHero';

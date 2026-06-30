@@ -1,0 +1,1 @@
+export { HomeContact } from './HomeContact';

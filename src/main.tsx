@@ -6,9 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
-// Import the code-based router
 import { router } from './router';
-
 import { GlobalStyles } from '@styles/GlobalStyles';
 import { theme } from '@styles/theme';
 
@@ -36,7 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               duration: 4000,
               style: {
                 background: theme.colors.surface,
-                color: theme.colors.text.primary,
+                color: theme.colors.ink,
                 borderRadius: theme.radii.md,
               },
             }}

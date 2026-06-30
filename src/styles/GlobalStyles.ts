@@ -1,10 +1,7 @@
 import { createGlobalStyle } from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
-  /* ═══════════════════════════════════════════════════════════════
-     CSS RESET & DEFAULTS
-     ═══════════════════════════════════════════════════════════════ */
-  
+  /* Reset */
   *,
   *::before,
   *::after {
@@ -13,220 +10,108 @@ export const GlobalStyles = createGlobalStyle`
     padding: 0;
   }
 
+  /* Document */
   html {
-    font-size: 16px;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    
-    @media (prefers-reduced-motion: reduce) {
-      scroll-behavior: auto;
-      
-    }
   }
 
   body {
-    font-family: ${({ theme }) => theme.typography.fontFamily.body};
-    font-size: ${({ theme }) => theme.typography.fontSize.base};
-    font-weight: ${({ theme }) => theme.typography.fontWeight.normal};
-    line-height: ${({ theme }) => theme.typography.lineHeight.normal};
-    color: ${({ theme }) => theme.colors.text.secondary};
-    background-color: ${({ theme }) => theme.colors.background.primary};
+    font-family: ${({ theme }) => theme.typography.fonts.sans};
+    font-size: ${({ theme }) => theme.typography.sizes.body};
+    font-weight: ${({ theme }) => theme.typography.weights.regular};
+    line-height: ${({ theme }) => theme.typography.lineHeights.body};
+    color: ${({ theme }) => theme.colors.ink};
+    background-color: ${({ theme }) => theme.colors.paper};
     min-height: 100vh;
-    overflow-x: hidden;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     TYPOGRAPHY DEFAULTS
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* Typography resets */
   h1, h2, h3, h4, h5, h6 {
-    font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-    color: ${({ theme }) => theme.colors.text.primary};
-    font-weight: ${({ theme }) => theme.typography.fontWeight.semibold};
-    line-height: ${({ theme }) => theme.typography.lineHeight.snug};
-    margin-bottom: ${({ theme }) => theme.spacing[4]};
-  }
-
-  h1 {
-    font-size: ${({ theme }) => theme.typography.fontSize['5xl']};
-    letter-spacing: ${({ theme }) => theme.typography.letterSpacing.tight};
-    
-    ${({ theme }) => theme.media.maxMd} {
-      font-size: ${({ theme }) => theme.typography.fontSize['4xl']};
-    }
-  }
-
-  h2 {
-    font-size: ${({ theme }) => theme.typography.fontSize['4xl']};
-    
-    ${({ theme }) => theme.media.maxMd} {
-      font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-    }
-  }
-
-  h3 {
-    font-size: ${({ theme }) => theme.typography.fontSize['3xl']};
-    
-    ${({ theme }) => theme.media.maxMd} {
-      font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-    }
-  }
-
-  h4 {
-    font-size: ${({ theme }) => theme.typography.fontSize['2xl']};
-  }
-
-  h5 {
-    font-size: ${({ theme }) => theme.typography.fontSize.xl};
-  }
-
-  h6 {
-    font-size: ${({ theme }) => theme.typography.fontSize.lg};
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
+    line-height: ${({ theme }) => theme.typography.lineHeights.heading};
+    letter-spacing: ${({ theme }) => theme.typography.letterSpacing.normal};
   }
 
   p {
-    margin-bottom: ${({ theme }) => theme.spacing[4]};
-    line-height: ${({ theme }) => theme.typography.lineHeight.relaxed};
-    
-    &:last-child {
-      margin-bottom: 0;
-    }
+    margin-bottom: ${({ theme }) => theme.spacing.s4};
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     LINKS
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* Links */
   a {
-    color: ${({ theme }) => theme.colors.accent.teal};
+    color: ${({ theme }) => theme.colors.blue};
     text-decoration: none;
-    transition: color ${({ theme }) => theme.transitions.preset.hover};
-    
+    transition: color ${({ theme }) => theme.transitions.fast};
+
     &:hover {
-      color: ${({ theme }) => theme.colors.accent.tealLight};
-    }
-    
-    &:focus-visible {
-      outline: 2px solid ${({ theme }) => theme.colors.accent.teal};
-      outline-offset: 2px;
-      border-radius: ${({ theme }) => theme.radii.sm};
+      color: ${({ theme }) => theme.colors.blueHover};
     }
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     CODE
-     ═══════════════════════════════════════════════════════════════ */
-
-  code, pre {
-    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-    font-size: ${({ theme }) => theme.typography.fontSize.sm};
-  }
-
-  code {
-    background: ${({ theme }) => theme.colors.surface};
-    padding: ${({ theme }) => theme.spacing[1]} ${({ theme }) => theme.spacing[2]};
-    border-radius: ${({ theme }) => theme.radii.sm};
-  }
-
-  pre {
-    background: ${({ theme }) => theme.colors.surface};
-    padding: ${({ theme }) => theme.spacing[4]};
-    border-radius: ${({ theme }) => theme.radii.md};
-    overflow-x: auto;
-    
-    code {
-      background: none;
-      padding: 0;
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     MEDIA
-     ═══════════════════════════════════════════════════════════════ */
-
-  img, picture, video, canvas, svg {
+  /* Images */
+  img, svg {
     display: block;
     max-width: 100%;
-    height: auto;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     FORMS
-     ═══════════════════════════════════════════════════════════════ */
-
-  input, button, textarea, select {
-    font: inherit;
-    color: inherit;
-  }
-
-  button {
-    cursor: pointer;
-    border: none;
-    background: none;
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     LISTS
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* Lists */
   ul, ol {
     list-style: none;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     SELECTION
-     ═══════════════════════════════════════════════════════════════ */
-
-  ::selection {
-    background-color: ${({ theme }) => theme.colors.accent.tealMuted};
-    color: ${({ theme }) => theme.colors.text.primary};
+  /* Buttons */
+  button {
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: inherit;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     SCROLLBAR (WEBKIT)
-     ═══════════════════════════════════════════════════════════════ */
-
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: ${({ theme }) => theme.colors.background.primary};
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: ${({ theme }) => theme.colors.border};
-    border-radius: ${({ theme }) => theme.radii.full};
-    
-    &:hover {
-      background: ${({ theme }) => theme.colors.borderLight};
-    }
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
-     FOCUS VISIBLE UTILITY
-     ═══════════════════════════════════════════════════════════════ */
-
-  .focus-ring:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.accent.teal};
+  /* Focus styles */
+  :focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.blue};
     outline-offset: 2px;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     REDUCED MOTION
-     ═══════════════════════════════════════════════════════════════ */
+  /* Selection */
+  ::selection {
+    background-color: ${({ theme }) => theme.colors.blue};
+    color: ${({ theme }) => theme.colors.surface};
+  }
 
+  /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
     }
+  }
+
+  /* Mobile typography */
+  ${({ theme }) => theme.media.mobile} {
+    body {
+      font-size: ${({ theme }) => theme.typography.sizesMobile.body};
+    }
+  }
+
+  /* Utility: screen reader only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 `;

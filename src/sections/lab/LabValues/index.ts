@@ -1,0 +1,1 @@
+export { LabValues } from './LabValues';

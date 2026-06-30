@@ -12,7 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-router": "^1.144.0",
-    "@tanstack/react-router-with-query": "^1.130.17",
+
     "@tanstack/router-devtools": "^1.144.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
@@ -22,14 +22,13 @@
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.11.0",
+
     "styled-components": "^6.1.19",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@tanstack/router-cli": "^1.145.2",
-    "@tanstack/router-vite-plugin": "^1.145.2",
+
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",

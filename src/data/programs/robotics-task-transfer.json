@@ -1,0 +1,40 @@
+{
+  "slug": "robotics-task-transfer",
+  "number": 2,
+  "title": "Robotics and Task Transfer",
+  "summary": "Studying how learned skills can be reused across tasks, how systems can generalize beyond single trained behaviors, and how to reduce the training data required for each new task.",
+  "accent": "#0B7F79",
+  "description": "This program studies task generalization and transfer learning in robotics. The focus is on how learned skills can be reused across tasks and how systems can generalize beyond a single trained behavior. The research goal is to understand how robots can transfer prior learning into new tasks, compose skills into longer workflows, and reduce the amount of training data required for each task.\n\nThis connects to the lab's core agenda through the shared concern with efficiency and transfer: just as language models waste computation on redundant activations, robotic systems waste training effort by learning each task from scratch.",
+  "focusAreas": [
+    "Task generalization",
+    "Transfer learning",
+    "Reusable representations",
+    "Skill composition",
+    "Reducing training data requirements"
+  ],
+  "keyQuestions": [
+    { "id": 1, "question": "Can a single policy trained on one task transfer meaningfully to new tasks with different dynamics?" },
+    { "id": 2, "question": "How do we compose individually learned skills into longer, multi-step workflows without brittle handoffs?" },
+    { "id": 3, "question": "Can a robot learn reusable representations that reduce the amount of training data needed for each subsequent task?" },
+    { "id": 4, "question": "What is the right level of abstraction for transferable robotic skills — motor primitives, task-level plans, or something in between?" }
+  ],
+  "currentWork": "Current work is focused on literature review and problem formulation. The program is studying existing approaches to sim-to-real transfer and multi-task policy learning.",
+  "relatedReading": [
+    {
+      "title": "Sim-to-Real: Learning Agile Locomotion For Quadruped Robots",
+      "source": "Tan et al., 2018",
+      "reason": "Demonstrated practical sim-to-real transfer for complex robotic locomotion."
+    },
+    {
+      "title": "MT-Opt: Continuous Multi-Task Robotic Reinforcement Learning at Scale",
+      "source": "Kalashnikov et al., 2021",
+      "reason": "Large-scale multi-task learning that showed how shared representations improve sample efficiency."
+    },
+    {
+      "title": "A Survey on Transfer Learning in Robotics",
+      "source": "Zhu et al., 2023",
+      "reason": "Comprehensive overview of transfer learning approaches across robotic domains."
+    }
+  ],
+  "svgMotif": "TransferPath"
+}

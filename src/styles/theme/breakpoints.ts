@@ -1,34 +1,22 @@
 export const breakpoints = {
-    xs: '320px',    // Small phones
-    sm: '480px',    // Large phones
-    md: '768px',    // Tablets
-    lg: '1024px',   // Small laptops
-    xl: '1280px',   // Laptops
-    '2xl': '1536px', // Large screens
-    '3xl': '1920px', // Full HD
-    '4xl': '2560px', // 2K and up
-};
+  mobile: '760px',
+  tablet: '1024px',
+  desktop: '1280px',
+} as const;
 
-// Media query helpers
+export const containers = {
+  page: '1200px',
+  prose: '720px',
+  wide: '1440px',
+} as const;
+
 export const media = {
-    xs: `@media (min-width: ${breakpoints.xs})`,
-    sm: `@media (min-width: ${breakpoints.sm})`,
-    md: `@media (min-width: ${breakpoints.md})`,
-    lg: `@media (min-width: ${breakpoints.lg})`,
-    xl: `@media (min-width: ${breakpoints.xl})`,
-    '2xl': `@media (min-width: ${breakpoints['2xl']})`,
-    '3xl': `@media (min-width: ${breakpoints['3xl']})`,
+  mobile: `@media (max-width: ${breakpoints.mobile})`,
+  tablet: `@media (max-width: ${breakpoints.tablet})`,
+  desktop: `@media (min-width: ${breakpoints.tablet})`,
+  reducedMotion: '@media (prefers-reduced-motion: reduce)',
+} as const;
 
-    // Max-width variants for mobile-first edge cases
-    maxXs: `@media (max-width: ${breakpoints.xs})`,
-    maxSm: `@media (max-width: ${breakpoints.sm})`,
-    maxMd: `@media (max-width: ${breakpoints.md})`,
-    maxLg: `@media (max-width: ${breakpoints.lg})`,
-
-    // Hover capability detection
-    hover: '@media (hover: hover)',
-    touch: '@media (hover: none)',
-
-    // Motion preferences
-    reducedMotion: '@media (prefers-reduced-motion: reduce)',
-};
+export type Breakpoints = typeof breakpoints;
+export type Containers = typeof containers;
+export type Media = typeof media;

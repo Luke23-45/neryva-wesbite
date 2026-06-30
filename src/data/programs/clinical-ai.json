@@ -1,0 +1,39 @@
+{
+  "slug": "clinical-ai",
+  "number": 3,
+  "title": "Safe Clinical AI and Medical Research",
+  "summary": "Researching the safe use of AI systems in healthcare settings, with emphasis on human supervision, reliability, and validated decision support.",
+  "accent": "#1F7A4D",
+  "description": "This program studies the safe use of AI systems in healthcare settings, with emphasis on supervision, reliability, and decision support. The goal is not unsupervised replacement of clinicians, but careful research into how AI can support clinical work in constrained and validated ways.\n\nThe connection to the lab's core agenda is through the shared concern with deployment constraints and reliability. Clinical settings are among the most constrained deployment environments for AI: mistakes have direct consequences, supervision is required, and validation standards are high.",
+  "focusAreas": [
+    "Supervised clinical decision support",
+    "Reliability under clinical constraints",
+    "Validation before deployment",
+    "Failure modes in medical settings"
+  ],
+  "keyQuestions": [
+    { "id": 1, "question": "Where do current AI systems fail most consequentially in clinical decision support, and what patterns predict those failures?" },
+    { "id": 2, "question": "How can human supervision be structured to reduce harm without negating the efficiency benefits of AI assistance?" },
+    { "id": 3, "question": "Which clinical tasks are safe for AI support tools given current reliability levels, and which are not?" },
+    { "id": 4, "question": "How should medical AI systems be validated before deployment, and what evidence standards are appropriate for different risk levels?" }
+  ],
+  "currentWork": "Current work is focused on literature review and problem formulation. The program is studying failure modes of existing clinical AI systems and the structure of human-AI supervision workflows.",
+  "relatedReading": [
+    {
+      "title": "The Clinician and Dataset Shift in Artificial Intelligence",
+      "source": "Finlayson et al., 2021",
+      "reason": "Examines how distribution shift affects clinical AI reliability in practice."
+    },
+    {
+      "title": "Dissecting Racial Bias in an Algorithm Used to Manage the Health of Populations",
+      "source": "Obermeyer et al., 2019",
+      "reason": "Landmark study showing how algorithmic bias can cause real clinical harm."
+    },
+    {
+      "title": "A Framework for Integrating Human Oversight into AI-Driven Clinical Decision Support",
+      "source": "Sendak et al., 2020",
+      "reason": "Practical framework for human-AI supervision in clinical settings."
+    }
+  ],
+  "svgMotif": "ClinicalSupervisionLoop"
+}

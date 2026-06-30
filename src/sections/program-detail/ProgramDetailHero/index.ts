@@ -1,0 +1,1 @@
+export { ProgramDetailHero } from './ProgramDetailHero';

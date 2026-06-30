@@ -1,0 +1,1 @@
+export { ProgramDetailWork } from './ProgramDetailWork';
