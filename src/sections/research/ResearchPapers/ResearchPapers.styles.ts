@@ -1,17 +1,5 @@
 import styled from 'styled-components';
 
-/* ── Section ── */
-export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s9} 0;
-  background: ${({ theme }) => theme.colors.background.primary};
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
-`;
-
 export const Header = styled.div`
   margin-bottom: ${({ theme }) => theme.spacing.s7};
 `;

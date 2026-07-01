@@ -2,7 +2,7 @@ import { createRoute, redirect } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
 // Pages
-// import HomePage from '@pages/HomePage';
+import HomePage from '@pages/HomePage';
 import ResearchPage from '@pages/ResearchPage';
 import ProgramDetailPage from '@pages/ProgramDetailPage';
 import ResourcesPage from '@pages/ResourcesPage';
@@ -14,11 +14,11 @@ import CareersPage from '@pages/CareersPage';
 
 // ─── Routes ────────────────────────────────────────────
 
-// export const indexRoute = createRoute({
-//   getParentRoute: () => rootRoute,
-//   path: '/',
-//   component: HomePage,
-// });
+export const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: HomePage,
+});
 
 export const researchRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -88,7 +88,7 @@ export const careersRoute = createRoute({
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
-  // indexRoute,
+  indexRoute,
   researchRoute,
   programsRoute.addChildren([
     programsIndexRoute,

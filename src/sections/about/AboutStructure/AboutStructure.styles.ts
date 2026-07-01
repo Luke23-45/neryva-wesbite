@@ -1,19 +1,7 @@
 import styled from 'styled-components';
 
-export const Wrapper = styled.section`
-  padding: 140px 0;
-  background: ${({ theme }) => theme.colors.background.secondary};
+export const BorderTop = styled.div`
   border-top: 1px solid ${({ theme }) => theme.colors.line};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 100px 0;
-  }
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
 `;
 
 export const SectionHeader = styled.div`

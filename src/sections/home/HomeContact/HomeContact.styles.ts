@@ -1,18 +1,6 @@
 import styled from 'styled-components';
 
-export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s10} 0;
-  background: ${({ theme }) => theme.colors.graphite};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: ${({ theme }) => theme.spacing.s8} 0;
-  }
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.prose};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
+export const CenterContent = styled.div`
   text-align: center;
 `;
 

@@ -2,42 +2,66 @@ import styled from 'styled-components';
 
 /* ================================================================
    HEADER — Neryva Research System
-   Clean, structured, research-lab aesthetic.
-   Inspired by Mistral's discipline + Cohere's refinement.
+   Scroll-aware, brand-aligned, accessible navigation.
+   Every token references the design system — no legacy aliases.
    ================================================================ */
 
-export const StyledHeader = styled.header`
+// ─── MAIN HEADER SHELL ─────────────────────────────────────────
+// Full-bleed sticky container. Background spans entire viewport.
+// Content is constrained by HeaderInner below.
+export const StyledHeader = styled.header<{ $scrolled?: boolean }>`
   position: sticky;
   top: 0;
   z-index: ${({ theme }) => theme.zIndices.header};
+  width: 100%;
+
+  background: ${({ $scrolled }) =>
+    $scrolled ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.72)'
+  };
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  box-shadow: ${({ $scrolled }) =>
+    $scrolled ? '0 1px 0 rgba(0, 0, 0, 0.06)' : 'none'
+  };
+
+  transition: background 320ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 320ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: background, box-shadow;
+`;
+
+// ─── CONTENT WRAPPER ───────────────────────────────────────────
+// Constrains header content to max-width while keeping background full-bleed.
+// Same pattern as Apple, Stripe, Vercel navbars.
+export const HeaderInner = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  padding: 0 ${({ theme }) => theme.spacing.s6};
-  background-color: rgba(247, 245, 239, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  height: 72px;
+  max-width: ${({ theme }) => theme.containers.page};
+  margin: 0 auto;
+  padding: 0 ${({ theme }) => theme.spacing.s5};
 
   ${({ theme }) => theme.media.mobile} {
-    height: 56px;
-    padding: 0 ${({ theme }) => theme.spacing.s5};
+    height: 60px;
+    padding: 0 ${({ theme }) => theme.spacing.s4};
   }
 `;
 
-/* --- LAYOUT SECTIONS --- */
+// ─── LAYOUT SECTIONS ───────────────────────────────────────────
+// flex: 1 on left/right keeps the center nav truly centered at any width.
 export const HeaderLeft = styled.div`
   display: flex;
-  flex: 1;
-  justify-content: flex-start;
   align-items: center;
+  flex: 1;
+  min-width: 0;
 `;
 
 export const HeaderCenter = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 0 1 auto;
 
   ${({ theme }) => theme.media.mobile} {
     display: none;
@@ -46,82 +70,90 @@ export const HeaderCenter = styled.div`
 
 export const HeaderRight = styled.div`
   display: flex;
-  flex: 1;
   justify-content: flex-end;
   align-items: center;
+  flex: 1;
+  min-width: 0;
   gap: ${({ theme }) => theme.spacing.s3};
 `;
 
-/* --- BRANDING --- */
+// ─── BRANDING ──────────────────────────────────────────────────
+// Brand name uses mono font to distinguish it from nav links and
+// signal technical identity. Heavier weight + tighter tracking
+// creates the "premium stamp" effect used by Linear, Vercel, Stripe.
 export const LogoLink = styled.a`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s3};
+  gap: 14px;
   text-decoration: none;
-  color: ${({ theme }) => theme.colors.ink};
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.04em;
   transition: opacity ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    opacity: 0.7;
+    opacity: 0.8;
   }
 `;
 
-export const LogoImage = styled.img`
-  height: 22px;
+export const LogoImage = styled.svg`
+  height: 32px;
   width: auto;
   display: block;
-
-  ${({ theme }) => theme.media.mobile} {
-    height: 20px;
-  }
 `;
 
-/* --- DESKTOP NAV --- */
+// ─── DESKTOP NAV ───────────────────────────────────────────────
 export const DesktopNav = styled.nav`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s1};
+  gap: 2px;
 `;
 
 export const NavLink = styled.a<{ $isActive?: boolean }>`
   position: relative;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
+  font-size: 16px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme, $isActive }) => ($isActive ? theme.colors.ink : theme.colors.muted)};
+  color: ${({ theme }) => theme.colors.text.strong};
   text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: color ${({ theme }) => theme.transitions.fast},
-              background-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.ink};
-    background-color: rgba(0, 0, 0, 0.04);
-  }
+  padding: 10px 14px;
+  border-radius: 999px;
+  letter-spacing: -0.02em;
+  transition: color 180ms ease;
 
   &::after {
     content: '';
     position: absolute;
-    bottom: 2px;
-    left: 12px;
-    right: 12px;
-    height: 1.5px;
-    background-color: ${({ theme, $isActive }) => ($isActive ? theme.colors.ink : 'transparent')};
+    bottom: 4px;
+    left: 14px;
+    right: 14px;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      ${({ theme }) => theme.colors.accent.lilac},
+      ${({ theme }) => theme.colors.accent.emerald},
+      ${({ theme }) => theme.colors.accent.azure},
+      ${({ theme }) => theme.colors.accent.amethyst}
+    );
     border-radius: 1px;
-    transition: background-color ${({ theme }) => theme.transitions.fast};
+    opacity: ${({ $isActive }) => ($isActive ? 1 : 0)};
+    transform: scaleX(${({ $isActive }) => ($isActive ? 1 : 0)});
+    transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+                transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:hover::after {
+    opacity: 1;
+    transform: scaleX(1);
   }
 `;
 
-/* --- CTA BUTTONS --- */
+// ─── CTA BUTTONS ───────────────────────────────────────────────
 export const DesktopActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s2};
 
   ${({ theme }) => theme.media.mobile} {
     display: none;
@@ -132,52 +164,79 @@ export const ButtonSecondary = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  padding: 0 ${({ theme }) => theme.spacing.s4};
+  gap: 10px;
+  height: 42px;
+  padding: 0 18px 0 20px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.ink};
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: ${({ theme }) => theme.colors.text.primary};
   text-decoration: none;
   background-color: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  border-radius: 6px;
-  transition: border-color ${({ theme }) => theme.transitions.fast},
-              background-color ${({ theme }) => theme.transitions.fast};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 999px;
+  transition: border-color 180ms ease, background-color 180ms ease,
+              transform 140ms ease, box-shadow 180ms ease;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.lineStrong};
-    background-color: rgba(0, 0, 0, 0.03);
+    border-color: ${({ theme }) => theme.colors.text.muted};
+    background-color: ${({ theme }) => theme.colors.overlay.light};
+    box-shadow: 0 8px 18px -14px rgba(15, 23, 42, 0.24);
+  }
+
+  &:active {
+    transform: translateY(1px);
   }
 `;
 
 export const ButtonPrimary = styled(ButtonSecondary)`
-  color: ${({ theme }) => theme.colors.paper};
-  background-color: ${({ theme }) => theme.colors.blue};
-  border-color: ${({ theme }) => theme.colors.blue};
+  color: ${({ theme }) => theme.colors.text.inverse};
+  background-color: ${({ theme }) => theme.colors.accent.amethyst};
+  border-color: ${({ theme }) => theme.colors.accent.amethyst};
+  transition: background-color 180ms ease, border-color 180ms ease,
+              transform 120ms ease;
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.blueHover};
-    border-color: ${({ theme }) => theme.colors.blueHover};
+    background-color: ${({ theme }) => theme.colors.accent.amethystDark};
+    border-color: ${({ theme }) => theme.colors.accent.amethystDark};
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 `;
 
-/* --- MOBILE TOGGLE --- */
+export const ButtonIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+// ─── MOBILE TOGGLE ─────────────────────────────────────────────
 export const MobileMenuButton = styled.button`
   display: none;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.primary};
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  border-radius: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
+  transition: background-color 180ms ease;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: rgba(0, 0, 0, 0.05);
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -185,7 +244,7 @@ export const MobileMenuButton = styled.button`
   }
 `;
 
-/* --- MOBILE DRAWER --- */
+// ─── MOBILE DRAWER ─────────────────────────────────────────────
 export const MobileNavOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   top: 0;
@@ -195,45 +254,98 @@ export const MobileNavOverlay = styled.div<{ $isOpen: boolean }>`
   z-index: ${({ theme }) => theme.zIndices.mobileNav};
   display: flex;
   flex-direction: column;
-  background-color: ${({ theme }) => theme.colors.paper};
-  padding: ${({ theme }) => theme.spacing.s6};
+  background-color: ${({ theme }) => theme.colors.background.primary};
+  padding: ${({ theme }) => theme.spacing.s5};
   opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
   pointer-events: ${({ $isOpen }) => ($isOpen ? 'auto' : 'none')};
   transform: translateY(${({ $isOpen }) => ($isOpen ? '0' : '-8px')});
-  transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1),
-              transform 240ms cubic-bezier(0.2, 0, 0, 1);
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 `;
 
 export const MobileNavHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.s8};
+  margin-bottom: ${({ theme }) => theme.spacing.s6};
+`;
+
+export const MobileNavScroll = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: ${({ theme }) => theme.spacing.s4};
+  padding-right: 4px;
+`;
+
+export const MobileNavGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  padding: ${({ theme }) => theme.spacing.s4} 0;
+
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 export const MobileNavLink = styled.a<{ $isActive?: boolean }>`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
+  font-size: 18px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme, $isActive }) => ($isActive ? theme.colors.ink : theme.colors.muted)};
+  color: ${({ theme }) => theme.colors.text.strong};
   text-decoration: none;
-  padding: ${({ theme }) => theme.spacing.s3} 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
-  transition: color ${({ theme }) => theme.transitions.fast};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+export const MobileSubLinkContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: ${({ theme }) => theme.spacing.s3};
+  padding-left: 14px;
+  border-left: 1.5px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const MobileSubLink = styled.a<{ $indented?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 15px;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
+  text-decoration: none;
+  padding: 9px 0;
+  padding-left: ${({ $indented }) => ($indented ? '12px' : '0')};
+  transition: color 180ms ease, background-color 180ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.ink};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.overlay.light};
   }
 `;
 
-/* --- MOBILE ACTIONS --- */
+export const MobileSectionTitle = styled.span`
+  display: block;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin: 12px 0 6px 0;
+  opacity: 0.7;
+`;
+
+// ─── MOBILE ACTIONS ────────────────────────────────────────────
 export const MobileActions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.s4};
-  margin-top: auto;
-  padding-top: ${({ theme }) => theme.spacing.s6};
-  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding-top: ${({ theme }) => theme.spacing.s5};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   & > * {
     width: 100%;
@@ -241,8 +353,7 @@ export const MobileActions = styled.div`
   }
 `;
 
-/* --- DROPDOWN (Programs) --- */
-
+// ─── DESKTOP DROPDOWNS & PANELS ────────────────────────────────
 export const NavItemWrapper = styled.div`
   position: relative;
   display: flex;
@@ -251,115 +362,153 @@ export const NavItemWrapper = styled.div`
 
 export const DropdownPanel = styled.div<{ $isOpen: boolean }>`
   position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 260px;
-  background: ${({ theme }) => theme.colors.paper};
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  border-radius: 12px;
-  padding: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  top: calc(100% + 12px);
+  left: 0;
+  width: max-content;
+  min-width: 232px;
+  max-width: 296px;
+  background: ${({ theme }) => theme.colors.background.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 0;
+  padding: 0;
+  box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
   opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
   pointer-events: ${({ $isOpen }) => ($isOpen ? 'auto' : 'none')};
-  transform: translateX(-50%) translateY(${({ $isOpen }) => ($isOpen ? '0' : '-6px')});
-  transition: opacity 200ms ease, transform 200ms ease;
+  transform: translateY(${({ $isOpen }) => ($isOpen ? '0' : '-10px')});
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 100;
-`;
 
-export const DropdownItem = styled.a`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.inkSoft};
-  transition: background-color 160ms ease, color 160ms ease;
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
-    color: ${({ theme }) => theme.colors.ink};
+  &::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+    background: transparent;
   }
 `;
 
+export const DropdownItem = styled.a`
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  align-items: center;
+  column-gap: 14px;
+  min-height: 62px;
+  padding: 0 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
+  text-decoration: none;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 16px;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  transition: background-color 140ms ease, color 140ms ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.overlay.light};
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+export const DropdownArrow = styled.span`
+  margin-left: auto;
+  color: ${({ theme }) => theme.colors.text.strong};
+  opacity: 1;
+  transform: translateX(0);
+`;
+
 export const AccentDot = styled.span<{ $color: string }>`
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background-color: ${({ $color }) => $color};
   flex-shrink: 0;
 `;
 
-/* --- MEGA MENU (Resources) --- */
-export const MegaMenuPanel = styled.div<{ $isOpen: boolean }>`
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 320px;
-  background: ${({ theme }) => theme.colors.paper};
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
-  pointer-events: ${({ $isOpen }) => ($isOpen ? 'auto' : 'none')};
-  transform: translateX(-50%) translateY(${({ $isOpen }) => ($isOpen ? '0' : '-6px')});
-  transition: opacity 200ms ease, transform 200ms ease;
-  z-index: 100;
+export const MenuGlyph = styled.span`
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+`;
+
+// ─── MEGA MENU ─────────────────────────────────────────────────
+export const MegaMenuPanel = styled(DropdownPanel)`
+  width: max-content;
+  min-width: 344px;
+  max-width: none;
+  padding: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
+  grid-auto-flow: column;
+  grid-auto-columns: 344px;
 `;
 
 export const MegaMenuColumn = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  flex: 1;
+  min-width: 344px;
+  border-right: 1px solid ${({ theme }) => theme.colors.borderLight};
+
+  &:last-child {
+    border-right: none;
+  }
 `;
 
 export const MegaMenuTitle = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
-  margin-bottom: 8px;
+  color: ${({ theme }) => theme.colors.text.muted};
+  padding: 18px 18px 15px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
 `;
 
 export const MegaMenuLink = styled.a`
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 20px;
+  align-items: center;
+  column-gap: 14px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
+  min-height: 68px;
+  padding: 0 18px;
+  font-size: 16px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
   text-decoration: none;
-  transition: color 160ms ease;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
+  transition: background-color 180ms ease, color 180ms ease;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.ink};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.overlay.light};
+  }
+
+  &:last-child {
+    border-bottom: none;
   }
 `;
 
-/* --- MOBILE SUB-ITEMS --- */
-export const MobileSubLink = styled.a`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  font-weight: ${({ theme }) => theme.typography.weights.regular};
-  color: ${({ theme }) => theme.colors.muted};
-  text-decoration: none;
-  padding: ${({ theme }) => theme.spacing.s2} 0 ${({ theme }) => theme.spacing.s2} 20px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
-  transition: color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.ink};
-  }
+export const MegaMenuArrow = styled.span`
+  margin-left: auto;
+  color: ${({ theme }) => theme.colors.text.strong};
+  opacity: 1;
+  transform: translateX(0);
 `;

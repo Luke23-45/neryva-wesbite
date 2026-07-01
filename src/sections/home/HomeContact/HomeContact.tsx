@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion';
 import { getSiteIdentity } from '@lib/data/site';
-import { Wrapper, Inner, Title, Body, Email } from './HomeContact.styles';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
+import { CenterContent, Title, Body, Email } from './HomeContact.styles';
 
 const identity = getSiteIdentity();
 
@@ -11,29 +14,31 @@ const fadeUp: any = {
 
 export function HomeContact() {
   return (
-    <Wrapper>
-      <Inner
-        as={motion.div}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-80px' }}
-        transition={{ staggerChildren: 0.1 }}
-      >
-        <motion.div variants={fadeUp}>
-          <Title>Let's talk about research.</Title>
-        </motion.div>
-        <motion.div variants={fadeUp}>
-          <Body>
-            We are building a small, focused research lab. If you are working on
-            related problems, we would like to hear from you.
-          </Body>
-        </motion.div>
-        <motion.div variants={fadeUp}>
-          <Email href={`mailto:${identity.contactEmail}`}>
-            {identity.contactEmail}
-          </Email>
-        </motion.div>
-      </Inner>
-    </Wrapper>
+    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.graphite}>
+      <Container>
+        <CenterContent
+          as={motion.div}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ staggerChildren: 0.1 }}
+        >
+          <motion.div variants={fadeUp}>
+            <Title>Let's talk about research.</Title>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <Body>
+              We are building a small, focused research lab. If you are working on
+              related problems, we would like to hear from you.
+            </Body>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <Email href={`mailto:${identity.contactEmail}`}>
+              {identity.contactEmail}
+            </Email>
+          </motion.div>
+        </CenterContent>
+      </Container>
+    </Section>
   );
 }

@@ -19,11 +19,12 @@ export interface NavChild {
   label: string;
   href: string;
   accent: string;
+  icon?: string;
 }
 
 export interface NavMegaMenuSection {
   title: string;
-  items: Array<{ label: string; href: string }>;
+  items: Array<{ label: string; href: string; accent?: string; icon?: string }>;
 }
 
 export interface NavItem {

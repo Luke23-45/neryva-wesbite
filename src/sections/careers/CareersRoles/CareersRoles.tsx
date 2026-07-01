@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
-  Wrapper,
-  Inner,
+  BorderTop,
   SectionHeader,
   Label,
   Title,
@@ -45,37 +47,39 @@ interface Props {
 
 export function CareersRoles({ data }: Props) {
   return (
-    <Wrapper>
-      <Inner>
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
-          <SectionHeader>
-            <motion.div variants={fadeUp}>
-              <Label>{data.label}</Label>
-            </motion.div>
-            <motion.div variants={fadeUp}>
-              <Title>{data.title}</Title>
-            </motion.div>
-          </SectionHeader>
+    <Section paddingY="lg" background={theme.colors.background.secondary}>
+      <BorderTop>
+        <Container>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
+            <SectionHeader>
+              <motion.div variants={fadeUp}>
+                <Label>{data.label}</Label>
+              </motion.div>
+              <motion.div variants={fadeUp}>
+                <Title>{data.title}</Title>
+              </motion.div>
+            </SectionHeader>
 
-          <div>
-            {data.departments.map((dept) => (
-              <DepartmentGroup as={motion.div} variants={fadeUp} key={dept.name}>
-                <DepartmentName>{dept.name}</DepartmentName>
-                <RoleList>
-                  {dept.positions.map((pos) => (
-                    <RoleRow key={pos.title} href="#">
-                      <RoleTitle>{pos.title}</RoleTitle>
-                      <RoleMeta>{pos.location}</RoleMeta>
-                      <RoleMeta>{pos.type}</RoleMeta>
-                      <RoleArrow aria-hidden="true">→</RoleArrow>
-                    </RoleRow>
-                  ))}
-                </RoleList>
-              </DepartmentGroup>
-            ))}
-          </div>
-        </motion.div>
-      </Inner>
-    </Wrapper>
+            <div>
+              {data.departments.map((dept) => (
+                <DepartmentGroup as={motion.div} variants={fadeUp} key={dept.name}>
+                  <DepartmentName>{dept.name}</DepartmentName>
+                  <RoleList>
+                    {dept.positions.map((pos) => (
+                      <RoleRow key={pos.title} href="#">
+                        <RoleTitle>{pos.title}</RoleTitle>
+                        <RoleMeta>{pos.location}</RoleMeta>
+                        <RoleMeta>{pos.type}</RoleMeta>
+                        <RoleArrow aria-hidden="true">→</RoleArrow>
+                      </RoleRow>
+                    ))}
+                  </RoleList>
+                </DepartmentGroup>
+              ))}
+            </div>
+          </motion.div>
+        </Container>
+      </BorderTop>
+    </Section>
   );
 }

@@ -1,20 +1,5 @@
 import styled from 'styled-components';
 
-export const Wrapper = styled.section`
-  padding: 140px 0;
-  background: ${({ theme }) => theme.colors.paper};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 100px 0;
-  }
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
-`;
-
 export const SectionHeader = styled.div`
   margin-bottom: 80px;
   max-width: 600px;

@@ -1,24 +1,8 @@
 import styled from 'styled-components';
 import { Link } from '@tanstack/react-router';
 
-export const Wrapper = styled.section`
-  padding: 120px 0 0;
-  background-color: ${({ theme }) => theme.colors.background.primary};
+export const OverflowWrapper = styled.div`
   overflow: hidden;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 80px 0 0;
-  }
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 0 ${({ theme }) => theme.spacing.s4};
-  }
 `;
 
 export const HeaderRow = styled.div`
@@ -26,7 +10,7 @@ export const HeaderRow = styled.div`
   align-items: flex-end;
   justify-content: space-between;
   gap: 32px;
-  margin-bottom: 72px;
+  margin-bottom: 64px;
   flex-wrap: wrap;
 `;
 
@@ -37,19 +21,20 @@ export const SectionLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 `;
 
 export const SectionTitle = styled.h2`
-  font-size: clamp(2.75rem, 5vw, 4.5rem);
-  font-weight: 500;
-  line-height: 1.0;
+  max-width: 11ch;
+  font-size: clamp(2.4rem, 4.2vw, 4rem);
+  font-weight: 700;
+  line-height: 0.98;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
 `;
 
 /* ── Queue Controls ── */
@@ -95,32 +80,35 @@ export const ControlButton = styled.button`
 export const QueueViewport = styled.div`
   position: relative;
   width: 100%;
-  min-height: 580px; /* Increased height */
+  min-height: 520px;
   overflow: hidden;
 `;
 
 export const QueueTrack = styled.div`
   display: flex;
-  gap: 40px; /* Increased gap */
+  gap: 28px;
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 10px 0; 
+  padding: 10px 0;
 `;
 
 /* ── Card ── */
 
 export const UpdateCard = styled(Link)<{ $accent: string }>`
-  /* 2 gaps of 40px = 80px */
-  flex: 0 0 calc((100% - 80px) / 3);
+  flex: 0 0 calc((100% - 56px) / 3);
   height: 100%;
   text-decoration: none;
   display: flex;
   flex-direction: column;
   position: relative;
   background: ${({ theme }) => theme.colors.background.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 18px 44px -32px rgba(15, 23, 42, 0.18);
   
   ${({ theme }) => theme.media.mobile} {
     flex: 0 0 100%; 
@@ -128,23 +116,16 @@ export const UpdateCard = styled(Link)<{ $accent: string }>`
 `;
 
 export const CardVisualWrapper = styled.div`
-  border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 24px;
   aspect-ratio: 16 / 10;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
-
-  ${UpdateCard}:hover & {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.08);
-  }
+  border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
 `;
 
 export const CardMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin: 20px 20px 14px;
 `;
 
 export const CardTag = styled.span<{ $accent: string }>`
@@ -157,19 +138,19 @@ export const CardTag = styled.span<{ $accent: string }>`
 `;
 
 export const CardTitle = styled.h3`
-  font-size: 1.375rem;
-  font-weight: 500;
+  font-size: 1.35rem;
+  font-weight: 600;
   line-height: 1.25;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 12px 0;
-  letter-spacing: -0.02em;
+  margin: 0 20px 10px;
+  letter-spacing: -0.03em;
 `;
 
 export const CardDescription = styled.p`
-  font-size: 0.9375rem;
-  line-height: 1.6;
+  font-size: 0.98rem;
+  line-height: 1.62;
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 0 24px 0;
+  margin: 0 20px 20px;
 `;
 
 /* ── Card Footer ── */
@@ -178,12 +159,12 @@ export const CardFooter = styled.div`
   align-items: flex-end;
   justify-content: space-between;
   margin-top: auto; /* Pushes footer to the bottom */
-  padding-top: 20px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 18px 20px 20px;
+  border-top: 1px solid ${({ theme }) => theme.colors.borderLight};
   transition: border-color 0.3s ease;
 
   ${UpdateCard}:hover & {
-    border-color: rgba(0,0,0,0.15);
+    border-color: ${({ theme }) => theme.colors.border};
   }
 `;
 
@@ -195,10 +176,10 @@ export const CardDate = styled.span`
 `;
 
 export const CardFooterArrow = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.03);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.overlay.light};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -215,7 +196,7 @@ export const CardFooterArrow = styled.div`
     background: ${({ theme }) => theme.colors.text.primary};
     svg {
       stroke: ${({ theme }) => theme.colors.background.primary};
-      transform: translateX(2px) translateY(-2px);
+      transform: translateX(2px);
     }
   }
 `;

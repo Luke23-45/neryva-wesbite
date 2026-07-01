@@ -1,16 +1,14 @@
-import { Helmet } from 'react-helmet-async';
+import { PageHead } from '@components/common/PageHead';
 import { BlogGrid } from '@/sections/blog/BlogGrid/BlogGrid';
 
 export default function BlogPage() {
   return (
     <>
-      <Helmet>
-        <title>Blog — Neryva</title>
-        <meta
-          name="description"
-          content="Research notes, engineering updates, and program dispatches from Neryva Lab."
-        />
-      </Helmet>
+      <PageHead
+        title="Blog"
+        description="Research notes, engineering updates, and program dispatches from Neryva Lab."
+        canonicalPath="/resources/blog"
+      />
       <BlogGrid />
     </>
   );

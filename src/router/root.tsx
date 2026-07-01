@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Header } from '@/sections/common/layout/Header';
 import { Footer } from '@/sections/common/layout/Footer';
+import { PageHead } from '@components/common/PageHead';
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -37,6 +38,8 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: function RootLayout() {
     return (
       <LayoutWrapper>
+        {/* Site-wide default SEO — overridden per-page by each page's own <PageHead> */}
+        <PageHead />
         <Header />
         <AnimatePresence mode="wait">
           <MainContent

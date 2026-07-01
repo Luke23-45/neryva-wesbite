@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import type { ProgramPage } from '@types';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
-  Wrapper,
-  Inner,
   SectionHeader,
   SectionLabel,
   SectionTitle,
@@ -25,8 +26,8 @@ interface Props { program: ProgramPage; }
 
 export function ProgramDetailQuestions({ program }: Props) {
   return (
-    <Wrapper>
-      <Inner>
+    <Section paddingY="lg" background={theme.colors.background.secondary}>
+      <Container>
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -56,7 +57,7 @@ export function ProgramDetailQuestions({ program }: Props) {
             ))}
           </ThreadList>
         </motion.div>
-      </Inner>
-    </Wrapper>
+      </Container>
+    </Section>
   );
 }

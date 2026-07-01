@@ -1,24 +1,5 @@
 import styled from 'styled-components';
 
-export const Wrapper = styled.section`
-  padding: 120px 0;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 80px 0;
-  }
-`;
-
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 0 ${({ theme }) => theme.spacing.s4};
-  }
-`;
-
 export const HeaderSection = styled.div`
   max-width: 600px;
   margin: 0 0 72px 0;

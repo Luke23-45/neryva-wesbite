@@ -4,9 +4,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TextLink } from '@/components/common/ui/TextLink';
 import { CardVisual } from '@/components/common/ui/CardVisual';
 import homeUpdatesData from '@data/pages/home/home_updates.json';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
-  Wrapper,
-  Inner,
+  OverflowWrapper,
   HeaderRow,
   HeaderLeft,
   SectionLabel,
@@ -74,9 +76,10 @@ export function HomeLatestWork() {
   });
 
   return (
-    <Wrapper>
-      <Inner>
-        {/* Header */}
+    <OverflowWrapper>
+      <Section paddingYTop="lg" paddingYBottom="none" background={theme.colors.background.primary}>
+        <Container>
+          {/* Header */}
         <HeaderRow
           as={motion.div}
           initial="hidden"
@@ -151,7 +154,8 @@ export function HomeLatestWork() {
             </AnimatePresence>
           </QueueTrack>
         </QueueViewport>
-      </Inner>
-    </Wrapper>
+        </Container>
+      </Section>
+    </OverflowWrapper>
   );
 }

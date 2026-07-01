@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import { PageHead } from '@components/common/PageHead';
 import { useParams } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { getProgramPage } from '@lib/data/programs';
@@ -34,10 +34,11 @@ export default function ProgramDetailPage() {
 
   return (
     <>
-      <Helmet>
-        <title>{program.title} — Neryva</title>
-        <meta name="description" content={program.summary} />
-      </Helmet>
+      <PageHead
+        title={program.title}
+        description={program.summary}
+        canonicalPath={`/programs/${slug}`}
+      />
       <ProgramDetailHero program={program} slug={slug} />
       <ProgramDetailFocus program={program} />
       <ProgramDetailQuestions program={program} />

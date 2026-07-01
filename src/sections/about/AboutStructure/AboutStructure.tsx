@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
-  Wrapper,
-  Inner,
+  BorderTop,
   SectionHeader,
   Label,
   Title,
@@ -38,8 +40,9 @@ interface Props {
 
 export function AboutStructure({ data }: Props) {
   return (
-    <Wrapper>
-      <Inner>
+    <Section paddingY="lg" background={theme.colors.background.secondary}>
+      <BorderTop>
+        <Container>
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
           <SectionHeader>
             <motion.div variants={fadeUp}>
@@ -64,7 +67,8 @@ export function AboutStructure({ data }: Props) {
             ))}
           </ListContainer>
         </motion.div>
-      </Inner>
-    </Wrapper>
+        </Container>
+      </BorderTop>
+    </Section>
   );
 }

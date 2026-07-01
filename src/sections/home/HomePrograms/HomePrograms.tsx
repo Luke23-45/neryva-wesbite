@@ -2,6 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TextLink } from '@/components/common/ui/TextLink';
 import homeProgramsData from '@data/pages/home/home_programs.json';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
   LLMIcon,
   RoboticsIcon,
@@ -13,8 +16,6 @@ import {
   SidebarEnergyIcon
 } from '@assets/visual/home/programs';
 import {
-  Wrapper,
-  Inner,
   HeaderSection,
   SectionLabel,
   SectionTitle,
@@ -99,8 +100,8 @@ export function HomePrograms() {
   };
 
   return (
-    <Wrapper>
-      <Inner>
+    <Section paddingY="lg" background={theme.colors.background.primary}>
+      <Container>
         {/* Header */}
         <HeaderSection
           as={motion.div}
@@ -197,7 +198,7 @@ export function HomePrograms() {
             {footer.linkText}
           </TextLink>
         </FooterAction>
-      </Inner>
-    </Wrapper>
+      </Container>
+    </Section>
   );
 }

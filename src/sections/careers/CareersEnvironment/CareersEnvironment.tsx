@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import {
-  Wrapper,
-  Inner,
   SectionHeader,
   Label,
   Title,
@@ -38,8 +39,8 @@ interface Props {
 
 export function CareersEnvironment({ data }: Props) {
   return (
-    <Wrapper>
-      <Inner>
+    <Section paddingY="lg" background={theme.colors.paper}>
+      <Container>
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
           <SectionHeader>
             <motion.div variants={fadeUp}>
@@ -60,7 +61,7 @@ export function CareersEnvironment({ data }: Props) {
             ))}
           </GridContainer>
         </motion.div>
-      </Inner>
-    </Wrapper>
+      </Container>
+    </Section>
   );
 }

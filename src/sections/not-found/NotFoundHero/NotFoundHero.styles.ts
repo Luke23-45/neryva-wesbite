@@ -1,15 +1,9 @@
 import styled from 'styled-components';
-export const Wrapper = styled.section`
+
+export const CenterWrap = styled.div`
   min-height: calc(100vh - 72px - 200px);
   display: flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.s10} 0;
-  background: ${({ theme }) => theme.colors.paper};
-`;
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
 `;
 export const Code = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};

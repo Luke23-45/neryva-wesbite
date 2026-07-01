@@ -1,19 +1,6 @@
 import styled from 'styled-components';
 import { Link } from '@tanstack/react-router';
 
-export const Wrapper = styled.section`
-  padding: 160px 0;
-  background-color: #030811;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 120px 24px;
-  }
-`;
-
 export const Title = styled.h2`
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 500;

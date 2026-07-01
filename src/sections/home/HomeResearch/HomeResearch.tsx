@@ -2,10 +2,11 @@ import type { FC } from 'react';
 import { motion } from 'framer-motion';
 import { TextLink } from '@/components/common/ui/TextLink';
 import homeResearchData from '@data/pages/home/home_research.json';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
 import { MoEIcon, SparseIcon, StabilityIcon, InferenceIcon } from '@assets/visual/home/research';
 import {
-  Wrapper,
-  Inner,
   HeaderSection,
   SectionLabel,
   Title,
@@ -40,8 +41,8 @@ export function HomeResearch() {
   const { heading, cards, footer } = homeResearchData;
 
   return (
-    <Wrapper>
-      <Inner>
+    <Section paddingY="lg" background={theme.colors.background.secondary}>
+      <Container>
         {/* Section header */}
         <HeaderSection
           as={motion.div}
@@ -92,7 +93,7 @@ export function HomeResearch() {
             {footer.linkText}
           </TextLink>
         </FooterAction>
-      </Inner>
-    </Wrapper>
+      </Container>
+    </Section>
   );
 }

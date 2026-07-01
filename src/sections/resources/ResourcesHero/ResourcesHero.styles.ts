@@ -1,14 +1,5 @@
 import styled from 'styled-components';
 
-export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s10} 0 ${({ theme }) => theme.spacing.s8};
-  background: ${({ theme }) => theme.colors.paper};
-`;
-export const Inner = styled.div`
-  max-width: ${({ theme }) => theme.containers.page};
-  margin: 0 auto;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
-`;
 export const Eyebrow = styled.span`
   display: inline-block;
   font-family: ${({ theme }) => theme.typography.fonts.mono};

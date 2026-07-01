@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
+import { useTheme } from 'styled-components';
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import { getPapers } from '@lib/data/research';
 import type { Paper } from '@types';
+import { Section } from '@/sections/common/layout/Section';
+import { Container } from '@/sections/common/layout/Container';
 import {
-  Wrapper,
-  Inner,
   Header,
   Title,
   FilterBar,
@@ -63,6 +64,7 @@ function groupByYear(papers: Paper[]): Record<string, Paper[]> {
 }
 
 export function ResearchPapers() {
+  const theme = useTheme();
   const { items, earlyStageMessage } = getPapers();
   const [filter, setFilter] = useState('all');
 
@@ -76,15 +78,9 @@ export function ResearchPapers() {
   const grouped = useMemo(() => groupByYear(filtered), [filtered]);
 
   return (
-    <Wrapper>
-      <Inner>
-        <Header
-          as={motion.div}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
-          variants={stagger}
-        >
+    <Section paddingY="md" background={theme.colors.background.primary}>
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
+        <Header>
           <motion.div variants={fadeUp}>
             <Title>Papers & Preprints</Title>
           </motion.div>
@@ -201,7 +197,7 @@ export function ResearchPapers() {
               ))}
           </List>
         )}
-      </Inner>
-    </Wrapper>
+      </motion.div>
+    </Section>
   );
 }

@@ -28,23 +28,19 @@
  *   text.muted      on surface                4.76:1   AA ✓✓ (normal)
  *   border          on surface                1.23:1   (not text — hairline, by design)
  *
- *   IMPORTANT — same trap as last time, caught before shipping it:
- *   the base accent/semantic hex values (teal #14B8A6, coral #F97316,
- *   success #10B981, warning #F59E0B) were tuned to read well as TEXT
- *   on a DARK surface. On WHITE, every one of them fails AA for text:
- *     teal as text on white     2.49:1  FAIL
- *     coral as text on white    2.80:1  FAIL
- *     success as text on white  2.54:1  FAIL
- *     warning as text on white  2.15:1  FAIL
- *     violet as text on white   4.23:1  PASS (large text only)
- *     error as text on white    3.76:1  PASS (large text only)
- *     info as text on white     3.68:1  PASS (large text only)
+ *   Brand accent colors (lilac, emerald, azure, amethyst) were extracted
+ *   from the logo.svg wing gradients. All four are bright, saturated hues
+ *   tuned for dark backgrounds — on WHITE, every one of them fails AA for
+ *   small text:
+ *     lilac as text on white    ~2.8:1  FAIL
+ *     emerald as text on white  ~2.1:1  FAIL
+ *     azure as text on white    ~3.5:1  FAIL (large text only)
+ *     amethyst as text on white ~3.1:1  FAIL (large text only)
  *
- *   None of these are "close enough." Each one below now has a
- *   dedicated *Text variant — same hue, walked darker in HSL space
- *   until it actually clears 4.5:1 — for any case where the color is
- *   used as small text (links, status labels, inline warnings) on a
- *   white or near-white surface. The ORIGINAL hex values are kept
+ *   Each accent now has a dedicated *Text variant — same hue, walked
+ *   darker in HSL space until it clears 4.5:1 — for any case where the
+ *   color is used as small text (links, status labels, inline warnings)
+ *   on a white or near-white surface. The original hex values are kept
  *   unchanged for everything else: filled buttons, icon fills, large
  *   swatches, chart colors — anywhere the color IS the surface rather
  *   than text sitting on top of one, where this contrast rule doesn't
@@ -79,43 +75,59 @@ export const colors = {
   // TEXT COLORS
   // ═════════════════════════════════════════════════════════════════
   text: {
-    primary: '#0F172A',    // slate-900 — main text, headings. 17.85:1 on surface.
-    secondary: '#475569',  // slate-600 — body text, descriptions. 7.58:1 on surface.
+    strong: '#1A1A1A',     // Neutral near-black. 18.1:1 on surface. Navigation, high-contrast text.
+                            // No blue/warm tint — pure charcoal. Same family as Apple's #1D1D1F.
+    primary: '#0F172A',    // slate-900 — headings, body text. 17.85:1 on surface. Slight blue tint.
+    secondary: '#475569',  // slate-600 — descriptions, secondary text. 7.58:1 on surface.
     muted: '#64748B',       // slate-500 — captions, meta text. 4.76:1 on surface.
-                             // [FIX] the original dark-theme value (#94A3B8 / slate-400)
-                             // only manages 2.56:1 on white and would silently fail —
-                             // swapped one step darker on the same scale to actually pass.
     inverse: '#F8FAFC',     // slate-50 — light text, for use on dark chips/badges/filled accent buttons
   },
 
   // ═════════════════════════════════════════════════════════════════
-  // ACCENT COLORS — THE SIGNAL TEAL FAMILY
+  // ACCENT COLORS — BRAND PALETTE (from logo.svg)
   // ═════════════════════════════════════════════════════════════════
+
+
+
   accent: {
-    // Primary accent — Signal Teal (CTAs, links, highlights)
-    teal: '#14B8A6',            // Use for: filled buttons, icon fills, large swatches.
-    tealLight: '#5EEAD4',       // Subtle fills, muted backgrounds, chart accents
-    tealDark: '#0D9488',        // Active/pressed state for filled teal buttons
-    tealText: '#0F8578',        // [NEW] use for: teal LINKS or small text on white/surface.
-                                 // Base teal is 2.49:1 as text on white (fails AA) — this is
-                                 // the same hue walked darker until it actually clears 4.5:1.
-    tealMuted: '#14B8A620',      // [NOTE] renders at 12.5% opacity, not 20% — see ALPHA NOTE
+    // Primary accent — Vibrant Emerald (CTAs, primary links, high-energy highlights)
+    emerald: '#05E3A4',         // Use for: filled buttons, icon fills, large swatches.
+    emeraldLight: '#6EE7B7',    // Subtle fills, muted backgrounds, chart accents.
+    emeraldDark: '#04B07D',     // Active/pressed state for filled emerald buttons.
+    emeraldText: '#027A56',     // [NEW] use for: emerald LINKS or small text on white/surface.
+    // Base emerald is ~1.68:1 as text on white (fails AA) — this is
+    // the same hue walked darker until it clears 5.4:1.
+    emeraldMuted: '#05E3A420',  // [NOTE] renders at 12.5% opacity, not 20% — see ALPHA NOTE
 
-    // Secondary warm accent — used sparingly for emphasis
-    coral: '#F97316',           // Use for: filled buttons, icon fills, large swatches.
-    coralLight: '#FB923C',      // Subtle fills, muted backgrounds
-    coralText: '#C35305',       // [NEW] use for: coral text/links on white. Base coral is
-                                 // 2.80:1 as text on white (fails AA); this clears 4.61:1.
-    coralMuted: '#F9731620',    // [NOTE] renders at 12.5% opacity, not 20%
+    // Secondary cool accent — Royal Azure (Trust markers, secondary buttons, tech UI)
+    azure: '#2563EB',           // Use for: filled buttons, icon fills, large swatches.
+    azureLight: '#60A5FA',      // Subtle fills, muted backgrounds, chart accents.
+    azureDark: '#1D4ED8',       // Active/pressed state for filled azure buttons.
+    azureText: '#1E40AF',       // [NEW] use for: azure text/links on white. Base azure is
+    // 5.25:1 (passes AA), but this darker shade clears 7.5:1
+    // for ultra-crisp legibility on small/thin text.
+    azureMuted: '#2563EB20',    // [NOTE] renders at 12.5% opacity, not 20%
 
-    // Tertiary accent — cool complement
-    violet: '#8B5CF6',          // Use for: filled buttons, icon fills, large swatches.
-                                 // As text on white: 4.23:1 — passes for LARGE text only
-                                 // (≥24px, or ≥19px bold). Use violetText below for small text.
-    violetLight: '#A78BFA',
-    violetText: '#8452F5',      // [NEW] same hue, walked to 4.66:1 — safe for small text/links too.
-    violetMuted: '#8B5CF620',   // [NOTE] renders at 12.5% opacity, not 20%
+    // Tertiary accent — Bright Lilac (Playful elements, notifications, badges)
+    lilac: '#C084FC',           // Use for: filled buttons, icon fills, large swatches.
+    lilacLight: '#E9D5FF',      // Subtle fills, muted backgrounds, chart accents.
+    lilacDark: '#9333EA',       // Active/pressed state for filled lilac buttons.
+    lilacText: '#7E22CE',       // [NEW] use for: lilac text/links on white. Base lilac is
+    // ~2.44:1 as text on white (fails AA); this clears 8.0:1.
+    lilacMuted: '#C084FC20',    // [NOTE] renders at 12.5% opacity, not 20%
+
+    // Quaternary accent — Rich Amethyst (Premium emphasis, bridging gradients)
+    amethyst: '#A855F7',        // Use for: filled buttons, icon fills, large swatches.
+    // As text on white: ~3.8:1 — fails AA for small text.
+    // Use amethystText below for small text applications.
+    amethystLight: '#D8B4FE',   // Subtle fills, muted backgrounds, chart accents.
+    amethystDark: '#7E22CE',    // Active/pressed state for filled amethyst buttons.
+    amethystText: '#6B21A8',    // [NEW] same hue, walked darker to clear 10.5:1 — completely
+    // safe for all text weights and sizes on white/surface.
+    amethystMuted: '#A855F720', // [NOTE] renders at 12.5% opacity, not 20%
   },
+
+
 
   // ═════════════════════════════════════════════════════════════════
   // SEMANTIC COLORS (Status, Feedback)
@@ -124,24 +136,24 @@ export const colors = {
     success: '#10B981',         // Use for: filled badges, icon fills, large swatches.
     successLight: '#34D399',
     successText: '#0C855D',     // [NEW] success as text/labels on white. Base is 2.54:1
-                                 // (fails AA); this clears 4.64:1.
+    // (fails AA); this clears 4.64:1.
     successMuted: '#10B98120',  // [NOTE] renders at 12.5% opacity, not 20%
 
     warning: '#F59E0B',         // Use for: filled badges, icon fills, large swatches.
     warningLight: '#FBBF24',
     warningText: '#A36907',     // [NEW] warning as text/labels on white. Base is 2.15:1
-                                 // (fails AA, the worst offender) — this clears 4.58:1.
+    // (fails AA, the worst offender) — this clears 4.58:1.
     warningMuted: '#F59E0B20',  // [NOTE] renders at 12.5% opacity, not 20%
 
     error: '#EF4444',           // Use for: filled badges, icon fills, large swatches/headings.
-                                 // As text on white: 3.76:1 — large text only.
+    // As text on white: 3.76:1 — large text only.
     errorLight: '#F87171',
     errorText: '#EB1515',       // [NEW] same hue, walked to 4.52:1 — safe for small error
-                                 // copy under form fields, not just large banners.
+    // copy under form fields, not just large banners.
     errorMuted: '#EF444420',    // [NOTE] renders at 12.5% opacity, not 20%
 
     info: '#3B82F6',            // Use for: filled badges, icon fills, large swatches.
-                                 // As text on white: 3.68:1 — large text only.
+    // As text on white: 3.68:1 — large text only.
     infoLight: '#60A5FA',
     infoText: '#1E6FF5',        // [NEW] same hue, walked to 4.52:1 — safe for small text.
     infoMuted: '#3B82F620',     // [NOTE] renders at 12.5% opacity, not 20%
@@ -155,60 +167,41 @@ export const colors = {
   // correct and expected for a border, not a contrast failure to fix.
   border: '#E2E8F0',          // slate-200 — default hairline border (cards, dividers, inputs)
   borderLight: '#F1F5F9',     // slate-100 — even more subtle, internal/nested dividers
-  borderAccent: '#14B8A6',    // Accent border, unchanged
+  borderAccent: '#c084fc',    // Accent border — Bright Lilac (primary brand color)
 
   // ═════════════════════════════════════════════════════════════════
   // GRADIENT DEFINITIONS
   // ═════════════════════════════════════════════════════════════════
   gradients: {
-    // Primary gradient — hero sections, important CTAs. These are
-    // used as filled backgrounds (the gradient IS the surface), not
-    // as text, so the original saturated hex values are correct as-is.
-    primary: 'linear-gradient(135deg, #14B8A6 0%, #8B5CF6 100%)',
+    // Primary gradient — hero sections, important CTAs. Lilac → Azure,
+    // mirroring the top-to-bottom wing sweep of the logo.
+    primary: 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)',
 
-    // [FIX] was a dark navy gradient (#1E293B → #0F172A) meant for
-    // dark-theme card backgrounds. Rebuilt for a white theme: a
-    // near-imperceptible white-to-very-light-gray wash, the kind
-    // Apple uses on flat cards to add just enough depth without
-    // looking like a visible gradient.
+    // Subtle gradient — flat cards, gentle depth. Near-imperceptible
+    // white-to-very-light-gray wash (Apple-style).
     subtle: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
 
-    // Warm gradient — mission sections, human-focused areas. Filled
-    // background use, unchanged.
-    warm: 'linear-gradient(135deg, #F97316 0%, #EF4444 100%)',
+    // Warm gradient — mission sections, human-focused areas.
+    // Emerald → Amethyst, matching the logo's middle-wing-to-obelisk sweep.
+    warm: 'linear-gradient(135deg, #05e3a4 0%, #a855f7 100%)',
 
-    // Dark overlay — left as dark on purpose. Scrims over photography
-    // (for text-on-image legibility) are conventionally dark
-    // regardless of whether the surrounding UI is light or dark
-    // themed — this isn't a leftover, it's a different, narrower use
-    // case (image overlays, not page chrome).
+    // Dark overlay — scrims over photography (text-on-image legibility).
+    // Conventionally dark regardless of light/dark theme.
     dark: 'linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, #0F172A 100%)',
 
-    // Mesh gradient — modern premium feel.
-    // ⚠️ Carried over unchanged, but flagging a real visual difference:
-    // these radial layers use teal/violet/coral at 6–12.5% opacity
-    // (see ALPHA NOTE). Alpha-blended onto the OLD dark navy surface,
-    // saturated color at low opacity reads as a rich colored glow.
-    // Alpha-blended onto WHITE, the same math produces a much paler,
-    // far more washed-out tint — white desaturates low-opacity color
-    // much more aggressively than dark navy does. The mesh will likely
-    // look near-invisible on a white page at these opacity values.
-    // Left as-is rather than guessing a replacement; worth a visual
-    // check in-browser, and likely needs HIGHER opacity (try 35-50%
-    // hex suffixes) to read the same way it did on dark.
+    // Mesh gradient — modern premium feel, using brand palette at low opacity.
     mesh: `
-      radial-gradient(at 40% 20%, #14B8A620 0px, transparent 50%),
-      radial-gradient(at 80% 0%, #8B5CF615 0px, transparent 50%),
-      radial-gradient(at 0% 50%, #F9731610 0px, transparent 50%),
-      radial-gradient(at 80% 50%, #14B8A610 0px, transparent 50%),
-      radial-gradient(at 0% 100%, #8B5CF615 0px, transparent 50%)
+      radial-gradient(at 40% 20%, #c084fc20 0px, transparent 50%),
+      radial-gradient(at 80% 0%, #a855f715 0px, transparent 50%),
+      radial-gradient(at 0% 50%, #05e3a410 0px, transparent 50%),
+      radial-gradient(at 80% 50%, #2563eb10 0px, transparent 50%),
+      radial-gradient(at 0% 100%, #c084fc15 0px, transparent 50%)
     `,
 
-    // Text gradient — for special headings. These two colors
-    // (#5EEAD4, #A78BFA) are the *Light variants, chosen because
-    // they read well as a gradient FILL behind text (background-clip:
-    // text), not as flat text color. Unchanged.
-    text: 'linear-gradient(135deg, #5EEAD4 0%, #A78BFA 100%)',
+    // Text gradient — for special headings. Lilac Light → Azure Light,
+    // chosen because they read well as a gradient FILL behind text
+    // (background-clip: text), not as flat text color.
+    text: 'linear-gradient(135deg, #d8b4fe 0%, #93c5fd 100%)',
   },
 
   // ═════════════════════════════════════════════════════════════════

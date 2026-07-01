@@ -8,11 +8,16 @@
     "label": "Programs",
     "href": "/programs/large-language-models",
     "order": 2,
-    "children": [
-      { "label": "Large Language Models", "href": "/programs/large-language-models", "accent": "#2458D3" },
-      { "label": "Robotics and Task Transfer", "href": "/programs/robotics-task-transfer", "accent": "#0B7F79" },
-      { "label": "Safe Clinical AI", "href": "/programs/clinical-ai", "accent": "#1F7A4D" },
-      { "label": "Energy and Engineering", "href": "/programs/energy-engineering-optimization", "accent": "#D99100" }
+    "megaMenu": [
+      {
+        "title": "LATEST MODELS",
+        "items": [
+          { "label": "Large Language Models", "href": "/programs/large-language-models", "icon": "llm" },
+          { "label": "Robotics and Task Transfer", "href": "/programs/robotics-task-transfer", "icon": "robotics" },
+          { "label": "Safe Clinical AI", "href": "/programs/clinical-ai", "icon": "clinical" },
+          { "label": "Energy and Engineering", "href": "/programs/energy-engineering-optimization", "icon": "energy" }
+        ]
+      }
     ]
   },
   {
@@ -23,14 +28,14 @@
       {
         "title": "RESOURCES",
         "items": [
-          { "label": "Blog", "href": "/resources/blog" }
+          { "label": "Blog", "href": "/resources/blog", "icon": "blog" }
         ]
       },
       {
         "title": "COMMUNITY",
         "items": [
-          { "label": "Discord", "href": "https://discord.gg/your-invite" },
-          { "label": "Events", "href": "/resources/events" }
+          { "label": "Discord", "href": "https://discord.gg/your-invite", "icon": "discord" },
+          { "label": "Events", "href": "/resources/events", "icon": "events" }
         ]
       }
     ]
@@ -40,8 +45,8 @@
     "href": "/lab/about",
     "order": 4,
     "children": [
-      { "label": "About Us", "href": "/lab/about", "accent": "#1A1A1A" },
-      { "label": "Careers", "href": "/lab/careers", "accent": "#2458D3" }
+      { "label": "About Us", "href": "/lab/about", "accent": "#1A1A1A", "icon": "about" },
+      { "label": "Careers", "href": "/lab/careers", "accent": "#2458D3", "icon": "careers" }
     ]
   }
 ]
