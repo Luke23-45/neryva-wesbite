@@ -1,19 +1,57 @@
 import { motion } from 'framer-motion';
-import type { ProgramDetail } from '@types';
-import { Wrapper, Inner, Title, Body, FocusList, FocusItem } from './ProgramDetailFocus.styles';
+import type { ProgramPage } from '@types';
+import {
+  Wrapper,
+  Inner,
+  SideLabel,
+  SectionLabel,
+  SectionTitle,
+  ArgumentBody,
+  ArgumentParagraph,
+} from './ProgramDetailFocus.styles';
 
-const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.2, 0, 0, 1] } } };
+const spring = [0.16, 1, 0.3, 1] as const;
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: spring } },
+};
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
 
-export function ProgramDetailFocus({ program }: { program: ProgramDetail }) {
+interface Props { program: ProgramPage; }
+
+export function ProgramDetailFocus({ program }: Props) {
   return (
     <Wrapper>
-      <Inner as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.08 }}>
-        <motion.div variants={fadeUp}><Title>Research Focus</Title></motion.div>
-        <motion.div variants={fadeUp}><Body>{program.description}</Body></motion.div>
-        <motion.div variants={fadeUp}>
-          <FocusList>
-            {program.focusAreas.map((a) => <FocusItem key={a}>{a}</FocusItem>)}
-          </FocusList>
+      <Inner>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px' }}
+          variants={stagger}
+        >
+          <SideLabel>
+            <motion.div variants={fadeUp}>
+              <SectionLabel>The Argument</SectionLabel>
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <SectionTitle>Why this matters.</SectionTitle>
+            </motion.div>
+          </SideLabel>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-60px' }}
+          variants={stagger}
+        >
+          <ArgumentBody>
+            {program.argument.map((para, i) => (
+              <motion.div key={i} variants={fadeUp}>
+                <ArgumentParagraph>{para}</ArgumentParagraph>
+              </motion.div>
+            ))}
+          </ArgumentBody>
         </motion.div>
       </Inner>
     </Wrapper>

@@ -1,7 +1,47 @@
 [
-  { "label": "Research", "href": "/research", "order": 1 },
-  { "label": "Programs", "href": "/programs", "order": 2 },
-  { "label": "Resources", "href": "/resources", "order": 3 },
-  { "label": "Lab", "href": "/lab", "order": 4 },
-  { "label": "Contact", "href": "/contact", "order": 5 }
+  {
+    "label": "Research",
+    "href": "/research",
+    "order": 1
+  },
+  {
+    "label": "Programs",
+    "href": "/programs/large-language-models",
+    "order": 2,
+    "children": [
+      { "label": "Large Language Models", "href": "/programs/large-language-models", "accent": "#2458D3" },
+      { "label": "Robotics and Task Transfer", "href": "/programs/robotics-task-transfer", "accent": "#0B7F79" },
+      { "label": "Safe Clinical AI", "href": "/programs/clinical-ai", "accent": "#1F7A4D" },
+      { "label": "Energy and Engineering", "href": "/programs/energy-engineering-optimization", "accent": "#D99100" }
+    ]
+  },
+  {
+    "label": "Resources",
+    "href": "/resources",
+    "order": 3,
+    "megaMenu": [
+      {
+        "title": "RESOURCES",
+        "items": [
+          { "label": "Blog", "href": "/resources/blog" }
+        ]
+      },
+      {
+        "title": "COMMUNITY",
+        "items": [
+          { "label": "Discord", "href": "https://discord.gg/your-invite" },
+          { "label": "Events", "href": "/resources/events" }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "Lab",
+    "href": "/lab/about",
+    "order": 4,
+    "children": [
+      { "label": "About Us", "href": "/lab/about", "accent": "#1A1A1A" },
+      { "label": "Careers", "href": "/lab/careers", "accent": "#2458D3" }
+    ]
+  }
 ]

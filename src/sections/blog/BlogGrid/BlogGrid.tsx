@@ -1,0 +1,163 @@
+import { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { PostMosaic } from '@/assets/visual/blog/PostMosaic';
+import blogData from '@data/pages/blog.json';
+import {
+  Wrapper,
+  PageHeader,
+  PageTitle,
+  GridContainer,
+  FilterBar,
+  FilterLeft,
+  FilterRight,
+  PostCount,
+  CategoryPills,
+  CategoryPill,
+  SearchInput,
+  CardGrid,
+  GridCell,
+  BlogCard,
+  CardMosaic,
+  CardBody,
+  CardCategory,
+  CardTitle,
+  CardSummary,
+  CardFooter,
+  CardMeta,
+  CardDate,
+  CardAuthor,
+  CardArrow,
+  PaginationBar,
+  PageButton,
+  PageArrow,
+  EmptyState,
+} from './BlogGrid.styles';
+
+const PAGES = [1, 2, 3, 4, 5, 6, 7, 8];
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const, delay: i * 0.06 },
+  }),
+};
+
+export function BlogGrid() {
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    return blogData.posts.filter((post) => {
+      const matchCat = activeCategory === 'All' || post.category === activeCategory;
+      const q = searchQuery.toLowerCase();
+      const matchSearch =
+        q === '' ||
+        post.title.toLowerCase().includes(q) ||
+        post.summary.toLowerCase().includes(q) ||
+        post.category.toLowerCase().includes(q);
+      return matchCat && matchSearch;
+    });
+  }, [activeCategory, searchQuery]);
+
+  return (
+    <Wrapper>
+      {/* ── Page Header ── */}
+      <PageHeader>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}>
+          <PageTitle>Latest updates from Neryva.</PageTitle>
+        </motion.div>
+      </PageHeader>
+
+      {/* ── Bordered Grid Container ── */}
+      <GridContainer>
+        {/* Filter Bar */}
+        <FilterBar>
+          <FilterLeft>
+            <PostCount>{filtered.length} {filtered.length === 1 ? 'article' : 'articles'}</PostCount>
+            <CategoryPills>
+              {blogData.categories.map((cat) => (
+                <CategoryPill
+                  key={cat}
+                  $active={activeCategory === cat}
+                  onClick={() => setActiveCategory(cat)}
+                >
+                  {cat}
+                </CategoryPill>
+              ))}
+            </CategoryPills>
+          </FilterLeft>
+          <FilterRight>
+            <SearchInput
+              type="text"
+              placeholder="Search articles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search articles"
+            />
+          </FilterRight>
+        </FilterBar>
+
+        {/* Card Grid */}
+        <CardGrid>
+          {filtered.length === 0 ? (
+            <EmptyState>No articles match your filter.</EmptyState>
+          ) : (
+            filtered.map((post, i) => {
+              const isFeatured = i === 0 && post.featured && activeCategory === 'All' && !searchQuery;
+              return (
+                <GridCell key={post.id} $featured={isFeatured}>
+                  <BlogCard
+                    as={motion.article}
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    variants={fadeUp}
+                  >
+                    {/* Mosaic Visual */}
+                    <CardMosaic $featured={isFeatured}>
+                      <PostMosaic seed={post.seed} baseColor={post.colorTheme} />
+                    </CardMosaic>
+
+                    {/* Text Content */}
+                    <CardBody>
+                      <CardCategory $type={post.category.toUpperCase() === 'RESEARCH' || post.category.toUpperCase() === 'COMPANY' ? 'COMPANY' : 'PRODUCT'}>
+                        {post.category}
+                      </CardCategory>
+                      <CardTitle $featured={isFeatured}>{post.title}</CardTitle>
+                      <CardSummary>{post.summary}</CardSummary>
+                    </CardBody>
+
+                    {/* Footer */}
+                    <CardFooter>
+                      <CardDate>{formatDate(post.date)}</CardDate>
+                      <CardAuthor>{post.author}</CardAuthor>
+                      <CardArrow aria-hidden="true">→</CardArrow>
+                    </CardFooter>
+                  </BlogCard>
+                </GridCell>
+              );
+            })
+          )}
+        </CardGrid>
+
+        {/* Pagination */}
+        <PaginationBar>
+          <PageArrow disabled aria-label="Previous page">←</PageArrow>
+          {PAGES.map((p) => (
+            <PageButton key={p} $active={p === 1} aria-label={`Page ${p}`} aria-current={p === 1 ? 'page' : undefined}>
+              {p}
+            </PageButton>
+          ))}
+          <PageArrow disabled aria-label="Next page">→</PageArrow>
+        </PaginationBar>
+      </GridContainer>
+    </Wrapper>
+  );
+}

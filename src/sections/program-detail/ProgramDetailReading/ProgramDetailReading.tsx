@@ -1,25 +1,61 @@
 import { motion } from 'framer-motion';
-import type { ProgramDetail } from '@types';
-import { Wrapper, Inner, Title, ReadingCard, ReadingTitle, ReadingSource, ReadingReason } from './ProgramDetailReading.styles';
+import type { ProgramPage } from '@types';
+import {
+  Wrapper,
+  Inner,
+  SectionHeader,
+  SectionLabel,
+  SectionTitle,
+  CitationList,
+  CitationItem,
+  CitationLeft,
+  CitationTitle,
+  CitationSource,
+  CitationAnnotation,
+} from './ProgramDetailReading.styles';
 
-const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.2, 0, 0, 1] } } };
+const spring = [0.16, 1, 0.3, 1] as const;
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: spring } },
+};
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
 
-export function ProgramDetailReading({ program }: { program: ProgramDetail }) {
+interface Props { program: ProgramPage; }
+
+export function ProgramDetailReading({ program }: Props) {
   return (
     <Wrapper>
-      <Inner as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.08 }}>
-        <motion.div variants={fadeUp}><Title>Related Reading</Title></motion.div>
-        {program.relatedReading.map((r, i) => (
-          <motion.div key={i} variants={fadeUp}>
-            <ReadingCard>
-              <div>
-                <ReadingTitle>{r.title}</ReadingTitle>
-                <ReadingSource>{r.source}</ReadingSource>
-              </div>
-              <ReadingReason>{r.reason}</ReadingReason>
-            </ReadingCard>
-          </motion.div>
-        ))}
+      <Inner>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={stagger}
+        >
+          <SectionHeader>
+            <motion.div variants={fadeUp}>
+              <SectionLabel>Foundational Literature</SectionLabel>
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <SectionTitle>Where we started reading.</SectionTitle>
+            </motion.div>
+          </SectionHeader>
+
+          <CitationList>
+            {program.literature.map((item, i) => (
+              <motion.div key={i} variants={fadeUp}>
+                <CitationItem>
+                  <CitationLeft>
+                    <CitationTitle>{item.title}</CitationTitle>
+                    <CitationSource>{item.source}</CitationSource>
+                  </CitationLeft>
+                  <CitationAnnotation>{item.annotation}</CitationAnnotation>
+                </CitationItem>
+              </motion.div>
+            ))}
+          </CitationList>
+        </motion.div>
       </Inner>
     </Wrapper>
   );

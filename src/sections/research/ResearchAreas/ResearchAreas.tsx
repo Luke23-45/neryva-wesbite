@@ -1,32 +1,122 @@
+import { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Tag } from '@components/common/ui/Tag';
-import { getActiveAreas } from '@lib/data/research';
-import { Wrapper, Inner, Title, AreaBlock, AreaLeft, AreaTitle, TagRow, AreaDescription, AreaConnection } from './ResearchAreas.styles';
+import programAreas from '@data/research/program-areas.json';
+import {
+  Wrapper,
+  Inner,
+  Sidebar,
+  SidebarItem,
+  Panel,
+  ProgramSection,
+  ProgramTitle,
+  CardGrid,
+  Card,
+  CardTitle,
+  TagRow,
+  Tag,
+  CardDescription,
+} from './ResearchAreas.styles';
 
-const areas = getActiveAreas();
-const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.2, 0, 0, 1] } } };
+type ProgramId = keyof typeof programAreas;
+
+const programIds = Object.keys(programAreas) as ProgramId[];
+
+const sectionId = (id: ProgramId) => `research-program-${id}`;
 
 export function ResearchAreas() {
+  const [active, setActive] = useState<ProgramId>('large-language-models');
+  const sectionRefs = useRef<Map<ProgramId, HTMLElement>>(new Map());
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.getAttribute('data-program-id') as ProgramId;
+            if (id) setActive(id);
+          }
+        }
+      },
+      { threshold: 0.3, rootMargin: '-80px 0px -60% 0px' },
+    );
+
+    for (const ref of sectionRefs.current.values()) {
+      observer.observe(ref);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const scrollTo = (id: ProgramId) => {
+    const el = sectionRefs.current.get(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <Wrapper>
       <Inner>
-        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
-          <motion.div variants={fadeUp}><Title>Active Technical Areas</Title></motion.div>
-          {areas.map((area) => (
-            <motion.div key={area.id} variants={fadeUp}>
-              <AreaBlock>
-                <AreaLeft>
-                  <AreaTitle>{area.title}</AreaTitle>
-                  <TagRow>{area.labels.map((l) => <Tag key={l}>{l}</Tag>)}</TagRow>
-                </AreaLeft>
-                <div>
-                  <AreaDescription>{area.description}</AreaDescription>
-                  <AreaConnection>{area.connectionToAgenda}</AreaConnection>
-                </div>
-              </AreaBlock>
-            </motion.div>
-          ))}
-        </motion.div>
+        <Sidebar>
+          {programIds.map((id) => {
+            const p = programAreas[id];
+            return (
+              <SidebarItem
+                key={id}
+                $active={id === active}
+                $accent={p.accent}
+                onClick={() => scrollTo(id)}
+              >
+                {p.title}
+              </SidebarItem>
+            );
+          })}
+        </Sidebar>
+
+        <Panel>
+          {programIds.map((id) => {
+            const p = programAreas[id];
+            return (
+              <ProgramSection
+                key={id}
+                id={sectionId(id)}
+                data-program-id={id}
+                ref={(el: HTMLElement | null) => {
+                  if (el) sectionRefs.current.set(id, el);
+                  else sectionRefs.current.delete(id);
+                }}
+                as={motion.section}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] as const }}
+              >
+                <ProgramTitle $accent={p.accent}>{p.title}</ProgramTitle>
+                <CardGrid>
+                  {p.cards.map((card, i) => (
+                    <motion.div
+                      key={card.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] as const, delay: i * 0.06 }}
+                    >
+                      <Card>
+                        <CardTitle>{card.title}</CardTitle>
+                        <TagRow>
+                          {card.labels.map((label) => (
+                            <Tag key={label}>{label}</Tag>
+                          ))}
+                        </TagRow>
+                        <CardDescription>{card.description}</CardDescription>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </CardGrid>
+              </ProgramSection>
+            );
+          })}
+        </Panel>
       </Inner>
     </Wrapper>
   );

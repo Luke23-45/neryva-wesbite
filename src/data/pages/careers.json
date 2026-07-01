@@ -1,0 +1,62 @@
+{
+  "hero": {
+    "label": "Careers at Neryva",
+    "title": "Build intelligence that matters.",
+    "description": "We are looking for exceptional researchers, engineers, and operators who are driven to push the boundaries of physical AI. No bureaucracy. Just compute and autonomy."
+  },
+  "environment": {
+    "label": "The Environment",
+    "title": "How we operate.",
+    "items": [
+      {
+        "id": "A",
+        "title": "Radical Autonomy",
+        "description": "We hire exceptional people and get out of their way. No endless meetings or top-down roadmaps. If you have a hypothesis, you own the execution from design to deployment."
+      },
+      {
+        "id": "C",
+        "title": "Massive Compute",
+        "description": "Compute shouldn't be the bottleneck for fundamental breakthroughs. Every researcher and engineer has unrestricted access to our state-of-the-art multi-node H100 clusters."
+      },
+      {
+        "id": "O",
+        "title": "Open Publication",
+        "description": "We believe progress in foundation models should be shared. We actively encourage our teams to publish their non-critical findings and contribute back to the global research commons."
+      },
+      {
+        "id": "P",
+        "title": "Physical Impact",
+        "description": "We aren't building ad-optimizers or engagement loops. Your work directly impacts robotics, energy dispatch, and clinical care systems in the real world."
+      }
+    ]
+  },
+  "roles": {
+    "label": "Open Roles",
+    "title": "Join the lab.",
+    "departments": [
+      {
+        "name": "Research",
+        "positions": [
+          { "title": "Foundational AI Scientist", "location": "San Francisco / Remote", "type": "Full-Time" },
+          { "title": "Sparse Architecture Researcher", "location": "San Francisco", "type": "Full-Time" },
+          { "title": "Robotics Reinforcement Learning Lead", "location": "London", "type": "Full-Time" }
+        ]
+      },
+      {
+        "name": "Engineering",
+        "positions": [
+          { "title": "Distributed Training Engineer", "location": "San Francisco / Remote", "type": "Full-Time" },
+          { "title": "Inference Optimization Lead (C++/CUDA)", "location": "Remote", "type": "Full-Time" },
+          { "title": "Hardware Infrastructure Engineer", "location": "San Francisco", "type": "Full-Time" }
+        ]
+      },
+      {
+        "name": "Operations",
+        "positions": [
+          { "title": "Compute Cluster Manager", "location": "San Francisco", "type": "Full-Time" },
+          { "title": "Technical Recruiter", "location": "Remote", "type": "Full-Time" }
+        ]
+      }
+    ]
+  }
+}

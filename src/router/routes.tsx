@@ -1,23 +1,24 @@
-import { createRoute } from '@tanstack/react-router';
+import { createRoute, redirect } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
 // Pages
-import HomePage from '@pages/HomePage';
+// import HomePage from '@pages/HomePage';
 import ResearchPage from '@pages/ResearchPage';
-import ProgramsPage from '@pages/ProgramsPage';
 import ProgramDetailPage from '@pages/ProgramDetailPage';
 import ResourcesPage from '@pages/ResourcesPage';
-import LabPage from '@pages/LabPage';
-import ContactPage from '@pages/ContactPage';
-import NotFoundPage from '@pages/NotFoundPage';
+import BlogPage from '@pages/BlogPage';
+import AboutPage from '@pages/AboutPage';
+import CareersPage from '@pages/CareersPage';
+// import ContactPage from '@pages/ContactPage';
+// import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
 
-export const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: HomePage,
-});
+// export const indexRoute = createRoute({
+//   getParentRoute: () => rootRoute,
+//   path: '/',
+//   component: HomePage,
+// });
 
 export const researchRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -25,16 +26,19 @@ export const researchRoute = createRoute({
   component: ResearchPage,
 });
 
-// Programs layout route (parent for index and detail)
+// Programs layout route (parent for detail pages only)
 export const programsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/programs',
 });
 
+// /programs redirects to the first program — no index page
 export const programsIndexRoute = createRoute({
   getParentRoute: () => programsRoute,
   path: '/',
-  component: ProgramsPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/programs/large-language-models' });
+  },
 });
 
 export const programDetailRoute = createRoute({
@@ -49,35 +53,51 @@ export const resourcesRoute = createRoute({
   component: ResourcesPage,
 });
 
-export const labRoute = createRoute({
+// Resources child routes
+export const blogRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/lab',
-  component: LabPage,
+  path: '/resources/blog',
+  component: BlogPage,
 });
 
-export const contactRoute = createRoute({
+// Lab child routes
+export const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/contact',
-  component: ContactPage,
+  path: '/lab/about',
+  component: AboutPage,
 });
 
-export const notFoundRoute = createRoute({
+export const careersRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '*',
-  component: NotFoundPage,
+  path: '/lab/careers',
+  component: CareersPage,
 });
+
+// export const contactRoute = createRoute({
+//   getParentRoute: () => rootRoute,
+//   path: '/contact',
+//   component: ContactPage,
+// });
+
+// export const notFoundRoute = createRoute({
+//   getParentRoute: () => rootRoute,
+//   path: '*',
+//   component: NotFoundPage,
+// });
 
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
-  indexRoute,
+  // indexRoute,
   researchRoute,
   programsRoute.addChildren([
     programsIndexRoute,
     programDetailRoute,
   ]),
   resourcesRoute,
-  labRoute,
-  contactRoute,
-  notFoundRoute,
+  blogRoute,
+  aboutRoute,
+  careersRoute,
+  // contactRoute,
+  // notFoundRoute,
 ];

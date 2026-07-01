@@ -1,22 +1,61 @@
 import { motion } from 'framer-motion';
-import type { ProgramDetail } from '@types';
-import { Wrapper, Inner, Title, Item, Number, Text } from './ProgramDetailQuestions.styles';
+import type { ProgramPage } from '@types';
+import {
+  Wrapper,
+  Inner,
+  SectionHeader,
+  SectionLabel,
+  SectionTitle,
+  ThreadList,
+  ThreadItem,
+  ThreadIndex,
+  ThreadContent,
+  ThreadTitle,
+  ThreadQuestion,
+} from './ProgramDetailQuestions.styles';
 
-const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.2, 0, 0, 1] } } };
+const spring = [0.16, 1, 0.3, 1] as const;
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: spring } },
+};
+const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
 
-export function ProgramDetailQuestions({ program }: { program: ProgramDetail }) {
+interface Props { program: ProgramPage; }
+
+export function ProgramDetailQuestions({ program }: Props) {
   return (
     <Wrapper>
-      <Inner as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.08 }}>
-        <motion.div variants={fadeUp}><Title>Key Questions</Title></motion.div>
-        {program.keyQuestions.map((q, i) => (
-          <motion.div key={q.id} variants={fadeUp}>
-            <Item>
-              <Number>{String(i + 1).padStart(2, '0')}</Number>
-              <Text>{q.question}</Text>
-            </Item>
-          </motion.div>
-        ))}
+      <Inner>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={stagger}
+        >
+          <SectionHeader>
+            <motion.div variants={fadeUp}>
+              <SectionLabel>Active Threads</SectionLabel>
+            </motion.div>
+            <motion.div variants={fadeUp}>
+              <SectionTitle>What we're actively working out.</SectionTitle>
+            </motion.div>
+          </SectionHeader>
+
+          <ThreadList>
+            {program.threads.map((thread, i) => (
+              <motion.div key={thread.id} variants={fadeUp}>
+                <ThreadItem>
+                  <ThreadIndex>{String(i + 1).padStart(2, '0')}</ThreadIndex>
+                  <ThreadContent>
+                    <ThreadTitle>{thread.title}</ThreadTitle>
+                    <ThreadQuestion>{thread.question}</ThreadQuestion>
+                  </ThreadContent>
+                </ThreadItem>
+              </motion.div>
+            ))}
+          </ThreadList>
+        </motion.div>
       </Inner>
     </Wrapper>
   );

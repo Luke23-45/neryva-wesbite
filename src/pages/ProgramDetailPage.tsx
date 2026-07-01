@@ -1,8 +1,8 @@
 import { Helmet } from 'react-helmet-async';
 import { useParams } from '@tanstack/react-router';
 import styled from 'styled-components';
-import { getProgramBySlug } from '@lib/data/programs';
-import { TextLink } from '@components/common/ui/TextLink';
+import { getProgramPage } from '@lib/data/programs';
+import { TextLink } from '@/components/common/ui/TextLink';
 import { ProgramDetailHero } from '@/sections/program-detail/ProgramDetailHero';
 import { ProgramDetailFocus } from '@/sections/program-detail/ProgramDetailFocus';
 import { ProgramDetailQuestions } from '@/sections/program-detail/ProgramDetailQuestions';
@@ -21,7 +21,7 @@ const NotFoundTitle = styled.h1`
 
 export default function ProgramDetailPage() {
   const { slug } = useParams({ from: '/programs/$slug' });
-  const program = getProgramBySlug(slug);
+  const program = getProgramPage(slug);
 
   if (!program) {
     return (
@@ -35,10 +35,10 @@ export default function ProgramDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{program.title} â€” Neryva</title>
+        <title>{program.title} — Neryva</title>
         <meta name="description" content={program.summary} />
       </Helmet>
-      <ProgramDetailHero program={program} />
+      <ProgramDetailHero program={program} slug={slug} />
       <ProgramDetailFocus program={program} />
       <ProgramDetailQuestions program={program} />
       <ProgramDetailWork program={program} />

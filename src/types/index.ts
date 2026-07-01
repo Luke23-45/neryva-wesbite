@@ -15,10 +15,23 @@ export interface SeoDefaults {
 }
 
 // ─── Navigation ────────────────────────────────────────
+export interface NavChild {
+  label: string;
+  href: string;
+  accent: string;
+}
+
+export interface NavMegaMenuSection {
+  title: string;
+  items: Array<{ label: string; href: string }>;
+}
+
 export interface NavItem {
   label: string;
   href: string;
   order: number;
+  children?: NavChild[];
+  megaMenu?: NavMegaMenuSection[];
 }
 
 // ─── Research ──────────────────────────────────────────
@@ -39,6 +52,7 @@ export interface Paper {
   authors: string[];
   venue: string;
   date: string;
+  program: string;
   url?: string;
   status: 'published' | 'preprint' | 'in-preparation';
 }
@@ -90,6 +104,32 @@ export interface ProgramDetail {
   currentWork: string;
   relatedReading: RelatedReading[];
   svgMotif: string;
+}
+
+// ─── New Program Page Data (pages/program/*.json) ───────
+export interface ProgramThread {
+  id: string;
+  title: string;
+  question: string;
+}
+
+export interface ProgramLiterature {
+  title: string;
+  source: string;
+  annotation: string;
+}
+
+export interface ProgramPage {
+  number: number;
+  status: string;
+  accent: string;
+  title: string;
+  summary: string;
+  argument: string[];
+  threads: ProgramThread[];
+  currentWork: string;
+  futureDirection: string;
+  literature: ProgramLiterature[];
 }
 
 // ─── Resources ─────────────────────────────────────────

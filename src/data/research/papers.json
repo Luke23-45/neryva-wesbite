@@ -1,4 +1,77 @@
 {
-  "items": [],
-  "earlyStageMessage": "First papers in preparation."
+  "items": [
+    {
+      "title": "Efficient Routing Objectives for Sparse Mixture-of-Experts at Scale",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2025-01",
+      "program": "large-language-models",
+      "status": "preprint"
+    },
+    {
+      "title": "Early Warning Signals for Training Instability in Large Language Models",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2025-01",
+      "program": "large-language-models",
+      "status": "preprint"
+    },
+    {
+      "title": "Structured Sparsity Patterns That Preserve Capability Under Deployment Constraints",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2024-12",
+      "program": "large-language-models",
+      "status": "preprint"
+    },
+    {
+      "title": "Adaptive Inference Serving Pipelines for Variable Workload Characteristics",
+      "authors": ["N. Research"],
+      "venue": "NeurIPS 2024 Workshop",
+      "date": "2024-12",
+      "program": "large-language-models",
+      "status": "published"
+    },
+    {
+      "title": "Task Transfer in Robotic Manipulation: A Multi-Task Representation Learning Approach",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2024-11",
+      "program": "robotics-task-transfer",
+      "status": "preprint"
+    },
+    {
+      "title": "Sim-to-Real Gap Analysis for Robotic Skill Composition",
+      "authors": ["N. Research"],
+      "venue": "ICRA 2025",
+      "date": "2024-10",
+      "program": "robotics-task-transfer",
+      "status": "published"
+    },
+    {
+      "title": "Failure Mode Detection in Clinical Decision Support Systems",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2024-09",
+      "program": "clinical-ai",
+      "status": "preprint"
+    },
+    {
+      "title": "Validation Frameworks for Medical AI Under Distribution Shift",
+      "authors": ["N. Research"],
+      "venue": "arXiv",
+      "date": "2024-08",
+      "program": "clinical-ai",
+      "status": "preprint"
+    },
+    {
+      "title": "Optimization Methods for Variable Renewable Energy Grid Balancing",
+      "authors": ["N. Research"],
+      "venue": "Energy Systems Journal",
+      "date": "2024-07",
+      "program": "energy-engineering-optimization",
+      "status": "published"
+    }
+  ],
+  "earlyStageMessage": "First papers are in preparation. Research results will be published here as they become available."
 }

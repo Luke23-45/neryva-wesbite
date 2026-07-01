@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Tag } from '@components/common/ui/Tag';
-import { TextLink } from '@components/common/ui/TextLink';
+import { Tag } from '@/components/common/ui/Tag';
+import { TextLink } from '@/components/common/ui/TextLink';
 import { getPrograms } from '@lib/data/programs';
 import { Wrapper, Inner, Card, CardMeta, CardNumber, CardTitle, CardBody } from './ProgramsDirectory.styles';
 

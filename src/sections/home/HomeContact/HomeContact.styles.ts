@@ -19,7 +19,7 @@ export const Inner = styled.div`
 export const Title = styled.h2`
   font-size: ${({ theme }) => theme.typography.sizes.h2};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.dark.text};
+  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: ${({ theme }) => theme.spacing.s4};
 
   ${({ theme }) => theme.media.mobile} {
@@ -30,20 +30,19 @@ export const Title = styled.h2`
 export const Body = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
   line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: ${({ theme }) => theme.colors.dark.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: ${({ theme }) => theme.spacing.s6};
 `;
 
 export const Email = styled.a`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
-  color: ${({ theme }) => theme.colors.dark.accent};
+  color: ${({ theme }) => theme.colors.accent.tealText};
+  border: 1px solid transparent;
+  padding: 4px 0;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color ${({ theme }) => theme.transitions.fast};
-
+  
   &:hover {
-    border-color: ${({ theme }) => theme.colors.dark.accent};
-    color: ${({ theme }) => theme.colors.dark.accent};
+    color: ${({ theme }) => theme.colors.accent.teal};
   }
 `;

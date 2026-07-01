@@ -1,12 +1,11 @@
 import styled from 'styled-components';
 
 export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s10} 0;
-  background: ${({ theme }) => theme.colors.surface};
-  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  padding: 120px 0;
+  background-color: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.mobile} {
-    padding: ${({ theme }) => theme.spacing.s8} 0;
+    padding: 80px 0;
   }
 `;
 
@@ -20,107 +19,186 @@ export const Inner = styled.div`
   }
 `;
 
-export const HeaderRow = styled.div`
+export const HeaderSection = styled.div`
+  margin-bottom: 80px;
+`;
+
+export const SectionLabel = styled.span`
+  display: inline-block;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin-bottom: 20px;
+`;
+
+export const SectionTitle = styled.h2`
+  font-size: clamp(2.75rem, 5vw, 4.5rem);
+  font-weight: 500;
+  line-height: 1.0;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
+  letter-spacing: -0.04em;
+`;
+
+/* ── Two Column Layout ── */
+
+export const TwoColumnLayout = styled.div`
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 64px;
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+`;
+
+export const SidebarMenu = styled.div`
+  position: sticky;
+  top: calc(50vh - 130px);
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 12px;
+  align-self: flex-start;
+
+  ${({ theme }) => theme.media.tablet} {
+    position: relative;
+    top: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+`;
+
+export const MenuItem = styled.button<{ $active: boolean }>`
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.background.secondary)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.secondary)};
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+
+  &:hover {
+    background-color: ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.border)};
+  }
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+`;
+
+export const ProgramsContent = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+/* ── Individual Program Row ── */
+
+export const ProgramRow = styled.div`
+  margin-bottom: 120px;
+  scroll-margin-top: 120px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    margin-bottom: 80px;
+    scroll-margin-top: 80px;
+  }
+`;
+
+export const ProgramHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: ${({ theme }) => theme.spacing.s7};
-  gap: ${({ theme }) => theme.spacing.s5};
+  gap: 24px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 `;
 
-export const Eyebrow = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.label};
-  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.label};
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
-  margin-bottom: ${({ theme }) => theme.spacing.s3};
-  display: block;
+export const ProgramTitle = styled.h3<{ $accent: string }>`
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  line-height: 1.05;
+  color: ${({ $accent }) => $accent};
+  margin: 0;
+  letter-spacing: -0.03em;
 `;
 
-export const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.sizes.h2};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.ink};
-
-  ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.typography.sizesMobile.h2};
-  }
+export const ProgramCTA = styled.div`
+  padding-top: 8px;
+  flex-shrink: 0;
 `;
 
-export const Grid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }) => theme.spacing.s5};
-
-  ${({ theme }) => theme.media.mobile} {
-    grid-template-columns: 1fr;
-  }
+export const ProgramDescription = styled.p`
+  font-size: 1rem;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0 0 32px 0;
+  max-width: 720px;
 `;
 
-export const Card = styled.div<{ $accent?: string }>`
+export const ProgramVisual = styled.div<{ $accent: string }>`
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 20px;
+  background: ${({ $accent }) => $accent};
   position: relative;
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  background: ${({ theme }) => theme.colors.paper};
-  padding: ${({ theme }) => theme.spacing.s6};
-  transition: all ${({ theme }) => theme.transitions.standard};
   overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background: ${({ $accent, theme }) => $accent || theme.colors.blue};
-    opacity: 0;
-    transition: opacity ${({ theme }) => theme.transitions.fast};
-  }
-
-  &:hover {
-    border-color: ${({ theme }) => theme.colors.lineStrong};
-    box-shadow: ${({ theme }) => theme.shadows.md};
-    transform: translateY(-2px);
-
-    &::before {
-      opacity: 1;
-    }
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   ${({ theme }) => theme.media.mobile} {
-    padding: ${({ theme }) => theme.spacing.s5};
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
   }
 `;
 
-export const CardNumber = styled.span`
+export const VisualOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 100%);
+  pointer-events: none;
+`;
+
+export const VisualCaption = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 24px;
+  padding: 20px 28px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.label};
-  color: ${({ theme }) => theme.colors.muted};
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.label};
-`;
-
-export const CardTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.ink};
-  margin: ${({ theme }) => theme.spacing.s2} 0 ${({ theme }) => theme.spacing.s3};
+  color: rgba(255, 255, 255, 0.6);
+  overflow-x: auto;
+  white-space: nowrap;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.typography.sizesMobile.h3};
+    padding: 16px 20px;
+    font-size: 9px;
+    gap: 16px;
   }
 `;
 
-export const CardBody = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
-  color: ${({ theme }) => theme.colors.inkSoft};
-  margin-bottom: ${({ theme }) => theme.spacing.s4};
-`;
-
-export const CardLink = styled.div`
-  margin-top: auto;
+export const FooterAction = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 80px;
 `;

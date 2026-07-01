@@ -1,30 +1,26 @@
 [
   {
     "id": "moe-routing",
-    "title": "MoE Routing and Expert Selection",
-    "labels": ["mixture-of-experts", "routing", "expert-selection"],
-    "description": "Mixture-of-Experts architectures promise efficient scaling by activating only a subset of parameters for each input. But routing decisions are difficult to make well. Poor routing leads to expert collapse, load imbalance, and wasted capacity. The core problem is that current routing objectives optimize for task loss without directly accounting for the computational cost of routing errors or the long-term consequences of expert specialization patterns.\n\nNeryva studies how routing objectives can be designed to balance throughput, specialization, and training stability. We are particularly interested in cases where routing decisions must be made under deployment-time constraints — fixed memory budgets, latency targets, and heterogeneous hardware.",
-    "connectionToAgenda": "Routing is the mechanism through which sparse models allocate computation. Better routing means more useful computation per unit of hardware."
+    "title": "Routing & Selection",
+    "labels": ["mixture-of-experts", "routing"],
+    "description": "Designing objectives that balance throughput with training stability under strict hardware constraints."
   },
   {
     "id": "sparse-computation",
     "title": "Sparse Computation",
-    "labels": ["sparsity", "conditional-computation", "activation-patterns"],
-    "description": "Most large models activate far more parameters than are needed for any given input. Sparse computation aims to reduce this waste by activating only the parameters that are relevant. But sparsity introduces its own challenges: which sparsity patterns preserve useful behavior? How do we maintain training stability when large portions of the network are inactive? How do we ensure that sparse models degrade gracefully under deployment constraints rather than failing unpredictably?\n\nNeryva studies structured and unstructured sparsity patterns, their interaction with training dynamics, and their behavior under the constraints that matter at deployment time.",
-    "connectionToAgenda": "Sparsity is the most direct mechanism for reducing computational waste. Understanding which sparsity patterns work — and which fail — is essential for efficient large-scale AI."
+    "labels": ["sparsity", "conditional-compute"],
+    "description": "Identifying sparsity patterns that preserve capability and degrade gracefully in deployment."
   },
   {
     "id": "training-stability",
     "title": "Training Stability",
-    "labels": ["training-dynamics", "convergence", "loss-landscape"],
-    "description": "Large-scale training runs are expensive and fragile. Loss spikes, divergence, and subtle training instabilities can waste significant compute and make results difficult to reproduce. The problem is not just that training can fail — it is that training behavior is often poorly understood, making it hard to predict which configurations will be stable at scale.\n\nNeryva studies the dynamics of large-scale training with a focus on measurable stability indicators, early warning signals for instability, and training configurations that are robust across different scales and architectures.",
-    "connectionToAgenda": "Stable training is a prerequisite for efficient research. If training is fragile, compute is wasted on restarts, debugging, and failed experiments."
+    "labels": ["training-dynamics", "loss-landscape"],
+    "description": "Detecting early warning signals for divergence to prevent expensive compute waste at scale."
   },
   {
     "id": "inference-optimization",
     "title": "Inference Optimization",
-    "labels": ["inference", "deployment", "serving-systems"],
-    "description": "Deploying large models in production requires solving a different set of problems than training them. Inference must be fast, memory-efficient, and cost-effective. But many inference optimization techniques — quantization, caching, batching, speculative decoding — interact in complex ways, and their effectiveness depends heavily on workload characteristics and hardware constraints.\n\nNeryva studies inference optimization as a systems problem: how to build serving pipelines that adapt to workload, make efficient use of available hardware, and maintain quality under throughput pressure.",
-    "connectionToAgenda": "Inference is where trained models meet real constraints. Optimization at this stage determines whether a model is deployable or merely impressive on benchmarks."
+    "labels": ["inference", "serving-systems"],
+    "description": "Building adaptive serving pipelines that maintain quality under extreme throughput pressure."
   }
 ]

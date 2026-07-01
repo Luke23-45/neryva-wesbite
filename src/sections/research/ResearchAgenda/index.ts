@@ -1,1 +1,0 @@
-export { ResearchAgenda } from './ResearchAgenda';

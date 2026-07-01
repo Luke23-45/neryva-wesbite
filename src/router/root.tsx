@@ -3,8 +3,8 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import type { QueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Header } from '@components/common/layout/Header';
-import { Footer } from '@components/common/layout/Footer';
+import { Header } from '@/sections/common/layout/Header';
+import { Footer } from '@/sections/common/layout/Footer';
 
 interface RouterContext {
   queryClient: QueryClient;

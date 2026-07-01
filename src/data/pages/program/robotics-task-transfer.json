@@ -1,0 +1,47 @@
+{
+  "number": 2,
+  "status": "Active",
+  "accent": "#0B7F79",
+  "title": "Robotics and Task Transfer",
+  "summary": "Studying how learned behaviors can generalize — so a robotic system trained on one task can adapt to another with a fraction of the data.",
+  "argument": [
+    "Every time a robotic system is trained on a new task, we start nearly from scratch. The skills learned in one context — grasping, navigating, manipulating — rarely transfer cleanly to the next. This is not a problem of insufficient compute. It is a problem of representation and generalization that we do not yet understand well enough to solve reliably.",
+    "Neryva's robotics program focuses on the transfer problem: what properties of a learned skill make it reusable, and how do we build training regimes that produce transferable behaviors rather than task-specific solutions. Our interest is in reducing the data cost of each new task — not by scaling training, but by learning in a way that generalizes."
+  ],
+  "threads": [
+    {
+      "id": "skill-generalization",
+      "title": "Skill Generalization",
+      "question": "Under what conditions does a learned policy transfer to an unseen task without catastrophic forgetting of previously learned behaviors?"
+    },
+    {
+      "id": "data-efficient-transfer",
+      "title": "Data-Efficient Adaptation",
+      "question": "How much task-specific demonstration data is genuinely required for reliable adaptation — and what methods systematically reduce that threshold?"
+    },
+    {
+      "id": "task-representation",
+      "title": "Task and Environment Representation",
+      "question": "What representations of task structure and environment state support the broadest transfer across physically different but conceptually similar tasks?"
+    }
+  ],
+  "currentWork": "Surveying transfer learning and meta-learning approaches in robotic manipulation and locomotion. Identifying the experimental settings where transfer fails most predictably — as a starting point for understanding why.",
+  "futureDirection": "Developing low-data adaptation methods for manipulation tasks in unstructured environments, with a specific focus on settings where demonstration data is expensive or unsafe to collect at scale.",
+  "literature": [
+    {
+      "title": "Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks",
+      "source": "Finn et al., UC Berkeley, 2017",
+      "annotation": "The clearest formulation of fast task adaptation through meta-learning. A conceptual anchor for understanding what task-level generalization requires."
+    },
+    {
+      "title": "Learning to Transfer: A Hierarchical List-wise Approach for Source Domain Selection in Transfer Learning",
+      "source": "Mensink et al., Google, 2021",
+      "annotation": "Addresses a key practical question: given a library of learned skills, how do we identify which ones transfer to a new task?"
+    },
+    {
+      "title": "RoboAgent: Generalization and Efficiency in Robot Manipulation via Semantic Augmentations and Action Chunking",
+      "source": "Bharadhwaj et al., CMU, 2023",
+      "annotation": "Recent work on building generalizable manipulation policies with limited data. Useful for understanding the current practical frontier."
+    }
+  ]
+}

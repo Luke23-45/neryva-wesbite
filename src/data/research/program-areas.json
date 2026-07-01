@@ -1,0 +1,122 @@
+{
+  "large-language-models": {
+    "title": "Large Language Models",
+    "accent": "#2458D3",
+    "cards": [
+      {
+        "id": "routing-selection",
+        "title": "Routing & Selection",
+        "labels": ["mixture-of-experts", "routing"],
+        "description": "Designing objectives that balance throughput with training stability under strict hardware constraints."
+      },
+      {
+        "id": "sparse-computation",
+        "title": "Sparse Computation",
+        "labels": ["sparsity", "conditional-compute"],
+        "description": "Identifying sparsity patterns that preserve capability and degrade gracefully in deployment."
+      },
+      {
+        "id": "training-stability",
+        "title": "Training Stability",
+        "labels": ["training-dynamics", "loss-landscape"],
+        "description": "Detecting early warning signals for divergence to prevent expensive compute waste at scale."
+      },
+      {
+        "id": "inference-optimization",
+        "title": "Inference Optimization",
+        "labels": ["inference", "serving-systems"],
+        "description": "Building adaptive serving pipelines that maintain quality under extreme throughput pressure."
+      }
+    ]
+  },
+  "robotics-task-transfer": {
+    "title": "Robotics and Task Transfer",
+    "accent": "#0B7F79",
+    "cards": [
+      {
+        "id": "task-generalization",
+        "title": "Task Generalization",
+        "labels": ["multi-task", "policy-transfer"],
+        "description": "Enabling a single policy to transfer meaningfully across tasks with different dynamics and objectives."
+      },
+      {
+        "id": "skill-composition",
+        "title": "Skill Composition",
+        "labels": ["chaining", "workflow"],
+        "description": "Composing individually learned skills into longer multi-step workflows without brittle handoffs."
+      },
+      {
+        "id": "reusable-representations",
+        "title": "Reusable Representations",
+        "labels": ["representation-learning", "abstraction"],
+        "description": "Learning representations that reduce training data requirements for each subsequent task."
+      },
+      {
+        "id": "sim-to-real",
+        "title": "Sim-to-Real Transfer",
+        "labels": ["simulation", "domain-adaptation"],
+        "description": "Bridging the gap between simulated training environments and real-world deployment conditions."
+      }
+    ]
+  },
+  "clinical-ai": {
+    "title": "Safe Clinical AI and Medical Research",
+    "accent": "#1F7A4D",
+    "cards": [
+      {
+        "id": "supervised-decision-support",
+        "title": "Supervised Decision Support",
+        "labels": ["human-in-loop", "workflow"],
+        "description": "Designing AI support systems where human clinicians remain the central decision-makers."
+      },
+      {
+        "id": "reliability-constraints",
+        "title": "Reliability Under Constraints",
+        "labels": ["robustness", "uncertainty"],
+        "description": "Studying how clinical AI systems behave under distribution shift and data constraints."
+      },
+      {
+        "id": "validation-standards",
+        "title": "Validation Standards",
+        "labels": ["evaluation", "safety"],
+        "description": "Developing appropriate evidence standards for different levels of clinical decision support risk."
+      },
+      {
+        "id": "failure-mode-analysis",
+        "title": "Failure Mode Analysis",
+        "labels": ["auditing", "bias-detection"],
+        "description": "Identifying where current AI systems fail most consequentially in clinical settings."
+      }
+    ]
+  },
+  "energy-engineering-optimization": {
+    "title": "Energy and Engineering Optimization",
+    "accent": "#D99100",
+    "cards": [
+      {
+        "id": "resource-efficiency",
+        "title": "Resource Efficiency",
+        "labels": ["waste-reduction", "allocation"],
+        "description": "Applying AI methods to measurably reduce energy waste in generation and distribution systems."
+      },
+      {
+        "id": "renewable-planning",
+        "title": "Renewable System Planning",
+        "labels": ["solar", "wind", "optimization"],
+        "description": "Using optimization models to plan energy usage across systems with variable supply and demand."
+      },
+      {
+        "id": "engineering-design-support",
+        "title": "Engineering Design Support",
+        "labels": ["decision-support", "constraints"],
+        "description": "Supporting engineering design decisions under physical, operational, and cost constraints."
+      },
+      {
+        "id": "supply-demand-optimization",
+        "title": "Supply-Demand Optimization",
+        "labels": ["forecasting", "scheduling"],
+        "description": "Optimizing allocation between variable renewable generation and fluctuating consumption patterns."
+      }
+    ]
+  }
+}
