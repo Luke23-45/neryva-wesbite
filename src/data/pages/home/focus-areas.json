@@ -1,0 +1,17 @@
+[
+  {
+    "id": "resource-efficiency-optimization",
+    "title": "Resource Efficiency & Optimization",
+    "description": "Progress in intelligent systems requires more than just scaling up; it requires making resources fundamentally more useful. We study how to intelligently allocate compute, minimize systemic waste, and optimize performance. Whether reducing the data required for training or maximizing operational output in complex networks, our focus is on engineering highly efficient, sustainable architectures that do more with less."
+  },
+  {
+    "id": "adaptability-knowledge-transfer",
+    "title": "Adaptability & Knowledge Transfer",
+    "description": "Intelligent systems must evolve beyond rigid, single-use behaviors. We investigate how learned capabilities and representations can be transferred, reused, and composed into longer, dynamic workflows. Our research aims to create versatile frameworks that can seamlessly adapt prior knowledge to solve new, unseen tasks, reducing the friction and data required to operate in changing environments."
+  },
+  {
+    "id": "reliability-safe-deployment",
+    "title": "Reliability & Safe Deployment",
+    "description": "For advanced systems to be truly useful, they must operate flawlessly in complex, constrained conditions. We research methods for rigorous system validation, stability, and effective human supervision. Our goal is to build reliable, well-aligned decision-support frameworks that preserve useful behavior and mitigate harm when pushed into high-stakes, real-world operational environments."
+  }
+]

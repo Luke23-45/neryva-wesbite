@@ -100,7 +100,7 @@ export function HomePrograms() {
   };
 
   return (
-    <Section paddingY="lg" background={theme.colors.background.primary}>
+    <Section paddingYTop="lg" paddingYBottom="none" background={theme.colors.background.primary}>
       <Container>
         {/* Header */}
         <HeaderSection
@@ -110,9 +110,7 @@ export function HomePrograms() {
           viewport={{ once: true, margin: '-80px' }}
           variants={staggerContainer}
         >
-          <motion.div variants={fadeUp}>
-            <SectionLabel>{heading.label}</SectionLabel>
-          </motion.div>
+
           <motion.div variants={fadeUp}>
             <SectionTitle>{heading.title}</SectionTitle>
           </motion.div>
@@ -125,7 +123,7 @@ export function HomePrograms() {
             {programs.map((program) => {
               const SidebarIcon = SidebarIconsMap[program.id as ProgramId];
               const isActive = activeId === program.id;
-              
+
               return (
                 <MenuItem
                   key={`menu-${program.id}`}

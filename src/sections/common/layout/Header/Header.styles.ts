@@ -449,19 +449,19 @@ export const MenuGlyph = styled.span`
 // ─── MEGA MENU ─────────────────────────────────────────────────
 export const MegaMenuPanel = styled(DropdownPanel)`
   width: max-content;
-  min-width: 344px;
+  min-width: 0;
   max-width: none;
   padding: 0;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 344px;
+  grid-auto-columns: max-content;
 `;
 
 export const MegaMenuColumn = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-width: 344px;
+  min-width: 236px;
   border-right: 1px solid ${({ theme }) => theme.colors.borderLight};
 
   &:last-child {
@@ -484,10 +484,10 @@ export const MegaMenuLink = styled.a`
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) 20px;
   align-items: center;
-  column-gap: 14px;
+  column-gap: 12px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   min-height: 68px;
-  padding: 0 18px;
+  padding: 0 16px;
   font-size: 16px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   letter-spacing: -0.02em;
@@ -507,8 +507,9 @@ export const MegaMenuLink = styled.a`
 `;
 
 export const MegaMenuArrow = styled.span`
-  margin-left: auto;
+  display: inline-flex;
   color: ${({ theme }) => theme.colors.text.strong};
   opacity: 1;
   transform: translateX(0);
+  margin-left: auto;
 `;

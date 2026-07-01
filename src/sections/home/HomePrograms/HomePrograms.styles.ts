@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 export const HeaderSection = styled.div`
-  margin-bottom: 80px;
+  margin-bottom: 70px;
 `;
 
 export const SectionLabel = styled.span`
@@ -16,7 +16,7 @@ export const SectionLabel = styled.span`
 `;
 
 export const SectionTitle = styled.h2`
-  font-size: clamp(2.75rem, 5vw, 4.5rem);
+  font-size: 3.5rem;
   font-weight: 500;
   line-height: 1.0;
   color: ${({ theme }) => theme.colors.text.primary};
@@ -29,7 +29,7 @@ export const SectionTitle = styled.h2`
 export const TwoColumnLayout = styled.div`
   display: grid;
   grid-template-columns: 56px 1fr;
-  gap: 64px;
+  gap:120px;
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
@@ -180,6 +180,6 @@ export const VisualCaption = styled.div`
 
 export const FooterAction = styled.div`
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-top: 80px;
 `;

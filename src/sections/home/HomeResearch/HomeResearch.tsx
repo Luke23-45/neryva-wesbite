@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { motion } from 'framer-motion';
 import { TextLink } from '@/components/common/ui/TextLink';
 import homeResearchData from '@data/pages/home/home_research.json';
+import focusAreas from '@data/pages/home/focus-areas.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -38,10 +39,11 @@ const AreaIcons: Record<string, FC> = {
 };
 
 export function HomeResearch() {
-  const { heading, cards, footer } = homeResearchData;
+  const { heading, footer } = homeResearchData;
+  const cards = focusAreas;
 
   return (
-    <Section paddingY="lg" background={theme.colors.background.secondary}>
+    <Section paddingYTop="lg" paddingYBottom="none" background={theme.colors.background.secondary}>
       <Container>
         {/* Section header */}
         <HeaderSection
@@ -51,9 +53,6 @@ export function HomeResearch() {
           viewport={{ once: true, margin: '-80px' }}
           variants={staggerContainer}
         >
-          <motion.div variants={fadeUp}>
-            <SectionLabel>Research</SectionLabel>
-          </motion.div>
           <motion.div variants={fadeUp}>
             <Title>{heading.title}</Title>
           </motion.div>
@@ -68,12 +67,14 @@ export function HomeResearch() {
           variants={staggerContainer}
         >
           {cards.map((area) => {
-            const IconComponent = AreaIcons[area.id] || (() => null);
+            const IconComponent = AreaIcons[area.id] || null;
             return (
               <BentoCard key={area.id} as={motion.div} variants={fadeUp}>
-                <CardIconWrapper>
-                  <IconComponent />
-                </CardIconWrapper>
+                {IconComponent && (
+                  <CardIconWrapper>
+                    <IconComponent />
+                  </CardIconWrapper>
+                )}
                 <CardTitle>{area.title}</CardTitle>
                 <CardDescription>{area.description}</CardDescription>
               </BentoCard>

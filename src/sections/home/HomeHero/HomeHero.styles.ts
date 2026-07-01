@@ -3,12 +3,14 @@ import styled from 'styled-components';
 export const HeroWrapper = styled.section`
   display: flex;
   width: 100%;
-  min-height: calc(100vh - 72px);
+  min-height: calc(84vh - 72px);
   background-color: #ffffff;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+
   
   @media (max-width: 900px) {
     flex-direction: column;
+    min-height: auto;
   }
 `;
 
@@ -17,6 +19,7 @@ export const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   border-right: 1px solid #eaeaea;
+    padding-top:1.5rem;
 `;
 
 export const RightColumn = styled.div`
@@ -24,32 +27,35 @@ export const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
   background-color: #f5f4f0;
+    padding-top:1.5rem;
 `;
 
 export const LeftTop = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
-  padding: 8rem 4rem;
+  padding: 5.5rem 4rem 4.5rem;
   
   @media (max-width: 900px) {
-    padding: 4rem 2rem;
+    padding: 3.5rem 2rem 3rem;
   }
 `;
 
 export const Headline = styled.h1`
-  font-size: clamp(4rem, 8vw, 7rem);
+  max-width: 13.5ch;
+  font-size: 6.2rem;
   font-weight: 500;
-  line-height: 1.05;
+  line-height: 0.96;
   color: #000000;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.055em;
   margin: 0;
+  text-wrap: balance;
 `;
 
 export const LeftBottom = styled.div`
   flex: 1;
   position: relative;
-  min-height: 400px;
+  min-height: 340px;
   background-color: #ff4c00;
   overflow: hidden;
 `;
@@ -58,20 +64,25 @@ export const RightTop = styled.div`
   flex: 1;
   display: flex;
   align-items: flex-end;
-  padding: 4rem;
-  
+  justify-content: center;
+  padding: 0.5rem 3rem 2.5rem;
+  padding-bottom:3.3rem;
+
+  border-bottom: 1px solid rgba(126, 126, 126, 0.5);
+
   @media (max-width: 900px) {
-    padding: 4rem 2rem 2rem 2rem;
+    padding: 2.5rem 2rem 1.5rem;
   }
 `;
 
 export const Description = styled.p`
-  font-size: 1.25rem;
-  line-height: 1.4;
+  font-size: 1.4rem;
+  line-height: 1.36;
   color: #000000;
-  font-weight: 400;
+  font-weight: 500;
   margin: 0;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
+
 `;
 
 export const RightBottom = styled.div`
@@ -79,10 +90,10 @@ export const RightBottom = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 4rem;
+  padding: 2.5rem 4rem 3rem;
   
   @media (max-width: 900px) {
-    padding: 2rem 2rem 4rem 2rem;
+    padding: 1.5rem 2rem 3rem;
   }
 `;
 
@@ -90,23 +101,23 @@ export const ArrowsContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 4rem;
+  gap: 6px;
+  margin-bottom: 2.5rem;
   color: #a0a0a0;
 `;
 
 export const NewsSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 `;
 
 export const NewsLabel = styled.span`
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: #888;
-  font-family: monospace;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
 `;
 
 export const NewsCard = styled.div`
@@ -137,8 +148,9 @@ export const NewsImage = styled.div<{ background: string }>`
 export const NewsTitle = styled.div`
   flex: 1;
   padding: 0 1rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: #000000;
 `;
 

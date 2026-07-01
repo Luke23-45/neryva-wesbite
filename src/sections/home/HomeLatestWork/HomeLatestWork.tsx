@@ -80,80 +80,77 @@ export function HomeLatestWork() {
       <Section paddingYTop="lg" paddingYBottom="none" background={theme.colors.background.primary}>
         <Container>
           {/* Header */}
-        <HeaderRow
-          as={motion.div}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-80px' }}
-          variants={staggerContainer}
-        >
-          <HeaderLeft>
-            <motion.div variants={fadeUp}>
-              <SectionLabel>{heading.label}</SectionLabel>
-            </motion.div>
-            <motion.div variants={fadeUp}>
-              <SectionTitle>{heading.title}</SectionTitle>
-            </motion.div>
-          </HeaderLeft>
+          <HeaderRow
+            as={motion.div}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={staggerContainer}
+          >
+            <HeaderLeft>
+              <motion.div variants={fadeUp}>
+                <SectionTitle>{heading.title}</SectionTitle>
+              </motion.div>
+            </HeaderLeft>
 
-          <ControlsContainer as={motion.div} variants={fadeUp}>
-            <TextLink to="/research" style={{ marginRight: 24 }}>
-              See all updates
-            </TextLink>
-            <ControlButton onClick={handlePrev} aria-label="Previous">
-              <ChevronLeft size={20} />
-            </ControlButton>
-            <ControlButton onClick={handleNext} aria-label="Next">
-              <ChevronRight size={20} />
-            </ControlButton>
-          </ControlsContainer>
-        </HeaderRow>
+            <ControlsContainer as={motion.div} variants={fadeUp}>
+              <TextLink to="/research" style={{ marginRight: 24 }}>
+                See all updates
+              </TextLink>
+              <ControlButton onClick={handlePrev} aria-label="Previous">
+                <ChevronLeft size={20} />
+              </ControlButton>
+              <ControlButton onClick={handleNext} aria-label="Next">
+                <ChevronRight size={20} />
+              </ControlButton>
+            </ControlsContainer>
+          </HeaderRow>
 
-        {/* Queue */}
-        <QueueViewport
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          <QueueTrack>
-            <AnimatePresence mode="popLayout">
-              {visibleItems.map((item) => (
-                <UpdateCard
-                  key={item._uniqueKey}
-                  to={item.link}
-                  $accent={item.accent}
-                  as={motion.a}
-                  layout
-                  initial={{ opacity: 0, x: 80, scale: 0.97 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -80, scale: 0.97, filter: 'blur(3px)' }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.9 }}
-                >
-                  {/* Row 1: Mosaic thumbnail */}
-                  <CardVisualWrapper>
-                    <CardVisual accent={item.accent} title={item.title} />
-                  </CardVisualWrapper>
+          {/* Queue */}
+          <QueueViewport
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <QueueTrack>
+              <AnimatePresence mode="popLayout">
+                {visibleItems.map((item) => (
+                  <UpdateCard
+                    key={item._uniqueKey}
+                    to={item.link}
+                    $accent={item.accent}
+                    as={motion.a}
+                    layout
+                    initial={{ opacity: 0, x: 80, scale: 0.97 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -80, scale: 0.97, filter: 'blur(3px)' }}
+                    transition={{ type: 'spring', stiffness: 220, damping: 28, mass: 0.9 }}
+                  >
+                    {/* Row 1: Mosaic thumbnail */}
+                    <CardVisualWrapper>
+                      <CardVisual accent={item.accent} title={item.title} />
+                    </CardVisualWrapper>
 
-                  {/* Row 2: Tag pill */}
-                  <CardMeta>
-                    <CardTag $accent={item.accent}>{item.tag}</CardTag>
-                  </CardMeta>
+                    {/* Row 2: Tag pill */}
+                    <CardMeta>
+                      <CardTag $accent={item.accent}>{item.tag}</CardTag>
+                    </CardMeta>
 
-                  {/* Row 3: Title + Description */}
-                  <CardTitle>{item.title}</CardTitle>
-                  <CardDescription>{item.description}</CardDescription>
+                    {/* Row 3: Title + Description */}
+                    <CardTitle>{item.title}</CardTitle>
+                    <CardDescription>{item.description}</CardDescription>
 
-                  {/* Row 4: Date (left) + Arrow (right) */}
-                  <CardFooter>
-                    <CardDate>{item.date}</CardDate>
-                    <CardFooterArrow>
-                      <ArrowIcon />
-                    </CardFooterArrow>
-                  </CardFooter>
-                </UpdateCard>
-              ))}
-            </AnimatePresence>
-          </QueueTrack>
-        </QueueViewport>
+                    {/* Row 4: Date (left) + Arrow (right) */}
+                    <CardFooter>
+                      <CardDate>{item.date}</CardDate>
+                      <CardFooterArrow>
+                        <ArrowIcon />
+                      </CardFooterArrow>
+                    </CardFooter>
+                  </UpdateCard>
+                ))}
+              </AnimatePresence>
+            </QueueTrack>
+          </QueueViewport>
         </Container>
       </Section>
     </OverflowWrapper>

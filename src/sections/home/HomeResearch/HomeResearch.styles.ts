@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const HeaderSection = styled.div`
   max-width: 600px;
-  margin: 0 0 72px 0;
+  margin: 0 0 50px 0;
 `;
 
 export const SectionLabel = styled.span`
@@ -17,7 +17,7 @@ export const SectionLabel = styled.span`
 `;
 
 export const Title = styled.h2`
-  font-size: clamp(2.75rem, 5vw, 4.5rem);
+  font-size: 3.6rem;
   font-weight: 500;
   line-height: 1.0;
   color: ${({ theme }) => theme.colors.text.primary};
@@ -27,11 +27,14 @@ export const Title = styled.h2`
 
 export const BentoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  margin-bottom: ${({ theme }) => theme.spacing.s10};
 
   ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
   }
 `;
@@ -95,6 +98,7 @@ export const CardDescription = styled.p`
 `;
 
 export const FooterAction = styled.div`
+margin-top:2rem;
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
 `;
