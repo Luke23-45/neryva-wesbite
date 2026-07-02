@@ -11,12 +11,14 @@ export function ResourcesWriting() {
   return (
     <Section paddingY="md" background={theme.colors.surface}>
       <BorderTop>
-        <Container as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
-          <motion.div variants={fadeUp}><Title>Technical Writing</Title></motion.div>
-          <motion.div variants={fadeUp}>
-            {data.items.length > 0 ? <p>Writing items here.</p> : <Message>{data.earlyStageMessage}</Message>}
-          </motion.div>
-        </Container>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
+          <Container>
+            <motion.div variants={fadeUp}><Title>Technical Writing</Title></motion.div>
+            <motion.div variants={fadeUp}>
+              {data.items.length > 0 ? <p>Writing items here.</p> : <Message>{data.earlyStageMessage}</Message>}
+            </motion.div>
+          </Container>
+        </motion.div>
       </BorderTop>
     </Section>
   );

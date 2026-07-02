@@ -11,7 +11,6 @@ import {
   OverflowWrapper,
   HeaderRow,
   HeaderLeft,
-  SectionLabel,
   SectionTitle,
   ControlsContainer,
   ControlButton,
@@ -94,7 +93,7 @@ export function HomeLatestWork() {
             </HeaderLeft>
 
             <ControlsContainer as={motion.div} variants={fadeUp}>
-              <TextLink to="/research" style={{ marginRight: 24 }}>
+              <TextLink to="/research">
                 See all updates
               </TextLink>
               <ControlButton onClick={handlePrev} aria-label="Previous">

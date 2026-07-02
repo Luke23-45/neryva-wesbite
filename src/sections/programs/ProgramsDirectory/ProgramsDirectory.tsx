@@ -12,9 +12,10 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 
 export function ProgramsDirectory() {
   return (
-    <Section paddingY="md" paddingYBottom="lg" background={theme.colors.surface}>
+    <Section paddingY="md" paddingYBottom="lg" background={theme.colors.background.primary}>
       <BorderTop>
-        <Container as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
+        <Container>
           {programs.map((p) => (
             <motion.div key={p.slug} variants={fadeUp}>
               <Card $accent={p.accent}>
@@ -29,6 +30,7 @@ export function ProgramsDirectory() {
             </motion.div>
           ))}
         </Container>
+        </motion.div>
       </BorderTop>
     </Section>
   );

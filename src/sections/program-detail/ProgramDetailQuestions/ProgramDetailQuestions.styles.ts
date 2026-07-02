@@ -11,7 +11,7 @@ export const SectionLabel = styled.span`
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 16px;
 `;
 
@@ -20,7 +20,7 @@ export const SectionTitle = styled.h2`
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
 `;
 
@@ -34,10 +34,10 @@ export const ThreadItem = styled.div`
   grid-template-columns: 64px 1fr;
   gap: 40px;
   padding: 40px 0;
-  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   &:last-child {
-    border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -51,7 +51,7 @@ export const ThreadIndex = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 12px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   padding-top: 4px;
 `;
 
@@ -61,16 +61,16 @@ export const ThreadTitle = styled.h3`
   font-size: 1.375rem;
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 16px 0;
 `;
 
 export const ThreadQuestion = styled.p`
   font-size: 1rem;
   line-height: 1.65;
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   font-style: italic;
   padding-left: 16px;
-  border-left: 2px solid ${({ theme }) => theme.colors.line};
+  border-left: 2px solid ${({ theme }) => theme.colors.border};
 `;

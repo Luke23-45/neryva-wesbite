@@ -14,7 +14,7 @@ const fadeUp: any = {
 
 export function HomeContact() {
   return (
-    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.graphite}>
+    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.background.secondary}>
       <Container>
         <CenterContent
           as={motion.div}

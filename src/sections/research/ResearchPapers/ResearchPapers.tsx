@@ -76,128 +76,130 @@ export function ResearchPapers() {
   const isEmpty = items.length === 0;
   const filteredEmpty = !isEmpty && filtered.length === 0;
   const grouped = useMemo(() => groupByYear(filtered), [filtered]);
-
+  //paddingYTop="md" paddingYBottom="none"
   return (
     <Section paddingY="md" background={theme.colors.background.primary}>
-      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
-        <Header>
-          <motion.div variants={fadeUp}>
-            <Title>Papers & Preprints</Title>
-          </motion.div>
-
-          {!isEmpty && (
+      <Container>
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} variants={stagger}>
+          <Header>
             <motion.div variants={fadeUp}>
-              <FilterBar>
-                {['all', 'large-language-models', 'robotics-task-transfer', 'clinical-ai', 'energy-engineering-optimization'].map(
-                  (id) => (
-                    <FilterButton
-                      key={id}
-                      $active={filter === id}
-                      $accent={programAccents[id] || '#64748B'}
-                      onClick={() => setFilter(id)}
-                    >
-                      {id === 'all' ? 'All' : programLabels[id]}
-                    </FilterButton>
-                  ),
-                )}
-              </FilterBar>
+              <Title>Papers & Preprints</Title>
             </motion.div>
-          )}
-        </Header>
 
-        {isEmpty && (
-          <EmptyState
-            as={motion.div}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] as const }}
-          >
-            <EmptyTitle>Papers are on the way.</EmptyTitle>
-            <EmptyRule />
-            <EmptyText>{earlyStageMessage}</EmptyText>
-            <EmptyText>
-              In the meantime, explore our{' '}
-              <Link to="/research" style={{ color: '#14B8A6', textDecoration: 'none' }}>
-                research agenda
-              </Link>
-              .
-            </EmptyText>
-          </EmptyState>
-        )}
-
-        {filteredEmpty && (
-          <EmptyState
-            as={motion.div}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] as const }}
-          >
-            <EmptyTitle>No papers for this program yet.</EmptyTitle>
-            <EmptyRule />
-            <EmptyText>Results will appear here as they become available.</EmptyText>
-          </EmptyState>
-        )}
-
-        {!isEmpty && filtered.length > 0 && (
-          <List>
-            {Object.entries(grouped)
-              .sort(([a], [b]) => Number(b) - Number(a))
-              .map(([year, papers]) => (
-                <YearGroup key={year}>
-                  <YearHeader
-                    as={motion.div}
-                    initial={{ opacity: 0, x: -8 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] as const }}
-                  >
-                    {year}
-                  </YearHeader>
-                  {papers.map((paper, i) => (
-                    <motion.div
-                      key={paper.title}
-                      initial={{ opacity: 0, y: 8 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{
-                        duration: 0.4,
-                        ease: [0.2, 0, 0, 1] as const,
-                        delay: i * 0.04,
-                      }}
-                    >
-                      <PaperRow
-                        as={paper.url ? Link : 'div'}
-                        to={paper.url || '#'}
-                        $accent={programAccents[paper.program] || '#64748B'}
+            {!isEmpty && (
+              <motion.div variants={fadeUp}>
+                <FilterBar>
+                  {['all', 'large-language-models', 'robotics-task-transfer', 'clinical-ai', 'energy-engineering-optimization'].map(
+                    (id) => (
+                      <FilterButton
+                        key={id}
+                        $active={filter === id}
+                        $accent={programAccents[id] || '#64748B'}
+                        onClick={() => setFilter(id)}
                       >
-                        <PaperLeft>
-                          <PaperTitle>{paper.title}</PaperTitle>
-                          <PaperMeta>
-                            <Authors>{paper.authors.join(', ')}</Authors>
-                            <StatusBadge $status={paper.status} $accent={programAccents[paper.program] || '#64748B'}>
-                              {paper.status}
-                            </StatusBadge>
-                            <DateSpan>{paper.date}</DateSpan>
-                            {paper.venue && (
-                              <span style={{ color: '#64748B' }}>{paper.venue}</span>
-                            )}
-                          </PaperMeta>
-                        </PaperLeft>
-                        {paper.url && (
-                          <PaperArrow>
-                            <ArrowRight size={14} />
-                          </PaperArrow>
-                        )}
-                      </PaperRow>
-                    </motion.div>
-                  ))}
-                </YearGroup>
-              ))}
-          </List>
-        )}
-      </motion.div>
+                        {id === 'all' ? 'All' : programLabels[id]}
+                      </FilterButton>
+                    ),
+                  )}
+                </FilterBar>
+              </motion.div>
+            )}
+          </Header>
+
+          {isEmpty && (
+            <EmptyState
+              as={motion.div}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] as const }}
+            >
+              <EmptyTitle>Papers are on the way.</EmptyTitle>
+              <EmptyRule />
+              <EmptyText>{earlyStageMessage}</EmptyText>
+              <EmptyText>
+                In the meantime, explore our{' '}
+                <Link to="/research" style={{ color: '#14B8A6', textDecoration: 'none' }}>
+                  research agenda
+                </Link>
+                .
+              </EmptyText>
+            </EmptyState>
+          )}
+
+          {filteredEmpty && (
+            <EmptyState
+              as={motion.div}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] as const }}
+            >
+              <EmptyTitle>No papers for this program yet.</EmptyTitle>
+              <EmptyRule />
+              <EmptyText>Results will appear here as they become available.</EmptyText>
+            </EmptyState>
+          )}
+
+          {!isEmpty && filtered.length > 0 && (
+            <List>
+              {Object.entries(grouped)
+                .sort(([a], [b]) => Number(b) - Number(a))
+                .map(([year, papers]) => (
+                  <YearGroup key={year}>
+                    <YearHeader
+                      as={motion.div}
+                      initial={{ opacity: 0, x: -8 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] as const }}
+                    >
+                      {year}
+                    </YearHeader>
+                    {papers.map((paper, i) => (
+                      <motion.div
+                        key={paper.title}
+                        initial={{ opacity: 0, y: 8 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{
+                          duration: 0.4,
+                          ease: [0.2, 0, 0, 1] as const,
+                          delay: i * 0.04,
+                        }}
+                      >
+                        <PaperRow
+                          as={paper.url ? Link : 'div'}
+                          to={paper.url || '#'}
+                          $accent={programAccents[paper.program] || '#64748B'}
+                        >
+                          <PaperLeft>
+                            <PaperTitle>{paper.title}</PaperTitle>
+                            <PaperMeta>
+                              <Authors>{paper.authors.join(', ')}</Authors>
+                              <StatusBadge $status={paper.status} $accent={programAccents[paper.program] || '#64748B'}>
+                                {paper.status}
+                              </StatusBadge>
+                              <DateSpan>{paper.date}</DateSpan>
+                              {paper.venue && (
+                                <span style={{ color: '#64748B' }}>{paper.venue}</span>
+                              )}
+                            </PaperMeta>
+                          </PaperLeft>
+                          {paper.url && (
+                            <PaperArrow>
+                              <ArrowRight size={14} />
+                            </PaperArrow>
+                          )}
+                        </PaperRow>
+                      </motion.div>
+                    ))}
+                  </YearGroup>
+                ))}
+            </List>
+          )}
+        </motion.div>
+      </Container>
     </Section>
   );
 }

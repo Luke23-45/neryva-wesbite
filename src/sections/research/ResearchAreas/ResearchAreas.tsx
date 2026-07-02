@@ -2,8 +2,10 @@ import { useRef, useEffect, useState } from 'react';
 import { useTheme } from 'styled-components';
 import { motion } from 'framer-motion';
 import programAreas from '@data/research/program-areas.json';
-import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
+import { PixelArrow } from '@/components/common/PixelArrow';
+import { ModelMotif } from '@/components/common/ModelMotifs';
+import { Section } from '@/sections/common/layout/Section';
 import {
   FlexContainer,
   Sidebar,
@@ -12,11 +14,16 @@ import {
   ProgramSection,
   ProgramTitle,
   CardGrid,
+  GridCell,
   Card,
+  CardHeader,
+  MotifBox,
+  OpenBadge,
+  CardBody,
   CardTitle,
+  CardDescription,
   TagRow,
   Tag,
-  CardDescription,
 } from './ResearchAreas.styles';
 
 type ProgramId = keyof typeof programAreas;
@@ -58,7 +65,7 @@ export function ResearchAreas() {
   };
 
   return (
-    <Section paddingY="md" background={theme.colors.background.secondary}>
+    <Section paddingYTop="md" paddingYBottom="none" background={theme.colors.background.secondary}>
       <Container>
         <FlexContainer>
           <Sidebar>
@@ -72,6 +79,7 @@ export function ResearchAreas() {
                   onClick={() => scrollTo(id)}
                 >
                   {p.title}
+                  {id === active && <PixelArrow size={14} />}
                 </SidebarItem>
               );
             })}
@@ -98,23 +106,33 @@ export function ResearchAreas() {
                   <ProgramTitle $accent={p.accent}>{p.title}</ProgramTitle>
                   <CardGrid>
                     {p.cards.map((card, i) => (
-                      <motion.div
-                        key={card.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] as const, delay: i * 0.06 }}
-                      >
-                        <Card>
-                          <CardTitle>{card.title}</CardTitle>
-                          <TagRow>
-                            {card.labels.map((label) => (
-                              <Tag key={label}>{label}</Tag>
-                            ))}
-                          </TagRow>
-                          <CardDescription>{card.description}</CardDescription>
-                        </Card>
-                      </motion.div>
+                      <GridCell key={card.id}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 12 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, ease: [0.2, 0, 0, 1] as const, delay: i * 0.06 }}
+                          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+                        >
+                          <Card>
+                            <CardHeader>
+                              <MotifBox>
+                                <ModelMotif programId={id} size={20} color={p.accent} />
+                              </MotifBox>
+                              <OpenBadge>OPEN</OpenBadge>
+                            </CardHeader>
+                            <CardBody>
+                              <CardTitle>{card.title}</CardTitle>
+                              <CardDescription>{card.description}</CardDescription>
+                              <TagRow>
+                                {card.labels.map((label) => (
+                                  <Tag key={label}>{label}</Tag>
+                                ))}
+                              </TagRow>
+                            </CardBody>
+                          </Card>
+                        </motion.div>
+                      </GridCell>
                     ))}
                   </CardGrid>
                 </ProgramSection>

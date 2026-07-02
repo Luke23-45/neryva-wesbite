@@ -1,16 +1,10 @@
 import { motion } from 'framer-motion';
 import type { ProgramPage } from '@types';
-import { LLMIcon } from '@/assets/visual/home/programs/LLMIcon';
-import { RoboticsIcon } from '@/assets/visual/home/programs/RoboticsIcon';
-import { ClinicalIcon } from '@/assets/visual/home/programs/ClinicalIcon';
-import { EnergyIcon } from '@/assets/visual/home/programs/EnergyIcon';
+import { ProgramHeroVisual } from './ProgramHeroVisual';
 import {
   Wrapper,
   Inner,
   LeftColumn,
-  MetaRow,
-  ProgramNumber,
-  StatusBadge,
   Title,
   Summary,
   RightColumn,
@@ -24,12 +18,7 @@ const fadeUp = {
   visible: (d: number) => ({ opacity: 1, y: 0, transition: { duration: 0.8, ease: spring, delay: d } }),
 };
 
-const ICONS: Record<string, JSX.Element> = {
-  'large-language-models': <LLMIcon />,
-  'robotics-task-transfer': <RoboticsIcon />,
-  'clinical-ai': <ClinicalIcon />,
-  'energy-engineering-optimization': <EnergyIcon />,
-};
+
 
 interface Props {
   program: ProgramPage;
@@ -41,13 +30,6 @@ export function ProgramDetailHero({ program, slug }: Props) {
     <Wrapper $accent={program.accent}>
       <Inner>
         <LeftColumn>
-          <motion.div initial="hidden" animate="visible" custom={0.1} variants={fadeUp}>
-            <MetaRow>
-              <ProgramNumber>Program {String(program.number).padStart(2, '0')}</ProgramNumber>
-              <StatusBadge $accent={program.accent}>{program.status}</StatusBadge>
-            </MetaRow>
-          </motion.div>
-
           <motion.div initial="hidden" animate="visible" custom={0.22} variants={fadeUp}>
             <Title $accent={program.accent}>{program.title}</Title>
           </motion.div>
@@ -63,8 +45,8 @@ export function ProgramDetailHero({ program, slug }: Props) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.0, ease: spring, delay: 0.5 }}
           >
-            <IconFrame $accent={program.accent}>
-              {ICONS[slug] ?? null}
+            <IconFrame>
+              <ProgramHeroVisual slug={slug} accent={program.accent} />
             </IconFrame>
           </motion.div>
         </RightColumn>

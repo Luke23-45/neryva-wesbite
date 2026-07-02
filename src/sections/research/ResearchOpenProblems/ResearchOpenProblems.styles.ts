@@ -17,7 +17,7 @@ export const ProblemItem = styled.div`
 export const ProblemNumber = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.label};
-  color: ${({ theme }) => theme.colors.accent.tealText};
+  color: ${({ theme }) => theme.colors.accent.emeraldText};
   min-width: 24px;
   margin-top: 4px;
 `;

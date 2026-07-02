@@ -8,8 +8,9 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 
 export function ProgramsHero() {
   return (
-    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.paper}>
-      <Container as={motion.div} initial="hidden" animate="visible" transition={{ staggerChildren: 0.1 }}>
+    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.background.primary}>
+      <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: 0.1 }}>
+      <Container>
         <motion.div variants={fadeUp}><Eyebrow>Programs</Eyebrow></motion.div>
         <motion.div variants={fadeUp}><Title>How our research agenda is organized.</Title></motion.div>
         <motion.div variants={fadeUp}>
@@ -18,6 +19,7 @@ export function ProgramsHero() {
           </Description>
         </motion.div>
       </Container>
+      </motion.div>
     </Section>
   );
 }

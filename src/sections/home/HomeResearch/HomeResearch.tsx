@@ -9,7 +9,6 @@ import { theme } from '@/styles/theme';
 import { EfficiencyIcon, AdaptabilityIcon, ReliabilityIcon } from '@assets/visual/home/research';
 import {
   HeaderSection,
-  SectionLabel,
   Title,
   BentoGrid,
   BentoCard,

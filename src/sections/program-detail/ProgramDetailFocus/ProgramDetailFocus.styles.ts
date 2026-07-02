@@ -2,8 +2,8 @@ import styled from 'styled-components';
 
 export const Wrapper = styled.section`
   padding: 120px 0;
-  background: ${({ theme }) => theme.colors.paper};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  background: ${({ theme }) => theme.colors.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
     padding: 80px 0;
@@ -32,7 +32,7 @@ export const SectionLabel = styled.span`
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   display: block;
   margin-bottom: 8px;
 `;
@@ -42,7 +42,7 @@ export const SectionTitle = styled.h2`
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
 `;
 
@@ -55,6 +55,6 @@ export const ArgumentBody = styled.div`
 export const ArgumentParagraph = styled.p`
   font-size: 1.125rem;
   line-height: 1.75;
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;

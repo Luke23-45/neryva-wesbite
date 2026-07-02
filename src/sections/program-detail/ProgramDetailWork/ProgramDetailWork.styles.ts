@@ -2,8 +2,8 @@ import styled from 'styled-components';
 
 export const Wrapper = styled.section`
   padding: 120px 0;
-  background: ${({ theme }) => theme.colors.paper};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  background: ${({ theme }) => theme.colors.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
     padding: 80px 0;
@@ -33,7 +33,7 @@ export const BlockLabel = styled.span`
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
 `;
 
@@ -69,18 +69,18 @@ export const StatusIndicator = styled.div<{ $accent: string }>`
 export const StatusBody = styled.p`
   font-size: 1.0625rem;
   line-height: 1.7;
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
 
 export const FutureBlock = styled.div`
-  border-left: 3px solid ${({ theme }) => theme.colors.line};
+  border-left: 3px solid ${({ theme }) => theme.colors.border};
   padding-left: 32px;
 
   ${({ theme }) => theme.media.tablet} {
     border-left: none;
     padding-left: 0;
-    border-top: 3px solid ${({ theme }) => theme.colors.line};
+    border-top: 3px solid ${({ theme }) => theme.colors.border};
     padding-top: 32px;
   }
 `;
@@ -88,6 +88,6 @@ export const FutureBlock = styled.div`
 export const FutureBody = styled.p`
   font-size: 1.0625rem;
   line-height: 1.7;
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;

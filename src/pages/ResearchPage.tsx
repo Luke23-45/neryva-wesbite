@@ -2,7 +2,6 @@ import { PageHead } from '@components/common/PageHead';
 import { ResearchHero } from '@/sections/research/ResearchHero';
 import { ResearchAreas } from '@/sections/research/ResearchAreas';
 import { ResearchPapers } from '@/sections/research/ResearchPapers';
-import { ResearchOpenProblems } from '@/sections/research/ResearchOpenProblems';
 
 export default function ResearchPage() {
   return (
@@ -15,7 +14,6 @@ export default function ResearchPage() {
       <ResearchHero />
       <ResearchAreas />
       <ResearchPapers />
-      <ResearchOpenProblems />
     </>
   );
 }

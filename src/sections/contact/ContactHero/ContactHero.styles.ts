@@ -21,7 +21,7 @@ export const Title = styled.h1`
 export const Description = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
   line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   max-width: 560px;
   ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.bodyLg}; }
 `;

@@ -25,12 +25,12 @@ export const Body = styled.p`
 export const Email = styled.a`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
-  color: ${({ theme }) => theme.colors.accent.tealText};
+  color: ${({ theme }) => theme.colors.accent.emeraldText};
   border: 1px solid transparent;
   padding: 4px 0;
   text-decoration: none;
   
   &:hover {
-    color: ${({ theme }) => theme.colors.accent.teal};
+    color: ${({ theme }) => theme.colors.accent.emerald};
   }
 `;

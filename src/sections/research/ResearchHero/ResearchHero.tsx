@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useUiStore } from '@store/uiStore';
 import { HeroMosaic } from './HeroMosaic';
 import {
   Wrapper,
@@ -28,6 +30,12 @@ const fadeUp = {
 };
 
 export function ResearchHero() {
+  const { setHeaderTheme } = useUiStore();
+
+  useEffect(() => {
+    setHeaderTheme('dark');
+    return () => setHeaderTheme('light');
+  }, [setHeaderTheme]);
   return (
     <Wrapper>
       {/* ── Eyebrow label ── */}

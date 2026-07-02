@@ -23,8 +23,8 @@ export const GlobalStyles = createGlobalStyle`
     font-size: ${({ theme }) => theme.typography.sizes.body};
     font-weight: ${({ theme }) => theme.typography.weights.regular};
     line-height: ${({ theme }) => theme.typography.lineHeights.body};
-    color: ${({ theme }) => theme.colors.ink};
-    background-color: ${({ theme }) => theme.colors.paper};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background-color: ${({ theme }) => theme.colors.background.primary};
     min-height: 100vh;
   }
 
@@ -41,12 +41,12 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Links */
   a {
-    color: ${({ theme }) => theme.colors.blue};
+    color: ${({ theme }) => theme.colors.accent.azureText};
     text-decoration: none;
     transition: color ${({ theme }) => theme.transitions.fast};
 
     &:hover {
-      color: ${({ theme }) => theme.colors.blueHover};
+      color: ${({ theme }) => theme.colors.accent.azureDark};
     }
   }
 
@@ -73,13 +73,13 @@ export const GlobalStyles = createGlobalStyle`
 
   /* Focus styles */
   :focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.blue};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.azureText};
     outline-offset: 2px;
   }
 
   /* Selection */
   ::selection {
-    background-color: ${({ theme }) => theme.colors.blue};
+    background-color: ${({ theme }) => theme.colors.accent.azure};
     color: ${({ theme }) => theme.colors.surface};
   }
 

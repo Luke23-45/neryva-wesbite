@@ -145,7 +145,7 @@ export const PaperTitle = styled.span`
   line-height: ${({ theme }) => theme.typography.lineHeights.h3};
 
   ${PaperRow}:hover & {
-    color: ${({ theme }) => theme.colors.accent.teal};
+    color: ${({ theme }) => theme.colors.accent.emerald};
   }
 `;
 

@@ -7,7 +7,7 @@ import { ProgramDetailHero } from '@/sections/program-detail/ProgramDetailHero';
 import { ProgramDetailFocus } from '@/sections/program-detail/ProgramDetailFocus';
 import { ProgramDetailQuestions } from '@/sections/program-detail/ProgramDetailQuestions';
 import { ProgramDetailWork } from '@/sections/program-detail/ProgramDetailWork';
-import { ProgramDetailReading } from '@/sections/program-detail/ProgramDetailReading';
+
 
 const NotFoundWrapper = styled.section`
   padding: 120px 0;
@@ -43,7 +43,7 @@ export default function ProgramDetailPage() {
       <ProgramDetailFocus program={program} />
       <ProgramDetailQuestions program={program} />
       <ProgramDetailWork program={program} />
-      <ProgramDetailReading program={program} />
+
     </>
   );
 }

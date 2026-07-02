@@ -195,3 +195,28 @@ export interface EarlyStageData<T> {
   items: T[];
   earlyStageMessage?: string;
 }
+
+// ─── Blog ───────────────────────────────────────────────
+export interface BlogPostSection {
+  type: 'heading' | 'paragraph' | 'pullquote' | 'code' | 'callout';
+  level?: 2 | 3;             // for type === 'heading'
+  language?: string;         // for type === 'code'
+  label?: string;            // for type === 'callout'
+  text: string;
+}
+
+export interface BlogPost {
+  id: number;
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+  date: string;
+  author: string;
+  featured: boolean;
+  colorTheme: string;
+  seed: number;
+  readingTime: number;       // minutes
+  sections: BlogPostSection[];
+}
+

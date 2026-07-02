@@ -9,7 +9,7 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 export function LabTeam() {
   const theme = useTheme();
   return (
-    <Section paddingY="md" background={theme.colors.paper}>
+    <Section paddingY="md" background={theme.colors.background.primary}>
       <BorderTop>
         <Container>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>

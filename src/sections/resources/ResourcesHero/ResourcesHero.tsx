@@ -7,14 +7,16 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 
 export function ResourcesHero() {
   return (
-    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.paper}>
-      <Container as={motion.div} initial="hidden" animate="visible" transition={{ staggerChildren: 0.1 }}>
-        <motion.div variants={fadeUp}><Eyebrow>Resources</Eyebrow></motion.div>
-        <motion.div variants={fadeUp}><Title>Technical writing, open source, and reading lists.</Title></motion.div>
-        <motion.div variants={fadeUp}>
-          <Description>Public outputs from our research â€" writing, code, and curated references we use and recommend.</Description>
-        </motion.div>
-      </Container>
+    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.background.primary}>
+      <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: 0.1 }}>
+        <Container>
+          <motion.div variants={fadeUp}><Eyebrow>Resources</Eyebrow></motion.div>
+          <motion.div variants={fadeUp}><Title>Technical writing, open source, and reading lists.</Title></motion.div>
+          <motion.div variants={fadeUp}>
+            <Description>Public outputs from our research — writing, code, and curated references we use and recommend.</Description>
+          </motion.div>
+        </Container>
+      </motion.div>
     </Section>
   );
 }

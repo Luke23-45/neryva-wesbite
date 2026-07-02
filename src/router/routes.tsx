@@ -9,6 +9,7 @@ import ResourcesPage from '@pages/ResourcesPage';
 import BlogPage from '@pages/BlogPage';
 import AboutPage from '@pages/AboutPage';
 import CareersPage from '@pages/CareersPage';
+import BlogDetailPage from '@pages/BlogDetailPage';
 // import ContactPage from '@pages/ContactPage';
 // import NotFoundPage from '@pages/NotFoundPage';
 
@@ -60,6 +61,12 @@ export const blogRoute = createRoute({
   component: BlogPage,
 });
 
+export const blogDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/blog/$slug',
+  component: BlogDetailPage,
+});
+
 // Lab child routes
 export const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -96,6 +103,7 @@ export const routeDefinitions = [
   ]),
   resourcesRoute,
   blogRoute,
+  blogDetailRoute,
   aboutRoute,
   careersRoute,
   // contactRoute,

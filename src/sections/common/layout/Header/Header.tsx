@@ -44,7 +44,8 @@ import {
 const navItems = getMainNav();
 
 export function Header() {
-  const { isMobileNavOpen, toggleMobileNav, closeMobileNav } = useUiStore();
+  const { isMobileNavOpen, toggleMobileNav, closeMobileNav, headerTheme } = useUiStore();
+  const isDark = headerTheme === 'dark';
   const matchRoute = useMatchRoute();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -82,11 +83,11 @@ export function Header() {
 
   return (
     <>
-      <StyledHeader $scrolled={scrolled}>
+      <StyledHeader $scrolled={scrolled} $isDark={isDark}>
         <HeaderInner>
           {/* LEFT: Brand Logo */}
           <HeaderLeft>
-            <LogoLink as={Link} to="/" onClick={closeMobileNav}>
+            <LogoLink as={Link} to="/" onClick={closeMobileNav} $isDark={isDark}>
               <LogoImage as={LogoIcon} aria-label="Neryva" />
               <span>Neryva</span>
             </LogoLink>
@@ -106,7 +107,7 @@ export function Header() {
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <NavLink as={Link} to={item.href} $isActive={isActive}>
+                      <NavLink as={Link} to={item.href} $isActive={isActive} $isDark={isDark}>
                         {item.label}
                       </NavLink>
                       <MegaMenuPanel
@@ -156,7 +157,7 @@ export function Header() {
                       onMouseEnter={() => handleMouseEnter(item.href)}
                       onMouseLeave={handleMouseLeave}
                     >
-                      <NavLink as={Link} to={item.href} $isActive={isActive}>
+                      <NavLink as={Link} to={item.href} $isActive={isActive} $isDark={isDark}>
                         {item.label}
                       </NavLink>
                       <DropdownPanel
@@ -189,7 +190,7 @@ export function Header() {
 
                 // 3. Simple Link
                 return (
-                  <NavLink key={item.href} as={Link} to={item.href} $isActive={isActive}>
+                  <NavLink key={item.href} as={Link} to={item.href} $isActive={isActive} $isDark={isDark}>
                     {item.label}
                   </NavLink>
                 );
@@ -212,6 +213,7 @@ export function Header() {
               onClick={toggleMobileNav}
               aria-expanded={isMobileNavOpen}
               aria-label={isMobileNavOpen ? 'Close menu' : 'Open menu'}
+              $isDark={isDark}
             >
               {isMobileNavOpen ? <X size={20} /> : <Menu size={20} />}
             </MobileMenuButton>

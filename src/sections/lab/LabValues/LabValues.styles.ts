@@ -17,7 +17,7 @@ export const ValueItem = styled.div`
 export const ValueNumber = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.label};
-  color: ${({ theme }) => theme.colors.accent.tealText};
+  color: ${({ theme }) => theme.colors.accent.emeraldText};
   min-width: 24px;
   margin-top: 4px;
 `;

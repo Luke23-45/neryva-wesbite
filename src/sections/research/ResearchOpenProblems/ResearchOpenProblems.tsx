@@ -11,7 +11,7 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 export function ResearchOpenProblems() {
   const theme = useTheme();
   return (
-    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.graphite}>
+    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.background.secondary}>
       <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.08 }}>
         <Container>
           <motion.div variants={fadeUp}><Title>Open Problems</Title></motion.div>

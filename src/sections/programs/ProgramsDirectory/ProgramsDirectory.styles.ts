@@ -5,9 +5,9 @@ export const BorderTop = styled.div`
 `;
 export const Card = styled.div<{ $accent?: string }>`
   position: relative;
-  border: 1px solid ${({ theme }) => theme.colors.line};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.lg};
-  background: ${({ theme }) => theme.colors.paper};
+  background: ${({ theme }) => theme.colors.background.primary};
   padding: ${({ theme }) => theme.spacing.s7};
   margin-bottom: ${({ theme }) => theme.spacing.s5};
   transition: all ${({ theme }) => theme.transitions.standard};
@@ -17,12 +17,12 @@ export const Card = styled.div<{ $accent?: string }>`
     position: absolute;
     top: 0; left: 0;
     width: 4px; height: 100%;
-    background: ${({ $accent, theme }) => $accent || theme.colors.blue};
+    background: ${({ $accent, theme }) => $accent || theme.colors.accent.azure};
     opacity: 0;
     transition: opacity ${({ theme }) => theme.transitions.fast};
   }
   &:hover {
-    border-color: ${({ theme }) => theme.colors.lineStrong};
+    border-color: ${({ theme }) => theme.colors.text.primary};
     box-shadow: ${({ theme }) => theme.shadows.lg};
     transform: translateY(-3px);
     &::before { opacity: 1; }
@@ -38,21 +38,21 @@ export const CardMeta = styled.div`
 export const CardNumber = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.label};
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   text-transform: uppercase;
   letter-spacing: ${({ theme }) => theme.typography.letterSpacing.label};
 `;
 export const CardTitle = styled.h3`
   font-size: ${({ theme }) => theme.typography.sizes.h3};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin-bottom: ${({ theme }) => theme.spacing.s3};
   ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.h3}; }
 `;
 export const CardBody = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.body};
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   max-width: ${({ theme }) => theme.containers.prose};
   margin-bottom: ${({ theme }) => theme.spacing.s5};
 `;

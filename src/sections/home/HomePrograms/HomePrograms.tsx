@@ -17,7 +17,6 @@ import {
 } from '@assets/visual/home/programs';
 import {
   HeaderSection,
-  SectionLabel,
   SectionTitle,
   TwoColumnLayout,
   SidebarMenu,

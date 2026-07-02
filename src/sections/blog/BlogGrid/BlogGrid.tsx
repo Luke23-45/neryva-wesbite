@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from '@tanstack/react-router';
 import { PostMosaic } from '@/assets/visual/blog/PostMosaic';
 import blogData from '@data/pages/blog.json';
 import {
@@ -113,12 +114,14 @@ export function BlogGrid() {
               const isFeatured = i === 0 && post.featured && activeCategory === 'All' && !searchQuery;
               return (
                 <GridCell key={post.id} $featured={isFeatured}>
+                  <Link to="/resources/blog/$slug" params={{ slug: post.slug }} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flex: 1 }}>
                   <BlogCard
                     as={motion.article}
                     custom={i}
                     initial="hidden"
                     animate="visible"
                     variants={fadeUp}
+                    style={{ flex: 1 }}
                   >
                     {/* Mosaic Visual */}
                     <CardMosaic $featured={isFeatured}>
@@ -138,9 +141,14 @@ export function BlogGrid() {
                     <CardFooter>
                       <CardDate>{formatDate(post.date)}</CardDate>
                       <CardAuthor>{post.author}</CardAuthor>
-                      <CardArrow aria-hidden="true">→</CardArrow>
+                      <CardArrow aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter">
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
+                      </CardArrow>
                     </CardFooter>
                   </BlogCard>
+                  </Link>
                 </GridCell>
               );
             })

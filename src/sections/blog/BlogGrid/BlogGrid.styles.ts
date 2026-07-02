@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 /* ══════════════════════════════════════════════════════════════
    BlogGrid Styles — Pixel-perfect 1px border grid system.
@@ -11,6 +12,7 @@ export const Wrapper = styled.div`
   max-width: ${({ theme }) => theme.containers.page};
   margin: 0 auto;
   padding: 80px ${({ theme }) => theme.spacing.s5} 120px;
+  background: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.mobile} {
     padding: 60px ${({ theme }) => theme.spacing.s4} 80px;
@@ -27,18 +29,17 @@ export const PageTitle = styled.h1`
   font-weight: 500;
   line-height: 1.04;
   letter-spacing: -0.04em;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
 `;
 
 /* ══════════════════════════════════════════════════════════════
    THE BORDERED GRID CONTAINER
-   All children must have a solid background — the gap is the border.
 ══════════════════════════════════════════════════════════════ */
 
 export const GridContainer = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.line};
-  background: ${({ theme }) => theme.colors.line}; /* The "border" color */
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.border}; /* The "border" color */
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 1px;
@@ -46,7 +47,7 @@ export const GridContainer = styled.div`
 
 /* ── Filter Bar ── */
 export const FilterBar = styled.div`
-  background: ${({ theme }) => theme.colors.paper};
+  background: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   align-items: center;
   gap: 0;
@@ -58,7 +59,7 @@ export const FilterLeft = styled.div`
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  border-right: 1px solid ${({ theme }) => theme.colors.line};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
   flex-wrap: wrap;
   flex: 1;
 `;
@@ -69,10 +70,10 @@ export const PostCount = styled.span`
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   white-space: nowrap;
   padding-right: 12px;
-  border-right: 1px solid ${({ theme }) => theme.colors.line};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const CategoryPills = styled.div`
@@ -88,9 +89,9 @@ export const CategoryPill = styled.button<{ $active: boolean }>`
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: ${({ $active, theme }) => ($active ? theme.colors.paper : theme.colors.muted)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.ink : 'transparent')};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.ink : theme.colors.line)};
+  color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.muted)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.text.primary : 'transparent')};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.text.primary : theme.colors.border)};
   border-radius: 20px;
   padding: 4px 10px;
   cursor: pointer;
@@ -98,8 +99,8 @@ export const CategoryPill = styled.button<{ $active: boolean }>`
   white-space: nowrap;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.ink};
-    color: ${({ $active, theme }) => ($active ? theme.colors.paper : theme.colors.ink)};
+    border-color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.primary)};
   }
 `;
 
@@ -112,9 +113,9 @@ export const FilterRight = styled.div`
 export const SearchInput = styled.input`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 13px;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.primary};
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.line};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   padding: 6px 12px;
   width: 200px;
@@ -122,11 +123,11 @@ export const SearchInput = styled.input`
   transition: border-color 160ms ease;
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.muted};
+    color: ${({ theme }) => theme.colors.text.muted};
   }
 
   &:focus {
-    border-color: ${({ theme }) => theme.colors.ink};
+    border-color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -135,7 +136,7 @@ export const SearchInput = styled.input`
 ══════════════════════════════════════════════════════════════ */
 
 export const CardGrid = styled.div`
-  background: ${({ theme }) => theme.colors.line};
+  background: ${({ theme }) => theme.colors.border};
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
@@ -151,7 +152,7 @@ export const CardGrid = styled.div`
 
 /* ── Grid Cell (The white area with padding) ── */
 export const GridCell = styled.div<{ $featured?: boolean }>`
-  background: ${({ theme }) => theme.colors.paper};
+  background: ${({ theme }) => theme.colors.background.primary};
   padding: 32px;
   grid-column: ${({ $featured }) => ($featured ? 'span 2' : 'span 1')};
   display: flex;
@@ -168,9 +169,9 @@ export const GridCell = styled.div<{ $featured?: boolean }>`
 `;
 
 /* ── Blog Card (The bordered gray box inside the cell) ── */
-export const BlogCard = styled.article`
-  background: ${({ theme }) => theme.colors.background?.secondary ?? '#F7F7F8'};
-  border: 1px solid ${({ theme }) => theme.colors.line};
+export const BlogCard = styled(motion.article)`
+  background: ${({ theme }) => theme.colors.surfaceHover};
+  border: 1px solid ${({ theme }) => theme.colors.borderLight};
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -178,7 +179,7 @@ export const BlogCard = styled.article`
   transition: border-color 200ms ease;
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.ink};
+    border-color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -188,7 +189,7 @@ export const CardMosaic = styled.div<{ $featured?: boolean }>`
   height: ${({ $featured }) => ($featured ? '320px' : '220px')};
   overflow: hidden;
   flex-shrink: 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.line};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
 
   ${({ theme }) => theme.media.mobile} {
     height: 200px;
@@ -204,15 +205,15 @@ export const CardBody = styled.div`
 `;
 
 export const CardCategory = styled.span<{ $type?: string }>`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.ink};
-  background: ${({ $type }) => ($type === 'COMPANY' ? '#FDE68A' : '#E5E7EB')};
+  color: ${({ theme }) => theme.colors.text.primary};
+  background: ${({ theme }) => theme.colors.borderLight};
   padding: 4px 8px;
-  border-radius: 2px;
+  border-radius: 4px;
   align-self: flex-start;
   margin-bottom: 16px;
 `;
@@ -222,14 +223,14 @@ export const CardTitle = styled.h2<{ $featured?: boolean }>`
   font-weight: 500;
   line-height: 1.3;
   letter-spacing: -0.02em;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 12px 0;
 `;
 
 export const CardSummary = styled.p`
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   flex: 1;
 
@@ -244,14 +245,14 @@ export const CardSummary = styled.p`
 export const CardFooter = styled.div`
   display: flex;
   align-items: stretch;
-  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  border-top: 1px solid ${({ theme }) => theme.colors.borderLight};
   height: 48px;
 `;
 
 export const CardDate = styled.div`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.muted};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex: 1;
   display: flex;
   align-items: center;
@@ -259,14 +260,14 @@ export const CardDate = styled.div`
 `;
 
 export const CardAuthor = styled.div`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: ${({ theme }) => theme.colors.muted};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
   flex: 1;
   display: flex;
   align-items: center;
   padding: 0 16px;
-  border-left: 1px solid ${({ theme }) => theme.colors.line};
+  border-left: 1px solid ${({ theme }) => theme.colors.borderLight};
 `;
 
 export const CardArrow = styled.div`
@@ -274,20 +275,19 @@ export const CardArrow = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme }) => theme.colors.inkSoft};
-  font-size: 16px;
-  border-left: 1px solid ${({ theme }) => theme.colors.line};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border-left: 1px solid ${({ theme }) => theme.colors.borderLight};
   transition: all 160ms ease;
 
   ${BlogCard}:hover & {
-    color: ${({ theme }) => theme.colors.ink};
-    background: ${({ theme }) => theme.colors.line};
+    color: ${({ theme }) => theme.colors.background.primary};
+    background: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
 /* ── Pagination ── */
 export const PaginationBar = styled.div`
-  background: ${({ theme }) => theme.colors.paper};
+  background: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -299,9 +299,9 @@ export const PageButton = styled.button<{ $active?: boolean }>`
   width: 32px;
   height: 32px;
   border-radius: 4px;
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.ink : 'transparent')};
-  background: ${({ $active, theme }) => ($active ? theme.colors.ink : 'transparent')};
-  color: ${({ $active, theme }) => ($active ? theme.colors.paper : theme.colors.muted)};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.text.primary : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.text.primary : 'transparent')};
+  color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.muted)};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 12px;
   font-weight: 600;
@@ -312,8 +312,8 @@ export const PageButton = styled.button<{ $active?: boolean }>`
   justify-content: center;
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.colors.line};
-    color: ${({ theme }) => theme.colors.ink};
+    border-color: ${({ theme }) => theme.colors.borderLight};
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -324,10 +324,10 @@ export const PageArrow = styled(PageButton)`
 /* ── Empty State ── */
 export const EmptyState = styled.div`
   grid-column: span 3;
-  background: ${({ theme }) => theme.colors.paper};
+  background: ${({ theme }) => theme.colors.background.primary};
   padding: 80px 24px;
   text-align: center;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 13px;
   letter-spacing: 0.08em;

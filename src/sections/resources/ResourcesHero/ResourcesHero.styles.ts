@@ -6,14 +6,14 @@ export const Eyebrow = styled.span`
   font-size: ${({ theme }) => theme.typography.sizes.label};
   letter-spacing: ${({ theme }) => theme.typography.letterSpacing.label};
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: ${({ theme }) => theme.spacing.s4};
 `;
 export const Title = styled.h1`
   font-size: clamp(36px, 5vw, 56px);
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   line-height: 1.08;
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   max-width: 700px;
   margin-bottom: ${({ theme }) => theme.spacing.s5};
   letter-spacing: -0.02em;
@@ -21,7 +21,7 @@ export const Title = styled.h1`
 export const Description = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
   line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   max-width: 560px;
   ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.bodyLg}; }
 `;

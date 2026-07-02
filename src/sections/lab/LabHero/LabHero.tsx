@@ -7,7 +7,7 @@ const fadeUp: any = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0
 export function LabHero() {
   const theme = useTheme();
   return (
-    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.paper}>
+    <Section paddingYTop="lg" paddingYBottom="sm" background={theme.colors.background.primary}>
       <motion.div initial="hidden" animate="visible" transition={{ staggerChildren: 0.1 }}>
         <Container>
           <motion.div variants={fadeUp}><Eyebrow>Lab</Eyebrow></motion.div>

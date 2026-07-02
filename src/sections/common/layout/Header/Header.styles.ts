@@ -9,21 +9,23 @@ import styled from 'styled-components';
 // ─── MAIN HEADER SHELL ─────────────────────────────────────────
 // Full-bleed sticky container. Background spans entire viewport.
 // Content is constrained by HeaderInner below.
-export const StyledHeader = styled.header<{ $scrolled?: boolean }>`
+export const StyledHeader = styled.header<{ $scrolled?: boolean; $isDark?: boolean }>`
   position: sticky;
   top: 0;
   z-index: ${({ theme }) => theme.zIndices.header};
   width: 100%;
 
-  background: ${({ $scrolled }) =>
-    $scrolled ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.72)'
-  };
+  background: ${({ $scrolled, $isDark }) => {
+    if ($isDark) return $scrolled ? 'rgba(6, 16, 30, 0.92)' : 'rgba(6, 16, 30, 1)';
+    return $scrolled ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.72)';
+  }};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 
-  box-shadow: ${({ $scrolled }) =>
-    $scrolled ? '0 1px 0 rgba(0, 0, 0, 0.06)' : 'none'
-  };
+  box-shadow: ${({ $scrolled, $isDark }) => {
+    if (!$scrolled) return 'none';
+    return $isDark ? '0 1px 0 rgba(255, 255, 255, 0.06)' : '0 1px 0 rgba(0, 0, 0, 0.06)';
+  }};
 
   transition: background 320ms cubic-bezier(0.2, 0, 0, 1),
               box-shadow 320ms cubic-bezier(0.2, 0, 0, 1);
@@ -81,12 +83,12 @@ export const HeaderRight = styled.div`
 // Brand name uses mono font to distinguish it from nav links and
 // signal technical identity. Heavier weight + tighter tracking
 // creates the "premium stamp" effect used by Linear, Vercel, Stripe.
-export const LogoLink = styled.a`
+export const LogoLink = styled.a<{ $isDark?: boolean }>`
   display: flex;
   align-items: center;
   gap: 14px;
   text-decoration: none;
-  color: ${({ theme }) => theme.colors.text.primary};
+  color: ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.92)' : theme.colors.text.primary};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-weight: 700;
   font-size: 19px;
@@ -111,12 +113,12 @@ export const DesktopNav = styled.nav`
   gap: 2px;
 `;
 
-export const NavLink = styled.a<{ $isActive?: boolean }>`
+export const NavLink = styled.a<{ $isActive?: boolean; $isDark?: boolean }>`
   position: relative;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 16px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
+  color: ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.82)' : theme.colors.text.strong};
   text-decoration: none;
   padding: 10px 14px;
   border-radius: 999px;
@@ -222,21 +224,21 @@ export const ButtonIcon = styled.span`
 `;
 
 // ─── MOBILE TOGGLE ─────────────────────────────────────────────
-export const MobileMenuButton = styled.button`
+export const MobileMenuButton = styled.button<{ $isDark?: boolean }>`
   display: none;
   align-items: center;
   justify-content: center;
   width: 36px;
   height: 36px;
-  color: ${({ theme }) => theme.colors.text.primary};
+  color: ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.82)' : theme.colors.text.primary};
   background: transparent;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.18)' : theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.md};
   cursor: pointer;
   transition: background-color 180ms ease;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
   }
 
   ${({ theme }) => theme.media.mobile} {

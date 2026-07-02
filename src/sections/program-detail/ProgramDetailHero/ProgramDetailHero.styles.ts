@@ -5,19 +5,14 @@ const float = keyframes`
   50% { transform: translateY(-8px) rotate(1.5deg); }
 `;
 
-/* Dark hero tinted with the program's accent color */
+/* Light hero — sits cleanly within the overall site light context */
 export const Wrapper = styled.section<{ $accent: string }>`
   position: relative;
-  min-height: 100vh;
+  min-height: 80vh;
   display: flex;
   align-items: center;
-  background-color: #06101e;
-  /* Subtle accent tint radiating from the right */
-  background-image: radial-gradient(
-    ellipse 60% 70% at 85% 50%,
-    ${({ $accent }) => $accent}18 0%,
-    transparent 70%
-  );
+  background-color: ${({ theme }) => theme.colors.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   overflow: hidden;
   padding: 140px 0 100px;
 
@@ -49,59 +44,20 @@ export const LeftColumn = styled.div`
   flex-direction: column;
 `;
 
-export const MetaRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 32px;
-`;
-
-export const ProgramNumber = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-`;
-
-export const StatusBadge = styled.span<{ $accent: string }>`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: ${({ $accent }) => $accent};
-  background: ${({ $accent }) => $accent}1a;
-  border: 1px solid ${({ $accent }) => $accent}33;
-  border-radius: 20px;
-  padding: 3px 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-
-  &::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: ${({ $accent }) => $accent};
-  }
-`;
 
 export const Title = styled.h1<{ $accent: string }>`
-  font-size: clamp(3rem, 6vw, 5rem);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
   font-weight: 500;
-  line-height: 1.03;
+  line-height: 1.05;
   letter-spacing: -0.04em;
-  color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 28px 0;
 `;
 
 export const Summary = styled.p`
   font-size: 1.125rem;
   line-height: 1.65;
-  color: rgba(255, 255, 255, 0.48);
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 520px;
 `;
@@ -117,20 +73,17 @@ export const RightColumn = styled.div`
   }
 `;
 
-export const IconFrame = styled.div<{ $accent: string }>`
+export const IconFrame = styled.div`
   width: 360px;
   height: 360px;
-  border-radius: 32px;
-  background: ${({ $accent }) => $accent}12;
-  border: 1px solid ${({ $accent }) => $accent}22;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: ${float} 6s ease-in-out infinite;
 
   svg {
-    width: 200px;
-    height: 200px;
+    width: 360px;
+    height: 360px;
   }
 
   ${({ theme }) => theme.media.tablet} {
@@ -138,8 +91,8 @@ export const IconFrame = styled.div<{ $accent: string }>`
     height: 240px;
 
     svg {
-      width: 140px;
-      height: 140px;
+      width: 240px;
+      height: 240px;
     }
   }
 `;

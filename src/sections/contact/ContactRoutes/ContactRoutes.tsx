@@ -10,7 +10,7 @@ export function ContactRoutes() {
   return (
     <Section paddingY="md" paddingYBottom="lg" background={theme.colors.surface}>
       <BorderTop>
-        <Container as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
+        <Container><motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-80px' }} transition={{ staggerChildren: 0.1 }}>
           <motion.div variants={fadeUp}><Title>How to Reach Us</Title></motion.div>
           <Grid>
             {routes.map((r) => (
@@ -23,7 +23,7 @@ export function ContactRoutes() {
               </motion.div>
             ))}
           </Grid>
-        </Container>
+        </motion.div></Container>
       </BorderTop>
     </Section>
   );
