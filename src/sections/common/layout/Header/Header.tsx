@@ -3,7 +3,7 @@ import { Link, useMatchRoute } from '@tanstack/react-router';
 import { Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import { getMainNav } from '@lib/data/navigation';
-import LogoIcon from '@assets/brand/transparent/logo-transparent.svg?react';
+import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
 import { NavMotifIcon, type NavMotifKind } from '@assets/visual/navigation/NavMotifs';
 import {
   StyledHeader,

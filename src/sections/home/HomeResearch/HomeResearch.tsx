@@ -6,7 +6,7 @@ import focusAreas from '@data/pages/home/focus-areas.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
-import { MoEIcon, SparseIcon, StabilityIcon, InferenceIcon } from '@assets/visual/home/research';
+import { EfficiencyIcon, AdaptabilityIcon, ReliabilityIcon } from '@assets/visual/home/research';
 import {
   HeaderSection,
   SectionLabel,
@@ -32,10 +32,9 @@ const staggerContainer = {
 };
 
 const AreaIcons: Record<string, FC> = {
-  'moe-routing': MoEIcon,
-  'sparse-computation': SparseIcon,
-  'training-stability': StabilityIcon,
-  'inference-optimization': InferenceIcon,
+  'resource-efficiency-optimization': EfficiencyIcon,
+  'adaptability-knowledge-transfer': AdaptabilityIcon,
+  'reliability-safe-deployment': ReliabilityIcon,
 };
 
 export function HomeResearch() {

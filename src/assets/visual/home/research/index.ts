@@ -1,4 +1,3 @@
-export { MoEIcon } from './MoEIcon';
-export { SparseIcon } from './SparseIcon';
-export { StabilityIcon } from './StabilityIcon';
-export { InferenceIcon } from './InferenceIcon';
+export { EfficiencyIcon } from './EfficiencyIcon';
+export { AdaptabilityIcon } from './AdaptabilityIcon';
+export { ReliabilityIcon } from './ReliabilityIcon';
