@@ -1,0 +1,19 @@
+{
+  "label": "Team",
+  "title": "The team is being assembled with care.",
+  "items": [
+    {
+      "name": "Core Research",
+      "focus": "Research direction, experimentation, and technical evaluation across the main domains."
+    },
+    {
+      "name": "Applied Systems",
+      "focus": "Turning research into usable enterprise systems and delivery-ready prototypes."
+    },
+    {
+      "name": "Operations",
+      "focus": "Supporting execution, communication, and company structure as the organization grows."
+    }
+  ],
+  "note": "No named leadership or team bios should be published here until they are final and accurate."
+}

@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "slug": "enterprise-ai-assistant",
+      "title": "Enterprise AI Assistant",
+      "summary": "Secure internal assistant for document reasoning, knowledge access, and workflow support.",
+      "status": "core",
+      "value": "Reduces time spent searching, summarizing, and routing internal work."
+    },
+    {
+      "slug": "knowledge-search-system",
+      "title": "Knowledge Search System",
+      "summary": "Retrieval and semantic search for internal and customer-facing knowledge bases.",
+      "status": "core",
+      "value": "Makes company knowledge easier to find, trust, and reuse."
+    },
+    {
+      "slug": "ai-efficiency-deployment",
+      "title": "AI Efficiency and Deployment",
+      "summary": "Evaluation, latency reduction, inference cost analysis, and deployment support for production systems.",
+      "status": "core",
+      "value": "Improves reliability and lowers the cost of AI in production."
+    },
+    {
+      "slug": "domain-ai-solutions",
+      "title": "Domain AI Solutions",
+      "summary": "Applied systems for energy, clinical validation, robotics, and other verticals when the opportunity is justified.",
+      "status": "emerging",
+      "value": "Translates research into domain-specific systems only when the problem is ready."
+    }
+  ]
+}

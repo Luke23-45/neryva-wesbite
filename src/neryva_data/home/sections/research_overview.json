@@ -1,0 +1,31 @@
+{
+  "label": "Research",
+  "title": "Four research programs, one technical direction.",
+  "description": "Neryva's research spans multiple domains because efficiency, reliability, transfer, and optimization are cross-domain problems. Each program reflects a serious technical line of work, not a claim that every area is already fully commercialized.",
+  "items": [
+    {
+      "id": "language-systems",
+      "title": "Language Systems",
+      "description": "Research on routing, sparsity, training stability, inference efficiency, and practical model deployment."
+    },
+    {
+      "id": "robotics-task-transfer",
+      "title": "Robotics and Task Transfer",
+      "description": "Research on how learned skills move across tasks, environments, and data constraints."
+    },
+    {
+      "id": "clinical-ai",
+      "title": "Clinical AI",
+      "description": "Research on reliability, evaluation, uncertainty, and safe deployment in high-stakes settings."
+    },
+    {
+      "id": "energy-engineering-optimization",
+      "title": "Energy and Engineering Optimization",
+      "description": "Research on optimization, constraint handling, and decision support in complex operating environments."
+    }
+  ],
+  "cta": {
+    "label": "Read the full research view",
+    "href": "/research"
+  }
+}

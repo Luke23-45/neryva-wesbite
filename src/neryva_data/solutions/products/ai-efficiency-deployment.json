@@ -1,0 +1,28 @@
+{
+  "slug": "ai-efficiency-deployment",
+  "title": "AI Efficiency and Deployment",
+  "status": "core",
+  "hero": {
+    "eyebrow": "Solution",
+    "headline": "Lower the cost and risk of production AI.",
+    "description": "Evaluation, latency analysis, and deployment support for teams running AI systems in production."
+  },
+  "problem": "Many AI systems are expensive to run and difficult to stabilize once they move beyond demos.",
+  "solution": "Measure bottlenecks, optimize serving behavior, and support deployment decisions with real operational evidence.",
+  "bestFor": [
+    "model evaluation",
+    "latency reduction",
+    "inference cost analysis",
+    "deployment support"
+  ],
+  "notFor": [
+    "theoretical optimization without deployment context",
+    "marketing claims without measurements",
+    "one-size-fits-all tuning"
+  ],
+  "proofNotes": "This product should be backed by concrete performance metrics and reproducible evaluation methods.",
+  "cta": {
+    "label": "Discuss this solution",
+    "href": "/contact"
+  }
+}

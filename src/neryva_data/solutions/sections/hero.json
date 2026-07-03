@@ -1,0 +1,17 @@
+{
+  "eyebrow": "Solutions",
+  "headline": "Enterprise AI systems built from research.",
+  "description": "Neryva turns research into practical systems that organizations can use for knowledge access, workflow support, deployment efficiency, and domain-specific AI delivery.",
+  "primaryCta": {
+    "label": "Contact Us",
+    "href": "/contact"
+  },
+  "secondaryCta": {
+    "label": "Read Research",
+    "href": "/research"
+  },
+  "visual": {
+    "type": "enterprise-system",
+    "note": "Use a premium visual language that feels precise, operational, and trustworthy."
+  }
+}

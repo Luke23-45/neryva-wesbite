@@ -1,0 +1,13 @@
+{
+  "page": "research",
+  "title": "Research",
+  "metaDescription": "Neryva's research agenda spans language systems, robotics and task transfer, clinical AI, and energy and engineering optimization.",
+  "canonicalPath": "/research",
+  "sections": [
+    "hero",
+    "agenda",
+    "program_areas",
+    "open_problems",
+    "papers"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "page": "solutions",
+  "title": "Solutions",
+  "metaDescription": "Neryva builds enterprise AI systems informed by research across language, robotics, clinical intelligence, and engineering optimization.",
+  "canonicalPath": "/solutions",
+  "sections": [
+    "hero",
+    "offerings",
+    "delivery_model",
+    "proof_points",
+    "contact_cta"
+  ]
+}

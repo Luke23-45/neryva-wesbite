@@ -1,0 +1,10 @@
+{
+  "page": "events",
+  "title": "Events",
+  "metaDescription": "Neryva events, talks, workshops, and public appearances.",
+  "canonicalPath": "/resources/events",
+  "sections": [
+    "hero",
+    "events_list"
+  ]
+}

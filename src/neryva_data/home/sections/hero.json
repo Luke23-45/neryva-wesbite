@@ -1,0 +1,17 @@
+{
+  "eyebrow": "Research-led enterprise AI",
+  "headline": "Practical AI systems for organizations.",
+  "description": "Neryva combines research depth with enterprise delivery to build systems that are more efficient, more reliable, and more adaptable across real-world use cases.",
+  "primaryCta": {
+    "label": "Explore Solutions",
+    "href": "/solutions"
+  },
+  "secondaryCta": {
+    "label": "Read Research",
+    "href": "/research"
+  },
+  "visual": {
+    "type": "abstract-system",
+    "note": "Use a strong editorial visual that signals precision, systems, and technical depth."
+  }
+}

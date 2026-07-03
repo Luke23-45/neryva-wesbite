@@ -1,0 +1,22 @@
+{
+  "label": "Mission",
+  "title": "Why Neryva exists.",
+  "statement": "Neryva exists to turn research into enterprise systems that are more efficient, more reliable, and more adaptable. The company is built on the belief that serious AI work requires both technical depth and practical delivery, and that research should directly strengthen the products and systems customers rely on.",
+  "items": [
+    {
+      "id": "research-to-delivery",
+      "title": "Research to Delivery",
+      "description": "Use research as the mechanism for building better enterprise systems, not as a separate identity."
+    },
+    {
+      "id": "honest-scope",
+      "title": "Honest Scope",
+      "description": "Commercialize selectively and only where the technical and market conditions justify the work."
+    },
+    {
+      "id": "measurable-work",
+      "title": "Measurable Work",
+      "description": "Favor evidence, evaluation, and clear outcomes over vague AI ambition."
+    }
+  ]
+}

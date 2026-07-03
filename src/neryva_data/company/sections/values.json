@@ -1,0 +1,26 @@
+{
+  "label": "Values",
+  "title": "How we work.",
+  "items": [
+    {
+      "id": 1,
+      "statement": "Be specific about what exists and what is still being built."
+    },
+    {
+      "id": 2,
+      "statement": "Tie claims to evidence whenever possible."
+    },
+    {
+      "id": 3,
+      "statement": "Keep the scope selective enough to execute well."
+    },
+    {
+      "id": 4,
+      "statement": "Let research inform the product, not replace the product."
+    },
+    {
+      "id": 5,
+      "statement": "Keep the company legible to customers, partners, and investors."
+    }
+  ]
+}

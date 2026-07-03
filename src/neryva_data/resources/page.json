@@ -1,0 +1,12 @@
+{
+  "page": "resources",
+  "title": "Resources",
+  "metaDescription": "Technical writing, open source, and reading lists from Neryva.",
+  "canonicalPath": "/resources",
+  "sections": [
+    "hero",
+    "writing",
+    "open_source",
+    "reading_lists"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "page": "blog",
+  "title": "Blog",
+  "metaDescription": "Research notes, engineering updates, and technical essays from Neryva.",
+  "canonicalPath": "/resources/blog",
+  "sections": [
+    "hero",
+    "posts"
+  ]
+}

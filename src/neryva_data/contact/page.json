@@ -1,0 +1,11 @@
+{
+  "page": "contact",
+  "title": "Contact",
+  "metaDescription": "Contact Neryva for enterprise inquiries, research collaboration, or general company questions.",
+  "canonicalPath": "/contact",
+  "sections": [
+    "hero",
+    "routes",
+    "form"
+  ]
+}

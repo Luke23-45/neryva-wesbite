@@ -1,0 +1,15 @@
+{
+  "fields": {
+    "firstName": { "label": "First name", "placeholder": "First name" },
+    "lastName": { "label": "Last name", "placeholder": "Last name" },
+    "email": { "label": "Work email", "placeholder": "name@company.com" },
+    "role": { "label": "Role", "placeholder": "Role or function" },
+    "project": {
+      "label": "Tell us about your project.",
+      "placeholder": "Share the problem, the context, and what outcome you need."
+    }
+  },
+  "checkbox": "I want to receive updates from Neryva.",
+  "disclaimer": "By submitting this form, you agree that Neryva may use your information to respond to your inquiry.",
+  "submit": "Send message"
+}

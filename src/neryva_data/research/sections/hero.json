@@ -1,0 +1,10 @@
+{
+  "eyebrow": "Research",
+  "headline": "Computation, used well.",
+  "description": "Neryva studies how large-scale AI systems can use computation more effectively, train more stably, and deploy more reliably under real constraints.",
+  "visual": {
+    "type": "dark-mosaic",
+    "note": "Use a restrained editorial visual that signals systems, structure, and technical depth."
+  },
+  "scrollHint": "Scroll"
+}

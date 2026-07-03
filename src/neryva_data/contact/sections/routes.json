@@ -1,0 +1,26 @@
+{
+  "title": "Ways to reach us.",
+  "items": [
+    {
+      "id": "general",
+      "title": "General contact",
+      "description": "For company questions and initial outreach.",
+      "href": "mailto:contact@neryva.com",
+      "label": "contact@neryva.com"
+    },
+    {
+      "id": "enterprise",
+      "title": "Enterprise inquiries",
+      "description": "For pilots, integrations, and commercial discussions.",
+      "href": "mailto:contact@neryva.com",
+      "label": "contact@neryva.com"
+    },
+    {
+      "id": "research",
+      "title": "Research collaboration",
+      "description": "For technical collaboration, papers, and relevant research conversations.",
+      "href": "mailto:contact@neryva.com",
+      "label": "contact@neryva.com"
+    }
+  ]
+}

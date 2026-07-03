@@ -1,0 +1,28 @@
+{
+  "slug": "domain-ai-solutions",
+  "title": "Domain AI Solutions",
+  "status": "emerging",
+  "hero": {
+    "eyebrow": "Solution",
+    "headline": "Selective domain systems where the fit is real.",
+    "description": "Applied systems for vertical use cases in energy, clinical validation, robotics, or other domains when the opportunity is justified."
+  },
+  "problem": "Some domains need specialized AI systems, but only when the problem, constraints, and evidence support it.",
+  "solution": "Translate the research into a vertical system only when the use case is clear and commercially meaningful.",
+  "bestFor": [
+    "energy optimization",
+    "clinical validation support",
+    "robotics transfer",
+    "other justified verticals"
+  ],
+  "notFor": [
+    "forcing every research topic into a product",
+    "unvalidated domain claims",
+    "premature commercialization"
+  ],
+  "proofNotes": "This category should remain selective until there is a concrete opportunity and enough evidence to support a product claim.",
+  "cta": {
+    "label": "Discuss this solution",
+    "href": "/contact"
+  }
+}
