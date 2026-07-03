@@ -17,15 +17,14 @@ export const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Calculate left padding to align with a 1200px max-width container with 24px inner padding */
-  padding: 120px 80px 120px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 120px 80px;
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+    padding: 80px 40px;
   }
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 60px 16px;
+    padding: 60px 24px;
   }
 `;
 
@@ -73,6 +72,33 @@ export const Description = styled.p`
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 32px 0;
   max-width: 480px;
+`;
+
+export const CTAButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: ${({ theme }) => theme.colors.text.strong};
+  color: ${({ theme }) => theme.colors.background.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  padding: 14px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background-color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 `;
 
 export const ImageColumn = styled.div`

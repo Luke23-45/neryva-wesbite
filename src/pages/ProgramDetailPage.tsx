@@ -4,10 +4,10 @@ import styled from 'styled-components';
 import { getProgramPage } from '@lib/data/programs';
 import { TextLink } from '@/components/common/ui/TextLink';
 import { ProgramDetailHero } from '@/sections/program-detail/ProgramDetailHero';
-import { ProgramDetailFocus } from '@/sections/program-detail/ProgramDetailFocus';
-import { ProgramDetailQuestions } from '@/sections/program-detail/ProgramDetailQuestions';
+import { ProgramDetailOverview } from '@/sections/program-detail/ProgramDetailOverview';
+import { ProgramDetailVectors } from '@/sections/program-detail/ProgramDetailVectors';
 import { ProgramDetailWork } from '@/sections/program-detail/ProgramDetailWork';
-
+import { ProgramDetailFoundations } from '@/sections/program-detail/ProgramDetailFoundations';
 
 const NotFoundWrapper = styled.section`
   padding: 120px 0;
@@ -40,10 +40,10 @@ export default function ProgramDetailPage() {
         canonicalPath={`/programs/${slug}`}
       />
       <ProgramDetailHero program={program} slug={slug} />
-      <ProgramDetailFocus program={program} />
-      <ProgramDetailQuestions program={program} />
+      <ProgramDetailOverview program={program} />
+      <ProgramDetailVectors program={program} />
       <ProgramDetailWork program={program} />
-
+      <ProgramDetailFoundations program={program} />
     </>
   );
 }

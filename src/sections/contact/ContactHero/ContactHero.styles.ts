@@ -1,27 +1,86 @@
 import styled from 'styled-components';
 
+export const Wrapper = styled.section`
+  display: grid;
+  grid-template-columns: 72% 28%;
+  min-height: 85vh;
+  background-color: ${({ theme }) => theme.colors.background.primary};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+`;
+
+export const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  /* Top, Right, Bottom, Left */
+  padding: 120px 80px 120px max(24px, calc((100vw - 1200px) / 2 + 24px));
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 60px 16px;
+  }
+`;
+
+export const RightColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 120px 80px;
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    border-left: none;
+    padding: 60px 40px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 48px 24px;
+  }
+`;
+
 export const Eyebrow = styled.span`
-  display: inline-block;
+  display: block;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.label};
-  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.label};
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.muted};
-  margin-bottom: ${({ theme }) => theme.spacing.s4};
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin-bottom: 48px;
 `;
+
 export const Title = styled.h1`
-  font-size: clamp(36px, 5vw, 56px);
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  line-height: 1.08;
-  color: ${({ theme }) => theme.colors.ink};
-  max-width: 700px;
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
-  letter-spacing: -0.02em;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: ${({ theme }) => theme.colors.text.strong};
+  margin: 0;
+  max-width: 900px;
 `;
+
 export const Description = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
-  line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  max-width: 560px;
-  ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.bodyLg}; }
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-weight: 400;
+  line-height: 1.4;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
+  max-width: 400px;
+  transform: translateY(-8px); /* Optically aligns the baseline of the description with the title */
+
+  ${({ theme }) => theme.media.tablet} {
+    transform: none;
+  }
 `;

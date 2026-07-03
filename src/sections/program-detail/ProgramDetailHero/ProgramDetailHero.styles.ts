@@ -38,10 +38,24 @@ export const Inner = styled.div`
   }
 `;
 
-/* ── Left Column ── */
 export const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
+`;
+
+export const StatusBadge = styled.span<{ $accent: string }>`
+  align-self: flex-start;
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: ${({ $accent }) => `${$accent}15`};
+  color: ${({ $accent }) => $accent};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  margin-bottom: 32px;
 `;
 
 

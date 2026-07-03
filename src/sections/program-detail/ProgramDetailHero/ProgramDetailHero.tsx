@@ -5,6 +5,7 @@ import {
   Wrapper,
   Inner,
   LeftColumn,
+  StatusBadge,
   Title,
   Summary,
   RightColumn,
@@ -15,7 +16,7 @@ const spring = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
-  visible: (d: number) => ({ opacity: 1, y: 0, transition: { duration: 0.8, ease: spring, delay: d } }),
+  visible: (d: number) => ({ opacity: 1, y: 0, transition: { duration: 0.8, ease: spring as any, delay: d } }),
 };
 
 
@@ -30,6 +31,10 @@ export function ProgramDetailHero({ program, slug }: Props) {
     <Wrapper $accent={program.accent}>
       <Inner>
         <LeftColumn>
+          <motion.div initial="hidden" animate="visible" custom={0.1} variants={fadeUp}>
+            <StatusBadge $accent={program.accent}>{program.status}</StatusBadge>
+          </motion.div>
+
           <motion.div initial="hidden" animate="visible" custom={0.22} variants={fadeUp}>
             <Title $accent={program.accent}>{program.title}</Title>
           </motion.div>
@@ -43,7 +48,7 @@ export function ProgramDetailHero({ program, slug }: Props) {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.0, ease: spring, delay: 0.5 }}
+            transition={{ duration: 1.0, ease: spring as any, delay: 0.5 }}
           >
             <IconFrame>
               <ProgramHeroVisual slug={slug} accent={program.accent} />

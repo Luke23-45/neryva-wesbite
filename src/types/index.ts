@@ -108,16 +108,16 @@ export interface ProgramDetail {
 }
 
 // ─── New Program Page Data (pages/program/*.json) ───────
-export interface ProgramThread {
+export interface ProgramVector {
   id: string;
   title: string;
-  question: string;
+  description: string;
 }
 
-export interface ProgramLiterature {
+export interface ProgramFoundation {
   title: string;
   source: string;
-  annotation: string;
+  relevance: string;
 }
 
 export interface ProgramPage {
@@ -126,11 +126,12 @@ export interface ProgramPage {
   accent: string;
   title: string;
   summary: string;
-  argument: string[];
-  threads: ProgramThread[];
+  problem: string;
+  approach: string;
+  vectors: ProgramVector[];
   currentWork: string;
   futureDirection: string;
-  literature: ProgramLiterature[];
+  foundations: ProgramFoundation[];
 }
 
 // ─── Resources ─────────────────────────────────────────

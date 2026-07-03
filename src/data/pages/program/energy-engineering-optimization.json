@@ -1,47 +1,45 @@
 {
   "number": 4,
-  "status": "Active",
+  "status": "Active Research",
   "accent": "#D99100",
   "title": "Energy and Engineering",
   "summary": "Applying optimization and decision support to energy systems and engineering design — measuring and eliminating waste, not approximating around it.",
-  "argument": [
-    "Energy systems and engineering design problems are full of waste that is not visible to the people operating them. The optimization landscape is too complex for intuition alone, and classical methods make assumptions that break down at the scale and variability of real-world systems. The result is decisions that are locally reasonable but globally inefficient.",
-    "Neryva's energy and engineering program studies how AI-based optimization and decision support can find better solutions — not by replacing human judgment, but by making the structure of complex problems legible. We focus on settings where constraints are hard, objectives compete, and the gap between textbook optimization and operational reality is large."
-  ],
-  "threads": [
+  "problem": "Energy systems and engineering design problems are full of waste that is not visible to the people operating them. The optimization landscape is too complex for intuition alone, and classical methods make assumptions that break down at the scale and variability of real-world systems. The result is decisions that are locally reasonable but globally inefficient.",
+  "approach": "Neryva's energy and engineering program studies how AI-based optimization and decision support can find better solutions — not by replacing human judgment, but by making the structure of complex problems legible. We focus on settings where constraints are hard, objectives compete, and the gap between textbook optimization and operational reality is large.",
+  "vectors": [
     {
       "id": "multi-objective-optimization",
       "title": "Multi-Objective Optimization",
-      "question": "How do we find and communicate solutions that balance genuinely competing objectives — cost, reliability, safety, emissions — without collapsing to an arbitrary single scalar?"
+      "description": "Investigating how to find and communicate solutions that balance genuinely competing objectives — cost, reliability, safety, emissions — without collapsing to an arbitrary single scalar."
     },
     {
       "id": "waste-legibility",
       "title": "Making Waste Measurable",
-      "question": "Before waste in an engineering system can be eliminated, it must be measured. What representations make the structure of waste legible to optimization algorithms and to human operators?"
+      "description": "Identifying representations that make the structure of waste legible to optimization algorithms and to human operators, so it can be eliminated."
     },
     {
       "id": "constraint-handling",
       "title": "Hard Constraint Satisfaction",
-      "question": "How do we handle the physical, regulatory, and operational constraints that make engineering optimization categorically different from benchmark problems where constraints are soft or absent?"
+      "description": "Designing methods to handle the physical, regulatory, and operational constraints that make engineering optimization categorically different from benchmark problems."
     }
   ],
   "currentWork": "Problem scoping in energy dispatch and building systems. Reviewing optimization approaches used in grid operations and identifying the points where classical methods consistently produce poor solutions due to model simplifications.",
   "futureDirection": "Developing optimization methods for real-time energy dispatch under uncertainty — specifically, settings where demand and supply forecasts are unreliable and the cost of constraint violations is asymmetric.",
-  "literature": [
+  "foundations": [
     {
       "title": "A Survey of Multi-Objective Optimization Methods and Their Applications in Supply Chain Management",
       "source": "Taboada & Coit, 2007",
-      "annotation": "A useful anchor for understanding the full landscape of multi-objective optimization methods before entering the energy domain specifically."
+      "relevance": "A useful anchor for understanding the full landscape of multi-objective optimization methods before entering the energy domain specifically."
     },
     {
       "title": "Reinforcement Learning for Electricity Market Bidding",
       "source": "Ye et al., IEEE Transactions on Power Systems, 2020",
-      "annotation": "An example of RL applied to a real energy optimization problem with hard constraints and competitive dynamics. Useful for understanding where learning methods currently succeed and fail."
+      "relevance": "An example of RL applied to a real energy optimization problem with hard constraints and competitive dynamics. Useful for understanding where learning methods currently succeed and fail."
     },
     {
       "title": "Machine Learning for Predictive Maintenance in Industrial Equipment",
       "source": "Ran et al., IEEE Access, 2019",
-      "annotation": "Demonstrates how decision support can surface waste (via degradation patterns) in engineering systems that classical monitoring misses."
+      "relevance": "Demonstrates how decision support can surface waste (via degradation patterns) in engineering systems that classical monitoring misses."
     }
   ]
 }

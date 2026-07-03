@@ -10,8 +10,9 @@ import BlogPage from '@pages/BlogPage';
 import AboutPage from '@pages/AboutPage';
 import CareersPage from '@pages/CareersPage';
 import BlogDetailPage from '@pages/BlogDetailPage';
-// import ContactPage from '@pages/ContactPage';
-// import NotFoundPage from '@pages/NotFoundPage';
+import EventsPage from '@pages/EventsPage';
+import ContactPage from '@pages/ContactPage';
+import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
 
@@ -67,6 +68,12 @@ export const blogDetailRoute = createRoute({
   component: BlogDetailPage,
 });
 
+export const eventsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/events',
+  component: EventsPage,
+});
+
 // Lab child routes
 export const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -80,17 +87,17 @@ export const careersRoute = createRoute({
   component: CareersPage,
 });
 
-// export const contactRoute = createRoute({
-//   getParentRoute: () => rootRoute,
-//   path: '/contact',
-//   component: ContactPage,
-// });
+export const contactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/contact',
+  component: ContactPage,
+});
 
-// export const notFoundRoute = createRoute({
-//   getParentRoute: () => rootRoute,
-//   path: '*',
-//   component: NotFoundPage,
-// });
+export const notFoundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '*',
+  component: NotFoundPage,
+});
 
 // ─── Route Tree ────────────────────────────────────────
 
@@ -104,8 +111,9 @@ export const routeDefinitions = [
   resourcesRoute,
   blogRoute,
   blogDetailRoute,
+  eventsRoute,
   aboutRoute,
   careersRoute,
-  // contactRoute,
-  // notFoundRoute,
+  contactRoute,
+  notFoundRoute,
 ];

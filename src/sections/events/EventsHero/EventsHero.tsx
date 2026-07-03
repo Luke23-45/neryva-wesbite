@@ -7,7 +7,8 @@ import {
   Title,
   ArrowIndicator,
   Description,
-} from './AboutHero.styles';
+  CTAButton,
+} from './EventsHero.styles';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -30,7 +31,7 @@ interface Props {
   };
 }
 
-export function AboutHero({ data }: Props) {
+export function EventsHero({ data }: Props) {
   return (
     <Wrapper>
       <ContentColumn>
@@ -59,12 +60,21 @@ export function AboutHero({ data }: Props) {
         <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp}>
           <Description>{data.description}</Description>
         </motion.div>
+
+        <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
+          <CTAButton href="#events">
+            View Schedule
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </CTAButton>
+        </motion.div>
       </ContentColumn>
 
       <ImageColumn>
         <motion.img 
           src="/images/careers-hero.png" 
-          alt="Abstract representation of physical AI"
+          alt="Hands arranging dominoes"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.2, ease: "easeOut" }}

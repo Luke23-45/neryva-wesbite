@@ -1,60 +1,52 @@
 {
   "hero": {
-    "label": "The Neryva Charter",
-    "title": "Intelligence for the physical world.",
-    "description": "We are an independent research laboratory dedicated to solving the hardest problems in robotics, clinical science, and energy through empirical rigor and highly scaled compute."
+    "label": "The Lab",
+    "title": "We are Neryva.",
+    "description": "A specialized research laboratory building foundational AI for the physical world."
   },
-  "principles": {
-    "label": "Operating Principles",
-    "title": "How we conduct research.",
+  "mission": {
+    "label": "Our Mission",
+    "title": "Solving physical intelligence.",
     "items": [
       {
         "id": "01",
-        "title": "Empirical Truth over Dogma",
-        "description": "We do not believe that blindly scaling parameters solves every problem. We rely on rigorous, empirical testing to discover architectures that map efficiently to the underlying physics of the domain."
+        "title": "Hardware-Aware Design",
+        "description": "We build models specifically optimized for extreme latency and energy constraints, allowing inference directly on edge hardware."
       },
       {
         "id": "02",
-        "title": "Open by Default",
-        "description": "Progress in foundational science belongs to humanity. We are committed to publishing our core findings, open-sourcing our non-critical weights, and contributing to the global research commons."
+        "title": "Empirical Validation",
+        "description": "Theoretical scaling is insufficient. Our architectures are rigorously tested against the strict limits of physical environments."
       },
       {
         "id": "03",
-        "title": "The Physical First",
-        "description": "While digital intelligence has accelerated, physical intelligence has lagged. We focus our compute on areas constrained by the laws of thermodynamics, mechanics, and biology."
-      },
-      {
-        "id": "04",
-        "title": "Constraint-Driven Design",
-        "description": "A model that cannot be deployed is a theoretical curiosity. We design our algorithms around the strict latency, energy, and hardware constraints of real-world inference systems."
+        "title": "Open Research",
+        "description": "We believe foundational breakthroughs should be accessible. We publish core models and architectures to accelerate global engineering."
       }
     ]
   },
-  "structure": {
-    "label": "Lab Structure",
-    "title": "Divisions of inquiry.",
+  "team": {
+    "label": "Our Team",
+    "title": "A coalition of leading researchers.",
     "items": [
       {
         "name": "Fundamental Architecture",
-        "focus": "Developing the next generation of sparse routing, adaptive computation, and sub-quadratic attention mechanisms.",
-        "color": "#2458D3"
+        "focus": "Our core modeling team comprises top researchers from leading institutes, focusing on breaking current scaling paradigms."
       },
       {
         "name": "Applied Systems & Inference",
-        "focus": "Optimizing models for deployment on edge devices, specialized hardware, and constrained energy grids.",
-        "color": "#0B7F79"
+        "focus": "Engineers dedicated to compressing and deploying frontier models onto specialized, constrained hardware."
       },
       {
         "name": "Safety & Alignment",
-        "focus": "Ensuring clinical and robotic AI systems operate with verifiable mathematical bounds and strict ethical alignment.",
-        "color": "#1F7A4D"
+        "focus": "Ensuring our physical AI systems operate with verifiable mathematical bounds and strict ethical constraints."
       }
     ]
   },
   "cta": {
-    "title": "We are looking for exceptional minds.",
-    "description": "If you are driven to build intelligence that operates in the real world, explore our open roles.",
-    "buttonText": "View Careers",
+    "title": "Join the lab.",
+    "description": "We are looking for exceptional minds to help us build the future of physical intelligence.",
+    "buttonText": "View Open Roles",
     "buttonLink": "/lab/careers"
   }
 }
