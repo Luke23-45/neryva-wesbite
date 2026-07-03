@@ -21,6 +21,7 @@ export default defineConfig({
       '@store': path.resolve(__dirname, './src/store'),
       '@styles': path.resolve(__dirname, './src/styles'),
       '@types': path.resolve(__dirname, './src/types'),
+      '@neryva_data': path.resolve(__dirname, './src/neryva_data'),
     },
   },
   server: {

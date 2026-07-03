@@ -18,8 +18,7 @@ src/neryva_data/solutions/products/
   plan.md
   refactor_plan.md
   catalog.json
-  enterprise-ai-assistant.json
-  knowledge-search-system.json
+  enterprise-knowledge-assistant.json
   ai-efficiency-deployment.json
   domain-ai-solutions.json
 ```
@@ -30,4 +29,3 @@ src/neryva_data/solutions/products/
 - Do not invent shipped customers or false launch status.
 - Use `status` to distinguish core offerings from emerging ones.
 - Keep the catalog aligned with the Solutions overview page.
-

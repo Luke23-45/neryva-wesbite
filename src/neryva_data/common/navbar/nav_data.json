@@ -1,0 +1,135 @@
+[
+    {
+        "label": "Products",
+        "href": "/products",
+        "order": 1,
+        "megaMenu": [
+            {
+                "title": "CORE PRODUCTS",
+                "items": [
+                    {
+                        "label": "Enterprise AI Assistant",
+                        "href": "/products/enterprise-ai-assistant",
+                        "icon": "assistant"
+                    },
+                    {
+                        "label": "AI Efficiency and Deployment",
+                        "href": "/products/ai-efficiency-deployment",
+                        "icon": "deployment"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "label": "Solutions",
+        "href": "/solutions",
+        "order": 2,
+        "megaMenu": [
+            {
+                "title": "DOMAINS",
+                "items": [
+                    {
+                        "label": "Clinical Validation",
+                        "href": "/solutions/clinical-validation",
+                        "icon": "clinical"
+                    },
+                    {
+                        "label": "Energy Optimization",
+                        "href": "/solutions/energy",
+                        "icon": "energy"
+                    },
+                    {
+                        "label": "Engineering Systems",
+                        "href": "/solutions/engineering",
+                        "icon": "engineering"
+                    },
+                    {
+                        "label": "Applied Robotics",
+                        "href": "/solutions/robotics",
+                        "icon": "robotics"
+                    }
+                ]
+            },
+            {
+                "title": "ENTERPRISE WORKFLOWS",
+                "items": [
+                    {
+                        "label": "Operations & Support",
+                        "href": "/solutions/operations-support",
+                        "icon": "operations"
+                    },
+                    {
+                        "label": "Finance & Compliance",
+                        "href": "/solutions/finance-compliance",
+                        "icon": "compliance"
+                    },
+                    {
+                        "label": "Internal Productivity",
+                        "href": "/solutions/productivity",
+                        "icon": "productivity"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "label": "Research",
+        "href": "/research",
+        "order": 3
+    },
+    {
+        "label": "Resources",
+        "href": "/resources",
+        "order": 4,
+        "megaMenu": [
+            {
+                "title": "COMPANY UPDATES",
+                "items": [
+                    {
+                        "label": "Blog",
+                        "href": "/resources/blog",
+                        "icon": "blog"
+                    },
+                    {
+                        "label": "Events & Webinars",
+                        "href": "/resources/events",
+                        "icon": "events"
+                    }
+                ]
+            },
+            {
+                "title": "COMMUNITY",
+                "items": [
+                    {
+                        "label": "Developer Discord",
+                        "href": "https://discord.gg/your-invite",
+                        "icon": "discord"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "label": "Company",
+        "href": "/company/about",
+        "order": 5,
+        "children": [
+            {
+                "label": "About Us",
+                "href": "/company/about",
+                "icon": "about"
+            },
+            {
+                "label": "Careers",
+                "href": "/company/careers",
+                "icon": "careers"
+            },
+            {
+                "label": "Contact",
+                "href": "/contact",
+                "icon": "contact"
+            }
+        ]
+    }
+]

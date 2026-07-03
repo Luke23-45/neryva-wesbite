@@ -156,9 +156,30 @@ export const NavLink = styled.a<{ $isActive?: boolean; $isDark?: boolean }>`
 export const DesktopActions = styled.div`
   display: flex;
   align-items: center;
+  gap: 12px;
 
   ${({ theme }) => theme.media.mobile} {
     display: none;
+  }
+`;
+
+export const ButtonGhost = styled.a<{ $isDark?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme, $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.85)' : theme.colors.text.secondary};
+  text-decoration: none;
+  border-radius: 999px;
+  transition: color 180ms ease, background-color 180ms ease;
+
+  &:hover {
+    color: ${({ theme, $isDark }) => $isDark ? '#FFF' : theme.colors.text.strong};
+    background-color: ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
   }
 `;
 
@@ -192,20 +213,43 @@ export const ButtonSecondary = styled.a`
   }
 `;
 
-export const ButtonPrimary = styled(ButtonSecondary)`
-  color: ${({ theme }) => theme.colors.text.inverse};
-  background-color: ${({ theme }) => theme.colors.accent.amethyst};
-  border-color: ${({ theme }) => theme.colors.accent.amethyst};
-  transition: background-color 180ms ease, border-color 180ms ease,
-              transform 120ms ease;
+export const ButtonPrimary = styled.a<{ $isDark?: boolean }>`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 20px 0 24px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  
+  /* Premium Aesthetics */
+  color: ${({ theme, $isDark }) => $isDark ? theme.colors.text.strong : theme.colors.text.inverse};
+  background: ${({ theme, $isDark }) => $isDark ? '#FFFFFF' : theme.colors.text.strong};
+  border-radius: 999px;
+  border: 1px solid ${({ theme, $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'};
+  box-shadow: 
+    0 4px 14px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'},
+    inset 0 1px 1px 0 ${({ $isDark }) => $isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)'};
+  
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 
+  /* Hover effect with a sleek shadow / subtle lift */
   &:hover {
-    background-color: ${({ theme }) => theme.colors.accent.amethystDark};
-    border-color: ${({ theme }) => theme.colors.accent.amethystDark};
+    transform: translateY(-1px);
+    box-shadow: 
+      0 6px 20px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)'},
+      inset 0 1px 1px 0 ${({ $isDark }) => $isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.25)'};
   }
 
   &:active {
     transform: scale(0.98);
+    box-shadow: 0 2px 8px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
   }
 `;
 

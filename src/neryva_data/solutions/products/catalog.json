@@ -1,18 +1,11 @@
 {
   "items": [
     {
-      "slug": "enterprise-ai-assistant",
-      "title": "Enterprise AI Assistant",
-      "summary": "Secure internal assistant for document reasoning, knowledge access, and workflow support.",
+      "slug": "enterprise-knowledge-assistant",
+      "title": "Enterprise Knowledge Assistant",
+      "summary": "Secure assistant for document reasoning, knowledge access, and workflow support.",
       "status": "core",
       "value": "Reduces time spent searching, summarizing, and routing internal work."
-    },
-    {
-      "slug": "knowledge-search-system",
-      "title": "Knowledge Search System",
-      "summary": "Retrieval and semantic search for internal and customer-facing knowledge bases.",
-      "status": "core",
-      "value": "Makes company knowledge easier to find, trust, and reuse."
     },
     {
       "slug": "ai-efficiency-deployment",

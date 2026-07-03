@@ -28,7 +28,8 @@
       "@store/*": ["src/store/*"],
       "@styles/*": ["src/styles/*"],
       "@types/*": ["src/types/*"],
-      "@types": ["src/types/index.ts"]
+      "@types": ["src/types/index.ts"],
+      "@neryva_data/*": ["src/neryva_data/*"]
     }
   },
   "include": ["src"]

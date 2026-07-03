@@ -4,19 +4,9 @@
   "description": "The commercial side of Neryva turns research into practical systems that organizations can use today. The initial offerings should be selective, concrete, and tied to real operational value.",
   "items": [
     {
-      "id": "enterprise-ai-assistants",
-      "title": "Enterprise AI Assistants",
-      "description": "Custom assistants for document reasoning, internal knowledge access, and workflow support."
-    },
-    {
-      "id": "knowledge-search-systems",
-      "title": "Knowledge and Search Systems",
-      "description": "Retrieval, semantic search, and document intelligence for internal and customer-facing use cases."
-    },
-    {
-      "id": "ai-workflow-automation",
-      "title": "AI Workflow Automation",
-      "description": "Automation for repeatable enterprise workflows across operations, support, finance, compliance, and engineering."
+      "id": "enterprise-knowledge-assistant",
+      "title": "Enterprise Knowledge Assistant",
+      "description": "A secure assistant for knowledge access, document reasoning, and workflow support."
     },
     {
       "id": "ai-efficiency-deployment",

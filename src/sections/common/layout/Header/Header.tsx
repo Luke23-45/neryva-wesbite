@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useMatchRoute } from '@tanstack/react-router';
-import { Menu, X, ChevronRight, ArrowRight } from 'lucide-react';
+import { Menu, X, ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import { getMainNav } from '@lib/data/navigation';
 import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
@@ -27,8 +27,8 @@ import {
   MegaMenuLink,
   MegaMenuArrow,
   DesktopActions,
+  ButtonGhost,
   ButtonPrimary,
-  ButtonIcon,
   MobileMenuButton,
   MobileNavOverlay,
   MobileNavHeader,
@@ -201,11 +201,11 @@ export function Header() {
           {/* RIGHT: CTAs & Mobile Toggle */}
           <HeaderRight>
             <DesktopActions>
-              <ButtonPrimary as={Link} to="/contact">
+              <ButtonGhost as={Link} to="/sign-in" $isDark={isDark}>
+                Sign In
+              </ButtonGhost>
+              <ButtonPrimary as={Link} to="/contact" $isDark={isDark}>
                 Contact Us
-                <ButtonIcon aria-hidden="true">
-                  <ArrowRight size={16} strokeWidth={2.5} />
-                </ButtonIcon>
               </ButtonPrimary>
             </DesktopActions>
 
@@ -258,7 +258,11 @@ export function Header() {
                         to={child.href}
                         onClick={closeMobileNav}
                       >
-                        <AccentDot $color={child.accent} />
+                        {child.icon ? (
+                          <NavMotifIcon kind={child.icon as NavMotifKind} />
+                        ) : (
+                          <AccentDot $color={child.accent ?? '#666'} />
+                        )}
                         {child.label}
                       </MobileSubLink>
                     ))}
@@ -292,12 +296,12 @@ export function Header() {
         </MobileNavScroll>
 
         <MobileActions>
-          <ButtonPrimary as={Link} to="/contact" onClick={closeMobileNav}>
-            Contact Us
-            <ButtonIcon aria-hidden="true">
-              <ArrowRight size={16} strokeWidth={2.5} />
-            </ButtonIcon>
-          </ButtonPrimary>
+          <ButtonGhost as={Link} to="/sign-in" onClick={closeMobileNav}>
+            Sign In
+          </ButtonGhost>
+            <ButtonPrimary as={Link} to="/contact" onClick={closeMobileNav}>
+              Contact Us
+            </ButtonPrimary>
         </MobileActions>
       </MobileNavOverlay>
     </>

@@ -1,5 +1,5 @@
 import type { NavItem } from '@types';
-import mainNavData from '@data/navigation/main.json';
+import mainNavData from '@neryva_data/common/navbar/nav_data.json';
 import footerData from '@data/navigation/footer.json';
 
 export function getMainNav(): NavItem[] {

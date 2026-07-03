@@ -18,7 +18,7 @@ export interface SeoDefaults {
 export interface NavChild {
   label: string;
   href: string;
-  accent: string;
+  accent?: string;
   icon?: string;
 }
 

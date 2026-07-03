@@ -4,24 +4,10 @@
   "description": "These solution categories are the commercial expression of the company. They should remain concrete, selective, and tied to real operational value.",
   "items": [
     {
-      "id": "enterprise-ai-assistants",
-      "title": "Enterprise AI Assistants",
-      "description": "Custom assistants for secure knowledge access, document reasoning, and workflow support.",
+      "id": "enterprise-knowledge-assistant",
+      "title": "Enterprise Knowledge Assistant",
+      "description": "A secure assistant for knowledge access, document reasoning, and workflow support.",
       "value": "Reduce time spent searching, summarizing, and routing internal work.",
-      "status": "core"
-    },
-    {
-      "id": "knowledge-search-systems",
-      "title": "Knowledge and Search Systems",
-      "description": "Retrieval, semantic search, and document intelligence for internal and customer-facing use cases.",
-      "value": "Make company knowledge easier to find, use, and trust.",
-      "status": "core"
-    },
-    {
-      "id": "ai-workflow-automation",
-      "title": "AI Workflow Automation",
-      "description": "Automation for repeatable enterprise workflows across operations, support, finance, compliance, and engineering.",
-      "value": "Reduce repetitive work while keeping human oversight where it matters.",
       "status": "core"
     },
     {
@@ -34,7 +20,7 @@
     {
       "id": "domain-ai-solutions",
       "title": "Domain AI Solutions",
-      "description": "Applied systems for vertical use cases in energy, clinical validation, robotics, or other domains when the opportunity is justified.",
+      "description": "Applied systems for energy, clinical validation, robotics, or other verticals when the opportunity is justified.",
       "value": "Translate research into a domain-specific product only when the problem is ready.",
       "status": "emerging"
     }
