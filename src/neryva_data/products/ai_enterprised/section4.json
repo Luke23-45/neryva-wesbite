@@ -1,0 +1,23 @@
+{
+    "id": "workflow-execution",
+    "sidebarLabel": "3. Workflow execution",
+    "title": "3. Workflow execution.",
+    "visual": {
+        "type": "terminal_log",
+        "description": "Dark-mode terminal log showing an anomaly detected, followed by the system autonomously triggering a POST request to /jira/api/v2 and a Slack webhook."
+    },
+    "features": [
+        {
+            "title": "API triggering.",
+            "description": "Connects reasoning directly to action via internal company endpoints."
+        },
+        {
+            "title": "Multi-step autonomy.",
+            "description": "Capable of chaining independent actions to complete end-to-end operational tasks."
+        },
+        {
+            "title": "Human-in-the-loop.",
+            "description": "Configurable approval gates and manual overrides for high-consequence actions."
+        }
+    ]
+}

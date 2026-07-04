@@ -176,7 +176,7 @@ export function Header() {
                               {child.icon ? (
                                 <NavMotifIcon kind={child.icon as NavMotifKind} />
                               ) : (
-                                <AccentDot $color={child.accent} />
+                                <AccentDot $color={child.accent || 'transparent'} />
                               )}
                             </MenuGlyph>
                             {child.label}

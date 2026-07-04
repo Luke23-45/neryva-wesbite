@@ -12,6 +12,7 @@ import CareersPage from '@pages/CareersPage';
 import BlogDetailPage from '@pages/BlogDetailPage';
 import EventsPage from '@pages/EventsPage';
 import ContactPage from '@pages/ContactPage';
+import EnterpriseAiAssistantPage from '@pages/EnterpriseAiAssistantPage';
 import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
@@ -93,6 +94,12 @@ export const contactRoute = createRoute({
   component: ContactPage,
 });
 
+export const enterpriseAiAssistantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/products/enterprise-ai-assistant',
+  component: EnterpriseAiAssistantPage,
+});
+
 export const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
@@ -115,5 +122,6 @@ export const routeDefinitions = [
   aboutRoute,
   careersRoute,
   contactRoute,
+  enterpriseAiAssistantRoute,
   notFoundRoute,
 ];

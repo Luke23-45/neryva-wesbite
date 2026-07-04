@@ -1,0 +1,23 @@
+{
+    "id": "profile-management",
+    "sidebarLabel": "4. Profile management",
+    "title": "4. Profile management.",
+    "visual": {
+        "type": "ui_toggle",
+        "description": "Interface showing a dropdown context switch from 'Internal Ops Profile (Full Access)' to 'Customer Profile (Public Docs Only)', demonstrating dynamic data restriction."
+    },
+    "features": [
+        {
+            "title": "Dual-agent architecture.",
+            "description": "Serve internal engineering teams and external customers from one underlying system."
+        },
+        {
+            "title": "Boundary enforcement.",
+            "description": "Strict logical separation of data access and tool execution based on the active profile."
+        },
+        {
+            "title": "Custom instructions.",
+            "description": "Tailor the operational behavior, tone, and system boundaries per deployment context."
+        }
+    ]
+}

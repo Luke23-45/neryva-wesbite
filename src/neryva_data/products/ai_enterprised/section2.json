@@ -1,0 +1,23 @@
+{
+    "id": "data-integration",
+    "sidebarLabel": "1. Data integration",
+    "title": "1. Data integration.",
+    "visual": {
+        "type": "diagram",
+        "description": "Minimalist pipeline schema showing connectors from Confluence, Jira, and secure S3 buckets flowing directly into a localized Neryva Vector Index."
+    },
+    "features": [
+        {
+            "title": "Enterprise connectors.",
+            "description": "Native integrations with standard operational data silos and databases."
+        },
+        {
+            "title": "Permissions sync.",
+            "description": "Strictly respects your existing IAM and RBAC controls upon ingestion."
+        },
+        {
+            "title": "Real-time indexing.",
+            "description": "Continuous delta updates ensure accurate and current data representation."
+        }
+    ]
+}

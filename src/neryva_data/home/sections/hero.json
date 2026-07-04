@@ -1,17 +1,18 @@
 {
-  "eyebrow": "Research-led enterprise AI",
-  "headline": "Practical AI systems for organizations.",
-  "description": "Neryva combines research depth with enterprise delivery to build systems that are more efficient, more reliable, and more adaptable across real-world use cases.",
-  "primaryCta": {
-    "label": "Explore Solutions",
-    "href": "/solutions"
-  },
-  "secondaryCta": {
-    "label": "Read Research",
-    "href": "/research"
-  },
-  "visual": {
-    "type": "abstract-system",
-    "note": "Use a strong editorial visual that signals precision, systems, and technical depth."
+  "hero": {
+    "headline": {
+      "line1": "Frontier AI.",
+      "line2": "In your hands."
+    },
+    "labels": {
+      "bottomLeft": "DEEP CAPABILITY",
+      "topRight": "PROVEN IMPACT"
+    },
+    "description": "We build highly capable, profoundly reliable AI systems to solve complex problems and power the modern enterprise.",
+    "featured": {
+      "label": "LATEST RELEASE",
+      "title": "Meet the Neryva Enterprise Assistant",
+      "href": "/products/enterprise-ai-assistant"
+    }
   }
 }

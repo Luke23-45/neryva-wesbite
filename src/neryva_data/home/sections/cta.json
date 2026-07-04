@@ -1,0 +1,16 @@
+{
+  "enterprise": {
+    "label": "Commercial",
+    "title": "Scale with Neryva",
+    "description": "Deploy the Neryva Enterprise Assistant within your security boundary.",
+    "ctaText": "Contact Sales",
+    "href": "/contact"
+  },
+  "technical": {
+    "label": "Engineers",
+    "title": "Build with Neryva",
+    "description": "Access technical documentation, API references, and architecture guides.",
+    "ctaText": "Read the Docs",
+    "href": "/docs"
+  }
+}

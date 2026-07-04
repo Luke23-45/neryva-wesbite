@@ -1,0 +1,23 @@
+{
+    "id": "deep-reasoning",
+    "sidebarLabel": "2. Deep reasoning",
+    "title": "2. Deep reasoning.",
+    "visual": {
+        "type": "ui_mockup",
+        "description": "Chat interface showing a user querying ISO-9001 compliance. The Assistant answers and provides a verifiable citation linking to a specific page and paragraph in a 200-page PDF."
+    },
+    "features": [
+        {
+            "title": "Strict citations.",
+            "description": "Every claim is grounded in source documentation to actively prevent hallucination."
+        },
+        {
+            "title": "Multi-format parsing.",
+            "description": "Natively reads and structures complex PDFs, tabular data, and technical schematics."
+        },
+        {
+            "title": "Contextual memory.",
+            "description": "Retains deep thread history to support complex, multi-turn organizational tasks."
+        }
+    ]
+}

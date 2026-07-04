@@ -1,0 +1,23 @@
+{
+    "id": "deployment-security",
+    "sidebarLabel": "5. Deployment & security",
+    "title": "5. Deployment & security.",
+    "visual": {
+        "type": "network_topology",
+        "description": "High-contrast network topology diagram showing VPC peering, On-prem servers, and secure air-gapped deployment pathways."
+    },
+    "features": [
+        {
+            "title": "Zero-trust infrastructure.",
+            "description": "Deploy completely on-premise, inside your VPC, or via our secure enterprise cloud."
+        },
+        {
+            "title": "No model training.",
+            "description": "We never train our foundational research models on your proprietary inputs or logs."
+        },
+        {
+            "title": "Comprehensive audit.",
+            "description": "Full cryptographic traceability of every query, cited document, and executed workflow."
+        }
+    ]
+}

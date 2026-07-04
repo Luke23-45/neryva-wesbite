@@ -156,7 +156,7 @@ export const NavLink = styled.a<{ $isActive?: boolean; $isDark?: boolean }>`
 export const DesktopActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s2};
 
   ${({ theme }) => theme.media.mobile} {
     display: none;
@@ -168,10 +168,11 @@ export const ButtonGhost = styled.a<{ $isDark?: boolean }>`
   align-items: center;
   justify-content: center;
   height: 40px;
-  padding: 0 16px;
+  padding: 0 14px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  letter-spacing: -0.02em;
   color: ${({ theme, $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.85)' : theme.colors.text.secondary};
   text-decoration: none;
   border-radius: 999px;
@@ -231,8 +232,8 @@ export const ButtonPrimary = styled.a<{ $isDark?: boolean }>`
   color: ${({ theme, $isDark }) => $isDark ? theme.colors.text.strong : theme.colors.text.inverse};
   background: ${({ theme, $isDark }) => $isDark ? '#FFFFFF' : theme.colors.text.strong};
   border-radius: 999px;
-  border: 1px solid ${({ theme, $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'};
-  box-shadow: 
+  border: 1px solid ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.9)'};
+  box-shadow:
     0 4px 14px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'},
     inset 0 1px 1px 0 ${({ $isDark }) => $isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)'};
   

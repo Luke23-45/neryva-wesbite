@@ -50,26 +50,6 @@
                         "icon": "robotics"
                     }
                 ]
-            },
-            {
-                "title": "ENTERPRISE WORKFLOWS",
-                "items": [
-                    {
-                        "label": "Operations & Support",
-                        "href": "/solutions/operations-support",
-                        "icon": "operations"
-                    },
-                    {
-                        "label": "Finance & Compliance",
-                        "href": "/solutions/finance-compliance",
-                        "icon": "compliance"
-                    },
-                    {
-                        "label": "Internal Productivity",
-                        "href": "/solutions/productivity",
-                        "icon": "productivity"
-                    }
-                ]
             }
         ]
     },

@@ -1,5 +1,7 @@
 import { ArrowDown } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { PixelGrid } from '@assets/visual/home/hero/PixelGrid';
+import heroData from '@neryva_data/home/sections/hero.json';
 import {
   HeroWrapper,
   LeftColumn,
@@ -35,8 +37,8 @@ export function HomeHero() {
       <LeftColumn>
         <LeftTop>
           <Headline>
-            Frontier AI.<br />
-            In your hands.
+            {heroData.hero.headline.line1}<br />
+            {heroData.hero.headline.line2}
           </Headline>
         </LeftTop>
         <LeftBottom>
@@ -45,13 +47,13 @@ export function HomeHero() {
           <Crosshair style={{ top: '2rem', left: '8rem', zIndex: 2 }} />
 
           <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', zIndex: 2, display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <SmallTextLabel>FRONTIER AI</SmallTextLabel>
+            <SmallTextLabel>{heroData.hero.labels.bottomLeft}</SmallTextLabel>
             <Crosshair style={{ position: 'relative' }} />
           </div>
 
           <div style={{ position: 'absolute', top: '2rem', right: '4rem', zIndex: 2, display: 'flex', alignItems: 'center', gap: '2rem' }}>
             <Crosshair style={{ position: 'relative' }} />
-            <SmallTextLabel>IN YOUR HANDS</SmallTextLabel>
+            <SmallTextLabel>{heroData.hero.labels.topRight}</SmallTextLabel>
           </div>
 
           <Crosshair style={{ bottom: '2rem', right: '8rem', zIndex: 2 }} />
@@ -69,9 +71,7 @@ export function HomeHero() {
       <RightColumn>
         <RightTop>
           <Description>
-            We help organizations build
-            tailored AI systems to solve the
-            world's hardest problems.
+            {heroData.hero.description}
           </Description>
         </RightTop>
         <RightBottom>
@@ -81,12 +81,12 @@ export function HomeHero() {
             <ArrowDown size={14} strokeWidth={2} />
           </ArrowsContainer>
           <NewsSection>
-            <NewsLabel>FEATURED NEWS</NewsLabel>
-            <NewsCard>
+            <NewsLabel>{heroData.hero.featured.label}</NewsLabel>
+            <NewsCard as={Link} to={heroData.hero.featured.href}>
               <NewsImage background="transparent">
                 <NewsImageGradient />
               </NewsImage>
-              <NewsTitle>Introducing Mistral OCR 4</NewsTitle>
+              <NewsTitle>{heroData.hero.featured.title}</NewsTitle>
               <NewsArrow>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M9 18l6-6-6-6" />
