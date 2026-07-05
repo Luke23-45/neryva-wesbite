@@ -30,12 +30,12 @@
                 "title": "DOMAINS",
                 "items": [
                     {
-                        "label": "Clinical Validation",
-                        "href": "/solutions/clinical-validation",
+                        "label": "Healthcare",
+                        "href": "/solutions/healthcare",
                         "icon": "clinical"
                     },
                     {
-                        "label": "Energy Optimization",
+                        "label": "Energy ",
                         "href": "/solutions/energy",
                         "icon": "energy"
                     },
@@ -45,7 +45,7 @@
                         "icon": "engineering"
                     },
                     {
-                        "label": "Applied Robotics",
+                        "label": "Robotics",
                         "href": "/solutions/robotics",
                         "icon": "robotics"
                     }
