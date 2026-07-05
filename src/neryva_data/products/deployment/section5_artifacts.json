@@ -1,0 +1,18 @@
+{
+  "id": "engineering-artifacts",
+  "title": "ENGINEERING ARTIFACTS",
+  "subtitle": "Our methodology, documented and open.",
+  "description": "Neryva’s credibility comes from evidence. Review our technical notes on deployment efficiency and system optimization.",
+  "articles": [
+    {
+      "title": "Optimizing RAG Inference Costs in High-Volume Clinical Environments.",
+      "type": "Technical Note",
+      "href": "/research/clinical-rag-optimization"
+    },
+    {
+      "title": "Latency Benchmarks: Small Language Models for Localized Engineering Tasks.",
+      "type": "Experiment Result",
+      "href": "/research/edge-latency-benchmarks"
+    }
+  ]
+}

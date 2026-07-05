@@ -13,6 +13,7 @@ import BlogDetailPage from '@pages/BlogDetailPage';
 import EventsPage from '@pages/EventsPage';
 import ContactPage from '@pages/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/EnterpriseAiAssistantPage';
+import AiEfficiencyDeploymentPage from '@pages/AiEfficiencyDeploymentPage';
 import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
@@ -100,6 +101,12 @@ export const enterpriseAiAssistantRoute = createRoute({
   component: EnterpriseAiAssistantPage,
 });
 
+export const aiEfficiencyDeploymentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/products/ai-efficiency-deployment',
+  component: AiEfficiencyDeploymentPage,
+});
+
 export const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
@@ -123,5 +130,6 @@ export const routeDefinitions = [
   careersRoute,
   contactRoute,
   enterpriseAiAssistantRoute,
+  aiEfficiencyDeploymentRoute,
   notFoundRoute,
 ];

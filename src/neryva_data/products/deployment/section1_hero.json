@@ -1,0 +1,15 @@
+{
+    "id": "efficiency-hero",
+    "eyebrow": "AI EFFICIENCY & DEPLOYMENT",
+    "title": "Production-grade AI requires rigorous engineering.",
+    "description": "We evaluate, optimize, and deploy AI systems that meet strict enterprise requirements for latency, cost, and reliability. No over-engineered promises, just pragmatic infrastructure execution.",
+    "visual": {
+        "type": "architectural_diagram",
+        "alt": "Pipeline diagram showing unoptimized models passing through compression to secure deployment."
+    },
+    "cta": {
+        "label": "Speak with Engineering",
+        "href": "/contact",
+        "primary": true
+    }
+}

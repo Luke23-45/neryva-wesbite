@@ -1,0 +1,16 @@
+{
+    "id": "provisioned-performance",
+    "title": "PROVISIONED PERFORMANCE",
+    "subtitle": "Predictable capacity, latency, and cost.",
+    "description": "Enterprise workflows cannot rely on shared-compute endpoints with variable latency. We engineer dedicated deployment pipelines with strict service level guarantees.",
+    "features": [
+        {
+            "title": "Dedicated Compute Profiling",
+            "description": "We match your specific token-generation requirements to the exact hardware needed (NVIDIA GPUs or optimized CPU clusters), preventing expensive over-provisioning."
+        },
+        {
+            "title": "Guaranteed Latency Baselines",
+            "description": "Continuous telemetry and dynamic load balancing ensure your AI systems respond within strict millisecond thresholds, even during peak operational hours."
+        }
+    ]
+}
