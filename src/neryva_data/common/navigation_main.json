@@ -5,38 +5,6 @@
     "order": 1
   },
   {
-    "label": "Programs",
-    "href": "/programs/large-language-models",
-    "order": 2,
-    "megaMenu": [
-      {
-        "title": "LATEST MODELS",
-        "items": [
-          {
-            "label": "Large Language Models",
-            "href": "/programs/large-language-models",
-            "icon": "llm"
-          },
-          {
-            "label": "Robotics and Task Transfer",
-            "href": "/programs/robotics-task-transfer",
-            "icon": "robotics"
-          },
-          {
-            "label": "Safe Clinical AI",
-            "href": "/programs/clinical-ai",
-            "icon": "clinical"
-          },
-          {
-            "label": "Energy and Engineering",
-            "href": "/programs/energy-engineering-optimization",
-            "icon": "energy"
-          }
-        ]
-      }
-    ]
-  },
-  {
     "label": "Resources",
     "href": "/resources/blog",
     "order": 3,

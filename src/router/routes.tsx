@@ -1,10 +1,9 @@
-import { createRoute, redirect } from '@tanstack/react-router';
+import { createRoute } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
 // Pages
 import HomePage from '@pages/home/HomePage';
 import ResearchPage from '@pages/research/ResearchPage';
-import ProgramDetailPage from '@pages/programs/ProgramDetailPage';
 import BlogPage from '@pages/resources/blog/BlogPage';
 import AboutPage from '@pages/company/about/AboutPage';
 import CareersPage from '@pages/company/careers/CareersPage';
@@ -31,27 +30,6 @@ export const researchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/research',
   component: ResearchPage,
-});
-
-// Programs layout route (parent for detail pages only)
-export const programsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/programs',
-});
-
-// /programs redirects to the first program — no index page
-export const programsIndexRoute = createRoute({
-  getParentRoute: () => programsRoute,
-  path: '/',
-  beforeLoad: () => {
-    throw redirect({ to: '/programs/large-language-models' });
-  },
-});
-
-export const programDetailRoute = createRoute({
-  getParentRoute: () => programsRoute,
-  path: '/$slug',
-  component: ProgramDetailPage,
 });
 
 // Resources child routes
@@ -139,10 +117,6 @@ export const notFoundRoute = createRoute({
 export const routeDefinitions = [
   indexRoute,
   researchRoute,
-  programsRoute.addChildren([
-    programsIndexRoute,
-    programDetailRoute,
-  ]),
   blogRoute,
   blogDetailRoute,
   eventsRoute,

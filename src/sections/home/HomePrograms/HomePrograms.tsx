@@ -156,7 +156,7 @@ export function HomePrograms() {
                       <ProgramTitle $accent={program.accent}>{program.title}</ProgramTitle>
                     </motion.div>
                     <ProgramCTA as={motion.div} variants={fadeUp}>
-                      <TextLink to={`/programs/${program.slug}`} variant="secondary">
+                      <TextLink to="/research">
                         Discover {program.title.split(' ')[0]}
                       </TextLink>
                     </ProgramCTA>

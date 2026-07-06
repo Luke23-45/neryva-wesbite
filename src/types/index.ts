@@ -72,68 +72,6 @@ export interface OpenProblem {
   relatedArea: string;
 }
 
-// ─── Programs ──────────────────────────────────────────
-export interface Program {
-  slug: string;
-  number: number;
-  title: string;
-  summary: string;
-  accent: string;
-}
-
-export interface KeyQuestion {
-  id: number;
-  question: string;
-}
-
-export interface RelatedReading {
-  title: string;
-  source: string;
-  reason: string;
-  url?: string;
-}
-
-export interface ProgramDetail {
-  slug: string;
-  number: number;
-  title: string;
-  summary: string;
-  accent: string;
-  description: string;
-  focusAreas: string[];
-  keyQuestions: KeyQuestion[];
-  currentWork: string;
-  relatedReading: RelatedReading[];
-  svgMotif: string;
-}
-
-// ─── New Program Page Data (pages/program/*.json) ───────
-export interface ProgramVector {
-  id: string;
-  title: string;
-  description: string;
-}
-
-export interface ProgramFoundation {
-  title: string;
-  source: string;
-  relevance: string;
-}
-
-export interface ProgramPage {
-  number: number;
-  status: string;
-  accent: string;
-  title: string;
-  summary: string;
-  problem: string;
-  approach: string;
-  vectors: ProgramVector[];
-  currentWork: string;
-  futureDirection: string;
-  foundations: ProgramFoundation[];
-}
-
 // ─── Resources ─────────────────────────────────────────
 export interface TechnicalWritingEntry {
   title: string;
