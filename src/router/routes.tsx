@@ -2,22 +2,22 @@ import { createRoute, redirect } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
 // Pages
-import HomePage from '@pages/HomePage';
-import ResearchPage from '@pages/ResearchPage';
-import ProgramDetailPage from '@pages/ProgramDetailPage';
-import ResourcesPage from '@pages/ResourcesPage';
-import BlogPage from '@pages/BlogPage';
-import AboutPage from '@pages/AboutPage';
-import CareersPage from '@pages/CareersPage';
-import BlogDetailPage from '@pages/BlogDetailPage';
-import EventsPage from '@pages/EventsPage';
-import ContactPage from '@pages/ContactPage';
-import EnterpriseAiAssistantPage from '@pages/EnterpriseAiAssistantPage';
-import AiEfficiencyDeploymentPage from '@pages/AiEfficiencyDeploymentPage';
-import EnergyPage from '@pages/EnergyPage';
-import EngineeringPage from '@pages/EngineeringPage';
-import HealthcarePage from '@pages/HealthcarePage';
-import RoboticsPage from '@pages/RoboticsPage';
+import HomePage from '@pages/home/HomePage';
+import ResearchPage from '@pages/research/ResearchPage';
+import ProgramDetailPage from '@pages/programs/ProgramDetailPage';
+import ResourcesPage from '@pages/resources/ResourcesPage';
+import BlogPage from '@pages/resources/blog/BlogPage';
+import AboutPage from '@pages/company/about/AboutPage';
+import CareersPage from '@pages/company/careers/CareersPage';
+import BlogDetailPage from '@pages/resources/blog/BlogDetailPage';
+import EventsPage from '@pages/resources/events/EventsPage';
+import ContactPage from '@pages/company/contact/ContactPage';
+import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
+import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
+import EnergyPage from '@pages/solutions/energy/EnergyPage';
+import EngineeringPage from '@pages/solutions/engineering/EngineeringPage';
+import HealthcarePage from '@pages/solutions/healthcare/HealthcarePage';
+import RoboticsPage from '@pages/solutions/robotics/RoboticsPage';
 import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
