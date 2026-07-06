@@ -14,6 +14,10 @@ import EventsPage from '@pages/EventsPage';
 import ContactPage from '@pages/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/EnterpriseAiAssistantPage';
 import AiEfficiencyDeploymentPage from '@pages/AiEfficiencyDeploymentPage';
+import EnergyPage from '@pages/EnergyPage';
+import EngineeringPage from '@pages/EngineeringPage';
+import HealthcarePage from '@pages/HealthcarePage';
+import RoboticsPage from '@pages/RoboticsPage';
 import NotFoundPage from '@pages/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
@@ -107,6 +111,30 @@ export const aiEfficiencyDeploymentRoute = createRoute({
   component: AiEfficiencyDeploymentPage,
 });
 
+export const energyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/solutions/energy',
+  component: EnergyPage,
+});
+
+export const engineeringRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/solutions/engineering',
+  component: EngineeringPage,
+});
+
+export const healthcareRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/solutions/healthcare',
+  component: HealthcarePage,
+});
+
+export const roboticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/solutions/robotics',
+  component: RoboticsPage,
+});
+
 export const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '*',
@@ -131,5 +159,9 @@ export const routeDefinitions = [
   contactRoute,
   enterpriseAiAssistantRoute,
   aiEfficiencyDeploymentRoute,
+  energyRoute,
+  engineeringRoute,
+  healthcareRoute,
+  roboticsRoute,
   notFoundRoute,
 ];

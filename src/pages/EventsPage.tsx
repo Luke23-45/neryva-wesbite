@@ -1,6 +1,6 @@
 import { PageHead } from '@components/common/PageHead';
-import { EventsHero } from '@/sections/events/EventsHero/EventsHero';
-import { EventsList } from '@/sections/events/EventsList/EventsList';
+import { EventsHero } from '@/sections/resources/events/EventsHero/EventsHero';
+import { EventsList } from '@/sections/resources/events/EventsList/EventsList';
 import eventsData from '@/data/pages/events.json';
 
 export default function EventsPage() {

@@ -1,0 +1,13 @@
+{
+  "id": "engineering-research",
+  "title": "ENGINEERING OPTIMIZATION RESEARCH",
+  "subtitle": "Backed by rigorous, multi-domain AI research.",
+  "description": "Our applied systems are directly informed by Neryva\u2019s ongoing lab research into multi-modal reasoning, geometric processing, and system optimization.",
+  "artifacts": [
+    {
+      "title": "Evaluating Multimodal RAG on Complex Mechanical Schematics and Legacy CAD Metadata.",
+      "type": "Research Artifact",
+      "href": "/research/multimodal-cad-reasoning"
+    }
+  ]
+}

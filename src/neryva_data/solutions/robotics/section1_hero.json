@@ -1,0 +1,15 @@
+{
+  "id": "robotics-hero",
+  "eyebrow": "APPLIED ROBOTICS AI",
+  "title": "Intelligence at the edge of physical execution.",
+  "description": "We engineer and deploy highly optimized AI systems for robotics fleets, autonomous vehicles, and industrial automation. From custom embedded firmware to ROS diagnostic assistants, we bridge the gap between reasoning and action.",
+  "visual": {
+    "type": "embedded_architecture_diagram",
+    "alt": "System architecture diagram showing Neryva edge models interfacing with vision sensors and RTOS execution layers."
+  },
+  "cta": {
+    "label": "Speak with Solutions",
+    "href": "/contact",
+    "primary": true
+  }
+}

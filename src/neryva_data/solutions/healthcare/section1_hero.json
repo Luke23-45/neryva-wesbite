@@ -1,0 +1,15 @@
+{
+  "id": "healthcare-hero",
+  "eyebrow": "HEALTHCARE & CLINICAL AI",
+  "title": "Intelligence for environments where accuracy is non-negotiable.",
+  "description": "We deploy secure, strictly grounded AI systems for hospitals, research institutions, and biotech firms. Automate clinical workflows and parse complex medical data without compromising PHI.",
+  "visual": {
+    "type": "security_architecture_diagram",
+    "alt": "Diagram demonstrating EHR data interacting with a localized, air-gapped Neryva deployment."
+  },
+  "cta": {
+    "label": "Speak with Solutions",
+    "href": "/contact",
+    "primary": true
+  }
+}

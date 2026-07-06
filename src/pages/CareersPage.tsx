@@ -1,7 +1,7 @@
 import { PageHead } from '@components/common/PageHead';
-import { CareersHero } from '@/sections/careers/CareersHero';
-import { CareersEnvironment } from '@/sections/careers/CareersEnvironment';
-import { CareersRoles } from '@/sections/careers/CareersRoles';
+import { CareersHero } from '@/sections/company/careers/CareersHero';
+import { CareersEnvironment } from '@/sections/company/careers/CareersEnvironment';
+import { CareersRoles } from '@/sections/company/careers/CareersRoles';
 import careersData from '@data/pages/careers.json';
 
 export default function CareersPage() {

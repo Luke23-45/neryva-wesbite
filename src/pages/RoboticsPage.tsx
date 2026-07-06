@@ -1,0 +1,21 @@
+import { PageHead } from '@components/common/PageHead';
+import { RoboticsHero } from '@/sections/solutions/robotics/RoboticsHero';
+import { RoboticsStandards } from '@/sections/solutions/robotics/RoboticsStandards';
+import { RoboticsWorkflows } from '@/sections/solutions/robotics/RoboticsWorkflows';
+import { RoboticsResearch } from '@/sections/solutions/robotics/RoboticsResearch';
+
+export default function RoboticsPage() {
+  return (
+    <>
+      <PageHead
+        title="Applied Robotics AI"
+        description="Intelligence at the edge of physical execution. Optimized AI systems for robotics fleets, autonomous vehicles, and industrial automation."
+        canonicalPath="/solutions/robotics"
+      />
+      <RoboticsHero />
+      <RoboticsStandards />
+      <RoboticsWorkflows />
+      <RoboticsResearch />
+    </>
+  );
+}

@@ -1,0 +1,22 @@
+{
+  "id": "engineering-workflows",
+  "title": "APPLIED ENGINEERING WORKFLOWS",
+  "subtitle": "Removing friction from the hardware development lifecycle.",
+  "workflows": [
+    {
+      "step": "01",
+      "title": "Automated Spec & Compliance Auditing",
+      "description": "Engineers spend thousands of hours cross-referencing designs against regulatory standards. The Neryva Assistant automatically audits your current design parameters against updated ISO, ASME, and IEEE standards, flagging exact geometric or material non-compliances."
+    },
+    {
+      "step": "02",
+      "title": "Legacy CAD & BOM Retrieval",
+      "description": "Prevent teams from redesigning parts that already exist. Neryva indexes decades of legacy CAD files and Bill of Materials (BOMs). Engineers can query the system conversationally to find exact historical components, stress-test results, and supplier data."
+    },
+    {
+      "step": "03",
+      "title": "Cross-Disciplinary Systems Engineering",
+      "description": "Hardware design requires constant translation between mechanical, electrical, and software teams. Neryva bridges these silos by instantly summarizing structural load requirements for software teams, or extracting thermal constraints for electrical layout."
+    }
+  ]
+}

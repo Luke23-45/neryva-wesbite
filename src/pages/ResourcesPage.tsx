@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { ResourcesHero } from '@/sections/resources/ResourcesHero';
-import { ResourcesWriting } from '@/sections/resources/ResourcesWriting';
-import { ResourcesOpenSource } from '@/sections/resources/ResourcesOpenSource';
-import { ResourcesReadingLists } from '@/sections/resources/ResourcesReadingLists';
+import { ResourcesHero } from '@/sections/resources/page_section/ResourcesHero';
+import { ResourcesWriting } from '@/sections/resources/page_section/ResourcesWriting';
+import { ResourcesOpenSource } from '@/sections/resources/page_section/ResourcesOpenSource';
+import { ResourcesReadingLists } from '@/sections/resources/page_section/ResourcesReadingLists';
 
 export default function ResourcesPage() {
   return (

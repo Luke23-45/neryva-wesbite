@@ -3,9 +3,9 @@ import styled from 'styled-components';
 import { PageHead } from '@components/common/PageHead';
 import { TextLink } from '@/components/common/ui/TextLink';
 import { getBlogPost } from '@/lib/data/blog';
-import { BlogDetailHero } from '@/sections/blog/blog-detail/BlogDetailHero/BlogDetailHero';
-import { BlogDetailBody } from '@/sections/blog/blog-detail/BlogDetailBody/BlogDetailBody';
-import { BlogDetailFooter } from '@/sections/blog/blog-detail/BlogDetailFooter/BlogDetailFooter';
+import { BlogDetailHero } from '@/sections/resources/blog/blog-detail/BlogDetailHero/BlogDetailHero';
+import { BlogDetailBody } from '@/sections/resources/blog/blog-detail/BlogDetailBody/BlogDetailBody';
+import { BlogDetailFooter } from '@/sections/resources/blog/blog-detail/BlogDetailFooter/BlogDetailFooter';
 
 const NotFoundWrapper = styled.section`
   padding: 120px 0;

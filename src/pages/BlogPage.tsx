@@ -1,5 +1,5 @@
 import { PageHead } from '@components/common/PageHead';
-import { BlogGrid } from '@/sections/blog/BlogGrid/BlogGrid';
+import { BlogGrid } from '@/sections/resources/blog/BlogGrid/BlogGrid';
 
 export default function BlogPage() {
   return (

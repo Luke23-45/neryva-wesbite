@@ -1,0 +1,13 @@
+{
+  "id": "healthcare-research",
+  "title": "CLINICAL RESEARCH FOUNDATION",
+  "subtitle": "Backed by rigorous, multi-domain AI research.",
+  "description": "Neryva is not a generic software wrapper. Our solutions are powered by our ongoing research into clinical AI reliability, optimizing models specifically for complex medical reasoning.",
+  "artifacts": [
+    {
+      "title": "Evaluating RAG-based LLM Accuracy on Unstructured Clinical Diagnostics.",
+      "type": "Research Artifact",
+      "href": "/research/clinical-accuracy-evaluation"
+    }
+  ]
+}

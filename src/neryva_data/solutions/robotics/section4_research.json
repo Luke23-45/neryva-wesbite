@@ -1,0 +1,13 @@
+{
+  "id": "robotics-research",
+  "title": "ROBOTICS & TASK TRANSFER RESEARCH",
+  "subtitle": "Backed by rigorous, multi-domain AI research.",
+  "description": "Our embedded solutions are the direct result of Neryva\u2019s foundational lab research into spatial reasoning, model quantization, and cross-domain task transfer.",
+  "artifacts": [
+    {
+      "title": "Evaluating Zero-Shot Task Transfer: Translating Natural Language into Kinematic Constraints.",
+      "type": "Research Artifact",
+      "href": "/research/zero-shot-kinematics"
+    }
+  ]
+}
