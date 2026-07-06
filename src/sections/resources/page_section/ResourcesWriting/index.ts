@@ -1,1 +1,0 @@
-export { ResourcesWriting } from './ResourcesWriting';

@@ -2,7 +2,7 @@
   "links": [
     { "label": "Research", "href": "/research", "order": 1 },
     { "label": "Solutions", "href": "/solutions", "order": 2 },
-    { "label": "Resources", "href": "/resources", "order": 3 },
+    { "label": "Resources", "href": "/resources/blog", "order": 3 },
     { "label": "Company", "href": "/company", "order": 4 },
     { "label": "Contact", "href": "/contact", "order": 5 }
   ],

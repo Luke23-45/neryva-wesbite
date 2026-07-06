@@ -1,1 +1,0 @@
-export { ResourcesHero } from './ResourcesHero';

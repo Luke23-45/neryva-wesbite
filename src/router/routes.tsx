@@ -5,7 +5,6 @@ import { rootRoute } from './root';
 import HomePage from '@pages/home/HomePage';
 import ResearchPage from '@pages/research/ResearchPage';
 import ProgramDetailPage from '@pages/programs/ProgramDetailPage';
-import ResourcesPage from '@pages/resources/ResourcesPage';
 import BlogPage from '@pages/resources/blog/BlogPage';
 import AboutPage from '@pages/company/about/AboutPage';
 import CareersPage from '@pages/company/careers/CareersPage';
@@ -53,12 +52,6 @@ export const programDetailRoute = createRoute({
   getParentRoute: () => programsRoute,
   path: '/$slug',
   component: ProgramDetailPage,
-});
-
-export const resourcesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/resources',
-  component: ResourcesPage,
 });
 
 // Resources child routes
@@ -150,7 +143,6 @@ export const routeDefinitions = [
     programsIndexRoute,
     programDetailRoute,
   ]),
-  resourcesRoute,
   blogRoute,
   blogDetailRoute,
   eventsRoute,

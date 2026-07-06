@@ -1,1 +1,0 @@
-export { ResourcesReadingLists } from './ResourcesReadingLists';
