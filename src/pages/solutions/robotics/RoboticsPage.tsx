@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { RoboticsHero } from '@/sections/solutions/robotics/RoboticsHero';
-import { RoboticsStandards } from '@/sections/solutions/robotics/RoboticsStandards';
-import { RoboticsWorkflows } from '@/sections/solutions/robotics/RoboticsWorkflows';
-import { RoboticsResearch } from '@/sections/solutions/robotics/RoboticsResearch';
+import { RoboticsHero } from '@/sections/pages/solutions/robotics/RoboticsHero';
+import { RoboticsStandards } from '@/sections/pages/solutions/robotics/RoboticsStandards';
+import { RoboticsWorkflows } from '@/sections/pages/solutions/robotics/RoboticsWorkflows';
+import { RoboticsResearch } from '@/sections/pages/solutions/robotics/RoboticsResearch';
 
 export default function RoboticsPage() {
   return (

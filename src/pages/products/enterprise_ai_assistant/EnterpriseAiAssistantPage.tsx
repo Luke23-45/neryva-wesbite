@@ -1,6 +1,6 @@
 import { PageHead } from '@components/common/PageHead';
-import { EnterpriseHero } from '@/sections/products/enterprise-ai-assistant/EnterpriseHero';
-import { EnterprisePipeline } from '@/sections/products/enterprise-ai-assistant/EnterprisePipeline';
+import { EnterpriseHero } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseHero';
+import { EnterprisePipeline } from '@/sections/pages/products/enterprise-ai-assistant/EnterprisePipeline';
 
 export default function EnterpriseAiAssistantPage() {
   return (

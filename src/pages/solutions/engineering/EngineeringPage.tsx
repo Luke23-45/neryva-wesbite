@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { EngineeringHero } from '@/sections/solutions/engineering/EngineeringHero';
-import { EngineeringStandards } from '@/sections/solutions/engineering/EngineeringStandards';
-import { EngineeringWorkflows } from '@/sections/solutions/engineering/EngineeringWorkflows';
-import { EngineeringResearch } from '@/sections/solutions/engineering/EngineeringResearch';
+import { EngineeringHero } from '@/sections/pages/solutions/engineering/EngineeringHero';
+import { EngineeringStandards } from '@/sections/pages/solutions/engineering/EngineeringStandards';
+import { EngineeringWorkflows } from '@/sections/pages/solutions/engineering/EngineeringWorkflows';
+import { EngineeringResearch } from '@/sections/pages/solutions/engineering/EngineeringResearch';
 
 export default function EngineeringPage() {
   return (

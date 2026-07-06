@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
-import { ContactHero } from '@/sections/company/contact/ContactHero';
-import { ContactFormSection } from '@/sections/company/contact/ContactFormSection/ContactFormSection';
+import { ContactHero } from '@/sections/pages/company/contact/ContactHero';
+import { ContactFormSection } from '@/sections/pages/company/contact/ContactFormSection/ContactFormSection';
 import contactData from '@/data/pages/contact.json';
 
 export default function ContactPage() {

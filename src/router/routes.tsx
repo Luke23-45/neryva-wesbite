@@ -16,7 +16,7 @@ import EnergyPage from '@pages/solutions/energy/EnergyPage';
 import EngineeringPage from '@pages/solutions/engineering/EngineeringPage';
 import HealthcarePage from '@pages/solutions/healthcare/HealthcarePage';
 import RoboticsPage from '@pages/solutions/robotics/RoboticsPage';
-import NotFoundPage from '@pages/NotFoundPage';
+import NotFoundPage from '@pages/_shared/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
 

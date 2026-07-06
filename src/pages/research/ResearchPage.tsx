@@ -1,7 +1,7 @@
 import { PageHead } from '@components/common/PageHead';
-import { ResearchHero } from '@/sections/research/ResearchHero';
-import { ResearchAreas } from '@/sections/research/ResearchAreas';
-import { ResearchPapers } from '@/sections/research/ResearchPapers';
+import { ResearchHero } from '@/sections/pages/research/ResearchHero';
+import { ResearchAreas } from '@/sections/pages/research/ResearchAreas';
+import { ResearchPapers } from '@/sections/pages/research/ResearchPapers';
 
 export default function ResearchPage() {
   return (

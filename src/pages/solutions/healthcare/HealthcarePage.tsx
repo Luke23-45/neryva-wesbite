@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { HealthcareHero } from '@/sections/solutions/healthcare/HealthcareHero';
-import { HealthcareStandards } from '@/sections/solutions/healthcare/HealthcareStandards';
-import { HealthcareWorkflows } from '@/sections/solutions/healthcare/HealthcareWorkflows';
-import { HealthcareResearch } from '@/sections/solutions/healthcare/HealthcareResearch';
+import { HealthcareHero } from '@/sections/pages/solutions/healthcare/HealthcareHero';
+import { HealthcareStandards } from '@/sections/pages/solutions/healthcare/HealthcareStandards';
+import { HealthcareWorkflows } from '@/sections/pages/solutions/healthcare/HealthcareWorkflows';
+import { HealthcareResearch } from '@/sections/pages/solutions/healthcare/HealthcareResearch';
 
 export default function HealthcarePage() {
   return (

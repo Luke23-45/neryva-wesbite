@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { AboutHero } from '@/sections/company/about/AboutHero';
-import { AboutMission } from '@/sections/company/about/AboutMission';
-import { AboutTeam } from '@/sections/company/about/AboutTeam';
-import { AboutCTA } from '@/sections/company/about/AboutCTA';
+import { AboutHero } from '@/sections/pages/company/about/AboutHero';
+import { AboutMission } from '@/sections/pages/company/about/AboutMission';
+import { AboutTeam } from '@/sections/pages/company/about/AboutTeam';
+import { AboutCTA } from '@/sections/pages/company/about/AboutCTA';
 import aboutData from '@data/pages/about.json';
 
 export default function AboutPage() {

@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { EnergyHero } from '@/sections/solutions/energy/EnergyHero';
-import { EnergyStandards } from '@/sections/solutions/energy/EnergyStandards';
-import { EnergyWorkflows } from '@/sections/solutions/energy/EnergyWorkflows';
-import { EnergyResearch } from '@/sections/solutions/energy/EnergyResearch';
+import { EnergyHero } from '@/sections/pages/solutions/energy/EnergyHero';
+import { EnergyStandards } from '@/sections/pages/solutions/energy/EnergyStandards';
+import { EnergyWorkflows } from '@/sections/pages/solutions/energy/EnergyWorkflows';
+import { EnergyResearch } from '@/sections/pages/solutions/energy/EnergyResearch';
 
 export default function EnergyPage() {
   return (
