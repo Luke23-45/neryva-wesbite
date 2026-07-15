@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -21,12 +21,12 @@ import {
   ApplyButton,
 } from './CareersRoles.styles';
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const stagger = {
+const stagger: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
 };
@@ -74,7 +74,7 @@ export function CareersRoles({ data }: Props) {
 
             <div>
               {data.departments.map((dept) => (
-                <DepartmentGroup as={motion.div} variants={fadeUp} key={dept.name}>
+                <DepartmentGroup variants={fadeUp} key={dept.name}>
                   <DepartmentName>{dept.name}</DepartmentName>
                   <RoleList>
                     {dept.positions.map((pos) => {

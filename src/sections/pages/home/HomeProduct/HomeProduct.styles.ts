@@ -145,7 +145,7 @@ export const TileDescription = styled.p<{ $isDark?: boolean }>`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 15px;
   line-height: 1.6;
-  color: ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)'};
+  color: ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)'};
   margin: 0;
   max-width: 90%;
 `;

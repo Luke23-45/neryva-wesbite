@@ -34,7 +34,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               duration: 4000,
               style: {
                 background: theme.colors.surface,
-                color: theme.colors.ink,
+                color: theme.colors.text.strong,
                 borderRadius: theme.radii.md,
               },
             }}

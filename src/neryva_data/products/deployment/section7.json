@@ -1,0 +1,23 @@
+{
+  "id": "support",
+  "sidebarLabel": "Support",
+  "title": "Ongoing Managed Support",
+  "visual": {
+    "type": "MAINTENANCE",
+    "description": "Continuing to support the deployment after launch."
+  },
+  "features": [
+    {
+      "title": "Issue Resolution",
+      "description": "Dedicated issue response, maintenance, and optimization reviews."
+    },
+    {
+      "title": "System Updates",
+      "description": "Applying environment updates and continuous reliability improvements."
+    },
+    {
+      "title": "Expert Guidance",
+      "description": "Ongoing operational guidance and training for the customer team."
+    }
+  ]
+}

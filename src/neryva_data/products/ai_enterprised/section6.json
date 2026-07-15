@@ -1,23 +1,23 @@
 {
-    "id": "deployment-security",
-    "sidebarLabel": "5. Deployment & security",
-    "title": "5. Deployment & security.",
-    "visual": {
-        "type": "network_topology",
-        "description": "High-contrast network topology diagram showing VPC peering, On-prem servers, and secure air-gapped deployment pathways."
+  "id": "workflow-support",
+  "sidebarLabel": "5. Workflow support",
+  "title": "5. Workflow support.",
+  "visual": {
+    "type": "flowchart",
+    "description": "Agent autonomously capturing user details, completing a form, and routing a support ticket."
+  },
+  "features": [
+    {
+      "title": "Task assistance.",
+      "description": "Support practical workflows like ticket routing and status checks."
     },
-    "features": [
-        {
-            "title": "Zero-trust infrastructure.",
-            "description": "Deploy completely on-premise, inside your VPC, or via our secure enterprise cloud."
-        },
-        {
-            "title": "No model training.",
-            "description": "We never train our foundational research models on your proprietary inputs or logs."
-        },
-        {
-            "title": "Comprehensive audit.",
-            "description": "Full cryptographic traceability of every query, cited document, and executed workflow."
-        }
-    ]
+    {
+      "title": "Form completion.",
+      "description": "Autonomously collect necessary details before human handoff."
+    },
+    {
+      "title": "Internal utility.",
+      "description": "Help employees find information and follow internal company procedures."
+    }
+  ]
 }

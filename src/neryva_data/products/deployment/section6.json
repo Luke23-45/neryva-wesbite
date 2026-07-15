@@ -1,0 +1,23 @@
+{
+  "id": "governance",
+  "sidebarLabel": "Governance",
+  "title": "Governance And Reliability",
+  "visual": {
+    "type": "CONTROL",
+    "description": "Keeping the system safe, documented, and controllable."
+  },
+  "features": [
+    {
+      "title": "Change Management",
+      "description": "Deployment records, model version tracking, and rollback planning."
+    },
+    {
+      "title": "Security Reviews",
+      "description": "Continuous security review support and safe update procedures."
+    },
+    {
+      "title": "Handoff Documentation",
+      "description": "Comprehensive operational handoff documentation for internal teams."
+    }
+  ]
+}

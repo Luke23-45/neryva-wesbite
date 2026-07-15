@@ -1,0 +1,45 @@
+{
+  "title": "Core Offerings",
+  "description": "Neryva builds practical enterprise AI systems in two product areas.",
+  "offers": [
+    {
+      "title": "AI Deployment And Operations",
+      "description": "Secure deployment, optimization, and ongoing operation of AI systems.",
+      "href": "/products/ai-efficiency-deployment",
+      "link_label": "Explore AI Deployment",
+      "outcomes": [
+        "A model deployed in a secure environment",
+        "Reliable production infrastructure",
+        "Performance tuning and cost control",
+        "Governance, monitoring, and operational support",
+        "A clear path from prototype to production"
+      ]
+    },
+    {
+      "title": "Professional AI Agents",
+      "description": "Customer-facing and business-facing AI agents that represent the company professionally.",
+      "href": "/products/enterprise-ai-assistant",
+      "link_label": "Explore Agent Studio",
+      "outcomes": [
+        "A branded customer service chatbot",
+        "A professional website assistant",
+        "An internal assistant for employees",
+        "A workflow-aware agent for support or operations",
+        "A controlled conversational layer built on top of a chosen model"
+      ]
+    }
+  ],
+  "businessOutcomes": {
+    "title": "Business Outcomes",
+    "description": "Neryva Solutions is designed for organizations that need one or more of the following outcomes:",
+    "list": [
+      "Secure AI deployment in production",
+      "Professional customer interactions powered by AI",
+      "Better access to company knowledge",
+      "Lower manual support burden",
+      "More reliable business workflows",
+      "Stronger brand consistency in AI interactions",
+      "Tighter control over how AI behaves inside the business"
+    ]
+  }
+}

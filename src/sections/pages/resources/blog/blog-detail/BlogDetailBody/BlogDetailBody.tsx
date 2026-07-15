@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+
 import type { BlogPost, BlogPostSection } from '@types';
 import {
   BodyWrapper,

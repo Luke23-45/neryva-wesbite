@@ -1,23 +1,23 @@
 {
-    "id": "workflow-execution",
-    "sidebarLabel": "3. Workflow execution",
-    "title": "3. Workflow execution.",
-    "visual": {
-        "type": "terminal_log",
-        "description": "Dark-mode terminal log showing an anomaly detected, followed by the system autonomously triggering a POST request to /jira/api/v2 and a Slack webhook."
+  "id": "knowledge-integration",
+  "sidebarLabel": "3. Knowledge integration",
+  "title": "3. Knowledge integration.",
+  "visual": {
+    "type": "diagram",
+    "description": "Schema showing company FAQs, product info, and support docs syncing into the agent's knowledge base."
+  },
+  "features": [
+    {
+      "title": "Approved sources.",
+      "description": "Answers are scoped only to your company FAQs and official documentation."
     },
-    "features": [
-        {
-            "title": "API triggering.",
-            "description": "Connects reasoning directly to action via internal company endpoints."
-        },
-        {
-            "title": "Multi-step autonomy.",
-            "description": "Capable of chaining independent actions to complete end-to-end operational tasks."
-        },
-        {
-            "title": "Human-in-the-loop.",
-            "description": "Configurable approval gates and manual overrides for high-consequence actions."
-        }
-    ]
+    {
+      "title": "Structured data.",
+      "description": "Easily connect existing product catalogs and service procedures."
+    },
+    {
+      "title": "Accurate responses.",
+      "description": "Ensure the agent answers real questions using only allowed business data."
+    }
+  ]
 }

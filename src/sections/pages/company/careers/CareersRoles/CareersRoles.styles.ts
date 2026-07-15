@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 export const BorderTop = styled.div`
   border-top: 1px solid ${({ theme }) => theme.colors.border};
@@ -28,7 +29,7 @@ export const Title = styled.h2`
   margin: 0;
 `;
 
-export const DepartmentGroup = styled.div`
+export const DepartmentGroup = styled(motion.div)`
   margin-bottom: 64px;
 `;
 

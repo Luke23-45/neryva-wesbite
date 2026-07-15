@@ -1,8 +1,7 @@
 import type { FC } from 'react';
 import { motion } from 'framer-motion';
 import { TextLink } from '@/components/common/ui/TextLink';
-import homeResearchData from '@data/pages/home/home_research.json';
-import focusAreas from '@data/pages/home/focus-areas.json';
+import researchOverview from '@neryva_data/home/sections/research_overview.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -37,8 +36,11 @@ const AreaIcons: Record<string, FC> = {
 };
 
 export function HomeResearch() {
-  const { heading, footer } = homeResearchData;
-  const cards = focusAreas;
+  const { heading, footer, cards } = {
+    heading: { title: researchOverview.title },
+    footer: { linkText: researchOverview.cta?.label || '', linkUrl: researchOverview.cta?.href || '' },
+    cards: researchOverview.items,
+  };
 
   return (
     <Section paddingYTop="lg" paddingYBottom="none" background={theme.colors.background.secondary}>

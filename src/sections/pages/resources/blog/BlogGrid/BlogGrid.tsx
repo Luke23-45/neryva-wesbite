@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { PostMosaic } from '@/assets/visual/blog/PostMosaic';
-import blogData from '@data/pages/blog.json';
+import blogData from '@neryva_data/blog/sections/posts.json';
 import {
   Wrapper,
   PageHeader,
@@ -24,7 +24,7 @@ import {
   CardTitle,
   CardSummary,
   CardFooter,
-  CardMeta,
+
   CardDate,
   CardAuthor,
   CardArrow,
@@ -55,7 +55,7 @@ export function BlogGrid() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
-    return blogData.posts.filter((post) => {
+    return blogData.items.filter((post: any) => {
       const matchCat = activeCategory === 'All' || post.category === activeCategory;
       const q = searchQuery.toLowerCase();
       const matchSearch =

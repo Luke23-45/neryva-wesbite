@@ -1,22 +1,22 @@
 import styled, { css } from 'styled-components';
 
 const primaryStyles = css`
-  background-color: ${({ theme }) => theme.colors.ink};
+  background-color: ${({ theme }) => theme.colors.text.strong};
   color: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.ink};
+  border: 1px solid ${({ theme }) => theme.colors.text.strong};
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.graphite};
+    background-color: ${({ theme }) => theme.colors.text.secondary};
   }
 `;
 
 const secondaryStyles = css`
   background-color: transparent;
-  color: ${({ theme }) => theme.colors.ink};
-  border: 1px solid ${({ theme }) => theme.colors.line};
+  color: ${({ theme }) => theme.colors.text.strong};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.lineStrong};
+    border-color: ${({ theme }) => theme.colors.text.strong};
   }
 `;
 
@@ -36,7 +36,7 @@ export const StyledButton = styled.button<{ $variant?: 'primary' | 'secondary' }
   ${({ $variant = 'primary' }) => $variant === 'primary' ? primaryStyles : secondaryStyles}
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.blue};
+    outline: 2px solid ${({ theme }) => theme.colors.accent.azure};
     outline-offset: 2px;
   }
 `;

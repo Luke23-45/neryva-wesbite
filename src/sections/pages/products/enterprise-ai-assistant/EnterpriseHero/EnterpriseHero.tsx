@@ -5,24 +5,15 @@ import heroData from '@neryva_data/products/ai_enterprised/section1.json';
 import { EnterpriseHeroVisual } from './EnterpriseHeroVisual';
 import {
   HeroWrapper,
-  MeshOverlay,
   ContentGrid,
   LeftColumn,
   Eyebrow,
   Headline,
+  DownArrows,
   Description,
   CtaGroup,
   CtaPrimary,
-  CtaSecondary,
-  TrustBar,
-  TrustLabel,
-  TrustLogos,
-  TrustDot,
-  TrustLogoPlaceholder,
   RightColumn,
-  ScrollHint,
-  ScrollLine,
-  ScrollLabel,
 } from './EnterpriseHero.styles';
 
 const spring = [0.16, 1, 0.3, 1] as const;
@@ -40,14 +31,13 @@ export function EnterpriseHero() {
   const { setHeaderTheme } = useUiStore();
 
   useEffect(() => {
-    setHeaderTheme('dark');
+    // Header should be light since the left background is white
+    setHeaderTheme('light');
     return () => setHeaderTheme('light');
   }, [setHeaderTheme]);
 
   return (
     <HeroWrapper>
-      <MeshOverlay />
-
       <ContentGrid>
         {/* ── Left: text content ── */}
         <LeftColumn>
@@ -61,6 +51,20 @@ export function EnterpriseHero() {
             <Headline>{heroData.hero.title}</Headline>
           </motion.div>
 
+          <motion.div initial="hidden" animate="visible" custom={0.3} variants={fadeUp}>
+            <DownArrows>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+            </DownArrows>
+          </motion.div>
+
           <motion.div initial="hidden" animate="visible" custom={0.36} variants={fadeUp}>
             <Description>{heroData.hero.description}</Description>
           </motion.div>
@@ -69,24 +73,11 @@ export function EnterpriseHero() {
             <CtaGroup>
               <CtaPrimary href={heroData.hero.ctas[0].href}>
                 {heroData.hero.ctas[0].label}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
               </CtaPrimary>
-              <CtaSecondary href={heroData.hero.ctas[1].href}>
-                {heroData.hero.ctas[1].label}
-              </CtaSecondary>
             </CtaGroup>
-          </motion.div>
-
-          <motion.div initial="hidden" animate="visible" custom={0.65} variants={fadeUp}>
-            <TrustBar>
-              <TrustLabel>Trusted by</TrustLabel>
-              <TrustLogos>
-                <TrustLogoPlaceholder>Fortune 500</TrustLogoPlaceholder>
-                <TrustDot />
-                <TrustLogoPlaceholder>Global Banks</TrustLogoPlaceholder>
-                <TrustDot />
-                <TrustLogoPlaceholder>Health Systems</TrustLogoPlaceholder>
-              </TrustLogos>
-            </TrustBar>
           </motion.div>
         </LeftColumn>
 
@@ -95,18 +86,6 @@ export function EnterpriseHero() {
           <EnterpriseHeroVisual />
         </RightColumn>
       </ContentGrid>
-
-      {/* ── Scroll hint ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.0, delay: 1.6 }}
-      >
-        <ScrollHint>
-          <ScrollLine />
-          <ScrollLabel>Scroll</ScrollLabel>
-        </ScrollHint>
-      </motion.div>
     </HeroWrapper>
   );
 }

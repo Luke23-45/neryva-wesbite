@@ -4,11 +4,15 @@ import { motion } from 'framer-motion';
 import { useUiStore } from '@store/uiStore';
 import { Container } from '@/sections/common/layout/Container';
 import { Section } from '@/sections/common/layout/Section';
+
+// Importing the newly mapped 6-stage Neryva Agent Studio data
 import section2 from '@neryva_data/products/ai_enterprised/section2.json';
 import section3 from '@neryva_data/products/ai_enterprised/section3.json';
 import section4 from '@neryva_data/products/ai_enterprised/section4.json';
 import section5 from '@neryva_data/products/ai_enterprised/section5.json';
 import section6 from '@neryva_data/products/ai_enterprised/section6.json';
+import section7 from '@neryva_data/products/ai_enterprised/section7.json';
+
 import {
   FlexContainer,
   Sidebar,
@@ -23,8 +27,13 @@ import {
   FeatureCard,
   FeatureTitle,
   FeatureDescription,
-  SectionDivider,
 } from './EnterprisePipeline.styles';
+
+// Strict typing for our data schema
+interface Feature {
+  title: string;
+  description: string;
+}
 
 interface SectionData {
   id: string;
@@ -34,41 +43,43 @@ interface SectionData {
     type: string;
     description: string;
   };
-  features: Array<{
-    title: string;
-    description: string;
-  }>;
+  features: Feature[];
 }
 
+// Consolidating our JSON imports into the pipeline array
 const sections: SectionData[] = [
   section2 as SectionData,
   section3 as SectionData,
   section4 as SectionData,
   section5 as SectionData,
   section6 as SectionData,
+  section7 as SectionData,
 ];
 
 export function EnterprisePipeline() {
   const theme = useTheme();
   const { setHeaderTheme } = useUiStore();
-  const [active, setActive] = useState(sections[0].id);
+  const [activeId, setActiveId] = useState(sections[0].id);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
+  // Force light theme for this clean, structural design
   useEffect(() => {
     setHeaderTheme('light');
   }, [setHeaderTheme]);
 
+  // Intersection Observer to drive the Sticky Navigation state
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const id = entry.target.getAttribute('data-section-id');
-            if (id) setActive(id);
+            if (id) setActiveId(id);
           }
         }
       },
-      { threshold: 0.3, rootMargin: '-80px 0px -60% 0px' },
+      // Offset accounts for the 120px sticky top spacing to trigger accurately
+      { threshold: 0.2, rootMargin: '-120px 0px -60% 0px' }
     );
 
     for (const ref of sectionRefs.current.values()) {
@@ -78,81 +89,85 @@ export function EnterprisePipeline() {
     return () => observer.disconnect();
   }, []);
 
+  // Smooth scroll handler for sidebar clicks
   const scrollTo = (id: string) => {
-    const el = sectionRefs.current.get(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const element = sectionRefs.current.get(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
   return (
     <Section
       paddingYTop="none"
-      paddingYBottom="md"
-      background={theme.colors.background.secondary}
+      paddingYBottom="lg"
+      background={theme.colors.background.secondary} // Soft grey background to make the white grid pop
     >
       <Container variant="wide">
         <FlexContainer>
+          {/* LEFT: STICKY NAV */}
           <Sidebar>
-            {sections.map((s) => (
+            {sections.map((section) => (
               <SidebarItem
-                key={s.id}
-                $active={s.id === active}
-                onClick={() => scrollTo(s.id)}
+                key={section.id}
+                $active={section.id === activeId}
+                onClick={() => scrollTo(section.id)}
+                aria-current={section.id === activeId ? 'step' : undefined}
               >
-                {s.sidebarLabel}
+                {section.sidebarLabel}
               </SidebarItem>
             ))}
           </Sidebar>
 
+          {/* RIGHT: SCROLLING CONTENT GRID */}
           <Panel>
-            {sections.map((s, sectionIdx) => (
-              <motion.div key={s.id}>
-                {sectionIdx > 0 && <SectionDivider />}
+            {sections.map((section) => (
+              <PipelineSectionStyled
+                key={section.id}
+                id={`neryva-pipeline-${section.id}`}
+                data-section-id={section.id}
+                ref={(el: HTMLElement | null) => {
+                  if (el) sectionRefs.current.set(section.id, el);
+                  else sectionRefs.current.delete(section.id);
+                }}
+                as={motion.section}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} // Apple-esque spring-like ease
+              >
+                {/* Row 1: Strict Header */}
+                <SectionTitle>{section.title}</SectionTitle>
 
-                <PipelineSectionStyled
-                  id={`enterprise-pipeline-${s.id}`}
-                  data-section-id={s.id}
-                  ref={(el: HTMLElement | null) => {
-                    if (el) sectionRefs.current.set(s.id, el);
-                    else sectionRefs.current.delete(s.id);
-                  }}
-                  as={motion.section}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] as const }}
-                >
-                  <SectionTitle>{s.title}</SectionTitle>
+                {/* Row 2: Visual Diagram Area */}
+                <VisualBlock>
+                  <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
+                  <VisualDescription>{section.visual.description}</VisualDescription>
+                </VisualBlock>
 
-                  <VisualBlock>
-                    <VisualTypeLabel>{s.visual.type}</VisualTypeLabel>
-                    <VisualDescription>{s.visual.description}</VisualDescription>
-                  </VisualBlock>
-
-                  <FeatureGrid>
-                    {s.features.map((f, featIdx) => (
-                      <motion.div
-                        key={f.title}
-                        initial={{ opacity: 0, y: 12 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          duration: 0.4,
-                          ease: [0.2, 0, 0, 1] as const,
-                          delay: featIdx * 0.06,
-                        }}
-                        style={{ display: 'flex', flexDirection: 'column' }}
-                      >
-                        <FeatureCard>
-                          <FeatureTitle>{f.title}</FeatureTitle>
-                          <FeatureDescription>{f.description}</FeatureDescription>
-                        </FeatureCard>
-                      </motion.div>
-                    ))}
-                  </FeatureGrid>
-                </PipelineSectionStyled>
-              </motion.div>
+                {/* Row 3: 3-Column Feature Grid */}
+                <FeatureGrid>
+                  {section.features.map((feature, featureIndex) => (
+                    // This motion.div acts as the direct column wrapper targeted by our > div CSS
+                    <motion.div
+                      key={feature.title}
+                      initial={{ opacity: 0, y: 15 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{
+                        duration: 0.5,
+                        ease: [0.16, 1, 0.3, 1],
+                        delay: featureIndex * 0.1, // Staggered fade in
+                      }}
+                    >
+                      <FeatureCard>
+                        <FeatureTitle>{feature.title}</FeatureTitle>
+                        <FeatureDescription>{feature.description}</FeatureDescription>
+                      </FeatureCard>
+                    </motion.div>
+                  ))}
+                </FeatureGrid>
+              </PipelineSectionStyled>
             ))}
           </Panel>
         </FlexContainer>

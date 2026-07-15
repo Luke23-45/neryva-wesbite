@@ -1,15 +1,9 @@
 {
-    "id": "efficiency-hero",
-    "eyebrow": "AI EFFICIENCY & DEPLOYMENT",
-    "title": "Production-grade AI requires rigorous engineering.",
-    "description": "We evaluate, optimize, and deploy AI systems that meet strict enterprise requirements for latency, cost, and reliability. No over-engineered promises, just pragmatic infrastructure execution.",
-    "visual": {
-        "type": "architectural_diagram",
-        "alt": "Pipeline diagram showing unoptimized models passing through compression to secure deployment."
-    },
-    "cta": {
-        "label": "Speak with Engineering",
-        "href": "/contact",
-        "primary": true
-    }
+  "eyebrow": "AI DEPLOYMENT",
+  "title": "Deploy and operate enterprise AI systems securely, reliably, and with clear ownership.",
+  "description": "Neryva AI Deployment is the secure deployment, optimization, and operations product for enterprise AI systems. We turn AI models into production systems that can be owned, monitored, maintained, and trusted by business, security, and operations teams.",
+  "cta": {
+    "label": "Deploy Your Model",
+    "href": "/contact"
+  }
 }

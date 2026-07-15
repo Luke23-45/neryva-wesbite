@@ -1,0 +1,115 @@
+{
+  "id": 1,
+  "slug": "moe-routing-objectives-sparse-transformers",
+  "title": "Routing Objectives in Sparse Transformer Architectures",
+  "summary": "How load-balancing auxiliary losses interact with training stability in MoE models, and why naive objectives often produce the opposite of their intended effect.",
+  "category": "Research",
+  "date": "2026-06-28",
+  "author": "Neryva Lab",
+  "featured": true,
+  "colorTheme": "#2458D3",
+  "seed": 101,
+  "readingTime": 12,
+  "sections": [
+    {
+      "type": "paragraph",
+      "text": "Mixture-of-Experts (MoE) architectures have re-emerged as one of the most compelling efficiency strategies in large-scale language modelling. By activating only a sparse subset of parameters per forward pass, MoE models can scale parameter counts without proportionally increasing compute. But routing — the mechanism that decides which tokens are dispatched to which experts — remains poorly understood in practice, and the auxiliary losses designed to govern it often behave in surprising ways."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Load-Balancing Problem"
+    },
+    {
+      "type": "paragraph",
+      "text": "The central challenge in MoE routing is expert collapse: without explicit pressure to distribute tokens evenly, a small number of experts learn to handle all traffic while the rest receive near-zero gradient signal and fail to specialise. This is not merely a compute efficiency problem — underutilised experts represent wasted capacity and produce models that are difficult to scale further."
+    },
+    {
+      "type": "paragraph",
+      "text": "The standard remedy is an auxiliary load-balancing loss, first introduced by Shazeer et al. in the original Sparsely-Gated MoE paper and refined across subsequent work including GShard, Switch Transformer, and GLaM. The loss penalises variance in expert assignment fractions, pushing the router toward uniform dispatch. It is added to the cross-entropy training objective with a small coefficient — typically in the range [0.001, 0.01]."
+    },
+    {
+      "type": "pullquote",
+      "text": "The auxiliary loss solves a measurement problem, not a routing problem. It regulates what you can count — token fractions — rather than what you actually want, which is expert specialisation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Naive Objectives Backfire"
+    },
+    {
+      "type": "paragraph",
+      "text": "The practical problem with this formulation is the tension between load-balancing pressure and the router's primary objective: routing each token to the expert most likely to process it well. A loss that penalises imbalanced dispatch is agnostic to whether a perfectly balanced router is actually routing competently. In the worst case, you get uniform random assignment — technically zero load-balancing loss — while completely destroying expert specialisation."
+    },
+    {
+      "type": "paragraph",
+      "text": "We observed this failure mode repeatedly in early training runs. With load-balancing coefficients above a threshold (which varied by model size and architecture), routers would converge to near-uniform dispatch within the first few thousand steps. Loss curves looked healthy. Expert utilisation looked excellent. But downstream evaluation revealed that experts had not specialised — they were processing heterogeneous token populations indistinguishable from random assignment."
+    },
+    {
+      "type": "callout",
+      "label": "Key Finding",
+      "text": "In 3 out of 8 configurations tested, auxiliary loss coefficients above 0.005 produced routers that achieved near-perfect load balance at the direct expense of specialisation, resulting in evaluation losses 4–9% worse than a no-auxiliary-loss baseline after 100K steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Stability–Specialisation Trade-off"
+    },
+    {
+      "type": "paragraph",
+      "text": "The relationship between auxiliary loss coefficient and training stability is non-monotonic. Too low, and expert collapse occurs within the first 10K steps; recovery is possible but costly. Too high, and routers converge to uniform dispatch, sacrificing the very specialisation that makes MoE architectures valuable. The window of well-behaved behaviour is narrow and shifts with model scale, batch size, learning rate schedule, and expert count."
+    },
+    {
+      "type": "paragraph",
+      "text": "This creates a practical calibration problem. The optimal coefficient for a 1B-parameter model with 8 experts may be incorrect by an order of magnitude for a 7B model with 64 experts. Practitioners typically grid-search over coefficients, which is expensive and provides limited transferability. Published recipes for specific architectures often break when adapted to different scales or expert configurations."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Alternatives Worth Examining"
+    },
+    {
+      "type": "paragraph",
+      "text": "Several alternative approaches to load management have shown promise in the literature. Expert Choice routing (Zhou et al., 2022) inverts the standard formulation: instead of each token selecting its top-K experts, each expert selects its top-K tokens from the input. This guarantees perfect load balance by construction, eliminating the auxiliary loss entirely. The trade-off is that tokens are no longer guaranteed to be processed — some may be dropped, requiring separate mechanisms to handle overflow."
+    },
+    {
+      "type": "paragraph",
+      "text": "Token dropping has its own pathologies. In tasks where all tokens carry meaningful semantic content — as opposed to padding-heavy batches — dropping tokens introduces a systematic bias that compounds across layers in deep MoE stacks. The practical impact depends heavily on sequence length distribution and domain."
+    },
+    {
+      "type": "code",
+      "language": "python",
+      "text": "# Simplified expert-choice routing (Expert Choice, Zhou et al. 2022)\ndef expert_choice_routing(hidden_states, expert_weights, capacity_factor=1.0):\n    \"\"\"\n    Each expert selects its top-k tokens rather than each token selecting experts.\n    Guarantees load balance; tokens may be dropped if not selected by any expert.\n    \"\"\"\n    seq_len, d_model = hidden_states.shape\n    n_experts = expert_weights.shape[0]\n    \n    # Compute affinity scores: [seq_len, n_experts]\n    scores = hidden_states @ expert_weights.T  # (S, E)\n    \n    # Each expert selects its top-k tokens\n    k = int(capacity_factor * seq_len / n_experts)\n    # expert_indices: [n_experts, k] — indices of selected tokens per expert\n    _, expert_indices = torch.topk(scores.T, k=k, dim=1)\n    \n    return expert_indices  # Process only selected tokens per expert"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practical Recommendations"
+    },
+    {
+      "type": "paragraph",
+      "text": "Based on our experiments, we find that auxiliary loss coefficient should be treated as a first-class hyperparameter requiring explicit search, not a fixed recommendation. The following heuristics are useful starting points but should not be treated as universal."
+    },
+    {
+      "type": "paragraph",
+      "text": "First, monitor expert assignment entropy during early training. A router that converges to maximum entropy (uniform distribution across experts) within the first 5K steps is over-regularised, regardless of what validation loss appears to show. Second, evaluate downstream specialisation directly by measuring token-type distributions per expert — if experts are processing linguistically heterogeneous populations, load balance is cosmetic. Third, consider staged regularisation: start with a higher coefficient to prevent collapse, then decay it as routing patterns stabilise."
+    },
+    {
+      "type": "pullquote",
+      "text": "The right question is not whether your experts are equally loaded. It is whether your equally-loaded experts are doing different things."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What We Are Investigating Next"
+    },
+    {
+      "type": "paragraph",
+      "text": "Our current work focuses on two directions. First, adaptive coefficient scheduling — treating the auxiliary loss coefficient as a function of current routing entropy rather than a static hyperparameter. The intuition is that the loss should be strongest when routing is most collapsed and should relax as specialisation emerges. Second, we are exploring whether routing decisions can be made observable through lightweight probes on expert activations, providing a richer training signal than the coarse assignment-fraction statistics that current auxiliary losses rely on."
+    },
+    {
+      "type": "paragraph",
+      "text": "Both directions are early-stage. We will share results when they are robust enough to draw conclusions from. In the meantime, the main practical takeaway stands: treat routing as a design decision requiring active monitoring, not a solved problem that auxiliary losses handle automatically."
+    }
+  ]
+}

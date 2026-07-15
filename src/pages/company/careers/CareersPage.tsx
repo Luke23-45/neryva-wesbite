@@ -2,7 +2,7 @@ import { PageHead } from '@components/common/PageHead';
 import { CareersHero } from '@/sections/pages/company/careers/CareersHero';
 import { CareersEnvironment } from '@/sections/pages/company/careers/CareersEnvironment';
 import { CareersRoles } from '@/sections/pages/company/careers/CareersRoles';
-import careersData from '@data/pages/careers.json';
+import careersData from '@neryva_data/company/sections/careers.json';
 
 export default function CareersPage() {
   return (

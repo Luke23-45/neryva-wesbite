@@ -1,118 +1,186 @@
 import styled from 'styled-components';
 
+/* ─── Full-viewport split hero wrapper ─── */
 export const HeroWrapper = styled.section`
-  padding: 180px 0 120px 0;
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  display: flex;
-  justify-content: center;
   position: relative;
-  overflow: hidden;
-
-  ${({ theme }) => theme.media.tablet} {
-    padding: 140px 0 80px 0;
-  }
-`;
-
-export const InnerContainer = styled.div`
-  width: 100%;
-  max-width: 1200px;
-  padding: 0 ${({ theme }) => theme.spacing.s5};
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-`;
+  background-color: #ffffff;
+  overflow: hidden;
 
-export const Eyebrow = styled.div`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 13px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 32px;
-`;
-
-export const Title = styled.h1`
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 72px;
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  line-height: 1.05;
-  color: ${({ theme }) => theme.colors.text.strong};
-  text-align: center;
-  max-width: 900px;
-  margin: 0 0 40px 0;
+  /* The right side dark background split */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 50%;
+    background-color: #111520; /* Deep navy/slate matching the image */
+    z-index: 0;
+  }
 
   ${({ theme }) => theme.media.tablet} {
-    font-size: 56px;
-  }
-  ${({ theme }) => theme.media.mobile} {
-    font-size: 44px;
-  }
-`;
-
-export const Description = styled.p`
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 22px;
-  line-height: 1.6;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-align: center;
-  max-width: 700px;
-  margin: 0 0 64px 0;
-
-  ${({ theme }) => theme.media.mobile} {
-    font-size: 18px;
+    &::after {
+      width: 100%;
+      top: 50%;
+    }
   }
 `;
 
-export const HeroCta = styled.a`
+/* ─── Content grid: two-column split ─── */
+export const ContentGrid = styled.div`
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s8};
+  max-width: ${({ theme }) => theme.containers.wide};
+  width: 100%;
+  margin: 0 auto;
+  padding: ${({ theme }) => theme.spacing.s10} ${({ theme }) => theme.spacing.s5};
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 1fr;
+    gap: ${({ theme }) => theme.spacing.s7};
+    padding: ${({ theme }) => theme.spacing.s9} ${({ theme }) => theme.spacing.s5};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 96px ${({ theme }) => theme.spacing.s4} ${({ theme }) => theme.spacing.s7};
+  }
+`;
+
+/* ─── Left column: text content ─── */
+export const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s4};
+`;
+
+/* ─── Eyebrow label ─── */
+export const Eyebrow = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 48px;
-  background-color: ${({ theme }) => theme.colors.text.strong};
-  color: ${({ theme }) => theme.colors.background.primary};
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 16px;
-  font-weight: 500;
-  text-decoration: none;
-  border-radius: 1px; /* Pristine sharpness */
-  transition: transform 0.3s ease, background-color 0.3s ease;
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 
-  &:hover {
-    transform: translateY(-2px);
-    background-color: ${({ theme }) => theme.colors.text.primary};
-  }
-
-  svg {
-    transition: transform 0.3s ease;
-  }
-
-  &:hover svg {
-    transform: translateX(4px);
+  span {
+    font-family: ${({ theme }) => theme.typography.fonts.mono};
+    font-size: ${({ theme }) => theme.typography.sizes.label};
+    font-weight: ${({ theme }) => theme.typography.weights.medium};
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(0, 0, 0, 0.4);
   }
 `;
 
-export const DiagramContainer = styled.div`
-  width: 100%;
-  max-width: 1000px;
-  margin-top: 100px;
-  padding: 60px;
-  border: 1px solid ${({ theme }) => theme.colors.borderLight};
-  background-color: ${({ theme }) => theme.colors.background.secondary};
+/* ─── Main headline ─── */
+export const Headline = styled.h1`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: clamp(2.5rem, 5vw, 3.75rem);
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  line-height: ${({ theme }) => theme.typography.lineHeights.heading};
+  letter-spacing: -0.03em;
+  color: #000000;
+  margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: clamp(2rem, 8vw, 2.5rem);
+  }
+`;
+
+/* ─── Downward arrows ─── */
+export const DownArrows = styled.div`
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(0, 0, 0, 0.25);
+  margin: ${({ theme }) => theme.spacing.s2} 0;
+  
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
+/* ─── Description text ─── */
+export const Description = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
+  line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
+  color: #000000;
+  margin: 0;
+  max-width: 520px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizes.body};
+  }
+`;
+
+/* ─── CTA button group ─── */
+export const CtaGroup = styled.div`
+  display: flex;
   align-items: center;
+  gap: ${({ theme }) => theme.spacing.s4};
+  margin-top: ${({ theme }) => theme.spacing.s5};
+
+  ${({ theme }) => theme.media.mobile} {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: ${({ theme }) => theme.spacing.s3};
+  }
+`;
+
+/* ─── Primary CTA: solid black ─── */
+export const CtaPrimary = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.s5};
+  background: #000000;
+  color: #ffffff;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: ${({ theme }) => theme.typography.sizes.small};
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  line-height: 1;
+  text-decoration: none;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: opacity ${({ theme }) => theme.transitions.fast}, transform ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accent.emerald};
+    outline-offset: 2px;
+  }
 
   svg {
-    width: 100%;
-    max-width: 800px;
-    height: auto;
-    stroke-width: 1px;
-    color: ${({ theme }) => theme.colors.text.strong};
+    width: 14px;
+    height: 14px;
+  }
+`;
+
+/* ─── Right column: visual area ─── */
+export const RightColumn = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 480px;
+
+  ${({ theme }) => theme.media.tablet} {
+    min-height: 360px;
   }
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 32px;
-    margin-top: 60px;
+    min-height: 280px;
   }
 `;

@@ -1,7 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
 import { EventsHero } from '@/sections/pages/resources/events/EventsHero/EventsHero';
 import { EventsList } from '@/sections/pages/resources/events/EventsList/EventsList';
-import eventsData from '@/data/pages/events.json';
+import eventsHero from '@neryva_data/events/sections/hero.json';
+import eventsListData from '@neryva_data/events/sections/events_list.json';
 
 export default function EventsPage() {
   return (
@@ -12,8 +13,8 @@ export default function EventsPage() {
         canonicalPath="/resources/events"
       />
       <main>
-        <EventsHero data={eventsData.hero} />
-        <EventsList data={eventsData.eventsList} />
+        <EventsHero data={eventsHero} />
+        <EventsList data={eventsListData} />
       </main>
     </>
   );

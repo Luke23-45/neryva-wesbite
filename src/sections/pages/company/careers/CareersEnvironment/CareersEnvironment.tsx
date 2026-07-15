@@ -20,7 +20,7 @@ import {
   PerkDesc,
 } from './CareersEnvironment.styles';
 
-const fadeUp = {
+const fadeUp: any = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] } },
 };
@@ -96,7 +96,8 @@ export function CareersEnvironment({ data }: Props) {
   };
 
   return (
-    <Section paddingY="lg" background={theme.colors.background.primary} style={{ overflow: 'hidden' }}>
+    <Section paddingY="lg" background={theme.colors.background.primary}>
+      <div style={{ overflow: 'hidden' }}>
       <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
         <Container>
           <HeaderLayout>
@@ -147,6 +148,7 @@ export function CareersEnvironment({ data }: Props) {
           </motion.div>
         </Container>
       </motion.div>
+      </div>
     </Section>
   );
 }

@@ -12,10 +12,7 @@ import EventsPage from '@pages/resources/events/EventsPage';
 import ContactPage from '@pages/company/contact/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
 import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
-import EnergyPage from '@pages/solutions/energy/EnergyPage';
-import EngineeringPage from '@pages/solutions/engineering/EngineeringPage';
-import HealthcarePage from '@pages/solutions/healthcare/HealthcarePage';
-import RoboticsPage from '@pages/solutions/robotics/RoboticsPage';
+import SolutionsPage from '@pages/solutions/SolutionsPage';
 import NotFoundPage from '@pages/_shared/NotFoundPage';
 
 // ─── Routes ────────────────────────────────────────────
@@ -54,13 +51,13 @@ export const eventsRoute = createRoute({
 // Lab child routes
 export const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/lab/about',
+  path: '/company/about',
   component: AboutPage,
 });
 
 export const careersRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/lab/careers',
+  path: '/company/careers',
   component: CareersPage,
 });
 
@@ -82,28 +79,10 @@ export const aiEfficiencyDeploymentRoute = createRoute({
   component: AiEfficiencyDeploymentPage,
 });
 
-export const energyRoute = createRoute({
+export const solutionsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/solutions/energy',
-  component: EnergyPage,
-});
-
-export const engineeringRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/solutions/engineering',
-  component: EngineeringPage,
-});
-
-export const healthcareRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/solutions/healthcare',
-  component: HealthcarePage,
-});
-
-export const roboticsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/solutions/robotics',
-  component: RoboticsPage,
+  path: '/solutions',
+  component: SolutionsPage,
 });
 
 export const notFoundRoute = createRoute({
@@ -125,9 +104,6 @@ export const routeDefinitions = [
   contactRoute,
   enterpriseAiAssistantRoute,
   aiEfficiencyDeploymentRoute,
-  energyRoute,
-  engineeringRoute,
-  healthcareRoute,
-  roboticsRoute,
+  solutionsRoute,
   notFoundRoute,
 ];

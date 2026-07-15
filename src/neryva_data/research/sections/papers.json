@@ -1,4 +1,50 @@
 {
-  "items": [],
+  "items": [
+    {
+      "title": "Scaling Laws for Task-Specific Alignment in Professional AI Agents",
+      "authors": ["Dr. Adrian Valerius", "Sarah Chen", "Neryva Research"],
+      "status": "Preprint",
+      "date": "2026-05-12",
+      "venue": "arXiv",
+      "url": "https://arxiv.org",
+      "program": "large-language-models"
+    },
+    {
+      "title": "Towards Zero-Shot Task Transfer in Industrial Robotics via Foundation Models",
+      "authors": ["Elena Rodriguez", "Dr. Adrian Valerius", "James Wu"],
+      "status": "Published",
+      "date": "2025-11-04",
+      "venue": "ICRA 2026",
+      "url": "#",
+      "program": "robotics-task-transfer"
+    },
+    {
+      "title": "Robustness in Clinical Diagnostics: Mitigating Hallucination in Medical QA Systems",
+      "authors": ["Dr. Anika Sharma", "Dr. Adrian Valerius"],
+      "status": "Under Review",
+      "date": "2026-02-18",
+      "venue": "Nature Medicine",
+      "url": "#",
+      "program": "clinical-ai"
+    },
+    {
+      "title": "Optimizing National Grid Allocation through Predictive AI Pipelines",
+      "authors": ["Dr. Marcus Vance", "Sarah Chen"],
+      "status": "Published",
+      "date": "2024-09-21",
+      "venue": "IEEE Transactions on Smart Grid",
+      "url": "#",
+      "program": "energy-engineering-optimization"
+    },
+    {
+      "title": "Efficient Context Caching for Ultra-Long Sequence Processing",
+      "authors": ["Sarah Chen", "Elena Rodriguez", "Neryva Systems"],
+      "status": "Preprint",
+      "date": "2025-08-30",
+      "venue": "arXiv",
+      "url": "https://arxiv.org",
+      "program": "large-language-models"
+    }
+  ],
   "earlyStageMessage": "First papers are in preparation. Research results will be published here when they are ready to stand on their own."
 }

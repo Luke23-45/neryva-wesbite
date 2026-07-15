@@ -1,0 +1,23 @@
+{
+  "id": "monitoring",
+  "sidebarLabel": "Operations",
+  "title": "Monitoring And Operations",
+  "visual": {
+    "type": "OBSERVABILITY",
+    "description": "Maintaining visibility into how the system behaves after launch."
+  },
+  "features": [
+    {
+      "title": "System Uptime",
+      "description": "Uptime, error, traffic, and resource usage monitoring."
+    },
+    {
+      "title": "Incident Response",
+      "description": "Setting up alerts and managing structured incident responses."
+    },
+    {
+      "title": "Cost & Reporting",
+      "description": "Ongoing cost monitoring and deep operational reporting."
+    }
+  ]
+}

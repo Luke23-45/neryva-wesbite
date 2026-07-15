@@ -1,8 +1,8 @@
 import type { BlogPost } from '@types';
-import blogIndex from '@data/pages/blog.json';
+import blogIndex from '@neryva_data/blog/sections/posts.json';
 
 // Detail data — one file per post slug
-import moePost from '@data/pages/blog/moe-routing-objectives-sparse-transformers.json';
+import moePost from '@neryva_data/blog/posts/moe-routing-objectives-sparse-transformers.json';
 
 const blogPosts: Record<string, BlogPost> = {
   'moe-routing-objectives-sparse-transformers': moePost as BlogPost,
@@ -10,12 +10,12 @@ const blogPosts: Record<string, BlogPost> = {
 
 /** All posts (index-level, for the grid) */
 export function getBlogPosts() {
-  return blogIndex.posts;
+  return (blogIndex as { items: any[] }).items;
 }
 
 /** All category labels */
 export function getBlogCategories() {
-  return blogIndex.categories;
+  return (blogIndex as { categories: string[] }).categories;
 }
 
 /** Full detail data for a single post. Returns undefined if no detail page exists yet. */

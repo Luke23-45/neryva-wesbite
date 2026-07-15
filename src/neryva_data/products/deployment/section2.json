@@ -1,0 +1,23 @@
+{
+  "id": "provisioning",
+  "sidebarLabel": "Provisioning",
+  "title": "Secure Provisioning",
+  "visual": {
+    "type": "SECURITY",
+    "description": "Setting up the environment needed for controlled production use."
+  },
+  "features": [
+    {
+      "title": "Identity & Access",
+      "description": "Rigorous identity management and access control for system operators."
+    },
+    {
+      "title": "Data Protection",
+      "description": "Handling encryption and secrets for secure data processing."
+    },
+    {
+      "title": "Audit & Compliance",
+      "description": "Configuring audit logging, network segmentation, and baseline hardening."
+    }
+  ]
+}

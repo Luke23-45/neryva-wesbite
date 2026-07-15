@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TextLink } from '@/components/common/ui/TextLink';
-import homeProgramsData from '@data/pages/home/home_programs.json';
+import programsData from '@neryva_data/home/sections/research_overview.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -61,8 +61,32 @@ const SidebarIconsMap: Record<ProgramId, React.FC> = {
   'energy-engineering-optimization': SidebarEnergyIcon,
 };
 
+const programAccents: Record<string, string> = {
+  'language-systems': '#2458D3',
+  'robotics-task-transfer': '#0B7F79',
+  'clinical-ai': '#1F7A4D',
+  'energy-engineering-optimization': '#D99100',
+};
+const oldIds: Record<string, string> = {
+  'language-systems': 'large-language-models',
+  'robotics-task-transfer': 'robotics-task-transfer',
+  'clinical-ai': 'clinical-ai',
+  'energy-engineering-optimization': 'energy-engineering-optimization',
+};
+
 export function HomePrograms() {
-  const { heading, programs, footer } = homeProgramsData;
+  const { heading, programs, footer } = {
+    heading: { label: programsData.label, title: programsData.title },
+    programs: programsData.items.map((item: any, i: number) => ({
+      id: oldIds[item.id] || item.id,
+      slug: oldIds[item.id] || item.id,
+      number: i + 1,
+      accent: programAccents[item.id] || '#2458D3',
+      title: item.title,
+      description: item.description,
+    })),
+    footer: { linkText: programsData.cta?.label || '', linkUrl: programsData.cta?.href || '' },
+  };
   const [activeId, setActiveId] = useState<string>(programs[0].id);
 
   // References to the program row elements
@@ -144,7 +168,7 @@ export function HomePrograms() {
                 <ProgramRow
                   key={program.id}
                   id={program.id}
-                  ref={(el) => (rowRefs.current[program.id] = el)}
+                  ref={(el) => { rowRefs.current[program.id] = el; }}
                   as={motion.div}
                   initial="hidden"
                   whileInView="visible"

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TextLink } from '@/components/common/ui/TextLink';
 import { CardVisual } from '@/components/common/ui/CardVisual';
-import homeUpdatesData from '@data/pages/home/home_updates.json';
+import selectedWorkData from '@neryva_data/home/sections/selected_work.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -46,8 +46,27 @@ function ArrowIcon() {
   );
 }
 
+const typeAccents: Record<string, string> = {
+  'open-problem': '#9333EA',
+  'research-note': '#059669',
+  'prototype': '#2563EB',
+};
+
 export function HomeLatestWork() {
-  const { heading, items } = homeUpdatesData;
+  const { heading, items } = {
+    heading: { label: selectedWorkData.label, title: selectedWorkData.title },
+    items: selectedWorkData.items.map((item: any, i: number) => ({
+      id: `selected-work-${i}`,
+      type: item.type,
+      tag: item.status || 'In progress',
+      accent: typeAccents[item.type] || '#2563EB',
+      date: item.status || 'Ongoing',
+      title: item.title,
+      description: item.description,
+      link: selectedWorkData.cta?.href || '/research',
+      visual: { highlight: [], words: [] },
+    })),
+  };
   const [startIndex, setStartIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 

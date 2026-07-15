@@ -3,7 +3,10 @@ import { AboutHero } from '@/sections/pages/company/about/AboutHero';
 import { AboutMission } from '@/sections/pages/company/about/AboutMission';
 import { AboutTeam } from '@/sections/pages/company/about/AboutTeam';
 import { AboutCTA } from '@/sections/pages/company/about/AboutCTA';
-import aboutData from '@data/pages/about.json';
+import companyHero from '@neryva_data/company/sections/hero.json';
+import companyMission from '@neryva_data/company/sections/mission.json';
+import companyTeam from '@neryva_data/company/sections/team.json';
+import companyCta from '@neryva_data/company/sections/contact_cta.json';
 
 export default function AboutPage() {
   return (
@@ -15,10 +18,10 @@ export default function AboutPage() {
       />
 
       <main>
-        <AboutHero data={aboutData.hero} />
-        <AboutMission data={aboutData.mission} />
-        <AboutTeam data={aboutData.team} />
-        <AboutCTA data={aboutData.cta} />
+        <AboutHero data={{ label: companyHero.eyebrow, title: companyHero.headline, description: companyHero.description }} />
+        <AboutMission data={companyMission} />
+        <AboutTeam data={companyTeam} />
+        <AboutCTA data={{ title: companyCta.title, description: companyCta.description, buttonText: companyCta.primaryCta.label, buttonLink: companyCta.primaryCta.href }} />
       </main>
     </>
   );

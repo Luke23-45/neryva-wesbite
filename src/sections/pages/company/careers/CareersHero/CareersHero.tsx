@@ -10,7 +10,7 @@ import {
   CTAButton,
 } from './CareersHero.styles';
 
-const fadeUp = {
+const fadeUp: any = {
   hidden: { opacity: 0, y: 24 },
   visible: (custom: number) => ({
     opacity: 1,

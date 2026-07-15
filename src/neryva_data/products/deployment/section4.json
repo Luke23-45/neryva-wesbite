@@ -1,0 +1,23 @@
+{
+  "id": "performance",
+  "sidebarLabel": "Optimization",
+  "title": "Performance Optimization",
+  "visual": {
+    "type": "METRICS",
+    "description": "Improving the practical efficiency of the deployment."
+  },
+  "features": [
+    {
+      "title": "Speed & Throughput",
+      "description": "Latency reduction, throughput tuning, and request batching strategies."
+    },
+    {
+      "title": "Model Compression",
+      "description": "Applying quantization and model compression where appropriate."
+    },
+    {
+      "title": "Cost Efficiency",
+      "description": "Cache design, resource right-sizing, and cost-per-request improvement."
+    }
+  ]
+}

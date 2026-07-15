@@ -1,0 +1,43 @@
+{
+  "title": "By Industry",
+  "description": "The company does not need a separate product for every industry. The same product set can be applied differently depending on the buyer and the operating context.",
+  "industries": [
+    {
+      "name": "Healthcare",
+      "applications": [
+        "Secure deployment for sensitive data and controlled environments",
+        "Professional assistants for patient support, staff support, and operational workflows"
+      ]
+    },
+    {
+      "name": "Engineering",
+      "applications": [
+        "Secure deployment for proprietary systems and technical data",
+        "Internal assistants for design, documentation, and knowledge access"
+      ]
+    },
+    {
+      "name": "Energy",
+      "applications": [
+        "Reliable deployment for operational systems",
+        "Assistants for field support, maintenance guidance, and internal workflows"
+      ]
+    },
+    {
+      "name": "Robotics",
+      "applications": [
+        "Deployment support for edge and hardware-linked AI systems",
+        "Assistants for diagnostics, operator support, and technical workflows"
+      ]
+    },
+    {
+      "name": "Other Enterprise Sectors",
+      "applications": [
+        "Finance",
+        "Manufacturing",
+        "Professional services",
+        "Logistics"
+      ]
+    }
+  ]
+}

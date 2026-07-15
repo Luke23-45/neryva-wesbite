@@ -1,23 +1,23 @@
 {
-    "id": "data-integration",
-    "sidebarLabel": "1. Data integration",
-    "title": "1. Data integration.",
-    "visual": {
-        "type": "diagram",
-        "description": "Minimalist pipeline schema showing connectors from Confluence, Jira, and secure S3 buckets flowing directly into a localized Neryva Vector Index."
+  "id": "business-scope",
+  "sidebarLabel": "1. Business scope",
+  "title": "1. Business scope.",
+  "visual": {
+    "type": "schema",
+    "description": "Diagram showing objective definition, allowed service scope, and strict customer support boundaries."
+  },
+  "features": [
+    {
+      "title": "Objective alignment.",
+      "description": "Define exactly what the agent is allowed to do."
     },
-    "features": [
-        {
-            "title": "Enterprise connectors.",
-            "description": "Native integrations with standard operational data silos and databases."
-        },
-        {
-            "title": "Permissions sync.",
-            "description": "Strictly respects your existing IAM and RBAC controls upon ingestion."
-        },
-        {
-            "title": "Real-time indexing.",
-            "description": "Continuous delta updates ensure accurate and current data representation."
-        }
-    ]
+    {
+      "title": "Service scope.",
+      "description": "Clearly outline what topics and workflows are supported."
+    },
+    {
+      "title": "Support boundaries.",
+      "description": "Establish strict limits on what must not be done or answered."
+    }
+  ]
 }

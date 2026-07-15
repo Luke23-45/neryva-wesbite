@@ -1,0 +1,23 @@
+{
+  "id": "architecture",
+  "sidebarLabel": "Architecture",
+  "title": "Deployment Architecture",
+  "visual": {
+    "type": "TOPOLOGY",
+    "description": "Designing the technical structure required to run the model in the right environment."
+  },
+  "features": [
+    {
+      "title": "Execution Planning",
+      "description": "Planning execution across cloud, on-premise, hybrid, or edge environments."
+    },
+    {
+      "title": "Network Boundaries",
+      "description": "Defining strict networking and access boundaries for internal and external traffic."
+    },
+    {
+      "title": "Resource Sizing",
+      "description": "Sizing compute and storage requirements and mapping the AI system into your environment."
+    }
+  ]
+}

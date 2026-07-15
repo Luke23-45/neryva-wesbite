@@ -8,7 +8,7 @@ export const PageTitle = styled.h1`
   font-size: ${({ theme }) => theme.typography.sizes.h1};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   line-height: ${({ theme }) => theme.typography.lineHeights.heading};
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin-bottom: ${({ theme }) => theme.spacing.s4};
 
   ${({ theme }) => theme.media.mobile} {
@@ -19,7 +19,7 @@ export const PageTitle = styled.h1`
 export const PageDescription = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
   line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   max-width: ${({ theme }) => theme.containers.prose};
   margin-bottom: 0;
 

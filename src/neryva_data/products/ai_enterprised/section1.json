@@ -1,19 +1,11 @@
 {
-    "hero": {
-        "eyebrow": "FLAGSHIP SYSTEM",
-        "title": "Neryva Enterprise Assistant",
-        "description": "The secure AI interface for your organization. Deploy reasoning-driven assistants that execute workflows and resolve inquiries—hosted entirely within your own infrastructure without cloud lock-in.",
-        "ctas": [
-            {
-                "label": "Talk to Solutions",
-                "href": "/contact",
-                "primary": true
-            },
-            {
-                "label": "Read the Documentation",
-                "href": "/docs/enterprise-assistant",
-                "primary": false
-            }
-        ]
-    }
+  "hero": {
+    "eyebrow": "EXPERIENCE LAYER",
+    "title": "Neryva Agent Studio",
+    "description": "The professional customer-service and brand-representation layer for enterprise AI. We build and operate AI agents that represent your business professionally, stay on-brand, on-scope, and useful.",
+    "ctas": [
+      { "label": "Talk to Solutions", "href": "/contact", "primary": true },
+      { "label": "Read the Documentation", "href": "/docs", "primary": false }
+    ]
+  }
 }

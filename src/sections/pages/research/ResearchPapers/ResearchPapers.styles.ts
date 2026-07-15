@@ -1,151 +1,161 @@
 import styled from 'styled-components';
 
 export const Header = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.s7};
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 64px;
 `;
 
 export const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.sizes.h1};
+  font-size: 48px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.03em;
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
+  margin: 0;
+  line-height: 1.1;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.typography.sizesMobile.h1};
+    font-size: 36px;
   }
 `;
 
-/* ── Filter tabs ── */
+/* ── Editorial Filter System ── */
 export const FilterBar = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.s2};
+  gap: 12px;
 `;
 
 export const FilterButton = styled.button<{ $active: boolean; $accent: string }>`
   display: inline-flex;
   align-items: center;
-  height: 32px;
-  padding: 0 ${({ theme }) => theme.spacing.s3};
-  border: 1px solid ${({ $active, $accent, theme }) =>
-    $active ? $accent : theme.colors.border};
-  border-radius: 6px;
-  background: ${({ $active, $accent }) =>
-    $active ? $accent : 'transparent'};
-  color: ${({ $active, theme }) => ($active ? '#FFFFFF' : theme.colors.text.muted)};
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 36px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 13px;
-  font-weight: ${({ $active, theme }) =>
-    $active ? theme.typography.weights.medium : theme.typography.weights.regular};
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background-color ${({ theme }) => theme.transitions.fast},
-              border-color ${({ theme }) => theme.transitions.fast},
-              color ${({ theme }) => theme.transitions.fast};
+  
+  /* Apple-tier hardware-accelerated easing */
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Stark, high-contrast active state. Subtle, refined inactive state. */
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.text.primary : 'transparent'};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.background.primary : theme.colors.text.secondary};
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? theme.colors.text.primary : theme.colors.border};
 
   &:hover {
-    border-color: ${({ $accent }) => $accent};
-    color: ${({ $active, $accent }) => ($active ? '#FFFFFF' : $accent)};
+    border-color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ $active, theme }) =>
+    $active ? theme.colors.background.primary : theme.colors.text.primary};
   }
 `;
 
-/* ── Empty state ── */
+/* ── Architectural Empty State ── */
 export const EmptyState = styled.div`
-  max-width: 520px;
-  padding: ${({ theme }) => theme.spacing.s8} ${({ theme }) => theme.spacing.s7};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors.surface};
+  width: 100%;
+  padding: 80px 0;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 `;
 
 export const EmptyTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  font-size: 28px;
+  font-weight: 400;
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.02em;
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
+  margin: 0 0 32px 0;
 `;
 
 export const EmptyRule = styled.hr`
-  width: 48px;
-  height: 1px;
-  background: ${({ theme }) => theme.colors.border};
-  border: none;
-  margin: 0 0 ${({ theme }) => theme.spacing.s5} 0;
+  display: none; /* Replaced by the structural top/bottom borders of EmptyState */
 `;
 
 export const EmptyText = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
+  font-size: 16px;
+  line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 0 ${({ theme }) => theme.spacing.s3} 0;
+  margin: 0 0 8px 0;
+  max-width: 600px;
 
   &:last-child {
     margin-bottom: 0;
   }
 `;
 
-/* ── Papers list ── */
+/* ── Pre-declare PaperRow to enable CSS nesting ── */
+export const PaperRow = styled.div<{ $accent: string }>`
+  /* Expose the accent color as a local CSS variable for flawless, synchronized hover states */
+  --row-accent: ${({ $accent }) => $accent};
+  
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 40px 0; /* Massive breathing room */
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  text-decoration: none;
+  cursor: pointer;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+/* ── Catalog List ── */
 export const List = styled.div`
   display: flex;
   flex-direction: column;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const YearGroup = styled.div`
-  margin-bottom: ${({ theme }) => theme.spacing.s7};
-
-  &:last-child {
-    margin-bottom: 0;
-  }
+  display: flex;
+  flex-direction: column;
 `;
 
 export const YearHeader = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 13px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.muted};
+  font-size: 16px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: 0.04em;
-  padding-bottom: ${({ theme }) => theme.spacing.s3};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  margin-bottom: ${({ theme }) => theme.spacing.s2};
+  padding: 48px 0 16px 0;
+  border-bottom: 2px solid ${({ theme }) => theme.colors.text.primary}; /* Strong chronological divider */
 `;
 
-/* ── Paper row ── */
-export const PaperRow = styled.div<{ $accent: string }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.s4};
-  padding: ${({ theme }) => theme.spacing.s4} 0;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  text-decoration: none;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(15, 23, 42, 0.02);
-  }
-
-  &:last-child {
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  }
-`;
-
+/* ── Paper Row Contents ── */
 export const PaperLeft = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.s1};
+  gap: 12px;
   min-width: 0;
 `;
 
 export const PaperTitle = styled.span`
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  font-size: 22px;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.h3};
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Inherits the exact program accent color on row hover via CSS variable */
   ${PaperRow}:hover & {
-    color: ${({ theme }) => theme.colors.accent.emerald};
+    color: var(--row-accent);
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 18px;
   }
 `;
 
@@ -153,62 +163,70 @@ export const PaperMeta = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s2};
+  gap: 16px;
 `;
 
 export const Authors = styled.span`
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  color: ${({ theme }) => theme.colors.text.muted};
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  line-height: 1.4;
 `;
 
-const statusColors: Record<string, { color: string; border: string; bg: string }> = {
-  preprint: { color: '', border: '', bg: '' },
-  published: { color: '#0C855D', border: 'rgba(16, 185, 129, 0.2)', bg: 'rgba(16, 185, 129, 0.06)' },
-  'in-preparation': { color: '#64748B', border: '#E2E8F0', bg: 'transparent' },
-};
-
-export const StatusBadge = styled.span<{ $status: string; $accent: string }>`
+export const StatusBadge = styled.span<{ $status: string }>`
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 6px;
+  height: 22px;
+  padding: 0 8px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  letter-spacing: 0.02em;
-  text-transform: lowercase;
-  border: 1px solid;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   border-radius: 4px;
-  color: ${({ $status, $accent }) =>
-    $status === 'preprint' ? $accent : (statusColors[$status]?.color || '#64748B')};
-  border-color: ${({ $status, $accent }) =>
-    $status === 'preprint' ? `${$accent}33` : (statusColors[$status]?.border || '#E2E8F0')};
-  background: ${({ $status, $accent }) =>
-    $status === 'preprint' ? `${$accent}14` : (statusColors[$status]?.bg || 'transparent')};
+  
+  /* Extremely refined base grayscale state */
+  background: ${({ $status }) =>
+    $status === 'published' ? 'rgba(0, 0, 0, 0.03)' : 'transparent'};
+  border: 1px solid ${({ $status, theme }) =>
+    $status === 'published' ? 'transparent' : theme.colors.border};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  
+  /* Badge beautifully inherits the program accent when the row is interacted with */
+  ${PaperRow}:hover & {
+    background: transparent;
+    border-color: var(--row-accent);
+    color: var(--row-accent);
+  }
 `;
 
 export const DateSpan = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
+  font-size: 12px;
   color: ${({ theme }) => theme.colors.text.muted};
+  letter-spacing: 0.02em;
 `;
 
+/* ── The Reveal Arrow ── */
 export const PaperArrow = styled.span`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: ${({ theme }) => theme.colors.text.muted};
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--row-accent);
+  color: var(--row-accent);
   flex-shrink: 0;
-  transition: color ${({ theme }) => theme.transitions.fast},
-              transform ${({ theme }) => theme.transitions.fast},
-              background-color ${({ theme }) => theme.transitions.fast};
+  
+  /* Hidden by default, elegantly slides into place */
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
   ${PaperRow}:hover & {
-    color: ${({ theme }) => theme.colors.text.primary};
-    transform: translateX(3px);
-    background: rgba(15, 23, 42, 0.04);
+    opacity: 1;
+    transform: translateX(0);
   }
 `;

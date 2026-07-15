@@ -1,0 +1,23 @@
+{
+  "id": "serving",
+  "sidebarLabel": "Serving",
+  "title": "Model Serving",
+  "visual": {
+    "type": "API",
+    "description": "Putting the model into a usable production interface."
+  },
+  "features": [
+    {
+      "title": "API Exposure",
+      "description": "Creating robust API exposures for internal and external consumers."
+    },
+    {
+      "title": "Traffic Management",
+      "description": "Request routing, load balancing, and dedicated inference service setup."
+    },
+    {
+      "title": "Reliable Responses",
+      "description": "Version handling, response handling, and fallback behavior design."
+    }
+  ]
+}

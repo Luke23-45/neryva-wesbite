@@ -1,16 +1,22 @@
 import type { LabMission, TeamMember, LabValue } from '@types';
-import missionData from '@data/lab/mission.json';
-import teamData from '@data/lab/team.json';
-import valuesData from '@data/lab/values.json';
+import missionData from '@neryva_data/company/sections/mission.json';
+import teamData from '@neryva_data/company/sections/team.json';
+import valuesData from '@neryva_data/company/sections/values.json';
 
 export function getMission(): LabMission {
   return missionData;
 }
 
 export function getTeam(): TeamMember[] {
-  return teamData as TeamMember[];
+  const data = teamData as { items: Array<{ name: string; focus: string }> };
+  return data.items.map((item) => ({
+    name: item.name,
+    role: '',
+    bio: item.focus,
+    links: {},
+  }));
 }
 
 export function getValues(): LabValue[] {
-  return valuesData as LabValue[];
+  return (valuesData as { items: LabValue[] }).items;
 }

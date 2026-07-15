@@ -1,9 +1,9 @@
 import styled from 'styled-components';
 
 export const StyledFooter = styled.footer`
-  border-top: 1px solid ${({ theme }) => theme.colors.line};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
   padding: ${({ theme }) => theme.spacing.s8} ${({ theme }) => theme.spacing.s7};
-  background-color: ${({ theme }) => theme.colors.paper};
+  background-color: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.mobile} {
     padding: ${({ theme }) => theme.spacing.s7} ${({ theme }) => theme.spacing.s5};
@@ -34,7 +34,7 @@ export const FooterName = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   font-size: ${({ theme }) => theme.typography.sizes.body};
-  color: ${({ theme }) => theme.colors.ink};
+  color: ${({ theme }) => theme.colors.text.strong};
 `;
 
 export const FooterNav = styled.nav`
@@ -45,12 +45,12 @@ export const FooterNav = styled.nav`
 
 export const FooterLink = styled.a`
   font-size: ${({ theme }) => theme.typography.sizes.small};
-  color: ${({ theme }) => theme.colors.inkSoft};
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-decoration: none;
   transition: color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    color: ${({ theme }) => theme.colors.ink};
+    color: ${({ theme }) => theme.colors.text.strong};
   }
 `;
 
@@ -68,15 +68,15 @@ export const FooterMeta = styled.div`
 export const FooterEmail = styled.a`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.small};
-  color: ${({ theme }) => theme.colors.blue};
+  color: ${({ theme }) => theme.colors.accent.azure};
   text-decoration: none;
 
   &:hover {
-    color: ${({ theme }) => theme.colors.blueHover};
+    color: ${({ theme }) => theme.colors.accent.azureDark};
   }
 `;
 
 export const FooterCopyright = styled.span`
   font-size: ${({ theme }) => theme.typography.sizes.label};
-  color: ${({ theme }) => theme.colors.muted};
+  color: ${({ theme }) => theme.colors.text.muted};
 `;
