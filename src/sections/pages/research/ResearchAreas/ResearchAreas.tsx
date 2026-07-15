@@ -77,7 +77,7 @@ export function ResearchAreas() {
       paddingYBottom="lg"
       background={theme.colors.background.secondary} // Provides contrast for the white grid cells
     >
-      <Container variant="wide">
+      <Container>
         <FlexContainer>
 
           {/* LEFT: STICKY NAVIGATION */}
