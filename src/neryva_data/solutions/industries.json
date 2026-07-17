@@ -1,42 +1,82 @@
 {
-  "title": "By Industry",
-  "description": "The company does not need a separate product for every industry. The same product set can be applied differently depending on the buyer and the operating context.",
+  "header": {
+    "title": "Where Neryva applies.",
+    "description": "Neryva replaces generic ambition with targeted computational execution. Select an operational domain to view capabilities."
+  },
   "industries": [
     {
-      "name": "Healthcare",
+      "id": "financial",
+      "name": "Financial Services",
+      "prefix": "01",
       "applications": [
-        "Secure deployment for sensitive data and controlled environments",
-        "Professional assistants for patient support, staff support, and operational workflows"
+        {
+          "icon": "ShieldCheck",
+          "title": "Algorithmic Risk & Triage",
+          "description": "Analyze multi-variable inflow to optimize routing, risk calculation, and real-time operational triage.",
+          "span": "large"
+        },
+        {
+          "icon": "Network",
+          "title": "Fraud Pipelines",
+          "description": "High-frequency operational analysis against historical behavioral models.",
+          "span": "small"
+        },
+        {
+          "icon": "FileLock2",
+          "title": "Auto-Compliance",
+          "description": "Secure, real-time regulatory audit trails and documentation.",
+          "span": "small"
+        }
       ]
     },
     {
-      "name": "Engineering",
+      "id": "healthcare",
+      "name": "Healthcare & Life Sci",
+      "prefix": "02",
       "applications": [
-        "Secure deployment for proprietary systems and technical data",
-        "Internal assistants for design, documentation, and knowledge access"
+        {
+          "icon": "Activity",
+          "title": "Secure Patient Workflows",
+          "description": "Private, locked-down ingestion pipelines for highly sensitive data extraction and routing.",
+          "span": "large"
+        },
+        {
+          "icon": "FileText",
+          "title": "EHR Summarization",
+          "description": "Strictly scoped extraction for complex longitudinal health records.",
+          "span": "small"
+        },
+        {
+          "icon": "ScanLine",
+          "title": "Literature Automation",
+          "description": "Rapid synthesis of thousands of verified clinical biomedical papers.",
+          "span": "small"
+        }
       ]
     },
     {
-      "name": "Energy",
+      "id": "manufacturing",
+      "name": "Advanced Manufacturing",
+      "prefix": "03",
       "applications": [
-        "Reliable deployment for operational systems",
-        "Assistants for field support, maintenance guidance, and internal workflows"
-      ]
-    },
-    {
-      "name": "Robotics",
-      "applications": [
-        "Deployment support for edge and hardware-linked AI systems",
-        "Assistants for diagnostics, operator support, and technical workflows"
-      ]
-    },
-    {
-      "name": "Other Enterprise Sectors",
-      "applications": [
-        "Finance",
-        "Manufacturing",
-        "Professional services",
-        "Logistics"
+        {
+          "icon": "Cpu",
+          "title": "Supply Chain Synthesis",
+          "description": "Live, edge-case resilient tracking and predictive flow optimization for massive physical infrastructure.",
+          "span": "large"
+        },
+        {
+          "icon": "Wrench",
+          "title": "Predictive Maintenance",
+          "description": "Automated log extraction and mechanical failure trajectory mapping.",
+          "span": "small"
+        },
+        {
+          "icon": "Layers",
+          "title": "Robotics QA Routing",
+          "description": "Algorithmic decision-trees integrating human-in-the-loop sign-offs.",
+          "span": "small"
+        }
       ]
     }
   ]

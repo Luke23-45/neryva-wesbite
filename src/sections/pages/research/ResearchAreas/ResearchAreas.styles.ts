@@ -205,7 +205,7 @@ export const CardBody = styled.div`
 
 export const CardTitle = styled.h3`
   font-size: 20px;
-  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.2;
   letter-spacing: -0.01em;

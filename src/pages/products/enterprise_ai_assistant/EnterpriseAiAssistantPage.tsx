@@ -1,5 +1,7 @@
 import { PageHead } from '@components/common/PageHead';
 import { EnterpriseHero } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseHero';
+import { EnterpriseUseCases } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseUseCases';
+import { EnterpriseCapabilities } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseCapabilities';
 import { EnterprisePipeline } from '@/sections/pages/products/enterprise-ai-assistant/EnterprisePipeline';
 
 export default function EnterpriseAiAssistantPage() {
@@ -11,6 +13,8 @@ export default function EnterpriseAiAssistantPage() {
         canonicalPath="/products/enterprise-ai-assistant"
       />
       <EnterpriseHero />
+      <EnterpriseUseCases />
+      <EnterpriseCapabilities />
       <EnterprisePipeline />
     </>
   );

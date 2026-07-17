@@ -7,7 +7,7 @@
       "date": "2026-05-12",
       "venue": "arXiv",
       "url": "https://arxiv.org",
-      "program": "large-language-models"
+      "program": "language-systems"
     },
     {
       "title": "Towards Zero-Shot Task Transfer in Industrial Robotics via Foundation Models",
@@ -25,7 +25,7 @@
       "date": "2026-02-18",
       "venue": "Nature Medicine",
       "url": "#",
-      "program": "clinical-ai"
+      "program": "biomedical-clinical-ai"
     },
     {
       "title": "Optimizing National Grid Allocation through Predictive AI Pipelines",
@@ -34,7 +34,7 @@
       "date": "2024-09-21",
       "venue": "IEEE Transactions on Smart Grid",
       "url": "#",
-      "program": "energy-engineering-optimization"
+      "program": "energy-systems"
     },
     {
       "title": "Efficient Context Caching for Ultra-Long Sequence Processing",
@@ -43,7 +43,7 @@
       "date": "2025-08-30",
       "venue": "arXiv",
       "url": "https://arxiv.org",
-      "program": "large-language-models"
+      "program": "language-systems"
     }
   ],
   "earlyStageMessage": "First papers are in preparation. Research results will be published here when they are ready to stand on their own."

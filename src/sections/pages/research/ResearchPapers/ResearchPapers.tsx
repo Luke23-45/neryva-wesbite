@@ -36,17 +36,19 @@ const premiumEase = [0.16, 1, 0.3, 1] as const;
 const AnimatedPaperRow = motion(PaperRow);
 
 const programLabels: Record<string, string> = {
-  'large-language-models': 'Large Language Models',
+  'language-systems': 'Language Systems',
   'robotics-task-transfer': 'Robotics',
-  'clinical-ai': 'Clinical AI',
-  'energy-engineering-optimization': 'Energy & Engineering',
+  'biomedical-clinical-ai': 'Biomedical & Clinical',
+  'energy-systems': 'Energy Systems',
+  'computational-science': 'Computational Science',
 };
 
 const programAccents: Record<string, string> = {
-  'large-language-models': '#2458D3',
+  'language-systems': '#2458D3',
   'robotics-task-transfer': '#0B7F79',
-  'clinical-ai': '#1F7A4D',
-  'energy-engineering-optimization': '#D99100',
+  'biomedical-clinical-ai': '#1F7A4D',
+  'energy-systems': '#D99100',
+  'computational-science': '#8B5CF6',
 };
 
 const fadeUp = {
@@ -90,8 +92,8 @@ export function ResearchPapers() {
   const grouped = useMemo(() => groupByYear(filtered), [filtered]);
 
   return (
-    <Section paddingYTop="md" paddingYBottom="xl" background={theme.colors.background.primary}>
-      <Container variant="narrow">
+    <Section paddingYTop="md" paddingYBottom="lg" background={theme.colors.background.primary}>
+      <Container variant="page">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -107,7 +109,7 @@ export function ResearchPapers() {
             {!isEmpty && (
               <motion.div variants={fadeUp}>
                 <FilterBar>
-                  {['all', 'large-language-models', 'robotics-task-transfer', 'clinical-ai', 'energy-engineering-optimization'].map(
+                  {['all', 'language-systems', 'robotics-task-transfer', 'biomedical-clinical-ai', 'energy-systems', 'computational-science'].map(
                     (id) => (
                       <FilterButton
                         key={id}
@@ -187,6 +189,7 @@ export function ResearchPapers() {
                       <AnimatedPaperRow
                         key={paper.title}
                         // Casts the component to Link if URL exists, maintaining correct DOM structure
+                        // @ts-expect-error TS complains about 'as' with framer-motion and styled-components
                         as={paper.url ? Link : 'div'}
                         to={paper.url || undefined}
                         $accent={programAccents[paper.program] || theme.colors.text.primary}

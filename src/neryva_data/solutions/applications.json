@@ -1,22 +1,33 @@
 {
-  "title": "Where Neryva Applies",
-  "description": "Neryva does not sell generic AI ambition. It applies specific products to specific business needs.",
+  "header": {
+    "icons": [
+      "Search",
+      "Flame",
+      "Box"
+    ],
+    "title": "Where Neryva applies.",
+    "description": "A focused approach that maps specific AI capabilities directly to concrete business needs."
+  },
   "items": [
     {
-      "title": "Customer Support And Service",
-      "description": "For companies that need a professional chatbot or service assistant that stays on topic, follows the brand voice, and escalates correctly."
+      "icon": "MessageSquare",
+      "title": "Customer support.",
+      "description": "Deploy professional chatbots and service assistants that stay on-brand and escalate correctly."
     },
     {
-      "title": "Internal Operations",
-      "description": "For teams that need an assistant to help find information, complete tasks, and follow internal procedures."
+      "icon": "Settings",
+      "title": "Internal operations.",
+      "description": "Equip teams with assistants to find information, complete tasks, and follow internal procedures."
     },
     {
-      "title": "Secure AI Infrastructure",
-      "description": "For organizations that already have a model or model strategy but need help deploying it safely and operating it reliably."
+      "icon": "ShieldCheck",
+      "title": "Secure infrastructure.",
+      "description": "Safely deploy and reliably operate models for organizations with existing AI strategies."
     },
     {
-      "title": "Workflow Support",
-      "description": "For business processes that need an AI layer to route requests, capture information, draft responses, and support structured work."
+      "icon": "Network",
+      "title": "Workflow support.",
+      "description": "Route requests, capture information, and support structured business processes with an AI layer."
     }
   ]
 }

@@ -186,3 +186,36 @@ Here is the highly calculated JSON structure that accommodates your update while
 2. **"Solutions" is perfectly divided:** It uses standard B2B enterprise architecture by splitting Solutions into **"By Capability"** (what the AI actually does for operations/deployment) and **"By Domain"** (how it applies to specific industries). 
 3. **It honors the "Proof Requirements":** I added "Technical Notes" under Resources. The foundation explicitly stated: *"The minimum proof set should include... one serious technical note or research paper."* Giving this prime real estate in the nav proves you are a research-led company.
 4. **Research is safely isolated:** Research programs match the exact wording of your foundation document. Customers looking to buy will click Products/Solutions. Investors/Engineers looking for technical depth will click Research. You have successfully decoupled "what you study" from "what you sell."
+
+    {
+        "label": "Solutions",
+        "href": "/solutions",
+        "order": 2,
+        "megaMenu": [
+            {
+                "title": "DOMAINS",
+                "items": [
+                    {
+                        "label": "Healthcare",
+                        "href": "/solutions/healthcare",
+                        "icon": "clinical"
+                    },
+                    {
+                        "label": "Energy ",
+                        "href": "/solutions/energy",
+                        "icon": "energy"
+                    },
+                    {
+                        "label": "Engineering Systems",
+                        "href": "/solutions/engineering",
+                        "icon": "engineering"
+                    },
+                    {
+                        "label": "Robotics",
+                        "href": "/solutions/robotics",
+                        "icon": "robotics"
+                    }
+                ]
+            }
+        ]
+    },

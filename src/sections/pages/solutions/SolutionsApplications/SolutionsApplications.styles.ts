@@ -1,125 +1,156 @@
 import styled from 'styled-components';
 
 export const AppsWrapper = styled.section`
+  padding: 120px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 80px 0;
+  }
 `;
 
 export const InnerContainer = styled.div`
   width: 100%;
-  max-width: ${({ theme }) => theme.containers.wide};
+  max-width: 1400px;
   margin: 0 auto;
+  padding: 0 40px;
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 0 24px;
+  }
 `;
 
+/* ── Header Area ── */
 export const AppsHeader = styled.div`
-  padding: ${({ theme }) => theme.spacing.s8} ${({ theme }) => theme.spacing.s5};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  margin-bottom: 80px;
+`;
+
+export const HeaderIcons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  color: ${({ theme }) => theme.colors.text.primary};
+
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5px;
+    
+    /* Make the icons pop slightly, referencing the emoji feel */
+    &:nth-child(1) { color: #0078D7; }
+    &:nth-child(2) { color: #FF4500; }
+    &:nth-child(3) { color: #FF8C00; }
+  }
 `;
 
 export const AppsTitle = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.h2};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin: 0 0 ${({ theme }) => theme.spacing.s3} 0;
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 24px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 40px;
+  }
 `;
 
 export const AppsDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
+  font-size: 16px;
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 auto;
+  margin: 0;
   max-width: 600px;
+  line-height: 1.6;
 `;
 
+/* ── The 4-Column Master Grid ── */
 export const AppsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0;
-
-  > div {
-    display: flex;
-    border-right: 1px solid ${({ theme }) => theme.colors.border};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  }
-
-  /* Remove right border for even items */
-  > div:nth-child(2n) {
-    border-right: none;
-  }
+  grid-template-columns: repeat(4, 1fr);
   
-  /* Remove bottom border for the last two items */
-  > div:nth-last-child(-n+2) {
-    border-bottom: none;
+  /* The reference image has top and bottom borders spanning the whole grid */
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+    border-bottom: none; /* Handled by individual cells on mobile/tablet */
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const AppCell = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 420px; /* Forces all cards to be uniformly tall, matching reference */
+  padding: 48px 32px;
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  background: transparent;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.015);
+  }
+
+  /* Remove right border from the last column */
+  &:last-child {
+    border-right: none;
   }
 
   ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: 1fr;
+    height: 320px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
     
-    > div {
-      border-right: none;
-      border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    }
-    
-    > div:nth-child(2n) {
+    /* Reset borders for 2-column layout */
+    &:nth-child(2n) {
       border-right: none;
     }
-    
-    > div:last-child {
-      border-bottom: none;
-    }
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    border-right: none;
   }
 `;
 
-export const AppCard = styled.div`
-  flex: 1;
-  background: ${({ theme }) => theme.colors.background.primary};
-  display: flex;
-  flex-direction: column;
-  transition: background ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.01);
-  }
-`;
-
-export const AppCardVisual = styled.div`
-  height: 120px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background-image: 
-    linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
-  display: flex;
-  align-items: center;
-  padding: 0 ${({ theme }) => theme.spacing.s6};
-`;
-
-export const AppCardNumber = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  color: ${({ theme }) => theme.colors.text.muted};
-`;
-
-export const AppCardContent = styled.div`
-  padding: ${({ theme }) => theme.spacing.s6};
-`;
-
-export const AppCardTitle = styled.h3`
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
+/* ── Cell Content Typography ── */
+export const CellIcon = styled.div`
+  margin-bottom: 40px; /* Big gap between icon and title */
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 ${({ theme }) => theme.spacing.s2} 0;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.5px;
+  }
 `;
 
-export const AppCardDesc = styled.p`
+export const CellTitle = styled.h3`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.body};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
+  font-size: 28px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0;
+`;
+
+export const CellDesc = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
+  line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+  
+  /* CRITICAL: This pushes the description to the absolute bottom of the cell */
+  margin-top: auto; 
 `;

@@ -1,31 +1,31 @@
 {
-  "large-language-models": {
-    "title": "Large Language Models",
+  "language-systems": {
+    "title": "Language Systems",
     "accent": "#2458D3",
     "cards": [
       {
-        "id": "routing-selection",
-        "title": "Routing & Selection",
-        "labels": ["mixture-of-experts", "routing"],
-        "description": "Designing objectives that balance throughput with training stability under strict hardware constraints."
+        "id": "post-training-alignment",
+        "title": "Post-Training & Alignment",
+        "labels": ["rlhf", "fine-tuning", "alignment"],
+        "description": "Shaping model behavior after pretraining so the system follows instructions and respects constraints."
       },
       {
-        "id": "sparse-computation",
-        "title": "Sparse Computation",
-        "labels": ["sparsity", "conditional-compute"],
-        "description": "Identifying sparsity patterns that preserve capability and degrade gracefully in deployment."
+        "id": "architecture-routing",
+        "title": "Model Architecture & Routing",
+        "labels": ["mixture-of-experts", "sparsity"],
+        "description": "Studying how structure affects capability, stability, and efficient use of compute via routing and sparse activation."
       },
       {
-        "id": "training-stability",
-        "title": "Training Stability",
-        "labels": ["training-dynamics", "loss-landscape"],
-        "description": "Detecting early warning signals for divergence to prevent expensive compute waste at scale."
+        "id": "efficiency-inference",
+        "title": "Efficiency & Inference",
+        "labels": ["compression", "serving", "latency"],
+        "description": "Making language systems cheaper, faster, and more deployable without unnecessary loss of quality."
       },
       {
-        "id": "inference-optimization",
-        "title": "Inference Optimization",
-        "labels": ["inference", "serving-systems"],
-        "description": "Building adaptive serving pipelines that maintain quality under extreme throughput pressure."
+        "id": "agentic-systems",
+        "title": "Agentic Systems & Tool Use",
+        "labels": ["reasoning", "tool-use", "planning"],
+        "description": "Understanding behavior when models can reason across steps, use external tools, and act inside a system."
       }
     ]
   },
@@ -35,87 +35,93 @@
     "cards": [
       {
         "id": "task-generalization",
-        "title": "Task Generalization",
+        "title": "Task Generalization & Transfer",
         "labels": ["multi-task", "policy-transfer"],
-        "description": "Understanding when a learned policy transfers meaningfully across tasks with different dynamics and objectives."
+        "description": "Studying how policies and representations transfer from one task or environment to another."
       },
       {
-        "id": "skill-composition",
-        "title": "Skill Composition",
-        "labels": ["chaining", "workflow"],
-        "description": "Composing individual skills into longer multi-step workflows without brittle handoffs."
-      },
-      {
-        "id": "reusable-representations",
-        "title": "Reusable Representations",
-        "labels": ["representation-learning", "abstraction"],
-        "description": "Learning representations that reduce the data required for each subsequent task."
+        "id": "embodied-skill-composition",
+        "title": "Embodied Skill Composition",
+        "labels": ["action-sequencing", "control"],
+        "description": "Composing smaller capabilities into longer, reliable sequences of physical action."
       },
       {
         "id": "sim-to-real",
-        "title": "Sim-to-Real Transfer",
-        "labels": ["simulation", "domain-adaptation"],
-        "description": "Bridging the gap between simulated training environments and real-world deployment conditions."
+        "title": "Sim-to-Real & Reliability",
+        "labels": ["simulation", "sensor-noise"],
+        "description": "Ensuring robotic systems behave reliably when they leave simulation and enter the physical world."
       }
     ]
   },
-  "clinical-ai": {
-    "title": "Safe Clinical AI",
+  "biomedical-clinical-ai": {
+    "title": "Biomedical, Biological & Clinical AI",
     "accent": "#1F7A4D",
     "cards": [
       {
-        "id": "supervised-decision-support",
-        "title": "Supervised Decision Support",
-        "labels": ["human-in-loop", "workflow"],
-        "description": "Designing support systems where clinicians remain the central decision-makers."
+        "id": "clinical-decision-support",
+        "title": "Clinical Decision Support",
+        "labels": ["human-in-loop", "validation"],
+        "description": "Supporting clinical workflows while keeping clinicians in control and preserving evidence standards."
       },
       {
-        "id": "reliability-constraints",
-        "title": "Reliability Under Constraints",
-        "labels": ["robustness", "uncertainty"],
-        "description": "Studying how clinical AI systems behave under distribution shift and data constraints."
+        "id": "computational-biology",
+        "title": "Computational Biology",
+        "labels": ["protein-modeling", "bioinformatics"],
+        "description": "Solving molecular and biological problems where AI can help with representation, inference, and design."
       },
       {
-        "id": "validation-standards",
-        "title": "Validation Standards",
-        "labels": ["evaluation", "safety"],
-        "description": "Developing evidence standards appropriate to the risk level of each clinical use case."
-      },
-      {
-        "id": "failure-mode-analysis",
-        "title": "Failure Mode Analysis",
-        "labels": ["auditing", "bias-detection"],
-        "description": "Identifying where current AI systems fail most consequentially in clinical settings."
+        "id": "biological-data-integration",
+        "title": "Biological Data Integration",
+        "labels": ["multimodal", "research-workflows"],
+        "description": "Organizing and reasoning over fragmented biological and clinical data in practical research settings."
       }
     ]
   },
-  "energy-engineering-optimization": {
-    "title": "Energy and Engineering Optimization",
+  "energy-systems": {
+    "title": "Energy Systems",
     "accent": "#D99100",
     "cards": [
       {
-        "id": "resource-efficiency",
-        "title": "Resource Efficiency",
-        "labels": ["waste-reduction", "allocation"],
-        "description": "Applying AI methods to reduce measurable waste in energy and engineering systems."
+        "id": "grid-intelligence",
+        "title": "Grid Intelligence & Forecasting",
+        "labels": ["grid-stability", "forecasting"],
+        "description": "Improving forecasting, monitoring, and decision support for grid and energy operations."
+      },
+      {
+        "id": "asset-monitoring",
+        "title": "Asset Monitoring",
+        "labels": ["resource-efficiency", "diagnostics"],
+        "description": "Reducing waste and improving the efficiency of physical energy assets through performance tracking."
       },
       {
         "id": "renewable-planning",
-        "title": "Renewable System Planning",
-        "labels": ["solar", "wind", "optimization"],
-        "description": "Using optimization models to plan across systems with variable supply and demand."
+        "title": "Renewable Planning",
+        "labels": ["supply-demand", "control"],
+        "description": "Supporting planning and control in systems with highly variable supply and demand."
+      }
+    ]
+  },
+  "computational-science": {
+    "title": "Computational Science & Engineering",
+    "accent": "#8B5CF6",
+    "cards": [
+      {
+        "id": "simulation-acceleration",
+        "title": "Simulation Acceleration",
+        "labels": ["surrogate-models", "approximation"],
+        "description": "Using AI and numerical methods to reduce the cost of simulation without losing practical utility."
       },
       {
-        "id": "engineering-design-support",
-        "title": "Engineering Design Support",
-        "labels": ["decision-support", "constraints"],
-        "description": "Supporting engineering decisions under physical, operational, and cost constraints."
+        "id": "constraint-aware-design",
+        "title": "Constraint-Aware Design",
+        "labels": ["optimization", "feasibility"],
+        "description": "Generating or improving designs while respecting the physical and operational constraints of real systems."
       },
       {
-        "id": "supply-demand-optimization",
-        "title": "Supply-Demand Optimization",
-        "labels": ["forecasting", "scheduling"],
-        "description": "Optimizing allocation between variable generation and fluctuating consumption patterns."
+        "id": "diagnostics-verification",
+        "title": "Diagnostics & Verification",
+        "labels": ["validation", "anomaly-detection"],
+        "description": "Using computational methods to help validate, inspect, and diagnose complex physical systems."
       }
     ]
   }

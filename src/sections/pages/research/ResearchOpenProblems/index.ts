@@ -1,1 +1,0 @@
-export { ResearchOpenProblems } from './ResearchOpenProblems';
