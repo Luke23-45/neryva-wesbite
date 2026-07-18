@@ -15,13 +15,13 @@ import section6 from '@neryva_data/products/deployment/section6.json';
 import section7 from '@neryva_data/products/deployment/section7.json';
 
 // Import images statically
-import imgDeploymentSection1 from '@assets/images/page/deployment/deployment_pipeline_section1.png';
-import imgDeploymentSection2 from '@assets/images/page/deployment/deployment_pipeline_section2.png';
-import imgDeploymentSection3 from '@assets/images/page/deployment/deployment_pipeline_section3.png';
-import imgDeploymentSection4 from '@assets/images/page/deployment/deployment_pipeline_section4.png';
-import imgDeploymentSection5 from '@assets/images/page/deployment/deployment_pipeline_section5.png';
-import imgDeploymentSection6 from '@assets/images/page/deployment/deployment_pipeline_section6.png';
-import imgDeploymentSection7 from '@assets/images/page/deployment/deployment_pipeline_section7.png';
+import imgDeploymentSection1 from '@assets/page/product/deployment/deployment_pipeline_section1.png';
+import imgDeploymentSection2 from '@assets/page/product/deployment/deployment_pipeline_section2.png';
+import imgDeploymentSection3 from '@assets/page/product/deployment/deployment_pipeline_section3.png';
+import imgDeploymentSection4 from '@assets/page/product/deployment/deployment_pipeline_section4.png';
+import imgDeploymentSection5 from '@assets/page/product/deployment/deployment_pipeline_section5.png';
+import imgDeploymentSection6 from '@assets/page/product/deployment/deployment_pipeline_section6.png';
+import imgDeploymentSection7 from '@assets/page/product/deployment/deployment_pipeline_section7.png';
 
 const imageMapping: Record<string, string> = {
   'deployment_pipeline_section1.png': imgDeploymentSection1,

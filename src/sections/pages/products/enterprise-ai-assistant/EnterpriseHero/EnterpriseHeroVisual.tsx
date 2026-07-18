@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 
-import interfaceImage from '@assets/images/page/enterprised_ai/enterprise_interface.png';
+import interfaceImage from '@assets/page/product/enterprised_ai/enterprise_interface.png';
 
 const VisualContainer = styled.div`
   position: relative;
