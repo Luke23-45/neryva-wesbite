@@ -13,6 +13,23 @@ import section5 from '@neryva_data/products/ai_enterprised/section5.json';
 import section6 from '@neryva_data/products/ai_enterprised/section6.json';
 import section7 from '@neryva_data/products/ai_enterprised/section7.json';
 
+// Import images statically
+import imgPipelineSection2 from '../../../../../../assets/images/pipeline_section2.png';
+import imgPipelineSection3 from '../../../../../../assets/images/pipeline_section3.png';
+import imgPipelineSection4 from '../../../../../../assets/images/pipeline_section4.png';
+import imgPipelineSection5 from '../../../../../../assets/images/pipeline_section5.png';
+import imgPipelineSection6 from '../../../../../../assets/images/pipeline_section6.png';
+import imgPipelineSection7 from '../../../../../../assets/images/pipeline_section7.png';
+
+const imageMapping: Record<string, string> = {
+  'pipeline_section2.png': imgPipelineSection2,
+  'pipeline_section3.png': imgPipelineSection3,
+  'pipeline_section4.png': imgPipelineSection4,
+  'pipeline_section5.png': imgPipelineSection5,
+  'pipeline_section6.png': imgPipelineSection6,
+  'pipeline_section7.png': imgPipelineSection7,
+};
+
 import {
   FlexContainer,
   Sidebar,
@@ -21,6 +38,7 @@ import {
   PipelineSectionStyled,
   SectionTitle,
   VisualBlock,
+  VisualImage,
   VisualTypeLabel,
   VisualDescription,
   FeatureGrid,
@@ -42,6 +60,7 @@ interface SectionData {
   visual: {
     type: string;
     description: string;
+    image?: string;
   };
   features: Feature[];
 }
@@ -141,6 +160,16 @@ export function EnterprisePipeline() {
 
                 {/* Row 2: Visual Diagram Area */}
                 <VisualBlock>
+                  {section.visual.image && imageMapping[section.visual.image] && (
+                    <VisualImage
+                      src={imageMapping[section.visual.image]}
+                      alt={section.visual.description}
+                      as={motion.img}
+                      initial={{ opacity: 0, scale: 1.05 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.8 }}
+                    />
+                  )}
                   <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
                   <VisualDescription>{section.visual.description}</VisualDescription>
                 </VisualBlock>

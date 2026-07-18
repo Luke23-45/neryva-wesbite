@@ -4,7 +4,8 @@
   "title": "5. Workflow support.",
   "visual": {
     "type": "flowchart",
-    "description": "Agent autonomously capturing user details, completing a form, and routing a support ticket."
+    "description": "Agent autonomously capturing user details, completing a form, and routing a support ticket.",
+    "image": "pipeline_section6.png"
   },
   "features": [
     {

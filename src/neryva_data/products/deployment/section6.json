@@ -4,7 +4,8 @@
   "title": "Governance And Reliability",
   "visual": {
     "type": "CONTROL",
-    "description": "Keeping the system safe, documented, and controllable."
+    "description": "Keeping the system safe, documented, and controllable.",
+    "image": "deployment_pipeline_section6.png"
   },
   "features": [
     {

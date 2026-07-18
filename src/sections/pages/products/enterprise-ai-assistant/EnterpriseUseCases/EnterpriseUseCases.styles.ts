@@ -1,120 +1,135 @@
 import styled from 'styled-components';
 
 export const UseCasesSection = styled.section`
-  padding: ${({ theme }) => theme.spacing.s10} 0;
+  padding: 120px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
-  position: relative;
-  overflow: hidden;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 80px 0;
+  }
 `;
 
-export const HeaderContainer = styled.div`
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto ${({ theme }) => theme.spacing.s8};
+export const InnerContainer = styled.div`
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 0 24px;
+  }
+`;
+
+/* ─── HEADER ─── */
+export const HeaderBlock = styled.div`
+  max-width: 600px;
+  margin-bottom: 64px;
+  display: flex;
+  flex-direction: column;
 `;
 
 export const Subtitle = styled.span`
-  display: inline-block;
-  color: ${({ theme }) => theme.colors.accent.azure};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
+  letter-spacing: 0.16em;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin-bottom: 24px;
 `;
 
 export const Title = styled.h2`
-  font-size: ${({ theme }) => theme.typography.sizes.h1};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 1.1;
   letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 16px 0;
 
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    font-size: ${({ theme }) => theme.typography.sizes.h2};
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 32px;
   }
 `;
 
 export const Description = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
+  font-size: 18px;
+  line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
+  margin: 0;
 `;
 
-export const GridContainer = styled.div`
+/* ─── MASTER BENTO GRID ─── */
+export const BentoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }) => theme.spacing.s8};
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 280px; /* Force rows to have immense architectural weight */
+  
+  /* PERFECT 1PX BORDER TRICK */
+  background-color: ${({ theme }) => theme.colors.border}; 
+  gap: 1px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
 
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+  ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
-    gap: ${({ theme }) => theme.spacing.s6};
+    /* Reset heights and auto-rows on tablet for natural stacking */
+    grid-auto-rows: minmax(200px, auto); 
   }
 `;
 
-export const Card = styled.div`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.xl};
-  padding: ${({ theme }) => theme.spacing.s8};
-  transition: ${({ theme }) => theme.transitions.standard};
+/* ─── BENTO CELLS ─── */
+export const BentoCell = styled.div<{ $layoutArea: string }>`
+  background-color: ${({ theme }) => theme.colors.background.primary};
+  padding: 40px;
   display: flex;
   flex-direction: column;
-  position: relative;
-  overflow: hidden;
+  
+  /* Maps to exactly the string in the JSON payload (e.g., '1 / 1 / 3 / 2') */
+  grid-area: ${({ $layoutArea }) => $layoutArea};
 
-  /* Subtle gradient background for premium feel */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: ${({ theme }) => theme.colors.gradients.primary};
-    opacity: 0;
-    transition: ${({ theme }) => theme.transitions.standard};
+  /* Smooth subtle background transition to emulate hardware surface hover */
+  transition: background-color 0.4s ease;
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.015);
   }
 
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: ${({ theme }) => theme.shadows.lg};
-    border-color: ${({ theme }) => theme.colors.borderLight};
-
-    &::before {
-      opacity: 1;
-    }
+  ${({ theme }) => theme.media.tablet} {
+    grid-area: auto; /* Cancel specific positions, forces linear stacking */
+    padding: 32px;
   }
 `;
 
-export const IconWrapper = styled.div`
+export const IconBox = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: ${({ theme }) => theme.radii.lg};
-  background-color: ${({ theme }) => theme.colors.background.tertiary};
-  color: ${({ theme }) => theme.colors.accent.azure};
-  margin-bottom: ${({ theme }) => theme.spacing.s6};
-  
-  transition: ${({ theme }) => theme.transitions.default};
+  width: 44px;
+  height: 44px;
+  /* Monolithic high-contrast styling */
+  background: ${({ theme }) => theme.colors.text.primary};
+  color: ${({ theme }) => theme.colors.background.primary};
+  border-radius: 6px;
+  margin-bottom: auto; /* This forces the text to drop to the bottom! */
 
-  ${Card}:hover & {
-    background-color: ${({ theme }) => theme.colors.accent.azureMuted};
-    color: ${({ theme }) => theme.colors.accent.azureDark};
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.5px;
   }
 `;
 
-export const CardTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin-bottom: ${({ theme }) => theme.spacing.s3};
+export const AppTitle = styled.h3`
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 24px 0 12px 0;
 `;
 
-export const CardDescription = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.body};
+export const AppDesc = styled.p`
+  font-size: 15px;
+  line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
+  margin: 0;
+  max-width: 90%;
 `;

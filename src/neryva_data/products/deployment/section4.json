@@ -4,7 +4,8 @@
   "title": "Performance Optimization",
   "visual": {
     "type": "METRICS",
-    "description": "Improving the practical efficiency of the deployment."
+    "description": "Improving the practical efficiency of the deployment.",
+    "image": "deployment_pipeline_section4.png"
   },
   "features": [
     {

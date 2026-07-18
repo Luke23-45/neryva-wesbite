@@ -4,7 +4,8 @@
   "title": "3. Knowledge integration.",
   "visual": {
     "type": "diagram",
-    "description": "Schema showing company FAQs, product info, and support docs syncing into the agent's knowledge base."
+    "description": "Schema showing company FAQs, product info, and support docs syncing into the agent's knowledge base.",
+    "image": "pipeline_section4.png"
   },
   "features": [
     {

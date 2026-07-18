@@ -159,6 +159,16 @@ export const VisualBlock = styled.div`
   }
 `;
 
+export const VisualImage = styled.img`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+`;
+
 export const VisualTypeLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 11px;

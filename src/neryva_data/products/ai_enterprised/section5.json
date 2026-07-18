@@ -4,7 +4,8 @@
   "title": "4. Behavior guardrails.",
   "visual": {
     "type": "dashboard",
-    "description": "Dashboard intercepting an off-topic question and redirecting back to the core service role."
+    "description": "Dashboard intercepting an off-topic question and redirecting back to the core service role.",
+    "image": "pipeline_section5.png"
   },
   "features": [
     {

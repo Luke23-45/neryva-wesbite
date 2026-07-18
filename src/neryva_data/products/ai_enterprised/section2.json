@@ -4,7 +4,8 @@
   "title": "1. Business scope.",
   "visual": {
     "type": "schema",
-    "description": "Diagram showing objective definition, allowed service scope, and strict customer support boundaries."
+    "description": "Diagram showing objective definition, allowed service scope, and strict customer support boundaries.",
+    "image": "pipeline_section2.png"
   },
   "features": [
     {

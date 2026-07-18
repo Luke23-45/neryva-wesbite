@@ -4,7 +4,8 @@
   "title": "Ongoing Managed Support",
   "visual": {
     "type": "MAINTENANCE",
-    "description": "Continuing to support the deployment after launch."
+    "description": "Continuing to support the deployment after launch.",
+    "image": "deployment_pipeline_section7.png"
   },
   "features": [
     {

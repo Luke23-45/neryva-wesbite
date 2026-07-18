@@ -4,7 +4,8 @@
   "title": "Model Serving",
   "visual": {
     "type": "API",
-    "description": "Putting the model into a usable production interface."
+    "description": "Putting the model into a usable production interface.",
+    "image": "deployment_pipeline_section3.png"
   },
   "features": [
     {

@@ -4,7 +4,8 @@
   "title": "Deployment Architecture",
   "visual": {
     "type": "TOPOLOGY",
-    "description": "Designing the technical structure required to run the model in the right environment."
+    "description": "Designing the technical structure required to run the model in the right environment.",
+    "image": "deployment_pipeline_section1.png"
   },
   "features": [
     {

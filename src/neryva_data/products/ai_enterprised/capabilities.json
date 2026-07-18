@@ -1,0 +1,29 @@
+{
+  "header": {
+    "subtext": "The Professional Experience Layer",
+    "title": "Control, Guardrails, and Voice",
+    "description": "A raw AI model is a liability. We provide the control layer that gives your assistant discipline, ensures it stays on topic, and guarantees a premium experience for every interaction."
+  },
+  "items": [
+    {
+      "icon": "Palette",
+      "title": "Brand & Voice Design",
+      "description": "Shape how the agent speaks. Enforce brand voice, professional tone, approved phrasing patterns, and strictly prohibit disallowed language so it reflects your company perfectly."
+    },
+    {
+      "icon": "Database",
+      "title": "Business Knowledge Integration",
+      "description": "Ground responses in reality. Feed the agent with company FAQs, product info, and structured business data so it can answer real customer questions accurately."
+    },
+    {
+      "icon": "ShieldAlert",
+      "title": "Guardrails & Escalation",
+      "description": "Keep the agent aligned with business policy. Define allowed topics, hard restrict unrelated prompts (like programming or trivia), and establish clear human handoff triggers."
+    },
+    {
+      "icon": "Activity",
+      "title": "Tool & Workflow Support",
+      "description": "Allow the agent to execute practical tasks such as ticket routing, form completion, and status checks directly within your existing systems."
+    }
+  ]
+}

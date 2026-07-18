@@ -4,7 +4,8 @@
   "title": "Secure Provisioning",
   "visual": {
     "type": "SECURITY",
-    "description": "Setting up the environment needed for controlled production use."
+    "description": "Setting up the environment needed for controlled production use.",
+    "image": "deployment_pipeline_section2.png"
   },
   "features": [
     {

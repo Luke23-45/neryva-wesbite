@@ -4,7 +4,8 @@
   "title": "6. Operations & testing.",
   "visual": {
     "type": "analytics",
-    "description": "Analytics dashboard showing response testing, edge-case evaluation, and performance review."
+    "description": "Analytics dashboard showing response testing, edge-case evaluation, and performance review.",
+    "image": "pipeline_section7.png"
   },
   "features": [
     {

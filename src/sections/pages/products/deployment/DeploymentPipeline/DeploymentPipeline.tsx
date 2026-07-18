@@ -14,6 +14,25 @@ import section5 from '@neryva_data/products/deployment/section5.json';
 import section6 from '@neryva_data/products/deployment/section6.json';
 import section7 from '@neryva_data/products/deployment/section7.json';
 
+// Import images statically
+import imgDeploymentSection1 from '../../../../../../assets/images/deployment_pipeline_section1.png';
+import imgDeploymentSection2 from '../../../../../../assets/images/deployment_pipeline_section2.png';
+import imgDeploymentSection3 from '../../../../../../assets/images/deployment_pipeline_section3.png';
+import imgDeploymentSection4 from '../../../../../../assets/images/deployment_pipeline_section4.png';
+import imgDeploymentSection5 from '../../../../../../assets/images/deployment_pipeline_section5.png';
+import imgDeploymentSection6 from '../../../../../../assets/images/deployment_pipeline_section6.png';
+import imgDeploymentSection7 from '../../../../../../assets/images/deployment_pipeline_section7.png';
+
+const imageMapping: Record<string, string> = {
+  'deployment_pipeline_section1.png': imgDeploymentSection1,
+  'deployment_pipeline_section2.png': imgDeploymentSection2,
+  'deployment_pipeline_section3.png': imgDeploymentSection3,
+  'deployment_pipeline_section4.png': imgDeploymentSection4,
+  'deployment_pipeline_section5.png': imgDeploymentSection5,
+  'deployment_pipeline_section6.png': imgDeploymentSection6,
+  'deployment_pipeline_section7.png': imgDeploymentSection7,
+};
+
 import {
   FlexContainer,
   Sidebar,
@@ -22,6 +41,7 @@ import {
   PipelineSectionStyled,
   SectionTitle,
   VisualBlock,
+  VisualImage,
   VisualTypeLabel,
   VisualDescription,
   FeatureGrid,
@@ -43,6 +63,7 @@ interface SectionData {
   visual: {
     type: string;
     description: string;
+    image?: string;
   };
   features: Feature[];
 }
@@ -143,6 +164,16 @@ export function DeploymentPipeline() {
 
                 {/* Row 2: Visual Diagram Area */}
                 <VisualBlock>
+                  {section.visual.image && imageMapping[section.visual.image] && (
+                    <VisualImage 
+                      src={imageMapping[section.visual.image]} 
+                      alt={section.visual.description}
+                      as={motion.img}
+                      initial={{ opacity: 0, scale: 1.05 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.8 }}
+                    />
+                  )}
                   <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
                   <VisualDescription>{section.visual.description}</VisualDescription>
                 </VisualBlock>

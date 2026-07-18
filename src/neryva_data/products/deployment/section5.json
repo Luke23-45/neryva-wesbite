@@ -4,7 +4,8 @@
   "title": "Monitoring And Operations",
   "visual": {
     "type": "OBSERVABILITY",
-    "description": "Maintaining visibility into how the system behaves after launch."
+    "description": "Maintaining visibility into how the system behaves after launch.",
+    "image": "deployment_pipeline_section5.png"
   },
   "features": [
     {

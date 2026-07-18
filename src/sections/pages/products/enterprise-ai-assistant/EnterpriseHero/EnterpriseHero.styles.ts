@@ -1,187 +1,195 @@
 import styled from 'styled-components';
 
-/* ─── Full-viewport split hero wrapper ─── */
+/* ─── Master Container — stacks rows vertically, 1px gap between them ─── */
 export const HeroWrapper = styled.section`
   position: relative;
-  min-height: 100vh;
+  width: 100%;
+  background-color: ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   flex-direction: column;
-  background-color: #ffffff;
-  overflow: hidden;
-
-  /* The right side dark background split */
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 50%;
-    background-color: #111520; /* Deep navy/slate matching the image */
-    z-index: 0;
-  }
-
-  ${({ theme }) => theme.media.tablet} {
-    &::after {
-      width: 100%;
-      top: 50%;
-    }
-  }
+  gap: 1px;
 `;
 
-/* ─── Content grid: two-column split ─── */
-export const ContentGrid = styled.div`
-  position: relative;
-  z-index: 1;
-  flex: 1;
+/* ─── Row 1: existing 65/35 split ─── */
+export const Row1 = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.s8};
-  max-width: ${({ theme }) => theme.containers.wide};
-  width: 100%;
-  margin: 0 auto;
-  padding: ${({ theme }) => theme.spacing.s10} ${({ theme }) => theme.spacing.s5};
+  grid-template-columns: 65fr 35fr;
+  gap: 1px;
+  background-color: ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
-    gap: ${({ theme }) => theme.spacing.s7};
-    padding: ${({ theme }) => theme.spacing.s9} ${({ theme }) => theme.spacing.s5};
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 96px ${({ theme }) => theme.spacing.s4} ${({ theme }) => theme.spacing.s7};
   }
 `;
 
-/* ─── Left column: text content ─── */
-export const LeftColumn = styled.div`
+/* ─── Row 2: 40/60 split ─── */
+export const Row2 = styled.div`
+  display: grid;
+  grid-template-columns: 45fr 55fr;
+  gap: 1px;
+  background-color: ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 1fr;
+  }
+`;
+
+/* ─── Row 1: Left Cell (Massive Typography) ─── */
+export const CellTopLeft = styled.div`
+  background: #ffffff; /* Bright white base */
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.s4};
+  justify-content: flex-end;
+  /* Massive breathing room, aligned precisely with standard premium margins */
+  padding: 150px 80px 48px 80px;
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 140px 40px 40px 40px;
+  }
+  
+  ${({ theme }) => theme.media.mobile} {
+    padding: 120px 24px 32px 24px;
+  }
 `;
 
-/* ─── Eyebrow label ─── */
+/* Editorial Breadcrumb / Eyebrow */
 export const Eyebrow = styled.div`
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  margin-bottom: ${({ theme }) => theme.spacing.s1};
+  gap: 8px;
+  margin-bottom: 25px;
 
   span {
     font-family: ${({ theme }) => theme.typography.fonts.mono};
-    font-size: ${({ theme }) => theme.typography.sizes.label};
-    font-weight: ${({ theme }) => theme.typography.weights.medium};
-    letter-spacing: 0.16em;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(0, 0, 0, 0.4);
+    color: ${({ theme }) => theme.colors.text.muted};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    margin-bottom: 24px;
   }
 `;
 
-/* ─── Main headline ─── */
 export const Headline = styled.h1`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: clamp(2.5rem, 5vw, 3.75rem);
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  line-height: ${({ theme }) => theme.typography.lineHeights.heading};
-  letter-spacing: -0.03em;
-  color: #000000;
+font-size: clamp(2.25rem, 4.5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em; /* Tight, premium tracking */
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
-
-  ${({ theme }) => theme.media.mobile} {
-    font-size: clamp(2rem, 8vw, 2.5rem);
-  }
+  white-space: pre-line;
 `;
 
-/* ─── Downward arrows ─── */
-export const DownArrows = styled.div`
+/* ─── Row 1: Right Cell (Editorial Sidebar) ─── */
+export const CellTopRight = styled.div`
+  background: #fcfcfc; /* Barely off-white for structural contrast */
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  color: rgba(0, 0, 0, 0.25);
-  margin: ${({ theme }) => theme.spacing.s2} 0;
+  justify-content: flex-end; /* Baselines align mathematically with the Headline */
+  padding: 160px 64px 48px 64px;
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 40px;
+    background: #ffffff;
+  }
   
-  svg {
-    width: 14px;
-    height: 14px;
+  ${({ theme }) => theme.media.mobile} {
+    padding: 32px 24px;
   }
 `;
 
-/* ─── Description text ─── */
-export const Description = styled.p`
+export const SidebarMetric = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
-  line-height: ${({ theme }) => theme.typography.lineHeights.bodyLg};
-  color: #000000;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
-  max-width: 520px;
+`;
+
+/* ─── Row 2: Left Cell (Narrative + CTA) ─── */
+export const CellBottomLeft = styled.div`
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 80px 120px 80px;
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 32px 40px 80px 40px;
+  }
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.typography.sizes.body};
+    padding: 24px 24px 64px 24px;
   }
 `;
 
-/* ─── CTA button group ─── */
+export const Description = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 20px;
+  line-height: 1.6;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0 0 40px 0;
+  max-width: 600px; /* Forces optimal reading width regardless of window size */
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 18px;
+    margin-bottom: 32px;
+  }
+`;
+
 export const CtaGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s4};
-  margin-top: ${({ theme }) => theme.spacing.s5};
-
-  ${({ theme }) => theme.media.mobile} {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: ${({ theme }) => theme.spacing.s3};
-  }
 `;
 
-/* ─── Primary CTA: solid black ─── */
+/* Razor-sharp architectural button */
 export const CtaPrimary = styled.a`
   display: inline-flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s2};
-  padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.s5};
-  background: #000000;
-  color: #ffffff;
+  gap: 12px;
+  padding: 16px 28px;
+  background: ${({ theme }) => theme.colors.text.primary};
+  color: ${({ theme }) => theme.colors.background.primary};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  line-height: 1;
-  text-decoration: none;
-  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 500;
   border: none;
+  border-radius: 4px; 
   cursor: pointer;
-  transition: opacity ${({ theme }) => theme.transitions.fast}, transform ${({ theme }) => theme.transitions.fast};
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    opacity: 0.88;
+    opacity: 0.92;
     transform: translateY(-1px);
   }
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.accent.lilac};
-    outline-offset: 2px;
-  }
-
   svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
-/* ─── Right column: visual area ─── */
-export const RightColumn = styled.div`
+/* ─── Row 2: Right Cell (Dark Visual Panel) ─── */
+export const CellBottomRight = styled.div`
+  background: #090e15; /* Reintroduced the deep structural navy/black for contrast */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 480px;
+  overflow: hidden;
 
   ${({ theme }) => theme.media.tablet} {
-    min-height: 360px;
+    min-height: 400px;
   }
 
   ${({ theme }) => theme.media.mobile} {
-    min-height: 280px;
+    min-height: 320px;
   }
 `;
-

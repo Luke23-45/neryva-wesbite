@@ -1,16 +1,31 @@
 import styled from 'styled-components';
 
 export const CapabilitiesSection = styled.section`
-  padding: ${({ theme }) => theme.spacing.s10} 0;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-  position: relative;
-  overflow: hidden;
+  padding: 120px 0;
+  background-color: ${({ theme }) => theme.colors.background.primary};
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 80px 0;
+  }
 `;
 
-export const HeaderWrapper = styled.div`
+export const InnerContainer = styled.div`
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 0 24px;
+  }
+`;
+
+export const AppsHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  max-width: 700px;
-  margin: 0 auto ${({ theme }) => theme.spacing.s10};
+  margin-bottom: 80px;
 `;
 
 export const Subtext = styled.span`
@@ -24,102 +39,99 @@ export const Subtext = styled.span`
 `;
 
 export const SectionHeading = styled.h2`
-  font-size: ${({ theme }) => theme.typography.sizes.h1};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
-  letter-spacing: -0.02em;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 24px 0;
 
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    font-size: ${({ theme }) => theme.typography.sizes.h2};
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 40px;
   }
 `;
 
 export const SectionDescription = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.bodyLg};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 16px;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
+  margin: 0;
+  max-width: 600px;
+  line-height: 1.6;
 `;
 
-export const BentoGrid = styled.div`
+export const AppsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: ${({ theme }) => theme.spacing.s6};
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+    border-bottom: none;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
   }
 `;
 
-export const BentoCard = styled.div<{ $highlight?: boolean }>`
-  background-color: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.xl};
-  padding: ${({ theme, $highlight }) => ($highlight ? theme.spacing.s10 : theme.spacing.s8)};
+export const AppCell = styled.div`
   display: flex;
   flex-direction: column;
-  transition: ${({ theme }) => theme.transitions.standard};
-  position: relative;
-  overflow: hidden;
-
-  grid-column: ${({ $highlight }) => ($highlight ? 'span 2' : 'span 1')};
-
-  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
-    grid-column: span 1;
-    padding: ${({ theme }) => theme.spacing.s8};
-  }
+  height: 420px;
+  padding: 48px 32px;
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  background: transparent;
+  transition: background-color 0.3s ease;
 
   &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-    border-color: ${({ theme }) => theme.colors.borderLight};
+    background: rgba(0, 0, 0, 0.015);
+  }
+
+  &:last-child {
+    border-right: none;
+  }
+
+  ${({ theme }) => theme.media.tablet} {
+    height: 320px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    &:nth-child(2n) {
+      border-right: none;
+    }
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    border-right: none;
   }
 `;
 
-export const CardHeader = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.s5};
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
+export const CellIcon = styled.div`
+  margin-bottom: 40px;
+  color: ${({ theme }) => theme.colors.text.primary};
+
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.5px;
+  }
 `;
 
-export const IconContainer = styled.div<{ $colorType?: 'emerald' | 'azure' | 'lilac' | 'amethyst' }>`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: ${({ theme }) => theme.radii.lg};
-  
-  background-color: ${({ theme, $colorType }) => {
-    switch ($colorType) {
-      case 'emerald': return theme.colors.accent.emeraldMuted;
-      case 'azure': return theme.colors.accent.azureMuted;
-      case 'lilac': return theme.colors.accent.lilacMuted;
-      case 'amethyst': return theme.colors.accent.amethystMuted;
-      default: return theme.colors.background.tertiary;
-    }
-  }};
-  
-  color: ${({ theme, $colorType }) => {
-    switch ($colorType) {
-      case 'emerald': return theme.colors.accent.emeraldDark;
-      case 'azure': return theme.colors.accent.azureDark;
-      case 'lilac': return theme.colors.accent.lilacDark;
-      case 'amethyst': return theme.colors.accent.amethystDark;
-      default: return theme.colors.text.strong;
-    }
-  }};
+export const CellTitle = styled.h3`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 28px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0;
 `;
 
-export const CardTitle = styled.h3`
-  font-size: ${({ theme }) => theme.typography.sizes.h3};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.strong};
-`;
-
-export const CardBody = styled.p`
-  font-size: ${({ theme }) => theme.typography.sizes.body};
+export const CellDesc = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
+  line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.body};
-  max-width: 90%;
+  margin: 0;
+  margin-top: auto;
 `;
