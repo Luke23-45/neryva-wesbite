@@ -23,42 +23,26 @@ export const InnerContainer = styled.div`
 export const AppsHeader = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   text-align: center;
-  margin-bottom: 80px;
+  margin-bottom: 40px;
 `;
 
-export const Subtext = styled.span`
-  display: inline-block;
-  color: ${({ theme }) => theme.colors.accent.emeraldDark};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: ${({ theme }) => theme.spacing.s5};
-`;
+
 
 export const SectionHeading = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 56px;
+  font-size: 48px;
   font-weight: 500;
   letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 24px 0;
+  margin: 0 0 0px 0;
 
   ${({ theme }) => theme.media.mobile} {
     font-size: 40px;
   }
 `;
 
-export const SectionDescription = styled.p`
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 16px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0;
-  max-width: 600px;
-  line-height: 1.6;
-`;
 
 export const AppsGrid = styled.div`
   display: grid;
@@ -74,6 +58,7 @@ export const AppsGrid = styled.div`
   ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
   }
+  padding-top: 0;
 `;
 
 export const AppCell = styled.div`

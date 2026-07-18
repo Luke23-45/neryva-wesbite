@@ -47,17 +47,10 @@ export function EnterpriseCapabilities() {
           whileInView="visible"
           viewport={{ once: true, margin: '-50px' }}
         >
-          <motion.div variants={fadeUp} custom={0}>
-            <Subtext>{capsData.header.subtext}</Subtext>
-          </motion.div>
-
           <motion.div variants={fadeUp} custom={1}>
             <SectionHeading>{capsData.header.title}</SectionHeading>
           </motion.div>
 
-          <motion.div variants={fadeUp} custom={2}>
-            <SectionDescription>{capsData.header.description}</SectionDescription>
-          </motion.div>
         </AppsHeader>
 
         <AppsGrid

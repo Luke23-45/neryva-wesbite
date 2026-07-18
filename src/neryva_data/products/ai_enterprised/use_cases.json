@@ -1,8 +1,6 @@
 {
     "header": {
-        "subtitle": "Built for targeted interaction.",
-        "title": "What you can build.",
-        "description": "Deploy specialized agents explicitly mapped to business roles. They execute operations exactly as instructed, completely avoiding unprompted behaviors."
+        "title": "What you can build."
     },
     "items": [
         {

@@ -39,9 +39,7 @@ export function EnterpriseUseCases() {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.8, ease: premiumEase }}
         >
-          <Subtitle>// {header.subtitle}</Subtitle>
           <Title>{header.title}</Title>
-          <Description>{header.description}</Description>
         </HeaderBlock>
 
         {/* ─── BENTO GRID ASSEBMLY ─── */}
