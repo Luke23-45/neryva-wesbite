@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Palette, Database, ShieldAlert, Activity } from 'lucide-react';
 import capsData from '@neryva_data/products/ai_enterprised/capabilities.json';
 import {
   CapabilitiesSection,
@@ -13,12 +12,7 @@ import {
   CellDesc,
 } from './EnterpriseCapabilities.styles';
 
-const iconMap: Record<string, React.ElementType> = {
-  Palette,
-  Database,
-  ShieldAlert,
-  Activity,
-};
+import { EnterpriseIcons } from '@assets/visual/products/enterprise/EnterpriseCapabilityIcons';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
@@ -58,7 +52,7 @@ export function EnterpriseCapabilities() {
           viewport={{ once: true, margin: '-50px' }}
         >
           {capsData.items.map((item, i) => {
-            const IconComponent = iconMap[item.icon];
+            const IconComponent = EnterpriseIcons[item.icon.toLowerCase()];
 
             return (
               <AppCell

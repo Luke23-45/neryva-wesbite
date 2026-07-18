@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Headset, BadgeCheck, Users, Workflow } from 'lucide-react';
 import useCasesData from '@neryva_data/products/ai_enterprised/use_cases.json';
 import {
   UseCasesSection,
@@ -17,12 +16,7 @@ import {
   AppDesc,
 } from './EnterpriseUseCases.styles';
 
-const iconMap: Record<string, React.ElementType> = {
-  Headset,
-  BadgeCheck,
-  Users,
-  Workflow,
-};
+import { EnterpriseIcons } from '@assets/visual/products/enterprise/EnterpriseCapabilityIcons';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
@@ -96,7 +90,7 @@ export function EnterpriseUseCases() {
           }}
         >
           {items.map((item, index) => {
-            const Icon = iconMap[item.icon];
+            const Icon = EnterpriseIcons[item.icon.toLowerCase()];
             const isActive = index === activeIndex;
             /* Width-matched duration — wider cards dwell longer,
                and the bar's animation synchronises exactly with this timer. */

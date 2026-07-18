@@ -50,7 +50,9 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
   cursor: pointer;
 
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
   text-align: left;
 
   /* Active state typography adjustments */
@@ -67,7 +69,7 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
 
   &:hover {
     color: ${({ theme }) => theme.colors.text.primary};
-    background: rgba(0, 0, 0, 0.02);
+    background: ${({ theme }) => theme.colors.background.secondary};
   }
 
   /* Pixel-perfect recreation of the active right-arrow from the screenshot */
@@ -96,20 +98,17 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
   }
 `;
 
-/** Icon chip on the leading edge of each sidebar item. */
+/** Icon on the leading edge of each sidebar item — pure SVG, no background chip. */
 export const SidebarItemIcon = styled.span<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  border-radius: 6px;
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.azureMuted : 'rgba(15, 23, 42, 0.04)'};
   color: ${({ $active, theme }) =>
-    $active ? theme.colors.accent.azureDark : theme.colors.text.secondary};
-  transition: all ${({ theme }) => theme.transitions.fast};
+    $active ? theme.colors.text.primary : theme.colors.text.muted};
+  transition: color ${({ theme }) => theme.transitions.fast};
 `;
 
 /** Label text inside each sidebar item. */
