@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   Network,
@@ -18,134 +18,136 @@ import {
   HeaderBlock,
   Title,
   Desc,
-  OSDashboard,
+  SplitLayout,
   Sidebar,
-  MenuItem,
-  MenuPrefix,
-  MenuLabel,
+  NavItem,
+  NavPrefix,
+  NavLabel,
   ActiveIndicator,
-  Stage,
-  StageBento,
-  BentoCell,
+  ContentArea,
+  IndustryBlock,
+  IndustryLabel,
+  IndustryPrefix,
+  IndustryName,
+  AppsGrid,
+  AppCell,
   AppIcon,
   AppTitle,
   AppDesc
 } from './SolutionsIndustries.styles';
 
-// Dynamic icon directory mapped for bulletproof imports
-const IconsMap: Record<string, any> = {
+const IconsMap: Record<string, React.ElementType> = {
   ShieldCheck, Network, FileLock2,
   Activity, FileText, ScanLine,
   Cpu, Wrench, Layers
 };
 
+const premiumEase = [0.16, 1, 0.3, 1] as const;
+
 const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 20 },
   visible: (custom: number) => ({
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.16, 1, 0.3, 1] as const,
-      delay: custom * 0.08
-    }
+    transition: { duration: 0.7, ease: premiumEase, delay: custom * 0.08 },
   }),
-  exit: {
-    opacity: 0,
-    y: -8,
-    transition: { duration: 0.2, ease: "easeOut" as const }
-  }
 };
 
 export function SolutionsIndustries() {
   const { header, industries } = industryData;
   const [activeId, setActiveId] = useState(industries[0].id);
 
-  // Memoize active dataset for instantaneous retrieval
-  const activeIndustry = industries.find((i) => i.id === activeId) || industries[0];
+  /* Scroll-to handler: smooth scroll to the target industry block */
+  const scrollToIndustry = useCallback((id: string) => {
+    setActiveId(id);
+    const el = document.getElementById(`industry-${id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   return (
     <Wrapper>
       <InnerContainer>
 
-        {/* ── HEADER INTRO ── */}
+        {/* ── HEADER ── */}
         <HeaderBlock
           as={motion.div}
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
+          transition={{ duration: 0.8, ease: premiumEase }}
         >
           <Title>{header.title}</Title>
           <Desc>{header.description}</Desc>
         </HeaderBlock>
 
-        {/* ── THE COMMAND INTERFACE ── */}
-        <OSDashboard>
+        {/* ── SPLIT LAYOUT: Sticky Sidebar + Vertical Content ── */}
+        <SplitLayout>
 
-          {/* 1. INTERACTIVE LEFT SIDEBAR */}
+          {/* LEFT: Sticky scroll-to navigation */}
           <Sidebar>
             {industries.map((ind) => (
-              <MenuItem
+              <NavItem
                 key={ind.id}
                 $isActive={activeId === ind.id}
-                onClick={() => setActiveId(ind.id)}
+                onClick={() => scrollToIndustry(ind.id)}
               >
-                {/* 
-                  Magic Layout ID line tracker. It fluidly slides between buttons. 
-                */}
                 {activeId === ind.id && (
                   <ActiveIndicator
                     as={motion.div}
-                    layoutId="neryva-industry-indicator"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    layoutId="neryva-industry-nav"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-
-                <MenuPrefix>// {ind.prefix}</MenuPrefix>
-                <MenuLabel>{ind.name}</MenuLabel>
-              </MenuItem>
+                <NavPrefix>// {ind.prefix}</NavPrefix>
+                <NavLabel>{ind.name}</NavLabel>
+              </NavItem>
             ))}
           </Sidebar>
 
-          {/* 2. DYNAMIC RIGHT STAGE (Morphing Payload Window) */}
-          <Stage>
-            {/* 
-              AnimatePresence 'mode="wait"' ensures the exiting Bento fully leaves 
-              the screen before the newly clicked industry loads into the window. 
-            */}
-            <AnimatePresence mode="wait">
-              <StageBento
+          {/* RIGHT: All industries stacked vertically */}
+          <ContentArea>
+            {industries.map((ind, indIndex) => (
+              <IndustryBlock
+                key={ind.id}
+                id={`industry-${ind.id}`}
                 as={motion.div}
-                key={activeIndustry.id}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-80px' }}
               >
-                {activeIndustry.applications.map((app, index) => {
-                  const LucideIcon = IconsMap[app.icon];
+                <motion.div variants={fadeUp} custom={0}>
+                  <IndustryLabel>
+                    <IndustryPrefix>// {ind.prefix}</IndustryPrefix>
+                  </IndustryLabel>
+                  <IndustryName>{ind.name}</IndustryName>
+                </motion.div>
 
-                  return (
-                    <BentoCell
-                      key={app.title}
-                      $span={app.span}
-                      as={motion.div}
-                      variants={fadeUp}
-                      custom={index}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                    >
-                      <AppIcon>
-                        {LucideIcon && <LucideIcon />}
-                      </AppIcon>
-                      <AppTitle>{app.title}</AppTitle>
-                      <AppDesc>{app.description}</AppDesc>
-                    </BentoCell>
-                  );
-                })}
-              </StageBento>
-            </AnimatePresence>
-          </Stage>
+                <AppsGrid>
+                  {ind.applications.map((app, appIndex) => {
+                    const LucideIcon = IconsMap[app.icon];
+                    return (
+                      <AppCell
+                        key={app.title}
+                        as={motion.div}
+                        variants={fadeUp}
+                        custom={1 + appIndex}
+                      >
+                        <AppIcon>
+                          {LucideIcon && <LucideIcon />}
+                        </AppIcon>
+                        <AppTitle>{app.title}</AppTitle>
+                        <AppDesc>{app.description}</AppDesc>
+                      </AppCell>
+                    );
+                  })}
+                </AppsGrid>
+              </IndustryBlock>
+            ))}
+          </ContentArea>
 
-        </OSDashboard>
+        </SplitLayout>
 
       </InnerContainer>
     </Wrapper>

@@ -13,6 +13,8 @@ import {
   GridCell,
   DecorativeCell,
   Diamond,
+  CornerDot,
+  InternalDecor,
   IconBox,
   CardTitle,
   CardDesc,
@@ -33,6 +35,23 @@ const fadeUp = {
     transition: { duration: 0.8, ease: premiumEase, delay: custom * 0.1 },
   }),
 };
+
+/* Generate corner dots at all 4×3 grid line intersections (5 cols × 4 rows = 20 dots) */
+function renderCornerDots() {
+  const dots = [];
+  for (let r = 0; r <= 3; r++) {
+    for (let c = 0; c <= 4; c++) {
+      dots.push(
+        <CornerDot
+          key={`dot-${r}-${c}`}
+          $top={`${(r / 3) * 100}%`}
+          $left={`${(c / 4) * 100}%`}
+        />
+      );
+    }
+  }
+  return dots;
+}
 
 export function SolutionsCore() {
   return (
@@ -73,35 +92,69 @@ export function SolutionsCore() {
             whileInView="visible"
             viewport={{ once: true, margin: '-50px' }}
           >
-            {/* Decorative Floating Diamonds for Mistral-style depth */}
+            {/* Corner dots at all grid intersections — Mistral signature detail */}
+            {renderCornerDots()}
+
+            {/* Decorative Floating Diamonds at key intersections */}
             {pIndex === 0 ? (
               <>
                 <Diamond $top="33.33%" $left="25%" />
-                <Diamond $top="66.66%" $left="75%" />
+                <Diamond $top="100%" $left="100%" />
               </>
             ) : (
               <>
                 <Diamond $top="33.33%" $left="75%" />
-                <Diamond $top="66.66%" $left="25%" />
+                <Diamond $top="100%" $left="0%" />
               </>
             )}
 
             {/* Core Capability Blocks */}
-            {product.blocks.map((block, bIndex) => (
-              <GridCell
-                key={block.title}
-                $area={block.area}
-                as={motion.div}
-                variants={fadeUp}
-                custom={3 + bIndex}
-              >
-                <IconBox $color={block.icon_color}><Layers size={16} /></IconBox>
-                <CardTitle>{block.title}</CardTitle>
-                <CardDesc>{block.description}</CardDesc>
-              </GridCell>
-            ))}
+            {product.blocks.map((block, bIndex) => {
+              const hasDecor = block.internal_decor;
+              return (
+                <GridCell
+                  key={block.title}
+                  $area={block.area}
+                  as={motion.div}
+                  variants={fadeUp}
+                  custom={3 + bIndex}
+                >
+                  <IconBox
+                    $color={block.icon_color}
+                    style={hasDecor ? { marginBottom: '16px' } : undefined}
+                  >
+                    <Layers size={16} />
+                  </IconBox>
 
-            {/* Beige Editorial Spacers */}
+                  {/* Two stacked beige blocks for tall-left cards (Mistral "Frontier models" pattern) */}
+                  {hasDecor === 'top' && (
+                    <>
+                      <InternalDecor style={{ minHeight: '130px' }} />
+                      <InternalDecor style={{ minHeight: '65px', marginTop: '24px' }} />
+                    </>
+                  )}
+
+                  <CardTitle
+                    style={
+                      hasDecor === 'bottom'
+                        ? { marginTop: '0', marginBottom: '0' }
+                        : undefined
+                    }
+                  >
+                    {block.title}
+                  </CardTitle>
+
+                  {block.description && <CardDesc>{block.description}</CardDesc>}
+
+                  {/* Single beige block at bottom for tall-right cards */}
+                  {hasDecor === 'bottom' && (
+                    <InternalDecor style={{ marginTop: 'auto', minHeight: '240px' }} />
+                  )}
+                </GridCell>
+              );
+            })}
+
+            {/* Beige Editorial Spacer — top-left decorative cell */}
             {product.decorative_cell && (
               <DecorativeCell
                 $area={product.decorative_cell}

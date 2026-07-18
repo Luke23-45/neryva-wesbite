@@ -13,30 +13,48 @@
       "blocks": [
         {
           "title": "Secure Enclaves",
-          "description": "Models deployed in completely private environments.",
-          "area": "1 / 1 / 3 / 2",
-          "icon_color": "#0078D7"
+          "description": "Models deployed in completely private, air-gapped environments.",
+          "area": "1 / 2 / 2 / 4",
+          "icon_color": "#0078D7",
+          "internal_decor": null
         },
         {
-          "title": "Performance Tuning",
-          "description": "Hardware-level optimization and precise cost control.",
-          "area": "1 / 2 / 2 / 4",
-          "icon_color": "#00BFFF"
+          "title": "Edge Ready",
+          "description": "",
+          "area": "2 / 1 / 4 / 2",
+          "icon_color": "#00BFFF",
+          "internal_decor": "top"
         },
         {
           "title": "Reliable Infra",
-          "description": "Production-grade uptime.",
+          "description": "Production-grade uptime with built-in redundancy.",
           "area": "2 / 2 / 3 / 3",
-          "icon_color": "#424242"
+          "icon_color": "#424242",
+          "internal_decor": null
         },
         {
           "title": "Governance",
-          "description": "Full operational monitoring.",
+          "description": "Full operational monitoring and audit trails.",
           "area": "2 / 3 / 3 / 4",
-          "icon_color": "#06101e"
+          "icon_color": "#06101e",
+          "internal_decor": null
+        },
+        {
+          "title": "Auto Scaling",
+          "description": "Elastic infrastructure for training and inference workloads.",
+          "area": "3 / 2 / 4 / 4",
+          "icon_color": "#4A90D9",
+          "internal_decor": null
+        },
+        {
+          "title": "Performance Tuning",
+          "description": "",
+          "area": "1 / 4 / 4 / 5",
+          "icon_color": "#00BFFF",
+          "internal_decor": "bottom"
         }
       ],
-      "decorative_cell": "3 / 1 / 4 / 2"
+      "decorative_cell": null
     },
     {
       "id": "agents",
@@ -48,29 +66,47 @@
         {
           "title": "Brand Guardianship",
           "description": "Stronger brand consistency in every single AI interaction.",
-          "area": "1 / 1 / 2 / 3",
-          "icon_color": "#FF4500"
+          "area": "1 / 2 / 2 / 4",
+          "icon_color": "#FF4500",
+          "internal_decor": null
         },
         {
-          "title": "Workflow Aware",
-          "description": "Agents securely connected to your actual operations.",
-          "area": "1 / 3 / 3 / 4",
-          "icon_color": "#FF8C00"
+          "title": "Context Engine",
+          "description": "",
+          "area": "2 / 1 / 4 / 2",
+          "icon_color": "#FF8C00",
+          "internal_decor": "top"
         },
         {
           "title": "Strict Guardrails",
-          "description": "Role-bound limits on behavior.",
-          "area": "2 / 1 / 3 / 2",
-          "icon_color": "#FF6D00"
+          "description": "Role-bound limits on agent behavior and scope.",
+          "area": "2 / 2 / 3 / 3",
+          "icon_color": "#FF6D00",
+          "internal_decor": null
         },
         {
           "title": "Knowledge Sync",
-          "description": "Real-time access to data.",
-          "area": "2 / 2 / 3 / 3",
-          "icon_color": "#D99100"
+          "description": "Real-time access to enterprise data sources.",
+          "area": "2 / 3 / 3 / 4",
+          "icon_color": "#D99100",
+          "internal_decor": null
+        },
+        {
+          "title": "Multi-Channel",
+          "description": "Deploy agents across web, mobile, voice, and API channels.",
+          "area": "3 / 2 / 4 / 4",
+          "icon_color": "#E85D04",
+          "internal_decor": null
+        },
+        {
+          "title": "Workflow Aware",
+          "description": "",
+          "area": "1 / 4 / 4 / 5",
+          "icon_color": "#FF8C00",
+          "internal_decor": "bottom"
         }
       ],
-      "decorative_cell": "3 / 3 / 4 / 4"
+      "decorative_cell": null
     }
   ],
   "businessOutcomes": {

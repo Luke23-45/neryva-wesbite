@@ -79,23 +79,24 @@ export const BentoGrid = styled.div`
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 240px; /* Taller rows for a sprawling, massive feel */
-  
-  /* We do NOT use gap here. We use negative margins on the children to collapse the borders. */
-  
+  grid-template-rows: repeat(3, 240px); /* Explicit 3-row grid matching Mistral reference */
+
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
     grid-auto-rows: minmax(200px, auto);
   }
 
   ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-auto-rows: minmax(180px, auto);
   }
 `;
 
 export const GridCell = styled.div<{ $area: string }>`
   background: ${({ theme }) => theme.colors.background.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
   margin: -1px 0 0 -1px; /* Collapses double borders seamlessly */
   padding: 40px;
   display: flex;
@@ -103,6 +104,7 @@ export const GridCell = styled.div<{ $area: string }>`
   grid-area: ${({ $area }) => $area};
   transition: background-color 0.3s ease;
   z-index: 1;
+  position: relative;
 
   &:hover {
     background: rgba(0, 0, 0, 0.015);
@@ -117,13 +119,31 @@ export const GridCell = styled.div<{ $area: string }>`
 
 export const DecorativeCell = styled.div<{ $area: string }>`
   background: #F4F3F0; /* Premium editorial beige from the Mistral reference */
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
   margin: -1px 0 0 -1px;
   grid-area: ${({ $area }) => $area};
   z-index: 1;
+  position: relative;
 
   ${({ theme }) => theme.media.tablet} {
     display: none; /* Hide decorative spacers on mobile to save vertical space */
+  }
+`;
+
+/* Corner dots at grid line intersections — the Mistral signature detail */
+export const CornerDot = styled.div<{ $top: string; $left: string }>`
+  position: absolute;
+  top: ${({ $top }) => $top};
+  left: ${({ $left }) => $left};
+  width: 6px;
+  height: 6px;
+  background: ${({ theme }) => theme.colors.text.primary};
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
+
+  ${({ theme }) => theme.media.tablet} {
+    display: none;
   }
 `;
 
@@ -137,12 +157,23 @@ export const Diamond = styled.div<{ $top?: string; $left?: string; $right?: stri
   width: 24px;
   height: 24px;
   background: ${({ theme }) => theme.colors.background.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
   transform: translate(-50%, -50%) rotate(45deg);
   z-index: 10;
 
   ${({ theme }) => theme.media.tablet} {
     display: none;
+  }
+`;
+
+/* Internal beige decorative area for tall/spanning cards */
+export const InternalDecor = styled.div`
+  background: #F4F3F0;
+  width: 100%;
+  flex-shrink: 0;
+
+  ${({ theme }) => theme.media.tablet} {
+    min-height: 60px;
   }
 `;
 

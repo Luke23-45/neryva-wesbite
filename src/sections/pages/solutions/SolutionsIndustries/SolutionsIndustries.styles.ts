@@ -1,12 +1,13 @@
 import styled from 'styled-components';
 
+/* ── SECTION WRAPPER ── */
 export const Wrapper = styled.section`
-  padding: 120px 0;
+  padding: 120px 0 0 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px 0;
+    padding: 80px 0 0 0;
   }
 `;
 
@@ -51,56 +52,54 @@ export const Desc = styled.p`
   margin: 0;
 `;
 
-/* ── KINEMATIC OS SPLIT (Left Menu + Right Stage) ── */
-export const OSDashboard = styled.div`
+/* ── MAIN LAYOUT: Sticky Sidebar + Vertical Content ── */
+export const SplitLayout = styled.div`
   display: flex;
-  align-items: stretch;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.background.primary};
-  min-height: 480px;
+  align-items: flex-start;
+  gap: 0;
 
   ${({ theme }) => theme.media.tablet} {
     flex-direction: column;
   }
 `;
 
-/* ── LEFT: INTERACTIVE MENU ── */
+/* ── LEFT: STICKY NAVIGATION SIDEBAR ── */
 export const Sidebar = styled.nav`
-  width: 320px;
+  width: 280px;
   flex-shrink: 0;
+  position: sticky;
+  top: 120px; /* Below header */
+  align-self: flex-start;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
-  display: flex;
-  flex-direction: column;
+  padding-right: 0;
 
   ${({ theme }) => theme.media.tablet} {
     width: 100%;
+    position: relative;
+    top: 0;
     border-right: none;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    flex-direction: row;
+    display: flex;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    /* Hide scrollbar for a seamless edge-to-edge UI feel */
-    scrollbar-width: none; 
-    &::-webkit-scrollbar {
-      display: none; 
-    }
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+    margin-bottom: 48px;
   }
 `;
 
-export const MenuItem = styled.button<{ $isActive: boolean }>`
+export const NavItem = styled.button<{ $isActive: boolean }>`
   position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 32px 32px;
+  gap: 14px;
   width: 100%;
+  padding: 20px 24px;
   border: none;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: transparent;
   cursor: pointer;
   text-align: left;
-
-  /* Typography strictly alters on interaction to indicate depth */
   color: ${({ $isActive, theme }) =>
     $isActive ? theme.colors.text.primary : theme.colors.text.muted};
   transition: color 0.3s ease, background-color 0.3s ease;
@@ -118,29 +117,29 @@ export const MenuItem = styled.button<{ $isActive: boolean }>`
     border-bottom: none;
     border-right: 1px solid ${({ theme }) => theme.colors.border};
     white-space: nowrap;
-    padding: 24px;
-    
-    &:last-child {
-      border-right: none;
-    }
+    padding: 16px 24px;
+    width: auto;
+    flex-shrink: 0;
+
+    &:last-child { border-right: none; }
   }
 `;
 
-export const MenuPrefix = styled.span`
+export const NavPrefix = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.1em;
+  opacity: 0.5;
 `;
 
-export const MenuLabel = styled.span`
+export const NavLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
 `;
 
-/* The fluid animated indicator acting as the exact "selection state" */
 export const ActiveIndicator = styled.div`
   position: absolute;
   left: -1px;
@@ -159,69 +158,128 @@ export const ActiveIndicator = styled.div`
   }
 `;
 
-/* ── RIGHT: DYNAMIC STAGE ── */
-export const Stage = styled.div`
-  flex-grow: 1;
-  background: ${({ theme }) => theme.colors.background.secondary}; 
-  position: relative;
-  overflow: hidden;
-  
-  /* Creates deep inner shadows / lighting environment */
-  box-shadow: inset 0 24px 60px rgba(0, 0, 0, 0.02);
+/* ── RIGHT: VERTICALLY STACKED INDUSTRY SECTIONS ── */
+export const ContentArea = styled.div`
+  flex: 1;
+  min-width: 0;
 `;
 
-export const StageBento = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: 240px;
-  padding: 40px;
-  width: 100%;
-  height: 100%;
+export const IndustryBlock = styled.div`
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 64px 0 64px 64px;
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   ${({ theme }) => theme.media.tablet} {
-    grid-auto-rows: auto;
-    padding: 32px;
+    padding: 48px 0;
   }
-  
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 32px 0;
+  }
+`;
+
+export const IndustryLabel = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+`;
+
+export const IndustryPrefix = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: ${({ theme }) => theme.colors.text.muted};
+`;
+
+export const IndustryName = styled.h3`
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 40px 0;
+  line-height: 1.2;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 22px;
+    margin-bottom: 32px;
+  }
+`;
+
+export const AppsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
-    padding: 24px;
   }
 `;
 
-export const BentoCell = styled.div<{ $span?: string }>`
-  background: ${({ theme }) => theme.colors.background.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 32px;
+export const AppCell = styled.div`
+  padding: 32px 32px 32px 0;
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   flex-direction: column;
-  margin: -1px 0 0 -1px; /* The master 1px collapse logic */
+  gap: 8px;
 
-  /* The "large" application cell expands fully horizontally to anchor the grid */
-  grid-column: ${({ $span }) => ($span === 'large' ? 'span 2' : 'span 1')};
-  
+  &:last-child {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  /* For 3-col: remove border on every 3rd */
+  &:nth-child(3n) {
+    border-right: none;
+    padding-right: 0;
+  }
+
   ${({ theme }) => theme.media.tablet} {
-    grid-column: span 2; /* All span full-width on mobile */
+    &:nth-child(3n) {
+      border-right: 1px solid ${({ theme }) => theme.colors.border};
+      padding-right: 32px;
+    }
+    &:nth-child(2n) {
+      border-right: none;
+      padding-right: 0;
+    }
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    border-right: none !important;
+    padding-right: 0 !important;
+    padding: 24px 0;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+    &:last-child { border-bottom: none; }
   }
 `;
 
-/* ── CELL CONTENT ── */
 export const AppIcon = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+
   svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     stroke-width: 1.5px;
   }
 `;
 
-export const AppTitle = styled.h3`
-  font-size: 20px;
+export const AppTitle = styled.h4`
+  font-size: 17px;
   font-weight: 500;
   letter-spacing: -0.01em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 12px 0;
+  margin: 0;
+  line-height: 1.3;
 `;
 
 export const AppDesc = styled.p`
