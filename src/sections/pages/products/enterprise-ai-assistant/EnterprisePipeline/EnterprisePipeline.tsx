@@ -14,12 +14,12 @@ import section6 from '@neryva_data/products/ai_enterprised/section6.json';
 import section7 from '@neryva_data/products/ai_enterprised/section7.json';
 
 // Import images statically
-import imgPipelineSection2 from '../../../../../../assets/images/pipeline_section2.png';
-import imgPipelineSection3 from '../../../../../../assets/images/pipeline_section3.png';
-import imgPipelineSection4 from '../../../../../../assets/images/pipeline_section4.png';
-import imgPipelineSection5 from '../../../../../../assets/images/pipeline_section5.png';
-import imgPipelineSection6 from '../../../../../../assets/images/pipeline_section6.png';
-import imgPipelineSection7 from '../../../../../../assets/images/pipeline_section7.png';
+import imgPipelineSection2 from '@assets/images/page/enterprised_ai/pipeline_section2.png';
+import imgPipelineSection3 from '@assets/images/page/enterprised_ai/pipeline_section3.png';
+import imgPipelineSection4 from '@assets/images/page/enterprised_ai/pipeline_section4.png';
+import imgPipelineSection5 from '@assets/images/page/enterprised_ai/pipeline_section5.png';
+import imgPipelineSection6 from '@assets/images/page/enterprised_ai/pipeline_section6.png';
+import imgPipelineSection7 from '@assets/images/page/enterprised_ai/pipeline_section7.png';
 
 const imageMapping: Record<string, string> = {
   'pipeline_section2.png': imgPipelineSection2,
