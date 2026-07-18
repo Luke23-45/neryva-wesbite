@@ -42,12 +42,12 @@ export function DeploymentHeroVisual() {
           initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 0.8, delay: 0.3, ease: spring }} style={{ transformOrigin: 'bottom' }} />
         <motion.rect x="200" y="100" width="100" height="300" fill={C_ACCENT1}
           initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 0.8, delay: 0.4, ease: spring }} style={{ transformOrigin: 'bottom' }} />
-        
+
         <motion.rect x="100" y="400" width="100" height="100" fill={C_MID}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} />
         <motion.rect x="200" y="400" width="100" height="100" fill={C_DARK}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} />
-        
+
         <motion.rect x="0" y="400" width="100" height="100" fill={C_DARK}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} />
         <motion.rect x="100" y="500" width="100" height="100" fill={C_MID}
@@ -65,7 +65,7 @@ export function DeploymentHeroVisual() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} />
         <motion.rect x="700" y="400" width="100" height="100" fill={C_DARK}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} />
-        
+
         <motion.rect x="500" y="400" width="100" height="100" fill={C_ACCENT1}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} />
       </g>
@@ -79,10 +79,10 @@ export function DeploymentHeroVisual() {
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2 }} />
 
       {/* ── Intersecting Arc Line ── */}
-      <motion.path 
-        d="M 350 -50 Q 400 300 750 350" 
-        fill="none" 
-        stroke="rgba(255,255,255,0.3)" 
+      <motion.path
+        d="M 350 -50 Q 400 300 750 350"
+        fill="none"
+        stroke="rgba(255,255,255,0.3)"
         strokeWidth="1"
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
@@ -90,18 +90,18 @@ export function DeploymentHeroVisual() {
       />
 
       {/* ── Square Nodes on Arc ── */}
-      <motion.rect x="382" y="112" width="6" height="6" fill="#ffffff" 
+      <motion.rect x="382" y="112" width="6" height="6" fill="#ffffff"
         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.8, type: 'spring' }} />
-      
-      <motion.rect x="562" y="212" width="6" height="6" fill="#ffffff" 
+
+      <motion.rect x="562" y="212" width="6" height="6" fill="#ffffff"
         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 2.0, type: 'spring' }} />
 
       {/* ── Label Text ── */}
-      <motion.text 
-        x="585" 
-        y="218" 
-        fill="rgba(255,255,255,0.7)" 
-        fontSize="12" 
+      <motion.text
+        x="585"
+        y="218"
+        fill="rgba(255,255,255,0.7)"
+        fontSize="12"
         fontFamily="monospace"
         letterSpacing="2"
         initial={{ opacity: 0, x: -10 }}

@@ -24,8 +24,9 @@ export const AppsHeader = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: center;
-  margin-bottom: 40px;
+  text-align: left;
+  max-width: 800px;
+  margin-bottom: 80px;
 `;
 
 
@@ -34,12 +35,14 @@ export const SectionHeading = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 56px;
   font-weight: 500;
-  letter-spacing: -0.03em;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 0px 0;
+  margin: 0;
 
   ${({ theme }) => theme.media.mobile} {
     font-size: 40px;
+    letter-spacing: -0.03em;
   }
 `;
 
@@ -58,7 +61,6 @@ export const AppsGrid = styled.div`
   ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
   }
-  padding-top: 0;
 `;
 
 export const AppCell = styled.div`
@@ -68,10 +70,11 @@ export const AppCell = styled.div`
   padding: 48px 32px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   background: transparent;
-  transition: background-color 0.3s ease;
+  position: relative;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.015);
+    background: rgba(0, 0, 0, 0.018);
   }
 
   &:last-child {
@@ -114,8 +117,9 @@ export const CellTitle = styled.h3`
 
 export const CellDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   margin-top: auto;

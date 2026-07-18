@@ -34,11 +34,15 @@ import {
   FlexContainer,
   Sidebar,
   SidebarItem,
+  SidebarItemIcon,
+  SidebarItemLabel,
   Panel,
   PipelineSectionStyled,
   SectionTitle,
   VisualBlock,
+  VisualImageFrame,
   VisualImage,
+  VisualCaption,
   VisualTypeLabel,
   VisualDescription,
   FeatureGrid,
@@ -48,6 +52,8 @@ import {
   HeaderBlock,
   PipelineTitle,
 } from './EnterprisePipeline.styles';
+
+import { EnterpriseStepIcons } from '@assets/visual/products/PipelineStepIcons';
 
 // Strict typing for our data schema
 interface Feature {
@@ -118,6 +124,10 @@ export function EnterprisePipeline() {
     }
   };
 
+  // Strip leading "N. " index prefix (e.g. "1. Business scope" -> "Business scope")
+  // so the sidebar reads alongside the new premium step icons.
+  const stripStepPrefix = (label: string) => label.replace(/^\s*\d+\.\s*/, '');
+
   return (
     <Section
       paddingYTop="none"
@@ -139,16 +149,25 @@ export function EnterprisePipeline() {
         <FlexContainer>
           {/* LEFT: STICKY NAV */}
           <Sidebar>
-            {sections.map((section) => (
-              <SidebarItem
-                key={section.id}
-                $active={section.id === activeId}
-                onClick={() => scrollTo(section.id)}
-                aria-current={section.id === activeId ? 'step' : undefined}
-              >
-                {section.sidebarLabel}
-              </SidebarItem>
-            ))}
+            {sections.map((section) => {
+              const StepIcon = EnterpriseStepIcons[section.id];
+              const isActive = section.id === activeId;
+              return (
+                <SidebarItem
+                  key={section.id}
+                  $active={isActive}
+                  onClick={() => scrollTo(section.id)}
+                  aria-current={isActive ? 'step' : undefined}
+                >
+                  {StepIcon && (
+                    <SidebarItemIcon $active={isActive}>
+                      <StepIcon />
+                    </SidebarItemIcon>
+                  )}
+                  <SidebarItemLabel>{stripStepPrefix(section.sidebarLabel)}</SidebarItemLabel>
+                </SidebarItem>
+              );
+            })}
           </Sidebar>
 
           {/* RIGHT: SCROLLING CONTENT GRID */}
@@ -173,18 +192,23 @@ export function EnterprisePipeline() {
 
                 {/* Row 2: Visual Diagram Area */}
                 <VisualBlock>
-                  {section.visual.image && imageMapping[section.visual.image] && (
-                    <VisualImage
-                      src={imageMapping[section.visual.image]}
-                      alt={section.visual.description}
-                      as={motion.img}
-                      initial={{ opacity: 0, scale: 1.05 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.8 }}
-                    />
+                  {section.visual.image && imageMapping[section.visual.image] ? (
+                    <VisualImageFrame>
+                      <VisualImage
+                        src={imageMapping[section.visual.image]}
+                        alt={section.visual.description}
+                        as={motion.img}
+                        initial={{ opacity: 0, scale: 1.05 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8 }}
+                      />
+                    </VisualImageFrame>
+                  ) : (
+                    <VisualCaption>
+                      <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
+                      <VisualDescription>{section.visual.description}</VisualDescription>
+                    </VisualCaption>
                   )}
-                  <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
-                  <VisualDescription>{section.visual.description}</VisualDescription>
                 </VisualBlock>
 
                 {/* Row 3: 3-Column Feature Grid */}

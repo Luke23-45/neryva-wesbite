@@ -64,24 +64,25 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 18px 24px;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
   width: 100%;
   border: none;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: transparent;
   cursor: pointer;
-  
+
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 14px;
   text-align: left;
-  
+
   /* Active state typography adjustments */
   font-weight: ${({ $active, theme }) =>
     $active ? theme.typography.weights.medium : theme.typography.weights.regular};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.secondary};
-  
+
   transition: all ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
@@ -99,7 +100,7 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
       content: '➔';
       font-size: 14px;
       color: inherit;
-      margin-left: 12px;
+      margin-left: auto;
     }
   `}
 
@@ -112,11 +113,36 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
     &::after {
       display: none;
     }
-    
+
     &:last-child {
       border-right: none;
     }
   }
+`;
+
+/** Icon chip on the leading edge of each sidebar item. */
+export const SidebarItemIcon = styled.span<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.accent.azureMuted : 'rgba(15, 23, 42, 0.04)'};
+  color: ${({ $active, theme }) =>
+    $active ? theme.colors.accent.azureDark : theme.colors.text.secondary};
+  transition: all ${({ theme }) => theme.transitions.fast};
+`;
+
+/** Label text inside each sidebar item. */
+export const SidebarItemLabel = styled.span`
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export const Panel = styled.div`
@@ -161,36 +187,145 @@ export const SectionTitle = styled.h2`
 
 export const VisualBlock = styled.div`
   width: 100%;
-  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  position: relative;
+  overflow: hidden;
+
+  /* ── Layer 1 (bottom): breathing ambient light ─────────────────────
+     Two off-centre radial gradients (warm lilac + cool azure) provide
+     a slow shifting "spotlight" warmth. We animate filter saturation
+     only — background-position on %-positioned radials is unreliable. */
+  background-color: #F8F9FA;
+  background-image:
+    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(192, 132, 252, 0.10), transparent 60%),
+    radial-gradient(ellipse 75% 60% at 88% 96%, rgba(37, 99, 235, 0.07), transparent 65%);
+  animation: visual-block-breathe 16s ease-in-out infinite;
+
+  /* ── Layer 2 (top, animated): the structural schematic ──────────────
+     A stencil grid (major 80px, minor 40px) with subtle crosshair
+     markers at major intersections. The grid pans one major tile over
+     a long period so the loop is seamless and the motion reads as
+     ambient, never as scrolly distraction. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+
+    background-image:
+      radial-gradient(circle, rgba(15, 23, 42, 0.22) 1px, transparent 1.6px),
+      linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+      linear-gradient(to right, rgba(15, 23, 42, 0.022) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.022) 1px, transparent 1px);
+
+    background-size:
+      80px 80px,
+      80px 80px,
+      80px 80px,
+      40px 40px,
+      40px 40px;
+
+    background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+    animation: visual-grid-drift 42s linear infinite;
+    will-change: background-position;
+  }
+
+  /* Mobile: tighter grid, slightly faster perception */
+  ${({ theme }) => theme.media.mobile} {
+    /* Reduce ambient gradient intensity on small screens for legibility */
+    background-image:
+      radial-gradient(ellipse 80% 60% at 18% 8%, rgba(192, 132, 252, 0.06), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 88% 96%, rgba(37, 99, 235, 0.05), transparent 65%);
+
+    &::before {
+      background-size:
+        60px 60px,
+        60px 60px,
+        60px 60px,
+        30px 30px,
+        30px 30px;
+      animation-duration: 32s;
+    }
+  }
+
+  /* Respect OS-level motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    &::before {
+      animation: none;
+    }
+  }
+
+  /* Slow saturation/sweep of the ambient light only — never a pulse. */
+  @keyframes visual-block-breathe {
+    0%, 100% { filter: saturate(1) brightness(1); }
+    50%      { filter: saturate(1.06) brightness(1.015); }
+  }
+
+  /* Drift the grid by exactly one major tile (80px) so the loop point
+     is invisible. background-position is GPU-composited and repaints
+     a no-op transform — far cheaper than animating transform itself. */
+  @keyframes visual-grid-drift {
+    from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+    to   { background-position: -80px -80px, -80px 0, 0 -80px, -40px -40px, -40px 0; }
+  }
+`;
+
+/** Frame that holds the visual image at its natural aspect ratio. */
+export const VisualImageFrame = styled.div`
+  width: 100%;
+  /* Stable, premium 16:10 canvas — predictable rhythms across all stages,
+     no layout shift, no absolute positioning. */
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: hidden;
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 24px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    aspect-ratio: 4 / 3;
+    padding: 16px;
+  }
+`;
+
+/** Caption block beneath (or instead of) the image. */
+export const VisualCaption = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  
-  /* Architect/Blueprint Canvas Background replicating the screenshot */
-  background-color: #F8F9FA;
-  background-image: 
-    linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  position: relative;
+  gap: 10px;
+  padding: 20px 32px 28px;
+  text-align: center;
+  background: ${({ theme }) => theme.colors.background.primary};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
-    min-height: 280px;
-    background-size: 30px 30px;
+    padding: 16px 20px 22px;
   }
 `;
 
 export const VisualImage = styled.img`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
+  /* Displayed at its NATURAL aspect ratio, never cropped or distorted.
+     width auto + max-width 100% + max-height 100% lets it fit perfectly
+     within the 16:10 frame while preserving the artwork's proportions. */
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 `;
 
 export const VisualTypeLabel = styled.span`
