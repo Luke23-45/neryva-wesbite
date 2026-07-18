@@ -45,6 +45,8 @@ import {
   FeatureCard,
   FeatureTitle,
   FeatureDescription,
+  HeaderBlock,
+  PipelineTitle,
 } from './EnterprisePipeline.styles';
 
 // Strict typing for our data schema
@@ -123,6 +125,17 @@ export function EnterprisePipeline() {
       background={theme.colors.background.secondary} // Soft grey background to make the white grid pop
     >
       <Container variant="wide">
+        <HeaderBlock
+          as={motion.div}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+
+        >
+          <PipelineTitle>The AI Enterprise Pipeline</PipelineTitle>
+        </HeaderBlock>
+
         <FlexContainer>
           {/* LEFT: STICKY NAV */}
           <Sidebar>
@@ -201,6 +214,6 @@ export function EnterprisePipeline() {
           </Panel>
         </FlexContainer>
       </Container>
-    </Section>
+    </Section >
   );
 }

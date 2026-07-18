@@ -24,7 +24,7 @@ export const InnerContainer = styled.div`
 /* ─── HEADER ─── */
 export const HeaderBlock = styled.div`
   max-width: 600px;
-  margin-bottom: 64px;
+  margin-bottom: 40px;
   display: flex;
   flex-direction: column;
 `;
@@ -36,16 +36,15 @@ export const Subtitle = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 24px;
+  margin-bottom: 40px;
 `;
 
 export const Title = styled.h2`
-  font-size: 42px;
+  font-size: 56px;
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 16px 0;
 
   ${({ theme }) => theme.media.mobile} {
     font-size: 32px;

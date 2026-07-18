@@ -32,7 +32,7 @@ export const AppsHeader = styled.div`
 
 export const SectionHeading = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 48px;
+  font-size: 56px;
   font-weight: 500;
   letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};

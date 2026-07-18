@@ -12,6 +12,30 @@ export const FlexContainer = styled.div`
   }
 `;
 
+export const HeaderBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  margin-top: 20px;
+  margin-bottom: 40px;
+
+`;
+
+export const PipelineTitle = styled.h2`
+
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 40px;
+  }
+`;
+
 export const Sidebar = styled.nav`
   width: 240px;
   flex-shrink: 0;
