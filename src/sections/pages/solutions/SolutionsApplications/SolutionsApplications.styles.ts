@@ -3,7 +3,6 @@ import styled from 'styled-components';
 export const AppsWrapper = styled.section`
   padding: 120px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     padding: 80px 0;
@@ -21,25 +20,44 @@ export const InnerContainer = styled.div`
   }
 `;
 
-/* ── Header Area — left-aligned editorial style ── */
+/* ── Header Area ── */
 export const AppsHeader = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: 600px;
-  margin-bottom: 64px;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 80px;
+`;
+
+export const HeaderIcons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+  color: ${({ theme }) => theme.colors.text.primary};
+
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5px;
+    
+    /* Make the icons pop slightly, referencing the emoji feel */
+    &:nth-child(1) { color: #0078D7; }
+    &:nth-child(2) { color: #FF4500; }
+    &:nth-child(3) { color: #FF8C00; }
+  }
 `;
 
 export const AppsTitle = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 42px;
+  font-size: 56px;
   font-weight: 500;
   letter-spacing: -0.03em;
-  line-height: 1.1;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 16px 0;
+  margin: 0 0 24px 0;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 32px;
+    font-size: 40px;
   }
 `;
 
@@ -48,17 +66,22 @@ export const AppsDesc = styled.p`
   font-size: 16px;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+  max-width: 600px;
   line-height: 1.6;
 `;
 
-/* ── The 4-Column Application Grid ── */
+/* ── The 4-Column Master Grid ── */
 export const AppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  
+  /* The reference image has top and bottom borders spanning the whole grid */
   border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
+    border-bottom: none; /* Handled by individual cells on mobile/tablet */
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -69,36 +92,39 @@ export const AppsGrid = styled.div`
 export const AppCell = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 40px 32px 40px 0;
+  height: 420px; /* Forces all cards to be uniformly tall, matching reference */
+  padding: 48px 32px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background: transparent;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.015);
+  }
 
   /* Remove right border from the last column */
-  &:nth-child(4n) {
+  &:last-child {
     border-right: none;
-    padding-right: 0;
   }
 
   ${({ theme }) => theme.media.tablet} {
-    &:nth-child(4n) {
-      border-right: 1px solid ${({ theme }) => theme.colors.border};
-      padding-right: 32px;
-    }
+    height: 320px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    
+    /* Reset borders for 2-column layout */
     &:nth-child(2n) {
       border-right: none;
-      padding-right: 0;
     }
   }
 
   ${({ theme }) => theme.media.mobile} {
-    border-right: none !important;
-    padding-right: 0 !important;
+    border-right: none;
   }
 `;
 
-/* ── Cell Content ── */
+/* ── Cell Content Typography ── */
 export const CellIcon = styled.div`
-  margin-bottom: 32px;
+  margin-bottom: 40px; /* Big gap between icon and title */
   color: ${({ theme }) => theme.colors.text.primary};
 
   svg {
@@ -110,18 +136,21 @@ export const CellIcon = styled.div`
 
 export const CellTitle = styled.h3`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin: 0 0 12px 0;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0;
 `;
 
 export const CellDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+  
+  /* CRITICAL: This pushes the description to the absolute bottom of the cell */
+  margin-top: auto; 
 `;

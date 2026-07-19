@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion';
-import { MessageSquare, Settings, ShieldCheck, Network } from 'lucide-react';
+import { Search, Flame, Box, MessageSquare, Settings, ShieldCheck, Network } from 'lucide-react';
 import appsData from '@neryva_data/solutions/applications.json';
 import {
   AppsWrapper,
   InnerContainer,
   AppsHeader,
+  HeaderIcons,
   AppsTitle,
   AppsDesc,
   AppsGrid,
@@ -14,7 +15,11 @@ import {
   CellDesc,
 } from './SolutionsApplications.styles';
 
+// Dynamic Icon Mapping
 const iconMap: Record<string, React.ElementType> = {
+  Search,
+  Flame,
+  Box,
   MessageSquare,
   Settings,
   ShieldCheck,
@@ -28,7 +33,11 @@ const fadeUp = {
   visible: (custom: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: premiumEase, delay: custom * 0.1 },
+    transition: {
+      duration: 0.8,
+      ease: premiumEase,
+      delay: custom * 0.1,
+    },
   }),
 };
 
@@ -37,7 +46,7 @@ export function SolutionsApplications() {
     <AppsWrapper>
       <InnerContainer>
 
-        {/* ── LEFT-ALIGNED HEADER ── */}
+        {/* ── HEADER ── */}
         <AppsHeader
           as={motion.div}
           initial="hidden"
@@ -45,15 +54,24 @@ export function SolutionsApplications() {
           viewport={{ once: true, margin: '-50px' }}
         >
           <motion.div variants={fadeUp} custom={0}>
-            <AppsTitle>{appsData.header.title}</AppsTitle>
+            <HeaderIcons>
+              {appsData.header.icons.map((iconName, idx) => {
+                const IconComponent = iconMap[iconName];
+                return IconComponent ? <IconComponent key={idx} /> : null;
+              })}
+            </HeaderIcons>
           </motion.div>
 
           <motion.div variants={fadeUp} custom={1}>
+            <AppsTitle>{appsData.header.title}</AppsTitle>
+          </motion.div>
+
+          <motion.div variants={fadeUp} custom={2}>
             <AppsDesc>{appsData.header.description}</AppsDesc>
           </motion.div>
         </AppsHeader>
 
-        {/* ── APPLICATION GRID ── */}
+        {/* ── MASTER GRID ── */}
         <AppsGrid
           as={motion.div}
           initial="hidden"
@@ -68,12 +86,15 @@ export function SolutionsApplications() {
                 key={i}
                 as={motion.div}
                 variants={fadeUp}
-                custom={2 + i}
+                custom={3 + i}
               >
                 <CellIcon>
                   {IconComponent && <IconComponent />}
                 </CellIcon>
+
                 <CellTitle>{item.title}</CellTitle>
+
+                {/* The CSS 'margin-top: auto' automatically pushes this to the floor */}
                 <CellDesc>{item.description}</CellDesc>
               </AppCell>
             );
