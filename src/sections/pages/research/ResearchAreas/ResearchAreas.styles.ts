@@ -147,8 +147,9 @@ export const CardGrid = styled.div`
 /* Individual lines owned implicitly by content bounding */
 export const GridCell = styled.div<{ $isEmpty?: boolean }>`
   background: ${({ theme }) => theme.colors.background.primary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid #e4e3de;
+  border-right: 1px solid #e4e3de;
+
   
   display: flex;
   flex-direction: column;
@@ -160,17 +161,30 @@ export const GridCell = styled.div<{ $isEmpty?: boolean }>`
   }
 
   transition: background-color 0.3s ease;
-  &:hover {
-    background-color: ${({ $isEmpty }) => ($isEmpty ? 'transparent' : 'rgba(0, 0, 0, 0.012)')};
-  }
+
 
   ${({ theme }) => theme.media.mobile} {
     padding: ${({ $isEmpty }) => ($isEmpty ? '0' : '24px')};
     border-right: none;
     display: ${({ $isEmpty }) => ($isEmpty ? 'none' : 'flex')};
   }
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    0 0 0 4px rgba(0, 0, 0, 0.01); /* Super subtle bounding line to sharpen the edge */
+
 `;
 
+export const GridInnerShell = styled.div`
+  border-bottom: 1px solid #e4e3de;
+  border-right: 1px solid #e4e3de;
+`
+export const GrildColorBgShell = styled.div`
+padding: 15px;
+background-color: #f5f4ef;
+
+
+`
 /* ── 4. Internal Reference Accents ── */
 export const CardHeader = styled.div`
   display: flex;

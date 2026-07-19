@@ -25,6 +25,8 @@ import {
   CardDescription,
   TagRow,
   Tag,
+  GridInnerShell,
+  GrildColorBgShell,
 } from './ResearchAreas.styles';
 
 type ProgramId = keyof typeof programAreas;
@@ -118,37 +120,43 @@ export function ResearchAreas() {
                   </ProgramTitle>
 
                   <CardGrid data-grid-area>
+
                     {program.cards.map((card, index) => (
-                      <GridCell
-                        key={card.id}
-                        as={motion.div}
-                        initial={{ opacity: 0 }}
-                        whileInView={{ opacity: 1 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          duration: 0.6,
-                          ease: "linear",
-                          delay: index * 0.1, // Subtle content entrance staggered
-                        }}
-                      >
-                        <CardHeader>
-                          <MotifBox>
-                            <ModelMotif programId={id} size={22} color={program.accent} />
-                          </MotifBox>
-                          <OpenBadge>OPEN</OpenBadge>
-                        </CardHeader>
+                      <GridInnerShell>
+                        <GrildColorBgShell>
 
-                        <CardBody>
-                          <CardTitle>{card.title}</CardTitle>
-                          <CardDescription>{card.description}</CardDescription>
+                          <GridCell
+                            key={card.id}
+                            as={motion.div}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{
+                              duration: 0.6,
+                              ease: "linear",
+                              delay: index * 0.1, // Subtle content entrance staggered
+                            }}
+                          >
+                            <CardHeader>
+                              <MotifBox>
+                                <ModelMotif programId={id} size={22} color={program.accent} />
+                              </MotifBox>
+                              <OpenBadge>OPEN</OpenBadge>
+                            </CardHeader>
 
-                          <TagRow>
-                            {card.labels.map((label) => (
-                              <Tag key={label}>{label}</Tag>
-                            ))}
-                          </TagRow>
-                        </CardBody>
-                      </GridCell>
+                            <CardBody>
+                              <CardTitle>{card.title}</CardTitle>
+                              <CardDescription>{card.description}</CardDescription>
+
+                              <TagRow>
+                                {card.labels.map((label) => (
+                                  <Tag key={label}>{label}</Tag>
+                                ))}
+                              </TagRow>
+                            </CardBody>
+                          </GridCell>
+                        </GrildColorBgShell>
+                      </GridInnerShell>
                     ))}
 
                     {/* The Unsung Hero fixing lazy HTML rendering: completes the matrix invisibly ensuring lower border spans full table width seamlessly! */}

@@ -12,9 +12,9 @@ import {
   BentoGrid,
   GridCell,
   DecorativeCell,
-  Diamond,
   CornerDot,
-  InternalDecor,
+  GapAnchor,
+  Diamond,
   IconBox,
   CardTitle,
   CardDesc,
@@ -31,138 +31,290 @@ const fadeUp = {
   }),
 };
 
-/* Generate corner dots at all 4×3 grid line intersections (5 cols × 4 rows = 20 dots) */
-function renderCornerDots() {
-  const dots = [];
-  for (let r = 0; r <= 3; r++) {
-    for (let c = 0; c <= 4; c++) {
-      dots.push(
-        <CornerDot
-          key={`dot-${r}-${c}`}
-          $top={`${(r / 3) * 100}%`}
-          $left={`${(c / 4) * 100}%`}
-        />
-      );
-    }
-  }
-  return dots;
+/* ────────────────────────────────────────────────────────────────────────
+ * Data shape
+ *
+ * The reference design is three zones sitting on the same row lines:
+ *   left column  |  gap  |  middle columns (any count)  |  gap  |  right column
+ *
+ * Each side column holds exactly ONE content card plus, optionally, one or
+ * more decorative filler cells — and always leaves exactly one row on the
+ * column truly blank (no cell at all), which is where a floating diamond
+ * accent lives.
+ * ──────────────────────────────────────────────────────────────────────── */
+interface CardContent {
+  title: string;
+  description?: string;
+  icon_color: string;
+  /** 'bottom' pushes title/description down, leaving empty space above
+   *  (used by cards with no/short description, e.g. "Frontier models"). */
+  align?: 'top' | 'bottom';
+}
+
+interface MiddleBlock extends CardContent {
+  row: number; // 1-indexed
+  col: number; // 1-indexed, relative to the middle zone only
+  colSpan?: number; // default 1
+}
+
+interface SideColumn {
+  contentRow: number;
+  /** Row left fully empty. Defaults to the row farthest from contentRow. */
+  blankRow?: number;
+  content: CardContent;
+}
+
+interface ProductData {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  link_label: string;
+  rows?: number;
+  middleColumns?: number;
+  middleBlocks: MiddleBlock[];
+  leftColumn?: SideColumn;
+  rightColumn?: SideColumn;
+  /** Which side gets the gap-track diamond vs. the outer-corner diamond.
+   *  Defaults to alternating per product so stacked sections stay varied. */
+  accents?: { gapSide: 'left' | 'right'; cornerSide: 'left' | 'right' };
+}
+
+const products = coreData.products as ProductData[];
+
+/* ── Column line helpers (see styles file for the full track layout) ── */
+const LEFT_COL = '1 / 2';
+const GAP_LEFT_COL = '2 / 3';
+const MID_START = 3;
+const midColSpan = (col: number, span: number) =>
+  `${MID_START + col - 1} / ${MID_START + col - 1 + span}`;
+const gapRightCol = (middleColumns: number) => {
+  const end = MID_START + middleColumns;
+  return `${end} / ${end + 1}`;
+};
+const rightCol = (middleColumns: number) => {
+  const end = MID_START + middleColumns;
+  return `${end + 1} / ${end + 2}`;
+};
+
+function rowLine(row: number) {
+  return `${row} / ${row + 1}`;
+}
+
+/** Resolves which rows in a side column are blank / decorative / content. */
+function resolveSideColumn(col: SideColumn, totalRows: number) {
+  const blankRow = col.blankRow ?? (col.contentRow === 1 ? totalRows : 1);
+  const decorativeRows = Array.from({ length: totalRows }, (_, i) => i + 1).filter(
+    (r) => r !== blankRow && r !== col.contentRow
+  );
+  const filledRows = [...decorativeRows, col.contentRow].sort((a, b) => a - b);
+  return { blankRow, decorativeRows, filledRows };
 }
 
 export function SolutionsCore() {
   return (
     <CoreWrapper>
+      {products.map((product, pIndex) => {
+        const middleColumns = product.middleColumns ?? 2;
+        const rows =
+          product.rows ??
+          Math.max(
+            ...product.middleBlocks.map((b) => b.row),
+            product.leftColumn?.contentRow ?? 1,
+            product.rightColumn?.contentRow ?? 1
+          );
 
-      {/* ── PRODUCT SECTIONS (Deployment & Agents) ── */}
-      {coreData.products.map((product, pIndex) => (
-        <ProductSection key={product.id}>
+        const accents =
+          product.accents ??
+          (pIndex % 2 === 0
+            ? { gapSide: 'left' as const, cornerSide: 'right' as const }
+            : { gapSide: 'right' as const, cornerSide: 'left' as const });
 
-          {/* Top Header: Title & CTA */}
-          <SectionHeader
-            as={motion.div}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-50px' }}
-          >
-            <motion.div variants={fadeUp} custom={0}>
-              <SectionTitle>{product.title}</SectionTitle>
-            </motion.div>
+        const left = product.leftColumn ? resolveSideColumn(product.leftColumn, rows) : null;
+        const right = product.rightColumn ? resolveSideColumn(product.rightColumn, rows) : null;
 
-            <motion.div variants={fadeUp} custom={1}>
-              <SectionDesc>{product.description}</SectionDesc>
-            </motion.div>
+        let blockCustomIndex = 3;
 
-            <motion.div variants={fadeUp} custom={2}>
-              <Link to={product.href} style={{ textDecoration: 'none' }}>
-                <CTAButton>
-                  {product.link_label} <ChevronRight size={16} strokeWidth={2} />
-                </CTAButton>
-              </Link>
-            </motion.div>
-          </SectionHeader>
+        return (
+          <ProductSection key={product.id}>
+            {/* Header */}
+            <SectionHeader
+              as={motion.div}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-50px' }}
+            >
+              <motion.div variants={fadeUp} custom={0}>
+                <SectionTitle>{product.title}</SectionTitle>
+              </motion.div>
+              <motion.div variants={fadeUp} custom={1}>
+                <SectionDesc>{product.description}</SectionDesc>
+              </motion.div>
+              <motion.div variants={fadeUp} custom={2}>
+                <Link to={product.href} style={{ textDecoration: 'none' }}>
+                  <CTAButton>
+                    {product.link_label} <ChevronRight size={16} strokeWidth={2} />
+                  </CTAButton>
+                </Link>
+              </motion.div>
+            </SectionHeader>
 
-          {/* Bottom Area: The Asymmetric Bento Grid */}
-          <BentoGrid
-            as={motion.div}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-50px' }}
-          >
-            {/* Corner dots at all grid intersections — Mistral signature detail */}
-            {renderCornerDots()}
-
-            {/* Decorative Floating Diamonds at key intersections */}
-            {pIndex === 0 ? (
-              <>
-                <Diamond $top="33.33%" $left="25%" />
-                <Diamond $top="100%" $left="100%" />
-              </>
-            ) : (
-              <>
-                <Diamond $top="33.33%" $left="75%" />
-                <Diamond $top="100%" $left="0%" />
-              </>
-            )}
-
-            {/* Core Capability Blocks */}
-            {product.blocks.map((block, bIndex) => {
-              const hasDecor = block.internal_decor;
-              return (
+            {/* Bento grid */}
+            <BentoGrid
+              as={motion.div}
+              $middleColumns={middleColumns}
+              $rows={rows}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-50px' }}
+            >
+              {/* ── Middle zone blocks ── */}
+              {product.middleBlocks.map((block) => (
                 <GridCell
                   key={block.title}
-                  $area={block.area}
                   as={motion.div}
                   variants={fadeUp}
-                  custom={3 + bIndex}
+                  custom={blockCustomIndex++}
+                  $col={midColSpan(block.col, block.colSpan ?? 1)}
+                  $row={rowLine(block.row)}
                 >
-                  <IconBox
-                    $color={block.icon_color}
-                    style={hasDecor ? { marginBottom: '16px' } : undefined}
-                  >
+                  <IconBox $color={block.icon_color}>
                     <Layers size={16} />
                   </IconBox>
-
-                  {/* Two stacked beige blocks for tall-left cards (Mistral "Frontier models" pattern) */}
-                  {hasDecor === 'top' && (
-                    <>
-                      <InternalDecor style={{ minHeight: '130px' }} />
-                      <InternalDecor style={{ minHeight: '65px', marginTop: '24px' }} />
-                    </>
-                  )}
-
-                  <CardTitle
-                    style={
-                      hasDecor === 'bottom'
-                        ? { marginTop: '0', marginBottom: '0' }
-                        : undefined
-                    }
-                  >
-                    {block.title}
-                  </CardTitle>
-
+                  <CardTitle $pushToBottom={block.align === 'bottom'}>{block.title}</CardTitle>
                   {block.description && <CardDesc>{block.description}</CardDesc>}
-
-                  {/* Single beige block at bottom for tall-right cards */}
-                  {hasDecor === 'bottom' && (
-                    <InternalDecor style={{ marginTop: 'auto', minHeight: '240px' }} />
-                  )}
                 </GridCell>
-              );
-            })}
+              ))}
 
-            {/* Beige Editorial Spacer — top-left decorative cell */}
-            {product.decorative_cell && (
-              <DecorativeCell
-                $area={product.decorative_cell}
-                as={motion.div}
-                variants={fadeUp}
-                custom={7}
-              />
-            )}
-          </BentoGrid>
+              {/* ── Left column zone ── */}
+              {left && product.leftColumn && (
+                <>
+                  {left.decorativeRows.map((row) => (
+                    <DecorativeCell key={`left-decor-${row}`} $col={LEFT_COL} $row={rowLine(row)}>
+                      {/* Every filled cell marks its own top edge; only the last
+                          (bottommost) filled cell also marks the bottom edge.
+                          Together these dot every row-line in the stack exactly once. */}
+                      <CornerDot $corner="tl" />
+                      <CornerDot $corner="tr" />
+                      {row === left.filledRows[left.filledRows.length - 1] && (
+                        <>
+                          <CornerDot $corner="bl" />
+                          <CornerDot $corner="br" />
+                        </>
+                      )}
+                      {accents.cornerSide === 'left' &&
+                        row === left.filledRows[left.filledRows.length - 1] && (
+                          <Diamond $placement="corner" />
+                        )}
+                    </DecorativeCell>
+                  ))}
+                  <GridCell
+                    as={motion.div}
+                    variants={fadeUp}
+                    custom={blockCustomIndex++}
+                    $col={LEFT_COL}
+                    $row={rowLine(product.leftColumn.contentRow)}
+                  >
+                    <CornerDot $corner="tl" />
+                    <CornerDot $corner="tr" />
+                    {product.leftColumn.contentRow ===
+                      left.filledRows[left.filledRows.length - 1] && (
+                        <>
+                          <CornerDot $corner="bl" />
+                          <CornerDot $corner="br" />
+                        </>
+                      )}
+                    <IconBox $color={product.leftColumn.content.icon_color}>
+                      <Layers size={16} />
+                    </IconBox>
+                    <CardTitle $pushToBottom={product.leftColumn.content.align !== 'top'}>
+                      {product.leftColumn.content.title}
+                    </CardTitle>
+                    {product.leftColumn.content.description && (
+                      <CardDesc>{product.leftColumn.content.description}</CardDesc>
+                    )}
+                    {accents.cornerSide === 'left' &&
+                      product.leftColumn.contentRow ===
+                      left.filledRows[left.filledRows.length - 1] && (
+                        <Diamond $placement="corner" />
+                      )}
+                  </GridCell>
 
-        </ProductSection>
-      ))}
+                  {accents.gapSide === 'left' && (
+                    <GapAnchor $col={GAP_LEFT_COL} $row={rowLine(left.blankRow)}>
+                      <Diamond
+                        $placement={left.blankRow < left.filledRows[0] ? 'gap-bottom' : 'gap-top'}
+                      />
+                    </GapAnchor>
+                  )}
+                </>
+              )}
 
+              {/* ── Right column zone ── */}
+              {right && product.rightColumn && (
+                <>
+                  {right.decorativeRows.map((row) => (
+                    <DecorativeCell
+                      key={`right-decor-${row}`}
+                      $col={rightCol(middleColumns)}
+                      $row={rowLine(row)}
+                    >
+                      <CornerDot $corner="tl" />
+                      <CornerDot $corner="tr" />
+                      {row === right.filledRows[right.filledRows.length - 1] && (
+                        <>
+                          <CornerDot $corner="bl" />
+                          <CornerDot $corner="br" />
+                        </>
+                      )}
+                      {accents.cornerSide === 'right' &&
+                        row === right.filledRows[right.filledRows.length - 1] && (
+                          <Diamond $placement="corner" />
+                        )}
+                    </DecorativeCell>
+                  ))}
+                  <GridCell
+                    as={motion.div}
+                    variants={fadeUp}
+                    custom={blockCustomIndex++}
+                    $col={rightCol(middleColumns)}
+                    $row={rowLine(product.rightColumn.contentRow)}
+                  >
+                    <CornerDot $corner="tl" />
+                    <CornerDot $corner="tr" />
+                    {product.rightColumn.contentRow ===
+                      right.filledRows[right.filledRows.length - 1] && (
+                        <>
+                          <CornerDot $corner="bl" />
+                          <CornerDot $corner="br" />
+                        </>
+                      )}
+                    <IconBox $color={product.rightColumn.content.icon_color}>
+                      <Layers size={16} />
+                    </IconBox>
+                    <CardTitle $pushToBottom={product.rightColumn.content.align !== 'top'}>
+                      {product.rightColumn.content.title}
+                    </CardTitle>
+                    {product.rightColumn.content.description && (
+                      <CardDesc>{product.rightColumn.content.description}</CardDesc>
+                    )}
+                  </GridCell>
+
+                  {accents.gapSide === 'right' && (
+                    <GapAnchor $col={gapRightCol(middleColumns)} $row={rowLine(right.blankRow)}>
+                      <Diamond
+                        $placement={
+                          right.blankRow < right.filledRows[0] ? 'gap-bottom' : 'gap-top'
+                        }
+                      />
+                    </GapAnchor>
+                  )}
+                </>
+              )}
+            </BentoGrid>
+          </ProductSection>
+        );
+      })}
     </CoreWrapper>
   );
 }

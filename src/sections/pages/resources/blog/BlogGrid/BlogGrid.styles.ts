@@ -39,10 +39,10 @@ export const PageTitle = styled.h1`
 
 export const GridContainer = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.border}; /* The "border" color */
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 1px;
+  background: ${({ theme }) => theme.colors.background.primary};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 `;
 
 /* ── Filter Bar ── */
@@ -52,6 +52,9 @@ export const FilterBar = styled.div`
   align-items: center;
   gap: 0;
   flex-wrap: wrap;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  position: relative;
+  z-index: 2;
 `;
 
 export const FilterLeft = styled.div`
@@ -136,10 +139,11 @@ export const SearchInput = styled.input`
 ══════════════════════════════════════════════════════════════ */
 
 export const CardGrid = styled.div`
-  background: ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background.primary};
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
+  margin-right: -1px;
+  margin-bottom: -1px;
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
@@ -156,6 +160,8 @@ export const GridCell = styled.div<{ $featured?: boolean }>`
   padding: 32px;
   grid-column: ${({ $featured }) => ($featured ? 'span 2' : 'span 1')};
   display: flex;
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-column: ${({ $featured }) => ($featured ? 'span 2' : 'span 1')};
@@ -293,6 +299,9 @@ export const PaginationBar = styled.div`
   justify-content: center;
   gap: 2px;
   padding: 14px 20px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  position: relative;
+  z-index: 1;
 `;
 
 export const PageButton = styled.button<{ $active?: boolean }>`
