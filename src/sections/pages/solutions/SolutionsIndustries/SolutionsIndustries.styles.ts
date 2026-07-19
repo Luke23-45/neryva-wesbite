@@ -125,14 +125,6 @@ export const NavItem = styled.button<{ $isActive: boolean }>`
   }
 `;
 
-export const NavPrefix = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  opacity: 0.5;
-`;
-
 export const NavLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 15px;
@@ -179,21 +171,6 @@ export const IndustryBlock = styled.div`
   ${({ theme }) => theme.media.mobile} {
     padding: 32px 0;
   }
-`;
-
-export const IndustryLabel = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-`;
-
-export const IndustryPrefix = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.colors.text.muted};
 `;
 
 export const IndustryName = styled.h3`

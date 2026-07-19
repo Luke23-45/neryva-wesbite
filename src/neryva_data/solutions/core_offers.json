@@ -108,19 +108,5 @@
       ],
       "decorative_cell": null
     }
-  ],
-  "businessOutcomes": {
-    "title": "Business Outcomes.",
-    "description": "Neryva Solutions is designed for organizations that need one or more of the following measurable results.",
-    "list": [
-      "Secure AI deployment in production",
-      "Professional customer interactions",
-      "Better access to company knowledge",
-      "Lower manual support burden",
-      "More reliable business workflows",
-      "Stronger brand consistency",
-      "Tighter control over AI behavior",
-      "Clear path from prototype to production"
-    ]
-  }
+  ]
 }

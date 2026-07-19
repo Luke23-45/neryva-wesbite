@@ -21,13 +21,10 @@ import {
   SplitLayout,
   Sidebar,
   NavItem,
-  NavPrefix,
   NavLabel,
   ActiveIndicator,
   ContentArea,
   IndustryBlock,
-  IndustryLabel,
-  IndustryPrefix,
   IndustryName,
   AppsGrid,
   AppCell,
@@ -100,7 +97,6 @@ export function SolutionsIndustries() {
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                <NavPrefix>// {ind.prefix}</NavPrefix>
                 <NavLabel>{ind.name}</NavLabel>
               </NavItem>
             ))}
@@ -108,7 +104,7 @@ export function SolutionsIndustries() {
 
           {/* RIGHT: All industries stacked vertically */}
           <ContentArea>
-            {industries.map((ind, indIndex) => (
+            {industries.map((ind) => (
               <IndustryBlock
                 key={ind.id}
                 id={`industry-${ind.id}`}
@@ -118,9 +114,6 @@ export function SolutionsIndustries() {
                 viewport={{ once: true, margin: '-80px' }}
               >
                 <motion.div variants={fadeUp} custom={0}>
-                  <IndustryLabel>
-                    <IndustryPrefix>// {ind.prefix}</IndustryPrefix>
-                  </IndustryLabel>
                   <IndustryName>{ind.name}</IndustryName>
                 </motion.div>
 

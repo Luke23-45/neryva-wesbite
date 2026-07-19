@@ -1,6 +1,7 @@
 import { PageHead } from '@components/common/PageHead';
 import { SolutionsHero } from '@/sections/pages/solutions/SolutionsHero';
 import { SolutionsCore } from '@/sections/pages/solutions/SolutionsCore';
+import { BusinessOutcomes } from '@/sections/pages/solutions/BusinessOutcomes';
 import { SolutionsApplications } from '@/sections/pages/solutions/SolutionsApplications';
 import { SolutionsIndustries } from '@/sections/pages/solutions/SolutionsIndustries';
 
@@ -18,6 +19,7 @@ export default function SolutionsPage() {
       <main>
         <SolutionsHero />
         <SolutionsCore />
+        <BusinessOutcomes />
         <SolutionsApplications />
         <SolutionsIndustries />
       </main>

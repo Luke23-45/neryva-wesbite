@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import heroImage from '../../../../assets/images/solutions_hero.png';
+import heroImage from '@assets/page/solution/hero.png';
 
 const VisualContainer = styled(motion.div)`
   position: relative;
@@ -32,8 +32,8 @@ const Overlay = styled.div`
 export function SolutionsHeroVisual() {
   return (
     <VisualContainer>
-      <HeroImg 
-        src={heroImage} 
+      <HeroImg
+        src={heroImage}
         alt="Neryva Commercial Enterprise Solutions"
         initial={{ scale: 1.05, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

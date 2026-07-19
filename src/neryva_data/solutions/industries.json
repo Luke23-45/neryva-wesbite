@@ -7,7 +7,6 @@
     {
       "id": "financial",
       "name": "Financial Services",
-      "prefix": "01",
       "applications": [
         {
           "icon": "ShieldCheck",
@@ -32,7 +31,6 @@
     {
       "id": "healthcare",
       "name": "Healthcare & Life Sci",
-      "prefix": "02",
       "applications": [
         {
           "icon": "Activity",
@@ -57,7 +55,6 @@
     {
       "id": "manufacturing",
       "name": "Advanced Manufacturing",
-      "prefix": "03",
       "applications": [
         {
           "icon": "Cpu",

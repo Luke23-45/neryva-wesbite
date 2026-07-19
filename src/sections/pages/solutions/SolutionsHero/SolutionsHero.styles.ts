@@ -1,177 +1,173 @@
 import styled from 'styled-components';
 
-/**
- * ════════════════════════════════════════════════════════════════════
- *  SolutionsHero
- *  Premium, editorial hero for the Solutions landing page.
- *
- *  Pattern mirrors the gold-standard ResearchHero: a 12-col CSS grid
- *  with two distinct content tracks (text + visual) sharing a hairline
- *  divider, with strict typographic rhythm.
- * ════════════════════════════════════════════════════════════════════
- */
-
 export const HeroWrapper = styled.section`
-  /* Two-track, edge-to-edge layout. Both columns stretch to the full
-     viewport height so the divider line runs the full height. */
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 80px);
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  position: relative;
+  min-height: 90vh; /* Deep full-screen canvas */
+  width: 100%;
+  display: flex;
+  background-color: #fafaf9; /* A supremely premium, ultra-light warm white/eggshell */
+  overflow: hidden;
+
+  /* 
+   * THE STATE-OF-THE-ART TOUCH: 
+   * Very faint architectural vertical grid lines running through the entire background.
+   * Matches the visual reference background exactly.
+   */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 16.666vw 100%; /* Six architectural columns */
+  }
 
   ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: 1fr;
     min-height: auto;
+    flex-direction: column;
+    padding-bottom: 80px;
+    background-size: 25vw 100%;
   }
 `;
 
-/* ── Text track ─────────────────────────────────────────────────── */
+export const InnerGrid = styled.div`
+  width: 100%;
+  max-width: 1536px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 50fr 50fr; /* 55% Text dominance on left */
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 1fr;
+  }
+`;
+
+/* ─── LEFT: TYPOGRAPHICAL MATRIX ─── */
 export const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 120px 88px;
-
-  /* The hairline that defines the split — taller on desktop, collapses
-     to a horizontal divider on mobile so the editorial feel survives. */
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  position: relative;
-
-  ${({ theme }) => theme.media.desktop} {
-    padding: 100px 64px;
-  }
+  padding: 60px 80px 160px 40px; 
+  /* Left padding explicitly respects the grid logic */
 
   ${({ theme }) => theme.media.tablet} {
-    border-right: none;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    padding: 72px 40px 64px;
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 56px 24px 48px;
+    padding: 120px 24px 80px 24px;
   }
 `;
 
-/* ── Visual track ───────────────────────────────────────────────── */
-export const VisualColumn = styled.div`
-  /* Sits inside its half, full-bleed. Position context for the SVG. */
-  position: relative;
-  overflow: hidden;
-  background-color: ${({ theme }) => theme.colors.background.secondary};
-
-  /* Layered ambient light — two off-centre radial gradients use the
-     brand palette at low opacity to give the schematic a subtle,
-     premium warmth without competing with the left-side text. */
-  background-image:
-    radial-gradient(ellipse 60% 50% at 22% 12%, rgba(192, 132, 252, 0.10), transparent 60%),
-    radial-gradient(ellipse 70% 55% at 80% 88%, rgba(5, 227, 164, 0.06), transparent 65%);
-
-  ${({ theme }) => theme.media.tablet} {
-    min-height: 480px;
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    min-height: 360px;
-  }
-`;
-
-/* ── Eyebrow — small mono caps with a leading rule ───────────────── */
 export const Eyebrow = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.s3};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.5); /* Precise faded tone */
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 0 ${({ theme }) => theme.spacing.s5} 0;
-
-  /* The leading rule — sets the eyebrow as a tight, telegraphed line
-     that reads like a Bloomberg-terminal section header. */
-  &::before {
-    content: '';
-    display: inline-block;
-    width: 28px;
-    height: 1px;
-    background-color: ${({ theme }) => theme.colors.text.muted};
-    flex-shrink: 0;
-  }
+  letter-spacing: 0.1em;
+  margin-bottom: 25px; 
 `;
 
-/* ── Title — display magnitude with tight, premium tracking ─────── */
 export const Title = styled.h1`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: clamp(3rem, 6vw, 5.25rem);
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  line-height: 1.04;
-  letter-spacing: -0.035em;
-  color: ${({ theme }) => theme.colors.text.primary};
-  max-width: 820px;
-  margin: 0 0 ${({ theme }) => theme.spacing.s6} 0;
+  
+  /* Uncompromising, brutal scale based exactly on the image */
+  font-size: 3.8rem;
+  font-weight: 500;
+  
+  /* CRITICAL FOR "NO SLOP" DESIGN: Extreme leading and kerning bounds */
+  line-height: 1.0; 
+  letter-spacing: -0.04em; 
+  
+  color: #000000;
+  margin: 0;
+  max-width: 960px;
+  white-space: pre-wrap; /* Forces the newline breaks exactly from JSON */
 
-  ${({ theme }) => theme.media.mobile} {
-    font-size: clamp(2.5rem, 9vw, 3.25rem);
-    letter-spacing: -0.03em;
+  ${({ theme }) => theme.media.tablet} {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
   }
 `;
 
-/* ── Description — first-thing-readable body copy ──────────────── */
+export const TripleArrowCluster = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Strict tiny gap */
+  margin: 60px 0; /* Massive breathing room as seen in image */
+  color: rgba(0, 0, 0, 0.25);
+  
+  svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2px;
+  }
+`;
+
 export const Description = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
+  
+  /* Notice the heavy scale compared to traditional P tags */
   font-size: 20px;
-  line-height: 1.55;
-  font-weight: ${({ theme }) => theme.typography.weights.regular};
-  letter-spacing: -0.01em;
-  color: ${({ theme }) => theme.colors.text.primary};
-  max-width: 540px;
-  margin: 0;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.02em; 
+  
+  color: #111111;
+  margin: 0 0 25px 0;
+  max-width: 780px;
 
+  ${({ theme }) => theme.media.tablet} {
+    font-size: 20px;
+    margin-bottom: 40px;
+  }
   ${({ theme }) => theme.media.mobile} {
-    font-size: 17px;
-    line-height: 1.6;
+    font-size: 18px;
   }
 `;
 
-/* ── Scroll indicator — minimalist "explore" CTA ──────────────── */
-export const ScrollIndicator = styled.a`
+export const SolidCta = styled.a`
+  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.s3};
-  margin-top: ${({ theme }) => theme.spacing.s8};
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.typography.sizes.small};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.text.primary};
+  gap: 12px;
+  
+  background-color: #050505; /* Supreme void black */
+  color: #ffffff;
+  
+  padding: 18px 24px;
+  border-radius: 6px;
+  
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
   text-decoration: none;
   cursor: pointer;
+  
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 
-  /* Lift, arrow nudge, color transitions. */
-  transition:
-    color ${({ theme }) => theme.transitions.fast} ease,
-    gap ${({ theme }) => theme.transitions.fast} ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  }
 
   svg {
     width: 16px;
     height: 16px;
-    transition: transform ${({ theme }) => theme.transitions.fast} ease;
   }
+`;
 
-  &:hover {
-    color: ${({ theme }) => theme.colors.text.primary};
-    gap: ${({ theme }) => theme.spacing.s4};
-
-    /* The arrow nudges toward the destination — telegraphed motion. */
-    svg {
-      transform: translateX(2px);
-    }
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    margin-top: ${({ theme }) => theme.spacing.s7};
+/* ─── RIGHT: VISUAL AREA ─── */
+export const VisualColumn = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Visual sits perfectly flushed inside the right 45% grid limit */
+  
+  ${({ theme }) => theme.media.tablet} {
+    min-height: 480px;
   }
 `;
