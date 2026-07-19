@@ -10,51 +10,62 @@
       "description": "Secure deployment, optimization, and ongoing operation of AI systems.",
       "href": "/products/ai-efficiency-deployment",
       "link_label": "Explore AI Deployment",
-      "blocks": [
+      "rows": 3,
+      "middleColumns": 2,
+      "leftColumn": {
+        "contentRow": 3,
+        "blankRow": 1,
+        "content": {
+          "title": "Edge Ready",
+          "description": "",
+          "icon_color": "#00BFFF",
+          "align": "bottom"
+        }
+      },
+      "rightColumn": {
+        "contentRow": 1,
+        "blankRow": 3,
+        "content": {
+          "title": "Performance Tuning",
+          "description": "",
+          "icon_color": "#00BFFF",
+          "align": "top"
+        }
+      },
+      "middleBlocks": [
         {
           "title": "Secure Enclaves",
           "description": "Models deployed in completely private, air-gapped environments.",
-          "area": "1 / 2 / 2 / 4",
           "icon_color": "#0078D7",
-          "internal_decor": null
-        },
-        {
-          "title": "Edge Ready",
-          "description": "",
-          "area": "2 / 1 / 4 / 2",
-          "icon_color": "#00BFFF",
-          "internal_decor": "top"
+          "row": 1,
+          "col": 1,
+          "colSpan": 2
         },
         {
           "title": "Reliable Infra",
           "description": "Production-grade uptime with built-in redundancy.",
-          "area": "2 / 2 / 3 / 3",
           "icon_color": "#424242",
-          "internal_decor": null
+          "row": 2,
+          "col": 1,
+          "colSpan": 1
         },
         {
           "title": "Governance",
           "description": "Full operational monitoring and audit trails.",
-          "area": "2 / 3 / 3 / 4",
           "icon_color": "#06101e",
-          "internal_decor": null
+          "row": 2,
+          "col": 2,
+          "colSpan": 1
         },
         {
           "title": "Auto Scaling",
           "description": "Elastic infrastructure for training and inference workloads.",
-          "area": "3 / 2 / 4 / 4",
           "icon_color": "#4A90D9",
-          "internal_decor": null
-        },
-        {
-          "title": "Performance Tuning",
-          "description": "",
-          "area": "1 / 4 / 4 / 5",
-          "icon_color": "#00BFFF",
-          "internal_decor": "bottom"
+          "row": 3,
+          "col": 1,
+          "colSpan": 2
         }
-      ],
-      "decorative_cell": null
+      ]
     },
     {
       "id": "agents",
@@ -62,51 +73,62 @@
       "description": "Customer-facing and business-facing AI agents that represent the company professionally.",
       "href": "/products/enterprise-ai-assistant",
       "link_label": "Explore Agent Studio",
-      "blocks": [
+      "rows": 3,
+      "middleColumns": 2,
+      "leftColumn": {
+        "contentRow": 3,
+        "blankRow": 1,
+        "content": {
+          "title": "Context Engine",
+          "description": "",
+          "icon_color": "#FF8C00",
+          "align": "bottom"
+        }
+      },
+      "rightColumn": {
+        "contentRow": 1,
+        "blankRow": 3,
+        "content": {
+          "title": "Workflow Aware",
+          "description": "",
+          "icon_color": "#FF8C00",
+          "align": "top"
+        }
+      },
+      "middleBlocks": [
         {
           "title": "Brand Guardianship",
           "description": "Stronger brand consistency in every single AI interaction.",
-          "area": "1 / 2 / 2 / 4",
           "icon_color": "#FF4500",
-          "internal_decor": null
-        },
-        {
-          "title": "Context Engine",
-          "description": "",
-          "area": "2 / 1 / 4 / 2",
-          "icon_color": "#FF8C00",
-          "internal_decor": "top"
+          "row": 1,
+          "col": 1,
+          "colSpan": 2
         },
         {
           "title": "Strict Guardrails",
           "description": "Role-bound limits on agent behavior and scope.",
-          "area": "2 / 2 / 3 / 3",
           "icon_color": "#FF6D00",
-          "internal_decor": null
+          "row": 2,
+          "col": 1,
+          "colSpan": 1
         },
         {
           "title": "Knowledge Sync",
           "description": "Real-time access to enterprise data sources.",
-          "area": "2 / 3 / 3 / 4",
           "icon_color": "#D99100",
-          "internal_decor": null
+          "row": 2,
+          "col": 2,
+          "colSpan": 1
         },
         {
           "title": "Multi-Channel",
           "description": "Deploy agents across web, mobile, voice, and API channels.",
-          "area": "3 / 2 / 4 / 4",
           "icon_color": "#E85D04",
-          "internal_decor": null
-        },
-        {
-          "title": "Workflow Aware",
-          "description": "",
-          "area": "1 / 4 / 4 / 5",
-          "icon_color": "#FF8C00",
-          "internal_decor": "bottom"
+          "row": 3,
+          "col": 1,
+          "colSpan": 2
         }
-      ],
-      "decorative_cell": null
+      ]
     }
   ]
 }
