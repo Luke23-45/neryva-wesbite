@@ -201,7 +201,7 @@ export const AppsGrid = styled.div`
 `;
 
 export const AppCell = styled.div`
-  padding: 32px 32px 32px 0;
+  padding: 32px 32px 32px 20px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   flex-direction: column;

@@ -5,9 +5,7 @@
   "canonicalPath": "/research",
   "sections": [
     "hero",
-    "agenda",
     "program_areas",
-    "open_problems",
     "papers"
   ]
 }

@@ -146,10 +146,11 @@ export const CellTitle = styled.h3`
 
 export const CellDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+  font-weight: 500;
   
   /* CRITICAL: This pushes the description to the absolute bottom of the cell */
   margin-top: auto; 
