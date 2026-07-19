@@ -3,7 +3,6 @@ import styled from 'styled-components';
 export const FlexContainer = styled.div`
   display: flex;
   align-items: flex-start;
-  /* Generous spacing between the sidebar and the main panel */
   gap: 48px;
 
   ${({ theme }) => theme.media.tablet} {
@@ -12,16 +11,14 @@ export const FlexContainer = styled.div`
   }
 `;
 
-/* ── Left Sidebar (Sticky Navigation) ── */
+/* ── 1. Sidebar Command Panel ── */
 export const Sidebar = styled.nav`
-  width: 240px;
+  width: 250px;
   flex-shrink: 0;
   position: sticky;
-  top: 120px; /* Ample space below the site header */
+  top: 140px;
   display: flex;
   flex-direction: column;
-  
-  /* Subtle bounding box reflecting the premium design */
   background: ${({ theme }) => theme.colors.background.primary};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
@@ -35,6 +32,10 @@ export const Sidebar = styled.nav`
     border-radius: 0;
     border-left: none;
     border-right: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 `;
 
@@ -48,7 +49,6 @@ export const SidebarItem = styled.button<{ $active: boolean; $accent: string }>`
   border: none;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   
-  /* Clean, flat background with a subtle shift on active */
   background: ${({ $active }) => ($active ? 'rgba(0, 0, 0, 0.02)' : 'transparent')};
   cursor: pointer;
   
@@ -56,13 +56,12 @@ export const SidebarItem = styled.button<{ $active: boolean; $accent: string }>`
   font-size: 14px;
   text-align: left;
   
-  /* Typography weights mimic the reference image */
   font-weight: ${({ $active, theme }) =>
     $active ? theme.typography.weights.medium : theme.typography.weights.regular};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.secondary};
   
-  transition: all ${({ theme }) => theme.transitions.fast};
+  transition: all 0.2s ease-out;
 
   &:last-child {
     border-bottom: none;
@@ -85,131 +84,137 @@ export const SidebarItem = styled.button<{ $active: boolean; $accent: string }>`
   }
 `;
 
-/* ── Right Panel (The Master Grid) ── */
+/* ── 2. The Master Staging Envelope ── */
 export const Panel = styled.div`
   flex: 1;
   min-width: 0;
-  
-  /* Creates the continuous outer bounding box for the entire right section */
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
-  background: ${({ theme }) => theme.colors.background.primary};
+  /* Setting pure background completely prevents "hole" coloring bleeding entirely */
+  background: ${({ theme }) => theme.colors.background.primary}; 
   overflow: hidden;
 `;
 
+/* Engineered to gracefully combine overlapping grids across categories */
 export const ProgramSection = styled.section`
-  scroll-margin-top: 120px;
   display: flex;
   flex-direction: column;
-  
-  /* Sections stack directly on top of each other with a single perfect line */
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
-  &:last-child {
+  /* Erase overlapping table lines mathematically only for terminal components */
+  &:last-child div[data-grid-area] > div:nth-last-child(-n+2) {
     border-bottom: none;
+  }
+  
+  ${({ theme }) => theme.media.mobile} {
+    &:last-child div[data-grid-area] > div:last-child {
+      border-bottom: none;
+    }
   }
 `;
 
 export const ProgramTitle = styled.h2<{ $accent: string }>`
-  font-size: 36px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.primary};
+  font-size: 32px; /* Mistral accurate size match */
+  font-weight: 500;
   line-height: 1.1;
-  letter-spacing: -0.03em; /* Tight, Apple-like tracking */
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   
-  /* Deep padding to give the header breathing room */
-  padding: 48px 32px 32px 32px;
+  /* Distinct border lines encapsulate exactly below the header grouping */
+  padding: 48px 40px 32px 40px;
   background: ${({ theme }) => theme.colors.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 28px;
+    font-size: 26px;
     padding: 32px 24px 24px 24px;
   }
 `;
 
-/* ── Architectural Card Grid ── */
+/* ── 3. The Unbroken Inner Borders Grid (Zero Background-Gaps) ── */
 export const CardGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  
-  /* CRITICAL: Gap of 1px + border background creates perfect structural lines */
-  gap: 1px;
-  background: ${({ theme }) => theme.colors.border};
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  /* The definitive fix: No 'gap: 1px' exists here to leak structural colors. */
+  gap: 0; 
+  background: transparent;
 
   ${({ theme }) => theme.media.mobile} {
     grid-template-columns: 1fr;
   }
 `;
 
-export const GridCell = styled.div`
-  /* Cells must be white to cover the dark grid background, revealing only the 1px gap */
+/* Individual lines owned implicitly by content bounding */
+export const GridCell = styled.div<{ $isEmpty?: boolean }>`
   background: ${({ theme }) => theme.colors.background.primary};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  
   display: flex;
   flex-direction: column;
-`;
+  padding: ${({ $isEmpty }) => ($isEmpty ? '0' : '40px')};
 
-export const Card = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 32px;
-  background: transparent;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
+  /* The magic to unify double lines natively */
+  &:nth-child(2n) {
+    border-right: none;
+  }
 
-  /* Subtle background shift instead of border color shift for a cleaner feel */
+  transition: background-color 0.3s ease;
   &:hover {
-    background-color: rgba(0, 0, 0, 0.01);
+    background-color: ${({ $isEmpty }) => ($isEmpty ? 'transparent' : 'rgba(0, 0, 0, 0.012)')};
   }
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 24px;
+    padding: ${({ $isEmpty }) => ($isEmpty ? '0' : '24px')};
+    border-right: none;
+    display: ${({ $isEmpty }) => ($isEmpty ? 'none' : 'flex')};
   }
 `;
 
+/* ── 4. Internal Reference Accents ── */
 export const CardHeader = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px; /* Space between header and title */
+  margin-bottom: 32px;
 `;
 
 export const MotifBox = styled.div`
   width: 44px;
   height: 44px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
+  border-radius: 6px;
+  background: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${({ theme }) => theme.colors.background.primary};
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 `;
 
 export const OpenBadge = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
-  padding: 4px 0; /* Align perfectly with the top of the motif */
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
 `;
 
 export const CardBody = styled.div`
   display: flex;
   flex-direction: column;
-  flex: 1; /* Pushes the TagRow to the bottom of the card */
+  flex: 1; /* Pushes arrays accurately downward matching grid scaling geometry */
 `;
 
 export const CardTitle = styled.h3`
   font-size: 20px;
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 500;
   line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin: 0 0 12px 0;
+  letter-spacing: -0.015em;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 10px 0;
 `;
 
 export const CardDescription = styled.p`
@@ -219,24 +224,23 @@ export const CardDescription = styled.p`
   margin: 0 0 32px 0;
 `;
 
-/* ── Refined Tags Row ── */
+/* Meticulous minimal border capsling matching reference architecture tags */
 export const TagRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: auto; /* Forces tags to align at the bottom of the card */
+  gap: 10px;
+  margin-top: auto; 
 `;
 
 export const Tag = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
   font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-transform: uppercase;
   letter-spacing: 0.06em;
-  
-  /* Ultra-minimalist styling mirroring the reference image */
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.03); /* Barely visible, elegant background */
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  background: transparent;
+  padding: 4px 6px;
+  border: 1px solid ${({ theme }) => theme.colors.border}; 
   border-radius: 4px;
 `;

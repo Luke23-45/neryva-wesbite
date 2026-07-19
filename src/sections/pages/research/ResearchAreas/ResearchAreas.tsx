@@ -2,16 +2,12 @@ import { useRef, useEffect, useState } from 'react';
 import { useTheme } from 'styled-components';
 import { motion } from 'framer-motion';
 
-// Data imports
 import programAreas from '@neryva_data/research/sections/program_areas.json';
-
-// Common layout & components
 import { Container } from '@/sections/common/layout/Container';
 import { PixelArrow } from '@/components/common/PixelArrow';
 import { ModelMotif } from '@/components/common/ModelMotifs';
 import { Section } from '@/sections/common/layout/Section';
 
-// Styled components
 import {
   FlexContainer,
   Sidebar,
@@ -21,7 +17,6 @@ import {
   ProgramTitle,
   CardGrid,
   GridCell,
-  Card,
   CardHeader,
   MotifBox,
   OpenBadge,
@@ -32,16 +27,15 @@ import {
   Tag,
 } from './ResearchAreas.styles';
 
-// Type definitions
 type ProgramId = keyof typeof programAreas;
 const programIds = Object.keys(programAreas) as ProgramId[];
 
 export function ResearchAreas() {
   const theme = useTheme();
-  const [activeId, setActiveId] = useState<ProgramId>(programIds[0] || 'large-language-models');
+  const [activeId, setActiveId] = useState<ProgramId>(programIds[0]);
   const sectionRefs = useRef<Map<ProgramId, HTMLElement>>(new Map());
 
-  // Intersection Observer to drive the Sticky Navigation state
+  // Precision alignment tracking matching specific native browser positioning bounds
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -52,8 +46,7 @@ export function ResearchAreas() {
           }
         }
       },
-      // Offset precisely accounts for the 120px sticky top spacing defined in styles
-      { threshold: 0.2, rootMargin: '-120px 0px -60% 0px' },
+      { threshold: 0.1, rootMargin: '-140px 0px -70% 0px' },
     );
 
     for (const ref of sectionRefs.current.values()) {
@@ -63,7 +56,6 @@ export function ResearchAreas() {
     return () => observer.disconnect();
   }, []);
 
-  // Smooth scroll handler for sidebar clicks
   const scrollTo = (id: ProgramId) => {
     const element = sectionRefs.current.get(id);
     if (element) {
@@ -72,15 +64,11 @@ export function ResearchAreas() {
   };
 
   return (
-    <Section
-      paddingYTop="md"
-      paddingYBottom="lg"
-      background={theme.colors.background.secondary} // Provides contrast for the white grid cells
-    >
-      <Container>
+    <Section paddingYTop="md" paddingYBottom="xl" background={theme.colors.background.secondary}>
+      <Container variant="wide">
         <FlexContainer>
 
-          {/* LEFT: STICKY NAVIGATION */}
+          {/* ── STICKY SIDEBAR (OS NAVIGATION) ── */}
           <Sidebar>
             {programIds.map((id) => {
               const program = programAreas[id];
@@ -101,10 +89,13 @@ export function ResearchAreas() {
             })}
           </Sidebar>
 
-          {/* RIGHT: SCROLLING MASTER GRID */}
+          {/* ── GRID STAGE MATRIX (PURE CELLS) ── */}
           <Panel>
             {programIds.map((id) => {
               const program = programAreas[id];
+
+              // Calculates odd counts automatically rendering pure completion bounds
+              const requiresGhostCell = program.cards.length % 2 !== 0;
 
               return (
                 <ProgramSection
@@ -116,55 +107,55 @@ export function ResearchAreas() {
                     else sectionRefs.current.delete(id);
                   }}
                   as={motion.section}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-50px' }}
-                  // Premium Apple-like easing curve
-                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
                 >
 
-                  {/* Title Area */}
                   <ProgramTitle $accent={program.accent}>
                     {program.title}
                   </ProgramTitle>
 
-                  {/* Card Grid Area */}
-                  <CardGrid>
+                  <CardGrid data-grid-area>
                     {program.cards.map((card, index) => (
                       <GridCell
                         key={card.id}
                         as={motion.div}
-                        initial={{ opacity: 0, y: 15 }}
-                        whileInView={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
                         viewport={{ once: true }}
                         transition={{
-                          duration: 0.5,
-                          ease: [0.16, 1, 0.3, 1] as const,
-                          delay: index * 0.1, // Elegant staggered entrance
+                          duration: 0.6,
+                          ease: "linear",
+                          delay: index * 0.1, // Subtle content entrance staggered
                         }}
                       >
-                        <Card>
-                          <CardHeader>
-                            <MotifBox>
-                              <ModelMotif programId={id} size={22} color={program.accent} />
-                            </MotifBox>
-                            <OpenBadge>OPEN</OpenBadge>
-                          </CardHeader>
+                        <CardHeader>
+                          <MotifBox>
+                            <ModelMotif programId={id} size={22} color={program.accent} />
+                          </MotifBox>
+                          <OpenBadge>OPEN</OpenBadge>
+                        </CardHeader>
 
-                          <CardBody>
-                            <CardTitle>{card.title}</CardTitle>
-                            <CardDescription>{card.description}</CardDescription>
+                        <CardBody>
+                          <CardTitle>{card.title}</CardTitle>
+                          <CardDescription>{card.description}</CardDescription>
 
-                            {/* Refined Tag Row stays firmly anchored at the bottom */}
-                            <TagRow>
-                              {card.labels.map((label) => (
-                                <Tag key={label}>{label}</Tag>
-                              ))}
-                            </TagRow>
-                          </CardBody>
-                        </Card>
+                          <TagRow>
+                            {card.labels.map((label) => (
+                              <Tag key={label}>{label}</Tag>
+                            ))}
+                          </TagRow>
+                        </CardBody>
                       </GridCell>
                     ))}
+
+                    {/* The Unsung Hero fixing lazy HTML rendering: completes the matrix invisibly ensuring lower border spans full table width seamlessly! */}
+                    {requiresGhostCell && (
+                      <GridCell $isEmpty aria-hidden="true" />
+                    )}
+
                   </CardGrid>
 
                 </ProgramSection>
