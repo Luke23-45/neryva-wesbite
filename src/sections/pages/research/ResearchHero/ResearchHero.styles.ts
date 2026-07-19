@@ -33,29 +33,70 @@ export const Wrapper = styled.section`
     grid-template-columns: 24px 1fr 24px;
     padding-top: 120px;
   }
+
+  margin-top: 20px;
+
 `;
 
 /* ── Top Header Area ── */
 export const HeaderArea = styled.div`
   /* Spans the two inner columns (2 and 3) to remain perfectly centered */
   grid-column: 2 / 4;
-  margin-bottom: 56px;
   animation: ${fadeIn} 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  align-items: stretch;
+
+  & > :first-child {
+    border-right: 1px solid ${({ theme }) => theme.colors.border};
+    padding-right: 48px;
+    padding-bottom: 56px; /* Replaces margin-bottom to let the border stretch */
+    display: flex;
+    align-items: center;
+  }
+  
+  & > :last-child {
+    padding-left: 48px;
+    padding-bottom: 56px; /* Replaces margin-bottom to let the border stretch */
+    display: flex;
+    align-items: center;
+  }
 
   ${({ theme }) => theme.media.tablet} {
     grid-column: 2 / 3;
-    margin-bottom: 40px;
+    grid-template-columns: 1fr;
+    
+    & > :first-child {
+      border-right: none;
+      padding-right: 0;
+      border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+      padding-bottom: 32px;
+      margin-bottom: 32px;
+    }
+    
+    & > :last-child {
+      padding-left: 0;
+      padding-bottom: 40px;
+    }
   }
 `;
 
 export const MassiveTitle = styled.h1`
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: 4.5rem;
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -0.03em; /* Tight, premium tracking */
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   max-width: 1000px;
+`;
+
+export const HeaderSubtitle = styled.p`
+  font-size: 16px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin: 0;
 `;
 
 /* ── Structural Divider ── */

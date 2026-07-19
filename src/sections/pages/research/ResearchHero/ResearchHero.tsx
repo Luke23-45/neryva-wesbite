@@ -2,14 +2,15 @@ import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDown, ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
+import heroData from '@neryva_data/research/sections/hero.json';
 
-// Assuming HeroMosaic is handled in a separate file as requested
 import { HeroMosaic } from './HeroMosaic';
 
 import {
   Wrapper,
   HeaderArea,
   MassiveTitle,
+  HeaderSubtitle,
   DividerLine,
   LeftContent,
   ArrowStack,
@@ -48,7 +49,8 @@ export function ResearchHero() {
         animate="visible"
         variants={fadeUp}
       >
-        <MassiveTitle>Computation, used well.</MassiveTitle>
+        <MassiveTitle>{heroData.headline}</MassiveTitle>
+        <HeaderSubtitle>{heroData.subheadline}</HeaderSubtitle>
       </HeaderArea>
 
       {/* ── Full-Width Structural Divider ── */}
@@ -79,10 +81,7 @@ export function ResearchHero() {
         </motion.div>
 
         <motion.div variants={fadeUp}>
-          <HeroDescription>
-            Neryva studies how large-scale AI systems can use computation more effectively,
-            train more stably, and deploy more reliably under real constraints.
-          </HeroDescription>
+          <HeroDescription>{heroData.description}</HeroDescription>
         </motion.div>
 
         <motion.div variants={fadeUp}>
