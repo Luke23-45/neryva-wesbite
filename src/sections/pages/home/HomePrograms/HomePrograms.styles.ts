@@ -133,7 +133,7 @@ export const ProgramDescription = styled.p`
 
 export const ProgramVisual = styled.div<{ $accent: string }>`
   width: 100%;
-  aspect-ratio: 16 / 7;
+  aspect-ratio: 16 / 9;
   border-radius: 20px;
   background: ${({ $accent }) => $accent};
   position: relative;

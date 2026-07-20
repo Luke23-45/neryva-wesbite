@@ -61,6 +61,20 @@ const SidebarIconsMap: Record<string, React.FC> = {
   'computational-science-engineering': SidebarEnergyIcon,
 };
 
+import imgLanguage from '@assets/page/home/language_systems.png';
+import imgRobotics from '@assets/page/home/robotics_task_transfer.png';
+import imgBiomedical from '@assets/page/home/biomedical_ai.png';
+import imgEnergy from '@assets/page/home/energy_systems.png';
+import imgComputational from '@assets/page/home/computational_science_1784559569500.png';
+
+const ProgramImagesMap: Record<string, string> = {
+  'language-systems': imgLanguage,
+  'robotics-task-transfer': imgRobotics,
+  'biomedical-biological-clinical-ai': imgBiomedical,
+  'energy-systems': imgEnergy,
+  'computational-science-engineering': imgComputational,
+};
+
 const programAccents: Record<string, string> = {
   'language-systems': '#2458D3',
   'robotics-task-transfer': '#0B7F79',
@@ -190,8 +204,16 @@ export function HomePrograms() {
                     as={motion.div}
                     variants={fadeUp}
                   >
+                    {ProgramImagesMap[program.id] ? (
+                      <img 
+                        src={ProgramImagesMap[program.id]} 
+                        alt={program.title} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      IconComponent && <IconComponent accent="#FFFFFF" />
+                    )}
                     <VisualOverlay />
-                    {IconComponent && <IconComponent accent="#FFFFFF" />}
                     <VisualCaption>
                       PROGRAM {program.number.toString().padStart(2, '0')} • {program.title.toUpperCase()}
                     </VisualCaption>
