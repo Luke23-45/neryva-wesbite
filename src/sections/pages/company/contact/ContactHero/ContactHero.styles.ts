@@ -3,10 +3,10 @@ import styled from 'styled-components';
 export const Wrapper = styled.section`
   display: grid;
   grid-template-columns: 72% 28%;
-  min-height: 85vh;
+  min-height: 80vh;
   background-color: ${({ theme }) => theme.colors.background.primary};
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid #e4e3de;
+  border-bottom: 1px solid #e4e3de;
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
@@ -23,7 +23,7 @@ export const LeftColumn = styled.div`
 
   ${({ theme }) => theme.media.tablet} {
     padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    border-bottom: 1px solid #e4e3de;
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -36,7 +36,7 @@ export const RightColumn = styled.div`
   flex-direction: column;
   justify-content: flex-end;
   padding: 120px 80px;
-  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 1px solid #e4e3de;
 
   ${({ theme }) => theme.media.tablet} {
     border-left: none;
@@ -56,7 +56,7 @@ export const Eyebrow = styled.span`
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 48px;
+  margin-bottom: 36px;
 `;
 
 export const Title = styled.h1`

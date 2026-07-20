@@ -160,8 +160,8 @@ export const GridCell = styled.div<{ $featured?: boolean }>`
   padding: 32px;
   grid-column: ${({ $featured }) => ($featured ? 'span 2' : 'span 1')};
   display: flex;
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-right: 1px solid #e4e3de;
+  border-bottom: 1px solid #e4e3de;
 
   ${({ theme }) => theme.media.tablet} {
     grid-column: ${({ $featured }) => ($featured ? 'span 2' : 'span 1')};
@@ -172,11 +172,12 @@ export const GridCell = styled.div<{ $featured?: boolean }>`
     grid-column: span 1;
     padding: 16px;
   }
+
 `;
 
 /* ── Blog Card (The bordered gray box inside the cell) ── */
 export const BlogCard = styled(motion.article)`
-  background: ${({ theme }) => theme.colors.surfaceHover};
+  background:   #F6F4F0;
   border: 1px solid ${({ theme }) => theme.colors.borderLight};
   display: flex;
   flex-direction: column;
@@ -187,6 +188,12 @@ export const BlogCard = styled(motion.article)`
   &:hover {
     border-color: ${({ theme }) => theme.colors.text.primary};
   }
+
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    0 4px 12px rgba(0, 0, 0, 0.03),
+    0 0 0 1px rgba(0, 0, 0, 0.01); /* Super subtle bounding line to sharpen the edge */
+
 `;
 
 /* ── Card Mosaic (visual area) ── */
@@ -251,7 +258,7 @@ export const CardSummary = styled.p`
 export const CardFooter = styled.div`
   display: flex;
   align-items: stretch;
-  border-top: 1px solid ${({ theme }) => theme.colors.borderLight};
+  border-top: 1px solid #E4E3DE;
   height: 48px;
 `;
 
@@ -273,7 +280,7 @@ export const CardAuthor = styled.div`
   display: flex;
   align-items: center;
   padding: 0 16px;
-  border-left: 1px solid ${({ theme }) => theme.colors.borderLight};
+  border-left: 1px solid #E4E3DE;
 `;
 
 export const CardArrow = styled.div`
@@ -282,7 +289,7 @@ export const CardArrow = styled.div`
   align-items: center;
   justify-content: center;
   color: ${({ theme }) => theme.colors.text.primary};
-  border-left: 1px solid ${({ theme }) => theme.colors.borderLight};
+  border-left: 1px solid #E4E3DE;
   transition: all 160ms ease;
 
   ${BlogCard}:hover & {

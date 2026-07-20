@@ -15,7 +15,7 @@ export const CoreWrapper = styled.section`
 
 /* ── Individual Product Area (Stacked Layout) ── */
 export const ProductSection = styled.div`
-  max-width: 1400px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 0 40px;
   width: 100%;
@@ -30,6 +30,11 @@ export const SectionHeader = styled.div`
   display: flex;
   flex-direction: column;
   gap: 24px;
+`;
+
+export const SectionFooter = styled.div`
+  display: flex;
+  justify-content: flex-start;
 `;
 
 export const SectionTitle = styled.h2`
@@ -104,11 +109,11 @@ export const BentoGrid = styled.div<{ $middleColumns: number; $rows: number }>`
   display: grid;
   grid-template-columns:
     1fr
-    9%
+    5%
     repeat(${({ $middleColumns }) => $middleColumns}, 1fr)
-    9%
+    5%
     1fr;
-  grid-template-rows: repeat(${({ $rows }) => $rows}, minmax(240px, auto));
+  grid-template-rows: repeat(${({ $rows }) => $rows}, minmax(180px, auto));
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr 1fr;
@@ -131,7 +136,7 @@ export const GridCell = styled.div<{
   background: ${({ theme }) => theme.colors.background.primary};
   border: 1px dashed ${({ theme }) => theme.colors.border};
   margin: -1px 0 0 -1px; /* Collapses double borders with neighbours in the same zone */
-  padding: 40px;
+  padding: 32px;
   display: flex;
   flex-direction: column;
   grid-column: ${({ $col }) => $col};
@@ -248,7 +253,7 @@ export const IconBox = styled.div<{ $color: string }>`
   height: 32px;
   background: ${({ $color }) => $color};
   border-radius: 4px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,7 +261,7 @@ export const IconBox = styled.div<{ $color: string }>`
 `;
 
 export const CardTitle = styled.h3<{ $pushToBottom?: boolean }>`
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.01em;
@@ -264,7 +269,7 @@ export const CardTitle = styled.h3<{ $pushToBottom?: boolean }>`
 `;
 
 export const CardDesc = styled.p`
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;

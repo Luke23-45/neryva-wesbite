@@ -6,6 +6,7 @@ import {
   CoreWrapper,
   ProductSection,
   SectionHeader,
+  SectionFooter,
   SectionTitle,
   SectionDesc,
   CTAButton,
@@ -149,13 +150,6 @@ export function SolutionsCore() {
               </motion.div>
               <motion.div variants={fadeUp} custom={1}>
                 <SectionDesc>{product.description}</SectionDesc>
-              </motion.div>
-              <motion.div variants={fadeUp} custom={2}>
-                <Link to={product.href} style={{ textDecoration: 'none' }}>
-                  <CTAButton>
-                    {product.link_label} <ChevronRight size={16} strokeWidth={2} />
-                  </CTAButton>
-                </Link>
               </motion.div>
             </SectionHeader>
 
@@ -312,6 +306,22 @@ export function SolutionsCore() {
                 </>
               )}
             </BentoGrid>
+
+            {/* Footer / CTA */}
+            <SectionFooter
+              as={motion.div}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-50px' }}
+            >
+              <motion.div variants={fadeUp} custom={0}>
+                <Link to={product.href} style={{ textDecoration: 'none' }}>
+                  <CTAButton>
+                    {product.link_label} <ChevronRight size={16} strokeWidth={2} />
+                  </CTAButton>
+                </Link>
+              </motion.div>
+            </SectionFooter>
           </ProductSection>
         );
       })}
