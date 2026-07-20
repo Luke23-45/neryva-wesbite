@@ -54,10 +54,11 @@ export function HomeProduct() {
         >
           <BentoGrid $isDark={isDark}>
             {/* ROW 1 */}
-            
+
             {/* Col 1: High-Throughput API */}
             <BentoTile $isDark={isDark}>
-              <CornerDot $top $right $isDark={isDark} />
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="tr" $isDark={isDark} />
               <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
                 <ApiBlueprint />
               </TileIcon>
@@ -71,7 +72,8 @@ export function HomeProduct() {
 
             {/* Col 2 & 3: Enterprise Assistant (2x1) */}
             <BentoTile $colSpan={2} $isDark={isDark}>
-              <CornerDot $top $left $isDark={isDark} />
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="tr" $isDark={isDark} />
               <TileIcon $color="transparent">
                 <NeryvaLogo color="#FF5500" />
               </TileIcon>
@@ -85,7 +87,8 @@ export function HomeProduct() {
 
             {/* Col 4: Applied AI Services (1x2) */}
             <BentoTile $rowSpan={2} $isDark={isDark}>
-              <CornerDot $top $left $isDark={isDark} />
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="tr" $isDark={isDark} />
               <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
                 <Network size={24} strokeWidth={1.5} />
               </TileIcon>
@@ -98,9 +101,10 @@ export function HomeProduct() {
             </BentoTile>
 
             {/* ROW 2 */}
-            
+
             {/* Col 1: Zero Data Retention */}
             <BentoTile $isDark={isDark}>
+              <CornerDot $corner="tl" $isDark={isDark} />
               <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
                 <OnPremBlueprint />
               </TileIcon>
@@ -114,6 +118,8 @@ export function HomeProduct() {
 
             {/* Col 2: Internal Ops */}
             <BentoTile $isDark={isDark}>
+              {/* Central Diamond Junction (Replaces top-left dot) */}
+              <DiamondLabel $isDark={isDark} style={{ top: 0, left: 0, translate: '-50% -50%' }} />
               <TileIcon $color="transparent">
                 <NeryvaLogo color="#0077FF" />
               </TileIcon>
@@ -127,6 +133,7 @@ export function HomeProduct() {
 
             {/* Col 3: Customer Facing */}
             <BentoTile $isDark={isDark}>
+              <CornerDot $corner="tl" $isDark={isDark} />
               <TileIcon $color="transparent">
                 <NeryvaLogo color="#0077FF" />
               </TileIcon>
@@ -139,9 +146,11 @@ export function HomeProduct() {
             </BentoTile>
 
             {/* ROW 3 */}
-            
+
             {/* Col 1: Custom Models */}
             <BentoTile $isDark={isDark}>
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="bl" $isDark={isDark} />
               <TileIcon $color="transparent">
                 <span style={{ fontSize: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🧠</span>
               </TileIcon>
@@ -155,6 +164,8 @@ export function HomeProduct() {
 
             {/* Col 2 & 3: Secure Infrastructure (2x1) */}
             <BentoTile $colSpan={2} $isDark={isDark}>
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="bl" $isDark={isDark} />
               <TileIcon $color="transparent">
                 <NeryvaLogo color="#FF5500" />
               </TileIcon>
@@ -168,8 +179,9 @@ export function HomeProduct() {
 
             {/* Col 4: Grey Block */}
             <BentoTile $isGrey $isDark={isDark} className="hide-on-mobile">
-              <CornerDot $top $left $isDark={isDark} />
-              <DiamondLabel $isDark={isDark} style={{ top: 'auto', bottom: '-24px', left: '100%' }} />
+              <CornerDot $corner="tl" $isDark={isDark} />
+              <CornerDot $corner="tr" $isDark={isDark} />
+              <DiamondLabel $isDark={isDark} style={{ bottom: 0, right: 0, translate: '50% 50%' }} />
             </BentoTile>
           </BentoGrid>
         </motion.div>

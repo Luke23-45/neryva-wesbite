@@ -25,10 +25,6 @@ export const Inner = styled.div`
 export const BentoGrid = styled.div<{ $isDark?: boolean }>`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  /* Extremely subtle grid lines */
-  background-color: ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
-  border: 1px solid ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
   width: 100%;
   position: relative;
 
@@ -58,12 +54,16 @@ export const BentoTile = styled.div<{ $colSpan?: number; $rowSpan?: number; $isE
   flex-direction: column;
   padding: 40px;
   
+  /* Overlapping dashed borders */
+  border: 1px dashed ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border};
+  margin: -1px 0 0 -1px;
+  z-index: 1;
+  
   /* Create exact aspect ratios to maintain perfect geometry */
   aspect-ratio: ${({ $colSpan = 1, $rowSpan = 1 }) => `${$colSpan} / ${$rowSpan}`};
   
   /* Fallback min-height */
   min-height: 280px;
-  overflow: hidden;
 
   /* Premium transition */
   transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -79,6 +79,7 @@ export const BentoTile = styled.div<{ $colSpan?: number; $rowSpan?: number; $isE
   }
 
   &:hover {
+    z-index: 2;
     background-color: ${({ $isEmpty, $isGrey, $isDark }) => {
       if ($isEmpty || $isGrey) return;
       return $isDark ? 'rgba(255,255,255,0.02)' : '#FAFAFA';
@@ -102,7 +103,8 @@ export const BentoTile = styled.div<{ $colSpan?: number; $rowSpan?: number; $isE
   }
 
   ${({ theme }) => theme.media.mobile} {
-    border: 1px solid ${({ theme }) => theme.colors.borderLight};
+    border: 1px dashed ${({ theme }) => theme.colors.borderLight};
+    margin: 0;
     border-radius: 12px;
     background-color: ${({ theme }) => theme.colors.background.secondary};
   }
@@ -151,20 +153,24 @@ export const TileDescription = styled.p<{ $isDark?: boolean }>`
 `;
 
 /* PRECISE DECORATIVE ELEMENTS */
-export const CornerDot = styled.div<{ $top?: boolean; $bottom?: boolean; $left?: boolean; $right?: boolean; $isDark?: boolean }>`
+export const CornerDot = styled.div<{ $corner: 'tl' | 'tr' | 'bl' | 'br'; $isDark?: boolean }>`
   position: absolute;
-  width: 5px;
-  height: 5px;
-  background-color: ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'};
-  border-radius: 50%;
-  
-  /* Align to exactly center on the 1px grid line */
-  ${({ $top }) => $top && 'top: -3px;'}
-  ${({ $bottom }) => $bottom && 'bottom: -3px;'}
-  ${({ $left }) => $left && 'left: -3px;'}
-  ${({ $right }) => $right && 'right: -3px;'}
-  z-index: 10;
-  
+  width: 4px;
+  height: 4px;
+  background: ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.7)' : theme.colors.text.primary};
+  border-radius: 0; /* perfectly sharp small square */
+  z-index: 20;
+  pointer-events: none;
+
+  ${({ $corner }) =>
+    $corner === 'tl'
+      ? `top: 0; left: 0; transform: translate(-50%, -50%);`
+      : $corner === 'tr'
+        ? `top: 0; right: 0; transform: translate(50%, -50%);`
+        : $corner === 'bl'
+          ? `bottom: 0; left: 0; transform: translate(-50%, 50%);`
+          : `bottom: 0; right: 0; transform: translate(50%, 50%);`}
+
   ${({ theme }) => theme.media.mobile} {
     display: none;
   }
@@ -172,18 +178,22 @@ export const CornerDot = styled.div<{ $top?: boolean; $bottom?: boolean; $left?:
 
 export const DiamondLabel = styled.div<{ $isDark?: boolean }>`
   position: absolute;
-  top: -24px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
-  width: 48px;
-  height: 48px;
-  background-color: ${({ theme }) => theme.colors.background.primary};
-  border: 1px solid ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
-  z-index: 5;
-  transition: transform 0.4s ease;
+  width: 16px;
+  height: 16px;
+  background: ${({ theme, $isDark }) => $isDark ? '#1A1A1A' : '#ffffff'};
+  border: 1px dashed ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.2)' : theme.colors.border};
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* We use modern independent transform properties for easier animation */
+  rotate: 45deg;
+  transition: rotate 0.5s cubic-bezier(0.16, 1, 0.3, 1), scale 0.4s ease;
 
   &:hover {
-    transform: translateX(-50%) rotate(135deg);
+    rotate: 135deg;
+    scale: 1.1;
   }
 
   ${({ theme }) => theme.media.mobile} {
