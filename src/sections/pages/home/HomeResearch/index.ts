@@ -1,1 +1,0 @@
-export { HomeResearch } from './HomeResearch';

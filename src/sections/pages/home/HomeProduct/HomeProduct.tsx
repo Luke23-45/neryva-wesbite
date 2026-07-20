@@ -21,6 +21,25 @@ const NeryvaLogo = ({ color = "#FF4D4D" }: { color?: string }) => (
   </svg>
 );
 
+const OnPremBlueprint = () => (
+  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+    <rect x="12" y="12" width="40" height="40" stroke="currentColor" />
+    <rect x="20" y="20" width="24" height="24" stroke="currentColor" />
+    <circle cx="32" cy="32" r="4" fill="currentColor" />
+    <path d="M12 12 L20 20 M52 12 L44 20 M12 52 L20 44 M52 52 L44 44" stroke="currentColor" />
+  </svg>
+);
+
+const ApiBlueprint = () => (
+  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+    <circle cx="32" cy="32" r="28" stroke="currentColor" />
+    <circle cx="32" cy="32" r="16" stroke="currentColor" strokeDasharray="4 4" />
+    <circle cx="32" cy="32" r="4" fill="currentColor" />
+    <path d="M32 4 L32 16 M32 48 L32 60 M4 32 L16 32 M48 32 L60 32" stroke="currentColor" />
+  </svg>
+);
+
+
 export function HomeProduct() {
   const isDark = false; // Could be connected to theme later
 
@@ -36,9 +55,18 @@ export function HomeProduct() {
           <BentoGrid $isDark={isDark}>
             {/* ROW 1 */}
             
-            {/* Col 1: Empty / Decorative */}
-            <BentoTile $isEmpty $isDark={isDark} className="hide-on-mobile">
-              <DiamondLabel $isDark={isDark} style={{ top: 'auto', bottom: '-24px', left: '100%' }} />
+            {/* Col 1: High-Throughput API */}
+            <BentoTile $isDark={isDark}>
+              <CornerDot $top $right $isDark={isDark} />
+              <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
+                <ApiBlueprint />
+              </TileIcon>
+              <TileContent>
+                <TileTitle $isDark={isDark}>High-Throughput API</TileTitle>
+                <TileDescription $isDark={isDark}>
+                  Enterprise-grade rate limits with sub-millisecond routing for real-time inference.
+                </TileDescription>
+              </TileContent>
             </BentoTile>
 
             {/* Col 2 & 3: Enterprise Assistant (2x1) */}
@@ -71,10 +99,17 @@ export function HomeProduct() {
 
             {/* ROW 2 */}
             
-            {/* Col 1: Grey Block */}
-            <BentoTile $isGrey $isDark={isDark} className="hide-on-mobile">
-              <CornerDot $top $right $isDark={isDark} />
-              <CornerDot $bottom $right $isDark={isDark} />
+            {/* Col 1: Zero Data Retention */}
+            <BentoTile $isDark={isDark}>
+              <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
+                <OnPremBlueprint />
+              </TileIcon>
+              <TileContent>
+                <TileTitle $isDark={isDark}>Zero Data Retention</TileTitle>
+                <TileDescription $isDark={isDark}>
+                  Your proprietary data is never logged, stored, or used for training.
+                </TileDescription>
+              </TileContent>
             </BentoTile>
 
             {/* Col 2: Internal Ops */}
