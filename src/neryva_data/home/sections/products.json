@@ -1,0 +1,85 @@
+{
+  "products": [
+    {
+      "id": "knowledge_search",
+      "title": "Knowledge & Search",
+      "description": "Retrieval systems, semantic search, research assistants, and document intelligence platforms.",
+      "colSpan": 1,
+      "rowSpan": 1,
+      "icon": "api_blueprint",
+      "iconColor": "transparent",
+      "dots": ["tl", "tr"]
+    },
+    {
+      "id": "agent_studio",
+      "title": "Neryva Agent Studio",
+      "description": "The professional agent layer for customer-facing and internal business workflows.",
+      "colSpan": 2,
+      "rowSpan": 1,
+      "icon": "neryva_logo",
+      "iconColor": "#FF5500",
+      "dots": ["tl", "tr"]
+    },
+    {
+      "id": "domain_solutions",
+      "title": "Domain AI Solutions",
+      "description": "Applied systems in energy, engineering, clinical validation, and robotics.",
+      "colSpan": 1,
+      "rowSpan": 2,
+      "icon": "network",
+      "iconColor": "transparent",
+      "dots": ["tl", "tr"]
+    },
+    {
+      "id": "workflow_automation",
+      "title": "AI Workflow Automation",
+      "description": "AI systems that support repeatable enterprise workflows in operations, support, and finance.",
+      "colSpan": 1,
+      "rowSpan": 1,
+      "icon": "on_prem_blueprint",
+      "iconColor": "transparent",
+      "dots": ["tl"]
+    },
+    {
+      "id": "enterprise_assistants",
+      "title": "Enterprise Assistants",
+      "description": "Custom AI assistants for organizations that need professional domain-specific interfaces.",
+      "colSpan": 1,
+      "rowSpan": 1,
+      "icon": "neryva_logo",
+      "iconColor": "#0077FF",
+      "dots": [],
+      "diamond": "tl"
+    },
+    {
+      "id": "customer_resolution",
+      "title": "Customer Resolution",
+      "description": "Professional customer service bots with brand-aligned agent behavior.",
+      "colSpan": 1,
+      "rowSpan": 1,
+      "icon": "neryva_logo",
+      "iconColor": "#0077FF",
+      "dots": ["tl"]
+    },
+    {
+      "id": "ai_efficiency",
+      "title": "AI Efficiency",
+      "description": "Evaluation, inference cost analysis, latency reduction, and reliability testing.",
+      "colSpan": 1,
+      "rowSpan": 1,
+      "icon": "brain",
+      "iconColor": "transparent",
+      "dots": ["tl", "bl"]
+    },
+    {
+      "id": "ai_deployment",
+      "title": "Neryva AI Deployment",
+      "description": "The secure deployment and operations layer for enterprise AI systems.",
+      "colSpan": 2,
+      "rowSpan": 1,
+      "icon": "neryva_logo",
+      "iconColor": "#FF5500",
+      "dots": ["tl", "bl"]
+    }
+  ]
+}

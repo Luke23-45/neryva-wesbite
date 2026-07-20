@@ -12,6 +12,7 @@ import {
   CornerDot,
   DiamondLabel,
 } from './HomeProduct.styles';
+import productsData from '@neryva_data/home/sections/products.json';
 
 // Custom 'N' Logo replicating the premium Mistral 'M' style
 const NeryvaLogo = ({ color = "#FF4D4D" }: { color?: string }) => (
@@ -39,6 +40,16 @@ const ApiBlueprint = () => (
   </svg>
 );
 
+const renderIcon = (iconStr: string, color: string) => {
+  switch (iconStr) {
+    case 'api_blueprint': return <ApiBlueprint />;
+    case 'neryva_logo': return <NeryvaLogo color={color} />;
+    case 'network': return <Network size={24} strokeWidth={1.5} />;
+    case 'on_prem_blueprint': return <OnPremBlueprint />;
+    case 'brain': return <span style={{ fontSize: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🧠</span>;
+    default: return null;
+  }
+};
 
 export function HomeProduct() {
   const isDark = false; // Could be connected to theme later
@@ -53,129 +64,34 @@ export function HomeProduct() {
           style={{ width: '100%' }}
         >
           <BentoGrid $isDark={isDark}>
-            {/* ROW 1 */}
-
-            {/* Col 1: High-Throughput API */}
-            <BentoTile $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <CornerDot $corner="tr" $isDark={isDark} />
-              <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
-                <ApiBlueprint />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>High-Throughput API</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Enterprise-grade rate limits with sub-millisecond routing for real-time inference.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* Col 2 & 3: Enterprise Assistant (2x1) */}
-            <BentoTile $colSpan={2} $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <CornerDot $corner="tr" $isDark={isDark} />
-              <TileIcon $color="transparent">
-                <NeryvaLogo color="#FF5500" />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Enterprise Assistant</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  The secure AI interface for internal operations and external customer resolution.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* Col 4: Applied AI Services (1x2) */}
-            <BentoTile $rowSpan={2} $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <CornerDot $corner="tr" $isDark={isDark} />
-              <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
-                <Network size={24} strokeWidth={1.5} />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Applied AI services</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Tailored AI implementations to accelerate your business goals.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* ROW 2 */}
-
-            {/* Col 1: Zero Data Retention */}
-            <BentoTile $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <TileIcon $color="transparent" style={{ color: isDark ? '#fff' : '#000' }}>
-                <OnPremBlueprint />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Zero Data Retention</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Your proprietary data is never logged, stored, or used for training.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* Col 2: Internal Ops */}
-            <BentoTile $isDark={isDark}>
-              {/* Central Diamond Junction (Replaces top-left dot) */}
-              <DiamondLabel $isDark={isDark} style={{ top: 0, left: 0, translate: '-50% -50%' }} />
-              <TileIcon $color="transparent">
-                <NeryvaLogo color="#0077FF" />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Internal Ops</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Automate complex workflows and internal knowledge retrieval.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* Col 3: Customer Facing */}
-            <BentoTile $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <TileIcon $color="transparent">
-                <NeryvaLogo color="#0077FF" />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Customer Facing</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Resolve external inquiries with grounded execution.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* ROW 3 */}
-
-            {/* Col 1: Custom Models */}
-            <BentoTile $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <CornerDot $corner="bl" $isDark={isDark} />
-              <TileIcon $color="transparent">
-                <span style={{ fontSize: '28px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}>🧠</span>
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Custom Models</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Train and evaluate domain-specific models securely.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
-
-            {/* Col 2 & 3: Secure Infrastructure (2x1) */}
-            <BentoTile $colSpan={2} $isDark={isDark}>
-              <CornerDot $corner="tl" $isDark={isDark} />
-              <CornerDot $corner="bl" $isDark={isDark} />
-              <TileIcon $color="transparent">
-                <NeryvaLogo color="#FF5500" />
-              </TileIcon>
-              <TileContent>
-                <TileTitle $isDark={isDark}>Secure Infrastructure</TileTitle>
-                <TileDescription $isDark={isDark}>
-                  Deployed entirely within your enterprise boundary for complete data sovereignty.
-                </TileDescription>
-              </TileContent>
-            </BentoTile>
+            {productsData.products.map((product) => {
+              const needsThemeColor = ['api_blueprint', 'network', 'on_prem_blueprint'].includes(product.icon);
+              return (
+                <BentoTile 
+                  key={product.id}
+                  $colSpan={product.colSpan}
+                  $rowSpan={product.rowSpan}
+                  $isDark={isDark}
+                >
+                  {product.dots.map((corner) => (
+                    <CornerDot key={`${product.id}-${corner}`} $corner={corner as 'tl' | 'tr' | 'bl' | 'br'} $isDark={isDark} />
+                  ))}
+                  {product.diamond && (
+                    <DiamondLabel $isDark={isDark} style={{ top: 0, left: 0, translate: '-50% -50%' }} />
+                  )}
+                  <TileIcon 
+                    $color="transparent" 
+                    style={needsThemeColor ? { color: isDark ? '#fff' : '#000' } : undefined}
+                  >
+                    {renderIcon(product.icon, product.iconColor)}
+                  </TileIcon>
+                  <TileContent>
+                    <TileTitle $isDark={isDark}>{product.title}</TileTitle>
+                    <TileDescription $isDark={isDark}>{product.description}</TileDescription>
+                  </TileContent>
+                </BentoTile>
+              );
+            })}
 
             {/* Col 4: Grey Block */}
             <BentoTile $isGrey $isDark={isDark} className="hide-on-mobile">

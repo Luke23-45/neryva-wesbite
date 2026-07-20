@@ -45,41 +45,36 @@ const staggerContainer = {
   },
 };
 
-type ProgramId = 'large-language-models' | 'robotics-task-transfer' | 'clinical-ai' | 'energy-engineering-optimization';
-
-const ProgramIcons: Record<ProgramId, React.FC<{ accent: string }>> = {
-  'large-language-models': LLMIcon,
+const ProgramIcons: Record<string, React.FC<{ accent: string }>> = {
+  'language-systems': LLMIcon,
   'robotics-task-transfer': RoboticsIcon,
-  'clinical-ai': ClinicalIcon,
-  'energy-engineering-optimization': EnergyIcon,
+  'biomedical-biological-clinical-ai': ClinicalIcon,
+  'energy-systems': EnergyIcon,
+  'computational-science-engineering': EnergyIcon,
 };
 
-const SidebarIconsMap: Record<ProgramId, React.FC> = {
-  'large-language-models': SidebarLLMIcon,
+const SidebarIconsMap: Record<string, React.FC> = {
+  'language-systems': SidebarLLMIcon,
   'robotics-task-transfer': SidebarRoboticsIcon,
-  'clinical-ai': SidebarClinicalIcon,
-  'energy-engineering-optimization': SidebarEnergyIcon,
+  'biomedical-biological-clinical-ai': SidebarClinicalIcon,
+  'energy-systems': SidebarEnergyIcon,
+  'computational-science-engineering': SidebarEnergyIcon,
 };
 
 const programAccents: Record<string, string> = {
   'language-systems': '#2458D3',
   'robotics-task-transfer': '#0B7F79',
-  'clinical-ai': '#1F7A4D',
-  'energy-engineering-optimization': '#D99100',
-};
-const oldIds: Record<string, string> = {
-  'language-systems': 'large-language-models',
-  'robotics-task-transfer': 'robotics-task-transfer',
-  'clinical-ai': 'clinical-ai',
-  'energy-engineering-optimization': 'energy-engineering-optimization',
+  'biomedical-biological-clinical-ai': '#1F7A4D',
+  'energy-systems': '#D99100',
+  'computational-science-engineering': '#8E44AD',
 };
 
 export function HomePrograms() {
   const { heading, programs, footer } = {
     heading: { label: programsData.label, title: programsData.title },
     programs: programsData.items.map((item: any, i: number) => ({
-      id: oldIds[item.id] || item.id,
-      slug: oldIds[item.id] || item.id,
+      id: item.id,
+      slug: item.id,
       number: i + 1,
       accent: programAccents[item.id] || '#2458D3',
       title: item.title,
@@ -144,7 +139,7 @@ export function HomePrograms() {
           {/* Left Column: Sticky Sidebar Menu */}
           <SidebarMenu>
             {programs.map((program) => {
-              const SidebarIcon = SidebarIconsMap[program.id as ProgramId];
+              const SidebarIcon = SidebarIconsMap[program.id];
               const isActive = activeId === program.id;
 
               return (
@@ -163,7 +158,7 @@ export function HomePrograms() {
           {/* Right Column: Program Rows */}
           <ProgramsContent>
             {programs.map((program) => {
-              const IconComponent = ProgramIcons[program.id as ProgramId];
+              const IconComponent = ProgramIcons[program.id];
               return (
                 <ProgramRow
                   key={program.id}
