@@ -1,7 +1,0 @@
-[
-  { "id": 1, "statement": "Useful computation matters more than raw scale. We study how to make AI systems more efficient, not just larger." },
-  { "id": 2, "statement": "Claims should be tied to evidence. We focus on problems where progress can be demonstrated and measured." },
-  { "id": 3, "statement": "Deployment constraints should shape research questions early. Real-world limits are not afterthoughts." },
-  { "id": 4, "statement": "Research should be legible enough for others to build on. Clarity is not optional." },
-  { "id": 5, "statement": "Small teams should be honest about scope. We would rather do fewer things well than many things poorly." }
-]
