@@ -1,1 +1,0 @@
-export { HomeContact } from './HomeContact';
