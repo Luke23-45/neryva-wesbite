@@ -16,7 +16,7 @@ import {
   AppDesc,
 } from './EnterpriseUseCases.styles';
 
-import { EnterpriseIcons } from '@assets/visual/products/enterprise/EnterpriseCapabilityIcons';
+import { EnterpriseIcons } from '@/assets/visual/products/enterprise/icon/EnterpriseCapabilityIcons';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
