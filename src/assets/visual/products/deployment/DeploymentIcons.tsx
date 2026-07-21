@@ -25,61 +25,47 @@ import {
 } from '@assets/visual/products/enterprise/EnterpriseCapabilityIcons';
 
 type IconProps = SVGProps<SVGSVGElement>;
+type IconFactory = React.FC<IconProps>;
 
-const LUCIDE_STYLE = {
-  width: 22,
-  height: 22,
-  strokeWidth: 1.5,
-  'aria-hidden': true,
-} as const;
+const lucideIcon = (C: React.ComponentType<{ size?: number; strokeWidth?: number }>): IconFactory =>
+  (() => <C size={22} strokeWidth={1.5} />) as unknown as IconFactory;
 
-function LucideIcon(Component: React.ComponentType<{ size?: number; strokeWidth?: number }>) {
-  return function LucideIconRender(props: IconProps) {
-    return <Component {...LUCIDE_STYLE} {...props} />;
-  };
-}
+const pixelIcon = (C: React.FC<IconProps>): IconFactory =>
+  (props: IconProps) => <C width={22} height={22} {...props} />;
 
-function PixelIcon(Component: React.ComponentType<IconProps>) {
-  return function PixelIconRender(props: IconProps) {
-    return <Component width={22} height={22} {...props} />;
-  };
-}
-
-export const DeploymentUseCaseIcons: Record<string, React.FC<IconProps>> = {
-  cloudcog: LucideIcon(CloudCogLucide),
-  server: LucideIcon(ServerLucide),
-  cpu: LucideIcon(CpuLucide),
-  workflow: LucideIcon(WorkflowLucide),
+export const DeploymentUseCaseIcons: Record<string, IconFactory> = {
+  cloudcog: lucideIcon(CloudCogLucide),
+  server: lucideIcon(ServerLucide),
+  cpu: lucideIcon(CpuLucide),
+  workflow: lucideIcon(WorkflowLucide),
 };
 
-export const DeploymentCapabilityIcons: Record<string, React.FC<IconProps>> = {
-  cpu: LucideIcon(CpuLucide),
-  gauge: LucideIcon(GaugeLucide),
-  activity: LucideIcon(ActivityLucide),
-  shieldcheck: LucideIcon(ShieldCheckLucide),
-  filecheck: LucideIcon(FileCheckLucide),
-  workflow: LucideIcon(WorkflowLucide),
-  managedops: PixelIcon(WorkflowAgentIcon),
+export const DeploymentCapabilityIcons: Record<string, IconFactory> = {
+  cpu: lucideIcon(CpuLucide),
+  gauge: lucideIcon(GaugeLucide),
+  activity: lucideIcon(ActivityLucide),
+  shieldcheck: lucideIcon(ShieldCheckLucide),
+  filecheck: lucideIcon(FileCheckLucide),
+  workflow: lucideIcon(WorkflowLucide),
+  harddrivedownload: lucideIcon(HardDriveDownloadLucide),
+  keyround: lucideIcon(KeyRoundLucide),
+  headphones: lucideIcon(HeadphonesLucide),
+  managedops: pixelIcon(WorkflowAgentIcon),
 
-  harddrivedownload: LucideIcon(HardDriveDownloadLucide),
-  workflowspecialist: LucideIcon(HeadphonesLucide),
-  keyround: LucideIcon(KeyRoundLucide),
-  headphones: LucideIcon(HeadphonesLucide),
+  brandvoice: pixelIcon(BrandVoiceIcon),
+  knowledge: pixelIcon(KnowledgeIcon),
+  guardrails: pixelIcon(GuardrailsIcon),
+  workflowgear: pixelIcon(WorkflowIcon),
+  headset: pixelIcon(HeadsetIcon),
+  people: pixelIcon(PeopleIcon),
+  badge: pixelIcon(BadgeIcon),
+  workflowagent: pixelIcon(WorkflowAgentIcon),
 
-  brandvoice: PixelIcon(BrandVoiceIcon),
-  knowledge: PixelIcon(KnowledgeIcon),
-  guardrails: PixelIcon(GuardrailsIcon),
-  workflowgear: PixelIcon(WorkflowIcon),
-  headset: PixelIcon(HeadsetIcon),
-  people: PixelIcon(PeopleIcon),
-  badge: PixelIcon(BadgeIcon),
-  workflowagent: PixelIcon(WorkflowAgentIcon),
-
-  palette: PixelIcon(BrandVoiceIcon),
-  database: PixelIcon(KnowledgeIcon),
-  shieldalert: PixelIcon(GuardrailsIcon),
-  users: PixelIcon(PeopleIcon),
-  badgecheck: PixelIcon(BadgeIcon),
-  settings2: PixelIcon(WorkflowIcon),
-  'workflow-agent': PixelIcon(WorkflowAgentIcon),
+  palette: pixelIcon(BrandVoiceIcon),
+  database: pixelIcon(KnowledgeIcon),
+  shieldalert: pixelIcon(GuardrailsIcon),
+  users: pixelIcon(PeopleIcon),
+  badgecheck: pixelIcon(BadgeIcon),
+  settings2: pixelIcon(WorkflowIcon),
+  'workflow-agent': pixelIcon(WorkflowAgentIcon),
 };

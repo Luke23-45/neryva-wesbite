@@ -1,8 +1,8 @@
 import { PageHead } from '@components/common/PageHead';
-import { DeploymentHero } from '@/sections/pages/products/deployment/DeploymentHero';
-import { DeploymentTypes } from '@/sections/pages/products/deployment/DeploymentTypes';
-import { DeploymentCapabilities } from '@/sections/pages/products/deployment/DeploymentCapabilities';
-import { DeploymentPipeline } from '@/sections/pages/products/deployment/DeploymentPipeline';
+import { DeploymentHero } from '@/sections/pages/products/deployment_temp/DeploymentHero';
+import { DeploymentUseCases } from '@/sections/pages/products/deployment_temp/DeploymentUseCases';
+import { DeploymentCapabilities } from '@/sections/pages/products/deployment_temp/DeploymentCapabilities';
+import { DeploymentPipeline } from '@/sections/pages/products/deployment_temp/DeploymentPipeline';
 import heroData from '@neryva_data/products/deployment/section1_hero.json';
 
 export default function AiEfficiencyDeploymentPage() {
@@ -14,7 +14,7 @@ export default function AiEfficiencyDeploymentPage() {
         canonicalPath="/products/ai-efficiency-deployment"
       />
       <DeploymentHero />
-      <DeploymentTypes />
+      <DeploymentUseCases />
       <DeploymentCapabilities />
       <DeploymentPipeline />
     </>
