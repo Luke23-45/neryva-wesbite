@@ -1,0 +1,121 @@
+{
+    "columns": [
+        {
+            "title": "Products",
+            "links": [
+                {
+                    "label": "Deployment Cloud",
+                    "href": "/products/ai-efficiency-deployment"
+                },
+                {
+                    "label": "Agent Studio",
+                    "href": "/products/enterprise-ai-assistant"
+                },
+                {
+                    "label": "Hardware Enclaves",
+                    "href": "/products/enclaves"
+                },
+                {
+                    "label": "Model Optimization",
+                    "href": "/products/optimization"
+                },
+                {
+                    "label": "Edge Compute",
+                    "href": "/products/compute"
+                },
+                {
+                    "label": "Pricing",
+                    "href": "/pricing"
+                }
+            ]
+        },
+        {
+            "title": "Solutions",
+            "links": [
+                {
+                    "label": "Delivery methodology",
+                    "href": "/solutions/delivery"
+                },
+                {
+                    "label": "Custom fine-tuning",
+                    "href": "/solutions/customization"
+                },
+                {
+                    "label": "Secure data ingestion",
+                    "href": "/solutions/data"
+                },
+                {
+                    "label": "Diagnostic analytics",
+                    "href": "/solutions/diagnostics"
+                },
+                {
+                    "label": "Neryva for healthcare",
+                    "href": "/industries/healthcare"
+                },
+                {
+                    "label": "Neryva for finance",
+                    "href": "/industries/finance"
+                },
+                {
+                    "label": "Neryva for advanced manufacturing",
+                    "href": "/industries/manufacturing"
+                }
+            ]
+        },
+        {
+            "title": "Why Neryva",
+            "description": "",
+            "links": [
+                {
+                    "label": "About the lab",
+                    "href": "/about"
+                },
+                {
+                    "label": "Careers",
+                    "href": "/careers"
+                },
+                {
+                    "label": "Partners",
+                    "href": "/partners"
+                },
+                {
+                    "label": "Case studies",
+                    "href": "/customers"
+                },
+                {
+                    "label": "Published research",
+                    "href": "/research"
+                },
+                {
+                    "label": "Brand architecture",
+                    "href": "/brand"
+                }
+            ]
+        },
+        {
+            "title": "Legal",
+            "links": [
+                {
+                    "label": "Terms of Service",
+                    "href": "/legal/terms"
+                },
+                {
+                    "label": "Privacy Policy",
+                    "href": "/legal/privacy"
+                },
+                {
+                    "label": "Privacy choices",
+                    "href": "/legal/privacy-choices"
+                },
+                {
+                    "label": "Data processing agreement",
+                    "href": "/legal/dpa"
+                },
+                {
+                    "label": "Legal notice",
+                    "href": "/legal/notice"
+                }
+            ]
+        }
+    ]
+}

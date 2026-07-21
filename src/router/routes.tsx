@@ -13,8 +13,6 @@ import ContactPage from '@pages/company/contact/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
 import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
 import SolutionsPage from '@pages/solutions/SolutionsPage';
-import NotFoundPage from '@pages/_shared/NotFoundPage';
-
 // ─── Routes ────────────────────────────────────────────
 
 export const indexRoute = createRoute({
@@ -85,12 +83,6 @@ export const solutionsRoute = createRoute({
   component: SolutionsPage,
 });
 
-export const notFoundRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '*',
-  component: NotFoundPage,
-});
-
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -105,5 +97,4 @@ export const routeDefinitions = [
   enterpriseAiAssistantRoute,
   aiEfficiencyDeploymentRoute,
   solutionsRoute,
-  notFoundRoute,
 ];

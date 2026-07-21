@@ -1,1 +1,0 @@
-export { NotFoundHero } from './NotFoundHero';
