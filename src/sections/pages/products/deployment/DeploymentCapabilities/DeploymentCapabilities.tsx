@@ -1,104 +1,77 @@
 import { motion } from 'framer-motion';
-import { LockKeyhole, Network, Zap, LineChart } from 'lucide-react';
-import { Container } from '@/sections/common/layout/Container';
+import capsData from '@neryva_data/products/deployment/capabilities.json';
 import {
-  CapabilitiesSection,
-  HeaderWrapper,
-  Subtext,
-  SectionHeading,
-  SectionDescription,
-  BentoGrid,
-  BentoCard,
-  CardHeader,
-  IconContainer,
-  CardTitle,
-  CardBody,
+  DeploymentCapabilitiesSection,
+  DeploymentCapabilitiesInnerContainer,
+  DeploymentCapabilitiesAppsHeader,
+  DeploymentCapabilitiesSectionHeading,
+  DeploymentCapabilitiesAppsGrid,
+  DeploymentCapabilitiesAppCell,
+  DeploymentCapabilitiesCellIcon,
+  DeploymentCapabilitiesCellTitle,
+  DeploymentCapabilitiesCellDesc,
 } from './DeploymentCapabilities.styles';
 
-const capabilities = [
-  {
-    id: 'secure-provisioning',
-    title: 'Secure Provisioning',
-    description: 'Set up the environment needed for controlled production use. We manage identity, access control, network segmentation, and baseline hardening to ensure secure execution.',
-    icon: LockKeyhole,
-    colorType: 'emerald' as const,
-    highlight: false,
-  },
-  {
-    id: 'model-serving',
-    title: 'Model Serving & Routing',
-    description: 'Put the model into a usable production interface. This includes API exposure, load balancing, request routing, and robust fallback behaviors for critical operations.',
-    icon: Network,
-    colorType: 'azure' as const,
-    highlight: false,
-  },
-  {
-    id: 'performance',
-    title: 'Performance Optimization',
-    description: 'Improve practical efficiency with latency reduction, throughput tuning, batching strategies, and model quantization tailored to your computational limits.',
-    icon: Zap,
-    colorType: 'amethyst' as const,
-    highlight: false,
-  },
-  {
-    id: 'governance',
-    title: 'Governance & Reliability',
-    description: 'Maintain visibility and control over time. Implement uptime monitoring, structured rollback planning, comprehensive audit logs, and clear operational handoff documentation.',
-    icon: LineChart,
-    colorType: 'lilac' as const,
-    highlight: false,
-  },
-];
+import { DeploymentCapabilityIcons } from '@assets/visual/products/deployment/DeploymentIcons';
+
+const premiumEase = [0.16, 1, 0.3, 1] as const;
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (custom: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.8,
+      ease: premiumEase,
+      delay: custom * 0.1,
+    },
+  }),
+};
 
 export function DeploymentCapabilities() {
   return (
-    <CapabilitiesSection>
-      <Container>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+    <DeploymentCapabilitiesSection>
+      <DeploymentCapabilitiesInnerContainer>
+        <DeploymentCapabilitiesAppsHeader
+          as={motion.div}
+          initial="hidden"
+          whileInView="visible"
           viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <HeaderWrapper>
-            <Subtext>The Secure Runtime Foundation</Subtext>
-            <SectionHeading>Engineering Core Service Areas</SectionHeading>
-            <SectionDescription>
-              We deliver the tangible structure needed to run an AI system in production, ensuring it is secure, fast, and continuously monitored.
-            </SectionDescription>
-          </HeaderWrapper>
-        </motion.div>
+          <motion.div variants={fadeUp} custom={1}>
+            <DeploymentCapabilitiesSectionHeading>{capsData.header.title}</DeploymentCapabilitiesSectionHeading>
+          </motion.div>
+        </DeploymentCapabilitiesAppsHeader>
 
-        <BentoGrid>
-          {capabilities.map((cap, index) => {
-            const Icon = cap.icon;
+        <DeploymentCapabilitiesAppsGrid
+          as={motion.div}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+        >
+          {capsData.items.map((item, i) => {
+            const IconComponent = DeploymentCapabilityIcons[item.icon.toLowerCase()];
+
             return (
-              <motion.div
-                key={cap.id}
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{
-                  duration: 0.5,
-                  ease: [0.16, 1, 0.3, 1],
-                  delay: index * 0.1, // Stagger effect
-                }}
-                style={{ height: '100%' }}
+              <DeploymentCapabilitiesAppCell
+                key={item.title}
+                as={motion.div}
+                variants={fadeUp}
+                custom={3 + i}
               >
-                <BentoCard $highlight={cap.highlight}>
-                  <CardHeader>
-                    <IconContainer $colorType={cap.colorType}>
-                      <Icon size={24} strokeWidth={1.5} />
-                    </IconContainer>
-                    <CardTitle>{cap.title}</CardTitle>
-                  </CardHeader>
-                  <CardBody>{cap.description}</CardBody>
-                </BentoCard>
-              </motion.div>
+                <DeploymentCapabilitiesCellIcon>
+                  {IconComponent && <IconComponent />}
+                </DeploymentCapabilitiesCellIcon>
+
+                <DeploymentCapabilitiesCellTitle>{item.title}</DeploymentCapabilitiesCellTitle>
+
+                <DeploymentCapabilitiesCellDesc>{item.description}</DeploymentCapabilitiesCellDesc>
+              </DeploymentCapabilitiesAppCell>
             );
           })}
-        </BentoGrid>
-      </Container>
-    </CapabilitiesSection>
+        </DeploymentCapabilitiesAppsGrid>
+      </DeploymentCapabilitiesInnerContainer>
+    </DeploymentCapabilitiesSection>
   );
 }

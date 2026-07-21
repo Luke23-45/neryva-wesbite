@@ -1,0 +1,35 @@
+{
+  "header": {
+    "title": "How you can deploy."
+  },
+  "items": [
+    {
+      "id": "cloud-inference",
+      "icon": "CloudCog",
+      "title": "Cloud Inference",
+      "description": "Serve frontier models from managed GPU clusters with autoscaling, sub-second cold starts, and pay-per-use economics.",
+      "layoutConfig": "1 / 1 / 3 / 2"
+    },
+    {
+      "id": "private-vpc",
+      "icon": "Server",
+      "title": "Private VPC Deployment",
+      "description": "Run models inside your own cloud account. Your data never leaves your perimeter, your security team keeps full visibility.",
+      "layoutConfig": "1 / 2 / 2 / 4"
+    },
+    {
+      "id": "edge-deployment",
+      "icon": "Cpu",
+      "title": "Edge & On-Premise",
+      "description": "Quantized and accelerated runtimes for low-latency inference at the edge, on ruggedized hardware, or fully air-gapped.",
+      "layoutConfig": "2 / 2 / 3 / 3"
+    },
+    {
+      "id": "batch-async",
+      "icon": "Workflow",
+      "title": "Batch & Async Pipelines",
+      "description": "Schedule long-running jobs, evaluations, and bulk inference behind throughput-tuned queues with retry, dedup, and resume.",
+      "layoutConfig": "2 / 3 / 3 / 4"
+    }
+  ]
+}

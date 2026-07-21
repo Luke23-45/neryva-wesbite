@@ -12,30 +12,6 @@ export const FlexContainer = styled.div`
   }
 `;
 
-export const HeaderBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  margin-top: 20px;
-  margin-bottom: 40px;
-
-`;
-
-export const PipelineTitle = styled.h2`
-
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 48px;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0;
-
-  ${({ theme }) => theme.media.mobile} {
-    font-size: 40px;
-  }
-`;
-
 export const Sidebar = styled.nav`
   width: 240px;
   flex-shrink: 0;
@@ -237,7 +213,6 @@ export const VisualBlock = styled.div`
 
   /* Mobile: tighter grid, slightly faster perception */
   ${({ theme }) => theme.media.mobile} {
-    /* Reduce ambient gradient intensity on small screens for legibility */
     background-image:
       radial-gradient(ellipse 80% 60% at 18% 8%, rgba(192, 132, 252, 0.06), transparent 60%),
       radial-gradient(ellipse 80% 60% at 88% 96%, rgba(37, 99, 235, 0.05), transparent 65%);
@@ -261,15 +236,11 @@ export const VisualBlock = styled.div`
     }
   }
 
-  /* Slow saturation/sweep of the ambient light only — never a pulse. */
   @keyframes visual-block-breathe {
     0%, 100% { filter: saturate(1) brightness(1); }
     50%      { filter: saturate(1.06) brightness(1.015); }
   }
 
-  /* Drift the grid by exactly one major tile (80px) so the loop point
-     is invisible. background-position is GPU-composited and repaints
-     a no-op transform — far cheaper than animating transform itself. */
   @keyframes visual-grid-drift {
     from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
     to   { background-position: -80px -80px, -80px 0, 0 -80px, -40px -40px, -40px 0; }
@@ -316,9 +287,6 @@ export const VisualCaption = styled.div`
 `;
 
 export const VisualImage = styled.img`
-  /* Displayed at its NATURAL aspect ratio, never cropped or distorted.
-     width auto + max-width 100% + max-height 100% lets it fit perfectly
-     within the 16:10 frame while preserving the artwork's proportions. */
   display: block;
   max-width: 100%;
   max-height: 100%;

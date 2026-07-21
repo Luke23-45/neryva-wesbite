@@ -4,8 +4,16 @@ import { motion } from 'framer-motion';
 import { useUiStore } from '@store/uiStore';
 import { Container } from '@/sections/common/layout/Container';
 import { Section } from '@/sections/common/layout/Section';
+import {
+  CloudCog as CloudCogLucide,
+  Server as ServerLucide,
+  KeyRound as KeyRoundLucide,
+  Gauge as GaugeLucide,
+  Activity as ActivityLucide,
+  FileCheck as FileCheckLucide,
+  Headphones as HeadphonesLucide,
+} from 'lucide-react';
 
-// Importing the newly mapped 7-stage Neryva AI Deployment data
 import section1 from '@neryva_data/products/deployment/section1.json';
 import section2 from '@neryva_data/products/deployment/section2.json';
 import section3 from '@neryva_data/products/deployment/section3.json';
@@ -14,49 +22,64 @@ import section5 from '@neryva_data/products/deployment/section5.json';
 import section6 from '@neryva_data/products/deployment/section6.json';
 import section7 from '@neryva_data/products/deployment/section7.json';
 
-// Import images statically
-import imgDeploymentSection1 from '@assets/page/product/deployment/deployment_pipeline_section1.png';
-import imgDeploymentSection2 from '@assets/page/product/deployment/deployment_pipeline_section2.png';
-import imgDeploymentSection3 from '@assets/page/product/deployment/deployment_pipeline_section3.png';
-import imgDeploymentSection4 from '@assets/page/product/deployment/deployment_pipeline_section4.png';
-import imgDeploymentSection5 from '@assets/page/product/deployment/deployment_pipeline_section5.png';
-import imgDeploymentSection6 from '@assets/page/product/deployment/deployment_pipeline_section6.png';
-import imgDeploymentSection7 from '@assets/page/product/deployment/deployment_pipeline_section7.png';
+import imgSection1 from '@assets/page/product/deployment/deployment_pipeline_section1.png';
+import imgSection2 from '@assets/page/product/deployment/deployment_pipeline_section2.png';
+import imgSection3 from '@assets/page/product/deployment/deployment_pipeline_section3.png';
+import imgSection4 from '@assets/page/product/deployment/deployment_pipeline_section4.png';
+import imgSection5 from '@assets/page/product/deployment/deployment_pipeline_section5.png';
+import imgSection6 from '@assets/page/product/deployment/deployment_pipeline_section6.png';
+import imgSection7 from '@assets/page/product/deployment/deployment_pipeline_section7.png';
 
 const imageMapping: Record<string, string> = {
-  'deployment_pipeline_section1.png': imgDeploymentSection1,
-  'deployment_pipeline_section2.png': imgDeploymentSection2,
-  'deployment_pipeline_section3.png': imgDeploymentSection3,
-  'deployment_pipeline_section4.png': imgDeploymentSection4,
-  'deployment_pipeline_section5.png': imgDeploymentSection5,
-  'deployment_pipeline_section6.png': imgDeploymentSection6,
-  'deployment_pipeline_section7.png': imgDeploymentSection7,
+  deployment_pipeline_section1: imgSection1,
+  deployment_pipeline_section2: imgSection2,
+  deployment_pipeline_section3: imgSection3,
+  deployment_pipeline_section4: imgSection4,
+  deployment_pipeline_section5: imgSection5,
+  deployment_pipeline_section6: imgSection6,
+  deployment_pipeline_section7: imgSection7,
 };
 
 import {
-  FlexContainer,
-  Sidebar,
-  SidebarItem,
-  SidebarItemIcon,
-  SidebarItemLabel,
-  Panel,
-  PipelineSectionStyled,
-  SectionTitle,
-  VisualBlock,
-  VisualImageFrame,
-  VisualImage,
-  VisualCaption,
-  VisualTypeLabel,
-  VisualDescription,
-  FeatureGrid,
-  FeatureCard,
-  FeatureTitle,
-  FeatureDescription,
+  DeploymentPipelineFlexContainer,
+  DeploymentPipelineSidebar,
+  DeploymentPipelineSidebarItem,
+  DeploymentPipelineSidebarItemIcon,
+  DeploymentPipelineSidebarItemLabel,
+  DeploymentPipelinePanel,
+  DeploymentPipelineSection,
+  DeploymentPipelineSectionTitle,
+  DeploymentPipelineVisualBlock,
+  DeploymentPipelineVisualImageFrame,
+  DeploymentPipelineVisualImage,
+  DeploymentPipelineVisualCaption,
+  DeploymentPipelineVisualTypeLabel,
+  DeploymentPipelineVisualDescription,
+  DeploymentPipelineFeatureGrid,
+  DeploymentPipelineFeatureCard,
+  DeploymentPipelineFeatureTitle,
+  DeploymentPipelineFeatureDescription,
+  DeploymentPipelineHeaderBlock,
+  DeploymentPipelineTitle,
 } from './DeploymentPipeline.styles';
 
 import { DeploymentStepIcons } from '@assets/visual/products/PipelineStepIcons';
 
-// Strict typing for our data schema
+const LUCIDE_STYLE = { width: 18, height: 18, strokeWidth: 1.5, 'aria-hidden': true } as const;
+
+const LucidePipelineFallback: Record<string, React.FC> = {
+  architecture: (props: React.SVGProps<SVGSVGElement>) => <CloudCogLucide {...LUCIDE_STYLE} {...props} />,
+  provisioning: (props: React.SVGProps<SVGSVGElement>) => <KeyRoundLucide {...LUCIDE_STYLE} {...props} />,
+  serving: (props: React.SVGProps<SVGSVGElement>) => <ServerLucide {...LUCIDE_STYLE} {...props} />,
+  performance: (props: React.SVGProps<SVGSVGElement>) => <GaugeLucide {...LUCIDE_STYLE} {...props} />,
+  monitoring: (props: React.SVGProps<SVGSVGElement>) => <ActivityLucide {...LUCIDE_STYLE} {...props} />,
+  governance: (props: React.SVGProps<SVGSVGElement>) => <FileCheckLucide {...LUCIDE_STYLE} {...props} />,
+  support: (props: React.SVGProps<SVGSVGElement>) => <HeadphonesLucide {...LUCIDE_STYLE} {...props} />,
+};
+
+const resolveStepIcon = (id: string): React.FC | undefined =>
+  DeploymentStepIcons[id] ?? LucidePipelineFallback[id];
+
 interface Feature {
   title: string;
   description: string;
@@ -74,7 +97,6 @@ interface SectionData {
   features: Feature[];
 }
 
-// Consolidating our JSON imports into the pipeline array
 const sections: SectionData[] = [
   section1 as SectionData,
   section2 as SectionData,
@@ -85,18 +107,22 @@ const sections: SectionData[] = [
   section7 as SectionData,
 ];
 
+const resolveVisualImage = (imageKey?: string): string | undefined => {
+  if (!imageKey) return undefined;
+  const base = imageKey.replace(/\.png$/i, '');
+  return imageMapping[base];
+};
+
 export function DeploymentPipeline() {
   const theme = useTheme();
   const { setHeaderTheme } = useUiStore();
   const [activeId, setActiveId] = useState(sections[0].id);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
-  // Force light theme for this clean, structural design
   useEffect(() => {
     setHeaderTheme('light');
   }, [setHeaderTheme]);
 
-  // Intersection Observer to drive the Sticky Navigation state
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -107,7 +133,6 @@ export function DeploymentPipeline() {
           }
         }
       },
-      // Offset accounts for the 120px sticky top spacing to trigger accurately
       { threshold: 0.2, rootMargin: '-120px 0px -60% 0px' }
     );
 
@@ -118,7 +143,6 @@ export function DeploymentPipeline() {
     return () => observer.disconnect();
   }, []);
 
-  // Smooth scroll handler for sidebar clicks
   const scrollTo = (id: string) => {
     const element = sectionRefs.current.get(id);
     if (element) {
@@ -126,108 +150,111 @@ export function DeploymentPipeline() {
     }
   };
 
-  // Strip leading "N. " index prefix (e.g. "1. Business scope" -> "Business scope")
-  // so the sidebar reads alongside the new premium step icons.
-  const stripStepPrefix = (label: string) => label.replace(/^\s*\d+\.\s*/, '');
-
   return (
     <Section
       paddingYTop="none"
       paddingYBottom="lg"
-      background={theme.colors.background.secondary} // Soft grey background to make the white grid pop
+      background={theme.colors.background.secondary}
     >
       <Container variant="wide">
-        <FlexContainer>
-          {/* LEFT: STICKY NAV */}
-          <Sidebar>
+        <DeploymentPipelineHeaderBlock
+          as={motion.div}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <DeploymentPipelineTitle>The AI Deployment Pipeline</DeploymentPipelineTitle>
+        </DeploymentPipelineHeaderBlock>
+
+        <DeploymentPipelineFlexContainer>
+          <DeploymentPipelineSidebar>
             {sections.map((section) => {
-              const StepIcon = DeploymentStepIcons[section.id];
+              const StepIcon = resolveStepIcon(section.id);
               const isActive = section.id === activeId;
               return (
-                <SidebarItem
+                <DeploymentPipelineSidebarItem
                   key={section.id}
                   $active={isActive}
                   onClick={() => scrollTo(section.id)}
                   aria-current={isActive ? 'step' : undefined}
                 >
                   {StepIcon && (
-                    <SidebarItemIcon $active={isActive}>
+                    <DeploymentPipelineSidebarItemIcon $active={isActive}>
                       <StepIcon />
-                    </SidebarItemIcon>
+                    </DeploymentPipelineSidebarItemIcon>
                   )}
-                  <SidebarItemLabel>{stripStepPrefix(section.sidebarLabel)}</SidebarItemLabel>
-                </SidebarItem>
+                  <DeploymentPipelineSidebarItemLabel>{section.sidebarLabel}</DeploymentPipelineSidebarItemLabel>
+                </DeploymentPipelineSidebarItem>
               );
             })}
-          </Sidebar>
+          </DeploymentPipelineSidebar>
 
-          {/* RIGHT: SCROLLING CONTENT GRID */}
-          <Panel>
-            {sections.map((section) => (
-              <PipelineSectionStyled
-                key={section.id}
-                id={`deployment-pipeline-${section.id}`}
-                data-section-id={section.id}
-                ref={(el: HTMLElement | null) => {
-                  if (el) sectionRefs.current.set(section.id, el);
-                  else sectionRefs.current.delete(section.id);
-                }}
-                as={motion.section}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-50px' }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} // Apple-esque spring-like ease
-              >
-                {/* Row 1: Strict Header */}
-                <SectionTitle>{section.title}</SectionTitle>
+          <DeploymentPipelinePanel>
+            {sections.map((section) => {
+              const imageSrc = resolveVisualImage(section.visual.image);
+              return (
+                <DeploymentPipelineSection
+                  key={section.id}
+                  id={`neryva-deployment-pipeline-${section.id}`}
+                  data-section-id={section.id}
+                  ref={(el: HTMLElement | null) => {
+                    if (el) sectionRefs.current.set(section.id, el);
+                    else sectionRefs.current.delete(section.id);
+                  }}
+                  as={motion.section}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <DeploymentPipelineSectionTitle>{section.title}</DeploymentPipelineSectionTitle>
 
-                {/* Row 2: Visual Diagram Area */}
-                <VisualBlock>
-                  {section.visual.image && imageMapping[section.visual.image] ? (
-                    <VisualImageFrame>
-                      <VisualImage
-                        src={imageMapping[section.visual.image]}
-                        alt={section.visual.description}
-                        as={motion.img}
-                        initial={{ opacity: 0, scale: 1.05 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8 }}
-                      />
-                    </VisualImageFrame>
-                  ) : (
-                    <VisualCaption>
-                      <VisualTypeLabel>{section.visual.type}</VisualTypeLabel>
-                      <VisualDescription>{section.visual.description}</VisualDescription>
-                    </VisualCaption>
-                  )}
-                </VisualBlock>
+                  <DeploymentPipelineVisualBlock>
+                    {imageSrc ? (
+                      <DeploymentPipelineVisualImageFrame>
+                        <DeploymentPipelineVisualImage
+                          src={imageSrc}
+                          alt={section.visual.description}
+                          as={motion.img}
+                          initial={{ opacity: 0, scale: 1.05 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.8 }}
+                        />
+                      </DeploymentPipelineVisualImageFrame>
+                    ) : (
+                      <DeploymentPipelineVisualCaption>
+                        <DeploymentPipelineVisualTypeLabel>{section.visual.type}</DeploymentPipelineVisualTypeLabel>
+                        <DeploymentPipelineVisualDescription>{section.visual.description}</DeploymentPipelineVisualDescription>
+                      </DeploymentPipelineVisualCaption>
+                    )}
+                  </DeploymentPipelineVisualBlock>
 
-                {/* Row 3: 3-Column Feature Grid */}
-                <FeatureGrid>
-                  {section.features.map((feature, featureIndex) => (
-                    // This motion.div acts as the direct column wrapper targeted by our > div CSS
-                    <motion.div
-                      key={feature.title}
-                      initial={{ opacity: 0, y: 15 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{
-                        duration: 0.5,
-                        ease: [0.16, 1, 0.3, 1],
-                        delay: featureIndex * 0.1, // Staggered fade in
-                      }}
-                    >
-                      <FeatureCard>
-                        <FeatureTitle>{feature.title}</FeatureTitle>
-                        <FeatureDescription>{feature.description}</FeatureDescription>
-                      </FeatureCard>
-                    </motion.div>
-                  ))}
-                </FeatureGrid>
-              </PipelineSectionStyled>
-            ))}
-          </Panel>
-        </FlexContainer>
+                  <DeploymentPipelineFeatureGrid>
+                    {section.features.map((feature, featureIndex) => (
+                      <motion.div
+                        key={feature.title}
+                        initial={{ opacity: 0, y: 15 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{
+                          duration: 0.5,
+                          ease: [0.16, 1, 0.3, 1],
+                          delay: featureIndex * 0.1,
+                        }}
+                      >
+                        <DeploymentPipelineFeatureCard>
+                          <DeploymentPipelineFeatureTitle>{feature.title}</DeploymentPipelineFeatureTitle>
+                          <DeploymentPipelineFeatureDescription>{feature.description}</DeploymentPipelineFeatureDescription>
+                        </DeploymentPipelineFeatureCard>
+                      </motion.div>
+                    ))}
+                  </DeploymentPipelineFeatureGrid>
+                </DeploymentPipelineSection>
+              );
+            })}
+          </DeploymentPipelinePanel>
+        </DeploymentPipelineFlexContainer>
       </Container>
     </Section>
   );

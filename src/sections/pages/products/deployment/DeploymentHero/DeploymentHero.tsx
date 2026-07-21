@@ -1,29 +1,38 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import heroData from '@neryva_data/products/deployment/section1_hero.json';
 import { DeploymentHeroVisual } from './DeploymentHeroVisual';
+
 import {
-  HeroWrapper,
-  ContentGrid,
-  LeftColumn,
-  Eyebrow,
-  Headline,
-  DownArrows,
-  Description,
-  CtaGroup,
-  CtaPrimary,
-  RightColumn,
+  DeploymentHeroWrapper,
+  DeploymentHeroRow1,
+  DeploymentHeroCellTopLeft,
+  DeploymentHeroEyebrow,
+  DeploymentHeroHeadline,
+  DeploymentHeroCellTopRight,
+  DeploymentHeroSidebarMetric,
+  DeploymentHeroRow2,
+  DeploymentHeroCellBottomLeft,
+  DeploymentHeroDescription,
+  DeploymentHeroCtaGroup,
+  DeploymentHeroCtaPrimary,
+  DeploymentHeroCellBottomRight,
 } from './DeploymentHero.styles';
 
-const spring = [0.16, 1, 0.3, 1] as const;
+const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
-  visible: (delay: number) => ({
+  hidden: { opacity: 0, y: 32 },
+  visible: (custom: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: spring, delay },
+    transition: {
+      duration: 0.85,
+      ease: premiumEase,
+      delay: custom * 0.1
+    },
   }),
 };
 
@@ -31,61 +40,69 @@ export function DeploymentHero() {
   const { setHeaderTheme } = useUiStore();
 
   useEffect(() => {
-    // Header should be light since the left background is white
     setHeaderTheme('light');
     return () => setHeaderTheme('light');
   }, [setHeaderTheme]);
 
+  const ctaHref = heroData.cta?.href ?? '/contact';
+  const ctaLabel = heroData.cta?.label ?? 'Talk to Solutions';
+
   return (
-    <HeroWrapper>
-      <ContentGrid>
-        {/* ── Left: text content ── */}
-        <LeftColumn>
-          <motion.div initial="hidden" animate="visible" custom={0.1} variants={fadeUp}>
-            <Eyebrow>
+    <DeploymentHeroWrapper>
+
+      {/* ─── ROW 1 (65/35 split) ─── */}
+      <DeploymentHeroRow1>
+        <DeploymentHeroCellTopLeft as={motion.div} initial="hidden" animate="visible" custom={0}>
+          <motion.div variants={fadeUp} custom={1}>
+            <DeploymentHeroEyebrow>
               <span>{heroData.eyebrow}</span>
-            </Eyebrow>
+              <span>&middot;</span>
+              <span>Operations</span>
+            </DeploymentHeroEyebrow>
+          </motion.div>
+          <motion.div variants={fadeUp} custom={2}>
+            <DeploymentHeroHeadline>{heroData.title}</DeploymentHeroHeadline>
+          </motion.div>
+        </DeploymentHeroCellTopLeft>
+
+        <DeploymentHeroCellTopRight as={motion.div} initial="hidden" animate="visible" custom={0}>
+          <motion.div variants={fadeUp} custom={4}>
+            <DeploymentHeroSidebarMetric>
+              Dedicated GPU clusters. Cloud-native speed. Maximum performance.
+            </DeploymentHeroSidebarMetric>
+          </motion.div>
+        </DeploymentHeroCellTopRight>
+      </DeploymentHeroRow1>
+
+      {/* ─── ROW 2 (45/55 split) ─── */}
+      <DeploymentHeroRow2>
+        <DeploymentHeroCellBottomLeft as={motion.div} initial="hidden" animate="visible" custom={0}>
+          <motion.div variants={fadeUp} custom={5}>
+            <DeploymentHeroDescription>
+              {heroData.description}
+            </DeploymentHeroDescription>
           </motion.div>
 
-          <motion.div initial="hidden" animate="visible" custom={0.22} variants={fadeUp}>
-            <Headline>{heroData.title}</Headline>
+          <motion.div variants={fadeUp} custom={6}>
+            <DeploymentHeroCtaGroup>
+              <DeploymentHeroCtaPrimary href={ctaHref}>
+                {ctaLabel}
+                <ChevronRight size={18} strokeWidth={1.5} />
+              </DeploymentHeroCtaPrimary>
+            </DeploymentHeroCtaGroup>
           </motion.div>
+        </DeploymentHeroCellBottomLeft>
 
-          <motion.div initial="hidden" animate="visible" custom={0.3} variants={fadeUp}>
-            <DownArrows>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M19 12l-7 7-7-7" />
-              </svg>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M19 12l-7 7-7-7" />
-              </svg>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M19 12l-7 7-7-7" />
-              </svg>
-            </DownArrows>
-          </motion.div>
-
-          <motion.div initial="hidden" animate="visible" custom={0.36} variants={fadeUp}>
-            <Description>{heroData.description}</Description>
-          </motion.div>
-
-          <motion.div initial="hidden" animate="visible" custom={0.5} variants={fadeUp}>
-            <CtaGroup>
-              <CtaPrimary href={heroData.cta.href}>
-                {heroData.cta.label}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </CtaPrimary>
-            </CtaGroup>
-          </motion.div>
-        </LeftColumn>
-
-        {/* ── Right: visual composition ── */}
-        <RightColumn>
+        <DeploymentHeroCellBottomRight
+          as={motion.div}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 1.2, ease: premiumEase, delay: 0.8 }}
+        >
           <DeploymentHeroVisual />
-        </RightColumn>
-      </ContentGrid>
-    </HeroWrapper>
+        </DeploymentHeroCellBottomRight>
+      </DeploymentHeroRow2>
+
+    </DeploymentHeroWrapper>
   );
 }
