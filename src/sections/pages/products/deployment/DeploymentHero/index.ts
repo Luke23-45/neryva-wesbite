@@ -1,1 +1,0 @@
-export { DeploymentHero } from './DeploymentHero';
