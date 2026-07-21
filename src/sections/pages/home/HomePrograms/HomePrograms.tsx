@@ -14,7 +14,7 @@ import {
   SidebarRoboticsIcon,
   SidebarClinicalIcon,
   SidebarEnergyIcon
-} from '@assets/visual/home/programs';
+} from '@assets/icons/home';
 import {
   HeaderSection,
   SectionTitle,

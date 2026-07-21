@@ -54,7 +54,7 @@ import {
   FeatureDescription,
 } from './DeploymentPipeline.styles';
 
-import { DeploymentStepIcons } from '@assets/visual/products/PipelineStepIcons';
+import { DeploymentStepIcons } from '@assets/icons/products/PipelineStepIcons';
 
 // Strict typing for our data schema
 interface Feature {

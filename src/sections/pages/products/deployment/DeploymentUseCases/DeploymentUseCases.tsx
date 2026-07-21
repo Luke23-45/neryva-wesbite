@@ -16,7 +16,7 @@ import {
   DeploymentUseCasesAppDesc,
 } from './DeploymentUseCases.styles';
 
-import { DeploymentUseCaseIcons } from '@assets/visual/products/deployment/DeploymentIcons';
+import { DeploymentUseCaseIcons } from '@assets/icons/products/DeploymentIcons';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 

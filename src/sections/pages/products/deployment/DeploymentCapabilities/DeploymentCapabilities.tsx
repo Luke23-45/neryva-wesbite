@@ -12,7 +12,7 @@ import {
   DeploymentCapabilitiesCellDesc,
 } from './DeploymentCapabilities.styles';
 
-import { DeploymentCapabilityIcons } from '@assets/visual/products/deployment/DeploymentIcons';
+import { DeploymentCapabilityIcons } from '@assets/icons/products/DeploymentIcons';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 

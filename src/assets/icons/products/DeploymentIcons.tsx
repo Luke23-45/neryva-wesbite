@@ -22,7 +22,7 @@ import {
   PeopleIcon,
   BadgeIcon,
   WorkflowAgentIcon,
-} from '@/assets/visual/products/enterprise/icon/EnterpriseCapabilityIcons';
+} from '@/assets/icons/products/EnterpriseCapabilityIcons';
 
 type IconProps = SVGProps<SVGSVGElement>;
 type IconFactory = React.FC<IconProps>;
