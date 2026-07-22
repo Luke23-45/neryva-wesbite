@@ -2,6 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ArrowRight, PlayCircle } from 'lucide-react';
 import eventData from '@neryva_data/events/sections/events_list.json';
+import event1Img from '@assets/page/event/event1.jpg';
+import event2Img from '@assets/page/event/event2.jpg';
+import event3Img from '@assets/page/event/event3.jpg';
+
+const eventImages: Record<string, string> = {
+  '/assets/page/event/event1.jpg': event1Img,
+  '/assets/page/event/event2.jpg': event2Img,
+  '/assets/page/event/event3.jpg': event3Img,
+};
 
 import {
   Wrapper,
@@ -58,7 +67,7 @@ function FilterDropdown({ options, activeOption, defaultLabel, onSelect }: { opt
         <span>{displayLabel}</span>
         <ChevronDown size={16} strokeWidth={2} color={isActive ? "#ffffff" : "#64748b"} style={{ transform: isOpen ? 'skewX(14deg) rotate(180deg)' : 'skewX(14deg)', transition: 'transform 0.2s ease' }} />
       </DropdownHeader>
-      
+
       <AnimatePresence>
         {isOpen && (
           <DropdownList
@@ -127,11 +136,11 @@ export function EventsList() {
                   <span>{type}</span>
                 </SlantedTab>
               ))}
-              <FilterDropdown 
-                options={typeDropdownOptions} 
-                activeOption={activeType} 
-                defaultLabel="All Types" 
-                onSelect={setActiveType} 
+              <FilterDropdown
+                options={typeDropdownOptions}
+                activeOption={activeType}
+                defaultLabel="All Types"
+                onSelect={setActiveType}
               />
             </ControlsRow>
           </FilterGroup>
@@ -148,11 +157,11 @@ export function EventsList() {
                   <span>{loc}</span>
                 </SlantedTab>
               ))}
-              <FilterDropdown 
-                options={locDropdownOptions} 
-                activeOption={activeLoc} 
-                defaultLabel="All Cities" 
-                onSelect={setActiveLoc} 
+              <FilterDropdown
+                options={locDropdownOptions}
+                activeOption={activeLoc}
+                defaultLabel="All Cities"
+                onSelect={setActiveLoc}
               />
             </ControlsRow>
           </FilterGroup>
@@ -192,9 +201,9 @@ export function EventsList() {
 
                   {/* Visual Asset Wrapper */}
                   <VisualHeader>
-                    <FloatTag>{evt.type}</FloatTag>
+                    {/* <FloatTag>{evt.type}</FloatTag> */}
                     {evt.image ? (
-                      <img src={evt.image} alt={evt.title} loading="lazy" />
+                      <img src={eventImages[evt.image] || evt.image} alt={evt.title} loading="lazy" />
                     ) : null}
                   </VisualHeader>
 

@@ -175,28 +175,26 @@ export const EventCard = styled.a`
   background: #ffffff;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
-  overflow: hidden; /* Fuses images and bounding boxes inextricably */
+  overflow: hidden;
   text-decoration: none;
-  /* Supreme tactile presence drop shadow */
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
-  }
 `;
 
 export const VisualHeader = styled.div`
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9; /* Hollywood cinema crop rules command immense framing authority */
+  aspect-ratio: 16 / 9;
   background-color: #E2E8F0;
+  overflow: hidden;
   
-  /* Prevents bad API uploads from blowing up grid matrices globally via image crops */
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  ${EventCard}:hover & img {
+    transform: scale(1.05);
   }
 `;
 
