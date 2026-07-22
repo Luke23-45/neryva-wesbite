@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s11} 0;
+  padding: 0  0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
@@ -61,6 +61,8 @@ export const Title = styled.h2`
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.04em; /* Strict negative tracking for high-end feel */
   margin: 0 0 24px 0;
+  padding-top: 80px;
+
 `;
 
 export const Description = styled.p`
@@ -68,6 +70,7 @@ export const Description = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+  padding-bottom: 80px;
 `;
 
 /* ─── RIGHT: THE iPAD FLUID LIST ─── */

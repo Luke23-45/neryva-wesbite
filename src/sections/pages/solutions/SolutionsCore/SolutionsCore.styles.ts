@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 export const CoreWrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s11} 0;
+  padding: ${({ theme }) => theme.spacing.s10} 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   flex-direction: column;

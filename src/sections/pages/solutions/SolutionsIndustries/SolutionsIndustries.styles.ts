@@ -2,12 +2,12 @@ import styled from 'styled-components';
 
 /* ── SECTION WRAPPER ── */
 export const Wrapper = styled.section`
-  padding: ${({ theme }) => theme.spacing.s11} 0;
+  padding: 80px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: ${({ theme }) => theme.spacing.s9} 0;
+    padding: ${({ theme }) => theme.spacing.s8} 0;
   }
 `;
 
