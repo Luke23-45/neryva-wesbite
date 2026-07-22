@@ -9,6 +9,8 @@ import { ModelMotif } from '@/components/common/ModelMotifs';
 import { Section } from '@/sections/common/layout/Section';
 
 import {
+  Header,
+  Title,
   FlexContainer,
   Sidebar,
   SidebarItem,
@@ -36,11 +38,15 @@ export function ResearchAreas() {
   const theme = useTheme();
   const [activeId, setActiveId] = useState<ProgramId>(programIds[0]);
   const sectionRefs = useRef<Map<ProgramId, HTMLElement>>(new Map());
+  const isClickScrolling = useRef(false);
+  const clickScrollTimeout = useRef<any>(null);
 
   // Precision alignment tracking matching specific native browser positioning bounds
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isClickScrolling.current) return;
+        
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const id = entry.target.getAttribute('data-program-id') as ProgramId;
@@ -48,7 +54,7 @@ export function ResearchAreas() {
           }
         }
       },
-      { threshold: 0.1, rootMargin: '-140px 0px -70% 0px' },
+      { threshold: 0, rootMargin: '-140px 0px -50% 0px' },
     );
 
     for (const ref of sectionRefs.current.values()) {
@@ -59,15 +65,34 @@ export function ResearchAreas() {
   }, []);
 
   const scrollTo = (id: ProgramId) => {
+    setActiveId(id);
+    isClickScrolling.current = true;
+    
+    if (clickScrollTimeout.current) clearTimeout(clickScrollTimeout.current);
+    clickScrollTimeout.current = setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 1000);
+
     const element = sectionRefs.current.get(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const headerOffset = 140; // perfectly aligns section top with sticky sidebar top
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.scrollY - headerOffset;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 
   return (
     <Section paddingYTop="md" paddingYBottom="xl" background={theme.colors.background.secondary}>
       <Container variant="wide">
+        <Header as={motion.div} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}>
+          <Title>Research Areas</Title>
+        </Header>
+
         <FlexContainer>
 
           {/* ── STICKY SIDEBAR (OS NAVIGATION) ── */}
@@ -147,13 +172,13 @@ export function ResearchAreas() {
                             <CardBody>
                               <CardTitle>{card.title}</CardTitle>
                               <CardDescription>{card.description}</CardDescription>
-
-                              <TagRow>
-                                {card.labels.map((label) => (
-                                  <Tag key={label}>{label}</Tag>
-                                ))}
-                              </TagRow>
                             </CardBody>
+
+                            <TagRow>
+                              {card.labels.map((label) => (
+                                <Tag key={label}>{label}</Tag>
+                              ))}
+                            </TagRow>
                           </GridCell>
                         </GrildColorBgShell>
                       </GridInnerShell>

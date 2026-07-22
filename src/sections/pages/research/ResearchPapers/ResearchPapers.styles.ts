@@ -28,32 +28,36 @@ export const FilterBar = styled.div`
 `;
 
 export const FilterButton = styled.button<{ $active: boolean; $accent: string }>`
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 20px;
-  border-radius: 36px;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  position: relative;
+  /* Slanted architectural blueprint design matching the Events section */
+  transform: skewX(-14deg);
+  background: ${({ $active, $accent }) => ($active ? $accent : '#ffffff')};
+  border: 1px solid ${({ $active, theme, $accent }) => ($active ? $accent : theme.colors.border)};
+  padding: 8px 20px;
+  border-radius: 4px;
   cursor: pointer;
   
   /* Apple-tier hardware-accelerated easing */
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Stark, high-contrast active state. Subtle, refined inactive state. */
-  background: ${({ $active, theme }) =>
-    $active ? theme.colors.text.primary : 'transparent'};
-  color: ${({ $active, theme }) =>
-    $active ? theme.colors.background.primary : theme.colors.text.secondary};
-  border: 1px solid ${({ $active, theme }) =>
-    $active ? theme.colors.text.primary : theme.colors.border};
-
   &:hover {
-    border-color: ${({ theme }) => theme.colors.text.primary};
-    color: ${({ $active, theme }) =>
-    $active ? theme.colors.background.primary : theme.colors.text.primary};
+    background: ${({ $active, $accent }) => ($active ? $accent : '#f5f5f5')};
+  }
+
+  span {
+    display: inline-block;
+    transform: skewX(14deg); /* Anti-skew text correction */
+    font-family: ${({ theme }) => theme.typography.fonts.sans};
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.secondary)};
+    text-transform: uppercase;
+    transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:hover span {
+    color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.primary)};
   }
 `;
 
@@ -76,10 +80,6 @@ export const EmptyTitle = styled.h3`
   margin: 0 0 32px 0;
 `;
 
-export const EmptyRule = styled.hr`
-  display: none; /* Replaced by the structural top/bottom borders of EmptyState */
-`;
-
 export const EmptyText = styled.p`
   font-size: 16px;
   line-height: 1.6;
@@ -97,17 +97,29 @@ export const PaperRow = styled.div<{ $accent: string }>`
   /* Expose the accent color as a local CSS variable for flawless, synchronized hover states */
   --row-accent: ${({ $accent }) => $accent};
   
-  display: flex;
+  display: grid;
+  grid-template-columns: 120px 1fr 240px 40px;
   align-items: center;
-  justify-content: space-between;
   gap: 32px;
-  padding: 40px 0; /* Massive breathing room */
+  padding: 24px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   text-decoration: none;
   cursor: pointer;
   
   &:last-child {
     border-bottom: none;
+  }
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: 100px 1fr 40px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 0;
   }
 `;
 
@@ -125,27 +137,40 @@ export const YearGroup = styled.div`
 
 export const YearHeader = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 16px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.primary};
-  letter-spacing: 0.04em;
-  padding: 48px 0 16px 0;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.text.primary}; /* Strong chronological divider */
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  letter-spacing: 0.1em;
+  padding: 64px 0 16px 0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-/* ── Paper Row Contents ── */
+/* ── Paper Row Columns ── */
+
+export const DateSpan = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12px;
+  }
+`;
+
 export const PaperLeft = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 `;
 
 export const PaperTitle = styled.span`
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: 1.3;
+  line-height: 1.4;
   letter-spacing: -0.01em;
   transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -159,23 +184,27 @@ export const PaperTitle = styled.span`
   }
 `;
 
-export const PaperMeta = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-`;
-
 export const Authors = styled.span`
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: 1.4;
+  line-height: 1.5;
+`;
+
+export const PaperMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+
+  ${({ theme }) => theme.media.tablet} {
+    display: none; /* Mobile/Tablet layout hides this column to keep things clean */
+  }
 `;
 
 export const StatusBadge = styled.span<{ $status: string }>`
   display: inline-flex;
   align-items: center;
-  height: 22px;
+  height: 24px;
   padding: 0 8px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
@@ -184,43 +213,34 @@ export const StatusBadge = styled.span<{ $status: string }>`
   text-transform: uppercase;
   border-radius: 4px;
   
-  /* Extremely refined base grayscale state */
-  background: ${({ $status }) =>
-    $status === 'published' ? 'rgba(0, 0, 0, 0.03)' : 'transparent'};
-  border: 1px solid ${({ $status, theme }) =>
-    $status === 'published' ? 'transparent' : theme.colors.border};
+  /* Transparent minimal badge to avoid clutter */
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   color: ${({ theme }) => theme.colors.text.secondary};
   
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   
-  /* Badge beautifully inherits the program accent when the row is interacted with */
   ${PaperRow}:hover & {
-    background: transparent;
     border-color: var(--row-accent);
     color: var(--row-accent);
   }
 `;
 
-export const DateSpan = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
+export const VenueSpan = styled.span`
+  font-size: 13px;
   color: ${({ theme }) => theme.colors.text.muted};
-  letter-spacing: 0.02em;
+  line-height: 1.4;
 `;
 
 /* ── The Reveal Arrow ── */
 export const PaperArrow = styled.span`
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--row-accent);
-  color: var(--row-accent);
+  justify-content: flex-end;
+  color: ${({ theme }) => theme.colors.text.muted};
   flex-shrink: 0;
   
-  /* Hidden by default, elegantly slides into place */
+  /* Hidden by default, elegantly slides into place without weird circular borders */
   opacity: 0;
   transform: translateX(-12px);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -228,5 +248,10 @@ export const PaperArrow = styled.span`
   ${PaperRow}:hover & {
     opacity: 1;
     transform: translateX(0);
+    color: var(--row-accent);
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    display: none;
   }
 `;

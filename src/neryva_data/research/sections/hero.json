@@ -2,10 +2,10 @@
   "eyebrow": "Research",
   "headline": "Computation, used well.",
   "subheadline": "Making AI efficient, reliable, and deployable under real constraints.",
-  "description": "The research agenda is organized around technical problems that matter across multiple domains. We are not treating safety, efficiency, and deployment as side concerns. We are treating them as core properties that determine whether an AI system can be used in practice.",
+  "description": "Safety, efficiency, and deployment aren't side concerns — they're the core problems that decide whether AI works in practice.",
   "visual": {
     "type": "dark-mosaic",
-    "note": "Use a restrained editorial visual that signals systems, structure, and technical depth."
+    "note": "Restrained editorial visual signaling systems, structure, and technical depth."
   },
   "scrollHint": "Scroll"
 }

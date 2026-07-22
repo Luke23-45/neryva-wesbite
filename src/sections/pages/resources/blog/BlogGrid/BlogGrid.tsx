@@ -86,6 +86,7 @@ export function BlogGrid() {
               {blogData.categories.map((cat) => (
                 <CategoryPill
                   key={cat}
+                  $cat={cat}
                   $active={activeCategory === cat}
                   onClick={() => setActiveCategory(cat)}
                 >
@@ -130,7 +131,7 @@ export function BlogGrid() {
 
                     {/* Text Content */}
                     <CardBody>
-                      <CardCategory $type={post.category.toUpperCase() === 'RESEARCH' || post.category.toUpperCase() === 'COMPANY' ? 'COMPANY' : 'PRODUCT'}>
+                      <CardCategory $cat={post.category}>
                         {post.category}
                       </CardCategory>
                       <CardTitle $featured={isFeatured}>{post.title}</CardTitle>
@@ -142,9 +143,14 @@ export function BlogGrid() {
                       <CardDate>{formatDate(post.date)}</CardDate>
                       <CardAuthor>{post.author}</CardAuthor>
                       <CardArrow aria-hidden="true">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter">
-                          <path d="M9 18l6-6-6-6" />
-                        </svg>
+                        <div className="arrow-wrapper">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
+                            <path d="M9 18l6-6-6-6" />
+                          </svg>
+                        </div>
                       </CardArrow>
                     </CardFooter>
                   </BlogCard>

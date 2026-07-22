@@ -27,7 +27,9 @@ export function HeroMosaic() {
     <svg
       viewBox="0 0 800 800"
       width="100%"
-      style={{ display: 'block', overflow: 'visible' }}
+      height="100%"
+      preserveAspectRatio="xMidYMid slice"
+      style={{ display: 'block', overflow: 'hidden' }}
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
@@ -57,14 +59,14 @@ export function HeroMosaic() {
             fill={orb.fill}
             initial={{ opacity: 0 }}
             animate={{
-              opacity: [0.3, 0.6, 0.4, 0.3], // Pulsing deeply and slowly
+              opacity: [0.2, 0.7, 0.2], // Continuous seamless pulsing
               cx: [orb.cx, orb.cx - 40, orb.cx + 20, orb.cx], // Drifting on X
               cy: [orb.cy, orb.cy + 30, orb.cy - 50, orb.cy], // Drifting on Y
             }}
             transition={{
-              opacity: { duration: 2.5, delay: orb.delay, ease: premiumEase },
-              cx: { duration: 20, ease: 'linear', repeat: Infinity },
-              cy: { duration: 24, ease: 'linear', repeat: Infinity },
+              opacity: { duration: 6, delay: orb.delay, ease: "easeInOut", repeat: Infinity },
+              cx: { duration: 20, ease: "easeInOut", repeat: Infinity },
+              cy: { duration: 24, ease: "easeInOut", repeat: Infinity },
             }}
           />
         ))}
@@ -82,8 +84,11 @@ export function HeroMosaic() {
           stroke="rgba(255,255,255,0.06)"
           strokeWidth="1"
           initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.5, ease: premiumEase, delay: 0.2 + i * 0.1 }}
+          animate={{ pathLength: 1, opacity: [0.1, 0.8, 0.1] }}
+          transition={{ 
+            pathLength: { duration: 1.5, ease: premiumEase, delay: 0.2 + i * 0.1 },
+            opacity: { duration: 4, ease: "easeInOut", repeat: Infinity, delay: 0.2 + i * 0.4 }
+          }}
         />
       ))}
       {/* Vertical Lines */}
@@ -97,8 +102,11 @@ export function HeroMosaic() {
           stroke="rgba(255,255,255,0.06)"
           strokeWidth="1"
           initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.5, ease: premiumEase, delay: 0.6 + i * 0.1 }}
+          animate={{ pathLength: 1, opacity: [0.1, 0.8, 0.1] }}
+          transition={{ 
+            pathLength: { duration: 1.5, ease: premiumEase, delay: 0.6 + i * 0.1 },
+            opacity: { duration: 4, ease: "easeInOut", repeat: Infinity, delay: 0.6 + i * 0.4 }
+          }}
         />
       ))}
 
@@ -121,8 +129,11 @@ export function HeroMosaic() {
             stroke={block.type !== 'solid' ? 'rgba(255,255,255,0.15)' : 'none'}
             strokeWidth="1"
             initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1.2, ease: premiumEase, delay: 1.2 + i * 0.15 }}
+            animate={{ opacity: 1, y: [0, -8, 0] }}
+            transition={{ 
+              opacity: { duration: 1.2, ease: premiumEase, delay: 1.2 + i * 0.15 },
+              y: { duration: 6, ease: "easeInOut", repeat: Infinity, delay: 1.2 + i * 0.3 }
+            }}
           />
         ))}
 
@@ -131,13 +142,13 @@ export function HeroMosaic() {
           Y_COORDS.map((y) => (
             <motion.g
               key={`cross-${x}-${y}`}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0, rotate: 0 }}
+              animate={{ opacity: [0.2, 1, 0.2], scale: 1, rotate: [0, 90, 180, 270, 360] }}
+              style={{ transformOrigin: `${x}px ${y}px` }}
               transition={{
-                duration: 0.8,
-                ease: premiumEase,
-                // Radiate outwards from the center node for drawing effect
-                delay: 1.5 + (Math.abs(x - 400) + Math.abs(y - 400)) * 0.002,
+                scale: { duration: 0.8, ease: premiumEase, delay: 1.5 + (Math.abs(x - 400) + Math.abs(y - 400)) * 0.002 },
+                opacity: { duration: 3, ease: "easeInOut", repeat: Infinity, delay: 1.5 + (Math.abs(x - 400) + Math.abs(y - 400)) * 0.002 },
+                rotate: { duration: 12, ease: "linear", repeat: Infinity }
               }}
             >
               <line x1={x - 6} y1={y} x2={x + 6} y2={y} stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
@@ -154,7 +165,7 @@ export function HeroMosaic() {
       */}
       <rect
         width="800"
-        height="600"
+        height="800"
         fill="url(#vignette)"
         style={{ pointerEvents: 'none' }}
       />

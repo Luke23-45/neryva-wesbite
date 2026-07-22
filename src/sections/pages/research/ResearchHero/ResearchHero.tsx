@@ -17,7 +17,6 @@ import {
   HeroDescription,
   CTAButton,
   RightBleed,
-  MosaicContainer,
 } from './ResearchHero.styles';
 
 // Premium hardware-accelerated easing
@@ -98,15 +97,15 @@ export function ResearchHero() {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 1, ease: premiumEase, delay: 0.3 }}
       >
-        <MosaicContainer
-          as={motion.div}
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2, ease: premiumEase, delay: 0.4 }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
         >
           {/* The visual container will handle its own animations internally */}
           <HeroMosaic />
-        </MosaicContainer>
+        </motion.div>
       </RightBleed>
     </Wrapper>
   );

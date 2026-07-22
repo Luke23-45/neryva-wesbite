@@ -114,7 +114,7 @@ export const DividerLine = styled.div`
 /* ── Left Column (Text & UI) ── */
 export const LeftContent = styled.div`
   grid-column: 2 / 3;
-  padding: 80px 80px 80px 0; /* Heavy padding for editorial breathing room */
+  padding: 56px 80px 56px 0; /* Tightened padding to balance the smaller graphic */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -193,22 +193,14 @@ export const RightBleed = styled.div`
   align-items: center;
   justify-content: center;
   
-  /* Creates an inner frame for the mosaic */
-  padding: 80px 80px 80px 80px; 
+  /* Update to support full absolute bleed */
+  position: relative;
+  overflow: hidden;
+  /* Removed padding completely so the SVG covers everything */
 
   ${({ theme }) => theme.media.tablet} {
     /* On mobile, it bleeds across the entire screen horizontally */
     grid-column: 1 / 4; 
-    padding: 64px 24px;
+    min-height: 400px; /* Provides base height since absolute content won't stretch row */
   }
-`;
-
-/* ── Inner container for the Mosaic to maintain its intended proportions ── */
-export const MosaicContainer = styled.div`
-  width: 100%;
-  max-width: 600px; /* Constrains the graphic so it doesn't stretch infinitely */
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4), 
-              0 0 0 1px rgba(255, 255, 255, 0.05);
 `;

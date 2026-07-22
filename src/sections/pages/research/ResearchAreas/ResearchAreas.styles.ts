@@ -1,5 +1,25 @@
 import styled from 'styled-components';
 
+export const Header = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-bottom: 64px;
+`;
+
+export const Title = styled.h2`
+  font-size: 48px;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  color: ${({ theme }) => theme.colors.text.primary};
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 36px;
+  }
+`;
+
 export const FlexContainer = styled.div`
   display: flex;
   align-items: flex-start;
@@ -53,7 +73,7 @@ export const SidebarItem = styled.button<{ $active: boolean; $accent: string }>`
   cursor: pointer;
   
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
+  font-size: 16px;
   text-align: left;
   
   font-weight: ${({ $active, theme }) =>
@@ -113,7 +133,7 @@ export const ProgramSection = styled.section`
 `;
 
 export const ProgramTitle = styled.h2<{ $accent: string }>`
-  font-size: 32px; /* Mistral accurate size match */
+  font-size: 48px; /* Mistral accurate size match */
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -147,50 +167,57 @@ export const CardGrid = styled.div`
 /* Individual lines owned implicitly by content bounding */
 export const GridCell = styled.div<{ $isEmpty?: boolean }>`
   background: ${({ theme }) => theme.colors.background.primary};
-  border-bottom: 1px solid #e4e3de;
-  border-right: 1px solid #e4e3de;
-
-  
   display: flex;
   flex-direction: column;
-  padding: ${({ $isEmpty }) => ($isEmpty ? '0' : '40px')};
-
-  /* The magic to unify double lines natively */
-  &:nth-child(2n) {
-    border-right: none;
-  }
+  flex: 1; /* Stretch to fill the GrildColorBgShell */
+  padding: 0;
 
   transition: background-color 0.3s ease;
 
-
   ${({ theme }) => theme.media.mobile} {
-    padding: ${({ $isEmpty }) => ($isEmpty ? '0' : '24px')};
-    border-right: none;
+    padding: 0;
     display: ${({ $isEmpty }) => ($isEmpty ? 'none' : 'flex')};
   }
   box-shadow: 
     0 1px 2px rgba(0, 0, 0, 0.02),
     0 4px 12px rgba(0, 0, 0, 0.03),
     0 0 0 4px rgba(0, 0, 0, 0.01); /* Super subtle bounding line to sharpen the edge */
-
 `;
 
 export const GridInnerShell = styled.div`
   border-bottom: 1px solid #e4e3de;
   border-right: 1px solid #e4e3de;
-`
+  display: flex;
+  flex-direction: column;
+
+  /* The magic to unify double lines natively */
+  &:nth-child(2n) {
+    border-right: none;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    border-right: none;
+  }
+`;
+
 export const GrildColorBgShell = styled.div`
-padding: 15px;
-background-color: #f5f4ef;
-
-
-`
+  padding: 15px;
+  background-color: #f5f4ef;
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Stretch to fill GridInnerShell */
+`;
 /* ── 4. Internal Reference Accents ── */
 export const CardHeader = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 32px;
+  padding: 40px 40px 16px 40px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 24px 24px 16px 24px;
+  }
 `;
 
 export const MotifBox = styled.div`
@@ -198,7 +225,7 @@ export const MotifBox = styled.div`
   height: 44px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
-  background: ${({ theme }) => theme.colors.background.primary};
+  background: #f5f5f5ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,10 +247,15 @@ export const CardBody = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1; /* Pushes arrays accurately downward matching grid scaling geometry */
+  padding: 16px 40px 0 40px;
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 16px 24px 0 24px;
+  }
 `;
 
 export const CardTitle = styled.h3`
-  font-size: 20px;
+  font-size: 29px;
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.015em;
@@ -232,10 +264,10 @@ export const CardTitle = styled.h3`
 `;
 
 export const CardDescription = styled.p`
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 0 32px 0;
+  margin: 0 0 16px 0;
 `;
 
 /* Meticulous minimal border capsling matching reference architecture tags */
@@ -243,7 +275,12 @@ export const TagRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: auto; 
+  padding: 16px 40px 40px 40px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 16px 24px 24px 24px;
+  }
 `;
 
 export const Tag = styled.span`

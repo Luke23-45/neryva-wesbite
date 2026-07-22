@@ -25,6 +25,7 @@ import {
   PaperMeta,
   Authors,
   StatusBadge,
+  VenueSpan,
   DateSpan,
   PaperArrow,
 } from './ResearchPapers.styles';
@@ -118,7 +119,7 @@ export function ResearchPapers() {
                         $accent={programAccents[id] || theme.colors.text.primary}
                         onClick={() => setFilter(id)}
                       >
-                        {id === 'all' ? 'All Publications' : programLabels[id]}
+                        <span>{id === 'all' ? 'All Publications' : programLabels[id]}</span>
                       </FilterButton>
                     ),
                   )}
@@ -203,27 +204,29 @@ export function ResearchPapers() {
                           delay: i * 0.05, // Elegant cascading entrance
                         }}
                       >
+                        <DateSpan>{paper.date.substring(0, 7)}</DateSpan>
+
                         <PaperLeft>
                           <PaperTitle>{paper.title}</PaperTitle>
-                          <PaperMeta>
-                            <Authors>{paper.authors.join(', ')}</Authors>
-                            <StatusBadge $status={paper.status}>
-                              {paper.status}
-                            </StatusBadge>
-                            <DateSpan>{paper.date}</DateSpan>
-                            {paper.venue && (
-                              <span style={{ color: theme.colors.text.muted, fontSize: '12px' }}>
-                                {paper.venue}
-                              </span>
-                            )}
-                          </PaperMeta>
+                          <Authors>{paper.authors.join(', ')}</Authors>
                         </PaperLeft>
 
-                        {paper.url && (
+                        <PaperMeta>
+                          <StatusBadge $status={paper.status}>
+                            {paper.status}
+                          </StatusBadge>
+                          {paper.venue && (
+                            <VenueSpan>
+                              {paper.venue}
+                            </VenueSpan>
+                          )}
+                        </PaperMeta>
+
+                        {paper.url ? (
                           <PaperArrow>
                             <ArrowRight size={18} strokeWidth={1.5} />
                           </PaperArrow>
-                        )}
+                        ) : <div />}
                       </AnimatedPaperRow>
                     ))}
                   </YearGroup>
