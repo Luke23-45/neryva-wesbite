@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
@@ -15,6 +15,8 @@ import {
   TripleArrowCluster,
   Description,
   SolidCta,
+  ButtonLabelText,
+  IconContainer,
 } from './SolutionsHero.styles';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -31,6 +33,64 @@ const fadeUp = {
     },
   }),
 };
+
+const premiumTransition = {
+  duration: 0.4,
+  ease: [0.16, 1, 0.3, 1]
+};
+
+function CyclicHeroCta({ label, href }: { label: string; href: string }) {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  return (
+    <SolidCta
+      href={href}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Icon 1: Enters from left of the text on hover */}
+      <IconContainer
+        as={motion.div}
+        initial={false}
+        animate={{
+          width: isHovered ? 16 : 0,
+          opacity: isHovered ? 1 : 0,
+          x: isHovered ? 0 : -10,
+          marginRight: isHovered ? 12 : 0
+        }}
+        transition={premiumTransition}
+        style={{ overflow: 'hidden' }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </IconContainer>
+
+      <ButtonLabelText>
+        {label}
+      </ButtonLabelText>
+
+      {/* Icon 2: Visible at rest on right side, exits right on hover */}
+      <IconContainer
+        as={motion.div}
+        initial={false}
+        animate={{
+          width: isHovered ? 0 : 16,
+          opacity: isHovered ? 0 : 1,
+          x: isHovered ? 10 : 0,
+          marginLeft: isHovered ? 0 : 12
+        }}
+        transition={premiumTransition}
+        style={{ overflow: 'hidden' }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </IconContainer>
+    </SolidCta>
+  );
+}
+
 
 export function SolutionsHero() {
   const { setHeaderTheme } = useUiStore();
@@ -70,13 +130,7 @@ export function SolutionsHero() {
           </motion.div>
 
           <motion.div initial="hidden" animate="visible" custom={5} variants={fadeUp}>
-            <SolidCta href={heroData.cta.href}>
-              {heroData.cta.label}
-              {/* Emulates the pixel/geometric right arrow indicator from image */}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </SolidCta>
+            <CyclicHeroCta href={heroData.cta.href} label={heroData.cta.label} />
           </motion.div>
 
         </ContentColumn>

@@ -1,15 +1,15 @@
 import styled from 'styled-components';
 
 export const CoreWrapper = styled.section`
-  padding: 160px 0;
+  padding: ${({ theme }) => theme.spacing.s11} 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   flex-direction: column;
-  gap: 160px;
+  gap: ${({ theme }) => theme.spacing.s11};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px 0;
-    gap: 96px;
+    padding: ${({ theme }) => theme.spacing.s9} 0;
+    gap: ${({ theme }) => theme.spacing.s9};
   }
 `;
 
@@ -21,6 +21,7 @@ export const ProductSection = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 64px;
 `;
 
@@ -29,12 +30,14 @@ export const SectionHeader = styled.div`
   max-width: 680px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 24px;
+  text-align: center;
 `;
 
 export const SectionFooter = styled.div`
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
 `;
 
 export const SectionTitle = styled.h2`
@@ -54,15 +57,15 @@ export const SectionDesc = styled.p`
   font-size: 18px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0 0 16px 0;
+  margin: 0;
 `;
 
 export const CTAButton = styled.button`
-  align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 24px;
+  justify-content: center;
+  height: 48px;
+  padding: 0 24px;
   background: ${({ theme }) => theme.colors.text.primary};
   color: ${({ theme }) => theme.colors.background.primary};
   border: none;
@@ -71,12 +74,17 @@ export const CTAButton = styled.button`
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+`;
 
-  &:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
+export const ButtonLabelText = styled.span`
+  white-space: nowrap;
+`;
+
+export const IconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 /**

@@ -1,13 +1,12 @@
 import styled from 'styled-components';
 
 export const Wrapper = styled.section`
-  /* Profound breathing room top and bottom to frame the interaction */
-  padding: 180px 0;
+  padding: ${({ theme }) => theme.spacing.s11} 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 100px 0;
+    padding: ${({ theme }) => theme.spacing.s9} 0;
   }
 `;
 

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, Layers } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
@@ -10,6 +11,8 @@ import {
   SectionTitle,
   SectionDesc,
   CTAButton,
+  ButtonLabelText,
+  IconContainer,
   BentoGrid,
   GridCell,
   DecorativeCell,
@@ -112,6 +115,59 @@ function resolveSideColumn(col: SideColumn, totalRows: number) {
   return { blankRow, decorativeRows, filledRows };
 }
 
+const premiumTransition = {
+  duration: 0.4,
+  ease: [0.16, 1, 0.3, 1]
+};
+
+function CyclicCTAButton({ label }: { label: string }) {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  return (
+    <CTAButton
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Icon 1: Enters from left of the text on hover */}
+      <IconContainer
+        as={motion.div}
+        initial={false}
+        animate={{
+          width: isHovered ? 16 : 0,
+          opacity: isHovered ? 1 : 0,
+          x: isHovered ? 0 : -10,
+          marginRight: isHovered ? 8 : 0
+        }}
+        transition={premiumTransition}
+        style={{ overflow: 'hidden' }}
+      >
+        <ChevronRight size={16} strokeWidth={2} />
+      </IconContainer>
+
+      <ButtonLabelText>
+        {label}
+      </ButtonLabelText>
+
+      {/* Icon 2: Visible at rest on right side, exits right on hover */}
+      <IconContainer
+        as={motion.div}
+        initial={false}
+        animate={{
+          width: isHovered ? 0 : 16,
+          opacity: isHovered ? 0 : 1,
+          x: isHovered ? 10 : 0,
+          marginLeft: isHovered ? 0 : 8
+        }}
+        transition={premiumTransition}
+        style={{ overflow: 'hidden' }}
+      >
+        <ChevronRight size={16} strokeWidth={2} />
+      </IconContainer>
+    </CTAButton>
+  );
+}
+
+
 export function SolutionsCore() {
   return (
     <CoreWrapper>
@@ -147,9 +203,6 @@ export function SolutionsCore() {
             >
               <motion.div variants={fadeUp} custom={0}>
                 <SectionTitle>{product.title}</SectionTitle>
-              </motion.div>
-              <motion.div variants={fadeUp} custom={1}>
-                <SectionDesc>{product.description}</SectionDesc>
               </motion.div>
             </SectionHeader>
 
@@ -316,9 +369,7 @@ export function SolutionsCore() {
             >
               <motion.div variants={fadeUp} custom={0}>
                 <Link to={product.href} style={{ textDecoration: 'none' }}>
-                  <CTAButton>
-                    {product.link_label} <ChevronRight size={16} strokeWidth={2} />
-                  </CTAButton>
+                  <CyclicCTAButton label={product.link_label} />
                 </Link>
               </motion.div>
             </SectionFooter>

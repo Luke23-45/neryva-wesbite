@@ -1,11 +1,11 @@
 import styled from 'styled-components';
 
 export const AppsWrapper = styled.section`
-  padding: 120px 0;
+  padding: ${({ theme }) => theme.spacing.s11} 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px 0;
+    padding: ${({ theme }) => theme.spacing.s9} 0;
   }
 `;
 

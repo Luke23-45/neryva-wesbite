@@ -2,12 +2,12 @@ import styled from 'styled-components';
 
 /* ── SECTION WRAPPER ── */
 export const Wrapper = styled.section`
-  padding: 120px 0 0 0;
+  padding: ${({ theme }) => theme.spacing.s11} 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px 0 0 0;
+    padding: ${({ theme }) => theme.spacing.s9} 0;
   }
 `;
 
@@ -25,7 +25,11 @@ export const InnerContainer = styled.div`
 /* ── HEADER ── */
 export const HeaderBlock = styled.div`
   max-width: 600px;
-  margin-bottom: 80px;
+  margin: 0 auto 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 
   ${({ theme }) => theme.media.tablet} {
     margin-bottom: 48px;

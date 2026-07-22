@@ -9,6 +9,8 @@ export const spacing = {
   s8: '64px',
   s9: '96px',
   s10: '128px',
+  s11: '160px',
+  s12: '200px',
 } as const;
 
 export type Spacing = typeof spacing;

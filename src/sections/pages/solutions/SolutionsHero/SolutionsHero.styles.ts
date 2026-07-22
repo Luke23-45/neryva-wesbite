@@ -131,9 +131,9 @@ export const SolidCta = styled.a`
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   
-  background-color: #050505; /* Supreme void black */
+  background-color: #050505;
   color: #ffffff;
   
   padding: 18px 24px;
@@ -145,18 +145,26 @@ export const SolidCta = styled.a`
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
   }
 
   svg {
     width: 16px;
     height: 16px;
   }
+`;
+
+export const ButtonLabelText = styled.span`
+  white-space: nowrap;
+`;
+
+export const IconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 /* ─── RIGHT: VISUAL AREA ─── */
