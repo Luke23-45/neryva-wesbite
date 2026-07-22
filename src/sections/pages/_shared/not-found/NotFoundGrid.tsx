@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
+import CyclicPreviousButton from '@components/common/ui/CyclicPreviousButton/CyclicPreviousButton';
 import notFoundImage from '@assets/page/not_found/hero.png';
 
 import {
@@ -10,12 +10,9 @@ import {
     ImageFrame,
     LedgerRow,
     LedgerCell,
-    MetadataBlock,
-    MonoLabel,
-    ReadoutText,
     CenterDisplay,
     HugeCode,
-    ReturnAction
+    BottomActionSection
 } from './NotFoundGrid.styles';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -39,10 +36,6 @@ export default function NotFoundGrid() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 1.2, ease: premiumEase }}
                 >
-                    {/* 
-            Pass the high-res 404 concept art path here. 
-            Object-fit natively manages bounds processing perfectly without bleeding or squashing dimensions. 
-          */}
                     <img
                         src={notFoundImage}
                         alt="Operational bound error imagery"
@@ -60,13 +53,6 @@ export default function NotFoundGrid() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: premiumEase, delay: 0.3 }}
                 >
-                    <MetadataBlock>
-                        <MonoLabel>// Target Exception</MonoLabel>
-                        <ReadoutText>
-                            The designated operational bounds have been exceeded.
-                            The requested directory endpoint remains entirely unverified.
-                        </ReadoutText>
-                    </MetadataBlock>
                 </LedgerCell>
 
                 {/* COLUMN 2: Supreme Typographic Error Anchor */}
@@ -74,7 +60,7 @@ export default function NotFoundGrid() {
                     as={motion.div}
                     initial={{ opacity: 0, y: 32 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.9, ease: premiumEase, delay: 0.1 }} // Ignites chronologically first for focal priority
+                    transition={{ duration: 0.9, ease: premiumEase, delay: 0.1 }}
                 >
                     <CenterDisplay>
                         <HugeCode>404</HugeCode>
@@ -88,16 +74,19 @@ export default function NotFoundGrid() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
                 >
-                    <MetadataBlock>
-                        <MonoLabel>// Routing Array</MonoLabel>
-                        <ReturnAction href="/">
-                            Re-establish registry connection
-                            <ArrowRight size={18} strokeWidth={1.5} />
-                        </ReturnAction>
-                    </MetadataBlock>
                 </LedgerCell>
 
             </LedgerRow>
+
+            {/* ─── SECTION 3: PREVIOUS ACTION SECTION ─── */}
+            <BottomActionSection
+                as={motion.section}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: premiumEase, delay: 0.5 }}
+            >
+                <CyclicPreviousButton label="Previous" />
+            </BottomActionSection>
 
         </MasterLayout>
     );

@@ -11,37 +11,20 @@ export const MasterLayout = styled.main`
 
 /* ─── SECTION 1: THE MONOLITHIC IMAGE ─── */
 export const VisualSection = styled.section`
-  flex-grow: 1; /* Automatically consumes all remaining viewport height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Architectural margin around the image gives it physical framing, acting as a matte */
-  padding: 40px; 
+  width: 100%;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px;
-    min-height: 50vh;
-  }
 `;
 
 export const ImageFrame = styled.div`
   width: 100%;
-  height: 100%;
-  max-width: 1600px;
-  /* 
-   * Flawless container logic: overflow is hidden so any massive image 
-   * scales dynamically without ripping the CSS box model constraints.
-   */
   overflow: hidden; 
-  background-color: #111; /* Absolute baseline reserve if the image delays loading */
-  position: relative;
+  background-color: #111;
+  line-height: 0;
   
   img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
+    height: auto;
+    display: block;
   }
 `;
 
@@ -152,3 +135,18 @@ export const ReturnAction = styled.a`
     transform: translateX(4px);
   }
 `;
+
+/* ─── SECTION 3: BOTTOM NAVIGATION SECTION ─── */
+export const BottomActionSection = styled.section`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 48px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: #fbfbfb;
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 32px 24px;
+  }
+`;
