@@ -1,155 +1,271 @@
 import styled from 'styled-components';
 
-export const BorderTop = styled.div`
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+export const Wrapper = styled.section`
+  padding: 160px 0;
+  background-color: #fafaf9; /* Supremely warm eggshell to make pure white cards stand out natively */
+
+  ${({ theme }) => theme.media.tablet} {
+    padding: 100px 0;
+  }
 `;
 
-export const SectionHeader = styled.div`
-  margin-bottom: 80px;
+export const InnerGrid = styled.div`
+  width: 100%;
+  max-width: 1536px;
+  margin: 0 auto;
+  padding: 0 40px;
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 0 24px;
+  }
 `;
 
-export const Label = styled.span`
-  display: block;
+/* ─── THE PRECISION COMMAND FILTERS ─── */
+export const FiltersContainer = styled.div`
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 40px;
+  margin-bottom: 64px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  padding-bottom: 32px;
+`;
+
+export const FilterGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+export const FilterLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
+  color: #111;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 20px;
 `;
 
-export const Title = styled.h2`
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin: 0;
-`;
-
-export const EventGroup = styled.div`
-  margin-bottom: 80px;
-`;
-
-export const GroupName = styled.h3`
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 32px 0;
-  padding-bottom: 16px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.text.primary};
-  display: inline-block;
-`;
-
-export const EventListContainer = styled.div`
+export const ControlsRow = styled.div`
   display: flex;
-  flex-direction: column;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px; /* Razor tight spatial correlation mirroring your image */
 `;
 
-export const EventRow = styled.div`
-  display: grid;
-  grid-template-columns: 120px 2fr 1fr 1fr;
-  align-items: start;
-  padding: 32px 16px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  transition: background 200ms ease;
+/* The Slanted Blueprint Buttons */
+export const SlantedTab = styled.button<{ $active: boolean }>`
+  position: relative;
+  /* Precisely slanted geometry matches screenshot constraints perfectly */
+  transform: skewX(-14deg);
+  background: ${({ $active }) => ($active ? '#3563E9' : '#ffffff')}; /* Bright signature Mistral Blue */
+  border: 1px solid ${({ $active, theme }) => ($active ? '#3563E9' : theme.colors.border)};
+  padding: 10px 20px;
+  border-radius: 4px; /* Tiny smooth bend on slanted limits natively avoiding hard artifacts */
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 
   &:hover {
-    background: ${({ theme }) => theme.colors.surfaceHover};
+    background: ${({ $active }) => ($active ? '#2b50bd' : '#f5f5f5')};
   }
 
-  ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 32px 24px;
+  /* Anti-skew correction keeps font structurally vertical inside slanted parent */
+  span {
+    display: inline-block;
+    transform: skewX(14deg);
+    font-family: ${({ theme }) => theme.typography.fonts.sans};
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: ${({ $active }) => ($active ? '#ffffff' : '#333333')};
+    text-transform: uppercase;
   }
 `;
 
-export const EventDate = styled.div`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-  letter-spacing: 0.05em;
-  padding-top: 4px;
+/* Pristine UI Dropdown Menu */
+export const DropdownContainer = styled.div`
+  position: relative;
+  display: inline-block;
+  min-width: 180px;
 `;
 
-export const EventDetails = styled.div`
+export const DropdownHeader = styled.div<{ $isOpen: boolean, $isActive: boolean }>`
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  padding-right: 32px;
+  height: 40px; /* Aligns mathematically equal bounding boxes with slants next to it */
+  background: ${({ $isActive }) => ($isActive ? '#3563E9' : '#ffffff')};
+  border: 1px solid ${({ $isActive, theme }) => ($isActive ? '#3563E9' : theme.colors.border)};
+  border-radius: 4px;
+  padding: 0 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  transform: skewX(-14deg);
 
-  ${({ theme }) => theme.media.tablet} {
-    padding-right: 0;
+  &:hover {
+    background: ${({ $isActive }) => ($isActive ? '#2b50bd' : '#f5f5f5')};
+  }
+
+  span {
+    display: inline-block;
+    transform: skewX(14deg);
+    font-family: ${({ theme }) => theme.typography.fonts.sans};
+    font-size: 13px;
+    font-weight: 500;
+    color: ${({ $isActive }) => ($isActive ? '#ffffff' : '#4A4A4A')};
+    text-transform: uppercase;
+  }
+  
+  svg {
+    transform: skewX(14deg);
   }
 `;
 
-export const EventTitle = styled.h4`
-  font-size: 1.25rem;
+export const DropdownList = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 8px;
+  background: #ffffff;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  z-index: 100;
+  overflow: hidden;
+`;
+
+export const DropdownItem = styled.div<{ $selected: boolean }>`
+  padding: 12px 16px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
   font-weight: 500;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0;
+  color: ${({ $selected }) => ($selected ? '#3563E9' : '#4A4A4A')};
+  text-transform: uppercase;
+  cursor: pointer;
+  background: ${({ $selected }) => ($selected ? '#f8faff' : 'transparent')};
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: #f5f5f5;
+  }
 `;
 
-export const EventDesc = styled.p`
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 0;
+
+/* ─── THE CINEMATIC EVENT CARDS MATRIX ─── */
+export const CardMatrix = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+
+  ${({ theme }) => theme.media.tablet} {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  ${({ theme }) => theme.media.mobile} {
+    grid-template-columns: 1fr;
+  }
 `;
 
-export const EventMetaGroup = styled.div`
+/* Total Unyielding Visual Encapsulation Container */
+export const EventCard = styled.a`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
+  background: #ffffff;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  overflow: hidden; /* Fuses images and bounding boxes inextricably */
+  text-decoration: none;
+  /* Supreme tactile presence drop shadow */
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  }
 `;
 
-export const EventMetaLabel = styled.span`
+export const VisualHeader = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* Hollywood cinema crop rules command immense framing authority */
+  background-color: #E2E8F0;
+  
+  /* Prevents bad API uploads from blowing up grid matrices globally via image crops */
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+/* Ultra Premium OS-style Floating Inner Category Pill */
+export const FloatTag = styled.div`
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  padding: 6px 10px;
+  border-radius: 4px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #111;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: ${({ theme }) => theme.colors.text.muted};
 `;
 
-export const EventMetaValue = styled.span`
-  font-size: 0.9375rem;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 500;
-`;
-
-export const ActionColumn = styled.div`
+/* Internal Pacing Layout Bounds */
+export const BodyPayload = styled.div`
   display: flex;
-  justify-content: flex-end;
-  padding-top: 4px;
-
-  ${({ theme }) => theme.media.tablet} {
-    justify-content: flex-start;
-    margin-top: 16px;
-  }
+  flex-direction: column;
+  padding: 24px;
+  flex: 1; /* Magnets buttons safely onto exact array flush flooring grids simultaneously! */
 `;
 
-export const RegisterButton = styled.a`
+export const MetaLine = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0 0 12px 0;
+`;
+
+export const CardTitle = styled.h3`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+  color: #0F172A;
+  margin: 0 0 32px 0;
+`;
+
+/* Conditional state mechanical anchor */
+export const InteractionButton = styled.div<{ $status: 'upcoming' | 'past' }>`
+  margin-top: auto;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 10px 24px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.text.primary};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  font-size: 0.9375rem;
-  font-weight: 500;
+  gap: 12px;
+  width: max-content;
+  padding: 12px 24px;
   border-radius: 6px;
-  text-decoration: none;
-  transition: all 200ms ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.text.primary};
-    color: ${({ theme }) => theme.colors.background.primary};
-    border-color: ${({ theme }) => theme.colors.text.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 600;
+  
+  /* State Machine Render Aesthetics */
+  background: ${({ $status }) => ($status === 'upcoming' ? '#0F172A' : 'transparent')};
+  color: ${({ $status }) => ($status === 'upcoming' ? '#ffffff' : '#0F172A')};
+  border: 1px solid ${({ $status }) => ($status === 'upcoming' ? 'transparent' : '#cbd5e1')};
+  
+  transition: opacity 0.2s ease;
+  
+  /* Inner SVG strict padding overrides */
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;

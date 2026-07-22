@@ -74,15 +74,16 @@ export const Sidebar = styled.nav`
   position: sticky;
   top: 120px; /* Below header */
   align-self: flex-start;
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   padding-right: 0;
 
   ${({ theme }) => theme.media.tablet} {
     width: 100%;
     position: relative;
     top: 0;
-    border-right: none;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    border: 1px solid ${({ theme }) => theme.colors.border}; /* Full border on tablet */
     display: flex;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -158,22 +159,20 @@ export const ActiveIndicator = styled.div`
 export const ContentArea = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const IndustryBlock = styled.div`
+  display: flex;
+  flex-direction: column;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 64px 0 64px 64px;
+  overflow: hidden; /* Clips negative margin from AppsGrid to hide duplicate bottom borders */
 
-  &:last-child {
-    border-bottom: none;
-  }
-
-  ${({ theme }) => theme.media.tablet} {
-    padding: 48px 0;
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 32px 0;
+  &:first-child {
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
   }
 `;
 
@@ -182,18 +181,21 @@ export const IndustryName = styled.h3`
   font-weight: 500;
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 40px 0;
+  margin: 0;
   line-height: 1.2;
+  padding: 40px 64px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
     font-size: 22px;
-    margin-bottom: 32px;
+    padding: 32px 24px;
   }
 `;
 
 export const AppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  margin-bottom: -1px; /* Pulls AppCell bottom borders out of view, leaving only IndustryBlock's bottom border visible */
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
@@ -205,41 +207,47 @@ export const AppsGrid = styled.div`
 `;
 
 export const AppCell = styled.div`
-  padding: 32px 32px 32px 20px;
+  padding: 40px 32px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   flex-direction: column;
   gap: 8px;
 
-  &:last-child {
-    border-right: none;
-    padding-right: 0;
+  /* Left-most column on desktop */
+  &:nth-child(3n+1) {
+    padding-left: 64px;
   }
 
-  /* For 3-col: remove border on every 3rd */
+  /* Right-most column on desktop */
   &:nth-child(3n) {
     border-right: none;
-    padding-right: 0;
+    padding-right: 64px;
   }
 
   ${({ theme }) => theme.media.tablet} {
+    /* Reset desktop column rules */
+    &:nth-child(3n+1) {
+      padding-left: 32px;
+    }
     &:nth-child(3n) {
       border-right: 1px solid ${({ theme }) => theme.colors.border};
       padding-right: 32px;
     }
+    
+    /* Apply tablet 2-column rules */
+    &:nth-child(2n+1) {
+      padding-left: 40px;
+    }
     &:nth-child(2n) {
       border-right: none;
-      padding-right: 0;
+      padding-right: 40px;
     }
   }
 
   ${({ theme }) => theme.media.mobile} {
     border-right: none !important;
-    padding-right: 0 !important;
-    padding: 24px 0;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
-    &:last-child { border-bottom: none; }
+    padding: 32px 24px !important;
   }
 `;
 

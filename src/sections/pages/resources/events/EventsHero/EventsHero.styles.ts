@@ -78,7 +78,6 @@ export const CTAButton = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   background-color: ${({ theme }) => theme.colors.text.strong};
   color: ${({ theme }) => theme.colors.background.primary};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
@@ -89,16 +88,26 @@ export const CTAButton = styled.a`
   text-decoration: none;
   cursor: pointer;
   align-self: flex-start;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
+  overflow: hidden;
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.text.primary};
+    color: ${({ theme }) => theme.colors.background.primary};
   }
 
   svg {
     width: 14px;
     height: 14px;
   }
+`;
+
+export const ButtonLabelText = styled.span`
+  white-space: nowrap;
+`;
+
+export const IconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 export const ImageColumn = styled.div`

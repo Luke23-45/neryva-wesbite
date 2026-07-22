@@ -26,7 +26,7 @@ export const AppsHeader = styled.div`
   flex-direction: column;
   align-items: center;
   text-align: center;
-  margin-bottom: 80px;
+  margin-bottom: 40px;
 `;
 
 export const HeaderIcons = styled.div`
@@ -75,9 +75,10 @@ export const AppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   
-  /* The reference image has top and bottom borders spanning the whole grid */
   border-top: 1px solid ${({ theme }) => theme.colors.border};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
