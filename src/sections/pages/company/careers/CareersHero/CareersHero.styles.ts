@@ -75,33 +75,6 @@ export const Description = styled.p`
   max-width: 480px;
 `;
 
-export const CTAButton = styled.a`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background-color: ${({ theme }) => theme.colors.text.strong};
-  color: ${({ theme }) => theme.colors.background.primary};
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
-  font-weight: 500;
-  padding: 14px 24px;
-  border-radius: 6px;
-  text-decoration: none;
-  cursor: pointer;
-  align-self: flex-start;
-  transition: background-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.text.primary};
-  }
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
-`;
-
 export const ImageColumn = styled.div`
   position: relative;
   width: 100%;

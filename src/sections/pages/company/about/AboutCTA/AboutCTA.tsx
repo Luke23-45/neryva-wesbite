@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { Section } from '@/sections/common/layout/Section';
-import { Title, Description, CTAButton } from './AboutCTA.styles';
+import { Container } from '@/sections/common/layout/Container';
+import { theme } from '@/styles/theme';
+import { Title, Description, CTAButton, CTAWrapper } from './AboutCTA.styles';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -18,23 +20,25 @@ interface Props {
 
 export function AboutCTA({ data }: Props) {
   return (
-    <Section paddingY="lg" background="#030811">
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-100px' }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
-      >
-        <motion.div variants={fadeUp}>
-          <Title>{data.title}</Title>
-        </motion.div>
-        <motion.div variants={fadeUp}>
-          <Description>{data.description}</Description>
-        </motion.div>
-        <motion.div variants={fadeUp}>
-          <CTAButton to={data.buttonLink}>{data.buttonText}</CTAButton>
-        </motion.div>
-      </motion.div>
+    <Section paddingY="lg" background={theme.colors.text.primary}>
+      <Container>
+        <CTAWrapper
+          as={motion.div}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+        >
+          <motion.div variants={fadeUp}>
+            <Title>{data.title}</Title>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <Description>{data.description}</Description>
+          </motion.div>
+          <motion.div variants={fadeUp}>
+            <CTAButton to={data.buttonLink}>{data.buttonText}</CTAButton>
+          </motion.div>
+        </CTAWrapper>
+      </Container>
     </Section>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
@@ -81,18 +81,45 @@ const renderIcon = (id: string) => {
 export function CareersEnvironment({ data }: Props) {
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  const scrollLeft = () => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeftPos, setScrollLeftPos] = useState(0);
+
+  const handleScrollLeft = () => {
     if (sliderRef.current) {
       const scrollAmount = sliderRef.current.clientWidth / 2;
       sliderRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
     }
   };
 
-  const scrollRight = () => {
+  const handleScrollRight = () => {
     if (sliderRef.current) {
       const scrollAmount = sliderRef.current.clientWidth / 2;
       sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!sliderRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - sliderRef.current.offsetLeft);
+    setScrollLeftPos(sliderRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !sliderRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startX) * 2;
+    sliderRef.current.scrollLeft = scrollLeftPos - walk;
   };
 
   return (
@@ -116,12 +143,12 @@ export function CareersEnvironment({ data }: Props) {
                   <div className="bar" />
                   <div className="dot" />
                 </ProgressIndicator>
-                <NavButton onClick={scrollLeft} aria-label="Previous">
+                <NavButton onClick={handleScrollLeft} aria-label="Previous">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                   </svg>
                 </NavButton>
-                <NavButton onClick={scrollRight} aria-label="Next">
+                <NavButton onClick={handleScrollRight} aria-label="Next">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="9 18 15 12 9 6"></polyline>
                   </svg>
@@ -130,7 +157,14 @@ export function CareersEnvironment({ data }: Props) {
             </motion.div>
           </HeaderLayout>
           <motion.div variants={fadeUp}>
-            <SliderContainer ref={sliderRef}>
+            <SliderContainer 
+              ref={sliderRef}
+              $isDragging={isDragging}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+            >
               {data.items.map((item) => (
                 <SlideCell key={item.id}>
                   <PerkCard $accentColor={item.accentColor}>

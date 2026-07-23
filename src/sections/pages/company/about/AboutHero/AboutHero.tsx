@@ -8,7 +8,7 @@ import {
   ArrowIndicator,
   Description,
 } from './AboutHero.styles';
-
+import heroimage from "@assets/page/about/about_hero.png"
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (custom: number) => ({
@@ -62,8 +62,8 @@ export function AboutHero({ data }: Props) {
       </ContentColumn>
 
       <ImageColumn>
-        <motion.img 
-          src="/images/careers-hero.png" 
+        <motion.img
+          src={heroimage}
           alt="Abstract representation of physical AI"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

@@ -7,8 +7,8 @@ import {
   Title,
   ArrowIndicator,
   Description,
-  CTAButton,
 } from './CareersHero.styles';
+import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
 
 const fadeUp: any = {
   hidden: { opacity: 0, y: 24 },
@@ -62,19 +62,17 @@ export function CareersHero({ data }: Props) {
         </motion.div>
 
         <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
-          <CTAButton href="#roles">
-            Apply now
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" strokeLinejoin="miter">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </CTAButton>
+          <CyclicNextButton 
+            label="Apply now" 
+            onClick={() => { window.location.href = '#roles'; }} 
+          />
         </motion.div>
       </ContentColumn>
 
       <ImageColumn>
         <motion.img 
           src="/images/careers-hero.png" 
-          alt="Hands arranging dominoes"
+          alt="Neryva Careers and Human Potential"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1.2, ease: "easeOut" }}

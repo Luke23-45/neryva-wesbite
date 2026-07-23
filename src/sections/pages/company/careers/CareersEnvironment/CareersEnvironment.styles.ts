@@ -88,10 +88,12 @@ export const NavButton = styled.button`
   }
 `;
 
-export const SliderContainer = styled.div`
+export const SliderContainer = styled.div<{ $isDragging?: boolean }>`
   display: flex;
   overflow-x: auto;
-  scroll-behavior: smooth;
+  scroll-behavior: ${({ $isDragging }) => ($isDragging ? 'auto' : 'smooth')};
+  cursor: ${({ $isDragging }) => ($isDragging ? 'grabbing' : 'grab')};
+  user-select: ${({ $isDragging }) => ($isDragging ? 'none' : 'auto')};
   -ms-overflow-style: none;
   scrollbar-width: none;
   gap: 1px;

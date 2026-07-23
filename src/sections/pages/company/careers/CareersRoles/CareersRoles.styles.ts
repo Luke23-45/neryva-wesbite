@@ -7,6 +7,7 @@ export const BorderTop = styled.div`
 
 export const SectionHeader = styled.div`
   margin-bottom: 80px;
+  margin-top: 40px;
 `;
 
 export const Label = styled.span`
@@ -34,13 +35,16 @@ export const DepartmentGroup = styled(motion.div)`
 `;
 
 export const DepartmentName = styled.h3`
-  font-size: 1.25rem;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 1.75rem;
   font-weight: 500;
+  letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 24px 0;
+  margin: 0 0 32px 0;
   padding-bottom: 16px;
-  border-bottom: 2px solid ${({ theme }) => theme.colors.text.primary};
-  display: inline-block;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  width: 100%;
 `;
 
 export const RoleList = styled.div`
@@ -51,7 +55,7 @@ export const RoleList = styled.div`
 
 export const RoleRow = styled.button<{ $isOpen?: boolean }>`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 48px;
+  grid-template-columns: 1fr auto 48px;
   align-items: center;
   padding: 24px 16px;
   border: none;
@@ -88,9 +92,26 @@ export const RoleTitle = styled.div`
 export const RoleMeta = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 12px;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
+  background: ${({ theme }) => theme.colors.background.primary};
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  white-space: nowrap;
+
+  ${RoleRow}:hover & {
+    border-color: rgba(15, 23, 42, 0.15);
+  }
 
   ${({ theme }) => theme.media.tablet} {
+    background: transparent;
+    border: none;
+    padding: 0;
     color: ${({ theme }) => theme.colors.text.muted};
   }
 `;
@@ -100,13 +121,17 @@ export const RoleArrow = styled.div<{ $isOpen?: boolean }>`
   align-items: center;
   justify-content: flex-end;
   color: ${({ theme }) => theme.colors.text.muted};
-  font-size: 20px;
   transform: ${({ $isOpen }) => ($isOpen ? 'rotate(90deg)' : 'rotate(0)')};
-  transition: color 200ms ease, transform 300ms ease;
+  transition: color 300ms ease, transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  svg {
+    width: 16px;
+    height: 16px;
+    shape-rendering: crispedges;
+  }
 
   ${RoleRow}:hover & {
     color: ${({ theme }) => theme.colors.text.primary};
-    transform: ${({ $isOpen }) => ($isOpen ? 'rotate(90deg)' : 'translateX(4px)')};
   }
 
   ${({ theme }) => theme.media.tablet} {
@@ -133,6 +158,16 @@ export const AccordionContent = styled.div`
   }
 `;
 
+export const LocationText = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: 16px;
+  text-transform: uppercase;
+`;
+
 export const AccordionDesc = styled.p`
   font-size: 1.0625rem;
   line-height: 1.65;
@@ -141,20 +176,34 @@ export const AccordionDesc = styled.p`
   max-width: 640px;
 `;
 
-export const ApplyButton = styled.a`
+export const EmailFallback = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 14px 32px;
-  background: ${({ theme }) => theme.colors.text.primary};
-  color: ${({ theme }) => theme.colors.background.primary};
+  height: 46px;
+  padding: 0 24px;
+  background: ${({ theme }) => theme.colors.background.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 15px;
   font-weight: 500;
-  border-radius: 8px;
   text-decoration: none;
-  transition: opacity 200ms ease;
+  transition: all 300ms ease;
   white-space: nowrap;
 
+  span {
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-weight: 600;
+    margin-left: 6px;
+  }
+
   &:hover {
-    opacity: 0.9;
+    border-color: rgba(15, 23, 42, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
+
+

@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 export const SectionHeader = styled.div`
   margin-bottom: 64px;
@@ -45,29 +46,32 @@ export const GridContainer = styled.div`
   }
 `;
 
-export const MissionCard = styled.div`
+export const MissionCard = styled(motion.div)`
   position: relative;
   display: flex;
   flex-direction: column;
+  height: 100%;
   padding: 32px;
   background-color: ${({ theme }) => theme.colors.surface};
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-export const NumberBadge = styled.div`
+export const IconBadge = styled.div`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 16px;
-  background-color: ${({ theme }) => theme.colors.text.strong};
-  color: ${({ theme }) => theme.colors.text.inverse};
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-  font-weight: 600;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: ${({ theme }) => theme.colors.background.tertiary};
+  color: ${({ theme }) => theme.colors.text.strong};
   margin-bottom: 24px;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 export const ContentWrapper = styled.div`

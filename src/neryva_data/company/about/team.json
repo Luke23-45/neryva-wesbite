@@ -4,15 +4,15 @@
   "items": [
     {
       "name": "Core Research",
-      "focus": "Research direction, experimentation, and technical evaluation across the main domains."
+      "focus": "Research direction, experimentation, and technical evaluation across language, robotics, clinical, energy, and computational science."
     },
     {
       "name": "Applied Systems",
-      "focus": "Turning research into usable enterprise systems and delivery-ready prototypes."
+      "focus": "Turning models into usable enterprise systems, focusing on secure deployment infrastructure and professional AI agent experiences."
     },
     {
       "name": "Operations",
-      "focus": "Supporting execution, communication, and company structure as the organization grows."
+      "focus": "Supporting execution, security, governance, and company structure as the organization scales."
     }
   ],
   "note": "No named leadership or team bios should be published here until they are final and accurate."

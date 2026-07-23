@@ -38,7 +38,7 @@ interface Props {
 
 export function AboutTeam({ data }: Props) {
   return (
-    <Section paddingY="lg" background={theme.colors.background.secondary}>
+    <Section paddingYTop="sm" background={theme.colors.background.secondary}>
       <BorderTop>
         <Container>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} variants={stagger}>
@@ -53,12 +53,10 @@ export function AboutTeam({ data }: Props) {
 
             <ListContainer>
               {data.items.map((item, index) => (
-                <motion.div key={item.name} variants={fadeUp} custom={index}>
-                  <ListItem>
-                    <TeamName>{item.name}</TeamName>
-                    <TeamFocus>{item.focus}</TeamFocus>
-                  </ListItem>
-                </motion.div>
+                <ListItem key={item.name} variants={fadeUp} custom={index}>
+                  <TeamName>{item.name}</TeamName>
+                  <TeamFocus>{item.focus}</TeamFocus>
+                </ListItem>
               ))}
             </ListContainer>
           </motion.div>

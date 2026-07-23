@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ShieldCheck, Scale, TrendingUp, Sparkles, LucideIcon } from 'lucide-react';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
@@ -8,11 +9,17 @@ import {
   Title,
   GridContainer,
   MissionCard,
-  NumberBadge,
+  IconBadge,
   ContentWrapper,
   MissionTitle,
   MissionDesc,
 } from './AboutMission.styles';
+
+const MISSION_ICONS: Record<string, LucideIcon> = {
+  'practical-delivery': ShieldCheck,
+  'honest-scope': Scale,
+  'measurable-outcomes': TrendingUp,
+};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -40,7 +47,7 @@ interface Props {
 
 export function AboutMission({ data }: Props) {
   return (
-    <Section paddingY="lg" background={theme.colors.background.primary}>
+    <Section paddingYTop="md" paddingYBottom="sm" background={theme.colors.background.primary}>
       <Container>
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }} variants={stagger}>
           <SectionHeader>
@@ -53,17 +60,20 @@ export function AboutMission({ data }: Props) {
           </SectionHeader>
 
           <GridContainer as={motion.div} variants={fadeUp}>
-            {data.items.map((item, index) => (
-              <motion.div key={item.id} variants={fadeUp} custom={index}>
-                <MissionCard>
-                  <NumberBadge>{item.id}</NumberBadge>
+            {data.items.map((item, index) => {
+              const Icon = MISSION_ICONS[item.id] || Sparkles;
+              return (
+                <MissionCard key={item.id} variants={fadeUp} custom={index}>
+                  <IconBadge>
+                    <Icon />
+                  </IconBadge>
                   <ContentWrapper>
                     <MissionTitle>{item.title}</MissionTitle>
                     <MissionDesc>{item.description}</MissionDesc>
                   </ContentWrapper>
                 </MissionCard>
-              </motion.div>
-            ))}
+              );
+            })}
           </GridContainer>
         </motion.div>
       </Container>

@@ -18,8 +18,10 @@ import {
   AccordionBody,
   AccordionContent,
   AccordionDesc,
-  ApplyButton,
+  LocationText,
+  EmailFallback,
 } from './CareersRoles.styles';
+import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -31,11 +33,24 @@ const stagger: Variants = {
   visible: { transition: { staggerChildren: 0.1 } },
 };
 
+const PixelRightArrow = () => (
+  <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+    <rect x="4" y="1" width="2" height="2" />
+    <rect x="6" y="3" width="2" height="2" />
+    <rect x="8" y="5" width="2" height="2" />
+    <rect x="10" y="6" width="2" height="2" />
+    <rect x="8" y="7" width="2" height="2" />
+    <rect x="6" y="9" width="2" height="2" />
+    <rect x="4" y="11" width="2" height="2" />
+  </svg>
+);
+
 interface Position {
   title: string;
   location: string;
   type: string;
   description: string;
+  applyLink?: string;
 }
 
 interface Department {
@@ -53,13 +68,23 @@ interface Props {
 
 export function CareersRoles({ data }: Props) {
   const [openRole, setOpenRole] = useState<string | null>(null);
+  const [showEmailFor, setShowEmailFor] = useState<string | null>(null);
 
   const toggleRole = (title: string) => {
     setOpenRole(openRole === title ? null : title);
+    setShowEmailFor(null);
+  };
+
+  const handleApplyClick = (pos: Position) => {
+    if (pos.applyLink) {
+      window.location.href = pos.applyLink;
+    } else {
+      setShowEmailFor(pos.title);
+    }
   };
 
   return (
-    <Section paddingY="lg" background={theme.colors.background.secondary}>
+    <Section paddingY="none" background={theme.colors.background.secondary}>
       <BorderTop>
         <Container>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
@@ -79,16 +104,17 @@ export function CareersRoles({ data }: Props) {
                   <RoleList>
                     {dept.positions.map((pos) => {
                       const isOpen = openRole === pos.title;
-                      
+
                       return (
                         <div key={pos.title}>
                           <RoleRow onClick={() => toggleRole(pos.title)} $isOpen={isOpen} aria-expanded={isOpen}>
                             <RoleTitle>{pos.title}</RoleTitle>
-                            <RoleMeta>{pos.location}</RoleMeta>
                             <RoleMeta>{pos.type}</RoleMeta>
-                            <RoleArrow $isOpen={isOpen} aria-hidden="true">→</RoleArrow>
+                            <RoleArrow $isOpen={isOpen} aria-hidden="true">
+                              <PixelRightArrow />
+                            </RoleArrow>
                           </RoleRow>
-                          
+
                           <AnimatePresence initial={false}>
                             {isOpen && (
                               <AccordionBody
@@ -99,8 +125,40 @@ export function CareersRoles({ data }: Props) {
                                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                               >
                                 <AccordionContent>
-                                  <AccordionDesc>{pos.description}</AccordionDesc>
-                                  <ApplyButton href="#apply">Apply for this role</ApplyButton>
+                                  <div>
+                                    <LocationText>Location: {pos.location}</LocationText>
+                                    <AccordionDesc>{pos.description}</AccordionDesc>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    <AnimatePresence mode="wait">
+                                      {showEmailFor === pos.title ? (
+                                        <motion.div
+                                          key="email"
+                                          initial={{ opacity: 0, x: -10 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          exit={{ opacity: 0, x: 10 }}
+                                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                                        >
+                                          <EmailFallback href="mailto:jobs@neryva.com">
+                                            Send CV to <span>jobs@neryva.com</span>
+                                          </EmailFallback>
+                                        </motion.div>
+                                      ) : (
+                                        <motion.div
+                                          key="button"
+                                          initial={{ opacity: 0, x: -10 }}
+                                          animate={{ opacity: 1, x: 0 }}
+                                          exit={{ opacity: 0, x: 10 }}
+                                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                                        >
+                                          <CyclicNextButton 
+                                            label="Apply for this role" 
+                                            onClick={() => handleApplyClick(pos)} 
+                                          />
+                                        </motion.div>
+                                      )}
+                                    </AnimatePresence>
+                                  </div>
                                 </AccordionContent>
                               </AccordionBody>
                             )}
