@@ -17,7 +17,7 @@ export const HeaderBlock = styled.div`
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  margin-top: 20px;
+  margin-top: 40px;
   margin-bottom: 40px;
 
 `;
@@ -37,7 +37,7 @@ export const PipelineTitle = styled.h2`
 `;
 
 export const Sidebar = styled.nav`
-  width: 240px;
+  width: 280px;
   flex-shrink: 0;
   position: sticky;
   top: 120px; /* Ample space below the header */
@@ -80,8 +80,7 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
   text-align: left;
 
   /* Active state typography adjustments */
-  font-weight: ${({ $active, theme }) =>
-    $active ? theme.typography.weights.medium : theme.typography.weights.regular};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.secondary};
 
@@ -96,15 +95,7 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
     background: ${({ theme }) => theme.colors.background.secondary};
   }
 
-  /* Pixel-perfect recreation of the active right-arrow from the screenshot */
-  ${({ $active }) => $active && `
-    &::after {
-      content: '➔';
-      font-size: 14px;
-      color: inherit;
-      margin-left: auto;
-    }
-  `}
+  /* The arrow is now handled via Framer Motion in the TSX for smooth gliding */
 
   ${({ theme }) => theme.media.tablet} {
     white-space: nowrap;
@@ -142,6 +133,8 @@ export const SidebarItemLabel = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 1.03rem;
+  font-weight: 500;
 `;
 
 export const Panel = styled.div`

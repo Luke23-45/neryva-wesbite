@@ -107,7 +107,7 @@ export const SidebarMetric = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 16px;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
@@ -148,33 +148,6 @@ export const CtaGroup = styled.div`
   align-items: center;
 `;
 
-/* Razor-sharp architectural button */
-export const CtaPrimary = styled.a`
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 28px;
-  background: ${({ theme }) => theme.colors.text.primary};
-  color: ${({ theme }) => theme.colors.background.primary};
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 15px;
-  font-weight: 500;
-  border: none;
-  border-radius: 4px; 
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-
-  &:hover {
-    opacity: 0.92;
-    transform: translateY(-1px);
-  }
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
 
 /* ─── Row 2: Right Cell (Dark Visual Panel) ─── */
 export const CellBottomRight = styled.div`

@@ -1,12 +1,13 @@
 import styled from 'styled-components';
 
 export const CapabilitiesSection = styled.section`
-  padding: 120px 0;
+  padding: 40px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.tablet} {
     padding: 80px 0;
   }
+  margin-bottom: 50px;
 `;
 
 export const InnerContainer = styled.div`
@@ -26,7 +27,7 @@ export const AppsHeader = styled.div`
   align-items: flex-start;
   text-align: left;
   max-width: 800px;
-  margin-bottom: 80px;
+  margin-bottom: 40px;
 `;
 
 

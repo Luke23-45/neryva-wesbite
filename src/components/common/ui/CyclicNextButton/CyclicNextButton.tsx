@@ -11,10 +11,11 @@ interface CyclicNextButtonProps {
     label?: string;
     onClick?: () => void;
     className?: string;
+    size?: 'default' | 'large';
 }
 
-const PixelRightArrow = () => (
-    <PixelChevronIcon viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+const PixelRightArrow = ({ size }: { size?: 'default' | 'large' }) => (
+    <PixelChevronIcon $size={size} viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
         <rect x="4" y="1" width="2" height="2" />
         <rect x="6" y="3" width="2" height="2" />
         <rect x="8" y="5" width="2" height="2" />
@@ -33,7 +34,8 @@ const premiumTransition = {
 export default function CyclicNextButton({
     label = 'Next',
     onClick,
-    className
+    className,
+    size = 'default'
 }: CyclicNextButtonProps) {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -49,6 +51,9 @@ export default function CyclicNextButton({
         }
     };
 
+    const iconWidth = size === 'large' ? 16 : 14;
+    const iconMargin = size === 'large' ? 12 : 10;
+
     return (
         <ButtonWrapper
             onClick={handleClick}
@@ -56,23 +61,24 @@ export default function CyclicNextButton({
             onMouseLeave={() => setIsHovered(false)}
             className={className}
             aria-label={label}
+            $size={size}
         >
             <IconContainer
                 as={motion.div}
                 initial={false}
                 animate={{
-                    width: isHovered ? 14 : 0,
+                    width: isHovered ? iconWidth : 0,
                     opacity: isHovered ? 1 : 0,
                     x: isHovered ? 0 : -10,
-                    marginRight: isHovered ? 10 : 0
+                    marginRight: isHovered ? iconMargin : 0
                 }}
                 transition={premiumTransition}
                 style={{ overflow: 'hidden' }}
             >
-                <PixelRightArrow />
+                <PixelRightArrow size={size} />
             </IconContainer>
 
-            <LabelText>
+            <LabelText $size={size}>
                 {label}
             </LabelText>
 
@@ -80,15 +86,15 @@ export default function CyclicNextButton({
                 as={motion.div}
                 initial={false}
                 animate={{
-                    width: isHovered ? 0 : 14,
+                    width: isHovered ? 0 : iconWidth,
                     opacity: isHovered ? 0 : 1,
                     x: isHovered ? 10 : 0,
-                    marginLeft: isHovered ? 0 : 10
+                    marginLeft: isHovered ? 0 : iconMargin
                 }}
                 transition={premiumTransition}
                 style={{ overflow: 'hidden' }}
             >
-                <PixelRightArrow />
+                <PixelRightArrow size={size} />
             </IconContainer>
         </ButtonWrapper>
     );

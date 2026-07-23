@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import heroData from '@neryva_data/products/ai_enterprised/section1.json';
 import { EnterpriseHeroVisual } from './EnterpriseHeroVisual';
+import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
 
 import {
   HeroWrapper,
@@ -17,7 +18,6 @@ import {
   CellBottomLeft,
   Description,
   CtaGroup,
-  CtaPrimary,
   CellBottomRight,
 } from './EnterpriseHero.styles';
 
@@ -85,11 +85,11 @@ export function EnterpriseHero() {
 
           <motion.div variants={fadeUp} custom={6}>
             <CtaGroup>
-              {/* Safely inject data properties assuming normal indexing in JSON array */}
-              <CtaPrimary href={heroData.hero.ctas?.[0]?.href || "/contact"}>
-                Talk to Solutions
-                <ChevronRight size={18} strokeWidth={1.5} />
-              </CtaPrimary>
+              <CyclicNextButton 
+                label="Talk to Solutions" 
+                size="large"
+                onClick={() => { window.location.href = heroData.hero.ctas?.[0]?.href || "/contact"; }}
+              />
             </CtaGroup>
           </motion.div>
         </CellBottomLeft>

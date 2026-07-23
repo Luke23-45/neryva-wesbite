@@ -98,15 +98,15 @@ export function EnterprisePipeline() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
+        entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const id = entry.target.getAttribute('data-section-id');
             if (id) setActiveId(id);
           }
-        }
+        });
       },
-      // Offset accounts for the 120px sticky top spacing to trigger accurately
-      { threshold: 0.2, rootMargin: '-120px 0px -60% 0px' }
+      // Trigger when any part of the section crosses the middle-upper part of the screen
+      { threshold: 0, rootMargin: '-15% 0px -60% 0px' }
     );
 
     for (const ref of sectionRefs.current.values()) {
@@ -118,9 +118,14 @@ export function EnterprisePipeline() {
 
   // Smooth scroll handler for sidebar clicks
   const scrollTo = (id: string) => {
+    // Intentionally omitting setActiveId(id) here!
+    // We want the IntersectionObserver to naturally step through the intermediate items as the page scrolls.
     const element = sectionRefs.current.get(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Calculate position explicitly, offsetting for the sticky header
+      const yOffset = -120; // Accounts for top: 120px sticky gap
+      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 
@@ -165,6 +170,28 @@ export function EnterprisePipeline() {
                     </SidebarItemIcon>
                   )}
                   <SidebarItemLabel>{stripStepPrefix(section.sidebarLabel)}</SidebarItemLabel>
+                  
+                  {isActive && (
+                    <motion.span
+                      layoutId="pipelineSidebarArrow"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ 
+                        type: 'spring', 
+                        stiffness: 400, 
+                        damping: 30 
+                      }}
+                      style={{ 
+                        marginLeft: 'auto', 
+                        fontSize: '14px',
+                        color: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      ➔
+                    </motion.span>
+                  )}
                 </SidebarItem>
               );
             })}
