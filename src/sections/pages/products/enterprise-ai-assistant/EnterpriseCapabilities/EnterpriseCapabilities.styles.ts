@@ -51,9 +51,9 @@ export const SectionHeading = styled.h2`
 export const AppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background-color: ${({ theme }) => theme.colors.border};
-  gap: 1px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  /* Top and Left borders applied to the container */
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
@@ -72,6 +72,10 @@ export const AppCell = styled.div`
   background: ${({ theme }) => theme.colors.background.primary};
   position: relative;
   transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Right and Bottom borders applied to each cell */
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 
   &:hover {
     background: ${({ theme }) => theme.colors.background.secondary};
