@@ -133,7 +133,7 @@ export function DeploymentPipeline() {
           }
         }
       },
-      { threshold: 0.2, rootMargin: '-120px 0px -60% 0px' }
+      { threshold: 0, rootMargin: '-15% 0px -60% 0px' }
     );
 
     for (const ref of sectionRefs.current.values()) {
@@ -146,7 +146,9 @@ export function DeploymentPipeline() {
   const scrollTo = (id: string) => {
     const element = sectionRefs.current.get(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const yOffset = -120;
+      const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 
@@ -185,6 +187,18 @@ export function DeploymentPipeline() {
                     </DeploymentPipelineSidebarItemIcon>
                   )}
                   <DeploymentPipelineSidebarItemLabel>{section.sidebarLabel}</DeploymentPipelineSidebarItemLabel>
+
+                  {isActive && (
+                    <motion.span
+                      layoutId="pipelineSidebarArrow"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      style={{ marginLeft: 'auto', fontSize: '14px', color: 'inherit', display: 'flex', alignItems: 'center' }}
+                    >
+                      ➔
+                    </motion.span>
+                  )}
                 </DeploymentPipelineSidebarItem>
               );
             })}

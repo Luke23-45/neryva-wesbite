@@ -1,12 +1,13 @@
 import styled from 'styled-components';
 
 export const DeploymentCapabilitiesSection = styled.section`
-  padding: 120px 0;
+  padding: 40px 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
 
   ${({ theme }) => theme.media.tablet} {
     padding: 80px 0;
   }
+  margin-bottom: 50px;
 `;
 
 export const DeploymentCapabilitiesInnerContainer = styled.div`
@@ -26,7 +27,7 @@ export const DeploymentCapabilitiesAppsHeader = styled.div`
   align-items: flex-start;
   text-align: left;
   max-width: 800px;
-  margin-bottom: 80px;
+  margin-bottom: 40px;
 `;
 
 export const DeploymentCapabilitiesSectionHeading = styled.h2`
@@ -47,12 +48,12 @@ export const DeploymentCapabilitiesSectionHeading = styled.h2`
 export const DeploymentCapabilitiesAppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.border};
+  gap: 1px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
-    border-bottom: none;
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -65,29 +66,16 @@ export const DeploymentCapabilitiesAppCell = styled.div`
   flex-direction: column;
   height: 420px;
   padding: 48px 32px;
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  background: transparent;
+  background: ${({ theme }) => theme.colors.background.primary};
   position: relative;
   transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.018);
-  }
-
-  &:last-child {
-    border-right: none;
+    background: ${({ theme }) => theme.colors.background.secondary};
   }
 
   ${({ theme }) => theme.media.tablet} {
     height: 320px;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    &:nth-child(2n) {
-      border-right: none;
-    }
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    border-right: none;
   }
 `;
 
@@ -96,27 +84,27 @@ export const DeploymentCapabilitiesCellIcon = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 
   svg {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     stroke-width: 1.5px;
   }
 `;
 
 export const DeploymentCapabilitiesCellTitle = styled.h3`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: 1.2;
+  line-height: 1.1;
   letter-spacing: -0.02em;
-  margin: 0 0 12px 0;
+  margin: 0;
 `;
 
 export const DeploymentCapabilitiesCellDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 14px;
   line-height: 1.6;
-  font-weight: 400;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   margin-top: auto;

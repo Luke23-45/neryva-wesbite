@@ -16,7 +16,7 @@ export const DeploymentPipelineHeaderBlock = styled.div`
   flex-direction: column;
   align-items: flex-start;
   text-align: left;
-  margin-top: 20px;
+  margin-top: 40px;
   margin-bottom: 40px;
 `;
 
@@ -34,14 +34,14 @@ export const DeploymentPipelineTitle = styled.h2`
 `;
 
 export const DeploymentPipelineSidebar = styled.nav`
-  width: 240px;
+  width: 280px;
   flex-shrink: 0;
   position: sticky;
   top: 120px;
   display: flex;
   flex-direction: column;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.background.primary};
   overflow: hidden;
 
@@ -75,11 +75,11 @@ export const DeploymentPipelineSidebarItem = styled.button<{ $active: boolean }>
   letter-spacing: -0.01em;
   text-align: left;
 
-  font-weight: ${({ $active }) => ($active ? 500 : 400)};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.secondary};
 
-  transition: all 0.2s ease;
+  transition: all ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
     border-bottom: none;
@@ -89,17 +89,6 @@ export const DeploymentPipelineSidebarItem = styled.button<{ $active: boolean }>
     color: ${({ theme }) => theme.colors.text.primary};
     background: ${({ theme }) => theme.colors.background.secondary};
   }
-
-  ${({ $active }) =>
-    $active &&
-    `
-    &::after {
-      content: '➔';
-      font-size: 14px;
-      color: inherit;
-      margin-left: auto;
-    }
-  `}
 
   ${({ theme }) => theme.media.tablet} {
     white-space: nowrap;
@@ -121,12 +110,17 @@ export const DeploymentPipelineSidebarItemIcon = styled.span<{ $active: boolean 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.muted};
-  transition: color 0.2s ease;
+  transition: color ${({ theme }) => theme.transitions.fast};
+
+  svg {
+    width: 30px;
+    height: 30px;
+  }
 `;
 
 export const DeploymentPipelineSidebarItemLabel = styled.span`
@@ -135,6 +129,8 @@ export const DeploymentPipelineSidebarItemLabel = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 1.03rem;
+  font-weight: 500;
 `;
 
 export const DeploymentPipelinePanel = styled.div`
@@ -158,13 +154,13 @@ export const DeploymentPipelineSection = styled.section`
 `;
 
 export const DeploymentPipelineSectionTitle = styled.h2`
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 3.3rem;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.2;
   letter-spacing: -0.02em;
   margin: 0;
-  padding: 24px 32px;
+  padding: 35px 32px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background.primary};
 
@@ -358,7 +354,7 @@ export const DeploymentPipelineFeatureCard = styled.div`
 `;
 
 export const DeploymentPipelineFeatureTitle = styled.h3`
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.4;
@@ -367,7 +363,7 @@ export const DeploymentPipelineFeatureTitle = styled.h3`
 `;
 
 export const DeploymentPipelineFeatureDescription = styled.p`
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
