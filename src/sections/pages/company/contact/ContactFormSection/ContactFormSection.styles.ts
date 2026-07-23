@@ -131,7 +131,6 @@ export const BlockFooter = styled.p`
 export const SecondaryButton = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   padding: 8px 12px;
   background-color: rgba(0, 0, 0, 0.05);
   border: none;
@@ -142,6 +141,7 @@ export const SecondaryButton = styled.button`
   color: ${({ theme }) => theme.colors.text.strong};
   cursor: pointer;
   transition: background-color 200ms ease;
+  overflow: hidden;
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.08);
@@ -150,7 +150,15 @@ export const SecondaryButton = styled.button`
   svg {
     width: 12px;
     height: 12px;
+    flex-shrink: 0;
+    shape-rendering: crispedges;
   }
+`;
+
+export const SecondaryIconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 // --- Form Styles ---
@@ -180,7 +188,7 @@ export const FormGroup = styled.div`
 
 export const Label = styled.label`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text.strong};
 
@@ -198,9 +206,10 @@ export const Input = styled.input`
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: ${({ theme }) => theme.colors.text.strong};
   transition: border-color 200ms ease;
+  font-weight: 500;
 
   &::placeholder {
     color: rgba(0, 0, 0, 0.3);
@@ -242,6 +251,13 @@ export const CheckboxGroup = styled.div`
   margin-top: 16px;
 `;
 
+export const CheckboxWrapper = styled.div`
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+  margin-top: 4px; /* Optical alignment to match text cap-height */
+`;
+
 export const Checkbox = styled.input`
   width: 20px;
   height: 20px;
@@ -252,16 +268,18 @@ export const Checkbox = styled.input`
 
 export const CheckboxLabel = styled.label`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.strong};
   line-height: 1.4;
   cursor: pointer;
+  margin: 0;
+  padding: 0;
 `;
 
 export const Disclaimer = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 0.85rem;
+  font-size: 1rem;
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;

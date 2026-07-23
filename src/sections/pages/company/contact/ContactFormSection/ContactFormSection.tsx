@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   SectionWrapper,
@@ -13,6 +13,7 @@ import {
   BlockContent,
   BlockFooter,
   SecondaryButton,
+  SecondaryIconContainer,
   FormContainer,
   FormRow,
   FormGroup,
@@ -20,6 +21,7 @@ import {
   Input,
   TextArea,
   CheckboxGroup,
+  CheckboxWrapper,
   Checkbox,
   CheckboxLabel,
   Disclaimer,
@@ -67,6 +69,67 @@ const Icons: Record<string, React.ReactNode> = {
       <circle cx="12" cy="12" r="2" />
     </svg>
   ),
+};
+
+const premiumTransition = {
+  duration: 0.4,
+  ease: [0.16, 1, 0.3, 1] as any
+};
+
+const PixelRightArrow = () => (
+  <svg viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+    <rect x="4" y="1" width="2" height="2" />
+    <rect x="6" y="3" width="2" height="2" />
+    <rect x="8" y="5" width="2" height="2" />
+    <rect x="10" y="6" width="2" height="2" />
+    <rect x="8" y="7" width="2" height="2" />
+    <rect x="6" y="9" width="2" height="2" />
+    <rect x="4" y="11" width="2" height="2" />
+  </svg>
+);
+
+const AnimatedSidebarButton = ({ text, url }: { text: string; url: string }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <SecondaryButton
+      onClick={() => { window.location.href = url; }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <SecondaryIconContainer
+          as={motion.div}
+          initial={false}
+          animate={{
+              width: isHovered ? 12 : 0,
+              opacity: isHovered ? 1 : 0,
+              x: isHovered ? 0 : -8,
+              marginRight: isHovered ? 6 : 0
+          }}
+          transition={premiumTransition}
+          style={{ overflow: 'hidden' }}
+      >
+          <PixelRightArrow />
+      </SecondaryIconContainer>
+      
+      {text}
+      
+      <SecondaryIconContainer
+          as={motion.div}
+          initial={false}
+          animate={{
+              width: isHovered ? 0 : 12,
+              opacity: isHovered ? 0 : 1,
+              x: isHovered ? 8 : 0,
+              marginLeft: isHovered ? 0 : 6
+          }}
+          transition={premiumTransition}
+          style={{ overflow: 'hidden' }}
+      >
+          <PixelRightArrow />
+      </SecondaryIconContainer>
+    </SecondaryButton>
+  );
 };
 
 interface Props {
@@ -124,12 +187,9 @@ export function ContactFormSection({ data }: Props) {
                 </BlockContent>
 
                 {item.button && (
-                  <SecondaryButton>
-                    {item.button.text}
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </SecondaryButton>
+                  <div style={{ marginTop: 'auto' }}>
+                    <AnimatedSidebarButton text={item.button.text} url={item.button.url} />
+                  </div>
                 )}
 
                 {item.footer && <BlockFooter>{item.footer}</BlockFooter>}
@@ -142,16 +202,14 @@ export function ContactFormSection({ data }: Props) {
       <RightColumn>
         <motion.div custom={4} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }} variants={fadeUp}>
           <FormContainer onSubmit={handleFormSubmit}>
-            <FormRow>
-              <FormGroup>
-                <Label>{data.form.fields.firstName.label}<span>*</span></Label>
-                <Input type="text" required placeholder={data.form.fields.firstName.placeholder} />
-              </FormGroup>
-              <FormGroup>
-                <Label>{data.form.fields.lastName.label}<span>*</span></Label>
-                <Input type="text" required placeholder={data.form.fields.lastName.placeholder} />
-              </FormGroup>
-            </FormRow>
+            <FormGroup>
+              <Label>{data.form.fields.firstName.label}<span>*</span></Label>
+              <Input type="text" required placeholder={data.form.fields.firstName.placeholder} />
+            </FormGroup>
+            <FormGroup>
+              <Label>{data.form.fields.lastName.label}<span>*</span></Label>
+              <Input type="text" required placeholder={data.form.fields.lastName.placeholder} />
+            </FormGroup>
 
             <FormGroup>
               <Label>{data.form.fields.email.label}<span>*</span></Label>
@@ -169,7 +227,9 @@ export function ContactFormSection({ data }: Props) {
             </FormGroup>
 
             <CheckboxGroup>
-              <Checkbox type="checkbox" id="updates" />
+              <CheckboxWrapper>
+                <Checkbox type="checkbox" id="updates" />
+              </CheckboxWrapper>
               <CheckboxLabel htmlFor="updates">{data.form.checkbox}</CheckboxLabel>
             </CheckboxGroup>
 

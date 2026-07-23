@@ -24,14 +24,6 @@
       "icon": "lock",
       "content": "You have rights regarding your data management. Contact us via our platform.",
       "button": { "text": "Submit here", "url": "#" }
-    },
-    {
-      "id": "vulnerability",
-      "title": "Vulnerability disclosure.",
-      "icon": "target",
-      "content": "If you have found a security vulnerability on one of our products, you can report it through our vulnerability disclosure program.",
-      "button": { "text": "Submit here", "url": "#" },
-      "footer": "General bugs shall be reported via our standard support channels."
     }
   ]
 }

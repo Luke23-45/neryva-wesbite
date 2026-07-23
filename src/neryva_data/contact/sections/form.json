@@ -1,15 +1,27 @@
 {
   "fields": {
-    "firstName": { "label": "First name", "placeholder": "First name" },
-    "lastName": { "label": "Last name", "placeholder": "Last name" },
-    "email": { "label": "Work email", "placeholder": "name@company.com" },
-    "role": { "label": "Role", "placeholder": "Role or function" },
+    "firstName": {
+      "label": "First name",
+      "placeholder": "Luke"
+    },
+    "lastName": {
+      "label": "Last name",
+      "placeholder": "Neryva"
+    },
+    "email": {
+      "label": "Work email",
+      "placeholder": "luke@neryva.com"
+    },
+    "role": {
+      "label": "Role",
+      "placeholder": "Engineer"
+    },
     "project": {
       "label": "Tell us about your project.",
-      "placeholder": "Share the problem, the context, and what outcome you need."
+      "placeholder": "Please share your objectives and any specific requirements for Neryva."
     }
   },
-  "checkbox": "I want to receive updates from Neryva.",
+  "checkbox": "I want to receive updates about new features and products from Neryva.",
   "disclaimer": "By submitting this form, you agree that Neryva may use your information to respond to your inquiry.",
-  "submit": "Send message"
+  "submit": "Talk with our team"
 }
