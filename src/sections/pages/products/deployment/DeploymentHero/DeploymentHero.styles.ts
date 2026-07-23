@@ -100,7 +100,7 @@ export const DeploymentHeroSidebarMetric = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: 16px;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
 `;
@@ -109,14 +109,15 @@ export const DeploymentHeroCellBottomLeft = styled.div`
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding: 48px 80px 120px 80px;
+  justify-content: center;
+  padding: 80px;
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 32px 40px 80px 40px;
+    padding: 64px 40px;
   }
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 24px 24px 64px 24px;
+    padding: 48px 24px;
   }
 `;
 

@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import heroData from '@neryva_data/products/deployment/section1_hero.json';
 import { DeploymentHeroVisual } from './DeploymentHeroVisual';
+import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
 
 import {
   DeploymentHeroWrapper,
@@ -17,7 +17,6 @@ import {
   DeploymentHeroCellBottomLeft,
   DeploymentHeroDescription,
   DeploymentHeroCtaGroup,
-  DeploymentHeroCtaPrimary,
   DeploymentHeroCellBottomRight,
 } from './DeploymentHero.styles';
 
@@ -43,9 +42,6 @@ export function DeploymentHero() {
     setHeaderTheme('light');
     return () => setHeaderTheme('light');
   }, [setHeaderTheme]);
-
-  const ctaHref = heroData.cta?.href ?? '/contact';
-  const ctaLabel = heroData.cta?.label ?? 'Talk to Solutions';
 
   return (
     <DeploymentHeroWrapper>
@@ -85,10 +81,11 @@ export function DeploymentHero() {
 
           <motion.div variants={fadeUp} custom={6}>
             <DeploymentHeroCtaGroup>
-              <DeploymentHeroCtaPrimary href={ctaHref}>
-                {ctaLabel}
-                <ChevronRight size={18} strokeWidth={1.5} />
-              </DeploymentHeroCtaPrimary>
+              <CyclicNextButton 
+                label={heroData.cta?.label ?? 'Deploy Your Model'} 
+                size="large"
+                onClick={() => { window.location.href = heroData.cta?.href ?? '/contact'; }}
+              />
             </DeploymentHeroCtaGroup>
           </motion.div>
         </DeploymentHeroCellBottomLeft>
