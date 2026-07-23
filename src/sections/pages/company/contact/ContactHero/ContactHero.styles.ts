@@ -3,7 +3,7 @@ import styled from 'styled-components';
 export const Wrapper = styled.section`
   display: grid;
   grid-template-columns: 72% 28%;
-  min-height: 80vh;
+  min-height: 60vh;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-top: 1px solid #e4e3de;
   border-bottom: 1px solid #e4e3de;
@@ -19,7 +19,7 @@ export const LeftColumn = styled.div`
   flex-direction: column;
   justify-content: flex-end;
   /* Top, Right, Bottom, Left */
-  padding: 120px 80px 120px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 120px 80px 50px max(24px, calc((100vw - 1200px) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
     padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
@@ -35,7 +35,7 @@ export const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 120px 80px;
+  padding: 120px 80px 50px 80px;
   border-left: 1px solid #e4e3de;
 
   ${({ theme }) => theme.media.tablet} {
@@ -56,24 +56,24 @@ export const Eyebrow = styled.span`
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
-  margin-bottom: 36px;
+  margin-bottom: 20px;
 `;
 
 export const Title = styled.h1`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: 4.5rem;
   font-weight: 500;
   line-height: 1.05;
   letter-spacing: -0.04em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
-  max-width: 900px;
+  max-width: 1000px;
 `;
 
 export const Description = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: clamp(1.25rem, 1.5vw, 1.5rem);
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.4;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;

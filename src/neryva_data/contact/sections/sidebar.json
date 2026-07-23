@@ -6,9 +6,9 @@
       "title": "Support.",
       "icon": "headphone",
       "links": [
-        { "text": "Visit our Help center.", "url": "#" },
-        { "text": "Login to chat with support.", "url": "#" },
-        { "text": "Join our Discord for community support.", "url": "#" }
+        { "text": "Visit our Help center.", "url": "#", "highlight": "Help center" },
+        { "text": "Login to chat with support.", "url": "#", "highlight": "Login" },
+        { "text": "Join our Discord for community support.", "url": "#", "highlight": "Discord" }
       ],
       "button": { "text": "Go to help center", "url": "#" }
     },
@@ -16,7 +16,7 @@
       "id": "press",
       "title": "Press and events.",
       "icon": "megaphone",
-      "content": "Email us at press@neryva.com."
+      "content": "Email us at <a href=\"mailto:press@neryva.com\">press@neryva.com</a>."
     },
     {
       "id": "privacy",

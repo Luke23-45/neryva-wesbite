@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 export const SectionWrapper = styled.section`
   display: grid;
-  grid-template-columns: 38% 62%;
+  grid-template-columns: 45% 55%;
   min-height: 800px;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
@@ -40,20 +40,30 @@ export const RightColumn = styled.div`
 
 export const SidebarTitle = styled.h2`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 2.25rem;
+  font-size: 2.4rem;
   font-weight: 500;
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 48px 0;
 `;
 
-export const SidebarBlock = styled.div`
-  padding: 32px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+export const SidebarBlocksWrapper = styled.div`
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background-color: transparent;
+  overflow: hidden;
+`;
 
-  &:first-of-type {
-    border-top: none;
-    padding-top: 0;
+export const SidebarBlock = styled.div`
+  padding: 40px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 32px 24px;
   }
 `;
 
@@ -71,7 +81,7 @@ export const IconWrapper = styled.div`
 
 export const BlockTitle = styled.h3`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 1.5rem;
+  font-size: 2rem;
   font-weight: 500;
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.strong};
@@ -80,7 +90,7 @@ export const BlockTitle = styled.h3`
 
 export const BlockContent = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 24px;

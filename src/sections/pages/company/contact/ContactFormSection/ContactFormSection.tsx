@@ -5,6 +5,7 @@ import {
   LeftColumn,
   RightColumn,
   SidebarTitle,
+  SidebarBlocksWrapper,
   SidebarBlock,
   BlockHeader,
   IconWrapper,
@@ -85,41 +86,57 @@ export function ContactFormSection({ data }: Props) {
           <SidebarTitle>{data.sidebar.title}</SidebarTitle>
         </motion.div>
 
-        {data.sidebar.items.map((item: any, index: number) => (
-          <motion.div key={item.id} custom={index + 2} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
-            <SidebarBlock>
-              <BlockHeader>
-                <IconWrapper>{Icons[item.icon]}</IconWrapper>
-                <BlockTitle>{item.title}</BlockTitle>
-              </BlockHeader>
-              
-              <BlockContent>
-                {item.links ? (
-                  <ul>
-                    {item.links.map((link: any, i: number) => (
-                      <li key={i}>
-                        <span><a href={link.url}>{link.text}</a></span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{item.content}</p>
+        <motion.div custom={2} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
+          <SidebarBlocksWrapper>
+            {data.sidebar.items.map((item: any) => (
+              <SidebarBlock key={item.id}>
+                <BlockHeader>
+                  <IconWrapper>{Icons[item.icon]}</IconWrapper>
+                  <BlockTitle>{item.title}</BlockTitle>
+                </BlockHeader>
+                
+                <BlockContent>
+                  {item.links ? (
+                    <ul>
+                      {item.links.map((link: any, i: number) => {
+                        if (link.highlight) {
+                          const parts = link.text.split(link.highlight);
+                          return (
+                            <li key={i}>
+                              <span>
+                                {parts[0]}
+                                <a href={link.url}>{link.highlight}</a>
+                                {parts[1]}
+                              </span>
+                            </li>
+                          );
+                        }
+                        return (
+                          <li key={i}>
+                            <span><a href={link.url}>{link.text}</a></span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p dangerouslySetInnerHTML={{ __html: item.content }} />
+                  )}
+                </BlockContent>
+
+                {item.button && (
+                  <SecondaryButton>
+                    {item.button.text}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </SecondaryButton>
                 )}
-              </BlockContent>
 
-              {item.button && (
-                <SecondaryButton>
-                  {item.button.text}
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </SecondaryButton>
-              )}
-
-              {item.footer && <BlockFooter>{item.footer}</BlockFooter>}
-            </SidebarBlock>
-          </motion.div>
-        ))}
+                {item.footer && <BlockFooter>{item.footer}</BlockFooter>}
+              </SidebarBlock>
+            ))}
+          </SidebarBlocksWrapper>
+        </motion.div>
       </LeftColumn>
 
       <RightColumn>
