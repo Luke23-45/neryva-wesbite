@@ -25,13 +25,12 @@ export const Wrapper = styled.section`
     minmax(0, 720px) 
     minmax(32px, 1fr);
   
-  padding-top: 80px; /* Deep spacing below navigation */
+  /* Top spacing moved to HeaderArea so the vertical divider can span the full height */
   overflow: hidden; /* Prevents horizontal scroll from the bleed */
 
   ${({ theme }) => theme.media.tablet} {
     /* On mobile, collapse to a simple 3-column grid (Gutter, Content, Gutter) */
     grid-template-columns: 24px 1fr 24px;
-    padding-top: 120px;
   }
 
   margin-top: 20px;
@@ -50,15 +49,17 @@ export const HeaderArea = styled.div`
 
   & > :first-child {
     border-right: 1px solid ${({ theme }) => theme.colors.border};
+    padding-top: 80px; /* Moved from Wrapper to let the border stretch upwards */
     padding-right: 48px;
-    padding-bottom: 56px; /* Replaces margin-bottom to let the border stretch */
+    padding-bottom: 56px; /* Replaces margin-bottom to let the border stretch downwards */
     display: flex;
     align-items: center;
   }
   
   & > :last-child {
+    padding-top: 80px;
     padding-left: 48px;
-    padding-bottom: 56px; /* Replaces margin-bottom to let the border stretch */
+    padding-bottom: 56px; 
     display: flex;
     align-items: center;
   }
@@ -69,6 +70,7 @@ export const HeaderArea = styled.div`
     
     & > :first-child {
       border-right: none;
+      padding-top: 120px; /* Moved from Wrapper */
       padding-right: 0;
       border-bottom: 1px solid ${({ theme }) => theme.colors.border};
       padding-bottom: 32px;
@@ -76,6 +78,7 @@ export const HeaderArea = styled.div`
     }
     
     & > :last-child {
+      padding-top: 0;
       padding-left: 0;
       padding-bottom: 40px;
     }

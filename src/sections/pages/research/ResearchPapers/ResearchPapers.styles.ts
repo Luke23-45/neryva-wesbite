@@ -4,7 +4,7 @@ export const Header = styled.div`
   display: flex;
   flex-direction: column;
   gap: 32px;
-  margin-bottom: 64px;
+  margin-bottom: 40px;
 `;
 
 export const Title = styled.h2`
@@ -47,10 +47,10 @@ export const FilterButton = styled.button<{ $active: boolean; $accent: string }>
   span {
     display: inline-block;
     transform: skewX(14deg); /* Anti-skew text correction */
-    font-family: ${({ theme }) => theme.typography.fonts.sans};
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
+    font-family: ${({ theme }) => theme.typography.fonts.mono};
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
     color: ${({ $active, theme }) => ($active ? theme.colors.background.primary : theme.colors.text.secondary)};
     text-transform: uppercase;
     transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -77,7 +77,7 @@ export const EmptyTitle = styled.h3`
   font-weight: 400;
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.02em;
-  margin: 0 0 32px 0;
+  margin: 0 0 15px 0;
 `;
 
 export const EmptyText = styled.p`
@@ -98,7 +98,7 @@ export const PaperRow = styled.div<{ $accent: string }>`
   --row-accent: ${({ $accent }) => $accent};
   
   display: grid;
-  grid-template-columns: 120px 1fr 240px 40px;
+  grid-template-columns: 1fr 100px;
   align-items: center;
   gap: 32px;
   padding: 24px 0;
@@ -111,7 +111,7 @@ export const PaperRow = styled.div<{ $accent: string }>`
   }
 
   ${({ theme }) => theme.media.tablet} {
-    grid-template-columns: 100px 1fr 40px;
+    grid-template-columns: 1fr 100px;
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -141,7 +141,7 @@ export const YearHeader = styled.div`
   font-weight: 600;
   color: ${({ theme }) => theme.colors.text.secondary};
   letter-spacing: 0.1em;
-  padding: 64px 0 16px 0;
+  padding: 40px 0 16px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
@@ -153,9 +153,13 @@ export const DateSpan = styled.span`
   color: ${({ theme }) => theme.colors.text.secondary};
   letter-spacing: 0.04em;
   font-weight: 500;
+  text-align: right;
+  justify-self: end;
   
   ${({ theme }) => theme.media.mobile} {
     font-size: 12px;
+    justify-self: flex-start;
+    text-align: left;
   }
 `;
 
@@ -167,11 +171,12 @@ export const PaperLeft = styled.div`
 `;
 
 export const PaperTitle = styled.span`
-  font-size: 20px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 24px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.primary};
-  line-height: 1.4;
-  letter-spacing: -0.01em;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
   transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Inherits the exact program accent color on row hover via CSS variable */
@@ -180,25 +185,14 @@ export const PaperTitle = styled.span`
   }
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 18px;
+    font-size: 20px;
   }
-`;
-
-export const Authors = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  line-height: 1.5;
 `;
 
 export const PaperMeta = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-
-  ${({ theme }) => theme.media.tablet} {
-    display: none; /* Mobile/Tablet layout hides this column to keep things clean */
-  }
+  align-items: center;
+  gap: 12px;
 `;
 
 export const StatusBadge = styled.span<{ $status: string }>`
@@ -227,31 +221,10 @@ export const StatusBadge = styled.span<{ $status: string }>`
 `;
 
 export const VenueSpan = styled.span`
-  font-size: 13px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
   color: ${({ theme }) => theme.colors.text.muted};
   line-height: 1.4;
-`;
-
-/* ── The Reveal Arrow ── */
-export const PaperArrow = styled.span`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  color: ${({ theme }) => theme.colors.text.muted};
-  flex-shrink: 0;
-  
-  /* Hidden by default, elegantly slides into place without weird circular borders */
-  opacity: 0;
-  transform: translateX(-12px);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-
-  ${PaperRow}:hover & {
-    opacity: 1;
-    transform: translateX(0);
-    color: var(--row-accent);
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    display: none;
-  }
+  letter-spacing: 0.01em;
 `;

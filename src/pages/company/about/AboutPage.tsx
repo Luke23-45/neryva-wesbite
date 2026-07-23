@@ -3,10 +3,10 @@ import { AboutHero } from '@/sections/pages/company/about/AboutHero';
 import { AboutMission } from '@/sections/pages/company/about/AboutMission';
 import { AboutTeam } from '@/sections/pages/company/about/AboutTeam';
 import { AboutCTA } from '@/sections/pages/company/about/AboutCTA';
-import companyHero from '@neryva_data/company/sections/hero.json';
-import companyMission from '@neryva_data/company/sections/mission.json';
-import companyTeam from '@neryva_data/company/sections/team.json';
-import companyCta from '@neryva_data/company/sections/contact_cta.json';
+import companyHero from '@neryva_data/company/about/hero.json';
+import companyMission from '@neryva_data/company/about/mission.json';
+import companyTeam from '@neryva_data/company/about/team.json';
+import companyCta from '@neryva_data/company/about/contact_cta.json';
 
 export default function AboutPage() {
   return (

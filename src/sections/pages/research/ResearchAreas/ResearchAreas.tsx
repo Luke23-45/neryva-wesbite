@@ -87,7 +87,7 @@ export function ResearchAreas() {
   };
 
   return (
-    <Section paddingYTop="md" paddingYBottom="xl" background={theme.colors.background.secondary}>
+    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.background.secondary}>
       <Container variant="wide">
         <Header as={motion.div} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}>
           <Title>Research Areas</Title>

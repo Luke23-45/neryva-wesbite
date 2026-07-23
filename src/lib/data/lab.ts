@@ -1,7 +1,7 @@
 import type { LabMission, TeamMember, LabValue } from '@types';
-import missionData from '@neryva_data/company/sections/mission.json';
-import teamData from '@neryva_data/company/sections/team.json';
-import valuesData from '@neryva_data/company/sections/values.json';
+import missionData from '@neryva_data/company/about/mission.json';
+import teamData from '@neryva_data/company/about/team.json';
+import valuesData from '@neryva_data/company/about/values.json';
 
 export function getMission(): LabMission {
   return missionData;

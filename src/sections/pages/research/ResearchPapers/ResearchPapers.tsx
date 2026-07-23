@@ -23,11 +23,9 @@ import {
   PaperLeft,
   PaperTitle,
   PaperMeta,
-  Authors,
   StatusBadge,
   VenueSpan,
   DateSpan,
-  PaperArrow,
 } from './ResearchPapers.styles';
 
 // Premium hardware-accelerated easing (Apple-tier)
@@ -93,7 +91,7 @@ export function ResearchPapers() {
   const grouped = useMemo(() => groupByYear(filtered), [filtered]);
 
   return (
-    <Section paddingYTop="md" paddingYBottom="lg" background={theme.colors.background.primary}>
+    <Section paddingYTop="lg" paddingYBottom="lg" background={theme.colors.background.primary}>
       <Container variant="page">
         <motion.div
           initial="hidden"
@@ -204,29 +202,21 @@ export function ResearchPapers() {
                           delay: i * 0.05, // Elegant cascading entrance
                         }}
                       >
-                        <DateSpan>{paper.date.substring(0, 7)}</DateSpan>
-
                         <PaperLeft>
                           <PaperTitle>{paper.title}</PaperTitle>
-                          <Authors>{paper.authors.join(', ')}</Authors>
+                          <PaperMeta>
+                            <StatusBadge $status={paper.status}>
+                              {paper.status}
+                            </StatusBadge>
+                            {paper.venue && (
+                              <VenueSpan>
+                                {paper.venue}
+                              </VenueSpan>
+                            )}
+                          </PaperMeta>
                         </PaperLeft>
 
-                        <PaperMeta>
-                          <StatusBadge $status={paper.status}>
-                            {paper.status}
-                          </StatusBadge>
-                          {paper.venue && (
-                            <VenueSpan>
-                              {paper.venue}
-                            </VenueSpan>
-                          )}
-                        </PaperMeta>
-
-                        {paper.url ? (
-                          <PaperArrow>
-                            <ArrowRight size={18} strokeWidth={1.5} />
-                          </PaperArrow>
-                        ) : <div />}
+                        <DateSpan>{paper.date.substring(0, 7)}</DateSpan>
                       </AnimatedPaperRow>
                     ))}
                   </YearGroup>
