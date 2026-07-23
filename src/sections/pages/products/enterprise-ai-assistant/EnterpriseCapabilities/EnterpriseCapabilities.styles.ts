@@ -51,12 +51,12 @@ export const SectionHeading = styled.h2`
 export const AppsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.border};
+  gap: 1px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: repeat(2, 1fr);
-    border-bottom: none;
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -69,29 +69,16 @@ export const AppCell = styled.div`
   flex-direction: column;
   height: 420px;
   padding: 48px 32px;
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
-  background: transparent;
+  background: ${({ theme }) => theme.colors.background.primary};
   position: relative;
   transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.018);
-  }
-
-  &:last-child {
-    border-right: none;
+    background: ${({ theme }) => theme.colors.background.secondary};
   }
 
   ${({ theme }) => theme.media.tablet} {
     height: 320px;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    &:nth-child(2n) {
-      border-right: none;
-    }
-  }
-
-  ${({ theme }) => theme.media.mobile} {
-    border-right: none;
   }
 `;
 
@@ -100,8 +87,8 @@ export const CellIcon = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 36px;
+    height: 36px;
     stroke-width: 1.5px;
   }
 `;

@@ -117,14 +117,15 @@ export const CellBottomLeft = styled.div`
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  padding: 48px 80px 120px 80px;
+  justify-content: center; /* PERFECT VERTICAL CENTERING */
+  padding: 80px; /* Equal padding ensures the mathematical center is visually accurate */
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 32px 40px 80px 40px;
+    padding: 64px 40px;
   }
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 24px 24px 64px 24px;
+    padding: 48px 24px;
   }
 `;
 

@@ -45,7 +45,7 @@ export const Sidebar = styled.nav`
   flex-direction: column;
   /* Subtle bounding box reflecting the reference image */
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.colors.background.primary};
   overflow: hidden;
 
@@ -118,12 +118,17 @@ export const SidebarItemIcon = styled.span<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   color: ${({ $active, theme }) =>
     $active ? theme.colors.text.primary : theme.colors.text.muted};
   transition: color ${({ theme }) => theme.transitions.fast};
+
+  svg {
+    width: 30px;
+    height: 30px;
+  }
 `;
 
 /** Label text inside each sidebar item. */
@@ -160,14 +165,14 @@ export const PipelineSectionStyled = styled.section`
 `;
 
 export const SectionTitle = styled.h2`
-  font-size: 28px;
+  font-size: 3.3rem;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.2;
   letter-spacing: -0.02em;
   margin: 0;
   /* Deep padding to match the airy, premium feel */
-  padding: 24px 32px;
+  padding: 35px 32px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background.primary};
 
@@ -392,7 +397,7 @@ export const FeatureCard = styled.div`
 `;
 
 export const FeatureTitle = styled.h3`
-  font-size: 16px;
+  font-size: 24px;
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.4;
@@ -401,7 +406,7 @@ export const FeatureTitle = styled.h3`
 `;
 
 export const FeatureDescription = styled.p`
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;

@@ -91,11 +91,9 @@ export const IconBox = styled.div<{ $colorType?: 'azure' | 'emerald' | 'lilac' |
   color: ${({ theme, $colorType }) =>
     $colorType ? theme.colors.accent[`${$colorType}Text`] : theme.colors.text.primary};
 
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-
   svg {
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     stroke-width: 1.5px;
   }
 `;
@@ -114,14 +112,9 @@ export const BentoCell = styled.div<{ $layoutArea: string; $isActive: boolean }>
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.03);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.06);
     z-index: 1; /* Elevate slightly over adjacent cells */
-
-    /* Target the IconBox for a nested scale effect */
-    ${IconBox} {
-      transform: scale(1.08);
-    }
   }
 
   ${({ theme }) => theme.media.tablet} {
