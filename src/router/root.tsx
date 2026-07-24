@@ -53,7 +53,7 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
           </MainContent>
         </AnimatePresence>
         <Footer />
-        {import.meta.env.DEV && <TanStackRouterDevtools />}
+        {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
       </LayoutWrapper>
     );
   },

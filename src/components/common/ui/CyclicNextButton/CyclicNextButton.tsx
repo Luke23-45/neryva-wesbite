@@ -12,10 +12,13 @@ interface CyclicNextButtonProps {
     onClick?: () => void;
     className?: string;
     size?: 'default' | 'large';
+    bgColor?: string;
+    textColor?: string;
+    borderRadius?: string | number;
 }
 
-const PixelRightArrow = ({ size }: { size?: 'default' | 'large' }) => (
-    <PixelChevronIcon $size={size} viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
+const PixelRightArrow = ({ size, textColor }: { size?: 'default' | 'large', textColor?: string }) => (
+    <PixelChevronIcon $size={size} $textColor={textColor} viewBox="0 0 14 14" fill="currentColor" aria-hidden="true">
         <rect x="4" y="1" width="2" height="2" />
         <rect x="6" y="3" width="2" height="2" />
         <rect x="8" y="5" width="2" height="2" />
@@ -35,7 +38,10 @@ export default function CyclicNextButton({
     label = 'Next',
     onClick,
     className,
-    size = 'default'
+    size = 'default',
+    bgColor,
+    textColor,
+    borderRadius
 }: CyclicNextButtonProps) {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -62,6 +68,9 @@ export default function CyclicNextButton({
             className={className}
             aria-label={label}
             $size={size}
+            $bgColor={bgColor}
+            $textColor={textColor}
+            $borderRadius={borderRadius}
         >
             <IconContainer
                 as={motion.div}
@@ -75,10 +84,10 @@ export default function CyclicNextButton({
                 transition={premiumTransition}
                 style={{ overflow: 'hidden' }}
             >
-                <PixelRightArrow size={size} />
+                <PixelRightArrow size={size} textColor={textColor} />
             </IconContainer>
 
-            <LabelText $size={size}>
+            <LabelText $size={size} $textColor={textColor}>
                 {label}
             </LabelText>
 
@@ -94,7 +103,7 @@ export default function CyclicNextButton({
                 transition={premiumTransition}
                 style={{ overflow: 'hidden' }}
             >
-                <PixelRightArrow size={size} />
+                <PixelRightArrow size={size} textColor={textColor} />
             </IconContainer>
         </ButtonWrapper>
     );

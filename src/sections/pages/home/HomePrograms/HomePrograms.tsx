@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { TextLink } from '@/components/common/ui/TextLink';
 import programsData from '@neryva_data/home/sections/research_overview.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
@@ -25,11 +24,9 @@ import {
   ProgramRow,
   ProgramHeader,
   ProgramTitle,
-  ProgramCTA,
+  ProgramBody,
   ProgramDescription,
   ProgramVisual,
-  VisualOverlay,
-  VisualCaption,
   FooterAction,
 } from './HomePrograms.styles';
 
@@ -112,8 +109,8 @@ export function HomePrograms() {
         });
       },
       {
-        rootMargin: '-20% 0px -40% 0px',
-        threshold: 0.5,
+        rootMargin: '-30% 0px -60% 0px', // Creates a narrow intersection band
+        threshold: 0, // Ensures even very tall elements trigger when they cross the band
       }
     );
 
@@ -160,6 +157,7 @@ export function HomePrograms() {
                 <MenuItem
                   key={`menu-${program.id}`}
                   $active={isActive}
+                  $accent={program.accent}
                   onClick={() => scrollToProgram(program.id)}
                   aria-label={`Scroll to ${program.title}`}
                 >
@@ -188,54 +186,34 @@ export function HomePrograms() {
                     <motion.div variants={fadeUp}>
                       <ProgramTitle $accent={program.accent}>{program.title}</ProgramTitle>
                     </motion.div>
-                    <ProgramCTA as={motion.div} variants={fadeUp}>
-                      <TextLink to="/research">
-                        Discover {program.title.split(' ')[0]}
-                      </TextLink>
-                    </ProgramCTA>
                   </ProgramHeader>
 
-                  <motion.div variants={fadeUp}>
-                    <ProgramDescription>{program.description}</ProgramDescription>
-                  </motion.div>
+                  <ProgramBody>
+                    <motion.div variants={fadeUp}>
+                      <ProgramDescription>{program.description}</ProgramDescription>
+                    </motion.div>
 
-                  <ProgramVisual
-                    $accent={program.accent}
-                    as={motion.div}
-                    variants={fadeUp}
-                  >
-                    {ProgramImagesMap[program.id] ? (
-                      <img 
-                        src={ProgramImagesMap[program.id]} 
-                        alt={program.title} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      IconComponent && <IconComponent accent="#FFFFFF" />
-                    )}
-                    <VisualOverlay />
-                    <VisualCaption>
-                      PROGRAM {program.number.toString().padStart(2, '0')} • {program.title.toUpperCase()}
-                    </VisualCaption>
-                  </ProgramVisual>
+                    <ProgramVisual
+                      $accent={program.accent}
+                      as={motion.div}
+                      variants={fadeUp}
+                    >
+                      {ProgramImagesMap[program.id] ? (
+                        <img 
+                          src={ProgramImagesMap[program.id]} 
+                          alt={program.title} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        IconComponent && <IconComponent accent="#FFFFFF" />
+                      )}
+                    </ProgramVisual>
+                  </ProgramBody>
                 </ProgramRow>
               );
             })}
           </ProgramsContent>
         </TwoColumnLayout>
-
-        {/* Footer CTA */}
-        <FooterAction
-          as={motion.div}
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-        >
-          <TextLink to={footer.linkUrl}>
-            {footer.linkText}
-          </TextLink>
-        </FooterAction>
       </Container>
     </Section>
   );

@@ -3,6 +3,9 @@ import { Network } from 'lucide-react';
 import {
   Wrapper,
   Inner,
+  HeaderSection,
+  SectionEyebrow,
+  SectionTitle,
   BentoGrid,
   BentoTile,
   TileIcon,
@@ -57,6 +60,14 @@ export function HomeProduct() {
   return (
     <Wrapper>
       <Inner>
+        <HeaderSection as={motion.div} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-100px' }}>
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } } }}>
+          </motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 } } }}>
+            <SectionTitle>{productsData.title}</SectionTitle>
+          </motion.div>
+        </HeaderSection>
+
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -67,7 +78,7 @@ export function HomeProduct() {
             {productsData.products.map((product) => {
               const needsThemeColor = ['api_blueprint', 'network', 'on_prem_blueprint'].includes(product.icon);
               return (
-                <BentoTile 
+                <BentoTile
                   key={product.id}
                   $colSpan={product.colSpan}
                   $rowSpan={product.rowSpan}
@@ -79,8 +90,8 @@ export function HomeProduct() {
                   {product.diamond && (
                     <DiamondLabel $isDark={isDark} style={{ top: 0, left: 0, translate: '-50% -50%' }} />
                   )}
-                  <TileIcon 
-                    $color="transparent" 
+                  <TileIcon
+                    $color="transparent"
                     style={needsThemeColor ? { color: isDark ? '#fff' : '#000' } : undefined}
                   >
                     {renderIcon(product.icon, product.iconColor)}

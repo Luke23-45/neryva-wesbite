@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 export const Wrapper = styled.section`
-  padding: 160px 0;
+  padding: 128px 0 0 0;
   background-color: ${({ theme }) => theme.colors.background.primary};
   display: flex;
   justify-content: center;
@@ -9,7 +9,7 @@ export const Wrapper = styled.section`
   overflow: hidden;
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 100px 0;
+    padding: 128px 0 0 0;
   }
 `;
 
@@ -20,6 +20,43 @@ export const Inner = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+`;
+
+export const HeaderSection = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  margin-bottom: 80px;
+
+  ${({ theme }) => theme.media.tablet} {
+    margin-bottom: 56px;
+  }
+`;
+
+export const SectionEyebrow = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.text.muted};
+`;
+
+export const SectionTitle = styled.h2`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.1;
+  max-width: 700px;
+  color: ${({ theme }) => theme.colors.text.strong};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 40px;
+  }
 `;
 
 export const BentoGrid = styled.div<{ $isDark?: boolean }>`

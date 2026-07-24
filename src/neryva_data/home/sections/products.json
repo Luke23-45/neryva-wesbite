@@ -1,4 +1,5 @@
 {
+  "title": "Do it all with Neryva.",
   "products": [
     {
       "id": "knowledge_search",
@@ -8,7 +9,10 @@
       "rowSpan": 1,
       "icon": "api_blueprint",
       "iconColor": "transparent",
-      "dots": ["tl", "tr"]
+      "dots": [
+        "tl",
+        "tr"
+      ]
     },
     {
       "id": "agent_studio",
@@ -18,7 +22,10 @@
       "rowSpan": 1,
       "icon": "neryva_logo",
       "iconColor": "#FF5500",
-      "dots": ["tl", "tr"]
+      "dots": [
+        "tl",
+        "tr"
+      ]
     },
     {
       "id": "domain_solutions",
@@ -28,7 +35,10 @@
       "rowSpan": 2,
       "icon": "network",
       "iconColor": "transparent",
-      "dots": ["tl", "tr"]
+      "dots": [
+        "tl",
+        "tr"
+      ]
     },
     {
       "id": "workflow_automation",
@@ -38,7 +48,9 @@
       "rowSpan": 1,
       "icon": "on_prem_blueprint",
       "iconColor": "transparent",
-      "dots": ["tl"]
+      "dots": [
+        "tl"
+      ]
     },
     {
       "id": "enterprise_assistants",
@@ -59,7 +71,9 @@
       "rowSpan": 1,
       "icon": "neryva_logo",
       "iconColor": "#0077FF",
-      "dots": ["tl"]
+      "dots": [
+        "tl"
+      ]
     },
     {
       "id": "ai_efficiency",
@@ -69,7 +83,10 @@
       "rowSpan": 1,
       "icon": "brain",
       "iconColor": "transparent",
-      "dots": ["tl", "bl"]
+      "dots": [
+        "tl",
+        "bl"
+      ]
     },
     {
       "id": "ai_deployment",
@@ -79,7 +96,10 @@
       "rowSpan": 1,
       "icon": "neryva_logo",
       "iconColor": "#FF5500",
-      "dots": ["tl", "bl"]
+      "dots": [
+        "tl",
+        "bl"
+      ]
     }
   ]
 }

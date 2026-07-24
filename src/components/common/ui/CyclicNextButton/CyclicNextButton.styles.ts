@@ -2,6 +2,9 @@ import styled, { css } from 'styled-components';
 
 interface StyleProps {
   $size?: 'default' | 'large';
+  $bgColor?: string;
+  $textColor?: string;
+  $borderRadius?: string | number;
 }
 
 export const ButtonWrapper = styled.button<StyleProps>`
@@ -9,9 +12,9 @@ export const ButtonWrapper = styled.button<StyleProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background-color: #090909;
-  color: #ffffff;
-  border: 1px solid #1f1f1f;
+  background-color: ${({ $bgColor }) => $bgColor || '#090909'};
+  color: ${({ $textColor }) => $textColor || '#ffffff'};
+  border: 1px solid ${({ $bgColor }) => $bgColor ? 'transparent' : '#1f1f1f'};
   cursor: pointer;
   overflow: hidden;
   outline: none;
@@ -20,12 +23,16 @@ export const ButtonWrapper = styled.button<StyleProps>`
   ${({ $size }) => $size === 'large' ? css`
     height: 56px;
     padding: 0 32px;
-    border-radius: 6px; /* Sharper, architectural look for large */
   ` : css`
     height: 46px;
     padding: 0 24px;
-    border-radius: 12px; /* Softer look for standard */
   `}
+
+  border-radius: ${({ $borderRadius, $size }) => 
+    $borderRadius !== undefined 
+      ? (typeof $borderRadius === 'number' ? `${$borderRadius}px` : $borderRadius)
+      : ($size === 'large' ? '6px' : '12px')
+  };
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme?.colors?.text?.primary || '#ffffff'};
@@ -34,11 +41,15 @@ export const ButtonWrapper = styled.button<StyleProps>`
 `;
 
 export const LabelText = styled.span<StyleProps>`
+  display: inline-flex;
+  align-items: center;
   font-family: ${({ theme }) => theme?.typography?.fonts?.sans || 'system-ui, -apple-system, sans-serif'};
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: ${({ $textColor }) => $textColor || '#ffffff'};
   white-space: nowrap;
+  line-height: 1;
+  transform: translateY(-1px); /* Optical alignment correction to match perfectly with the SVG baseline */
 
   ${({ $size }) => $size === 'large' ? css`
     font-size: 16px;
@@ -49,7 +60,7 @@ export const LabelText = styled.span<StyleProps>`
 
 export const PixelChevronIcon = styled.svg<StyleProps>`
   flex-shrink: 0;
-  color: #ffffff;
+  color: ${({ $textColor }) => $textColor || '#ffffff'};
   shape-rendering: crispedges;
 
   ${({ $size }) => $size === 'large' ? css`

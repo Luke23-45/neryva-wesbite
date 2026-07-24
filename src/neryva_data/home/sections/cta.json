@@ -1,16 +1,16 @@
 {
-  "enterprise": {
-    "label": "Commercial",
-    "title": "Scale with Neryva",
-    "description": "Deploy the Neryva Enterprise Assistant within your security boundary.",
-    "ctaText": "Contact Sales",
-    "href": "/contact"
-  },
-  "technical": {
-    "label": "Engineers",
-    "title": "Build with Neryva",
-    "description": "Access technical documentation, API references, and architecture guides.",
-    "ctaText": "Read the Docs",
-    "href": "/docs"
-  }
+  "eyebrow": "Own your own AI future.",
+  "title": "Build, customize, and deploy tailored AI solutions with complete control.",
+  "buttons": [
+    {
+      "label": "Start building",
+      "href": "/products/studio",
+      "variant": "white"
+    },
+    {
+      "label": "Contact sales",
+      "href": "/contact",
+      "variant": "black"
+    }
+  ]
 }
