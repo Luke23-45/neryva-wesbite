@@ -1,6 +1,6 @@
 import { ArrowDown } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
-import { PixelGrid } from '@assets/visual/home/hero/PixelGrid';
+import PixelGrid from '@assets/visual/home/hero/PixelGrid2';
 import heroData from '@neryva_data/home/sections/hero.json';
 import {
   HeroWrapper,
