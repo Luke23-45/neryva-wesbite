@@ -1,0 +1,32 @@
+<svg viewBox="0 0 21 15" fill="none" xmlns="http://www.w3.org/2000/svg" style="background-color: #12131C;">
+  <!-- Premium Dark Vignette Background matching your original style -->
+  <defs>
+    <radialGradient id="ambientBackground" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#12131C" />
+      <stop offset="100%" stop-color="#050507" />
+    </radialGradient>
+  </defs>
+  
+  <rect width="21" height="15" fill="url(#ambientBackground)" />
+
+  <!-- ROW 1 (y: 0-3): Top heavy left connection (Bright Lilac) -->
+  <path d="M9 0H3V3H9V0Z" fill="#C084FC"></path>
+  <path d="M18 0H15V3H18V0Z" fill="#C084FC"></path>
+
+  <!-- ROW 2 (y: 3-6): Thick diagonal anchor stepping right (Rich Amethyst) -->
+  <path d="M12 3H3V6H12V3Z" fill="#A855F7"></path>
+  <path d="M18 3H15V6H18V3Z" fill="#A855F7"></path>
+
+  <!-- ROW 3 (y: 6-9): The exact, beautiful center bridge (Vibrant Emerald core) -->
+  <path d="M6 6H3V9H6V6Z" fill="#05E3A4"></path>
+  <path d="M12 6H9V9H12V6Z" fill="#05E3A4"></path>
+  <path d="M18 6H15V9H18V6Z" fill="#05E3A4"></path>
+
+  <!-- ROW 4 (y: 9-12): Diagonal crossing the midline into right stem (Mid Ocean) -->
+  <path d="M6 9H3V12H6V9Z" fill="#0284C7"></path>
+  <path d="M18 9H9V12H18V9Z" fill="#0284C7"></path>
+
+  <!-- ROW 5 (y: 12-15): Bottom right heavy connection, precisely mirroring Top (Royal Azure) -->
+  <path d="M6 12H3V15H6V12Z" fill="#2563EB"></path>
+  <path d="M18 12H12V15H18V12Z" fill="#2563EB"></path>
+</svg>

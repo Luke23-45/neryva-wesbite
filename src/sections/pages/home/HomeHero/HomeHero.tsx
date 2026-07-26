@@ -60,9 +60,9 @@ export function HomeHero() {
 
           <div style={{ position: 'absolute', bottom: '1.5rem', right: '1.5rem', zIndex: 2 }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="6" width="4" height="4" fill="black" />
-              <rect x="16" y="6" width="4" height="4" fill="black" />
-              <rect x="8" y="10" width="8" height="8" fill="black" />
+              <rect x="4" y="6" width="4" height="4" fill="rgba(255, 255, 255, 0.8)" />
+              <rect x="16" y="6" width="4" height="4" fill="rgba(255, 255, 255, 0.8)" />
+              <rect x="8" y="10" width="8" height="8" fill="rgba(255, 255, 255, 0.8)" />
               <rect x="10" y="14" width="4" height="2" fill="white" />
             </svg>
           </div>

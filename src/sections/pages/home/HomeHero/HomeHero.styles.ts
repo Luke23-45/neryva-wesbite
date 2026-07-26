@@ -172,7 +172,7 @@ export const Crosshair = styled.div`
   &::before, &::after {
     content: '';
     position: absolute;
-    background-color: #000000;
+    background-color: rgba(255, 255, 255, 0.6);
   }
   
   &::before {
@@ -187,5 +187,5 @@ export const SmallTextLabel = styled.span`
   font-family: monospace;
   font-size: 0.7rem;
   letter-spacing: 0.05em;
-  color: #000000;
+  color: rgba(255, 255, 255, 0.8);
 `;
