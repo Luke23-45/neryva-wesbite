@@ -19,10 +19,10 @@ export const LeftColumn = styled.div`
   flex-direction: column;
   justify-content: flex-end;
   /* Top, Right, Bottom, Left */
-  padding: 120px 80px 50px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 120px 80px 50px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+    padding: 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
     border-bottom: 1px solid #e4e3de;
   }
 

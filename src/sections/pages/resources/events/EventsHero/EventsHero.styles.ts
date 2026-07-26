@@ -17,10 +17,11 @@ export const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 120px 80px;
+  /* Aligns padding with the wide container */
+  padding: 120px 80px 120px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px 40px;
+    padding: 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {

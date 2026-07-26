@@ -13,16 +13,16 @@ export const Wrapper = styled.section`
   /* 
    * ADVANCED CSS GRID:
    * Col 1: Left gutter (expands on large screens, min 32px)
-   * Col 2: Left content area (max 480px to constrain text)
-   * Col 3: Right content area (max 720px)
+   * Col 2: Left content area (max ~580px to constrain text)
+   * Col 3: Right content area (max ~860px)
    * Col 4: Right gutter (expands on large screens, min 32px)
-   * Total max inner width = 1200px.
+   * Total max inner width = 1440px (matches the wide container).
    */
   display: grid;
   grid-template-columns: 
     minmax(32px, 1fr) 
-    minmax(0, 480px) 
-    minmax(0, 720px) 
+    minmax(0, 580px) 
+    minmax(0, 860px) 
     minmax(32px, 1fr);
   
   /* Top spacing moved to HeaderArea so the vertical divider can span the full height */

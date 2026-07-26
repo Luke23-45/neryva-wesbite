@@ -17,11 +17,11 @@ export const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Calculate left padding to align with a 1200px max-width container with 24px inner padding */
-  padding: 120px 80px 120px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  /* Calculate left padding to align with the wide container */
+  padding: 120px 80px 120px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+    padding: 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {

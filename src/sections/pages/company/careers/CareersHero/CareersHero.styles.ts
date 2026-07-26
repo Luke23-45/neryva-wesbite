@@ -18,10 +18,10 @@ export const ContentColumn = styled.div`
   flex-direction: column;
   justify-content: center;
   /* Top, Right, Bottom, Left */
-  padding: 120px 80px 120px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 120px 80px 120px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+    padding: 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {

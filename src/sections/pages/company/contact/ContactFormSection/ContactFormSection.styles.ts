@@ -15,7 +15,7 @@ export const SectionWrapper = styled.section`
 export const LeftColumn = styled.div`
   background-color: #F8F8F5; /* Matches the slightly warm gray in the image */
   /* Top, Right, Bottom, Left */
-  padding: 80px 60px 80px max(24px, calc((100vw - 1200px) / 2 + 24px));
+  padding: 80px 60px 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   border-right: 1px solid ${({ theme }) => theme.colors.border};
 
   ${({ theme }) => theme.media.mobile} {
