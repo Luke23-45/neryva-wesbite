@@ -4,7 +4,13 @@ import programsData from '@neryva_data/home/sections/research_overview.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
-
+import {
+  SidebarLLMIcon,
+  SidebarRoboticsIcon,
+  SidebarClinicalIcon,
+  SidebarEnergyIcon,
+  SidebarComputationalIcon
+} from './HomeProgramIcons';
 import {
   HeaderSection,
   SectionTitle,
@@ -33,22 +39,12 @@ const staggerContainer = {
   },
 };
 
-import { NavMotifIcon } from '@/assets/visual/navigation/NavMotifs';
-
-const ProgramIcons: Record<string, React.FC> = {
-  'language-systems': () => <NavMotifIcon kind="llm" />,
-  'robotics-task-transfer': () => <NavMotifIcon kind="robotics" />,
-  'biomedical-biological-clinical-ai': () => <NavMotifIcon kind="clinical" />,
-  'energy-systems': () => <NavMotifIcon kind="energy" />,
-  'computational-science-engineering': () => <NavMotifIcon kind="deployment" />,
-};
-
 const SidebarIconsMap: Record<string, React.FC> = {
-  'language-systems': () => <NavMotifIcon kind="llm" />,
-  'robotics-task-transfer': () => <NavMotifIcon kind="robotics" />,
-  'biomedical-biological-clinical-ai': () => <NavMotifIcon kind="clinical" />,
-  'energy-systems': () => <NavMotifIcon kind="energy" />,
-  'computational-science-engineering': () => <NavMotifIcon kind="deployment" />,
+  'language-systems': SidebarLLMIcon,
+  'robotics-task-transfer': SidebarRoboticsIcon,
+  'biomedical-biological-clinical-ai': SidebarClinicalIcon,
+  'energy-systems': SidebarEnergyIcon,
+  'computational-science-engineering': SidebarComputationalIcon,
 };
 
 import imgLanguage from '@assets/page/home/language_systems.png';
@@ -163,7 +159,6 @@ export function HomePrograms() {
           {/* Right Column: Program Rows */}
           <ProgramsContent>
             {programs.map((program) => {
-              const IconComponent = ProgramIcons[program.id];
               return (
                 <ProgramRow
                   key={program.id}
@@ -191,14 +186,12 @@ export function HomePrograms() {
                       as={motion.div}
                       variants={fadeUp}
                     >
-                      {ProgramImagesMap[program.id] ? (
+                      {ProgramImagesMap[program.id] && (
                         <img 
                           src={ProgramImagesMap[program.id]} 
                           alt={program.title} 
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                         />
-                      ) : (
-                        IconComponent && <IconComponent accent="#FFFFFF" />
                       )}
                     </ProgramVisual>
                   </ProgramBody>

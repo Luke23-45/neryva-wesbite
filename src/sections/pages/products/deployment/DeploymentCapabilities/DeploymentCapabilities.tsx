@@ -12,7 +12,17 @@ import {
   DeploymentCapabilitiesCellDesc,
 } from './DeploymentCapabilities.styles';
 
-import { DeploymentCapabilityIcons } from '@assets/icons/products/DeploymentIcons';
+import { OpsFeatureIcon } from '@assets/visual/product/Deploymentcapablities';
+
+const iconToOpsId: Record<string, string> = {
+  cpu: 'optimized-runtimes',
+  gauge: 'autoscaling-routing',
+  activity: 'realtime-monitoring',
+  shieldcheck: 'secure-access',
+  filecheck: 'audit-compliance',
+  workflow: 'model-release',
+  headphones: 'managed-operations',
+};
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
@@ -51,7 +61,7 @@ export function DeploymentCapabilities() {
           viewport={{ once: true, margin: '-50px' }}
         >
           {capsData.items.map((item, i) => {
-            const IconComponent = DeploymentCapabilityIcons[item.icon.toLowerCase()];
+            const opsId = iconToOpsId[item.icon.toLowerCase()] || item.icon.toLowerCase();
 
             return (
               <DeploymentCapabilitiesAppCell
@@ -61,7 +71,7 @@ export function DeploymentCapabilities() {
                 custom={3 + i}
               >
                 <DeploymentCapabilitiesCellIcon>
-                  {IconComponent && <IconComponent />}
+                  <OpsFeatureIcon id={opsId} />
                 </DeploymentCapabilitiesCellIcon>
 
                 <DeploymentCapabilitiesCellTitle>{item.title}</DeploymentCapabilitiesCellTitle>

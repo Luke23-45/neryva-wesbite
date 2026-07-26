@@ -16,7 +16,7 @@ import {
   DeploymentUseCasesAppDesc,
 } from './DeploymentUseCases.styles';
 
-import { DeploymentUseCaseIcons } from '@assets/icons/products/DeploymentIcons';
+import { DeployFeatureIcon } from '@assets/visual/product/DeployusecaseFeatureIcon';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
@@ -78,7 +78,6 @@ export function DeploymentUseCases() {
           }}
         >
           {items.map((item, index) => {
-            const Icon = DeploymentUseCaseIcons[item.icon.toLowerCase()];
             const isActive = index === activeIndex;
             const durationMs = getDurationForCard(item.layoutConfig);
 
@@ -99,7 +98,7 @@ export function DeploymentUseCases() {
               >
                 <DeploymentUseCasesCellInner>
                   <DeploymentUseCasesIconBox>
-                    {Icon && <Icon />}
+                    <DeployFeatureIcon id={item.id} />
                   </DeploymentUseCasesIconBox>
 
                   <div>

@@ -88,8 +88,8 @@ export const DeploymentCapabilitiesCellIcon = styled.div`
   color: ${({ theme }) => theme.colors.text.primary};
 
   svg {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     stroke-width: 1.5px;
   }
 `;
