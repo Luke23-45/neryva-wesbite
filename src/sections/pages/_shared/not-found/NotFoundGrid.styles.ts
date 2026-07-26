@@ -80,6 +80,10 @@ export const MonoLabel = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.16em;
   margin-bottom: 24px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const ReadoutText = styled.p`
@@ -89,6 +93,10 @@ export const ReadoutText = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 export const CenterDisplay = styled.div`
@@ -133,6 +141,10 @@ export const ReturnAction = styled.a`
   }
   &:hover svg {
     transform: translateX(4px);
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
   }
 `;
 

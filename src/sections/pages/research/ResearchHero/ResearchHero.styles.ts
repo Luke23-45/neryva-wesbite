@@ -89,10 +89,18 @@ export const MassiveTitle = styled.h1`
   font-size: 4.5rem;
   font-weight: 500;
   line-height: 1.05;
-  letter-spacing: -0.03em; /* Tight, premium tracking */
+  letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   max-width: 1000px;
+
+  ${({ theme }) => theme.media.tablet} {
+    font-size: 3rem;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 2.25rem;
+  }
 `;
 
 export const HeaderSubtitle = styled.p`
@@ -100,6 +108,10 @@ export const HeaderSubtitle = styled.p`
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.muted};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* ── Structural Divider ── */
@@ -170,6 +182,10 @@ export const CTAButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 
   &:hover {
     opacity: 0.9;

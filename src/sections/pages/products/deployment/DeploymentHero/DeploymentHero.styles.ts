@@ -103,6 +103,10 @@ export const DeploymentHeroSidebarMetric = styled.p`
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 export const DeploymentHeroCellBottomLeft = styled.div`
@@ -156,6 +160,10 @@ export const DeploymentHeroCtaPrimary = styled.a`
   cursor: pointer;
   text-decoration: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 
   &:hover {
     opacity: 0.92;

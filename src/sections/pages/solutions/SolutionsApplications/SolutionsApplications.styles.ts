@@ -68,6 +68,10 @@ export const AppsDesc = styled.p`
   margin: 0;
   max-width: 600px;
   line-height: 1.6;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* ── The 4-Column Master Grid ── */
@@ -143,6 +147,10 @@ export const CellTitle = styled.h3`
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 24px;
+  }
 `;
 
 export const CellDesc = styled.p`
@@ -155,4 +163,8 @@ export const CellDesc = styled.p`
   
   /* CRITICAL: This pushes the description to the absolute bottom of the cell */
   margin-top: auto; 
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

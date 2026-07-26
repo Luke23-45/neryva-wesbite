@@ -39,6 +39,7 @@ export const CardDescription = styled.p`
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
   color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: ${({ theme }) => theme.spacing.s4};
+  ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.body}; }
 `;
 export const CardEmail = styled.a`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
@@ -47,4 +48,5 @@ export const CardEmail = styled.a`
   text-decoration: none;
   transition: color ${({ theme }) => theme.transitions.fast};
   &:hover { color: ${({ theme }) => theme.colors.accent.azureDark}; }
+  ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.small}; }
 `;

@@ -42,6 +42,10 @@ export const SectionEyebrow = styled.span`
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const SectionTitle = styled.h2`
@@ -161,6 +165,10 @@ export const TileIcon = styled.div<{ $color?: string; $isDark?: boolean }>`
   border-radius: 6px;
   margin-bottom: auto; /* Pushes the text to the bottom */
   box-shadow: ${({ $color }) => $color && $color !== 'transparent' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 18px;
+  }
 `;
 
 export const TileContent = styled.div`
@@ -178,6 +186,10 @@ export const TileTitle = styled.h3<{ $isDark?: boolean }>`
   margin: 0;
   letter-spacing: -0.03em;
   line-height: 1.1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 24px;
+  }
 `;
 
 export const TileDescription = styled.p<{ $isDark?: boolean }>`
@@ -187,6 +199,10 @@ export const TileDescription = styled.p<{ $isDark?: boolean }>`
   color: ${({ $isDark }) => $isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)'};
   margin: 0;
   max-width: 90%;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 /* PRECISE DECORATIVE ELEMENTS */

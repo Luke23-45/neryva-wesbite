@@ -26,6 +26,10 @@ export const Label = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 9px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -183,4 +187,8 @@ export const PerkDesc = styled.p`
   color: rgba(15, 23, 42, 0.85);
   margin: 0;
   max-width: 480px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.9rem;
+  }
 `;

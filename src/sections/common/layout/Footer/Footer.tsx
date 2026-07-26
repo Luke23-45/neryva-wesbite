@@ -1,12 +1,9 @@
 import footerData from '@neryva_data/navigation/footer.json';
+import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
 import {
   Linkedin,
   Youtube,
-  Github,
-  Smartphone,
-  ShieldCheck,
-  DiscIcon,
-  CircleCheckBig
+  Github
 } from 'lucide-react'; // Basic strict structural elements representing X, Socials perfectly without layout fail paths
 
 import {
@@ -19,10 +16,8 @@ import {
   FooterLink,
   BottomBand,
   SocialArray,
-  HardwareButtonsBlock,
-  AccessText,
-  AppRow,
-  BadgeBtn
+  CopyrightContainer,
+  CopyrightText
 } from './Footer.styles';
 
 export function Footer() {
@@ -52,34 +47,15 @@ export function Footer() {
           <SocialArray>
             <a href="#" aria-label="LinkedIn"><Linkedin strokeWidth={1.8} /></a>
             <a href="#" aria-label="GitHub"><Github strokeWidth={1.8} /></a>
-            <a href="#" aria-label="YouTube"><Youtube strokeWidth={1.8} /></a>
-            {/* Custom rigid paths mapping strict editorial spacing. Emulates identical flat UI to reference. */}
-            <a href="#" aria-label="Brand Base"><CircleCheckBig strokeWidth={1.8} /></a>
+
           </SocialArray>
 
-          {/* Reference identical App Store bounding right column alignments. Neryva Enterprise Studio replacements rendered */}
-          <HardwareButtonsBlock>
-            <AccessText>Access Neryva Environments</AccessText>
-
-            <AppRow>
-              <BadgeBtn>
-                <Smartphone strokeWidth={1.5} color="#fff" />
-                <div>
-                  <span>Deployed internally on</span>
-                  <span>Agent iOS Studio</span>
-                </div>
-              </BadgeBtn>
-
-              <BadgeBtn>
-                <ShieldCheck strokeWidth={1.5} color="#fff" />
-                <div>
-                  <span>Integrates fully to</span>
-                  <span>Google Cloud Data</span>
-                </div>
-              </BadgeBtn>
-            </AppRow>
-
-          </HardwareButtonsBlock>
+          <CopyrightContainer>
+            <LogoIcon width={40} height={40} aria-hidden="true" />
+            <CopyrightText>
+              &copy; 2026 Neryva
+            </CopyrightText>
+          </CopyrightContainer>
 
         </BottomBand>
 

@@ -4,8 +4,6 @@ export const FooterContainer = styled.footer`
   width: 100%;
   /* Very light warm structural paper off-white */
   background-color: #FAFAFA;
-  /* Massive architectural focal top-border (Vivid Neryva Accent) */
-  border-top: 3px solid #F65936; 
   /* Erases all top-shadow to lock physically into document flow */
   position: relative;
   z-index: 10;
@@ -81,6 +79,10 @@ export const HeaderText = styled.h4`
   color: #64748B;
   margin: 0 0 32px 0;
   letter-spacing: -0.01em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const LinkList = styled.div`
@@ -104,6 +106,10 @@ export const FooterLink = styled.a`
     text-underline-offset: 4px;
     text-decoration-thickness: 1px;
     text-decoration-color: #64748B;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
   }
 `;
 
@@ -147,73 +153,19 @@ export const SocialArray = styled.div`
   }
 `;
 
-export const HardwareButtonsBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end; /* Text sits completely flat to right flush layout */
-
-  ${({ theme }) => theme.media.tablet} {
-    align-items: flex-start;
-  }
-`;
-
-export const AccessText = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
-  font-weight: 500;
-  color: #4A4A4A;
-  margin-bottom: 12px;
-`;
-
-export const AppRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  ${({ theme }) => theme.media.mobile} {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-`;
-
-/* Pixel perfect recreation of solid-block hardware download badges */
-export const BadgeBtn = styled.button`
-  background: #000;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 10px 14px;
+export const CopyrightContainer = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
 
-  &:hover {
-    opacity: 0.85;
+  ${({ theme }) => theme.media.tablet} {
+    margin-top: 16px;
   }
+`;
 
-  /* Micro text alignment strictly observed on download buttons internally */
-  div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    gap: 1px;
-  }
-  
-  span:nth-child(1) {
-    font-size: 9px;
-    font-weight: 400;
-  }
-  span:nth-child(2) {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.1;
-  }
-
-  svg {
-    width: 24px;
-    height: 24px;
-  }
+export const CopyrightText = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 400;
+  color: #64748B;
 `;

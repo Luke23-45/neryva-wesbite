@@ -13,6 +13,10 @@ export const SectionLabel = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 9px;
+  }
 `;
 
 export const SectionTitle = styled.h2`
@@ -22,6 +26,10 @@ export const SectionTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   letter-spacing: -0.04em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 2.75rem;
+  }
 `;
 
 /* ── Two Column Layout ── */
@@ -152,6 +160,10 @@ export const ProgramDescription = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 32px 0;
   max-width: 720px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
+  }
 `;
 
 export const ProgramVisual = styled.div<{ $accent: string }>`

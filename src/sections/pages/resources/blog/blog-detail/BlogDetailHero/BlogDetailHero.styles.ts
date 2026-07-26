@@ -51,6 +51,10 @@ export const HeroCategoryBadge = styled.span`
   padding: 5px 10px;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 /* ── Meta strip below mosaic ── */
@@ -75,6 +79,10 @@ export const HeroMetaCell = styled.div`
     border-right: none;
     margin-left: auto;
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const HeroMetaLabel = styled.span`
@@ -85,6 +93,10 @@ export const HeroMetaLabel = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-right: 10px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 /* ── Title section below meta ── */
@@ -107,6 +119,10 @@ export const HeroCategory = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const HeroTitle = styled.h1`
@@ -125,4 +141,8 @@ export const HeroSummary = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   max-width: ${({ theme }) => theme.containers.prose};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.95rem;
+  }
 `;

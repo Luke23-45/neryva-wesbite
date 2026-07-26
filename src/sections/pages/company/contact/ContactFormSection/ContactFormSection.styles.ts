@@ -45,6 +45,10 @@ export const SidebarTitle = styled.h2`
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 48px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 2rem;
+  }
 `;
 
 export const SidebarBlocksWrapper = styled.div`
@@ -86,6 +90,10 @@ export const BlockTitle = styled.h3`
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.5rem;
+  }
 `;
 
 export const BlockContent = styled.div`
@@ -119,6 +127,10 @@ export const BlockContent = styled.div`
       opacity: 0.7;
     }
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.875rem;
+  }
 `;
 
 export const BlockFooter = styled.p`
@@ -126,6 +138,10 @@ export const BlockFooter = styled.p`
   font-size: 0.85rem;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 16px 0 0 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.75rem;
+  }
 `;
 
 export const SecondaryButton = styled.button`
@@ -152,6 +168,10 @@ export const SecondaryButton = styled.button`
     height: 12px;
     flex-shrink: 0;
     shape-rendering: crispedges;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.7rem;
   }
 `;
 
@@ -196,6 +216,10 @@ export const Label = styled.label`
     color: #D32F2F; /* Red asterisk */
     margin-left: 2px;
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.875rem;
+  }
 `;
 
 export const Input = styled.input`
@@ -219,6 +243,10 @@ export const Input = styled.input`
     outline: none;
     border-color: ${({ theme }) => theme.colors.text.muted};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.875rem;
+  }
 `;
 
 export const TextArea = styled.textarea`
@@ -241,6 +269,10 @@ export const TextArea = styled.textarea`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.text.muted};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
   }
 `;
 
@@ -275,6 +307,10 @@ export const CheckboxLabel = styled.label`
   cursor: pointer;
   margin: 0;
   padding: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.875rem;
+  }
 `;
 
 export const Disclaimer = styled.p`
@@ -288,6 +324,10 @@ export const Disclaimer = styled.p`
     color: ${({ theme }) => theme.colors.text.strong};
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.875rem;
   }
 `;
 
@@ -316,5 +356,9 @@ export const SubmitButton = styled.button`
   svg {
     width: 14px;
     height: 14px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
   }
 `;

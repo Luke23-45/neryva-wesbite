@@ -115,6 +115,7 @@ export const CardTitle = styled.h3`
   font-size: ${({ theme }) => theme.typography.sizes.h3};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.strong};
+  ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.h3}; }
 `;
 
 export const CardBody = styled.p`
@@ -122,4 +123,5 @@ export const CardBody = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
   max-width: 90%;
+  ${({ theme }) => theme.media.mobile} { font-size: ${({ theme }) => theme.typography.sizesMobile.body}; }
 `;

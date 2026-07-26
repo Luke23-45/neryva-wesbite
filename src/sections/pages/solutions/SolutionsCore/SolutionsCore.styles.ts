@@ -58,6 +58,10 @@ export const SectionDesc = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 16px;
+  }
 `;
 
 export const CTAButton = styled.button`
@@ -75,6 +79,10 @@ export const CTAButton = styled.button`
   font-weight: 500;
   cursor: pointer;
   overflow: hidden;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const ButtonLabelText = styled.span`
@@ -274,6 +282,10 @@ export const CardTitle = styled.h3<{ $pushToBottom?: boolean }>`
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.01em;
   margin: ${({ $pushToBottom }) => ($pushToBottom ? 'auto 0 12px 0' : '0 0 12px 0')};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 18px;
+  }
 `;
 
 export const CardDesc = styled.p`
@@ -281,4 +293,8 @@ export const CardDesc = styled.p`
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

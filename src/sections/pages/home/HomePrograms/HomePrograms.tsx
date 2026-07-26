@@ -4,16 +4,7 @@ import programsData from '@neryva_data/home/sections/research_overview.json';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
-import {
-  LLMIcon,
-  RoboticsIcon,
-  ClinicalIcon,
-  EnergyIcon,
-  SidebarLLMIcon,
-  SidebarRoboticsIcon,
-  SidebarClinicalIcon,
-  SidebarEnergyIcon
-} from '@assets/icons/home';
+
 import {
   HeaderSection,
   SectionTitle,
@@ -42,20 +33,22 @@ const staggerContainer = {
   },
 };
 
-const ProgramIcons: Record<string, React.FC<{ accent: string }>> = {
-  'language-systems': LLMIcon,
-  'robotics-task-transfer': RoboticsIcon,
-  'biomedical-biological-clinical-ai': ClinicalIcon,
-  'energy-systems': EnergyIcon,
-  'computational-science-engineering': EnergyIcon,
+import { NavMotifIcon } from '@/assets/visual/navigation/NavMotifs';
+
+const ProgramIcons: Record<string, React.FC> = {
+  'language-systems': () => <NavMotifIcon kind="llm" />,
+  'robotics-task-transfer': () => <NavMotifIcon kind="robotics" />,
+  'biomedical-biological-clinical-ai': () => <NavMotifIcon kind="clinical" />,
+  'energy-systems': () => <NavMotifIcon kind="energy" />,
+  'computational-science-engineering': () => <NavMotifIcon kind="deployment" />,
 };
 
 const SidebarIconsMap: Record<string, React.FC> = {
-  'language-systems': SidebarLLMIcon,
-  'robotics-task-transfer': SidebarRoboticsIcon,
-  'biomedical-biological-clinical-ai': SidebarClinicalIcon,
-  'energy-systems': SidebarEnergyIcon,
-  'computational-science-engineering': SidebarEnergyIcon,
+  'language-systems': () => <NavMotifIcon kind="llm" />,
+  'robotics-task-transfer': () => <NavMotifIcon kind="robotics" />,
+  'biomedical-biological-clinical-ai': () => <NavMotifIcon kind="clinical" />,
+  'energy-systems': () => <NavMotifIcon kind="energy" />,
+  'computational-science-engineering': () => <NavMotifIcon kind="deployment" />,
 };
 
 import imgLanguage from '@assets/page/home/language_systems.png';

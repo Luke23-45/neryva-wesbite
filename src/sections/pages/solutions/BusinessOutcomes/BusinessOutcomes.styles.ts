@@ -51,6 +51,10 @@ export const Eyebrow = styled.span`
   letter-spacing: 0.16em;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 24px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -71,6 +75,10 @@ export const Description = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   padding-bottom: 80px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 16px;
+  }
 `;
 
 /* ─── RIGHT: THE iPAD FLUID LIST ─── */
@@ -119,6 +127,10 @@ export const Index = styled.span`
   letter-spacing: 0.08em;
   color: ${({ theme }) => theme.colors.text.muted};
   flex-shrink: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const OutcomeText = styled.span`

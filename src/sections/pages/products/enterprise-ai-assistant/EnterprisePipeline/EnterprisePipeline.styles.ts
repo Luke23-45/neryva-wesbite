@@ -111,6 +111,10 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
       border-right: none;
     }
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 /** Icon on the leading edge of each sidebar item — pure SVG, no background chip. */
@@ -140,6 +144,10 @@ export const SidebarItemLabel = styled.span`
   white-space: nowrap;
   font-size: 1.03rem;
   font-weight: 500;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
+  }
 `;
 
 export const Panel = styled.div`
@@ -337,6 +345,10 @@ export const VisualTypeLabel = styled.span`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 20px;
   z-index: 1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const VisualDescription = styled.p`
@@ -348,6 +360,10 @@ export const VisualDescription = styled.p`
   margin: 0;
   padding: 0 24px;
   z-index: 1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const FeatureGrid = styled.div`
@@ -403,6 +419,10 @@ export const FeatureTitle = styled.h3`
   line-height: 1.4;
   letter-spacing: -0.01em;
   margin: 0 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 22px;
+  }
 `;
 
 export const FeatureDescription = styled.p`
@@ -410,6 +430,10 @@ export const FeatureDescription = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* Hidden because the strict layout architecture replaces the need for loose spacers */

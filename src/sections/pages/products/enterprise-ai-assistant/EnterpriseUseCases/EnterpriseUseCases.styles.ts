@@ -41,6 +41,10 @@ export const Subtitle = styled.span`
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -60,6 +64,10 @@ export const Description = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 16px;
+  }
 `;
 
 /* ─── MASTER BENTO GRID ─── */
@@ -168,6 +176,10 @@ export const AppTitle = styled.h3`
   letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 24px 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 22px;
+  }
 `;
 
 export const AppDesc = styled.p`
@@ -176,4 +188,8 @@ export const AppDesc = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 90%;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

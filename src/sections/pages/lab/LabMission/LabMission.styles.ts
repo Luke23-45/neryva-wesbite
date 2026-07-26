@@ -17,4 +17,8 @@ export const Paragraph = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: ${({ theme }) => theme.spacing.s5};
   &:last-of-type { margin-bottom: 0; }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.body};
+  }
 `;

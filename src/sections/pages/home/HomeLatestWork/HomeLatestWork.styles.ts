@@ -25,6 +25,10 @@ export const SectionLabel = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 16px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 9px;
+  }
 `;
 
 export const SectionTitle = styled.h2`
@@ -135,6 +139,10 @@ export const CardTag = styled.span<{ $accent: string }>`
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: ${({ $accent }) => $accent};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CardTitle = styled.h3`
@@ -144,6 +152,10 @@ export const CardTitle = styled.h3`
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 20px 10px;
   letter-spacing: -0.03em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.125rem;
+  }
 `;
 
 export const CardDescription = styled.p`
@@ -151,6 +163,10 @@ export const CardDescription = styled.p`
   line-height: 1.62;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 20px 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
+  }
 `;
 
 /* ── Card Footer ── */
@@ -173,6 +189,10 @@ export const CardDate = styled.span`
   font-size: 11px;
   letter-spacing: 0.05em;
   color: ${({ theme }) => theme.colors.text.muted};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 9px;
+  }
 `;
 
 export const CardFooterArrow = styled.div`

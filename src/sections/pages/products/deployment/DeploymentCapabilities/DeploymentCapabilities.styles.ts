@@ -102,6 +102,10 @@ export const DeploymentCapabilitiesCellTitle = styled.h3`
   line-height: 1.1;
   letter-spacing: -0.02em;
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 26px;
+  }
 `;
 
 export const DeploymentCapabilitiesCellDesc = styled.p`
@@ -112,4 +116,8 @@ export const DeploymentCapabilitiesCellDesc = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   margin-top: auto;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

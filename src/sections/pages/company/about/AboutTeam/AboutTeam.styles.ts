@@ -27,6 +27,10 @@ export const Label = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 16px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -91,6 +95,10 @@ export const TeamName = styled.h3`
   letter-spacing: -0.01em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1rem;
+  }
 `;
 
 export const TeamFocus = styled.p`
@@ -100,4 +108,8 @@ export const TeamFocus = styled.p`
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   max-width: 640px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
+  }
 `;

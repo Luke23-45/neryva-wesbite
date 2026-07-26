@@ -78,6 +78,10 @@ export const EmptyTitle = styled.h3`
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.02em;
   margin: 0 0 15px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 26px;
+  }
 `;
 
 export const EmptyText = styled.p`
@@ -89,6 +93,10 @@ export const EmptyText = styled.p`
 
   &:last-child {
     margin-bottom: 0;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
   }
 `;
 
@@ -143,6 +151,10 @@ export const YearHeader = styled.div`
   letter-spacing: 0.1em;
   padding: 40px 0 16px 0;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 /* ── Paper Row Columns ── */
@@ -218,6 +230,10 @@ export const StatusBadge = styled.span<{ $status: string }>`
     border-color: var(--row-accent);
     color: var(--row-accent);
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const VenueSpan = styled.span`
@@ -227,4 +243,8 @@ export const VenueSpan = styled.span`
   color: ${({ theme }) => theme.colors.text.muted};
   line-height: 1.4;
   letter-spacing: 0.01em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

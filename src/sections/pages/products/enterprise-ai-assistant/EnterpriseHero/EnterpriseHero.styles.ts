@@ -110,6 +110,10 @@ export const SidebarMetric = styled.p`
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* ─── Row 2: Left Cell (Narrative + CTA) ─── */

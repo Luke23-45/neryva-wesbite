@@ -91,7 +91,7 @@ const BackgroundCell = styled.div<{ $delay: number; $shouldPulse: boolean }>`
   `}
 `;
 
-const ActiveCell = styled(motion.div)<{ $color: string; $cellSize: number }>`
+const ActiveCell = styled(motion.div) <{ $color: string; $cellSize: number }>`
   position: absolute;
   top: 0;
   left: 0;

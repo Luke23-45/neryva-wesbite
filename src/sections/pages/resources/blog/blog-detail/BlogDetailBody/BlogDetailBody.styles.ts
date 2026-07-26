@@ -46,6 +46,10 @@ export const Paragraph = styled.p`
   line-height: 1.7;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 32px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1rem;
+  }
 `;
 
 export const Heading2 = styled.h2`
@@ -54,6 +58,10 @@ export const Heading2 = styled.h2`
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 56px 0 24px 0;
   letter-spacing: -0.02em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.5rem;
+  }
 `;
 
 export const Heading3 = styled.h3`
@@ -61,6 +69,10 @@ export const Heading3 = styled.h3`
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 40px 0 20px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.25rem;
+  }
 `;
 
 export const PullQuote = styled.blockquote`
@@ -72,6 +84,10 @@ export const PullQuote = styled.blockquote`
   margin: 56px 0;
   padding-left: 24px;
   border-left: 4px solid ${({ theme }) => theme.colors.accent.azure};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.25rem;
+  }
 `;
 
 export const Callout = styled.div`
@@ -91,6 +107,10 @@ export const CalloutLabel = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.accent.azureText};
   margin-bottom: 12px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CalloutText = styled.p`
@@ -98,6 +118,10 @@ export const CalloutText = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.9375rem;
+  }
 `;
 
 export const CodeBlockWrapper = styled.div`
@@ -122,6 +146,10 @@ export const CodeLanguage = styled.span`
   letter-spacing: 0.05em;
   color: #94a3b8; /* Tailwind slate-400 */
   text-transform: uppercase;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Pre = styled.pre`
@@ -135,6 +163,10 @@ export const Code = styled.code`
   font-size: 14px;
   line-height: 1.6;
   color: #f8fafc; /* Tailwind slate-50 */
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12px;
+  }
 `;
 
 /* ── Share tools (Left sidebar) ── */
@@ -145,6 +177,10 @@ export const ShareLabel = styled.span`
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const ShareLink = styled.button`
@@ -168,5 +204,9 @@ export const ShareLink = styled.button`
     svg {
       opacity: 1;
     }
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12px;
   }
 `;

@@ -54,6 +54,10 @@ export const Desc = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* ── MAIN LAYOUT: Sticky Sidebar + Vertical Content ── */
@@ -135,6 +139,10 @@ export const NavLabel = styled.span`
   font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const ActiveIndicator = styled.div`
@@ -269,6 +277,10 @@ export const AppTitle = styled.h4`
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   line-height: 1.3;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 15px;
+  }
 `;
 
 export const AppDesc = styled.p`
@@ -276,4 +288,8 @@ export const AppDesc = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

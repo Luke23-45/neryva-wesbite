@@ -90,6 +90,10 @@ export const PostCount = styled.span`
   white-space: nowrap;
   padding-right: 12px;
   border-right: 1px solid ${({ theme }) => theme.colors.border};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CategoryPills = styled.div`
@@ -119,6 +123,10 @@ export const CategoryPill = styled.button<{ $active: boolean; $cat?: string }>`
     background: ${({ $cat, $active, theme }) => $active ? theme.colors.text.primary : ($cat ? getCategoryColor($cat) : theme.colors.text.primary)};
     color: ${({ theme }) => theme.colors.background.primary};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const FilterRight = styled.div`
@@ -145,6 +153,10 @@ export const SearchInput = styled.input`
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
   }
 `;
 
@@ -262,6 +274,10 @@ export const CardTitle = styled.h2<{ $featured?: boolean }>`
   letter-spacing: -0.02em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ $featured }) => ($featured ? '1.25rem' : '1.125rem')};
+  }
 `;
 
 export const CardSummary = styled.p`
@@ -276,6 +292,10 @@ export const CardSummary = styled.p`
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.8125rem;
+  }
 `;
 
 /* ── Card Footer ── */
@@ -294,6 +314,10 @@ export const CardDate = styled.div`
   display: flex;
   align-items: center;
   padding: 0 16px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CardAuthor = styled.div`
@@ -305,6 +329,10 @@ export const CardAuthor = styled.div`
   align-items: center;
   padding: 0 16px;
   border-left: 1px solid #E4E3DE;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CardArrow = styled.div`
@@ -381,10 +409,18 @@ export const PageButton = styled.button<{ $active?: boolean }>`
     border-color: ${({ theme }) => theme.colors.borderLight};
     color: ${({ theme }) => theme.colors.text.primary};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const PageArrow = styled(PageButton)`
   font-size: 14px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12px;
+  }
 `;
 
 /* ── Empty State ── */
@@ -397,4 +433,8 @@ export const EmptyState = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 13px;
   letter-spacing: 0.08em;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;

@@ -38,6 +38,11 @@ export const Label = styled.span`
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 48px;
   display: block;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+    margin-bottom: 32px;
+  }
 `;
 
 export const Title = styled.h1`

@@ -44,6 +44,10 @@ export const FilterLabel = styled.span`
   letter-spacing: 0.08em;
   color: #111;
   text-transform: uppercase;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const ControlsRow = styled.div`
@@ -150,6 +154,10 @@ export const DropdownItem = styled.div<{ $selected: boolean }>`
   &:hover {
     background: #f5f5f5;
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 
@@ -213,6 +221,10 @@ export const FloatTag = styled.div`
   letter-spacing: 0.08em;
   color: #111;
   text-transform: uppercase;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 /* Internal Pacing Layout Bounds */
@@ -229,6 +241,10 @@ export const MetaLine = styled.p`
   font-weight: 500;
   color: #64748b;
   margin: 0 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const CardTitle = styled.h3`
@@ -239,6 +255,10 @@ export const CardTitle = styled.h3`
   letter-spacing: -0.015em;
   color: #0F172A;
   margin: 0 0 32px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 18px;
+  }
 `;
 
 /* Conditional state mechanical anchor */
@@ -265,5 +285,9 @@ export const InteractionButton = styled.div<{ $status: 'upcoming' | 'past' }>`
   svg {
     width: 16px;
     height: 16px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
   }
 `;

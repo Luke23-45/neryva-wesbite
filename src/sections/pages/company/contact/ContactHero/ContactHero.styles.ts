@@ -57,6 +57,10 @@ export const Eyebrow = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Title = styled.h1`
@@ -68,6 +72,14 @@ export const Title = styled.h1`
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0;
   max-width: 1000px;
+
+  ${({ theme }) => theme.media.tablet} {
+    font-size: 3rem;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 2.25rem;
+  }
 `;
 
 export const Description = styled.p`

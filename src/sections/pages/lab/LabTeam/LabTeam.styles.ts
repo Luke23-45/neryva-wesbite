@@ -33,15 +33,27 @@ export const Name = styled.h3`
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.strong};
   margin-bottom: ${({ theme }) => theme.spacing.s1};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.body};
+  }
 `;
 export const Role = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.typography.sizes.small};
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: ${({ theme }) => theme.spacing.s3};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.small};
+  }
 `;
 export const Bio = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.small};
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
   color: ${({ theme }) => theme.colors.text.secondary};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.small};
+  }
 `;

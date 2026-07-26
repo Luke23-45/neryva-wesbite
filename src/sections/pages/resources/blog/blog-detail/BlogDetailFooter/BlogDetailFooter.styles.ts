@@ -40,4 +40,8 @@ export const BackLink = styled.div`
       transform: translateX(-4px);
     }
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;

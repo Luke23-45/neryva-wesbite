@@ -49,4 +49,8 @@ export const CTAButton = styled(Link)`
   &:hover {
     color: ${({ theme }) => theme.colors.text.primary};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;

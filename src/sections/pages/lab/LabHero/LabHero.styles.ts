@@ -8,6 +8,10 @@ export const Eyebrow = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: ${({ theme }) => theme.spacing.s4};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.label};
+  }
 `;
 export const Title = styled.h1`
   font-size: clamp(36px, 5vw, 56px);

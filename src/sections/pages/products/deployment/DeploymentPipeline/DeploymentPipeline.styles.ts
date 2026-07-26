@@ -104,6 +104,10 @@ export const DeploymentPipelineSidebarItem = styled.button<{ $active: boolean }>
       border-right: none;
     }
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const DeploymentPipelineSidebarItemIcon = styled.span<{ $active: boolean }>`
@@ -131,6 +135,10 @@ export const DeploymentPipelineSidebarItemLabel = styled.span`
   white-space: nowrap;
   font-size: 1.03rem;
   font-weight: 500;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.85rem;
+  }
 `;
 
 export const DeploymentPipelinePanel = styled.div`
@@ -302,6 +310,10 @@ export const DeploymentPipelineVisualTypeLabel = styled.span`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 20px;
   z-index: 1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const DeploymentPipelineVisualDescription = styled.p`
@@ -313,6 +325,10 @@ export const DeploymentPipelineVisualDescription = styled.p`
   margin: 0;
   padding: 0 24px;
   z-index: 1;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const DeploymentPipelineFeatureGrid = styled.div`
@@ -360,6 +376,10 @@ export const DeploymentPipelineFeatureTitle = styled.h3`
   line-height: 1.4;
   letter-spacing: -0.01em;
   margin: 0 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 22px;
+  }
 `;
 
 export const DeploymentPipelineFeatureDescription = styled.p`
@@ -367,6 +387,10 @@ export const DeploymentPipelineFeatureDescription = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 export const DeploymentPipelineSectionDivider = styled.div`

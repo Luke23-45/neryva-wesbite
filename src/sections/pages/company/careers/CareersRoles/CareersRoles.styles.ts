@@ -19,6 +19,10 @@ export const Label = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.text.muted};
   margin-bottom: 20px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Title = styled.h2`
@@ -45,6 +49,10 @@ export const DepartmentName = styled.h3`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   width: 100%;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 1.5rem;
+  }
 `;
 
 export const RoleList = styled.div`
@@ -87,6 +95,10 @@ export const RoleTitle = styled.div`
   ${RoleRow}:hover & {
     transform: translateX(8px);
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.95rem;
+  }
 `;
 
 export const RoleMeta = styled.div`
@@ -113,6 +125,10 @@ export const RoleMeta = styled.div`
     border: none;
     padding: 0;
     color: ${({ theme }) => theme.colors.text.muted};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
   }
 `;
 
@@ -166,6 +182,10 @@ export const LocationText = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 16px;
   text-transform: uppercase;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 11px;
+  }
 `;
 
 export const AccordionDesc = styled.p`
@@ -174,6 +194,10 @@ export const AccordionDesc = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 640px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 0.9rem;
+  }
 `;
 
 export const EmailFallback = styled.a`
@@ -203,6 +227,10 @@ export const EmailFallback = styled.a`
     border-color: rgba(15, 23, 42, 0.3);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
   }
 `;
 

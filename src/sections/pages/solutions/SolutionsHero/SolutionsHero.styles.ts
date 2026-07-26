@@ -66,6 +66,10 @@ export const Eyebrow = styled.div`
   text-transform: uppercase;
   letter-spacing: 0.1em;
   margin-bottom: 25px; 
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const Title = styled.h1`
@@ -154,6 +158,10 @@ export const SolidCta = styled.a`
   svg {
     width: 16px;
     height: 16px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
   }
 `;
 

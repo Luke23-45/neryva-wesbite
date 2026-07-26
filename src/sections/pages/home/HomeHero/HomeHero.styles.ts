@@ -51,6 +51,10 @@ export const Headline = styled.h1`
   letter-spacing: -0.055em;
   margin: 0;
   text-wrap: balance;
+
+  @media (max-width: 900px) {
+    font-size: 3.5rem;
+  }
 `;
 
 export const LeftBottom = styled.div`
@@ -83,6 +87,10 @@ export const Description = styled.p`
   font-weight: 500;
   margin: 0;
   letter-spacing: -0.03em;
+
+  @media (max-width: 900px) {
+    font-size: 1.125rem;
+  }
 
 `;
 
@@ -119,6 +127,10 @@ export const NewsLabel = styled.span`
   letter-spacing: 0.14em;
   color: #888;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
+
+  @media (max-width: 900px) {
+    font-size: 0.65rem;
+  }
 `;
 
 export const NewsCard = styled.div`
@@ -153,6 +165,10 @@ export const NewsTitle = styled.div`
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #000000;
+
+  @media (max-width: 900px) {
+    font-size: 0.85rem;
+  }
 `;
 
 export const NewsArrow = styled.div`
@@ -189,4 +205,8 @@ export const SmallTextLabel = styled.span`
   font-size: 0.7rem;
   letter-spacing: 0.05em;
   color: rgba(255, 255, 255, 0.8);
+
+  @media (max-width: 900px) {
+    font-size: 0.6rem;
+  }
 `;

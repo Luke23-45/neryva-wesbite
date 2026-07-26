@@ -35,6 +35,10 @@ export const Subtitle = styled.span`
   text-transform: uppercase;
   letter-spacing: 1.5px;
   margin-bottom: ${({ theme }) => theme.spacing.s5};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.small};
+  }
 `;
 
 export const Title = styled.h2`
@@ -54,6 +58,10 @@ export const Description = styled.p`
   /* Using slate-400 equivalent for softer dark mode text */
   color: #94A3B8; 
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.bodyLg};
+  }
 `;
 
 export const GridContainer = styled.div`
@@ -103,10 +111,18 @@ export const CardTitle = styled.h3`
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.colors.text.inverse};
   margin-bottom: ${({ theme }) => theme.spacing.s3};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.h3};
+  }
 `;
 
 export const CardDescription = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.body};
   color: #94A3B8;
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.body};
+  }
 `;

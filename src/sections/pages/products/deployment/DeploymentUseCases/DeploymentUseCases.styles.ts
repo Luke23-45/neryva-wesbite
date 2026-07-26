@@ -132,6 +132,10 @@ export const DeploymentUseCasesAppTitle = styled.h3`
   letter-spacing: -0.03em;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 24px 0 12px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 22px;
+  }
 `;
 
 export const DeploymentUseCasesAppDesc = styled.p`
@@ -140,4 +144,8 @@ export const DeploymentUseCasesAppDesc = styled.p`
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 90%;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;

@@ -102,6 +102,10 @@ export const SidebarItem = styled.button<{ $active: boolean; $accent: string }>`
       border-right: none;
     }
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* ── 2. The Master Staging Envelope ── */
@@ -241,6 +245,10 @@ export const OpenBadge = styled.span`
   background: #f5f5f5;
   padding: 4px 8px;
   border-radius: 4px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const CardBody = styled.div`
@@ -261,6 +269,10 @@ export const CardTitle = styled.h3`
   letter-spacing: -0.015em;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 10px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 27px;
+  }
 `;
 
 export const CardDescription = styled.p`
@@ -268,6 +280,10 @@ export const CardDescription = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0 0 16px 0;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 /* Meticulous minimal border capsling matching reference architecture tags */
@@ -294,4 +310,8 @@ export const Tag = styled.span`
   padding: 4px 6px;
   border: 1px solid ${({ theme }) => theme.colors.border}; 
   border-radius: 4px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;

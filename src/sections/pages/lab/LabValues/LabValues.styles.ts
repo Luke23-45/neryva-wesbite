@@ -20,10 +20,18 @@ export const ValueNumber = styled.span`
   color: ${({ theme }) => theme.colors.accent.emeraldText};
   min-width: 24px;
   margin-top: 4px;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.label};
+  }
 `;
 export const ValueText = styled.p`
   font-size: ${({ theme }) => theme.typography.sizes.body};
   line-height: ${({ theme }) => theme.typography.lineHeights.body};
   color: ${({ theme }) => theme.colors.text.muted};
   max-width: ${({ theme }) => theme.containers.prose};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: ${({ theme }) => theme.typography.sizesMobile.body};
+  }
 `;

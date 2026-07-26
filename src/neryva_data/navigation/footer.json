@@ -10,22 +10,6 @@
                 {
                     "label": "Neryva Agent Studio",
                     "href": "/products/neryva-agent-studio"
-                },
-                {
-                    "label": "Solutions",
-                    "href": "/solutions"
-                },
-                {
-                    "label": "Research",
-                    "href": "/research"
-                },
-                {
-                    "label": "About Neryva",
-                    "href": "/about"
-                },
-                {
-                    "label": "Contact",
-                    "href": "/contact"
                 }
             ]
         },
@@ -33,28 +17,12 @@
             "title": "Solutions",
             "links": [
                 {
-                    "label": "AI Deployment & Operations",
-                    "href": "/products/neryva-ai-deployment"
-                },
-                {
-                    "label": "Professional AI Agents",
-                    "href": "/products/neryva-agent-studio"
-                },
-                {
                     "label": "Solutions Overview",
                     "href": "/solutions"
                 },
                 {
-                    "label": "Research",
-                    "href": "/research"
-                },
-                {
                     "label": "Case studies",
                     "href": "/customers"
-                },
-                {
-                    "label": "Contact",
-                    "href": "/contact"
                 }
             ]
         },
@@ -73,10 +41,6 @@
                 {
                     "label": "Partners",
                     "href": "/partners"
-                },
-                {
-                    "label": "Case studies",
-                    "href": "/customers"
                 },
                 {
                     "label": "Research",

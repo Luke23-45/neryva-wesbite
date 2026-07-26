@@ -98,6 +98,10 @@ export const LogoLink = styled.a<{ $isDark?: boolean }>`
   &:hover {
     opacity: 0.8;
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 17px;
+  }
 `;
 
 export const LogoImage = styled.svg`
@@ -150,6 +154,10 @@ export const NavLink = styled.a<{ $isActive?: boolean; $isDark?: boolean }>`
     opacity: 1;
     transform: scaleX(1);
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 // ─── CTA BUTTONS ───────────────────────────────────────────────
@@ -182,6 +190,10 @@ export const ButtonGhost = styled.a<{ $isDark?: boolean }>`
     color: ${({ theme, $isDark }) => $isDark ? '#FFF' : theme.colors.text.strong};
     background-color: ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 export const ButtonSecondary = styled.a`
@@ -211,6 +223,10 @@ export const ButtonSecondary = styled.a`
 
   &:active {
     transform: translateY(1px);
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12px;
   }
 `;
 
@@ -252,6 +268,10 @@ export const ButtonPrimary = styled.a<{ $isDark?: boolean }>`
   &:active {
     transform: scale(0.98);
     box-shadow: 0 2px 8px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'};
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 12.5px;
   }
 `;
 
@@ -345,6 +365,10 @@ export const MobileNavLink = styled.a<{ $isActive?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 16px;
+  }
 `;
 
 export const MobileSubLinkContainer = styled.div`
@@ -373,6 +397,10 @@ export const MobileSubLink = styled.a<{ $indented?: boolean }>`
     color: ${({ theme }) => theme.colors.text.primary};
     background-color: ${({ theme }) => theme.colors.overlay.light};
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 13px;
+  }
 `;
 
 export const MobileSectionTitle = styled.span`
@@ -385,6 +413,10 @@ export const MobileSectionTitle = styled.span`
   color: ${({ theme }) => theme.colors.text.muted};
   margin: 12px 0 6px 0;
   opacity: 0.7;
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 // ─── MOBILE ACTIONS ────────────────────────────────────────────
@@ -463,6 +495,10 @@ export const DropdownItem = styled.a`
   &:last-child {
     border-bottom: none;
   }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
+  }
 `;
 
 export const DropdownArrow = styled.span`
@@ -526,6 +562,10 @@ export const MegaMenuTitle = styled.span`
   color: ${({ theme }) => theme.colors.text.muted};
   padding: 18px 18px 15px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.borderLight};
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 10px;
+  }
 `;
 
 export const MegaMenuLink = styled.a`
@@ -551,6 +591,10 @@ export const MegaMenuLink = styled.a`
 
   &:last-child {
     border-bottom: none;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    font-size: 14px;
   }
 `;
 
