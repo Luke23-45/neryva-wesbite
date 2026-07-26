@@ -4,7 +4,7 @@
   "buttons": [
     {
       "label": "Start building",
-      "href": "/products/studio",
+      "href": "/products/neryva-agent-studio",
       "variant": "white"
     },
     {

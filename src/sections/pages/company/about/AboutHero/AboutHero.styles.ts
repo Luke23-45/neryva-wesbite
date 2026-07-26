@@ -48,7 +48,7 @@ export const Title = styled.h1`
   letter-spacing: -0.04em;
   color: ${({ theme }) => theme.colors.text.strong};
   margin: 0 0 48px 0;
-  max-width: 600px;
+  max-width: 720px;
 `;
 
 export const ArrowIndicator = styled.div`
@@ -72,7 +72,7 @@ export const Description = styled.p`
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 32px 0;
-  max-width: 480px;
+  max-width: 600px;
 `;
 
 export const ImageColumn = styled.div`

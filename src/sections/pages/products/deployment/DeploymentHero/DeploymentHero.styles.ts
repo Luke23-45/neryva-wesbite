@@ -37,10 +37,10 @@ export const DeploymentHeroCellTopLeft = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 150px 80px 48px 80px;
+  padding: 150px 80px 48px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 140px 40px 40px 40px;
+    padding: 140px 40px 40px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {
@@ -110,10 +110,10 @@ export const DeploymentHeroCellBottomLeft = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 80px;
+  padding: 80px 80px 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 64px 40px;
+    padding: 64px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {

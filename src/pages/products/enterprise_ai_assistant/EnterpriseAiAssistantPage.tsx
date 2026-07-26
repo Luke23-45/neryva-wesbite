@@ -10,7 +10,7 @@ export default function EnterpriseAiAssistantPage() {
       <PageHead
         title="Neryva Enterprise Assistant"
         description="The secure AI interface for your organization. Deploy reasoning-driven assistants that execute workflows and resolve inquiries within your own infrastructure."
-        canonicalPath="/products/enterprise-ai-assistant"
+        canonicalPath="/products/neryva-agent-studio"
       />
       <EnterpriseHero />
       <EnterpriseUseCases />

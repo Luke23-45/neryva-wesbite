@@ -41,11 +41,11 @@ export const CellTopLeft = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  /* Massive breathing room, aligned precisely with standard premium margins */
-  padding: 150px 80px 48px 80px;
+  /* Aligns left padding with the wide container */
+  padding: 150px 80px 48px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 140px 40px 40px 40px;
+    padding: 140px 40px 40px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
   
   ${({ theme }) => theme.media.mobile} {
@@ -117,11 +117,11 @@ export const CellBottomLeft = styled.div`
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* PERFECT VERTICAL CENTERING */
-  padding: 80px; /* Equal padding ensures the mathematical center is visually accurate */
+  justify-content: center;
+  padding: 80px 80px 80px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
 
   ${({ theme }) => theme.media.tablet} {
-    padding: 64px 40px;
+    padding: 64px max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   }
 
   ${({ theme }) => theme.media.mobile} {

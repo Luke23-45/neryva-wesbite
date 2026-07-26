@@ -72,13 +72,13 @@ export const contactRoute = createRoute({
 
 export const enterpriseAiAssistantRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/products/enterprise-ai-assistant',
+  path: '/products/neryva-agent-studio',
   component: EnterpriseAiAssistantPage,
 });
 
 export const aiEfficiencyDeploymentRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/products/ai-efficiency-deployment',
+  path: '/products/neryva-ai-deployment',
   component: AiEfficiencyDeploymentPage,
 });
 

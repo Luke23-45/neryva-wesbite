@@ -6,7 +6,6 @@ export const Wrapper = styled.section`
   min-height: 85vh;
   background-color: ${({ theme }) => theme.colors.background.primary};
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
     min-height: auto;
@@ -72,7 +71,7 @@ export const Description = styled.p`
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 32px 0;
-  max-width: 480px;
+  max-width: 600px;
 `;
 
 export const ImageColumn = styled.div`

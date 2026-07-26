@@ -34,7 +34,8 @@ export const LeftTop = styled.div`
   flex: 1;
   display: flex;
   align-items: center;
-  padding: 5.5rem 4rem 4.5rem;
+  /* Aligns left padding with the wide container */
+  padding: 5.5rem 4rem 4.5rem max(24px, calc((100vw - ${({ theme }) => theme.containers.wide}) / 2 + 24px));
   
   @media (max-width: 900px) {
     padding: 3.5rem 2rem 3rem;

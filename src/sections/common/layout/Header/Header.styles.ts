@@ -237,11 +237,12 @@ export const ButtonPrimary = styled.a<{ $isDark?: boolean }>`
     0 4px 14px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'},
     inset 0 1px 1px 0 ${({ $isDark }) => $isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.15)'};
   
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 180ms ease, box-shadow 180ms ease;
   overflow: hidden;
 
   /* Hover effect with a sleek shadow / subtle lift */
   &:hover {
+    color: ${({ theme, $isDark }) => $isDark ? theme.colors.text.strong : theme.colors.text.inverse};
     transform: translateY(-1px);
     box-shadow: 
       0 6px 20px 0 ${({ $isDark }) => $isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.2)'},

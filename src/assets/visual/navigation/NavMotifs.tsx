@@ -12,10 +12,6 @@ export type NavMotifKind =
   | 'careers'
   | 'assistant'
   | 'deployment'
-  | 'engineering'
-  | 'operations'
-  | 'compliance'
-  | 'productivity'
   | 'contact';
 
 type Pixel = [number, number, string] | [number, number, number, number, string];
@@ -253,70 +249,6 @@ function DeploymentIcon() {
   );
 }
 
-function EngineeringIcon() {
-  return (
-    <PixelBlocks
-      pixels={[
-        [10, 2, 4, 4, '#2563EB'],
-        [8, 4, 8, 4, '#2563EB'],
-        [6, 6, 12, 12, '#0B74D1'],
-        [8, 8, 8, 8, '#FFFFFF'],
-        [10, 10, 4, 4, '#0B74D1'],
-        [4, 8, 2, 8, '#2563EB'],
-        [18, 8, 2, 8, '#2563EB'],
-        [8, 4, 2, 2, '#2563EB'],
-        [14, 4, 2, 2, '#2563EB'],
-      ]}
-    />
-  );
-}
-
-function OperationsIcon() {
-  return (
-    <PixelBlocks
-      pixels={[
-        [4, 5, 10, 10, '#0B74D1'],
-        [6, 7, 6, 6, '#FFFFFF'],
-        [14, 9, 8, 8, '#2563EB'],
-        [16, 11, 4, 4, '#FFFFFF'],
-        [8, 15, 4, 2, '#F59E0B'],
-        [12, 17, 4, 2, '#F59E0B'],
-      ]}
-    />
-  );
-}
-
-function ComplianceIcon() {
-  return (
-    <PixelBlocks
-      pixels={[
-        [7, 3, 10, 4, '#2563EB'],
-        [6, 5, 12, 6, '#2563EB'],
-        [5, 9, 14, 10, '#0B74D1'],
-        [7, 11, 10, 6, '#FFFFFF'],
-        [9, 12, 6, 4, '#10B981'],
-        [11, 13, 2, 2, '#FFFFFF'],
-      ]}
-    />
-  );
-}
-
-function ProductivityIcon() {
-  return (
-    <PixelBlocks
-      pixels={[
-        [4, 16, 16, 3, '#0B74D1'],
-        [6, 12, 4, 4, '#2563EB'],
-        [12, 8, 4, 8, '#2563EB'],
-        [16, 4, 4, 12, '#2563EB'],
-        [8, 14, 6, 2, '#FFFFFF'],
-        [14, 10, 4, 2, '#FFFFFF'],
-        [18, 6, 2, 2, '#FFFFFF'],
-      ]}
-    />
-  );
-}
-
 function ContactIcon() {
   return (
     <PixelBlocks
@@ -355,14 +287,6 @@ export function NavMotifIcon({ kind }: { kind: NavMotifKind }) {
       return <AssistantIcon />;
     case 'deployment':
       return <DeploymentIcon />;
-    case 'engineering':
-      return <EngineeringIcon />;
-    case 'operations':
-      return <OperationsIcon />;
-    case 'compliance':
-      return <ComplianceIcon />;
-    case 'productivity':
-      return <ProductivityIcon />;
     case 'contact':
       return <ContactIcon />;
     default:
