@@ -23,7 +23,7 @@ export const CtaWrapper = styled.section`
 
 export const InnerGrid = styled.div`
   width: 100%;
-  max-width: 1536px;
+  max-width: ${({ theme }) => theme.containers.wide};
   padding: 0 40px;
   
   /* Hardware weight-balancing layout */

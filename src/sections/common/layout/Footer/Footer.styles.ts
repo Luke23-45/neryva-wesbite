@@ -12,7 +12,7 @@ export const FooterContainer = styled.footer`
 `;
 
 export const InnerLedger = styled.div`
-  max-width: 1536px;
+  max-width: ${({ theme }) => theme.containers.wide};
   margin: 0 auto;
   /* Constrains the master box layout precisely per the image */
   border-left: 1px solid ${({ theme }) => theme.colors.border};

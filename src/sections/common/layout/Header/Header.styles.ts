@@ -40,7 +40,7 @@ export const HeaderInner = styled.div`
   align-items: center;
   justify-content: space-between;
   height: 72px;
-  max-width: ${({ theme }) => theme.containers.page};
+  max-width: ${({ theme }) => theme.containers.wide};
   margin: 0 auto;
   padding: 0 ${({ theme }) => theme.spacing.s5};
 

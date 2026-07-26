@@ -33,7 +33,7 @@ export const HeroWrapper = styled.section`
 
 export const InnerGrid = styled.div`
   width: 100%;
-  max-width: 1536px;
+  max-width: ${({ theme }) => theme.containers.wide};
   margin: 0 auto;
   position: relative;
   z-index: 1;

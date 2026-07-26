@@ -12,7 +12,7 @@ export const DeploymentCapabilitiesSection = styled.section`
 
 export const DeploymentCapabilitiesInnerContainer = styled.div`
   width: 100%;
-  max-width: 1400px;
+  max-width: ${({ theme }) => theme.containers.wide};
   margin: 0 auto;
   padding: 0 40px;
 

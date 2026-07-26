@@ -28,7 +28,7 @@ export const LeftSidebar = styled.div`
 `;
 
 export const ContentColumn = styled.article`
-  max-width: 680px;
+  max-width: ${({ theme }) => theme.containers.prose};
   width: 100%;
   margin: 0 auto;
 `;

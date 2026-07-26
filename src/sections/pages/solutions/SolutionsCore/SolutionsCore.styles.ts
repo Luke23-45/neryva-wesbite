@@ -15,7 +15,7 @@ export const CoreWrapper = styled.section`
 
 /* ── Individual Product Area (Stacked Layout) ── */
 export const ProductSection = styled.div`
-  max-width: 1000px;
+  max-width: ${({ theme }) => theme.containers.page};
   margin: 0 auto;
   padding: 0 40px;
   width: 100%;
@@ -27,7 +27,7 @@ export const ProductSection = styled.div`
 
 /* ── Top Header Area ── */
 export const SectionHeader = styled.div`
-  max-width: 680px;
+  max-width: ${({ theme }) => theme.containers.prose};
   display: flex;
   flex-direction: column;
   align-items: center;

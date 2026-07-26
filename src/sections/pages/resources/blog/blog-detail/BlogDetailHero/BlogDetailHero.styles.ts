@@ -123,6 +123,6 @@ export const HeroSummary = styled.p`
   font-size: 1.125rem;
   line-height: 1.7;
   color: ${({ theme }) => theme.colors.text.secondary};
-  max-width: 680px;
+  max-width: ${({ theme }) => theme.containers.prose};
   margin: 0;
 `;

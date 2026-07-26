@@ -9,7 +9,7 @@ export const CapabilitiesSection = styled.section`
 
 export const HeaderWrapper = styled.div`
   text-align: center;
-  max-width: 700px;
+  max-width: ${({ theme }) => theme.containers.prose};
   margin: 0 auto ${({ theme }) => theme.spacing.s10};
 `;
 

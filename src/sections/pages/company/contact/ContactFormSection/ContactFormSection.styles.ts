@@ -167,7 +167,7 @@ export const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
   gap: 32px;
-  max-width: 700px;
+  max-width: ${({ theme }) => theme.containers.prose};
 `;
 
 export const FormRow = styled.div`

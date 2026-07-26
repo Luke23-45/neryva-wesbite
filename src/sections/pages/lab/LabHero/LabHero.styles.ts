@@ -14,7 +14,7 @@ export const Title = styled.h1`
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   line-height: 1.08;
   color: ${({ theme }) => theme.colors.text.strong};
-  max-width: 700px;
+  max-width: ${({ theme }) => theme.containers.prose};
   margin-bottom: ${({ theme }) => theme.spacing.s5};
   letter-spacing: -0.02em;
 `;

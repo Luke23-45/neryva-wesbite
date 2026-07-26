@@ -15,7 +15,7 @@ export const Wrapper = styled.section`
 
 export const Inner = styled.div`
   width: 100%;
-  max-width: 1200px;
+  max-width: ${({ theme }) => theme.containers.page};
   padding: 0 ${({ theme }) => theme.spacing.s5};
   display: flex;
   flex-direction: column;
@@ -51,7 +51,7 @@ export const SectionTitle = styled.h2`
   letter-spacing: -0.03em;
   margin: 0;
   line-height: 1.1;
-  max-width: 700px;
+  max-width: ${({ theme }) => theme.containers.prose};
   color: ${({ theme }) => theme.colors.text.strong};
 
   ${({ theme }) => theme.media.mobile} {

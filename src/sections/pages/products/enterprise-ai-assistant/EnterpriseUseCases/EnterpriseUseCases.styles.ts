@@ -13,7 +13,7 @@ export const UseCasesSection = styled.section`
 
 export const InnerContainer = styled.div`
   width: 100%;
-  max-width: 1400px;
+  max-width: ${({ theme }) => theme.containers.wide};
   margin: 0 auto;
   padding: 0 40px;
 
