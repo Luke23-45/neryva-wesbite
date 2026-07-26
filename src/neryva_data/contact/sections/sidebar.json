@@ -1,29 +1,29 @@
 {
-  "title": "Looking for help?",
+  "title": "Contact routes.",
   "items": [
     {
-      "id": "support",
-      "title": "Support.",
-      "icon": "headphone",
+      "id": "enterprise",
+      "title": "Enterprise inquiries.",
+      "icon": "briefcase",
       "links": [
-        { "text": "Visit our Help center.", "url": "#", "highlight": "Help center" },
-        { "text": "Login to chat with support.", "url": "#", "highlight": "Login" },
-        { "text": "Join our Discord for community support.", "url": "#", "highlight": "Discord" }
+        { "text": "Contact the team directly.", "url": "mailto:contact@neryva.com", "highlight": "contact@neryva.com" },
+        { "text": "Discuss deployment needs.", "url": "mailto:contact@neryva.com", "highlight": "enterprise inquiries" },
+        { "text": "Discuss Agent Studio.", "url": "mailto:contact@neryva.com", "highlight": "product inquiries" }
       ],
-      "button": { "text": "Go to help center", "url": "#" }
+      "button": { "text": "Start a conversation", "url": "mailto:contact@neryva.com" }
     },
     {
-      "id": "press",
-      "title": "Press and events.",
+      "id": "research",
+      "title": "Research collaboration.",
       "icon": "megaphone",
-      "content": "Email us at <a href=\"mailto:press@neryva.com\">press@neryva.com</a>."
+      "content": "For technical collaboration, papers, and research conversations, email <a href=\"mailto:contact@neryva.com\">contact@neryva.com</a>."
     },
     {
       "id": "privacy",
       "title": "Privacy requests.",
       "icon": "lock",
-      "content": "You have rights regarding your data management. Contact us via our platform.",
-      "button": { "text": "Submit here", "url": "#" }
+      "content": "For privacy questions or data-related requests, contact us through the main inquiry address.",
+      "button": { "text": "Email contact@neryva.com", "url": "mailto:contact@neryva.com" }
     }
   ]
 }

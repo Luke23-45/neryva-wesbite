@@ -1,8 +1,8 @@
 {
   "eyebrow": "Research",
-  "headline": "Computation, used well.",
-  "subheadline": "Making AI efficient, reliable, and deployable under real constraints.",
-  "description": "Safety, efficiency, and deployment aren't side concerns — they're the core problems that decide whether AI works in practice.",
+  "headline": "Research across domains.",
+  "subheadline": "Studying how AI systems become more efficient, reliable, and deployable under real operational constraints.",
+  "description": "Efficiency, reliability, and deployability are not domain-specific problems — they're the core properties that determine whether AI works in practice.",
   "visual": {
     "type": "dark-mosaic",
     "note": "Restrained editorial visual signaling systems, structure, and technical depth."

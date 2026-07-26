@@ -1,34 +1,34 @@
 {
   "header": {
-    "title": "How you can deploy."
+    "title": "How you can deploy"
   },
   "items": [
     {
       "id": "cloud-inference",
       "icon": "CloudCog",
-      "title": "Cloud Inference",
-      "description": "Serve frontier models from managed GPU clusters with autoscaling, sub-second cold starts, and pay-per-use economics.",
+      "title": "Cloud inference",
+      "description": "Run models in managed cloud infrastructure when the customer wants an external deployment environment.",
       "layoutConfig": "1 / 1 / 3 / 2"
     },
     {
       "id": "private-vpc",
       "icon": "Server",
-      "title": "Private VPC Deployment",
-      "description": "Run models inside your own cloud account. Your data never leaves your perimeter, your security team keeps full visibility.",
+      "title": "Private VPC deployment",
+      "description": "Run models inside the customer's own cloud account with controlled access and full visibility.",
       "layoutConfig": "1 / 2 / 2 / 4"
     },
     {
       "id": "edge-deployment",
       "icon": "Cpu",
-      "title": "Edge & On-Premise",
-      "description": "Quantized and accelerated runtimes for low-latency inference at the edge, on ruggedized hardware, or fully air-gapped.",
+      "title": "Edge and on-premise",
+      "description": "Deploy low-latency runtimes at the edge, on local hardware, or in air-gapped environments.",
       "layoutConfig": "2 / 2 / 3 / 3"
     },
     {
       "id": "batch-async",
       "icon": "Workflow",
-      "title": "Batch & Async Pipelines",
-      "description": "Schedule long-running jobs, evaluations, and bulk inference behind throughput-tuned queues with retry, dedup, and resume.",
+      "title": "Batch and async pipelines",
+      "description": "Run long jobs, evaluations, and bulk inference through queued batch and async workflows.",
       "layoutConfig": "2 / 3 / 3 / 4"
     }
   ]

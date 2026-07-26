@@ -1,24 +1,24 @@
 {
   "id": "business-scope",
-  "sidebarLabel": "1. Business scope",
-  "title": "1. Business scope.",
+  "sidebarLabel": "Business scope",
+  "title": "Business scope",
   "visual": {
     "type": "schema",
-    "description": "Diagram showing objective definition, allowed service scope, and strict customer support boundaries.",
+    "description": "Diagram showing objective definition, supported workflows, and service boundaries.",
     "image": "pipeline_section2.png"
   },
   "features": [
     {
-      "title": "Objective alignment.",
-      "description": "Define exactly what the agent is allowed to do."
+      "title": "Business objectives",
+      "description": "Define what the agent should do for the business."
     },
     {
-      "title": "Service scope.",
-      "description": "Clearly outline what topics and workflows are supported."
+      "title": "Service scope",
+      "description": "Set the topics, requests, and workflows the agent is allowed to handle."
     },
     {
-      "title": "Support boundaries.",
-      "description": "Establish strict limits on what must not be done or answered."
+      "title": "Support boundaries",
+      "description": "Make clear what the agent must not answer or attempt."
     }
   ]
 }

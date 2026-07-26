@@ -1,29 +1,29 @@
 {
   "header": {
-    "subtext": "The Professional Experience Layer",
-    "title": "Control, Guardrails, and Voice",
-    "description": "A raw AI model is a liability. We provide the control layer that gives your assistant discipline, ensures it stays on topic, and guarantees a premium experience for every interaction."
+    "subtext": "The professional experience layer",
+    "title": "Control, voice, and scope",
+    "description": "Neryva Agent Studio shapes how an AI system behaves in customer-facing and internal settings. It keeps the agent on brand, on task, and ready to escalate when the conversation needs a human."
   },
   "items": [
     {
       "icon": "Palette",
-      "title": "Brand & Voice Design",
-      "description": "Shape how the agent speaks. Enforce brand voice, professional tone, approved phrasing patterns, and strictly prohibit disallowed language so it reflects your company perfectly."
+      "title": "Brand and voice design",
+      "description": "Define the tone, phrasing, and level of formality the agent should use so it reflects the company clearly."
     },
     {
       "icon": "Database",
-      "title": "Business Knowledge Integration",
-      "description": "Ground responses in reality. Feed the agent with company FAQs, product info, and structured business data so it can answer real customer questions accurately."
+      "title": "Business knowledge integration",
+      "description": "Base answers on approved company information, including FAQs, product details, policies, and support documentation."
     },
     {
       "icon": "ShieldAlert",
-      "title": "Guardrails & Escalation",
-      "description": "Keep the agent aligned with business policy. Define allowed topics, hard restrict unrelated prompts (like programming or trivia), and establish clear human handoff triggers."
+      "title": "Guardrails and escalation",
+      "description": "Set clear limits on what the agent can answer, what it should refuse, and when it should hand off to a human."
     },
     {
       "icon": "Activity",
-      "title": "Tool & Workflow Support",
-      "description": "Allow the agent to execute practical tasks such as ticket routing, form completion, and status checks directly within your existing systems."
+      "title": "Tool and workflow support",
+      "description": "Connect the agent to practical business workflows such as ticket routing, request capture, form completion, and status checks."
     }
   ]
 }

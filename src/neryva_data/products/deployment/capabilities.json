@@ -1,44 +1,44 @@
 {
   "header": {
-    "subtext": "Production Operations Suite",
-    "title": "Performance, Observability, and Ownership.",
-    "description": "A deployed model is only the start. We provide the runtime layer that keeps it fast, observable, secure, and owned — so business, security, and operations teams can trust and operate it."
+    "subtext": "Production operations suite",
+    "title": "Performance, observability, and ownership",
+    "description": "Neryva AI Deployment provides the runtime layer that keeps a model secure, observable, and operationally owned so business, security, and operations teams can trust it in production."
   },
   "items": [
     {
       "icon": "Cpu",
-      "title": "Optimized Runtimes",
-      "description": "Triton, vLLM, TensorRT, and ONNX pipelines tuned for your hardware — GPU, TPU, NPU, or commodity CPU. Quantization, batching, and kernel selection baked in."
+      "title": "Optimized runtimes",
+      "description": "Production serving environments tuned for the customer's hardware and workload profile, with batching and compression applied where appropriate."
     },
     {
       "icon": "Gauge",
-      "title": "Autoscaling & Routing",
-      "description": "Per-model autoscaling with request-class routing, priority lanes for premium traffic, and graceful spillover when clusters saturate."
+      "title": "Autoscaling and routing",
+      "description": "Request routing and capacity management that keeps traffic flowing as load changes."
     },
     {
       "icon": "Activity",
-      "title": "Realtime Monitoring",
-      "description": "Latency, throughput, error, and drift metrics streamed out of the box. SLIs and SLOs turned into deployable alerts with sane defaults."
+      "title": "Realtime monitoring",
+      "description": "Clear visibility into latency, throughput, errors, and usage so the system can be monitored and adjusted."
     },
     {
       "icon": "ShieldCheck",
-      "title": "Secure Access & Identity",
-      "description": "SSO, RBAC, scoped API keys, and per-tenant isolation baked into the gateway. Your security team owns the policies, not a third-party box."
+      "title": "Secure access and identity",
+      "description": "Access control, scoped credentials, and isolation that fit the customer's security requirements."
     },
     {
       "icon": "FileCheck",
-      "title": "Audit & Compliance",
-      "description": "Tamper-evident request and decision logs. SOC 2, ISO 27001, and HIPAA-aligned controls out of the box, with controls you can map to your own framework."
+      "title": "Audit and compliance",
+      "description": "Logging, records, and reviewable controls that support governance and compliance."
     },
     {
       "icon": "Workflow",
-      "title": "CI/CD for Models",
-      "description": "Version, evaluate, and promote models like code. Shadow deploys, A/B splits, and one-click rollback when an evaluation regresses."
+      "title": "Model release flow",
+      "description": "Versioning, evaluation, rollout, and rollback practices that make model changes safer to manage."
     },
     {
       "icon": "Headphones",
-      "title": "Managed Operations",
-      "description": "An operations pod watches your fleet 24x7 — patches, retunes, escalates, and responds to incidents under a clear SLA you can hand to procurement."
+      "title": "Managed operations",
+      "description": "Ongoing operational support for teams that want help maintaining reliability after launch."
     }
   ]
 }

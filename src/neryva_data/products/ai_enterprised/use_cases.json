@@ -1,35 +1,35 @@
 {
-    "header": {
-        "title": "What you can build."
+  "header": {
+    "title": "What you can build"
+  },
+  "items": [
+    {
+      "id": "customer-service",
+      "icon": "Headset",
+      "title": "Customer Service Agent",
+      "description": "Handle product questions, support triage, and routine customer requests with a consistent service style.",
+      "layoutConfig": "1 / 1 / 3 / 2"
     },
-    "items": [
-        {
-            "id": "customer-service",
-            "icon": "Headset",
-            "title": "Customer Service Agent",
-            "description": "Resolve product inquiries, triage support requests, and handle front-line interactions with precision and empathy.",
-            "layoutConfig": "1 / 1 / 3 / 2"
-        },
-        {
-            "id": "internal-assistant",
-            "icon": "Users",
-            "title": "Internal Assistant",
-            "description": "Empower your workforce. instantly retrieve complex procedural documentation and execute internal protocols seamlessly.",
-            "layoutConfig": "1 / 2 / 2 / 4"
-        },
-        {
-            "id": "brand-assistant",
-            "icon": "BadgeCheck",
-            "title": "Brand Assistant",
-            "description": "Represent your organization on digital channels with an unwavering, professional tone.",
-            "layoutConfig": "2 / 2 / 3 / 3"
-        },
-        {
-            "id": "workflow-agent",
-            "icon": "Workflow",
-            "title": "Workflow Agent",
-            "description": "Autonomously route requests, capture strict dependencies, and prep handoffs.",
-            "layoutConfig": "2 / 3 / 3 / 4"
-        }
-    ]
+    {
+      "id": "internal-assistant",
+      "icon": "Users",
+      "title": "Internal Assistant",
+      "description": "Help employees find information, follow procedures, and complete routine internal tasks.",
+      "layoutConfig": "1 / 2 / 2 / 4"
+    },
+    {
+      "id": "brand-assistant",
+      "icon": "BadgeCheck",
+      "title": "Brand Assistant",
+      "description": "Represent the company on the website or in chat with a professional, on-brand tone.",
+      "layoutConfig": "2 / 2 / 3 / 3"
+    },
+    {
+      "id": "workflow-agent",
+      "icon": "Workflow",
+      "title": "Workflow Agent",
+      "description": "Collect information, route requests, and prepare handoffs for the next step.",
+      "layoutConfig": "2 / 3 / 3 / 4"
+    }
+  ]
 }

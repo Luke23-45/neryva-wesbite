@@ -1,0 +1,68 @@
+{
+  "id": 2,
+  "slug": "clinical-ai-validation-failures",
+  "title": "Why Clinical AI Validation Breaks at Deployment",
+  "summary": "Why benchmark scores rarely survive real clinical workflows, and what validation has to cover instead.",
+  "category": "Clinical AI",
+  "date": "2026-06-14",
+  "author": "Neryva Lab",
+  "featured": false,
+  "colorTheme": "#1F7A4D",
+  "seed": 303,
+  "readingTime": 4,
+  "sections": [
+    {
+      "type": "paragraph",
+      "text": "Clinical AI often looks strong in evaluation and weak in the real environment because the workflow is more constrained than the benchmark. The model might score well on medical question-answering, but the deployment context adds supervision requirements, data restrictions, and failure accountability that the benchmark never tested."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Benchmarks Mislead"
+    },
+    {
+      "type": "paragraph",
+      "text": "A good score does not guarantee safe use. Benchmarks test answer similarity, not clinical process. Clinical systems have to handle supervision, citation quality, data shifts, and failure recovery. A model that gives a correct answer without showing how it got there is not useful in a setting where every output has to be reviewable."
+    },
+    {
+      "type": "pullquote",
+      "text": "A benchmark is not a deployment plan."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Distribution Shift Is the Quiet Failure"
+    },
+    {
+      "type": "paragraph",
+      "text": "Clinical data shifts between hospitals, departments, and patient populations. A model validated in one setting may fail quietly in another because the input distribution changed, not because the model itself degraded. Validation has to measure performance under realistic distribution shifts, not just on held-out samples from the same source."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Human Oversight Is Not Optional"
+    },
+    {
+      "type": "paragraph",
+      "text": "Clinical AI operates under supervision. The system has to make its reasoning visible enough that a clinician can review, override, or escalate. Any validation framework that ignores oversight boundaries is testing the model in isolation, not in the workflow where it will actually run. The review step is part of the system, not separate from it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Validation Should Cover"
+    },
+    {
+      "type": "paragraph",
+      "text": "Validation should reflect the actual clinical workflow: who reviews the output, what data is allowed, what happens under uncertainty, and how every failure is recorded. These constraints are not edge cases — they are the operating conditions. A validation plan that does not include them is incomplete."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Failure Mode Analysis"
+    },
+    {
+      "type": "paragraph",
+      "text": "The most dangerous failures are the ones the system does not flag. In clinical settings, false confidence is worse than no answer. Validation has to test for failure modes explicitly — not just whether the model gets answers right, but whether it knows when to say it does not know, and whether that uncertainty signal reaches the clinician in time."
+    }
+  ]
+}

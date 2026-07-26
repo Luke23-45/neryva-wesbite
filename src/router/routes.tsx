@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { createRoute } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
@@ -13,6 +14,10 @@ import ContactPage from '@pages/company/contact/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
 import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
 import SolutionsPage from '@pages/solutions/SolutionsPage';
+
+// Lazy-loaded secret page (separate JS chunk)
+const SecretPage = lazy(() => import('@pages/secret/SecretPage'));
+
 // ─── Routes ────────────────────────────────────────────
 
 export const indexRoute = createRoute({
@@ -83,6 +88,12 @@ export const solutionsRoute = createRoute({
   component: SolutionsPage,
 });
 
+export const secretRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/secret',
+  component: SecretPage,
+});
+
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -97,4 +108,5 @@ export const routeDefinitions = [
   enterpriseAiAssistantRoute,
   aiEfficiencyDeploymentRoute,
   solutionsRoute,
+  secretRoute,
 ];

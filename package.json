@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "brand:images": "node scripts/generate-brand-images.mjs"
+    "brand:images": "node scripts/generate-brand-images.mjs",
+    "encrypt:content": "node scripts/encrypt-content.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",

@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "Issue Resolution",
-      "description": "Dedicated issue response, maintenance, and optimization reviews."
+      "title": "Issue resolution",
+      "description": "Respond to issues, handle maintenance, and review system performance."
     },
     {
-      "title": "System Updates",
-      "description": "Applying environment updates and continuous reliability improvements."
+      "title": "System updates",
+      "description": "Apply environment updates and continue improving reliability."
     },
     {
-      "title": "Expert Guidance",
-      "description": "Ongoing operational guidance and training for the customer team."
+      "title": "Expert guidance",
+      "description": "Provide operational guidance and support for the customer team."
     }
   ]
 }

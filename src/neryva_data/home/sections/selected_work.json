@@ -1,7 +1,7 @@
 {
   "label": "Selected Work",
   "title": "Proof, not noise.",
-  "description": "This section should surface research notes, prototypes, open problems, benchmarks, and other work-in-progress artifacts that show the company is building real systems.",
+  "description": "Current open problems and ongoing technical work.",
   "items": [
     {
       "type": "open-problem",
@@ -16,10 +16,10 @@
       "description": "Looking at how serving pipelines respond to changing batch sizes, request patterns, and latency pressure."
     },
     {
-      "type": "prototype",
-      "status": "Planned",
-      "title": "Enterprise assistant prototype",
-      "description": "A first commercial system for secure knowledge access, document reasoning, and workflow support."
+      "type": "open-problem",
+      "status": "Ongoing",
+      "title": "Compression without capability loss",
+      "description": "Investigating which compression methods preserve useful behavior while reducing memory, latency, and deployment cost."
     }
   ],
   "cta": {

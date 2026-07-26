@@ -1,11 +1,11 @@
 {
   "hero": {
-    "eyebrow": "EXPERIENCE LAYER",
+    "eyebrow": "Experience layer",
     "title": "Neryva Agent Studio",
-    "description": "The professional customer-service and brand-representation layer for enterprise AI. We build and operate AI agents that represent your business professionally, stay on-brand, on-scope, and useful.",
+    "description": "The professional customer-service and brand-representation layer for enterprise AI. Neryva Agent Studio shapes how the chosen model speaks, what it is allowed to do, and when it should escalate.",
     "ctas": [
-      { "label": "Talk to Solutions", "href": "/contact", "primary": true },
-      { "label": "Read the Documentation", "href": "/docs", "primary": false }
+      { "label": "Talk to us", "href": "/contact", "primary": true },
+      { "label": "Explore solutions", "href": "/solutions", "primary": false }
     ]
   }
 }

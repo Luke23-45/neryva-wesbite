@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "System Uptime",
-      "description": "Uptime, error, traffic, and resource usage monitoring."
+      "title": "System uptime",
+      "description": "Monitor uptime, errors, traffic, and resource usage."
     },
     {
-      "title": "Incident Response",
-      "description": "Setting up alerts and managing structured incident responses."
+      "title": "Incident response",
+      "description": "Set up alerts and handle incidents with a clear response process."
     },
     {
-      "title": "Cost & Reporting",
-      "description": "Ongoing cost monitoring and deep operational reporting."
+      "title": "Cost and reporting",
+      "description": "Track cost and maintain operational reporting after launch."
     }
   ]
 }

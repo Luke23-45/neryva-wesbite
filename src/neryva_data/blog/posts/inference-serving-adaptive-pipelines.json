@@ -1,0 +1,68 @@
+{
+  "id": 3,
+  "slug": "inference-serving-adaptive-pipelines",
+  "title": "Adaptive Inference Serving Under Workload Variance",
+  "summary": "How serving systems hold latency targets when request mix, batch sizes, and traffic patterns keep changing.",
+  "category": "Engineering",
+  "date": "2026-05-10",
+  "author": "Neryva Lab",
+  "featured": false,
+  "colorTheme": "#0369A1",
+  "seed": 707,
+  "readingTime": 4,
+  "sections": [
+    {
+      "type": "paragraph",
+      "text": "Inference performance changes with the shape of the workload, not just the model itself. A serving system tuned for one traffic pattern will drift when request volume, sequence length, or batch composition changes. The question is how to detect that drift and respond before users feel it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Averages Fail"
+    },
+    {
+      "type": "paragraph",
+      "text": "A serving stack that looks fine at steady-state can degrade quickly when conditions shift. Average latency hides tail behavior. Average throughput hides queue buildup. When batch sizes spike or request mix changes, the averages stay stable longer than the user experience does. Tail latency and queue depth are better indicators of real serving health."
+    },
+    {
+      "type": "pullquote",
+      "text": "Serving is a control problem."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Batching and Cache Behavior"
+    },
+    {
+      "type": "paragraph",
+      "text": "Batch size affects throughput, but the relationship is not linear. Larger batches improve GPU utilization up to a point, then latency climbs. Cache hit rates change with request patterns — a shift in input distribution can drop cache effectiveness without any change to the model or hardware. A serving system that ignores these dynamics cannot hold consistent performance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Static Provisioning Does Not Work"
+    },
+    {
+      "type": "paragraph",
+      "text": "Fixed resource allocation assumes a stable workload. Real inference traffic is not stable. The system needs to scale capacity, adjust batching parameters, and manage queue depth in response to what is actually happening, not what was expected at deployment time. This is why serving has to be treated as a control problem, not a configuration problem."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What We Measure"
+    },
+    {
+      "type": "paragraph",
+      "text": "The useful signals are tail latency at the 95th and 99th percentiles, queue depth over time, fallback rate, and resource utilization under varying load. These metrics tell you whether the system is adapting or just absorbing pressure until something breaks."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Serving Metrics Question"
+    },
+    {
+      "type": "paragraph",
+      "text": "Which serving metrics best predict inference performance before full-scale deployment, especially when workload characteristics shift? That question is still open. The answer determines whether serving teams can anticipate problems or only react to them."
+    }
+  ]
+}

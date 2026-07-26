@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "Change Management",
-      "description": "Deployment records, model version tracking, and rollback planning."
+      "title": "Change management",
+      "description": "Keep deployment records, version tracking, and rollback planning in place."
     },
     {
-      "title": "Security Reviews",
-      "description": "Continuous security review support and safe update procedures."
+      "title": "Security reviews",
+      "description": "Support security reviews and safe update procedures."
     },
     {
-      "title": "Handoff Documentation",
-      "description": "Comprehensive operational handoff documentation for internal teams."
+      "title": "Handoff documentation",
+      "description": "Provide operational handoff documentation for the internal team."
     }
   ]
 }

@@ -9,7 +9,7 @@ import {
   Description,
 } from './CareersHero.styles';
 import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
-
+import hero from "@assets/page/career/hero2.png"
 const fadeUp: any = {
   hidden: { opacity: 0, y: 24 },
   visible: (custom: number) => ({
@@ -62,16 +62,16 @@ export function CareersHero({ data }: Props) {
         </motion.div>
 
         <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp}>
-          <CyclicNextButton 
-            label="Apply now" 
-            onClick={() => { window.location.href = '#roles'; }} 
+          <CyclicNextButton
+            label="Apply now"
+            onClick={() => { window.location.href = '#roles'; }}
           />
         </motion.div>
       </ContentColumn>
 
       <ImageColumn>
-        <motion.img 
-          src="/images/careers-hero.png" 
+        <motion.img
+          src={hero}
           alt="Neryva Careers and Human Potential"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

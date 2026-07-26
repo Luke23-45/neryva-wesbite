@@ -4,7 +4,7 @@
     {
       "id": "knowledge_search",
       "title": "Knowledge & Search",
-      "description": "Retrieval systems, semantic search, research assistants, and document intelligence platforms.",
+      "description": "Retrieval systems, semantic search, research assistants, and document-based knowledge access.",
       "colSpan": 1,
       "rowSpan": 1,
       "icon": "api_blueprint",
@@ -30,7 +30,7 @@
     {
       "id": "domain_solutions",
       "title": "Domain AI Solutions",
-      "description": "Applied systems in energy, engineering, clinical validation, and robotics.",
+      "description": "Applied systems in energy, engineering, biomedical AI, and robotics.",
       "colSpan": 1,
       "rowSpan": 2,
       "icon": "network",
@@ -43,7 +43,7 @@
     {
       "id": "workflow_automation",
       "title": "AI Workflow Automation",
-      "description": "AI systems that support repeatable enterprise workflows in operations, support, and finance.",
+      "description": "AI systems that support repeatable enterprise workflows in operations and support.",
       "colSpan": 1,
       "rowSpan": 1,
       "icon": "on_prem_blueprint",
@@ -54,8 +54,8 @@
     },
     {
       "id": "enterprise_assistants",
-      "title": "Enterprise Assistants",
-      "description": "Custom AI assistants for organizations that need professional domain-specific interfaces.",
+      "title": "Professional Agents",
+      "description": "Professional AI agents for customer-facing and internal business roles.",
       "colSpan": 1,
       "rowSpan": 1,
       "icon": "neryva_logo",
@@ -66,7 +66,7 @@
     {
       "id": "customer_resolution",
       "title": "Customer Resolution",
-      "description": "Professional customer service bots with brand-aligned agent behavior.",
+      "description": "Professional customer service agents with brand-consistent behavior.",
       "colSpan": 1,
       "rowSpan": 1,
       "icon": "neryva_logo",

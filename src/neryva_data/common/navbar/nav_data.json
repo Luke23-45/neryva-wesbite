@@ -8,13 +8,13 @@
                 "title": "CORE PRODUCTS",
                 "items": [
                     {
-                        "label": "Enterprise AI Assistant",
-                        "href": "/products/enterprise-ai-assistant",
+                        "label": "Neryva Agent Studio",
+                        "href": "/products/neryva-agent-studio",
                         "icon": "assistant"
                     },
                     {
-                        "label": "AI Efficiency and Deployment",
-                        "href": "/products/ai-efficiency-deployment",
+                        "label": "Neryva AI Deployment",
+                        "href": "/products/neryva-ai-deployment",
                         "icon": "deployment"
                     }
                 ]

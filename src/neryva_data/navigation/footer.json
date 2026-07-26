@@ -4,28 +4,28 @@
             "title": "Products",
             "links": [
                 {
-                    "label": "Deployment Cloud",
-                    "href": "/products/ai-efficiency-deployment"
+                    "label": "Neryva AI Deployment",
+                    "href": "/products/neryva-ai-deployment"
                 },
                 {
-                    "label": "Agent Studio",
-                    "href": "/products/enterprise-ai-assistant"
+                    "label": "Neryva Agent Studio",
+                    "href": "/products/neryva-agent-studio"
                 },
                 {
-                    "label": "Hardware Enclaves",
-                    "href": "/products/enclaves"
+                    "label": "Solutions",
+                    "href": "/solutions"
                 },
                 {
-                    "label": "Model Optimization",
-                    "href": "/products/optimization"
+                    "label": "Research",
+                    "href": "/research"
                 },
                 {
-                    "label": "Edge Compute",
-                    "href": "/products/compute"
+                    "label": "About Neryva",
+                    "href": "/about"
                 },
                 {
-                    "label": "Pricing",
-                    "href": "/pricing"
+                    "label": "Contact",
+                    "href": "/contact"
                 }
             ]
         },
@@ -33,32 +33,28 @@
             "title": "Solutions",
             "links": [
                 {
-                    "label": "Delivery methodology",
-                    "href": "/solutions/delivery"
+                    "label": "AI Deployment & Operations",
+                    "href": "/products/neryva-ai-deployment"
                 },
                 {
-                    "label": "Custom fine-tuning",
-                    "href": "/solutions/customization"
+                    "label": "Professional AI Agents",
+                    "href": "/products/neryva-agent-studio"
                 },
                 {
-                    "label": "Secure data ingestion",
-                    "href": "/solutions/data"
+                    "label": "Solutions Overview",
+                    "href": "/solutions"
                 },
                 {
-                    "label": "Diagnostic analytics",
-                    "href": "/solutions/diagnostics"
+                    "label": "Research",
+                    "href": "/research"
                 },
                 {
-                    "label": "Neryva for healthcare",
-                    "href": "/industries/healthcare"
+                    "label": "Case studies",
+                    "href": "/customers"
                 },
                 {
-                    "label": "Neryva for finance",
-                    "href": "/industries/finance"
-                },
-                {
-                    "label": "Neryva for advanced manufacturing",
-                    "href": "/industries/manufacturing"
+                    "label": "Contact",
+                    "href": "/contact"
                 }
             ]
         },
@@ -67,7 +63,7 @@
             "description": "",
             "links": [
                 {
-                    "label": "About the lab",
+                    "label": "About Neryva",
                     "href": "/about"
                 },
                 {
@@ -83,7 +79,7 @@
                     "href": "/customers"
                 },
                 {
-                    "label": "Published research",
+                    "label": "Research",
                     "href": "/research"
                 },
                 {

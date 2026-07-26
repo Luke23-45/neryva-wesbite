@@ -1,24 +1,24 @@
 {
   "id": "brand-voice",
-  "sidebarLabel": "2. Brand & voice",
-  "title": "2. Brand & voice.",
+  "sidebarLabel": "Brand and voice",
+  "title": "Brand and voice",
   "visual": {
     "type": "interface",
-    "description": "UI Mockup showing tone configuration, professionalism level, and approved phrasing patterns.",
+    "description": "Mockup showing tone settings, professionalism level, and approved phrasing patterns.",
     "image": "pipeline_section3.png"
   },
   "features": [
     {
-      "title": "Brand consistency.",
-      "description": "Shape how the agent speaks to accurately reflect your company."
+      "title": "Brand consistency",
+      "description": "Keep the agent's language consistent with the company's voice."
     },
     {
-      "title": "Tone control.",
-      "description": "Define the exact response style and professionalism level."
+      "title": "Tone control",
+      "description": "Set the response style and level of formality the agent should use."
     },
     {
-      "title": "Language rules.",
-      "description": "Explicitly block disallowed phrasing to guarantee professional interactions."
+      "title": "Language rules",
+      "description": "Block phrasing that does not fit the brand or the service role."
     }
   ]
 }

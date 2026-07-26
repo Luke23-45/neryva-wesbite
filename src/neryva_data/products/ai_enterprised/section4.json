@@ -1,24 +1,24 @@
 {
   "id": "knowledge-integration",
-  "sidebarLabel": "3. Knowledge integration",
-  "title": "3. Knowledge integration.",
+  "sidebarLabel": "Knowledge integration",
+  "title": "Knowledge integration",
   "visual": {
     "type": "diagram",
-    "description": "Schema showing company FAQs, product info, and support docs syncing into the agent's knowledge base.",
+    "description": "Diagram showing approved company sources feeding the agent's knowledge base.",
     "image": "pipeline_section4.png"
   },
   "features": [
     {
-      "title": "Approved sources.",
-      "description": "Answers are scoped only to your company FAQs and official documentation."
+      "title": "Approved sources",
+      "description": "Scope answers to official FAQs, product information, policies, and documentation."
     },
     {
-      "title": "Structured data.",
-      "description": "Easily connect existing product catalogs and service procedures."
+      "title": "Structured data",
+      "description": "Connect the agent to product catalogs, service procedures, and other business records."
     },
     {
-      "title": "Accurate responses.",
-      "description": "Ensure the agent answers real questions using only allowed business data."
+      "title": "Accurate responses",
+      "description": "Keep answers based on the business information the customer has approved."
     }
   ]
 }

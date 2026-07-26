@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "Speed & Throughput",
-      "description": "Latency reduction, throughput tuning, and request batching strategies."
+      "title": "Speed and throughput",
+      "description": "Reduce latency, tune throughput, and use batching where it helps."
     },
     {
-      "title": "Model Compression",
-      "description": "Applying quantization and model compression where appropriate."
+      "title": "Model compression",
+      "description": "Apply quantization and other compression methods where they improve efficiency."
     },
     {
-      "title": "Cost Efficiency",
-      "description": "Cache design, resource right-sizing, and cost-per-request improvement."
+      "title": "Cost efficiency",
+      "description": "Improve cache design, resource sizing, and cost per request."
     }
   ]
 }

@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "Execution Planning",
-      "description": "Planning execution across cloud, on-premise, hybrid, or edge environments."
+      "title": "Execution planning",
+      "description": "Plan the deployment across cloud, on-premise, hybrid, or edge environments."
     },
     {
-      "title": "Network Boundaries",
-      "description": "Defining strict networking and access boundaries for internal and external traffic."
+      "title": "Network boundaries",
+      "description": "Define networking and access boundaries for internal and external traffic."
     },
     {
-      "title": "Resource Sizing",
-      "description": "Sizing compute and storage requirements and mapping the AI system into your environment."
+      "title": "Resource sizing",
+      "description": "Size compute and storage requirements and map the AI system into the customer's environment."
     }
   ]
 }

@@ -1,18 +1,18 @@
 {
   "hero": {
     "headline": {
-      "line1": "Frontier AI.",
+      "line1": "Enterprise AI.",
       "line2": "In your hands."
     },
     "labels": {
-      "bottomLeft": "DEEP CAPABILITY",
-      "topRight": "PROVEN IMPACT"
+      "bottomLeft": "AI DEPLOYMENT",
+      "topRight": "AGENT STUDIO"
     },
-    "description": "We build highly capable, profoundly reliable AI systems to solve complex problems and power the modern enterprise.",
+    "description": "Neryva builds AI systems that deploy securely, operate reliably, and represent your business professionally.",
     "featured": {
       "label": "LATEST RELEASE",
-      "title": "Meet the Neryva Enterprise Assistant",
-      "href": "/products/enterprise-ai-assistant"
+      "title": "Meet Neryva Agent Studio",
+      "href": "/products/neryva-agent-studio"
     }
   }
 }

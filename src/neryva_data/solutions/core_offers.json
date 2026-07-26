@@ -8,7 +8,7 @@
       "id": "deployment",
       "title": "AI Deployment\n& Operations",
       "description": "Secure deployment, optimization, and ongoing operation of AI systems.",
-      "href": "/products/ai-efficiency-deployment",
+      "href": "/products/neryva-ai-deployment",
       "link_label": "Explore AI Deployment",
       "rows": 3,
       "middleColumns": 2,
@@ -43,7 +43,7 @@
         },
         {
           "title": "Reliable Infra",
-          "description": "Production-grade uptime with built-in redundancy.",
+          "description": "Production-grade infrastructure with reliable uptime.",
           "icon_color": "#424242",
           "row": 2,
           "col": 1,
@@ -51,7 +51,7 @@
         },
         {
           "title": "Governance",
-          "description": "Full operational monitoring and audit trails.",
+          "description": "Operational monitoring and audit trails.",
           "icon_color": "#06101e",
           "row": 2,
           "col": 2,
@@ -59,7 +59,7 @@
         },
         {
           "title": "Auto Scaling",
-          "description": "Elastic infrastructure for training and inference workloads.",
+          "description": "Elastic infrastructure for inference and serving workloads.",
           "icon_color": "#4A90D9",
           "row": 3,
           "col": 1,
@@ -71,7 +71,7 @@
       "id": "agents",
       "title": "Professional\nAI Agents",
       "description": "Customer-facing and business-facing AI agents that represent the company professionally.",
-      "href": "/products/enterprise-ai-assistant",
+      "href": "/products/neryva-agent-studio",
       "link_label": "Explore Agent Studio",
       "rows": 3,
       "middleColumns": 2,
@@ -98,7 +98,7 @@
       "middleBlocks": [
         {
           "title": "Brand Guardianship",
-          "description": "Stronger brand consistency in every single AI interaction.",
+          "description": "Stronger brand consistency across AI interactions.",
           "icon_color": "#FF4500",
           "row": 1,
           "col": 1,
@@ -114,7 +114,7 @@
         },
         {
           "title": "Knowledge Sync",
-          "description": "Real-time access to enterprise data sources.",
+          "description": "Answers based on approved business information and documentation.",
           "icon_color": "#D99100",
           "row": 2,
           "col": 2,
@@ -122,7 +122,7 @@
         },
         {
           "title": "Multi-Channel",
-          "description": "Deploy agents across web, mobile, voice, and API channels.",
+          "description": "Deploy agents on the website, in chat, and across support channels.",
           "icon_color": "#E85D04",
           "row": 3,
           "col": 1,

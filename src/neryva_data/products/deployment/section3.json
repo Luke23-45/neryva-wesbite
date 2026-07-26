@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "API Exposure",
-      "description": "Creating robust API exposures for internal and external consumers."
+      "title": "API exposure",
+      "description": "Expose the model through a production-ready API for internal or external use."
     },
     {
-      "title": "Traffic Management",
-      "description": "Request routing, load balancing, and dedicated inference service setup."
+      "title": "Traffic management",
+      "description": "Route requests and balance load across the serving layer."
     },
     {
-      "title": "Reliable Responses",
-      "description": "Version handling, response handling, and fallback behavior design."
+      "title": "Reliable responses",
+      "description": "Manage versioning, response handling, and fallback behavior so the system stays reliable."
     }
   ]
 }

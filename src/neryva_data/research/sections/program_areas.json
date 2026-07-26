@@ -11,13 +11,13 @@
       },
       {
         "id": "architecture-routing",
-        "title": "Model Architecture & Routing",
+        "title": "Model Architecture, Routing & Scaling",
         "labels": ["mixture-of-experts", "sparsity"],
         "description": "Studying how structure affects capability, stability, and efficient use of compute via routing and sparse activation."
       },
       {
         "id": "efficiency-inference",
-        "title": "Efficiency & Inference",
+        "title": "Efficiency, Inference & Compression",
         "labels": ["compression", "serving", "latency"],
         "description": "Making language systems cheaper, faster, and more deployable without unnecessary loss of quality."
       },
@@ -47,9 +47,9 @@
       },
       {
         "id": "sim-to-real",
-        "title": "Sim-to-Real & Reliability",
+        "title": "Sim-to-Real & Deployment Reliability",
         "labels": ["simulation", "sensor-noise"],
-        "description": "Ensuring robotic systems behave reliably when they leave simulation and enter the physical world."
+        "description": "Studying how robotic systems behave when they leave simulation and enter the physical world."
       }
     ]
   },
@@ -59,19 +59,19 @@
     "cards": [
       {
         "id": "clinical-decision-support",
-        "title": "Clinical Decision Support",
+        "title": "Clinical Decision Support & Validation",
         "labels": ["human-in-loop", "validation"],
         "description": "Supporting clinical workflows while keeping clinicians in control and preserving evidence standards."
       },
       {
         "id": "computational-biology",
-        "title": "Computational Biology",
+        "title": "Computational Biology & Protein Systems",
         "labels": ["protein-modeling", "bioinformatics"],
-        "description": "Solving molecular and biological problems where AI can help with representation, inference, and design."
+        "description": "Studying molecular and biological problems where AI can help with representation, inference, and design."
       },
       {
         "id": "biological-data-integration",
-        "title": "Biological Data Integration",
+        "title": "Biological Data Integration & Life-Science Workflows",
         "labels": ["multimodal", "research-workflows"],
         "description": "Organizing and reasoning over fragmented biological and clinical data in practical research settings."
       }
@@ -89,15 +89,15 @@
       },
       {
         "id": "asset-monitoring",
-        "title": "Asset Monitoring",
+        "title": "Asset Monitoring & Resource Efficiency",
         "labels": ["resource-efficiency", "diagnostics"],
         "description": "Reducing waste and improving the efficiency of physical energy assets through performance tracking."
       },
       {
         "id": "renewable-planning",
-        "title": "Renewable Planning",
+        "title": "Renewable Planning & Operational Control",
         "labels": ["supply-demand", "control"],
-        "description": "Supporting planning and control in systems with highly variable supply and demand."
+        "description": "Supporting planning and control in systems with variable supply and demand."
       }
     ]
   },
@@ -113,7 +113,7 @@
       },
       {
         "id": "constraint-aware-design",
-        "title": "Constraint-Aware Design",
+        "title": "Constraint-Aware Design & Optimization",
         "labels": ["optimization", "feasibility"],
         "description": "Generating or improving designs while respecting the physical and operational constraints of real systems."
       },

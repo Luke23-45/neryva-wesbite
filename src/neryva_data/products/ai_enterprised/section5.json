@@ -1,24 +1,24 @@
 {
   "id": "behavior-guardrails",
-  "sidebarLabel": "4. Behavior guardrails",
-  "title": "4. Behavior guardrails.",
+  "sidebarLabel": "Behavior guardrails",
+  "title": "Behavior guardrails",
   "visual": {
     "type": "dashboard",
-    "description": "Dashboard intercepting an off-topic question and redirecting back to the core service role.",
+    "description": "Dashboard showing an off-topic request being redirected back to the service role.",
     "image": "pipeline_section5.png"
   },
   "features": [
     {
-      "title": "Service role lock.",
-      "description": "The agent strictly stays inside the support role and refuses unrelated prompts."
+      "title": "Service role lock",
+      "description": "Keep the agent inside the support role instead of drifting into unrelated topics."
     },
     {
-      "title": "Escalation logic.",
-      "description": "Define clear human handoff procedures and compliance controls."
+      "title": "Escalation logic",
+      "description": "Define clear human handoff steps and the conditions that trigger them."
     },
     {
-      "title": "Risk mitigation.",
-      "description": "Prevent the agent from answering out-of-scope topics like programming or trivia."
+      "title": "Scope control",
+      "description": "Prevent the agent from answering questions that fall outside the approved service scope."
     }
   ]
 }

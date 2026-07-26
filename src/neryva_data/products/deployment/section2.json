@@ -9,16 +9,16 @@
   },
   "features": [
     {
-      "title": "Identity & Access",
-      "description": "Rigorous identity management and access control for system operators."
+      "title": "Identity and access",
+      "description": "Configure access control and operator permissions for the production environment."
     },
     {
-      "title": "Data Protection",
-      "description": "Handling encryption and secrets for secure data processing."
+      "title": "Data protection",
+      "description": "Set up encryption and secret handling for secure data processing."
     },
     {
-      "title": "Audit & Compliance",
-      "description": "Configuring audit logging, network segmentation, and baseline hardening."
+      "title": "Audit and compliance",
+      "description": "Establish audit logging, network segmentation, and baseline hardening from the start."
     }
   ]
 }

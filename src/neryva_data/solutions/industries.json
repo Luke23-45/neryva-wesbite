@@ -1,77 +1,101 @@
 {
   "header": {
-    "title": "Where Neryva applies.",
-    "description": "Neryva replaces generic ambition with targeted computational execution. Select an operational domain to view capabilities."
+    "title": "By industry.",
+    "description": "The same product set applied differently depending on the buyer and the operating context."
   },
   "industries": [
     {
-      "id": "financial",
-      "name": "Financial Services",
+      "id": "healthcare",
+      "name": "Healthcare",
       "applications": [
         {
           "icon": "ShieldCheck",
-          "title": "Algorithmic Risk & Triage",
-          "description": "Analyze multi-variable inflow to optimize routing, risk calculation, and real-time operational triage.",
+          "title": "Controlled Environments",
+          "description": "Secure deployment for sensitive data and controlled environments.",
           "span": "large"
         },
         {
-          "icon": "Network",
-          "title": "Fraud Pipelines",
-          "description": "High-frequency operational analysis against historical behavioral models.",
+          "icon": "Activity",
+          "title": "Patient Support",
+          "description": "Professional assistants for patient-facing support and communication.",
           "span": "small"
         },
         {
-          "icon": "FileLock2",
-          "title": "Auto-Compliance",
-          "description": "Secure, real-time regulatory audit trails and documentation.",
+          "icon": "Users",
+          "title": "Staff & Operations",
+          "description": "Assistants for staff support and operational workflows.",
           "span": "small"
         }
       ]
     },
     {
-      "id": "healthcare",
-      "name": "Healthcare & Life Sci",
+      "id": "engineering",
+      "name": "Engineering",
       "applications": [
         {
-          "icon": "Activity",
-          "title": "Secure Patient Workflows",
-          "description": "Private, locked-down ingestion pipelines for highly sensitive data extraction and routing.",
+          "icon": "Server",
+          "title": "Proprietary Systems",
+          "description": "Secure deployment for proprietary systems and technical data.",
           "span": "large"
         },
         {
           "icon": "FileText",
-          "title": "EHR Summarization",
-          "description": "Strictly scoped extraction for complex longitudinal health records.",
+          "title": "Design & Documentation",
+          "description": "Internal assistants for engineering design and technical documentation.",
           "span": "small"
         },
         {
-          "icon": "ScanLine",
-          "title": "Literature Automation",
-          "description": "Rapid synthesis of thousands of verified clinical biomedical papers.",
+          "icon": "Search",
+          "title": "Knowledge Access",
+          "description": "Assistants for navigating and accessing internal knowledge.",
           "span": "small"
         }
       ]
     },
     {
-      "id": "manufacturing",
-      "name": "Advanced Manufacturing",
+      "id": "energy",
+      "name": "Energy",
       "applications": [
         {
-          "icon": "Cpu",
-          "title": "Supply Chain Synthesis",
-          "description": "Live, edge-case resilient tracking and predictive flow optimization for massive physical infrastructure.",
+          "icon": "Zap",
+          "title": "Operational Systems",
+          "description": "Reliable deployment for operational energy systems.",
           "span": "large"
         },
         {
           "icon": "Wrench",
-          "title": "Predictive Maintenance",
-          "description": "Automated log extraction and mechanical failure trajectory mapping.",
+          "title": "Field Support",
+          "description": "Assistants for field support and maintenance guidance.",
           "span": "small"
         },
         {
-          "icon": "Layers",
-          "title": "Robotics QA Routing",
-          "description": "Algorithmic decision-trees integrating human-in-the-loop sign-offs.",
+          "icon": "Settings",
+          "title": "Internal Workflows",
+          "description": "Assistants for internal energy operations and workflows.",
+          "span": "small"
+        }
+      ]
+    },
+    {
+      "id": "robotics",
+      "name": "Robotics",
+      "applications": [
+        {
+          "icon": "Cpu",
+          "title": "Edge Deployment",
+          "description": "Deployment support for edge and hardware-linked AI systems.",
+          "span": "large"
+        },
+        {
+          "icon": "ScanLine",
+          "title": "Diagnostics",
+          "description": "Assistants for diagnostics and operator support.",
+          "span": "small"
+        },
+        {
+          "icon": "Workflow",
+          "title": "Technical Workflows",
+          "description": "Assistants for technical workflows and procedures.",
           "span": "small"
         }
       ]
