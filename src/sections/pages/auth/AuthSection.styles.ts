@@ -1,56 +1,66 @@
 import styled from 'styled-components';
 
-export const ViewportGrid = styled.main`
-  display: grid;
-  /* Col 1: Flex | Col 2: Strict App Console | Col 3: Flex */
-  grid-template-columns: minmax(16px, 1fr) minmax(auto, 480px) minmax(16px, 1fr);
-  /* Row 1: Flex | Row 2: Form Payload Height | Row 3: Flex */
-  grid-template-rows: 1fr auto 1fr;
-  min-height: 100vh;
-  
-  /* PERFECT 1PX BLUEPRINT GRID TRICK */
-  background-color: ${({ theme }) => theme.colors.border};
-  gap: 1px;
-  overflow: hidden;
-
-  /* Global background for ambient empty grid cells */
-  > div {
-    background-color: #fafaf9;
-  }
-`;
-
-/* ── THE 9 CELLS IN THE MATRIX ── */
-/* Empty Spacer Cells */
-export const CellTopLeft = styled.div``;
-export const CellTopCenter = styled.div``;
-export const CellTopRight = styled.div``;
-export const CellMidLeft = styled.div``;
-export const CellMidRight = styled.div``;
-export const CellBotLeft = styled.div``;
-export const CellBotRight = styled.div``;
-
-/* The Master Auth Stage (Center Cell) */
-export const ConsoleStage = styled.div`
-  background-color: #ffffff !important; /* Forces the stage strictly white against the off-white */
-  padding: 20px 48px;
-  padding-top: 30px;
+export const AuthWrapper = styled.main`
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
   position: relative;
-  z-index: 10;
-  
-  /* Creates subtle physical lift over the adjacent cells natively on webkit */
-  box-shadow: 0 4px 40px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+
+  background-color: #fafaf9;
+  background-image:
+    /* ── Vertical lines (8, asymmetric spacing) ── */
+    linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
+    linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.06)),
+    linear-gradient(to bottom, rgba(0,0,0,0.04), rgba(0,0,0,0.04)),
+    linear-gradient(to bottom, rgba(0,0,0,0.02), rgba(0,0,0,0.02)),
+    linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.10)),
+    linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.10)),
+    linear-gradient(to bottom, rgba(0,0,0,0.04), rgba(0,0,0,0.04)),
+    linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
+    /* ── Horizontal lines (6, asymmetric spacing) ── */
+    linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
+    linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0.05)),
+    linear-gradient(to right, rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+    linear-gradient(to right, rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+    linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0.05)),
+    linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.03));
+  background-size:
+    1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%,
+    100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px;
+  background-position:
+    7% 0, 18% 0, 32% 0, 42% 0, calc(50vw - 208px) 0, calc(50vw + 272px) 0, 73% 0, 91% 0,
+    0 5%, 0 16%, 0 calc(50vh - 220px), 0 calc(50vh + 220px), 0 84%, 0 95%;
+  background-repeat: no-repeat;
+`;
+
+export const ConsoleStage = styled.div`
+  width: 480px;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 64px 48px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.04);
+  margin-left: 80px;
 
   ${({ theme }) => theme.media.mobile} {
-    padding: 64px 24px;
+    width: calc(100vw - 32px);
+    padding: 40px 24px;
+    margin-left: 0;
   }
 `;
 
-/* The Information Ledger (Bottom Center) */
-export const CellBotCenter = styled.div`
+export const FooterBar = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   padding: 32px 24px;
 `;
@@ -71,14 +81,8 @@ export const FooterLinks = styled.div`
   }
 `;
 
-/* ── INNER CONSOLE TYPOGRAPHY ── */
 export const BrandMotif = styled.div`
   margin-bottom: 40px;
-  svg {
-    width: 48px;
-    height: 48px;
-    color: #F65936; /* Signature Front-line Red/Orange */
-  }
 `;
 
 export const AuthTitle = styled.h1`
@@ -96,7 +100,6 @@ export const AuthSub = styled.p`
   margin: 0 0 48px 0;
 `;
 
-/* ── PRECISION FORMS ── */
 export const FormBox = styled.form`
   display: flex;
   flex-direction: column;
@@ -162,7 +165,6 @@ export const Input = styled.input`
     color: ${({ theme }) => theme.colors.text.muted};
   }
 
-  /* Ultimate brutalist unyielding input active status. Strict solid black out line. */
   &:focus {
     border-color: #050505;
     box-shadow: 0 0 0 1px #050505; 
@@ -218,5 +220,58 @@ export const BackAction = styled.button`
 
   &:hover {
     color: ${({ theme }) => theme.colors.text.primary};
+  }
+`;
+
+/* ── INBOX VERIFICATION STATE ── */
+export const VerifyIcon = styled.div`
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: #fafaf9;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0F172A;
+  margin-bottom: 32px;
+
+  svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.5px;
+  }
+`;
+
+export const VerifyTextRow = styled.p`
+  font-size: 15px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin: 0 0 40px 0;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-weight: 500;
+  }
+`;
+
+export const ResendAction = styled.button`
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: ${({ theme }) => theme.colors.border};
+  transition: text-decoration-color 0.2s ease;
+
+  &:hover {
+    text-decoration-color: ${({ theme }) => theme.colors.text.primary};
   }
 `;

@@ -1,19 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Mail } from 'lucide-react';
 import authData from '@neryva_data/auth/sections/auth.json';
 import {
-    ViewportGrid,
-    CellTopLeft,
-    CellTopCenter,
-    CellTopRight,
-    CellMidLeft,
+    AuthWrapper,
     ConsoleStage,
-    CellMidRight,
-    CellBotLeft,
-    CellBotCenter,
+    FooterBar,
     FooterLinks,
-    CellBotRight,
     BrandMotif,
     AuthTitle,
     AuthSub,
@@ -25,11 +18,14 @@ import {
     HelpLink,
     Input,
     SubmitAction,
-    BackAction
+    BackAction,
+    VerifyIcon,
+    VerifyTextRow,
+    ResendAction
 } from './AuthSection.styles';
 
 export default function AuthSection() {
-    const [authStep, setAuthStep] = useState<'initial' | 'signup'>('initial');
+    const [authStep, setAuthStep] = useState<'initial' | 'signup' | 'verify'>('initial');
     const [email, setEmail] = useState('');
 
     const handleNextStep = (e: React.FormEvent) => {
@@ -37,8 +33,7 @@ export default function AuthSection() {
         if (authStep === 'initial' && email.includes('@')) {
             setAuthStep('signup');
         } else if (authStep === 'signup') {
-            // Execute true final sign up architecture calls here
-            console.log('Final Execution Payload Fired');
+            setAuthStep('verify');
         }
     };
 
@@ -48,7 +43,7 @@ export default function AuthSection() {
 
     // Neryva Brand Mark
     const LogoMark = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="80" height="80">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="70" height="70">
             <defs>
                 <linearGradient id="authWingUpper" x1="0%" y1="100%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#c084fc" />
@@ -92,116 +87,126 @@ export default function AuthSection() {
     };
 
     return (
-        <ViewportGrid>
-            {/* ── ROW 1 ── */}
-            <CellTopLeft />
-            <CellTopCenter />
-            <CellTopRight />
-
-            {/* ── ROW 2 (Core Layer) ── */}
-            <CellMidLeft />
-
-            {/* Console dynamically scales based on internal array dimensions utilizing `layout` tracking prop */}
+        <AuthWrapper>
             <ConsoleStage as={motion.div} layout>
+                <AnimatePresence mode="wait">
 
-                <motion.div layout>
-                    <BrandMotif><LogoMark /></BrandMotif>
-                    <AuthTitle>{d.title}</AuthTitle>
-                    <AuthSub>{d.subtitle}</AuthSub>
-                </motion.div>
+                    {authStep !== 'verify' ? (
+                        <motion.div
+                            key="auth-forms"
+                            initial={{ opacity: 0, filter: 'blur(4px)' }}
+                            animate={{ opacity: 1, filter: 'blur(0px)' }}
+                            exit={{ opacity: 0, filter: 'blur(4px)' }}
+                            transition={transitionConfig}
+                        >
+                            <BrandMotif><LogoMark /></BrandMotif>
+                            <AuthTitle>{d.title}</AuthTitle>
+                            <AuthSub>{d.subtitle}</AuthSub>
 
-                <FormBox onSubmit={handleNextStep}>
-
-                    {/* Always Displayed */}
-                    <motion.div layout>
-                        <FieldGroup>
-                            <LabelRow>
-                                <Label>{d.email.label}</Label>
-                                {authStep === 'initial' && <HelpLink type="button">{d.email.helpLink}</HelpLink>}
-                            </LabelRow>
-                            <Input
-                                type="email"
-                                placeholder={d.email.placeholder}
-                                required
-                                autoFocus
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                disabled={authStep === 'signup'}
-                            />
-                        </FieldGroup>
-                    </motion.div>
-
-                    {/* Expanded Step Fields */}
-                    <AnimatePresence>
-                        {authStep === 'signup' && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={transitionConfig}
-                                style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '24px' }}
-                            >
-
-                                <NameSplit>
-                                    <FieldGroup>
-                                        <Label>{d.signup.firstName.label}</Label>
-                                        <Input type="text" placeholder={d.signup.firstName.placeholder} required />
-                                    </FieldGroup>
-                                    <FieldGroup>
-                                        <Label>{d.signup.lastName.label}</Label>
-                                        <Input type="text" placeholder={d.signup.lastName.placeholder} required />
-                                    </FieldGroup>
-                                </NameSplit>
+                            <FormBox onSubmit={handleNextStep}>
 
                                 <FieldGroup>
                                     <LabelRow>
-                                        <Label>{d.signup.password.label}</Label>
+                                        <Label>{d.email.label}</Label>
+                                        {authStep === 'initial' && <HelpLink type="button">{d.email.helpLink}</HelpLink>}
                                     </LabelRow>
-                                    <Input type="password" placeholder={d.signup.password.placeholder} required />
+                                    <Input
+                                        type="email"
+                                        placeholder={d.email.placeholder}
+                                        required
+                                        autoFocus
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        disabled={authStep === 'signup'}
+                                    />
                                 </FieldGroup>
 
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                <AnimatePresence>
+                                    {authStep === 'signup' && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={transitionConfig}
+                                            style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px' }}
+                                        >
+                                            <NameSplit>
+                                                <FieldGroup>
+                                                    <Label>{d.signup.firstName.label}</Label>
+                                                    <Input type="text" placeholder={d.signup.firstName.placeholder} required />
+                                                </FieldGroup>
+                                                <FieldGroup>
+                                                    <Label>{d.signup.lastName.label}</Label>
+                                                    <Input type="text" placeholder={d.signup.lastName.placeholder} required />
+                                                </FieldGroup>
+                                            </NameSplit>
 
-                    <motion.div layout style={{ marginTop: '8px', display: 'flex', flexDirection: 'column' }}>
-                        <SubmitAction type="submit">
-                            {authStep === 'initial' ? d.actions.connectTerminal : d.actions.initializeDirectory}
-                        </SubmitAction>
+                                            <FieldGroup>
+                                                <Label>{d.signup.password.label}</Label>
+                                                <Input type="password" placeholder={d.signup.password.placeholder} required />
+                                            </FieldGroup>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
-                        {/* The conditional retreat action bounds */}
-                        <AnimatePresence>
-                            {authStep === 'signup' && (
-                                <BackAction
-                                    type="button"
-                                    onClick={handleBack}
-                                    as={motion.button}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={transitionConfig}
-                                >
-                                    <ArrowLeft size={16} /> {d.actions.backToConfig}
-                                </BackAction>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+                                <motion.div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column' }}>
+                                    <SubmitAction type="submit">
+                                        {authStep === 'initial' ? d.actions.connectTerminal : d.actions.initializeDirectory}
+                                    </SubmitAction>
 
-                </FormBox>
+                                    <AnimatePresence>
+                                        {authStep === 'signup' && (
+                                            <BackAction
+                                                type="button"
+                                                onClick={handleBack}
+                                                as={motion.button}
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                transition={transitionConfig}
+                                            >
+                                                <ArrowLeft size={16} /> {d.actions.backToConfig}
+                                            </BackAction>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+
+                            </FormBox>
+                        </motion.div>
+
+                    ) : (
+                        <motion.div
+                            key="auth-verify"
+                            initial={{ opacity: 0, filter: 'blur(4px)' }}
+                            animate={{ opacity: 1, filter: 'blur(0px)' }}
+                            transition={{ ...transitionConfig, delay: 0.1 }}
+                        >
+                            <VerifyIcon>
+                                <Mail />
+                            </VerifyIcon>
+
+                            <AuthTitle>{d.verify.title}</AuthTitle>
+                            <VerifyTextRow>
+                                {d.verify.description} <br />
+                                <strong>{email}</strong>
+                            </VerifyTextRow>
+
+                            <VerifyTextRow style={{ margin: 0, fontSize: '14px' }}>
+                                {d.verify.noEmailText} <ResendAction type="button">{d.verify.resendText}</ResendAction>
+                            </VerifyTextRow>
+                        </motion.div>
+                    )}
+
+                </AnimatePresence>
             </ConsoleStage>
 
-            <CellMidRight />
-
-            {/* ── ROW 3 ── */}
-            <CellBotLeft />
-            <CellBotCenter>
+            <FooterBar>
                 <FooterLinks>
                     <a href={authData.footer.links[0].url}>{authData.footer.links[0].label}</a>
                     <a href={authData.footer.links[1].url}>{authData.footer.links[1].label}</a>
                 </FooterLinks>
-            </CellBotCenter>
-            <CellBotRight />
+            </FooterBar>
 
-        </ViewportGrid>
+        </AuthWrapper>
     );
 }
