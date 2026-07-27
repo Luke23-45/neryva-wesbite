@@ -1,0 +1,21 @@
+import { PageHead } from '@components/common/PageHead';
+import { EnterpriseHero } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseHero';
+import { EnterpriseUseCases } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseUseCases';
+import { EnterpriseCapabilities } from '@/sections/pages/products/enterprise-ai-assistant/EnterpriseCapabilities';
+import { EnterprisePipeline } from '@/sections/pages/products/enterprise-ai-assistant/EnterprisePipeline';
+
+export default function EnterpriseAiAssistantPage() {
+  return (
+    <>
+      <PageHead
+        title="Neryva Enterprise Assistant"
+        description="The secure AI interface for your organization. Deploy reasoning-driven assistants that execute workflows and resolve inquiries within your own infrastructure."
+        canonicalPath="/products/neryva-agent-studio"
+      />
+      <EnterpriseHero />
+      <EnterpriseUseCases />
+      <EnterpriseCapabilities />
+      <EnterprisePipeline />
+    </>
+  );
+}

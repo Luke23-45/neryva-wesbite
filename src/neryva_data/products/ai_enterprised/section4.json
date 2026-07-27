@@ -1,0 +1,24 @@
+{
+  "id": "knowledge-integration",
+  "sidebarLabel": "Knowledge integration",
+  "title": "Knowledge integration",
+  "visual": {
+    "type": "diagram",
+    "description": "Diagram showing approved company sources feeding the agent's knowledge base.",
+    "image": "pipeline_section4.png"
+  },
+  "features": [
+    {
+      "title": "Approved sources",
+      "description": "Scope answers to official FAQs, product information, policies, and documentation."
+    },
+    {
+      "title": "Structured data",
+      "description": "Connect the agent to product catalogs, service procedures, and other business records."
+    },
+    {
+      "title": "Accurate responses",
+      "description": "Keep answers based on the business information the customer has approved."
+    }
+  ]
+}

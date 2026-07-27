@@ -1,0 +1,24 @@
+{
+  "id": "provisioning",
+  "sidebarLabel": "Provisioning",
+  "title": "Secure Provisioning",
+  "visual": {
+    "type": "SECURITY",
+    "description": "Setting up the environment needed for controlled production use.",
+    "image": "deployment_pipeline_section2.png"
+  },
+  "features": [
+    {
+      "title": "Identity and access",
+      "description": "Configure access control and operator permissions for the production environment."
+    },
+    {
+      "title": "Data protection",
+      "description": "Set up encryption and secret handling for secure data processing."
+    },
+    {
+      "title": "Audit and compliance",
+      "description": "Establish audit logging, network segmentation, and baseline hardening from the start."
+    }
+  ]
+}

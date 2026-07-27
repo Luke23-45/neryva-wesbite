@@ -1,0 +1,24 @@
+{
+  "id": "architecture",
+  "sidebarLabel": "Architecture",
+  "title": "Deployment Architecture",
+  "visual": {
+    "type": "TOPOLOGY",
+    "description": "Designing the technical structure required to run the model in the right environment.",
+    "image": "deployment_pipeline_section1.png"
+  },
+  "features": [
+    {
+      "title": "Execution planning",
+      "description": "Plan the deployment across cloud, on-premise, hybrid, or edge environments."
+    },
+    {
+      "title": "Network boundaries",
+      "description": "Define networking and access boundaries for internal and external traffic."
+    },
+    {
+      "title": "Resource sizing",
+      "description": "Size compute and storage requirements and map the AI system into the customer's environment."
+    }
+  ]
+}

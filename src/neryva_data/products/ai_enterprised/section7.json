@@ -1,0 +1,24 @@
+{
+  "id": "operations-testing",
+  "sidebarLabel": "Operations and testing",
+  "title": "Operations and testing",
+  "visual": {
+    "type": "analytics",
+    "description": "Analytics view showing response testing, edge-case review, and performance monitoring.",
+    "image": "pipeline_section7.png"
+  },
+  "features": [
+    {
+      "title": "Pre-launch testing",
+      "description": "Verify responses, scope, and escalation behavior before the agent goes live."
+    },
+    {
+      "title": "Continuous refinement",
+      "description": "Review edge cases and adjust behavior after launch."
+    },
+    {
+      "title": "Managed updates",
+      "description": "Keep the agent current with content and business rule updates."
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "label": "Research",
+  "title": "Five research programs, one technical direction.",
+  "description": "Neryva's research spans multiple domains because efficiency, reliability, transfer, and optimization are cross-domain problems. We study how AI systems can become more efficient, more reliable, and more deployable under real operational constraints.",
+  "items": [
+    {
+      "id": "language-systems",
+      "title": "Language Systems",
+      "description": "We investigate how language models can be adapted, structured, served, and extended so they behave more usefully in real systems."
+    },
+    {
+      "id": "robotics-task-transfer",
+      "title": "Robotics and Task Transfer",
+      "description": "We study how learned skills transfer across tasks, tools, and physical environments."
+    },
+    {
+      "id": "biomedical-biological-clinical-ai",
+      "title": "Biomedical, Biological, and Clinical AI",
+      "description": "We study AI systems for clinical, biological, and life-science problems where correctness, validation, and supervision matter."
+    },
+    {
+      "id": "energy-systems",
+      "title": "Energy Systems",
+      "description": "We apply AI to complex physical and resource-constrained energy environments."
+    },
+    {
+      "id": "computational-science-engineering",
+      "title": "Computational Science and Engineering",
+      "description": "We study how computational methods can support engineering decisions, simulation, design constraints, and diagnostics."
+    }
+  ],
+  "cta": {
+    "label": "Read the full research view",
+    "href": "/research"
+  }
+}

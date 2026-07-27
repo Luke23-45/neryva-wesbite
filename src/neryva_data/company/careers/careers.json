@@ -1,0 +1,106 @@
+{
+  "hero": {
+    "label": "Careers at Neryva",
+    "title": "Build enterprise AI with real constraints.",
+    "description": "We are looking for researchers, engineers, and operators who care about rigorous work, clear thinking, and practical systems. Neryva is research-led, enterprise-focused, and selective about what it builds."
+  },
+  "environment": {
+    "label": "The Culture",
+    "title": "How we work.",
+    "items": [
+      {
+        "id": "01",
+        "title": "Technical Discipline",
+        "description": "We value specific thinking, measurable behavior, and work that can withstand scrutiny.",
+        "accentColor": "#F24E1E"
+      },
+      {
+        "id": "02",
+        "title": "Practical Delivery",
+        "description": "Research matters when it improves systems people can actually deploy, operate, and trust.",
+        "accentColor": "#0A84FF"
+      },
+      {
+        "id": "03",
+        "title": "Low Ego, High Standards",
+        "description": "Good ideas win on merit. We care more about correctness, clarity, and execution than hierarchy or theatrics.",
+        "accentColor": "#FF85D8"
+      },
+      {
+        "id": "04",
+        "title": "Constraint-Aware Work",
+        "description": "Security, reliability, and operational reality shape the work from the start rather than being added later.",
+        "accentColor": "#00C896"
+      }
+    ]
+  },
+  "roles": {
+    "label": "Open Roles",
+    "title": "Current opportunities.",
+    "departments": [
+      {
+        "name": "Research",
+        "positions": [
+          {
+            "title": "Language Systems Researcher",
+            "location": " Remote",
+            "type": "Full-Time",
+            "description": "Advance post-training, routing, and agentic systems research with a focus on measurable improvements."
+          },
+          {
+            "title": "Biomedical AI Researcher",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Investigate clinical, biological, and life-science problems where correctness and validation matter."
+          },
+          {
+            "title": "Computational Science Researcher",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Study simulation, optimization, and diagnostics for complex physical and engineering systems."
+          }
+        ]
+      },
+      {
+        "name": "Engineering",
+        "positions": [
+          {
+            "title": "Product Platform Engineer",
+            "location": "San Francisco / Remote",
+            "type": "Full-Time",
+            "description": "Build the systems that support secure deployment, product delivery, and reliable user experiences."
+          },
+          {
+            "title": "Inference & Systems Engineer",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Improve model serving, latency, observability, and operational reliability across deployed systems."
+          },
+          {
+            "title": "Front-End Engineer",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Implement the website and product surfaces with a premium, enterprise-grade presentation."
+          }
+        ]
+      },
+      {
+        "name": "Operations",
+        "positions": [
+          {
+            "title": "Program Operations Lead",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Coordinate execution across research, product, and company operations as the organization scales."
+          },
+          {
+            "title": "Technical Operations Specialist",
+            "location": "Remote",
+            "type": "Full-Time",
+            "description": "Support scheduling, documentation, delivery processes, and cross-functional follow-through."
+          }
+        ]
+      }
+    ]
+  }
+}

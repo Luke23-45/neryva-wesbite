@@ -1,0 +1,69 @@
+{
+    "columns": [
+        {
+            "title": "Products",
+            "links": [
+                {
+                    "label": "Neryva AI Deployment",
+                    "href": "/products/neryva-ai-deployment"
+                },
+                {
+                    "label": "Neryva Agent Studio",
+                    "href": "/products/neryva-agent-studio"
+                }
+            ]
+        },
+        {
+            "title": "Solutions",
+            "links": [
+                {
+                    "label": "Solutions Overview",
+                    "href": "/solutions"
+                },
+                {
+                    "label": "Case studies",
+                    "href": "#"
+                }
+            ]
+        },
+        {
+            "title": "Why Neryva",
+            "description": "",
+            "links": [
+                {
+                    "label": "About Neryva",
+                    "href": "/company/about"
+                },
+                {
+                    "label": "Careers",
+                    "href": "/company/careers"
+                },
+                {
+                    "label": "Research",
+                    "href": "/research"
+                }
+            ]
+        },
+        {
+            "title": "Legal",
+            "links": [
+                {
+                    "label": "Terms of Service",
+                    "href": "#"
+                },
+                {
+                    "label": "Privacy Policy",
+                    "href": "#"
+                },
+                {
+                    "label": "Privacy choices",
+                    "href": "#"
+                },
+                {
+                    "label": "Data processing agreement",
+                    "href": "#"
+                }
+            ]
+        }
+    ]
+}

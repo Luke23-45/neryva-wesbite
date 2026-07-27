@@ -7,15 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "brand:images": "node scripts/generate-brand-images.mjs",
+    "encrypt:content": "node scripts/encrypt-content.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-router": "^1.144.0",
-    "@tanstack/react-router-with-query": "^1.130.17",
     "@tanstack/router-devtools": "^1.144.0",
+    "axios": "^1.18.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
     "lodash.debounce": "^4.0.8",
@@ -24,15 +26,12 @@
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5",
     "react-hot-toast": "^2.6.0",
-    "react-router-dom": "^7.11.0",
     "styled-components": "^6.1.19",
     "three": "^0.182.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@tanstack/router-cli": "^1.145.2",
-    "@tanstack/router-vite-plugin": "^1.145.2",
     "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
@@ -45,9 +44,11 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
+    "sharp": "^0.35.3",
     "terser": "^5.44.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-svgr": "^5.2.0"
   }
 }

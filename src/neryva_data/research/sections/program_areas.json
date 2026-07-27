@@ -1,0 +1,128 @@
+{
+  "language-systems": {
+    "title": "Language Systems",
+    "accent": "#2458D3",
+    "cards": [
+      {
+        "id": "post-training-alignment",
+        "title": "Post-Training & Alignment",
+        "labels": ["rlhf", "fine-tuning", "alignment"],
+        "description": "Shaping model behavior after pretraining so the system follows instructions and respects constraints."
+      },
+      {
+        "id": "architecture-routing",
+        "title": "Model Architecture, Routing & Scaling",
+        "labels": ["mixture-of-experts", "sparsity"],
+        "description": "Studying how structure affects capability, stability, and efficient use of compute via routing and sparse activation."
+      },
+      {
+        "id": "efficiency-inference",
+        "title": "Efficiency, Inference & Compression",
+        "labels": ["compression", "serving", "latency"],
+        "description": "Making language systems cheaper, faster, and more deployable without unnecessary loss of quality."
+      },
+      {
+        "id": "agentic-systems",
+        "title": "Agentic Systems & Tool Use",
+        "labels": ["reasoning", "tool-use", "planning"],
+        "description": "Understanding behavior when models can reason across steps, use external tools, and act inside a system."
+      }
+    ]
+  },
+  "robotics-task-transfer": {
+    "title": "Robotics and Task Transfer",
+    "accent": "#0B7F79",
+    "cards": [
+      {
+        "id": "task-generalization",
+        "title": "Task Generalization & Transfer",
+        "labels": ["multi-task", "policy-transfer"],
+        "description": "Studying how policies and representations transfer from one task or environment to another."
+      },
+      {
+        "id": "embodied-skill-composition",
+        "title": "Embodied Skill Composition",
+        "labels": ["action-sequencing", "control"],
+        "description": "Composing smaller capabilities into longer, reliable sequences of physical action."
+      },
+      {
+        "id": "sim-to-real",
+        "title": "Sim-to-Real & Deployment Reliability",
+        "labels": ["simulation", "sensor-noise"],
+        "description": "Studying how robotic systems behave when they leave simulation and enter the physical world."
+      }
+    ]
+  },
+  "biomedical-clinical-ai": {
+    "title": "Biomedical, Biological & Clinical AI",
+    "accent": "#1F7A4D",
+    "cards": [
+      {
+        "id": "clinical-decision-support",
+        "title": "Clinical Decision Support & Validation",
+        "labels": ["human-in-loop", "validation"],
+        "description": "Supporting clinical workflows while keeping clinicians in control and preserving evidence standards."
+      },
+      {
+        "id": "computational-biology",
+        "title": "Computational Biology & Protein Systems",
+        "labels": ["protein-modeling", "bioinformatics"],
+        "description": "Studying molecular and biological problems where AI can help with representation, inference, and design."
+      },
+      {
+        "id": "biological-data-integration",
+        "title": "Biological Data Integration & Life-Science Workflows",
+        "labels": ["multimodal", "research-workflows"],
+        "description": "Organizing and reasoning over fragmented biological and clinical data in practical research settings."
+      }
+    ]
+  },
+  "energy-systems": {
+    "title": "Energy Systems",
+    "accent": "#D99100",
+    "cards": [
+      {
+        "id": "grid-intelligence",
+        "title": "Grid Intelligence & Forecasting",
+        "labels": ["grid-stability", "forecasting"],
+        "description": "Improving forecasting, monitoring, and decision support for grid and energy operations."
+      },
+      {
+        "id": "asset-monitoring",
+        "title": "Asset Monitoring & Resource Efficiency",
+        "labels": ["resource-efficiency", "diagnostics"],
+        "description": "Reducing waste and improving the efficiency of physical energy assets through performance tracking."
+      },
+      {
+        "id": "renewable-planning",
+        "title": "Renewable Planning & Operational Control",
+        "labels": ["supply-demand", "control"],
+        "description": "Supporting planning and control in systems with variable supply and demand."
+      }
+    ]
+  },
+  "computational-science": {
+    "title": "Computational Science & Engineering",
+    "accent": "#8B5CF6",
+    "cards": [
+      {
+        "id": "simulation-acceleration",
+        "title": "Simulation Acceleration",
+        "labels": ["surrogate-models", "approximation"],
+        "description": "Using AI and numerical methods to reduce the cost of simulation without losing practical utility."
+      },
+      {
+        "id": "constraint-aware-design",
+        "title": "Constraint-Aware Design & Optimization",
+        "labels": ["optimization", "feasibility"],
+        "description": "Generating or improving designs while respecting the physical and operational constraints of real systems."
+      },
+      {
+        "id": "diagnostics-verification",
+        "title": "Diagnostics & Verification",
+        "labels": ["validation", "anomaly-detection"],
+        "description": "Using computational methods to help validate, inspect, and diagnose complex physical systems."
+      }
+    ]
+  }
+}

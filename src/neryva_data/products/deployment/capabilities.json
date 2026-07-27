@@ -1,0 +1,44 @@
+{
+  "header": {
+    "subtext": "Production operations suite",
+    "title": "Performance, observability, and ownership",
+    "description": "Neryva AI Deployment provides the runtime layer that keeps a model secure, observable, and operationally owned so business, security, and operations teams can trust it in production."
+  },
+  "items": [
+    {
+      "icon": "Cpu",
+      "title": "Optimized runtimes",
+      "description": "Production serving environments tuned for the customer's hardware and workload profile, with batching and compression applied where appropriate."
+    },
+    {
+      "icon": "Gauge",
+      "title": "Autoscaling and routing",
+      "description": "Request routing and capacity management that keeps traffic flowing as load changes."
+    },
+    {
+      "icon": "Activity",
+      "title": "Realtime monitoring",
+      "description": "Clear visibility into latency, throughput, errors, and usage so the system can be monitored and adjusted."
+    },
+    {
+      "icon": "ShieldCheck",
+      "title": "Secure access and identity",
+      "description": "Access control, scoped credentials, and isolation that fit the customer's security requirements."
+    },
+    {
+      "icon": "FileCheck",
+      "title": "Audit and compliance",
+      "description": "Logging, records, and reviewable controls that support governance and compliance."
+    },
+    {
+      "icon": "Workflow",
+      "title": "Model release flow",
+      "description": "Versioning, evaluation, rollout, and rollback practices that make model changes safer to manage."
+    },
+    {
+      "icon": "Headphones",
+      "title": "Managed operations",
+      "description": "Ongoing operational support for teams that want help maintaining reliability after launch."
+    }
+  ]
+}

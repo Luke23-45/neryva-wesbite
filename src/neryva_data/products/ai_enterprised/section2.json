@@ -1,0 +1,24 @@
+{
+  "id": "business-scope",
+  "sidebarLabel": "Business scope",
+  "title": "Business scope",
+  "visual": {
+    "type": "schema",
+    "description": "Diagram showing objective definition, supported workflows, and service boundaries.",
+    "image": "pipeline_section2.png"
+  },
+  "features": [
+    {
+      "title": "Business objectives",
+      "description": "Define what the agent should do for the business."
+    },
+    {
+      "title": "Service scope",
+      "description": "Set the topics, requests, and workflows the agent is allowed to handle."
+    },
+    {
+      "title": "Support boundaries",
+      "description": "Make clear what the agent must not answer or attempt."
+    }
+  ]
+}

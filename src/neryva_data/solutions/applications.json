@@ -1,0 +1,37 @@
+{
+  "header": {
+    "icons": [
+      { "icon_id": "search" },
+      { "icon_id": "flame" },
+      { "icon_id": "box" }
+    ],
+    "title": "Where Neryva applies.",
+    "description": "Specific products applied to specific business needs."
+  },
+  "items": [
+    {
+      "icon": "MessageSquare",
+      "icon_id": "customer-support",
+      "title": "Customer support.",
+      "description": "Deploy professional chatbots and service assistants that stay on-brand and escalate correctly."
+    },
+    {
+      "icon": "Settings",
+      "icon_id": "internal-operations",
+      "title": "Internal operations.",
+      "description": "Equip teams with assistants to find information, complete tasks, and follow internal procedures."
+    },
+    {
+      "icon": "ShieldCheck",
+      "icon_id": "secure-infrastructure",
+      "title": "Secure infrastructure.",
+      "description": "Safely deploy and reliably operate models for organizations with existing AI strategies."
+    },
+    {
+      "icon": "Network",
+      "icon_id": "workflow-support",
+      "title": "Workflow support.",
+      "description": "Route requests, capture information, and support structured business processes with an AI layer."
+    }
+  ]
+}

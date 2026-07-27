@@ -1,0 +1,146 @@
+{
+  "header": {
+    "title": "Enterprise AI, engineered for reality.",
+    "description": "Neryva builds practical enterprise AI systems in two distinct product areas."
+  },
+  "products": [
+    {
+      "id": "deployment",
+      "title": "AI Deployment\n& Operations",
+      "description": "Secure deployment, optimization, and ongoing operation of AI systems.",
+      "href": "/products/neryva-ai-deployment",
+      "link_label": "Explore AI Deployment",
+      "rows": 3,
+      "middleColumns": 2,
+      "leftColumn": {
+        "contentRow": 3,
+        "blankRow": 1,
+        "content": {
+          "title": "Edge Ready",
+          "icon": "edge-ready",
+          "description": "",
+          "icon_color": "#00BFFF",
+          "align": "bottom"
+        }
+      },
+      "rightColumn": {
+        "contentRow": 1,
+        "blankRow": 3,
+        "content": {
+          "title": "Performance Tuning",
+          "icon": "performance-tuning",
+          "description": "",
+          "icon_color": "#00BFFF",
+          "align": "top"
+        }
+      },
+      "middleBlocks": [
+        {
+          "title": "Secure Enclaves",
+          "icon": "secure-enclaves",
+          "description": "Models deployed in completely private, air-gapped environments.",
+          "icon_color": "#0078D7",
+          "row": 1,
+          "col": 1,
+          "colSpan": 2
+        },
+        {
+          "title": "Reliable Infra",
+          "icon": "reliable-infra",
+          "description": "Production-grade infrastructure with reliable uptime.",
+          "icon_color": "#424242",
+          "row": 2,
+          "col": 1,
+          "colSpan": 1
+        },
+        {
+          "title": "Governance",
+          "icon": "governance",
+          "description": "Operational monitoring and audit trails.",
+          "icon_color": "#06101e",
+          "row": 2,
+          "col": 2,
+          "colSpan": 1
+        },
+        {
+          "title": "Auto Scaling",
+          "icon": "auto-scaling",
+          "description": "Elastic infrastructure for inference and serving workloads.",
+          "icon_color": "#4A90D9",
+          "row": 3,
+          "col": 1,
+          "colSpan": 2
+        }
+      ]
+    },
+    {
+      "id": "agents",
+      "title": "Professional\nAI Agents",
+      "description": "Customer-facing and business-facing AI agents that represent the company professionally.",
+      "href": "/products/neryva-agent-studio",
+      "link_label": "Explore Agent Studio",
+      "rows": 3,
+      "middleColumns": 2,
+      "leftColumn": {
+        "contentRow": 3,
+        "blankRow": 1,
+        "content": {
+          "title": "Context Engine",
+          "icon": "context-engine",
+          "description": "",
+          "icon_color": "#FF8C00",
+          "align": "bottom"
+        }
+      },
+      "rightColumn": {
+        "contentRow": 1,
+        "blankRow": 3,
+        "content": {
+          "title": "Workflow Aware",
+          "icon": "workflow-aware",
+          "description": "",
+          "icon_color": "#FF8C00",
+          "align": "top"
+        }
+      },
+      "middleBlocks": [
+        {
+          "title": "Brand Guardianship",
+          "icon": "brand-guardianship",
+          "description": "Stronger brand consistency across AI interactions.",
+          "icon_color": "#FF4500",
+          "row": 1,
+          "col": 1,
+          "colSpan": 2
+        },
+        {
+          "title": "Strict Guardrails",
+          "icon": "strict-guardrails",
+          "description": "Role-bound limits on agent behavior and scope.",
+          "icon_color": "#FF6D00",
+          "row": 2,
+          "col": 1,
+          "colSpan": 1
+        },
+        {
+          "title": "Knowledge Sync",
+          "icon": "knowledge-sync",
+          "description": "Answers based on approved business information and documentation.",
+          "icon_color": "#D99100",
+          "row": 2,
+          "col": 2,
+          "colSpan": 1
+        },
+        {
+          "title": "Multi-Channel",
+          "icon": "multi-channel",
+          "description": "Deploy agents on the website, in chat, and across support channels.",
+          "icon_color": "#E85D04",
+          "row": 3,
+          "col": 1,
+          "colSpan": 2
+        }
+      ]
+    }
+  ]
+}

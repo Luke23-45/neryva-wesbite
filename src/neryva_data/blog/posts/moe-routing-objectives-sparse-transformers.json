@@ -1,0 +1,68 @@
+{
+  "id": 1,
+  "slug": "moe-routing-objectives-sparse-transformers",
+  "title": "Routing Objectives in Sparse Transformer Architectures",
+  "summary": "Why load-balancing losses can improve utilization while quietly harming specialization, and what to watch instead.",
+  "category": "Research",
+  "date": "2026-06-28",
+  "author": "Neryva Lab",
+  "featured": true,
+  "colorTheme": "#2458D3",
+  "seed": 101,
+  "readingTime": 4,
+  "sections": [
+    {
+      "type": "paragraph",
+      "text": "Mixture-of-Experts models use sparse activation to scale capacity efficiently, but routing is only useful if the selected experts actually specialize. When the router dispatches generically, the model activates fewer parameters without gaining the targeted capability that specialization provides."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Core Trade-off"
+    },
+    {
+      "type": "paragraph",
+      "text": "A load-balancing loss can make expert usage look healthy while pushing the router toward generic dispatch. The loss penalizes uneven token distribution across experts, which sounds reasonable — idle experts waste capacity. But if the balancing objective is too strong, the router stops making discriminating choices and starts spreading tokens evenly regardless of content. Balance alone is not the objective. Specialization is."
+    },
+    {
+      "type": "pullquote",
+      "text": "A balanced router is not necessarily a competent router."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Utilization Metrics Mislead"
+    },
+    {
+      "type": "paragraph",
+      "text": "Expert utilization looks like a health metric — if all experts are active, the model is using its full capacity. But high utilization can mask a routing failure. When every expert processes roughly the same mix of tokens, no expert develops a strong specialty. The model is wide but not deep in any particular direction. Utilization tells you whether experts are busy, not whether they are useful."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What We Watch Instead"
+    },
+    {
+      "type": "paragraph",
+      "text": "The more informative signals are expert entropy, assignment stability, and downstream task quality. Expert entropy measures how concentrated or diffuse each expert's input distribution is — lower entropy means stronger specialization. Assignment stability tracks whether similar inputs consistently route to the same expert across training steps. If balance improves while task performance falls, the router is solving the wrong problem."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Scaling Amplifies the Problem"
+    },
+    {
+      "type": "paragraph",
+      "text": "As the number of experts increases, the router faces a harder assignment problem. With more slots to fill, load-balancing pressure grows, and the risk of generic dispatch increases. At scale, the tension between balance and specialization gets sharper, not softer. The routing objective has to be calibrated to the model's size, and what works at 8 experts may fail at 64."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Open Questions"
+    },
+    {
+      "type": "paragraph",
+      "text": "Which routing objectives improve capability and throughput without creating load imbalance or training instability? That question is still open. The answer likely depends on task distribution, model scale, and how specialization is measured — not just how evenly tokens are distributed across experts."
+    }
+  ]
+}

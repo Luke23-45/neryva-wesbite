@@ -1,0 +1,116 @@
+{
+  "header": {
+    "title": "By industry.",
+    "description": "The same product set applied differently depending on the buyer and the operating context."
+  },
+  "industries": [
+    {
+      "id": "healthcare",
+      "name": "Healthcare",
+      "applications": [
+        {
+          "icon": "ShieldCheck",
+          "icon_id": "controlled-environments",
+          "title": "Controlled Environments",
+          "description": "Secure deployment for sensitive data and controlled environments.",
+          "span": "large"
+        },
+        {
+          "icon": "Activity",
+          "icon_id": "patient-support",
+          "title": "Patient Support",
+          "description": "Professional assistants for patient-facing support and communication.",
+          "span": "small"
+        },
+        {
+          "icon": "Users",
+          "icon_id": "staff-operations",
+          "title": "Staff & Operations",
+          "description": "Assistants for staff support and operational workflows.",
+          "span": "small"
+        }
+      ]
+    },
+    {
+      "id": "engineering",
+      "name": "Engineering",
+      "applications": [
+        {
+          "icon": "Server",
+          "icon_id": "proprietary-systems",
+          "title": "Proprietary Systems",
+          "description": "Secure deployment for proprietary systems and technical data.",
+          "span": "large"
+        },
+        {
+          "icon": "FileText",
+          "icon_id": "design-documentation",
+          "title": "Design & Documentation",
+          "description": "Internal assistants for engineering design and technical documentation.",
+          "span": "small"
+        },
+        {
+          "icon": "Search",
+          "icon_id": "knowledge-access",
+          "title": "Knowledge Access",
+          "description": "Assistants for navigating and accessing internal knowledge.",
+          "span": "small"
+        }
+      ]
+    },
+    {
+      "id": "energy",
+      "name": "Energy",
+      "applications": [
+        {
+          "icon": "Zap",
+          "icon_id": "operational-systems",
+          "title": "Operational Systems",
+          "description": "Reliable deployment for operational energy systems.",
+          "span": "large"
+        },
+        {
+          "icon": "Wrench",
+          "icon_id": "field-support",
+          "title": "Field Support",
+          "description": "Assistants for field support and maintenance guidance.",
+          "span": "small"
+        },
+        {
+          "icon": "Settings",
+          "icon_id": "internal-workflows",
+          "title": "Internal Workflows",
+          "description": "Assistants for internal energy operations and workflows.",
+          "span": "small"
+        }
+      ]
+    },
+    {
+      "id": "robotics",
+      "name": "Robotics",
+      "applications": [
+        {
+          "icon": "Cpu",
+          "icon_id": "edge-deployment",
+          "title": "Edge Deployment",
+          "description": "Deployment support for edge and hardware-linked AI systems.",
+          "span": "large"
+        },
+        {
+          "icon": "ScanLine",
+          "icon_id": "diagnostics",
+          "title": "Diagnostics",
+          "description": "Assistants for diagnostics and operator support.",
+          "span": "small"
+        },
+        {
+          "icon": "Workflow",
+          "icon_id": "technical-workflows",
+          "title": "Technical Workflows",
+          "description": "Assistants for technical workflows and procedures.",
+          "span": "small"
+        }
+      ]
+    }
+  ]
+}

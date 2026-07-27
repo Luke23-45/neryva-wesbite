@@ -1,0 +1,1 @@
+export { EnterpriseHero } from './EnterpriseHero';

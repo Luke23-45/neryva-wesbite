@@ -1,0 +1,24 @@
+{
+  "id": "support",
+  "sidebarLabel": "Support",
+  "title": "Ongoing Managed Support",
+  "visual": {
+    "type": "MAINTENANCE",
+    "description": "Continuing to support the deployment after launch.",
+    "image": "deployment_pipeline_section7.png"
+  },
+  "features": [
+    {
+      "title": "Issue resolution",
+      "description": "Respond to issues, handle maintenance, and review system performance."
+    },
+    {
+      "title": "System updates",
+      "description": "Apply environment updates and continue improving reliability."
+    },
+    {
+      "title": "Expert guidance",
+      "description": "Provide operational guidance and support for the customer team."
+    }
+  ]
+}

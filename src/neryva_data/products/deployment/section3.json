@@ -1,0 +1,24 @@
+{
+  "id": "serving",
+  "sidebarLabel": "Serving",
+  "title": "Model Serving",
+  "visual": {
+    "type": "API",
+    "description": "Putting the model into a usable production interface.",
+    "image": "deployment_pipeline_section3.png"
+  },
+  "features": [
+    {
+      "title": "API exposure",
+      "description": "Expose the model through a production-ready API for internal or external use."
+    },
+    {
+      "title": "Traffic management",
+      "description": "Route requests and balance load across the serving layer."
+    },
+    {
+      "title": "Reliable responses",
+      "description": "Manage versioning, response handling, and fallback behavior so the system stays reliable."
+    }
+  ]
+}

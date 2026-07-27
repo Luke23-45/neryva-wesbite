@@ -1,0 +1,24 @@
+{
+  "id": "governance",
+  "sidebarLabel": "Governance",
+  "title": "Governance And Reliability",
+  "visual": {
+    "type": "CONTROL",
+    "description": "Keeping the system safe, documented, and controllable.",
+    "image": "deployment_pipeline_section6.png"
+  },
+  "features": [
+    {
+      "title": "Change management",
+      "description": "Keep deployment records, version tracking, and rollback planning in place."
+    },
+    {
+      "title": "Security reviews",
+      "description": "Support security reviews and safe update procedures."
+    },
+    {
+      "title": "Handoff documentation",
+      "description": "Provide operational handoff documentation for the internal team."
+    }
+  ]
+}

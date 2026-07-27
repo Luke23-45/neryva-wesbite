@@ -1,0 +1,24 @@
+{
+  "id": "monitoring",
+  "sidebarLabel": "Operations",
+  "title": "Monitoring And Operations",
+  "visual": {
+    "type": "OBSERVABILITY",
+    "description": "Maintaining visibility into how the system behaves after launch.",
+    "image": "deployment_pipeline_section5.png"
+  },
+  "features": [
+    {
+      "title": "System uptime",
+      "description": "Monitor uptime, errors, traffic, and resource usage."
+    },
+    {
+      "title": "Incident response",
+      "description": "Set up alerts and handle incidents with a clear response process."
+    },
+    {
+      "title": "Cost and reporting",
+      "description": "Track cost and maintain operational reporting after launch."
+    }
+  ]
+}

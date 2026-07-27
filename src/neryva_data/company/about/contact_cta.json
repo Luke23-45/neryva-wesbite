@@ -1,0 +1,10 @@
+{
+  "label": "Contact",
+  "title": "Reach out.",
+  "description": "For enterprise AI deployment, professional AI agent development, research collaboration, or partnership inquiries, use the contact route below.",
+  "primaryCta": {
+    "label": "Contact Us",
+    "href": "/contact"
+  },
+  "secondaryText": "Neryva is open to serious, relevant work."
+}

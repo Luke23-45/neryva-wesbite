@@ -1,0 +1,19 @@
+{
+  "label": "Team",
+  "title": "The team is being assembled with care.",
+  "items": [
+    {
+      "name": "Core Research",
+      "focus": "Research direction, experimentation, and technical evaluation across language, robotics, biomedical and life sciences, energy systems, and computational science and engineering."
+    },
+    {
+      "name": "Applied Systems",
+      "focus": "Turning models into usable enterprise systems, focusing on secure deployment infrastructure and professional AI agent experiences."
+    },
+    {
+      "name": "Operations",
+      "focus": "Supporting execution, security, governance, and company structure as the organization scales."
+    }
+  ],
+  "note": "No named leadership or team bios should be published here until they are final and accurate."
+}

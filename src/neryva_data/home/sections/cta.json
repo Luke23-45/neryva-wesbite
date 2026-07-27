@@ -1,0 +1,16 @@
+{
+  "eyebrow": "Own your AI future.",
+  "title": "Deploy AI securely, operate reliably, and build professional agents.",
+  "buttons": [
+    {
+      "label": "Start building",
+      "href": "/products/neryva-agent-studio",
+      "variant": "white"
+    },
+    {
+      "label": "Contact sales",
+      "href": "/contact",
+      "variant": "black"
+    }
+  ]
+}

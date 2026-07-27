@@ -1,0 +1,29 @@
+{
+  "label": "Selected Work",
+  "title": "Proof, not noise.",
+  "description": "Current open problems and ongoing technical work.",
+  "items": [
+    {
+      "type": "open-problem",
+      "status": "Ongoing",
+      "title": "Routing vs. stability in sparse models",
+      "description": "Investigating how routing objectives should change when throughput gains begin to trade off with training stability."
+    },
+    {
+      "type": "research-note",
+      "status": "In progress",
+      "title": "Inference efficiency under workload variance",
+      "description": "Looking at how serving pipelines respond to changing batch sizes, request patterns, and latency pressure."
+    },
+    {
+      "type": "open-problem",
+      "status": "Ongoing",
+      "title": "Compression without capability loss",
+      "description": "Investigating which compression methods preserve useful behavior while reducing memory, latency, and deployment cost."
+    }
+  ],
+  "cta": {
+    "label": "Read Research",
+    "href": "/research"
+  }
+}

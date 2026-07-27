@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "slug": "moe-routing-objectives-sparse-transformers",
+      "title": "Routing Objectives in Sparse Transformer Architectures",
+      "summary": "Why load-balancing losses can improve utilization while quietly harming specialization, and what to watch instead.",
+      "category": "Research",
+      "date": "2026-06-28",
+      "author": "Neryva Lab",
+      "featured": true,
+      "colorTheme": "#2458D3",
+      "seed": 101
+    },
+    {
+      "id": 2,
+      "slug": "clinical-ai-validation-failures",
+      "title": "Why Clinical AI Validation Breaks at Deployment",
+      "summary": "Why benchmark scores rarely survive real clinical workflows, and what validation has to cover instead.",
+      "category": "Clinical AI",
+      "date": "2026-06-14",
+      "author": "Neryva Lab",
+      "featured": false,
+      "colorTheme": "#1F7A4D",
+      "seed": 303
+    },
+    {
+      "id": 3,
+      "slug": "inference-serving-adaptive-pipelines",
+      "title": "Adaptive Inference Serving Under Workload Variance",
+      "summary": "How serving systems hold latency targets when request mix, batch sizes, and traffic patterns keep changing.",
+      "category": "Engineering",
+      "date": "2026-05-10",
+      "author": "Neryva Lab",
+      "featured": false,
+      "colorTheme": "#0369A1",
+      "seed": 707
+    }
+  ],
+  "categories": ["All", "Research", "Clinical AI", "Engineering"],
+  "earlyStageMessage": "Additional notes are in preparation."
+}

@@ -1,0 +1,22 @@
+{
+  "label": "Mission",
+  "title": "Why Neryva exists.",
+  "statement": "Neryva exists to turn research into enterprise systems that are more efficient, more reliable, and more adaptable. The company is built on the belief that serious AI work requires both technical depth and practical delivery, and that research should directly strengthen the products and systems customers rely on.",
+  "items": [
+    {
+      "id": "practical-delivery",
+      "title": "Practical Delivery",
+      "description": "Treat safety, efficiency, and deployment as core properties that determine whether an AI system can be used in practice."
+    },
+    {
+      "id": "honest-scope",
+      "title": "Honest Scope",
+      "description": "Commercialize selectively and only where the technical and market conditions justify the work."
+    },
+    {
+      "id": "measurable-outcomes",
+      "title": "Measurable Outcomes",
+      "description": "Focus on measurable behavior and evidence over vague AI ambition."
+    }
+  ]
+}

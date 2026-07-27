@@ -1,0 +1,1 @@
+export { LabTeam } from './LabTeam';

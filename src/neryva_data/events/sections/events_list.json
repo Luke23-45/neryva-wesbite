@@ -1,0 +1,53 @@
+{
+  "filters": {
+    "types": [
+      "All Types",
+      "Business",
+      "Technical",
+      "Research",
+      "Hackathon",
+      "Webinar",
+      "Social",
+      "Other"
+    ],
+    "locations": [
+      "All Cities",
+      "In-person",
+      "Online"
+    ],
+    "timing": [
+      "All Timing",
+      "Upcoming",
+      "Past"
+    ]
+  },
+  "events": [
+    {
+      "id": "evt-01",
+      "status": "past",
+      "type": "Technical",
+      "image": "/assets/page/event/event1.jpg",
+      "date": "Jan 14, 2026",
+      "format": "Online",
+      "title": "Neryva Agent Studio: Building the Control Layer for Enterprise AI"
+    },
+    {
+      "id": "evt-02",
+      "status": "past",
+      "type": "Business",
+      "image": "/assets/page/event/event2.jpg",
+      "date": "Mar 22, 2026",
+      "format": "Online",
+      "title": "AI in Production: Overcoming Deployment Failures at Scale"
+    },
+    {
+      "id": "evt-03",
+      "status": "past",
+      "type": "Webinar",
+      "image": "/assets/page/event/event3.jpg",
+      "date": "May 10, 2026",
+      "format": "Online",
+      "title": "Securing the Model: Best Practices for Enterprise AI Deployment"
+    }
+  ]
+}

@@ -1,80 +1,117 @@
+import { lazy } from 'react';
 import { createRoute } from '@tanstack/react-router';
 import { rootRoute } from './root';
 
 // Pages
-import Home from '@pages/Home';
-import About from '@pages/About';
-import Mission from '@pages/Mission';
-import Contact from '@pages/Contact';
-import OpenSource from '@pages/OpenSource';
-import Research from '@pages/Research';
-import Verification from '@pages/Verification';
+import HomePage from '@pages/home/HomePage';
+import ResearchPage from '@pages/research/ResearchPage';
+import BlogPage from '@pages/resources/blog/BlogPage';
+import AboutPage from '@pages/company/about/AboutPage';
+import CareersPage from '@pages/company/careers/CareersPage';
+import BlogDetailPage from '@pages/resources/blog/BlogDetailPage';
+import EventsPage from '@pages/resources/events/EventsPage';
+import ContactPage from '@pages/company/contact/ContactPage';
+import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
+import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
+import SolutionsPage from '@pages/solutions/SolutionsPage';
+import AuthPage from "@pages/auth/AuthPage"
+// Lazy-loaded secret page (separate JS chunk)
+const SecretPage = lazy(() => import('@pages/secret/SecretPage'));
 
-// Individual Routes
+// ─── Routes ────────────────────────────────────────────
+
 export const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: Home,
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: HomePage,
 });
 
+export const researchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/research',
+  component: ResearchPage,
+});
+
+// Resources child routes
+export const blogRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/blog',
+  component: BlogPage,
+});
+
+export const blogDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/blog/$slug',
+  component: BlogDetailPage,
+});
+
+export const eventsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/events',
+  component: EventsPage,
+});
+
+// Lab child routes
 export const aboutRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/about',
-    component: About,
+  getParentRoute: () => rootRoute,
+  path: '/company/about',
+  component: AboutPage,
 });
 
-export const missionRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/mission',
-    component: Mission,
+export const careersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/company/careers',
+  component: CareersPage,
 });
 
 export const contactRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/contact',
-    component: Contact,
+  getParentRoute: () => rootRoute,
+  path: '/contact',
+  component: ContactPage,
 });
 
-export const openSourceRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/open-source',
-    component: OpenSource,
+export const enterpriseAiAssistantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/products/neryva-agent-studio',
+  component: EnterpriseAiAssistantPage,
 });
 
-export const verificationRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/verification',
-    component: Verification,
+export const aiEfficiencyDeploymentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/products/neryva-ai-deployment',
+  component: AiEfficiencyDeploymentPage,
 });
 
-// Research Group
-export const researchRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/research',
+export const solutionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/solutions',
+  component: SolutionsPage,
 });
 
-export const researchIndexRoute = createRoute({
-    getParentRoute: () => researchRoute,
-    path: '/',
-    component: Research,
+export const secretRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/secret',
+  component: SecretPage,
 });
-
-export const researchPillarRoute = createRoute({
-    getParentRoute: () => researchRoute,
-    path: '/$pillar',
-    component: Research,
+export const authRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth',
+  component: AuthPage,
 });
+// ─── Route Tree ────────────────────────────────────────
 
-// Export all routes as a flat array for easier management in individual page-level split scenarios if needed later
 export const routeDefinitions = [
-    indexRoute,
-    aboutRoute,
-    missionRoute,
-    contactRoute,
-    openSourceRoute,
-    verificationRoute,
-    researchRoute.addChildren([
-        researchIndexRoute,
-        researchPillarRoute,
-    ]),
+  indexRoute,
+  researchRoute,
+  blogRoute,
+  blogDetailRoute,
+  eventsRoute,
+  aboutRoute,
+  careersRoute,
+  contactRoute,
+  enterpriseAiAssistantRoute,
+  aiEfficiencyDeploymentRoute,
+  solutionsRoute,
+  secretRoute,
+  authRoute
 ];

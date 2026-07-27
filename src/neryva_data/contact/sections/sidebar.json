@@ -1,0 +1,29 @@
+{
+  "title": "Contact routes.",
+  "items": [
+    {
+      "id": "enterprise",
+      "title": "Enterprise inquiries.",
+      "icon": "briefcase",
+      "links": [
+        { "text": "Contact the team directly.", "url": "mailto:contact@neryva.com", "highlight": "contact@neryva.com" },
+        { "text": "Discuss deployment needs.", "url": "mailto:contact@neryva.com", "highlight": "enterprise inquiries" },
+        { "text": "Discuss Agent Studio.", "url": "mailto:contact@neryva.com", "highlight": "product inquiries" }
+      ],
+      "button": { "text": "Start a conversation", "url": "mailto:contact@neryva.com" }
+    },
+    {
+      "id": "research",
+      "title": "Research collaboration.",
+      "icon": "megaphone",
+      "content": "For technical collaboration, papers, and research conversations, email <a href=\"mailto:contact@neryva.com\">contact@neryva.com</a>."
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy requests.",
+      "icon": "lock",
+      "content": "For privacy questions or data-related requests, contact us through the main inquiry address.",
+      "button": { "text": "Email contact@neryva.com", "url": "mailto:contact@neryva.com" }
+    }
+  ]
+}

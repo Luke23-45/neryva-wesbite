@@ -1,0 +1,18 @@
+{
+  "hero": {
+    "headline": {
+      "line1": "Enterprise AI.",
+      "line2": "In your hands."
+    },
+    "labels": {
+      "bottomLeft": "AI DEPLOYMENT",
+      "topRight": "AGENT STUDIO"
+    },
+    "description": "Neryva builds AI systems that deploy securely, operate reliably, and represent your business professionally.",
+    "featured": {
+      "label": "LATEST RELEASE",
+      "title": "Meet Neryva Agent Studio",
+      "href": "/products/neryva-agent-studio"
+    }
+  }
+}

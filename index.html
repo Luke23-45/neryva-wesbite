@@ -2,9 +2,55 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>neryva-website</title>
+
+    <!-- ── Primary SEO (overridden per-page by react-helmet-async) ── -->
+    <title>Neryva — AI Research Lab</title>
+    <meta name="description" content="Neryva is a research lab focused on improving the efficiency, stability, and deployability of large-scale AI systems." />
+    <meta name="robots" content="index, follow" />
+
+    <!-- ── Favicons ──────────────────────────────────────────────── -->
+    <!-- SVG: modern browsers (Chrome 80+, Firefox 41+, Safari 12+) -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- ICO: legacy browser fallback -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32" />
+    <!-- Apple home screen icon -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+
+    <!-- ── PWA Manifest ───────────────────────────────────────────── -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- ── Theme Color (browser chrome) ─────────────────────────── -->
+    <meta name="theme-color" content="#a855f7" />
+    <!-- Dark/light theme variants -->
+    <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#a855f7" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#7c3aed" />
+
+    <!-- ── Open Graph (base defaults; overridden per-page via Helmet) -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:site_name"   content="Neryva" />
+    <meta property="og:title"       content="Neryva — AI Research Lab" />
+    <meta property="og:description" content="Neryva is a research lab focused on improving the efficiency, stability, and deployability of large-scale AI systems." />
+    <meta property="og:url"         content="https://neryva.com" />
+    <meta property="og:image"       content="https://neryva.com/social-card.png" />
+    <meta property="og:image:width"  content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt"   content="Neryva — AI Research Lab" />
+
+    <!-- ── Twitter Card ─────────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Neryva — AI Research Lab" />
+    <meta name="twitter:description" content="Neryva is a research lab focused on improving the efficiency, stability, and deployability of large-scale AI systems." />
+    <meta name="twitter:image"       content="https://neryva.com/social-card.png" />
+    <meta name="twitter:image:alt"   content="Neryva — AI Research Lab" />
+
+    <!-- ── Google Fonts: IBM Plex Sans + IBM Plex Mono ───────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

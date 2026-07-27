@@ -1,0 +1,24 @@
+{
+  "id": "performance",
+  "sidebarLabel": "Optimization",
+  "title": "Performance Optimization",
+  "visual": {
+    "type": "METRICS",
+    "description": "Improving the practical efficiency of the deployment.",
+    "image": "deployment_pipeline_section4.png"
+  },
+  "features": [
+    {
+      "title": "Speed and throughput",
+      "description": "Reduce latency, tune throughput, and use batching where it helps."
+    },
+    {
+      "title": "Model compression",
+      "description": "Apply quantization and other compression methods where they improve efficiency."
+    },
+    {
+      "title": "Cost efficiency",
+      "description": "Improve cache design, resource sizing, and cost per request."
+    }
+  ]
+}

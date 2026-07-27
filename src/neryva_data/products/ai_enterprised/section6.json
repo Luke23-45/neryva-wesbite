@@ -1,0 +1,24 @@
+{
+  "id": "workflow-support",
+  "sidebarLabel": "Workflow support",
+  "title": "Workflow support",
+  "visual": {
+    "type": "flowchart",
+    "description": "Flowchart showing the agent collecting details, completing a form, and routing a request.",
+    "image": "pipeline_section6.png"
+  },
+  "features": [
+    {
+      "title": "Task assistance",
+      "description": "Support practical workflows such as ticket routing, request capture, and status checks."
+    },
+    {
+      "title": "Form completion",
+      "description": "Collect the details needed before a human handoff happens."
+    },
+    {
+      "title": "Internal utility",
+      "description": "Help employees find information and follow internal procedures."
+    }
+  ]
+}
