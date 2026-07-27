@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useTheme } from 'styled-components';
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
-import { ArrowRight } from 'lucide-react';
 import { getPapers } from '@lib/data/research';
 import type { Paper } from '@types';
 import { Section } from '@/sections/common/layout/Section';

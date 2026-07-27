@@ -31,7 +31,7 @@ const fadeUp = {
 
 const premiumTransition = {
   duration: 0.4,
-  ease: [0.16, 1, 0.3, 1]
+  ease: [0.16, 1, 0.3, 1] as const
 };
 
 function CyclicHeroCta({ label, href }: { label: string; href: string }) {

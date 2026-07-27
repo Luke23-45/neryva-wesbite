@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
 import heroData from '@neryva_data/products/ai_enterprised/section1.json';
 import { EnterpriseHeroVisual } from './EnterpriseHeroVisual';

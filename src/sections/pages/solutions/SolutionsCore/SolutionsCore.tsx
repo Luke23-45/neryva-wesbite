@@ -10,7 +10,6 @@ import {
   SectionHeader,
   SectionFooter,
   SectionTitle,
-  SectionDesc,
   CTAButton,
   ButtonLabelText,
   IconContainer,
@@ -118,7 +117,7 @@ function resolveSideColumn(col: SideColumn, totalRows: number) {
 
 const premiumTransition = {
   duration: 0.4,
-  ease: [0.16, 1, 0.3, 1]
+  ease: [0.16, 1, 0.3, 1] as const
 };
 
 function CyclicCTAButton({ label }: { label: string }) {

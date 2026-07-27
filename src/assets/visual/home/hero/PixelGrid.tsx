@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import styled, { keyframes, css } from "styled-components";
 import { motion } from "framer-motion";
 
