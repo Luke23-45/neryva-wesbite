@@ -32,7 +32,8 @@ export const CellBotRight = styled.div``;
 /* The Master Auth Stage (Center Cell) */
 export const ConsoleStage = styled.div`
   background-color: #ffffff !important; /* Forces the stage strictly white against the off-white */
-  padding: 80px 48px;
+  padding: 20px 48px;
+  padding-top: 30px;
   display: flex;
   flex-direction: column;
   position: relative;
