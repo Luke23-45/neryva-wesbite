@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import programAreas from '@neryva_data/research/sections/program_areas.json';
 import { Container } from '@/sections/common/layout/Container';
 import { PixelArrow } from '@/components/common/PixelArrow';
-import { ModelMotif } from '@/components/common/ModelMotifs';
 import { Section } from '@/sections/common/layout/Section';
+import { ResearchAreaIcon } from '@/assets/visual/research/researchareaicon';
 
 import {
   Header,
@@ -20,7 +20,6 @@ import {
   CardGrid,
   GridCell,
   CardHeader,
-  MotifBox,
   OpenBadge,
   CardBody,
   CardTitle,
@@ -163,9 +162,7 @@ export function ResearchAreas() {
                             }}
                           >
                             <CardHeader>
-                              <MotifBox>
-                                <ModelMotif programId={id} size={22} color={program.accent} />
-                              </MotifBox>
+                              <ResearchAreaIcon id={card.id} baseColor={program.accent} />
                               <OpenBadge>OPEN</OpenBadge>
                             </CardHeader>
 

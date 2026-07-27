@@ -158,17 +158,6 @@ export const TopSection = styled.div`
   flex-direction: column;
 `;
 
-export const IconWrapper = styled.div`
-  color: #0f172a;
-  margin-bottom: 64px;
-
-  svg {
-    width: 24px;
-    height: 24px;
-    fill: currentColor;
-  }
-`;
-
 export const PerkTitle = styled.h3`
   font-size: 2.25rem;
   font-weight: 500;

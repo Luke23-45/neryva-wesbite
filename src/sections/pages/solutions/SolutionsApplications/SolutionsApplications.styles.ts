@@ -34,18 +34,6 @@ export const HeaderIcons = styled.div`
   align-items: center;
   gap: 16px;
   margin-bottom: 32px;
-  color: ${({ theme }) => theme.colors.text.primary};
-
-  svg {
-    width: 24px;
-    height: 24px;
-    stroke-width: 1.5px;
-    
-    /* Make the icons pop slightly, referencing the emoji feel */
-    &:nth-child(1) { color: #0078D7; }
-    &:nth-child(2) { color: #FF4500; }
-    &:nth-child(3) { color: #FF8C00; }
-  }
 `;
 
 export const AppsTitle = styled.h2`
@@ -129,14 +117,7 @@ export const AppCell = styled.div`
 
 /* ── Cell Content Typography ── */
 export const CellIcon = styled.div`
-  margin-bottom: 40px; /* Big gap between icon and title */
-  color: ${({ theme }) => theme.colors.text.primary};
-
-  svg {
-    width: 20px;
-    height: 20px;
-    stroke-width: 1.5px;
-  }
+  margin-bottom: 40px;
 `;
 
 export const CellTitle = styled.h3`

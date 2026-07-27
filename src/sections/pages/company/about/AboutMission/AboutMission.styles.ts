@@ -61,23 +61,6 @@ export const MissionCard = styled(motion.div)`
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
-export const IconBadge = styled.div`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background-color: ${({ theme }) => theme.colors.background.tertiary};
-  color: ${({ theme }) => theme.colors.text.strong};
-  margin-bottom: 24px;
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-`;
-
 export const ContentWrapper = styled.div`
   display: flex;
   flex-direction: column;

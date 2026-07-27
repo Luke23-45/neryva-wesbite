@@ -14,7 +14,7 @@ import ContactPage from '@pages/company/contact/ContactPage';
 import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/EnterpriseAiAssistantPage';
 import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
 import SolutionsPage from '@pages/solutions/SolutionsPage';
-
+import AuthPage from "@pages/auth/AuthPage"
 // Lazy-loaded secret page (separate JS chunk)
 const SecretPage = lazy(() => import('@pages/secret/SecretPage'));
 
@@ -93,7 +93,11 @@ export const secretRoute = createRoute({
   path: '/secret',
   component: SecretPage,
 });
-
+export const authRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth',
+  component: AuthPage,
+});
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -109,4 +113,5 @@ export const routeDefinitions = [
   aiEfficiencyDeploymentRoute,
   solutionsRoute,
   secretRoute,
+  authRoute
 ];

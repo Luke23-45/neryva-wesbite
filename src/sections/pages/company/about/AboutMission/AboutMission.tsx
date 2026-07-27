@@ -1,25 +1,18 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, Scale, TrendingUp, Sparkles, LucideIcon } from 'lucide-react';
 import { Section } from '@/sections/common/layout/Section';
 import { Container } from '@/sections/common/layout/Container';
 import { theme } from '@/styles/theme';
+import { MissionFeatureIcon } from '@/assets/visual/company/aboutmissionicon';
 import {
   SectionHeader,
   Label,
   Title,
   GridContainer,
   MissionCard,
-  IconBadge,
   ContentWrapper,
   MissionTitle,
   MissionDesc,
 } from './AboutMission.styles';
-
-const MISSION_ICONS: Record<string, LucideIcon> = {
-  'practical-delivery': ShieldCheck,
-  'honest-scope': Scale,
-  'measurable-outcomes': TrendingUp,
-};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -61,12 +54,9 @@ export function AboutMission({ data }: Props) {
 
           <GridContainer as={motion.div} variants={fadeUp}>
             {data.items.map((item, index) => {
-              const Icon = MISSION_ICONS[item.id] || Sparkles;
               return (
                 <MissionCard key={item.id} variants={fadeUp} custom={index}>
-                  <IconBadge>
-                    <Icon />
-                  </IconBadge>
+                  <MissionFeatureIcon id={item.id} iconColor="#FF5500" style={{ marginBottom: 24 }} />
                   <ContentWrapper>
                     <MissionTitle>{item.title}</MissionTitle>
                     <MissionDesc>{item.description}</MissionDesc>

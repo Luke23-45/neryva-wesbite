@@ -1,17 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import {
-  ShieldCheck,
-  Network,
-  FileLock2,
-  Activity,
-  FileText,
-  ScanLine,
-  Cpu,
-  Wrench,
-  Layers
-} from 'lucide-react';
 import industryData from '@neryva_data/solutions/industries.json';
+import { IndustryFeatureIcon } from '@assets/visual/solution/solutionindustry';
 import {
   Wrapper,
   InnerContainer,
@@ -32,12 +22,6 @@ import {
   AppTitle,
   AppDesc
 } from './SolutionsIndustries.styles';
-
-const IconsMap: Record<string, React.ElementType> = {
-  ShieldCheck, Network, FileLock2,
-  Activity, FileText, ScanLine,
-  Cpu, Wrench, Layers
-};
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 
@@ -119,7 +103,6 @@ export function SolutionsIndustries() {
 
                 <AppsGrid>
                   {ind.applications.map((app, appIndex) => {
-                    const LucideIcon = IconsMap[app.icon];
                     return (
                       <AppCell
                         key={app.title}
@@ -128,7 +111,7 @@ export function SolutionsIndustries() {
                         custom={1 + appIndex}
                       >
                         <AppIcon>
-                          {LucideIcon && <LucideIcon />}
+                          <IndustryFeatureIcon id={app.icon_id} />
                         </AppIcon>
                         <AppTitle>{app.title}</AppTitle>
                         <AppDesc>{app.description}</AppDesc>

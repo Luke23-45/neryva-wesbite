@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronRight, Layers } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import coreData from '@neryva_data/solutions/core_offers.json';
+import { EnterpriseFeatureIcon } from '@assets/visual/solution/solutioncoreicons';
 import {
   CoreWrapper,
   ProductSection,
@@ -19,7 +20,6 @@ import {
   CornerDot,
   GapAnchor,
   Diamond,
-  IconBox,
   CardTitle,
   CardDesc,
 } from './SolutionsCore.styles';
@@ -48,6 +48,7 @@ const fadeUp = {
  * ──────────────────────────────────────────────────────────────────────── */
 interface CardContent {
   title: string;
+  icon: string;
   description?: string;
   icon_color: string;
   /** 'bottom' pushes title/description down, leaving empty space above
@@ -225,9 +226,7 @@ export function SolutionsCore() {
                   $col={midColSpan(block.col, block.colSpan ?? 1)}
                   $row={rowLine(block.row)}
                 >
-                  <IconBox $color={block.icon_color}>
-                    <Layers size={16} />
-                  </IconBox>
+                  <EnterpriseFeatureIcon id={block.icon} iconColor={block.icon_color} />
                   <CardTitle $pushToBottom={block.align === 'bottom'}>{block.title}</CardTitle>
                   {block.description && <CardDesc>{block.description}</CardDesc>}
                 </GridCell>
@@ -271,9 +270,7 @@ export function SolutionsCore() {
                           <CornerDot $corner="br" />
                         </>
                       )}
-                    <IconBox $color={product.leftColumn.content.icon_color}>
-                      <Layers size={16} />
-                    </IconBox>
+                    <EnterpriseFeatureIcon id={product.leftColumn.content.icon} iconColor={product.leftColumn.content.icon_color} />
                     <CardTitle $pushToBottom={product.leftColumn.content.align !== 'top'}>
                       {product.leftColumn.content.title}
                     </CardTitle>
@@ -336,9 +333,7 @@ export function SolutionsCore() {
                           <CornerDot $corner="br" />
                         </>
                       )}
-                    <IconBox $color={product.rightColumn.content.icon_color}>
-                      <Layers size={16} />
-                    </IconBox>
+                    <EnterpriseFeatureIcon id={product.rightColumn.content.icon} iconColor={product.rightColumn.content.icon_color} />
                     <CardTitle $pushToBottom={product.rightColumn.content.align !== 'top'}>
                       {product.rightColumn.content.title}
                     </CardTitle>

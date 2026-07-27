@@ -260,14 +260,7 @@ export const AppCell = styled.div`
 `;
 
 export const AppIcon = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
   margin-bottom: 16px;
-
-  svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 1.5px;
-  }
 `;
 
 export const AppTitle = styled.h4`
