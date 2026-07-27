@@ -71,7 +71,7 @@ export const RightTop = styled.div`
   align-items: flex-end;
   justify-content: center;
   padding: 0.5rem 3rem 2.5rem;
-  padding-bottom:3.3rem;
+  padding-bottom:5.6rem;
 
   border-bottom: 1px solid rgba(126, 126, 126, 0.5);
 

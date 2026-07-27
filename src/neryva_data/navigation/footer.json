@@ -22,7 +22,7 @@
                 },
                 {
                     "label": "Case studies",
-                    "href": "/customers"
+                    "href": "#"
                 }
             ]
         },
@@ -32,23 +32,15 @@
             "links": [
                 {
                     "label": "About Neryva",
-                    "href": "/about"
+                    "href": "/company/about"
                 },
                 {
                     "label": "Careers",
-                    "href": "/careers"
-                },
-                {
-                    "label": "Partners",
-                    "href": "/partners"
+                    "href": "/company/careers"
                 },
                 {
                     "label": "Research",
                     "href": "/research"
-                },
-                {
-                    "label": "Brand architecture",
-                    "href": "/brand"
                 }
             ]
         },
@@ -57,23 +49,19 @@
             "links": [
                 {
                     "label": "Terms of Service",
-                    "href": "/legal/terms"
+                    "href": "#"
                 },
                 {
                     "label": "Privacy Policy",
-                    "href": "/legal/privacy"
+                    "href": "#"
                 },
                 {
                     "label": "Privacy choices",
-                    "href": "/legal/privacy-choices"
+                    "href": "#"
                 },
                 {
                     "label": "Data processing agreement",
-                    "href": "/legal/dpa"
-                },
-                {
-                    "label": "Legal notice",
-                    "href": "/legal/notice"
+                    "href": "#"
                 }
             ]
         }

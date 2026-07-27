@@ -201,7 +201,7 @@ export function Header() {
           {/* RIGHT: CTAs & Mobile Toggle */}
           <HeaderRight>
             <DesktopActions>
-              <ButtonGhost as={Link} to="/sign-in" $isDark={isDark}>
+              <ButtonGhost as={Link} to="/auth" $isDark={isDark}>
                 Sign In
               </ButtonGhost>
               <ButtonPrimary as={Link} to="/contact" $isDark={isDark}>
@@ -296,7 +296,7 @@ export function Header() {
         </MobileNavScroll>
 
         <MobileActions>
-          <ButtonGhost as={Link} to="/sign-in" onClick={closeMobileNav}>
+          <ButtonGhost as={Link} to="/auth" onClick={closeMobileNav}>
             Sign In
           </ButtonGhost>
             <ButtonPrimary as={Link} to="/contact" onClick={closeMobileNav}>

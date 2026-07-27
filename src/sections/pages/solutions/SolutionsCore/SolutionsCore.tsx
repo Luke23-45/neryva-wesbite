@@ -171,7 +171,7 @@ function CyclicCTAButton({ label }: { label: string }) {
 
 export function SolutionsCore() {
   return (
-    <CoreWrapper>
+    <CoreWrapper id="core-offers">
       {products.map((product, pIndex) => {
         const middleColumns = product.middleColumns ?? 2;
         const rows =

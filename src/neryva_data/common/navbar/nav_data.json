@@ -1,7 +1,7 @@
 [
     {
         "label": "Products",
-        "href": "/products",
+        "href": "/products/neryva-agent-studio",
         "order": 1,
         "megaMenu": [
             {

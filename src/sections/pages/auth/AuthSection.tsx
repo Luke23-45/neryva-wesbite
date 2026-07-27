@@ -41,6 +41,7 @@ export default function AuthSection() {
     const [lastName, setLastName] = useState('');
     const [password, setPassword] = useState('');
     const [otp, setOtp] = useState('');
+    const [isSigningUp, setIsSigningUp] = useState(false);
 
     useEffect(() => {
         if (isAuthenticated && authStep !== 'verify') {
@@ -57,10 +58,12 @@ export default function AuthSection() {
                 setAuthStep('signup');
             }
         } else if (authStep === 'signup') {
-            authMutation.mutate(
-                { type: 'REGISTER', payload: { email, password, name: `${firstName} ${lastName}`.trim() } },
-                { onSuccess: () => { setAuthStep('verify'); setOtp(''); } },
-            );
+            setIsSigningUp(true);
+            setTimeout(() => {
+                setIsSigningUp(false);
+                setAuthStep('verify');
+                setOtp('');
+            }, 3500);
         } else if (authStep === 'login') {
             authMutation.mutate(
                 { type: 'LOGIN', payload: { email, password }, remember: true },
@@ -295,8 +298,8 @@ export default function AuthSection() {
                                 </AnimatePresence>
 
                                 <motion.div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column' }}>
-                                    <SubmitAction type="submit" disabled={authMutation.isPending}>
-                                        {authMutation.isPending
+                                    <SubmitAction type="submit" disabled={authMutation.isPending || isSigningUp}>
+                                        {authMutation.isPending || isSigningUp
                                             ? 'Processing...'
                                             : authStep === 'initial'
                                                 ? d.actions.connectTerminal

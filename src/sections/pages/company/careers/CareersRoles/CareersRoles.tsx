@@ -84,7 +84,7 @@ export function CareersRoles({ data }: Props) {
   };
 
   return (
-    <Section paddingY="none" background={theme.colors.background.secondary}>
+    <Section id="roles" paddingY="none" background={theme.colors.background.secondary}>
       <BorderTop>
         <Container>
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }} variants={stagger}>
