@@ -24,7 +24,6 @@ import {
   ProgramBody,
   ProgramDescription,
   ProgramVisual,
-  FooterAction,
 } from './HomePrograms.styles';
 
 const fadeUp = {
@@ -70,7 +69,7 @@ const programAccents: Record<string, string> = {
 };
 
 export function HomePrograms() {
-  const { heading, programs, footer } = {
+  const { heading, programs } = {
     heading: { label: programsData.label, title: programsData.title },
     programs: programsData.items.map((item: any, i: number) => ({
       id: item.id,
@@ -80,7 +79,6 @@ export function HomePrograms() {
       title: item.title,
       description: item.description,
     })),
-    footer: { linkText: programsData.cta?.label || '', linkUrl: programsData.cta?.href || '' },
   };
   const [activeId, setActiveId] = useState<string>(programs[0].id);
 

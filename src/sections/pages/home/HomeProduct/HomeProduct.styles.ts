@@ -233,7 +233,7 @@ export const DiamondLabel = styled.div<{ $isDark?: boolean }>`
   position: absolute;
   width: 16px;
   height: 16px;
-  background: ${({ theme, $isDark }) => $isDark ? '#1A1A1A' : '#ffffff'};
+  background: ${({ $isDark }) => $isDark ? '#1A1A1A' : '#ffffff'};
   border: 1px dashed ${({ theme, $isDark }) => $isDark ? 'rgba(255,255,255,0.2)' : theme.colors.border};
   z-index: 30;
   display: flex;

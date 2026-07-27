@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import type { QueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';

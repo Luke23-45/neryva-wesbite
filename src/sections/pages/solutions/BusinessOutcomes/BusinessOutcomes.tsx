@@ -5,13 +5,11 @@ import {
   Wrapper,
   InnerGrid,
   StickyHeader,
-  Eyebrow,
   Title,
   Description,
   ListContainer,
   InteractiveRow,
   RowContent,
-  Index,
   OutcomeText,
   HoverPill
 } from './BusinessOutcomes.styles';

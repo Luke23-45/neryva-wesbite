@@ -27,7 +27,6 @@ import {
   CardMatrix,
   EventCard,
   VisualHeader,
-  FloatTag,
   BodyPayload,
   MetaLine,
   CardTitle,

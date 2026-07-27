@@ -3,7 +3,6 @@ import {
   Wrapper,
   Inner,
   HeaderSection,
-  SectionEyebrow,
   SectionTitle,
   BentoGrid,
   BentoTile,

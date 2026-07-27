@@ -1,4 +1,4 @@
-import type { OpenProblem, EarlyStageData, Paper } from '@types';
+import type { EarlyStageData, Paper } from '@types';
 import papersData from '@neryva_data/research/sections/papers.json';
 
 
