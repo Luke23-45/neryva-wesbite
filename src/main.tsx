@@ -9,36 +9,43 @@ import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router';
 import { GlobalStyles } from '@styles/GlobalStyles';
 import { theme } from '@styles/theme';
+import { AuthProvider } from '@/Context/AuthContext';
 
-// Create a new query client
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-// Provision the router with context
 router.update({
   context: {
     queryClient,
   },
 });
 
-// Main render block
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <GlobalStyles />
-          <RouterProvider router={router} />
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: theme.colors.surface,
-                color: theme.colors.text.strong,
-                borderRadius: theme.radii.md,
-              },
-            }}
-          />
+          <AuthProvider>
+            <GlobalStyles />
+            <RouterProvider router={router} />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: theme.colors.surface,
+                  color: theme.colors.text.strong,
+                  borderRadius: theme.radii.md,
+                },
+              }}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </HelmetProvider>

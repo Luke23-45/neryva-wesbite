@@ -161,4 +161,4 @@ export const BottomActionSection = styled.section`
   ${({ theme }) => theme.media.tablet} {
     padding: 32px 24px;
   }
-`;
+`;

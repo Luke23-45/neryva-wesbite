@@ -2,9 +2,9 @@ import footerData from '@neryva_data/navigation/footer.json';
 import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
 import {
   Linkedin,
-  Youtube,
   Github
-} from 'lucide-react'; // Basic strict structural elements representing X, Socials perfectly without layout fail paths
+} from 'lucide-react';
+// import { useNewsletterMutation } from '@/hooks/mutations/useNewsletterMutation';
 
 import {
   FooterContainer,
@@ -17,10 +17,44 @@ import {
   BottomBand,
   SocialArray,
   CopyrightContainer,
-  CopyrightText
+  CopyrightText,
+  // NewsletterSection,
+  // NewsletterTitle,
+  // NewsletterForm,
+  // NewsletterInput,
+  // NewsletterButton,
+  // NewsletterStatus
 } from './Footer.styles';
 
+// const newsletterMutation = useNewsletterMutation();
+// const [newsletterEmail, setNewsletterEmail] = useState('');
+// const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+// const handleNewsletterSubmit = (e: React.FormEvent) => {
+//   e.preventDefault();
+//   if (!newsletterEmail.includes('@')) return;
+//   newsletterMutation.reset();
+//   newsletterMutation.mutate(
+//     { type: 'SUBSCRIBE', payload: { email: newsletterEmail, source: 'footer' } },
+//     {
+//       onSuccess: () => {
+//         setNewsletterStatus('success');
+//         setTimeout(() => setNewsletterStatus('idle'), 5000);
+//       },
+//       onError: () => {
+//         setNewsletterStatus('error');
+//         setTimeout(() => setNewsletterStatus('idle'), 5000);
+//       },
+//     },
+//   );
+//   setNewsletterEmail('');
+// };
+
 export function Footer() {
+  // const newsletterMutation = useNewsletterMutation();
+  // const [newsletterEmail, setNewsletterEmail] = useState('');
+  // const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   return (
     <FooterContainer>
       <InnerLedger>
@@ -47,7 +81,6 @@ export function Footer() {
           <SocialArray>
             <a href="#" aria-label="LinkedIn"><Linkedin strokeWidth={1.8} /></a>
             <a href="#" aria-label="GitHub"><Github strokeWidth={1.8} /></a>
-
           </SocialArray>
 
           <CopyrightContainer>

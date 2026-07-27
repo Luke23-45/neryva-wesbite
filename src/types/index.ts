@@ -159,3 +159,19 @@ export interface BlogPost {
   sections: BlogPostSection[];
 }
 
+// ─── API Types (re-exported for backend integration) ─────
+export type { ApiResponse, PaginationMeta, ApiError, OtpPurpose } from './api';
+export type {
+  RegisterDTO, LoginDTO, AuthResponse, AuthTokens,
+  UserResponse, UpdateProfileDTO as UpdateUserProfileDTO,
+  SendOtpDTO, VerifyOtpDTO, ForgotPasswordDTO, ResetPasswordDTO,
+} from './auth';
+export type { UpdateProfileDTO, ChangePasswordDTO } from './user';
+export type {
+  BlogPostResponse, BlogSection, BlogFilter,
+  CreateBlogPostDTO, UpdateBlogPostDTO, BlogCategory,
+} from './blog';
+export type { CreateContactDTO, ContactResponse } from './contact';
+export type { SubscribeDTO, UnsubscribeDTO } from './newsletter';
+export type { CreateCareerInput, CareerResponse } from './career';
+

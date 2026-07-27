@@ -275,3 +275,45 @@ export const ResendAction = styled.button`
     text-decoration-color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
+
+export const ToggleMode = styled.button`
+  background: transparent;
+  border: none;
+  margin-top: 16px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  padding: 0;
+  align-self: center;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+`;
+
+export const OtpInput = styled.input`
+  width: 100%;
+  height: 64px;
+  padding: 0 16px;
+  font-family: ${({ theme }) => theme.typography.fonts.mono || theme.typography.fonts.sans};
+  font-size: 28px;
+  letter-spacing: 12px;
+  text-align: center;
+  color: ${({ theme }) => theme.colors.text.primary};
+  background-color: #ffffff;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.text.muted};
+  }
+
+  &:focus {
+    border-color: #050505;
+    box-shadow: 0 0 0 1px #050505;
+  }
+`;

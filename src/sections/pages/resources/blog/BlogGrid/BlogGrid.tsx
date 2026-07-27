@@ -3,6 +3,10 @@ import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { PostMosaic } from '@/assets/visual/blog/PostMosaic';
 import blogData from '@neryva_data/blog/sections/posts.json';
+import { useBlogPostsQuery } from '@/hooks/queries/useBlogPostsQuery';
+import { useBlogCategoriesQuery } from '@/hooks/queries/useBlogCategoriesQuery';
+import { toBlogPosts } from '@/lib/blogAdapter';
+import type { BlogPost } from '@types';
 import {
   Wrapper,
   PageHeader,
@@ -54,8 +58,26 @@ export function BlogGrid() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const { data: apiData } = useBlogPostsQuery();
+  const { data: apiCategoriesData } = useBlogCategoriesQuery();
+
+  const posts: BlogPost[] = useMemo(() => {
+    if (apiData?.data && apiData.data.length > 0) {
+      return toBlogPosts(apiData.data) as BlogPost[];
+    }
+    return (blogData.items || []) as BlogPost[];
+  }, [apiData]);
+
+  const categories: string[] = useMemo(() => {
+    if (apiCategoriesData?.data && apiCategoriesData.data.length > 0) {
+      const all = apiCategoriesData.data.map((c) => c.category);
+      return ['All', ...all];
+    }
+    return blogData.categories || ['All'];
+  }, [apiCategoriesData]);
+
   const filtered = useMemo(() => {
-    return blogData.items.filter((post: any) => {
+    return posts.filter((post: any) => {
       const matchCat = activeCategory === 'All' || post.category === activeCategory;
       const q = searchQuery.toLowerCase();
       const matchSearch =
@@ -65,7 +87,7 @@ export function BlogGrid() {
         post.category.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, searchQuery, posts]);
 
   return (
     <Wrapper>
@@ -83,7 +105,7 @@ export function BlogGrid() {
           <FilterLeft>
             <PostCount>{filtered.length} {filtered.length === 1 ? 'article' : 'articles'}</PostCount>
             <CategoryPills>
-              {blogData.categories.map((cat) => (
+              {categories.map((cat) => (
                 <CategoryPill
                   key={cat}
                   $cat={cat}

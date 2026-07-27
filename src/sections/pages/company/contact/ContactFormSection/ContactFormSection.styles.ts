@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 
 export const SectionWrapper = styled.section`
   display: grid;
@@ -360,5 +361,68 @@ export const SubmitButton = styled.button`
 
   ${({ theme }) => theme.media.mobile} {
     font-size: 0.85rem;
+  }
+`;
+
+// ── Success State ──────────────────────────────────────────────────
+
+export const SuccessContainer = styled(motion.div)`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 32px 0;
+  max-width: ${({ theme }) => theme.containers.prose};
+`;
+
+export const SuccessIcon = styled.div`
+  width: 64px;
+  height: 64px;
+  margin-bottom: 28px;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+`;
+
+export const SuccessTitle = styled.h2`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: ${({ theme }) => theme.colors.text.strong};
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+`;
+
+export const SuccessBody = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 1rem;
+  line-height: 1.7;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 8px 0;
+  max-width: 480px;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text.strong};
+    font-weight: 600;
+  }
+`;
+
+export const SendAnotherLink = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 36px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  transition: color 200ms ease;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.text.strong};
   }
 `;

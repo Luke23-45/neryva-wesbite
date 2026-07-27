@@ -169,3 +169,76 @@ export const CopyrightText = styled.span`
   font-weight: 400;
   color: #64748B;
 `;
+
+export const NewsletterSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 40px 32px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const NewsletterTitle = styled.h4`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 15px;
+  font-weight: 500;
+  color: #0F172A;
+  margin: 0;
+`;
+
+export const NewsletterForm = styled.form`
+  display: flex;
+  gap: 8px;
+  max-width: 400px;
+`;
+
+export const NewsletterInput = styled.input`
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  color: #0F172A;
+  background-color: #ffffff;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 4px;
+  outline: none;
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+
+  &:focus {
+    border-color: #050505;
+  }
+`;
+
+export const NewsletterButton = styled.button`
+  height: 40px;
+  padding: 0 16px;
+  background-color: #050505;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #1a1a1a;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+export const NewsletterStatus = styled.p`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+`;
