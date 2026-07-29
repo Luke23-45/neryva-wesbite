@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1128 191" width="1128" height="191">
+  <defs>
+    <!-- Wide ambient glow, shifted to seamlessly track the emblem on the right side -->
+    <radialGradient id="ambientBackground" gradientUnits="userSpaceOnUse" cx="810" cy="95" r="900">
+      <stop offset="0%" stop-color="#14141f" />
+      <stop offset="55%" stop-color="#0b0b12" />
+      <stop offset="100%" stop-color="#050507" />
+    </radialGradient>
+
+    <!-- Faint colored bloom behind the mark, maintaining the gem's exact light source -->
+    <radialGradient id="gemBloom" gradientUnits="userSpaceOnUse" cx="810" cy="96" r="190">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.22" />
+      <stop offset="55%" stop-color="#22d3c7" stop-opacity="0.10" />
+      <stop offset="100%" stop-color="#22d3c7" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Logo gradients -->
+    <linearGradient id="twindigoUpper" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <linearGradient id="twindigoMiddle" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#00a8cc" />
+      <stop offset="60%" stop-color="#05e3a4" />
+      <stop offset="100%" stop-color="#00ff87" />
+    </linearGradient>
+
+    <linearGradient id="twindigoLower" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+
+    <linearGradient id="twindigoObelisk" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#faf5ff" />
+      <stop offset="50%" stop-color="#a855f7" />
+      <stop offset="100%" stop-color="#2e0854" />
+    </linearGradient>
+
+    <g id="masterWing">
+      <polygon points="45, -280 340, -420 430, -420 260, -190 55, -95" fill="url(#twindigoUpper)" />
+      <polygon points="26, -70 460, -110 450, -35 175, 115 20, 25" fill="url(#twindigoMiddle)" />
+      <polygon points="14, 55 310, 240 245, 305 55, 395 14, 325" fill="url(#twindigoLower)" />
+    </g>
+
+    <filter id="emblemGlow" x="-100%" y="-200%" width="300%" height="500%">
+      <feGaussianBlur stdDeviation="5" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1128" height="191" fill="url(#ambientBackground)" />
+  <rect width="1128" height="191" fill="url(#gemBloom)" />
+
+  <!-- Soft bloom behind the mark -->
+  <g filter="url(#emblemGlow)" opacity="0.5">
+    <g transform="translate(810, 99.6) scale(0.18)">
+      <use href="#masterWing" transform="scale(-1,1)" />
+      <use href="#masterWing" />
+      <polygon points="0,-440 30,-290 30,-115 0,45 -30,-115 -30,-290" fill="url(#twindigoObelisk)" />
+    </g>
+  </g>
+
+  <!-- Emblem -->
+  <g transform="translate(810, 99.6) scale(0.18)">
+    <use href="#masterWing" transform="scale(-1,1)" />
+    <use href="#masterWing" />
+    <polygon points="0,-440 30,-290 30,-115 0,45 -30,-115 -30,-290" fill="url(#twindigoObelisk)" />
+  </g>
+
+  <!-- Divider -->
+  <line x1="700" y1="58" x2="700" y2="136" stroke="url(#twindigoObelisk)" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+
+  <!-- Wordmark (Now elegantly right-aligned flush to the divider) -->
+  <text x="660" y="103" text-anchor="end" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="54" font-weight="600" letter-spacing="9" fill="#f6f4ff">NERYVA</text>
+
+  <!-- Tagline (Now elegantly right-aligned flush to the divider) -->
+  <text x="660" y="133" text-anchor="end" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="500" letter-spacing="2.6" fill="#9d99ba">AI RESEARCH · Solving Problems with AI.</text>
+</svg>
