@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://neryva.com/sitemap.xml
+Sitemap: https://www.neryva.com/sitemap.xml
