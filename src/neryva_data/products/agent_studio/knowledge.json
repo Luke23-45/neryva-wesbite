@@ -1,0 +1,89 @@
+{
+  "sources": [
+    {
+      "id": "k1",
+      "name": "Product documentation",
+      "kind": "url",
+      "url": "https://docs.aurora.example",
+      "documents": 248,
+      "lastSync": "12 minutes ago",
+      "status": "synced",
+      "tone": "emerald",
+      "addedBy": "Avery Kim",
+      "addedAt": "2 weeks ago",
+      "size": "48.2 MB"
+    },
+    {
+      "id": "k2",
+      "name": "Help center articles",
+      "kind": "url",
+      "url": "https://help.aurora.example",
+      "documents": 184,
+      "lastSync": "1 hour ago",
+      "status": "syncing",
+      "tone": "azure",
+      "addedBy": "Sara Chen",
+      "addedAt": "3 weeks ago",
+      "size": "32.4 MB"
+    },
+    {
+      "id": "k3",
+      "name": "Internal FAQ",
+      "kind": "file",
+      "url": "internal-faq.pdf",
+      "documents": 64,
+      "lastSync": "Yesterday",
+      "status": "synced",
+      "tone": "emerald",
+      "addedBy": "Jules Park",
+      "addedAt": "1 month ago",
+      "size": "8.1 MB"
+    },
+    {
+      "id": "k4",
+      "name": "Pricing & billing policies",
+      "kind": "url",
+      "url": "https://internal.aurora.example/pricing",
+      "documents": 32,
+      "lastSync": "3 days ago",
+      "status": "outdated",
+      "tone": "warning",
+      "addedBy": "Marcus Lee",
+      "addedAt": "2 months ago",
+      "size": "4.8 MB"
+    },
+    {
+      "id": "k5",
+      "name": "Customer success playbooks",
+      "kind": "notion",
+      "url": "notion://aurora-labs/playbooks",
+      "documents": 96,
+      "lastSync": "6 hours ago",
+      "status": "synced",
+      "tone": "emerald",
+      "addedBy": "Avery Kim",
+      "addedAt": "5 days ago",
+      "size": "16.4 MB"
+    },
+    {
+      "id": "k6",
+      "name": "Engineering changelog",
+      "kind": "url",
+      "url": "https://changelog.aurora.example",
+      "documents": 412,
+      "lastSync": "Failed — 403",
+      "status": "error",
+      "tone": "error",
+      "addedBy": "Marcus Lee",
+      "addedAt": "1 week ago",
+      "size": "—"
+    }
+  ],
+  "totals": {
+    "sources": 6,
+    "documents": 1036,
+    "size": "109.9 MB",
+    "queries": 184320,
+    "avgLatency": "82ms"
+  }
+}

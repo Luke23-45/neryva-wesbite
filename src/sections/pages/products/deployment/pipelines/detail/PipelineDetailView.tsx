@@ -216,7 +216,7 @@ export function PipelineDetailView() {
             subtitle={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <GitBranch size={12} strokeWidth={1.7} /> Pipeline events
-              </span> as any
+              </span>
             }
           >
             {relatedLogs.length === 0 ? (

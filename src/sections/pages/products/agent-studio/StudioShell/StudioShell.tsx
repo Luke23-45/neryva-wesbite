@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
 import {
@@ -50,16 +50,21 @@ import {
   Menu as MenuIcon,
   X as XIcon,
   Activity as ActivityIcon,
+  BookOpen,
+  Cpu,
+  BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
 import { ChatHeader } from '../chat/ChatHeader';
 import { UpgradeModal } from '../UpgradeModal';
+import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
 
 export type StudioNavItem = {
   label: string;
   to: string;
-  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings';
+  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings' | 'knowledge' | 'models' | 'analytics' | 'compliance';
 };
 
 export type RecentChat = { id: string; title: string };
@@ -82,6 +87,10 @@ const iconMap = {
   activity: ActivityIcon,
   integrations: Plug,
   settings: SettingsIcon,
+  knowledge: BookOpen,
+  models: Cpu,
+  analytics: BarChart3,
+  compliance: ShieldCheck,
 } as const;
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -97,9 +106,38 @@ export function StudioShell({
 }: Props) {
   const [query, setQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const matchRoute = useMatchRoute();
   const location = useLocation();
   const onChat = location.pathname === '/agent-studio/chat' || location.pathname.startsWith('/agent-studio/chat/');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      } else if (e.key === '/' && !paletteOpen && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName ?? '')) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [paletteOpen]);
+
+  const commandItems: CommandItem[] = [
+    { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/agent-studio/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
+    { id: 'chat', title: 'Chat', subtitle: 'Conversational playground', to: '/agent-studio/chat', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} />, shortcut: ['C'] },
+    { id: 'agents', title: 'Agents', subtitle: 'Manage and configure agents', to: '/agent-studio/agents', section: 'Navigate', icon: <Bot size={14} strokeWidth={1.7} />, shortcut: ['A'] },
+    { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
+    { id: 'models', title: 'Models', subtitle: 'AI models and routing', to: '/agent-studio/models', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
+    { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessagesSquare size={14} strokeWidth={1.7} /> },
+    { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
+    { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
+    { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
+    { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
+    { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
+  ];
 
   return (
     <ShellRoot>
@@ -229,9 +267,21 @@ export function StudioShell({
             <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
             <TopbarSubtitle>Studio</TopbarSubtitle>
             {topbarExtra ?? (onChat ? <ChatHeader /> : null)}
-            <TopbarSearchHint>
+            <TopbarSearchHint
+              role="button"
+              tabIndex={0}
+              onClick={() => setPaletteOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setPaletteOpen(true);
+                }
+              }}
+              aria-label="Open command palette"
+              style={{ cursor: 'pointer' }}
+            >
               <SearchIcon size={11} strokeWidth={1.7} />
-              Press / to search
+              Press <strong style={{ color: 'rgba(229, 231, 235, 0.78)', fontWeight: 500 }}>⌘K</strong> to search
             </TopbarSearchHint>
           </TopbarLeft>
           <TopbarRight>
@@ -244,6 +294,12 @@ export function StudioShell({
         </Topbar>
         <ContentArea>{children}</ContentArea>
       </ShellBody>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={commandItems}
+        brand="studio"
+      />
     </ShellRoot>
   );
 }

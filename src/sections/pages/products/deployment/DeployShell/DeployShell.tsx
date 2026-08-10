@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useMatchRoute } from '@tanstack/react-router';
 import {
@@ -10,12 +10,17 @@ import {
   Settings as SettingsIcon,
   Search as SearchIcon,
   Plus,
+  Bell,
+  DollarSign,
+  KeyRound,
+  ShieldCheck,
   Menu as MenuIcon,
   X as XIcon,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
 import { UpgradeModal } from '@/sections/pages/products/agent-studio/UpgradeModal/UpgradeModal';
+import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
 import {
   ShellRoot,
   ShellSidebar,
@@ -56,7 +61,7 @@ import {
 export type DeployNavItem = {
   label: string;
   to: string;
-  icon: 'dashboard' | 'pipelines' | 'deployments' | 'infrastructure' | 'logs' | 'settings';
+  icon: 'dashboard' | 'pipelines' | 'deployments' | 'infrastructure' | 'logs' | 'settings' | 'alerts' | 'cost' | 'secrets' | 'compliance';
 };
 
 export type RecentPipeline = { id: string; title: string };
@@ -77,6 +82,10 @@ const iconMap = {
   infrastructure: Server,
   logs: ScrollText,
   settings: SettingsIcon,
+  alerts: Bell,
+  cost: DollarSign,
+  secrets: KeyRound,
+  compliance: ShieldCheck,
 } as const;
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -91,7 +100,35 @@ export function DeployShell({
 }: Props) {
   const [query, setQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const matchRoute = useMatchRoute();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      } else if (e.key === '/' && !paletteOpen && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName ?? '')) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [paletteOpen]);
+
+  const commandItems: CommandItem[] = [
+    { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/deployment/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
+    { id: 'pipelines', title: 'Pipelines', subtitle: 'Deployment lifecycle', to: '/deployment/pipelines', section: 'Navigate', icon: <GitBranch size={14} strokeWidth={1.7} />, shortcut: ['P'] },
+    { id: 'deployments', title: 'Deployments', subtitle: 'Active model deployments', to: '/deployment/deployments', section: 'Navigate', icon: <Rocket size={14} strokeWidth={1.7} />, shortcut: ['D'] },
+    { id: 'infra', title: 'Infrastructure', subtitle: 'Regions and runtimes', to: '/deployment/infrastructure', section: 'Navigate', icon: <Server size={14} strokeWidth={1.7} /> },
+    { id: 'logs', title: 'Logs', subtitle: 'Live deployment logs', to: '/deployment/logs', section: 'Navigate', icon: <ScrollText size={14} strokeWidth={1.7} />, shortcut: ['L'] },
+    { id: 'alerts', title: 'Alerts', subtitle: 'Incidents and on-call', to: '/deployment/alerts', section: 'Navigate', icon: <Bell size={14} strokeWidth={1.7} /> },
+    { id: 'cost', title: 'Cost & usage', subtitle: 'Spend breakdown and forecast', to: '/deployment/cost', section: 'Navigate', icon: <DollarSign size={14} strokeWidth={1.7} /> },
+    { id: 'secrets', title: 'Secrets', subtitle: 'Encrypted vault', to: '/deployment/secrets', section: 'Navigate', icon: <KeyRound size={14} strokeWidth={1.7} /> },
+    { id: 'compliance', title: 'Compliance', subtitle: 'Controls and audit log', to: '/deployment/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
+    { id: 'settings', title: 'Settings', subtitle: 'Workspace, environments, access', to: '/deployment/settings', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
+  ];
 
   return (
     <ShellRoot>
@@ -216,9 +253,21 @@ export function DeployShell({
             <TopbarTitle>{workspace.name}</TopbarTitle>
             <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
             <TopbarSubtitle>Deploy</TopbarSubtitle>
-            <TopbarSearchHint>
+            <TopbarSearchHint
+              role="button"
+              tabIndex={0}
+              onClick={() => setPaletteOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setPaletteOpen(true);
+                }
+              }}
+              aria-label="Open command palette"
+              style={{ cursor: 'pointer' }}
+            >
               <SearchIcon size={11} strokeWidth={1.7} />
-              Press / to search
+              Press <strong style={{ color: 'rgba(229, 231, 235, 0.78)', fontWeight: 500 }}>⌘K</strong> to search
             </TopbarSearchHint>
           </TopbarLeft>
           <TopbarRight>
@@ -231,6 +280,12 @@ export function DeployShell({
         </Topbar>
         <ContentArea>{children}</ContentArea>
       </ShellBody>
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={commandItems}
+        brand="deploy"
+      />
     </ShellRoot>
   );
 }

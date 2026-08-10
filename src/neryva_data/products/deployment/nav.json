@@ -5,6 +5,10 @@
     { "label": "Deployments", "to": "/deployment/deployments", "icon": "deployments" },
     { "label": "Infrastructure", "to": "/deployment/infrastructure", "icon": "infrastructure" },
     { "label": "Logs", "to": "/deployment/logs", "icon": "logs" },
+    { "label": "Alerts", "to": "/deployment/alerts", "icon": "alerts" },
+    { "label": "Cost", "to": "/deployment/cost", "icon": "cost" },
+    { "label": "Secrets", "to": "/deployment/secrets", "icon": "secrets" },
+    { "label": "Compliance", "to": "/deployment/compliance", "icon": "compliance" },
     { "label": "Settings", "to": "/deployment/settings", "icon": "settings" }
   ],
   "user": {

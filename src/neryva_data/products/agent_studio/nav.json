@@ -3,9 +3,13 @@
     { "label": "Dashboard", "to": "/agent-studio/dashboard", "icon": "dashboard" },
     { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
     { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
+    { "label": "Knowledge", "to": "/agent-studio/knowledge", "icon": "knowledge" },
+    { "label": "Models", "to": "/agent-studio/models", "icon": "models" },
     { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
     { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" },
+    { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
     { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
+    { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
     { "label": "Settings", "to": "/agent-studio/settings", "icon": "settings" }
   ],
   "user": {

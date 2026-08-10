@@ -1,0 +1,114 @@
+{
+  "models": [
+    {
+      "id": "m1",
+      "name": "Reasoner Pro",
+      "provider": "Neryva",
+      "kind": "reasoning",
+      "context": "128k tokens",
+      "costInput": "$3.00 / 1M tokens",
+      "costOutput": "$12.00 / 1M tokens",
+      "latency": "1.2s",
+      "throughput": "12.4k req/min",
+      "quality": 96,
+      "status": "active",
+      "tone": "emerald",
+      "primary": true
+    },
+    {
+      "id": "m2",
+      "name": "Instant Fast",
+      "provider": "Neryva",
+      "kind": "chat",
+      "context": "32k tokens",
+      "costInput": "$0.40 / 1M tokens",
+      "costOutput": "$0.80 / 1M tokens",
+      "latency": "0.4s",
+      "throughput": "84k req/min",
+      "quality": 88,
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "m3",
+      "name": "Researcher Beta",
+      "provider": "Neryva",
+      "kind": "research",
+      "context": "256k tokens",
+      "costInput": "$5.00 / 1M tokens",
+      "costOutput": "$15.00 / 1M tokens",
+      "latency": "3.4s",
+      "throughput": "2.1k req/min",
+      "quality": 94,
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "m4",
+      "name": "Embeddings v2",
+      "provider": "Neryva",
+      "kind": "embedding",
+      "context": "8k tokens",
+      "costInput": "$0.10 / 1M tokens",
+      "costOutput": "—",
+      "latency": "0.08s",
+      "throughput": "240k req/min",
+      "quality": 92,
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "m5",
+      "name": "Vision v3",
+      "provider": "Neryva",
+      "kind": "vision",
+      "context": "16k tokens",
+      "costInput": "$2.50 / 1M tokens",
+      "costOutput": "$8.00 / 1M tokens",
+      "latency": "1.8s",
+      "throughput": "8.4k req/min",
+      "quality": 95,
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "m6",
+      "name": "Speech-to-Text Pro",
+      "provider": "Neryva",
+      "kind": "audio",
+      "context": "—",
+      "costInput": "$0.60 / hour",
+      "costOutput": "—",
+      "latency": "0.6s",
+      "throughput": "1.2k req/min",
+      "quality": 93,
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "m7",
+      "name": "Classifier Mini",
+      "provider": "Neryva",
+      "kind": "classification",
+      "context": "8k tokens",
+      "costInput": "$0.20 / 1M tokens",
+      "costOutput": "$0.40 / 1M tokens",
+      "latency": "0.12s",
+      "throughput": "180k req/min",
+      "quality": 89,
+      "status": "beta",
+      "tone": "azure"
+    }
+  ],
+  "providers": [
+    { "name": "Neryva", "models": 7, "region": "us-west-2", "status": "primary", "tone": "emerald" },
+    { "name": "OpenAI", "models": 0, "region": "external", "status": "available", "tone": "neutral" },
+    { "name": "Anthropic", "models": 0, "region": "external", "status": "available", "tone": "neutral" }
+  ],
+  "routing": {
+    "default": "Reasoner Pro",
+    "fallback": "Instant Fast",
+    "autoRoute": true,
+    "rulesCount": 12
+  }
+}

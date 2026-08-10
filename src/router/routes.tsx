@@ -33,6 +33,10 @@ import AgentStudioSettingsTeamPage from '@pages/products/agent_studio/AgentStudi
 import AgentStudioSettingsBillingPage from '@pages/products/agent_studio/AgentStudioSettingsBillingPage';
 import AgentStudioSettingsSecurityPage from '@pages/products/agent_studio/AgentStudioSettingsSecurityPage';
 import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeysPage';
+import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKnowledgePage';
+import AgentStudioModelsPage from '@pages/products/agent_studio/AgentStudioModelsPage';
+import AgentStudioAnalyticsPage from '@pages/products/agent_studio/AgentStudioAnalyticsPage';
+import AgentStudioCompliancePage from '@pages/products/agent_studio/AgentStudioCompliancePage';
 
 // Deployment app shell (auth-gated)
 import DeploymentShell from '@pages/products/deployment/DeploymentShell';
@@ -48,6 +52,10 @@ import DeploymentSettingsGeneralPage from '@pages/products/deployment/Deployment
 import DeploymentSettingsEnvironmentsPage from '@pages/products/deployment/DeploymentSettingsEnvironmentsPage';
 import DeploymentSettingsNotificationsPage from '@pages/products/deployment/DeploymentSettingsNotificationsPage';
 import DeploymentSettingsAccessPage from '@pages/products/deployment/DeploymentSettingsAccessPage';
+import DeploymentAlertsPage from '@pages/products/deployment/DeploymentAlertsPage';
+import DeploymentCostPage from '@pages/products/deployment/DeploymentCostPage';
+import DeploymentSecretsPage from '@pages/products/deployment/DeploymentSecretsPage';
+import DeploymentCompliancePage from '@pages/products/deployment/DeploymentCompliancePage';
 
 import { requireAuth } from '@components/ProtectedRoute';
 
@@ -254,6 +262,30 @@ export const agentStudioSettingsApiKeysRoute = createRoute({
   component: AgentStudioSettingsApiKeysPage,
 });
 
+export const agentStudioKnowledgeRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/knowledge',
+  component: AgentStudioKnowledgePage,
+});
+
+export const agentStudioModelsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/models',
+  component: AgentStudioModelsPage,
+});
+
+export const agentStudioAnalyticsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/analytics',
+  component: AgentStudioAnalyticsPage,
+});
+
+export const agentStudioComplianceRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/compliance',
+  component: AgentStudioCompliancePage,
+});
+
 // ─── Deployment (auth-gated app shell) ────────────────
 export const deploymentRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -348,6 +380,30 @@ export const deploymentSettingsAccessRoute = createRoute({
   component: DeploymentSettingsAccessPage,
 });
 
+export const deploymentAlertsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/alerts',
+  component: DeploymentAlertsPage,
+});
+
+export const deploymentCostRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/cost',
+  component: DeploymentCostPage,
+});
+
+export const deploymentSecretsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/secrets',
+  component: DeploymentSecretsPage,
+});
+
+export const deploymentComplianceRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/compliance',
+  component: DeploymentCompliancePage,
+});
+
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -369,9 +425,13 @@ export const routeDefinitions = [
     agentStudioChatRoute,
     agentStudioDashboardRoute,
     agentStudioAgentsRoute.addChildren([agentStudioAgentDetailRoute]),
+    agentStudioKnowledgeRoute,
+    agentStudioModelsRoute,
     agentStudioConversationsRoute,
     agentStudioActivityRoute,
+    agentStudioAnalyticsRoute,
     agentStudioIntegrationsRoute.addChildren([agentStudioWebhooksRoute]),
+    agentStudioComplianceRoute,
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,
@@ -389,6 +449,10 @@ export const routeDefinitions = [
     deploymentDeploymentsRoute.addChildren([deploymentDeployDetailRoute]),
     deploymentInfrastructureRoute,
     deploymentLogsRoute,
+    deploymentAlertsRoute,
+    deploymentCostRoute,
+    deploymentSecretsRoute,
+    deploymentComplianceRoute,
     deploymentSettingsRoute.addChildren([
       deploymentSettingsIndexRoute,
       deploymentSettingsGeneralRoute,

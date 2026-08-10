@@ -1,0 +1,34 @@
+{
+  "summary": {
+    "totalSpend": 18420,
+    "monthToDate": 14280,
+    "forecast": 19840,
+    "currency": "USD",
+    "budget": 25000,
+    "change": "+12.4%"
+  },
+  "byDeployment": [
+    { "id": "d1", "name": "production-classifier-v2", "env": "production", "region": "us-east-1", "cost": 4280, "share": 23.2, "trend": 8, "tone": "warning" },
+    { "id": "d2", "name": "edge-inference-fleet", "env": "production", "region": "global", "cost": 6840, "share": 37.1, "trend": 14, "tone": "warning" },
+    { "id": "d3", "name": "staging-reasoner-rollout", "env": "staging", "region": "eu-west-1", "cost": 1840, "share": 10.0, "trend": -4, "tone": "azure" },
+    { "id": "d4", "name": "vision-api-v3-canary", "env": "staging", "region": "ap-southeast-1", "cost": 920, "share": 5.0, "trend": 22, "tone": "warning" },
+    { "id": "d5", "name": "embeddings-api-v2", "env": "production", "region": "eu-central-1", "cost": 2680, "share": 14.6, "trend": 6, "tone": "azure" },
+    { "id": "d6", "name": "speech-to-text-prod", "env": "production", "region": "us-west-1", "cost": 1860, "share": 10.1, "trend": 2, "tone": "azure" }
+  ],
+  "byCategory": [
+    { "name": "Compute (GPU)", "value": 11240, "share": 61.0, "tone": "amber" },
+    { "name": "Compute (CPU)", "value": 3680, "share": 20.0, "tone": "azure" },
+    { "name": "Network egress", "value": 1840, "share": 10.0, "tone": "emerald" },
+    { "name": "Storage", "value": 920, "share": 5.0, "tone": "lilac" },
+    { "name": "Other", "value": 740, "share": 4.0, "tone": "neutral" }
+  ],
+  "byDay": [
+    { "date": "Apr 4", "spend": 460 },
+    { "date": "Apr 5", "spend": 480 },
+    { "date": "Apr 6", "spend": 502 },
+    { "date": "Apr 7", "spend": 520 },
+    { "date": "Apr 8", "spend": 548 },
+    { "date": "Apr 9", "spend": 580 },
+    { "date": "Apr 10", "spend": 612 }
+  ]
+}

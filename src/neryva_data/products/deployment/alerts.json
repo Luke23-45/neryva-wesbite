@@ -1,0 +1,69 @@
+{
+  "incidents": [
+    {
+      "id": "i1",
+      "title": "staging-reasoner auto-rollback triggered",
+      "severity": "high",
+      "status": "resolved",
+      "pipeline": "staging-reasoner-rollout",
+      "region": "eu-west-1",
+      "startedAt": "12:31:14 UTC",
+      "duration": "8m 22s",
+      "responder": "Sara Chen",
+      "tone": "warning",
+      "summary": "Error rate spiked above 0.25% threshold during canary. Auto-rollback succeeded."
+    },
+    {
+      "id": "i2",
+      "title": "p95 latency spike in us-east-2",
+      "severity": "medium",
+      "status": "investigating",
+      "pipeline": "edge-inference-fleet",
+      "region": "us-east-2",
+      "startedAt": "12:46:32 UTC",
+      "duration": "ongoing",
+      "responder": "Avery Kim",
+      "tone": "warning",
+      "summary": "p95 latency exceeded 300ms threshold. Autoscaler added 2 replicas."
+    },
+    {
+      "id": "i3",
+      "title": "Vision API timeout in ap-southeast-1",
+      "severity": "medium",
+      "status": "mitigated",
+      "pipeline": "vision-api-v3-canary",
+      "region": "ap-southeast-1",
+      "startedAt": "12:34:14 UTC",
+      "duration": "12m 04s",
+      "responder": "Marcus Lee",
+      "tone": "warning",
+      "summary": "3 inference timeouts. Model server overloaded — canary paused."
+    },
+    {
+      "id": "i4",
+      "title": "Engineering changelog sync failed",
+      "severity": "low",
+      "status": "open",
+      "pipeline": "production-classifier-v2",
+      "region": "global",
+      "startedAt": "08:14:22 UTC",
+      "duration": "ongoing",
+      "responder": "—",
+      "tone": "error",
+      "summary": "Sync returned 403 — credentials rotated upstream. Awaiting new credentials."
+    }
+  ],
+  "alertRules": [
+    { "id": "r1", "name": "High error rate", "condition": "error_rate > 0.25%", "window": "5 min", "severity": "high", "channels": ["PagerDuty", "Slack"], "tone": "error", "enabled": true },
+    { "id": "r2", "name": "p95 latency spike", "condition": "p95_latency > 300ms", "window": "5 min", "severity": "medium", "channels": ["Slack"], "tone": "warning", "enabled": true },
+    { "id": "r3", "name": "GPU saturation", "condition": "gpu_util > 90%", "window": "10 min", "severity": "medium", "channels": ["Slack"], "tone": "warning", "enabled": true },
+    { "id": "r4", "name": "Replica not ready", "condition": "ready_replicas < desired", "window": "1 min", "severity": "high", "channels": ["PagerDuty", "Slack"], "tone": "error", "enabled": true },
+    { "id": "r5", "name": "Memory pressure", "condition": "memory > 85%", "window": "10 min", "severity": "low", "channels": ["Email"], "tone": "azure", "enabled": true },
+    { "id": "r6", "name": "Disk usage high", "condition": "disk > 80%", "window": "30 min", "severity": "low", "channels": ["Email"], "tone": "azure", "enabled": false }
+  ],
+  "onCall": {
+    "primary": { "name": "Avery Kim", "email": "avery@aurora.example", "rotation": "primary", "tone": "azure" },
+    "secondary": { "name": "Sara Chen", "email": "sara@aurora.example", "rotation": "secondary", "tone": "lilac" },
+    "escalation": { "name": "Marcus Lee", "email": "marcus@aurora.example", "rotation": "escalation", "tone": "warning" }
+  }
+}
