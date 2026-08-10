@@ -1,0 +1,28 @@
+{
+  "nav": [
+    { "label": "Dashboard", "to": "/agent-studio/dashboard", "icon": "dashboard" },
+    { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
+    { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
+    { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
+    { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
+    { "label": "Settings", "to": "/agent-studio/settings", "icon": "settings" }
+  ],
+  "user": {
+    "initials": "NV",
+    "name": "Neryva Studio",
+    "tier": "Pro",
+    "email": "you@neryva.studio"
+  },
+  "workspace": {
+    "name": "Aurora Labs",
+    "plan": "Pro"
+  },
+  "searchPlaceholder": "Search Studio…",
+  "recentChats": [
+    { "id": "h1", "title": "Quarterly brief — Q4 strategy" },
+    { "id": "h2", "title": "Draft: investor update memo" },
+    { "id": "h3", "title": "Refactor onboarding flow" },
+    { "id": "h4", "title": "Audit translation coverage" },
+    { "id": "h5", "title": "Spreadsheet → narrative" }
+  ]
+}

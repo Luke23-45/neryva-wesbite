@@ -1,0 +1,1 @@
+export { StudioAreaChart } from './StudioAreaChart';

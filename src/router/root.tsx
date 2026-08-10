@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
+import { createRootRouteWithContext, Outlet, useLocation } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -34,13 +34,18 @@ const pageTransition: any = {
   ease: [0.2, 0, 0, 1],
 };
 
+const APP_SHELL_PATHS = ['/products/agent-studio'];
+
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: function RootLayout() {
+    const location = useLocation();
+    const isAppShell = APP_SHELL_PATHS.some((p) => location.pathname.startsWith(p));
+
     return (
       <LayoutWrapper>
         {/* Site-wide default SEO — overridden per-page by each page's own <PageHead> */}
         <PageHead />
-        <Header />
+        {!isAppShell && <Header />}
         <AnimatePresence mode="wait">
           <MainContent
             variants={pageVariants}
@@ -54,7 +59,7 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
             </Suspense>
           </MainContent>
         </AnimatePresence>
-        <Footer />
+        {!isAppShell && <Footer />}
         {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}
       </LayoutWrapper>
     );

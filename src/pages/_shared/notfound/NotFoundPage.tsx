@@ -4,7 +4,10 @@ import NotFoundGrid from '@/sections/pages/_shared/not-found/NotFoundGrid';
 export default function NotFoundPage() {
   return (
     <>
-      <Helmet><title>Page Not Found — Neryva</title></Helmet>
+      <Helmet>
+        <title>Page Not Found — Neryva</title>
+        <meta name="robots" content="noindex" />
+      </Helmet>
       <NotFoundGrid />
     </>
   );

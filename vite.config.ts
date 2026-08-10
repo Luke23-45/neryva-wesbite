@@ -47,6 +47,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom', '@tanstack/react-router', '@tanstack/react-query'],
           animations: ['framer-motion'],
           styles: ['styled-components'],
+          charts: ['recharts'],
         },
       },
     },

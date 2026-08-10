@@ -1,0 +1,138 @@
+{
+  "agents": ["All agents", "Support Concierge", "Onboarding Guide", "Sales Researcher", "Refund Specialist"],
+  "statuses": ["All", "Open", "Resolved", "Escalated"],
+  "conversations": [
+    {
+      "id": "c1",
+      "agent": "Support Concierge",
+      "channel": "Web",
+      "user": "Sara K.",
+      "preview": "My invoice shows a duplicate charge from March 4…",
+      "status": "resolved",
+      "rating": 5,
+      "messages": 12,
+      "duration": "4m",
+      "time": "12:48",
+      "transcript": [
+        { "role": "user", "text": "My invoice shows a duplicate charge from March 4. Can you help me check it?" },
+        { "role": "agent", "text": "I'll pull up your billing record. One moment while I check the March invoices." },
+        { "role": "agent", "text": "I can see two charges on March 4. The second one looks like an authorization hold that should release in 5 business days. Want me to flag it for the billing team?" },
+        { "role": "user", "text": "Yes please, and let me know when it's released." },
+        { "role": "agent", "text": "Done — flagged with the billing team and you'll get a notification when it's released." }
+      ]
+    },
+    {
+      "id": "c2",
+      "agent": "Onboarding Guide",
+      "channel": "In-app",
+      "user": "Marc D.",
+      "preview": "Where do I configure SSO for our workspace?",
+      "status": "open",
+      "rating": 0,
+      "messages": 6,
+      "duration": "2m",
+      "time": "12:31",
+      "transcript": [
+        { "role": "user", "text": "Where do I configure SSO for our workspace?" },
+        { "role": "agent", "text": "Head to Settings → Security → Single sign-on. I can walk you through the SAML setup if you'd like." }
+      ]
+    },
+    {
+      "id": "c3",
+      "agent": "Sales Researcher",
+      "channel": "Email",
+      "user": "J. Rivera",
+      "preview": "Researching the Acme Corp account before tomorrow's call…",
+      "status": "escalated",
+      "rating": 0,
+      "messages": 18,
+      "duration": "11m",
+      "time": "12:14",
+      "transcript": [
+        { "role": "user", "text": "Pull the latest context on Acme Corp and prepare a brief for the call tomorrow." },
+        { "role": "agent", "text": "I've compiled their tech stack, recent hires, and open opportunities. Sharing the brief now." },
+        { "role": "agent", "text": "Note: pricing negotiation requires a senior AE. Escalating to your assigned rep." }
+      ]
+    },
+    {
+      "id": "c4",
+      "agent": "Support Concierge",
+      "channel": "Web",
+      "user": "Anonymous",
+      "preview": "Tool timeout while syncing with Salesforce…",
+      "status": "open",
+      "rating": 0,
+      "messages": 3,
+      "duration": "1m",
+      "time": "11:58",
+      "transcript": [
+        { "role": "user", "text": "I'm getting a timeout when syncing with Salesforce." },
+        { "role": "agent", "text": "Let me retry the sync and check the integration logs." }
+      ]
+    },
+    {
+      "id": "c5",
+      "agent": "Onboarding Guide",
+      "channel": "Web",
+      "user": "Priya N.",
+      "preview": "Feature request: bulk import for our 1,200 contacts…",
+      "status": "resolved",
+      "rating": 4,
+      "messages": 9,
+      "duration": "6m",
+      "time": "11:42",
+      "transcript": [
+        { "role": "user", "text": "We have 1,200 contacts to import — bulk import please?" },
+        { "role": "agent", "text": "Bulk import is on the roadmap for next quarter. I can flag your workspace as a priority for early access." }
+      ]
+    },
+    {
+      "id": "c6",
+      "agent": "Refund Specialist",
+      "channel": "Web",
+      "user": "Liam O.",
+      "preview": "Requesting a refund — cancelled within 14 days…",
+      "status": "resolved",
+      "rating": 5,
+      "messages": 7,
+      "duration": "3m",
+      "time": "11:21",
+      "transcript": [
+        { "role": "user", "text": "I cancelled within 14 days — eligible for refund, right?" },
+        { "role": "agent", "text": "Yes. Confirming your cancellation date and processing the refund now." }
+      ]
+    },
+    {
+      "id": "c7",
+      "agent": "Support Concierge",
+      "channel": "Email",
+      "user": "Dana W.",
+      "preview": "Following up on the security review from last week…",
+      "status": "escalated",
+      "rating": 0,
+      "messages": 14,
+      "duration": "8m",
+      "time": "10:54",
+      "transcript": [
+        { "role": "user", "text": "Any update on our security review?" },
+        { "role": "agent", "text": "Escalating to the security team for an updated status." }
+      ]
+    },
+    {
+      "id": "c8",
+      "agent": "Sales Researcher",
+      "channel": "Email",
+      "user": "B. Chen",
+      "preview": "Quick check on competitor pricing tiers…",
+      "status": "open",
+      "rating": 0,
+      "messages": 4,
+      "duration": "2m",
+      "time": "10:31",
+      "transcript": [
+        { "role": "user", "text": "What are the closest competitor pricing tiers we should know about?" },
+        { "role": "agent", "text": "Pulling the latest from three primary competitors — I'll have a comparison in a moment." }
+      ]
+    }
+  ]
+}

@@ -51,9 +51,30 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap"
       rel="stylesheet"
     />
+
+    <!-- ── JSON-LD Structured Data ──────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Neryva",
+      "description": "Neryva is a research lab focused on improving the efficiency, stability, and deployability of large-scale AI systems.",
+      "url": "https://www.neryva.com",
+      "logo": "https://www.neryva.com/favicon.svg",
+      "foundingDate": "2024"
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="padding: 40px; font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1>Neryva — AI Research Lab</h1>
+        <p>Neryva is a research lab focused on improving the efficiency, stability, and deployability of large-scale AI systems.</p>
+        <p>Our work spans language systems, robotics, biomedical AI, energy systems, and computational science.</p>
+        <p>Please enable JavaScript to view the full experience.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

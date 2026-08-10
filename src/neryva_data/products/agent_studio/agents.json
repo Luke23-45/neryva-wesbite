@@ -1,0 +1,10 @@
+{
+  "agents": [
+    { "id": "a1", "name": "Support Concierge", "description": "First-line customer support for billing and account issues", "status": "active", "model": "Reasoner Pro", "responseMs": 1240, "volume": 3210, "resolution": 95, "tone": "lilac", "channels": ["Web", "Email"], "updated": "2h ago" },
+    { "id": "a2", "name": "Onboarding Guide", "description": "Walks new customers through setup and integrations", "status": "active", "model": "Instant Fast", "responseMs": 880, "volume": 1820, "resolution": 93, "tone": "emerald", "channels": ["Web", "In-app"], "updated": "1d ago" },
+    { "id": "a3", "name": "Sales Researcher", "description": "Researches prospects and prepares briefs for the sales team", "status": "active", "model": "Researcher Beta", "responseMs": 2110, "volume": 940, "resolution": 88, "tone": "azure", "channels": ["Email"], "updated": "3h ago" },
+    { "id": "a4", "name": "Refund Specialist", "description": "Handles refund requests within policy guardrails", "status": "paused", "model": "Reasoner Pro", "responseMs": 1460, "volume": 460, "resolution": 90, "tone": "warning", "channels": ["Web"], "updated": "5d ago" },
+    { "id": "a5", "name": "Knowledge Curator", "description": "Indexes internal docs and answers questions on policies", "status": "draft", "model": "Reasoner Pro", "responseMs": 0, "volume": 0, "resolution": 0, "tone": "neutral", "channels": ["Web"], "updated": "Drafting" },
+    { "id": "a6", "name": "Voice Concierge", "description": "Phone-based customer support with streaming TTS", "status": "active", "model": "Instant Fast", "responseMs": 980, "volume": 720, "resolution": 91, "tone": "azure", "channels": ["Phone"], "updated": "12m ago" }
+  ]
+}

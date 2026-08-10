@@ -1,0 +1,97 @@
+{
+  "kpis": [
+    {
+      "label": "Conversations",
+      "value": "12,840",
+      "delta": { "value": "+8.4%", "positive": true },
+      "spark": [12, 14, 11, 16, 18, 14, 19, 22, 20, 24, 26, 24, 28, 30, 32, 31],
+      "color": "#60a5fa",
+      "footnote": "vs last 7 days"
+    },
+    {
+      "label": "Avg response",
+      "value": "1.42s",
+      "delta": { "value": "-12%", "positive": true },
+      "spark": [2.1, 2.0, 1.9, 2.0, 1.8, 1.7, 1.7, 1.6, 1.5, 1.6, 1.5, 1.4, 1.5, 1.4, 1.4, 1.42],
+      "color": "#05e3a4",
+      "footnote": "p50 latency"
+    },
+    {
+      "label": "Resolution rate",
+      "value": "92.7%",
+      "delta": { "value": "+1.6pt", "positive": true },
+      "spark": [88, 89, 90, 91, 90, 91, 92, 92, 92, 93, 92, 93, 93, 92, 93, 92.7],
+      "color": "#c084fc",
+      "footnote": "last 30 days"
+    },
+    {
+      "label": "Cost / 1k msgs",
+      "value": "$0.84",
+      "delta": { "value": "+3.2%", "positive": false },
+      "spark": [0.78, 0.79, 0.80, 0.81, 0.82, 0.81, 0.83, 0.84, 0.83, 0.85, 0.86, 0.85, 0.84, 0.85, 0.84, 0.84],
+      "color": "#fbbf24",
+      "footnote": "blended"
+    }
+  ],
+  "usage": {
+    "title": "Messages over time",
+    "subtitle": "Inbound and outbound across all agents — last 30 days",
+    "series": [
+      { "key": "inbound", "name": "Inbound", "color": "#60a5fa" },
+      { "key": "outbound", "name": "Outbound", "color": "#c084fc" }
+    ],
+    "points": [
+      { "date": "Mar 12", "inbound": 410, "outbound": 320 },
+      { "date": "Mar 13", "inbound": 460, "outbound": 340 },
+      { "date": "Mar 14", "inbound": 380, "outbound": 300 },
+      { "date": "Mar 15", "inbound": 520, "outbound": 410 },
+      { "date": "Mar 16", "inbound": 540, "outbound": 430 },
+      { "date": "Mar 17", "inbound": 610, "outbound": 480 },
+      { "date": "Mar 18", "inbound": 590, "outbound": 470 },
+      { "date": "Mar 19", "inbound": 720, "outbound": 560 },
+      { "date": "Mar 20", "inbound": 760, "outbound": 600 },
+      { "date": "Mar 21", "inbound": 690, "outbound": 540 },
+      { "date": "Mar 22", "inbound": 740, "outbound": 590 },
+      { "date": "Mar 23", "inbound": 810, "outbound": 640 },
+      { "date": "Mar 24", "inbound": 760, "outbound": 610 },
+      { "date": "Mar 25", "inbound": 820, "outbound": 650 },
+      { "date": "Mar 26", "inbound": 900, "outbound": 720 },
+      { "date": "Mar 27", "inbound": 870, "outbound": 700 },
+      { "date": "Mar 28", "inbound": 940, "outbound": 760 },
+      { "date": "Mar 29", "inbound": 980, "outbound": 790 },
+      { "date": "Mar 30", "inbound": 920, "outbound": 740 },
+      { "date": "Mar 31", "inbound": 1010, "outbound": 820 },
+      { "date": "Apr 1", "inbound": 980, "outbound": 790 },
+      { "date": "Apr 2", "inbound": 1050, "outbound": 840 },
+      { "date": "Apr 3", "inbound": 1100, "outbound": 880 },
+      { "date": "Apr 4", "inbound": 1080, "outbound": 870 },
+      { "date": "Apr 5", "inbound": 1150, "outbound": 920 },
+      { "date": "Apr 6", "inbound": 1180, "outbound": 950 },
+      { "date": "Apr 7", "inbound": 1230, "outbound": 990 },
+      { "date": "Apr 8", "inbound": 1260, "outbound": 1010 },
+      { "date": "Apr 9", "inbound": 1290, "outbound": 1040 },
+      { "date": "Apr 10", "inbound": 1340, "outbound": 1080 }
+    ]
+  },
+  "agents": [
+    { "id": "a1", "name": "Support Concierge", "status": "active", "model": "Reasoner Pro", "responseMs": 1240, "volume": 3210, "resolution": 95, "tone": "lilac" },
+    { "id": "a2", "name": "Onboarding Guide", "status": "active", "model": "Instant Fast", "responseMs": 880, "volume": 1820, "resolution": 93, "tone": "emerald" },
+    { "id": "a3", "name": "Sales Researcher", "status": "active", "model": "Researcher Beta", "responseMs": 2110, "volume": 940, "resolution": 88, "tone": "azure" },
+    { "id": "a4", "name": "Refund Specialist", "status": "paused", "model": "Reasoner Pro", "responseMs": 1460, "volume": 460, "resolution": 90, "tone": "warning" },
+    { "id": "a5", "name": "Knowledge Curator", "status": "draft", "model": "Reasoner Pro", "responseMs": 0, "volume": 0, "resolution": 0, "tone": "neutral" }
+  ],
+  "activity": [
+    { "id": "ev1", "time": "12:48", "kind": "escalation", "title": "Refund edge case escalated", "agent": "Support Concierge", "tone": "warning" },
+    { "id": "ev2", "time": "12:31", "kind": "resolved", "title": "Subscription question resolved", "agent": "Onboarding Guide", "tone": "success" },
+    { "id": "ev3", "time": "12:14", "kind": "new", "title": "Enterprise lead captured", "agent": "Sales Researcher", "tone": "info" },
+    { "id": "ev4", "time": "11:58", "kind": "error", "title": "Tool timeout — Salesforce sync", "agent": "Support Concierge", "tone": "error" },
+    { "id": "ev5", "time": "11:42", "kind": "resolved", "title": "Feature request triaged", "agent": "Onboarding Guide", "tone": "success" },
+    { "id": "ev6", "time": "11:21", "kind": "new", "title": "Account security review", "agent": "Refund Specialist", "tone": "info" }
+  ],
+  "health": [
+    { "label": "API p95 latency", "value": "412ms", "tone": "emerald" },
+    { "label": "Tool error rate", "value": "0.18%", "tone": "emerald" },
+    { "label": "Reasoner queue", "value": "3 jobs", "tone": "azure" },
+    { "label": "Active sessions", "value": "284", "tone": "lilac" }
+  ]
+}

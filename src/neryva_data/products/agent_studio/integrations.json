@@ -1,0 +1,19 @@
+{
+  "categories": ["All", "Communication", "CRM", "Productivity", "Data", "Developer"],
+  "connectors": [
+    { "id": "slack", "name": "Slack", "category": "Communication", "description": "Send messages, react, and read channels", "connected": true, "tone": "lilac" },
+    { "id": "gmail", "name": "Gmail", "category": "Communication", "description": "Read, draft, and send email on your behalf", "connected": true, "tone": "azure" },
+    { "id": "outlook", "name": "Outlook", "category": "Communication", "description": "Microsoft 365 mail and calendar", "connected": false, "tone": "azure" },
+    { "id": "twilio", "name": "Twilio", "category": "Communication", "description": "Voice and SMS for live agents", "connected": false, "tone": "rose" },
+    { "id": "salesforce", "name": "Salesforce", "category": "CRM", "description": "Accounts, opportunities, and contact records", "connected": true, "tone": "azure" },
+    { "id": "hubspot", "name": "HubSpot", "category": "CRM", "description": "Pipelines, deals, and contacts", "connected": false, "tone": "amber" },
+    { "id": "zendesk", "name": "Zendesk", "category": "CRM", "description": "Tickets and customer profiles", "connected": false, "tone": "emerald" },
+    { "id": "notion", "name": "Notion", "category": "Productivity", "description": "Pages and databases as knowledge", "connected": true, "tone": "neutral" },
+    { "id": "gdrive", "name": "Google Drive", "category": "Productivity", "description": "Read and index files in Drive", "connected": false, "tone": "azure" },
+    { "id": "confluence", "name": "Confluence", "category": "Productivity", "description": "Internal docs and runbooks", "connected": false, "tone": "azure" },
+    { "id": "snowflake", "name": "Snowflake", "category": "Data", "description": "Warehouse queries with row-level security", "connected": true, "tone": "azure" },
+    { "id": "bigquery", "name": "BigQuery", "category": "Data", "description": "Google Cloud warehouse queries", "connected": false, "tone": "azure" },
+    { "id": "webhook", "name": "Webhooks", "category": "Developer", "description": "Send events to any HTTP endpoint", "connected": true, "tone": "lilac" },
+    { "id": "zapier", "name": "Zapier", "category": "Developer", "description": "5,000+ app integrations via Zapier", "connected": false, "tone": "amber" }
+  ]
+}

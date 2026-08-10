@@ -1,0 +1,39 @@
+{
+  "workspace": {
+    "brand": "Neryva",
+    "product": "Agent Studio",
+    "greeting": {
+      "title": "Evening, ready to focus on work?",
+      "subtitle": "Compose, context, and converse. Your agents, tools, and memory are one keystroke away."
+    },
+    "banner": {
+      "label": "Studio is sharper with your apps connected",
+      "action": "Connect"
+    },
+    "composer": {
+      "placeholder": "Type / for quick access",
+      "mode": "Fast",
+      "hint": "Press / to invoke skills, agents, and connected tools."
+    },
+    "suggestions": [
+      { "icon": "sparkles", "label": "Set up and discover what Studio can do" },
+      { "icon": "compass", "label": "Deep research on the latest AI news" },
+      { "icon": "plug", "label": "Connect your apps for sharper answers" },
+      { "icon": "orbit", "label": "Discover more" }
+    ],
+    "history": [
+      { "id": "h1", "title": "Quarterly brief — Q4 strategy", "group": "Today" },
+      { "id": "h2", "title": "Draft: investor update memo", "group": "Today" },
+      { "id": "h3", "title": "Refactor onboarding flow", "group": "Yesterday" },
+      { "id": "h4", "title": "Audit translation coverage", "group": "Yesterday" },
+      { "id": "h5", "title": "Spreadsheet → narrative", "group": "This week" },
+      { "id": "h6", "title": "Persona: enterprise buyer", "group": "This week" },
+      { "id": "h7", "title": "Roadmap themes for Studio v2", "group": "Last week" }
+    ],
+    "user": {
+      "initials": "NV",
+      "name": "Personal",
+      "tier": "Free"
+    }
+  }
+}
