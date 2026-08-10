@@ -1,0 +1,143 @@
+{
+  "endpoints": [
+    {
+      "id": "chat",
+      "method": "POST",
+      "path": "/v1/chat",
+      "group": "Conversations",
+      "description": "Send a message to an agent and receive a streamed response.",
+      "params": [
+        { "name": "agent_id", "type": "string", "required": true, "desc": "The agent identifier" },
+        { "name": "messages", "type": "array", "required": true, "desc": "Array of {role, content} pairs" },
+        { "name": "stream", "type": "boolean", "required": false, "desc": "Stream the response (default: false)" },
+        { "name": "temperature", "type": "number", "required": false, "desc": "Sampling temperature 0–1" }
+      ]
+    },
+    {
+      "id": "chat-stream",
+      "method": "POST",
+      "path": "/v1/chat/stream",
+      "group": "Conversations",
+      "description": "Streaming variant of /v1/chat. Returns SSE chunks.",
+      "params": [
+        { "name": "agent_id", "type": "string", "required": true, "desc": "The agent identifier" },
+        { "name": "messages", "type": "array", "required": true, "desc": "Message history" }
+      ]
+    },
+    {
+      "id": "agents-list",
+      "method": "GET",
+      "path": "/v1/agents",
+      "group": "Agents",
+      "description": "List all agents in the workspace.",
+      "params": [
+        { "name": "limit", "type": "number", "required": false, "desc": "Max results (default 50)" },
+        { "name": "cursor", "type": "string", "required": false, "desc": "Pagination cursor" }
+      ]
+    },
+    {
+      "id": "agents-create",
+      "method": "POST",
+      "path": "/v1/agents",
+      "group": "Agents",
+      "description": "Create a new agent with a system prompt and tools.",
+      "params": [
+        { "name": "name", "type": "string", "required": true, "desc": "Agent name" },
+        { "name": "model", "type": "string", "required": true, "desc": "Model identifier (reasoner-pro, instant-fast, …)" },
+        { "name": "system_prompt", "type": "string", "required": true, "desc": "System prompt" },
+        { "name": "tools", "type": "array", "required": false, "desc": "Tool definitions" }
+      ]
+    },
+    {
+      "id": "agents-retrieve",
+      "method": "GET",
+      "path": "/v1/agents/{id}",
+      "group": "Agents",
+      "description": "Retrieve a specific agent by id.",
+      "params": [
+        { "name": "id", "type": "string", "required": true, "desc": "Agent identifier" }
+      ]
+    },
+    {
+      "id": "agents-update",
+      "method": "PATCH",
+      "path": "/v1/agents/{id}",
+      "group": "Agents",
+      "description": "Update an agent's configuration.",
+      "params": [
+        { "name": "id", "type": "string", "required": true, "desc": "Agent identifier" },
+        { "name": "system_prompt", "type": "string", "required": false, "desc": "New system prompt" },
+        { "name": "model", "type": "string", "required": false, "desc": "New model" }
+      ]
+    },
+    {
+      "id": "agents-delete",
+      "method": "DELETE",
+      "path": "/v1/agents/{id}",
+      "group": "Agents",
+      "description": "Permanently delete an agent.",
+      "params": [
+        { "name": "id", "type": "string", "required": true, "desc": "Agent identifier" }
+      ]
+    },
+    {
+      "id": "knowledge-sources",
+      "method": "POST",
+      "path": "/v1/knowledge/sources",
+      "group": "Knowledge",
+      "description": "Add a knowledge source (URL, file, or Notion workspace).",
+      "params": [
+        { "name": "kind", "type": "string", "required": true, "desc": "url | file | notion" },
+        { "name": "url", "type": "string", "required": false, "desc": "Source URL" },
+        { "name": "name", "type": "string", "required": true, "desc": "Display name" }
+      ]
+    },
+    {
+      "id": "knowledge-query",
+      "method": "POST",
+      "path": "/v1/knowledge/query",
+      "group": "Knowledge",
+      "description": "Query the knowledge base. Returns ranked documents.",
+      "params": [
+        { "name": "query", "type": "string", "required": true, "desc": "Search query" },
+        { "name": "top_k", "type": "number", "required": false, "desc": "Number of results" }
+      ]
+    },
+    {
+      "id": "conversations-list",
+      "method": "GET",
+      "path": "/v1/conversations",
+      "group": "Conversations",
+      "description": "List conversations with filters.",
+      "params": [
+        { "name": "agent_id", "type": "string", "required": false, "desc": "Filter by agent" },
+        { "name": "from", "type": "string", "required": false, "desc": "ISO 8601 timestamp" },
+        { "name": "to", "type": "string", "required": false, "desc": "ISO 8601 timestamp" }
+      ]
+    },
+    {
+      "id": "webhooks-create",
+      "method": "POST",
+      "path": "/v1/webhooks",
+      "group": "Webhooks",
+      "description": "Register an outbound webhook for events.",
+      "params": [
+        { "name": "url", "type": "string", "required": true, "desc": "Destination URL" },
+        { "name": "events", "type": "array", "required": true, "desc": "Event types to subscribe to" },
+        { "name": "secret", "type": "string", "required": false, "desc": "HMAC secret for signing payloads" }
+      ]
+    },
+    {
+      "id": "analytics-usage",
+      "method": "GET",
+      "path": "/v1/analytics/usage",
+      "group": "Analytics",
+      "description": "Get usage analytics for a time window.",
+      "params": [
+        { "name": "from", "type": "string", "required": true, "desc": "ISO 8601 timestamp" },
+        { "name": "to", "type": "string", "required": true, "desc": "ISO 8601 timestamp" },
+        { "name": "group_by", "type": "string", "required": false, "desc": "agent | channel | day" }
+      ]
+    }
+  ]
+}

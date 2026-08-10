@@ -1,0 +1,93 @@
+{
+  "webhooks": [
+    {
+      "id": "w1",
+      "name": "Production deploys",
+      "url": "https://hooks.aurora.example/deploy",
+      "events": ["deploy.succeeded", "deploy.failed", "deploy.rolled_back"],
+      "status": "active",
+      "tone": "emerald",
+      "createdAt": "3 weeks ago",
+      "lastDelivery": "2 minutes ago",
+      "successRate": 100,
+      "totalDeliveries": 18420,
+      "secret": "whsec_…f3a8"
+    },
+    {
+      "id": "w2",
+      "name": "PagerDuty alerts",
+      "url": "https://events.pagerduty.com/v2/enqueue",
+      "events": ["alert.fired", "incident.opened"],
+      "status": "active",
+      "tone": "emerald",
+      "createdAt": "1 month ago",
+      "lastDelivery": "14 minutes ago",
+      "successRate": 99.8,
+      "totalDeliveries": 4820,
+      "secret": "whsec_…pqR4"
+    },
+    {
+      "id": "w3",
+      "name": "Slack channel",
+      "url": "https://hooks.slack.com/services/T0/B0/xxx",
+      "events": ["deploy.*", "alert.*"],
+      "status": "active",
+      "tone": "emerald",
+      "createdAt": "2 months ago",
+      "lastDelivery": "5 minutes ago",
+      "successRate": 99.4,
+      "totalDeliveries": 24180,
+      "secret": "whsec_…nQ8d"
+    },
+    {
+      "id": "w4",
+      "name": "Audit log archive",
+      "url": "https://compliance.aurora.example/audit",
+      "events": ["audit.*"],
+      "status": "active",
+      "tone": "emerald",
+      "createdAt": "2 months ago",
+      "lastDelivery": "1 hour ago",
+      "successRate": 100,
+      "totalDeliveries": 1840,
+      "secret": "whsec_…Wp7n"
+    },
+    {
+      "id": "w5",
+      "name": "Legacy CRM sync",
+      "url": "https://crm.aurora.example/webhook/deploy",
+      "events": ["deploy.succeeded"],
+      "status": "failing",
+      "tone": "error",
+      "createdAt": "3 months ago",
+      "lastDelivery": "2 days ago",
+      "successRate": 84.2,
+      "totalDeliveries": 920,
+      "secret": "whsec_…3mK9"
+    },
+    {
+      "id": "w6",
+      "name": "Staging notifications",
+      "url": "https://hooks.aurora.example/staging",
+      "events": ["deploy.*"],
+      "status": "paused",
+      "tone": "neutral",
+      "createdAt": "1 week ago",
+      "lastDelivery": "5 days ago",
+      "successRate": 100,
+      "totalDeliveries": 124,
+      "secret": "whsec_…1a4f"
+    }
+  ],
+  "events": [
+    { "id": "deploy.succeeded", "label": "deploy.succeeded", "category": "Deploy", "description": "A deployment completed successfully" },
+    { "id": "deploy.failed", "label": "deploy.failed", "description": "A deployment failed", "category": "Deploy" },
+    { "id": "deploy.rolled_back", "label": "deploy.rolled_back", "description": "A deployment was rolled back", "category": "Deploy" },
+    { "id": "alert.fired", "label": "alert.fired", "description": "An alert rule fired", "category": "Alerts" },
+    { "id": "incident.opened", "label": "incident.opened", "description": "A new incident was opened", "category": "Alerts" },
+    { "id": "incident.resolved", "label": "incident.resolved", "description": "An incident was resolved", "category": "Alerts" },
+    { "id": "audit.*", "label": "audit.*", "description": "Any audit event", "category": "Audit" },
+    { "id": "deploy.*", "label": "deploy.*", "description": "All deployment events", "category": "Deploy" },
+    { "id": "alert.*", "label": "alert.*", "description": "All alert events", "category": "Alerts" }
+  ]
+}

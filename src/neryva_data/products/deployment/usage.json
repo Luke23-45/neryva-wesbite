@@ -1,0 +1,54 @@
+{
+  "summary": {
+    "requestsThisMonth": 184200000,
+    "requestsLastMonth": 162400000,
+    "computeHours": 18420,
+    "bandwidthTB": 12.4
+  },
+  "byRegion": [
+    { "code": "us-east-1", "name": "N. Virginia", "requests": 64.2, "share": 34.9, "tone": "warning" },
+    { "code": "us-west-2", "name": "Oregon", "requests": 24.1, "share": 13.1, "tone": "azure" },
+    { "code": "eu-west-1", "name": "Ireland", "requests": 28.4, "share": 15.4, "tone": "azure" },
+    { "code": "eu-central-1", "name": "Frankfurt", "requests": 18.6, "share": 10.1, "tone": "azure" },
+    { "code": "ap-southeast-1", "name": "Singapore", "requests": 14.2, "share": 7.7, "tone": "emerald" },
+    { "code": "ap-northeast-1", "name": "Tokyo", "requests": 12.8, "share": 6.9, "tone": "emerald" },
+    { "code": "ap-south-1", "name": "Mumbai", "requests": 14.2, "share": 7.7, "tone": "emerald" },
+    { "code": "sa-east-1", "name": "São Paulo", "requests": 7.7, "share": 4.2, "tone": "azure" }
+  ],
+  "byDeployment": [
+    { "id": "d1", "name": "production-reasoner", "requests": 64.2, "share": 34.9 },
+    { "id": "d2", "name": "chat-router-prod", "requests": 48.4, "share": 26.3 },
+    { "id": "d3", "name": "vision-ocr-prod", "requests": 28.6, "share": 15.5 },
+    { "id": "d4", "name": "edge-inference-fleet", "requests": 22.4, "share": 12.2 },
+    { "id": "d5", "name": "batch-embeddings", "requests": 14.8, "share": 8.0 }
+  ],
+  "daily": [
+    { "date": "Jul 1", "requests": 4.2 },
+    { "date": "Jul 2", "requests": 4.8 },
+    { "date": "Jul 3", "requests": 5.1 },
+    { "date": "Jul 4", "requests": 4.6 },
+    { "date": "Jul 5", "requests": 5.4 },
+    { "date": "Jul 6", "requests": 5.2 },
+    { "date": "Jul 7", "requests": 4.9 },
+    { "date": "Jul 8", "requests": 5.8 },
+    { "date": "Jul 9", "requests": 6.1 },
+    { "date": "Jul 10", "requests": 5.9 },
+    { "date": "Jul 11", "requests": 6.2 },
+    { "date": "Jul 12", "requests": 5.7 },
+    { "date": "Jul 13", "requests": 6.4 },
+    { "date": "Jul 14", "requests": 6.8 }
+  ],
+  "quotas": [
+    { "id": "q1", "name": "Requests / month", "used": 184200000, "limit": 500000000, "tone": "emerald", "renews": "in 12 days" },
+    { "id": "q2", "name": "Compute hours", "used": 18420, "limit": 50000, "tone": "azure", "renews": "monthly" },
+    { "id": "q3", "name": "Bandwidth (TB)", "used": 12.4, "limit": 50, "tone": "emerald", "renews": "monthly" },
+    { "id": "q4", "name": "Concurrent replicas", "used": 184, "limit": 500, "tone": "azure", "renews": "live" },
+    { "id": "q5", "name": "Storage (TB)", "used": 4.2, "limit": 20, "tone": "emerald", "renews": "monthly" }
+  ],
+  "rateLimits": [
+    { "id": "rl1", "endpoint": "api.aurora.example/*", "limit": "10,000 req/min", "burst": "15,000 req/min", "current": "6,420 req/min", "tone": "emerald" },
+    { "id": "rl2", "endpoint": "edge.aurora.example/*", "limit": "50,000 req/min", "burst": "75,000 req/min", "current": "32,800 req/min", "tone": "azure" },
+    { "id": "rl3", "endpoint": "staging.aurora.example/*", "limit": "5,000 req/min", "burst": "10,000 req/min", "current": "820 req/min", "tone": "emerald" },
+    { "id": "rl4", "endpoint": "internal-vpc.aurora.example/*", "limit": "unlimited", "burst": "—", "current": "184 req/min", "tone": "neutral" }
+  ]
+}

@@ -9,6 +9,11 @@
     { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" },
     { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
     { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
+    { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates" },
+    { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" },
+    { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" },
+    { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
+    { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations" },
     { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
     { "label": "Settings", "to": "/agent-studio/settings", "icon": "settings" }
   ],

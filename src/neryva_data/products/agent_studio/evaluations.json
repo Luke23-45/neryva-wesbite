@@ -1,0 +1,186 @@
+{
+  "summary": {
+    "datasetsCount": 12,
+    "runsThisMonth": 84,
+    "passingRate": 92.4,
+    "avgLatencyMs": 1840
+  },
+  "datasets": [
+    {
+      "id": "d1",
+      "name": "production-regression",
+      "examples": 1842,
+      "tone": "azure",
+      "agent": "chat-router-prod",
+      "kind": "regression",
+      "updatedAt": "2 days ago"
+    },
+    {
+      "id": "d2",
+      "name": "reasoning-bench-v3",
+      "examples": 412,
+      "tone": "amethyst",
+      "agent": "production-reasoner",
+      "kind": "benchmark",
+      "updatedAt": "1 week ago"
+    },
+    {
+      "id": "d3",
+      "name": "safety-suite",
+      "examples": 624,
+      "tone": "emerald",
+      "agent": "all",
+      "kind": "safety",
+      "updatedAt": "3 days ago"
+    },
+    {
+      "id": "d4",
+      "name": "rag-groundedness",
+      "examples": 928,
+      "tone": "lilac",
+      "agent": "retriever-edge",
+      "kind": "groundedness",
+      "updatedAt": "5 days ago"
+    },
+    {
+      "id": "d5",
+      "name": "vision-ocr-corpus",
+      "examples": 1480,
+      "tone": "azure",
+      "agent": "vision-ocr-prod",
+      "kind": "regression",
+      "updatedAt": "1 day ago"
+    },
+    {
+      "id": "d6",
+      "name": "edge-inference-stress",
+      "examples": 240,
+      "tone": "warning",
+      "agent": "edge-inference-fleet",
+      "kind": "stress",
+      "updatedAt": "4 days ago"
+    }
+  ],
+  "runs": [
+    {
+      "id": "r1",
+      "name": "production-regression · nightly",
+      "dataset": "production-regression",
+      "agent": "chat-router-prod",
+      "tone": "azure",
+      "status": "passed",
+      "passed": 1818,
+      "total": 1842,
+      "passRate": 98.7,
+      "p95Latency": 1640,
+      "duration": "4m 12s",
+      "startedAt": "6h ago"
+    },
+    {
+      "id": "r2",
+      "name": "reasoning-bench · v3.2 rollout",
+      "dataset": "reasoning-bench-v3",
+      "agent": "production-reasoner",
+      "tone": "emerald",
+      "status": "passed",
+      "passed": 401,
+      "total": 412,
+      "passRate": 97.3,
+      "p95Latency": 8420,
+      "duration": "12m 48s",
+      "startedAt": "1d ago"
+    },
+    {
+      "id": "r3",
+      "name": "safety-suite · pre-release",
+      "dataset": "safety-suite",
+      "agent": "all",
+      "tone": "emerald",
+      "status": "passed",
+      "passed": 622,
+      "total": 624,
+      "passRate": 99.7,
+      "p95Latency": 980,
+      "duration": "1m 38s",
+      "startedAt": "2d ago"
+    },
+    {
+      "id": "r4",
+      "name": "rag-groundedness · monthly",
+      "dataset": "rag-groundedness",
+      "agent": "retriever-edge",
+      "tone": "warning",
+      "status": "degraded",
+      "passed": 836,
+      "total": 928,
+      "passRate": 90.1,
+      "p95Latency": 1240,
+      "duration": "6m 24s",
+      "startedAt": "3d ago"
+    },
+    {
+      "id": "r5",
+      "name": "vision-ocr-corpus · nightly",
+      "dataset": "vision-ocr-corpus",
+      "agent": "vision-ocr-prod",
+      "tone": "azure",
+      "status": "passed",
+      "passed": 1464,
+      "total": 1480,
+      "passRate": 98.9,
+      "p95Latency": 720,
+      "duration": "3m 02s",
+      "startedAt": "4d ago"
+    },
+    {
+      "id": "r6",
+      "name": "edge-inference-stress · canary",
+      "dataset": "edge-inference-stress",
+      "agent": "edge-inference-fleet",
+      "tone": "error",
+      "status": "failed",
+      "passed": 198,
+      "total": 240,
+      "passRate": 82.5,
+      "p95Latency": 4180,
+      "duration": "8m 12s",
+      "startedAt": "5d ago"
+    },
+    {
+      "id": "r7",
+      "name": "production-regression · weekly",
+      "dataset": "production-regression",
+      "agent": "chat-router-prod",
+      "tone": "azure",
+      "status": "passed",
+      "passed": 1824,
+      "total": 1842,
+      "passRate": 99.0,
+      "p95Latency": 1620,
+      "duration": "4m 08s",
+      "startedAt": "1w ago"
+    },
+    {
+      "id": "r8",
+      "name": "reasoning-bench · v3.1 baseline",
+      "dataset": "reasoning-bench-v3",
+      "agent": "production-reasoner",
+      "tone": "emerald",
+      "status": "passed",
+      "passed": 396,
+      "total": 412,
+      "passRate": 96.1,
+      "p95Latency": 8920,
+      "duration": "13m 02s",
+      "startedAt": "2w ago"
+    }
+  ],
+  "scorers": [
+    { "id": "s1", "name": "exact-match", "type": "deterministic", "runs": 412 },
+    { "id": "s2", "name": "judge-claude-3.5", "type": "model-based", "runs": 248 },
+    { "id": "s3", "name": "rouge-L", "type": "metric", "runs": 184 },
+    { "id": "s4", "name": "answer-relevance", "type": "model-based", "runs": 312 },
+    { "id": "s5", "name": "pii-leak", "type": "safety", "runs": 92 },
+    { "id": "s6", "name": "groundedness", "type": "model-based", "runs": 168 }
+  ]
+}

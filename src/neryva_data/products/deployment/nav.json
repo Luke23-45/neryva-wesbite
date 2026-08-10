@@ -9,6 +9,13 @@
     { "label": "Cost", "to": "/deployment/cost", "icon": "cost" },
     { "label": "Secrets", "to": "/deployment/secrets", "icon": "secrets" },
     { "label": "Compliance", "to": "/deployment/compliance", "icon": "compliance" },
+    { "label": "Webhooks", "to": "/deployment/webhooks", "icon": "webhooks" },
+    { "label": "Network", "to": "/deployment/network", "icon": "network" },
+    { "label": "Scaling", "to": "/deployment/scaling", "icon": "scaling" },
+    { "label": "Experiments", "to": "/deployment/experiments", "icon": "experiments" },
+    { "label": "Teams", "to": "/deployment/teams", "icon": "teams" },
+    { "label": "Usage", "to": "/deployment/usage", "icon": "usage" },
+    { "label": "Releases", "to": "/deployment/releases", "icon": "releases" },
     { "label": "Settings", "to": "/deployment/settings", "icon": "settings" }
   ],
   "user": {

@@ -1,0 +1,47 @@
+{
+  "summary": {
+    "tokensThisMonth": 184200000,
+    "tokensLastMonth": 162400000,
+    "costThisMonth": 4218,
+    "quotaTotal": 250000000,
+    "quotaUsed": 73.7,
+    "renewsIn": "12 days"
+  },
+  "byModel": [
+    { "id": "m1", "model": "gpt-4o", "provider": "openai", "tokens": 64200000, "cost": 1926, "share": 34.9, "tone": "azure" },
+    { "id": "m2", "model": "claude-3.5-sonnet", "provider": "anthropic", "tokens": 48200000, "cost": 1446, "share": 26.2, "tone": "amethyst" },
+    { "id": "m3", "model": "mixtral-8x22b", "provider": "mistral", "tokens": 32400000, "cost": 388, "share": 17.6, "tone": "lilac" },
+    { "id": "m4", "model": "llama-3.1-405b", "provider": "meta", "tokens": 24600000, "cost": 246, "share": 13.4, "tone": "emerald" },
+    { "id": "m5", "model": "gemini-1.5-pro", "provider": "google", "tokens": 14800000, "cost": 212, "share": 8.0, "tone": "azure" }
+  ],
+  "byAgent": [
+    { "id": "a1", "name": "production-classifier-v2", "tokens": 38400000, "cost": 812, "share": 20.8 },
+    { "id": "a2", "name": "chat-router-prod", "tokens": 32100000, "cost": 728, "share": 17.4 },
+    { "id": "a3", "name": "vision-ocr-prod", "tokens": 24800000, "cost": 612, "share": 13.5 },
+    { "id": "a4", "name": "staging-reasoner-rollout", "tokens": 19400000, "cost": 482, "share": 10.5 },
+    { "id": "a5", "name": "edge-inference-fleet", "tokens": 16200000, "cost": 386, "share": 8.8 }
+  ],
+  "daily": [
+    { "date": "Jul 1", "tokens": 4.2, "cost": 96 },
+    { "date": "Jul 2", "tokens": 4.8, "cost": 110 },
+    { "date": "Jul 3", "tokens": 5.1, "cost": 117 },
+    { "date": "Jul 4", "tokens": 4.6, "cost": 105 },
+    { "date": "Jul 5", "tokens": 5.4, "cost": 124 },
+    { "date": "Jul 6", "tokens": 5.2, "cost": 119 },
+    { "date": "Jul 7", "tokens": 4.9, "cost": 112 },
+    { "date": "Jul 8", "tokens": 5.8, "cost": 133 },
+    { "date": "Jul 9", "tokens": 6.1, "cost": 140 },
+    { "date": "Jul 10", "tokens": 5.9, "cost": 135 },
+    { "date": "Jul 11", "tokens": 6.2, "cost": 142 },
+    { "date": "Jul 12", "tokens": 5.7, "cost": 130 },
+    { "date": "Jul 13", "tokens": 6.4, "cost": 147 },
+    { "date": "Jul 14", "tokens": 6.8, "cost": 156 }
+  ],
+  "quotas": [
+    { "id": "q1", "name": "Monthly tokens", "used": 184200000, "limit": 250000000, "tone": "azure", "renews": "in 12 days" },
+    { "id": "q2", "name": "API rate", "used": 1840, "limit": 5000, "tone": "emerald", "renews": "rolling" },
+    { "id": "q3", "name": "Concurrent agents", "used": 42, "limit": 100, "tone": "emerald", "renews": "live" },
+    { "id": "q4", "name": "Vector storage", "used": 184, "limit": 500, "tone": "warning", "renews": "monthly" },
+    { "id": "q5", "name": "Dataset rows", "used": 842000, "limit": 1000000, "tone": "azure", "renews": "monthly" }
+  ]
+}

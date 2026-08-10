@@ -1,0 +1,202 @@
+{
+  "summary": {
+    "releasesThisMonth": 84,
+    "rollbackRate": 1.8,
+    "avgLeadTimeMinutes": 22,
+    "deploysToday": 6
+  },
+  "releases": [
+    {
+      "id": "rel1",
+      "version": "v3.2.1",
+      "deployment": "production-reasoner",
+      "environment": "production",
+      "tone": "emerald",
+      "status": "live",
+      "releasedAt": "2 hours ago",
+      "releasedBy": "Tomás Castillo",
+      "commit": "a4f8e2c",
+      "branch": "main",
+      "changes": {
+        "features": ["Add streaming token support", "Improved retry logic on transient errors"],
+        "fixes": ["Fix p99 latency regression on edge nodes", "Resolve cache miss on warm starts"],
+        "perf": ["12% reduction in cold-start time", "Reduced memory footprint by 18%"]
+      },
+      "metrics": {
+        "rolloutTime": "6m 42s",
+        "canaryDuration": "32m",
+        "autoRollback": false,
+        "testsRun": 1842,
+        "testsPassed": 1824
+      }
+    },
+    {
+      "id": "rel2",
+      "version": "v1.18.0",
+      "deployment": "chat-router-prod",
+      "environment": "production",
+      "tone": "emerald",
+      "status": "live",
+      "releasedAt": "yesterday",
+      "releasedBy": "Anya Volkov",
+      "commit": "b71c439",
+      "branch": "release/v1.18",
+      "changes": {
+        "features": ["New structured prompt v2", "Add per-tenant rate limit overrides"],
+        "fixes": ["Fix JWT validation for service accounts"],
+        "perf": ["Reduce p95 latency by 18ms"]
+      },
+      "metrics": {
+        "rolloutTime": "4m 18s",
+        "canaryDuration": "1h",
+        "autoRollback": false,
+        "testsRun": 1240,
+        "testsPassed": 1224
+      }
+    },
+    {
+      "id": "rel3",
+      "version": "v2.1.4",
+      "deployment": "vision-ocr-prod",
+      "environment": "production",
+      "tone": "emerald",
+      "status": "live",
+      "releasedAt": "2 days ago",
+      "releasedBy": "Marcus Lin",
+      "commit": "f23a8c1",
+      "branch": "main",
+      "changes": {
+        "features": ["Support for new document formats (DOCX, EPUB)"],
+        "fixes": ["Fix table detection accuracy on low-res scans"],
+        "perf": []
+      },
+      "metrics": {
+        "rolloutTime": "3m 12s",
+        "canaryDuration": "24m",
+        "autoRollback": false,
+        "testsRun": 1480,
+        "testsPassed": 1464
+      }
+    },
+    {
+      "id": "rel4",
+      "version": "v3.2.0",
+      "deployment": "production-reasoner",
+      "environment": "production",
+      "tone": "warning",
+      "status": "rolled-back",
+      "releasedAt": "4 days ago",
+      "releasedBy": "Tomás Castillo",
+      "commit": "8e2b4a9",
+      "branch": "main",
+      "changes": {
+        "features": ["New chain-of-thought decoder", "Add eval suite integration"],
+        "fixes": [],
+        "perf": []
+      },
+      "metrics": {
+        "rolloutTime": "5m 02s",
+        "canaryDuration": "18m",
+        "autoRollback": true,
+        "testsRun": 1842,
+        "testsPassed": 1818
+      }
+    },
+    {
+      "id": "rel5",
+      "version": "v0.18.0",
+      "deployment": "edge-inference-fleet",
+      "environment": "staging",
+      "tone": "azure",
+      "status": "canary",
+      "releasedAt": "5 days ago",
+      "releasedBy": "Helena Park",
+      "commit": "d12a3f8",
+      "branch": "feature/edge-v2",
+      "changes": {
+        "features": ["Migrate to vLLM 0.6", "Continuous batching enabled"],
+        "fixes": ["Memory leak on long-running workers"],
+        "perf": ["Throughput up 2.4x on T4 GPUs"]
+      },
+      "metrics": {
+        "rolloutTime": "12m 48s",
+        "canaryDuration": "ongoing",
+        "autoRollback": false,
+        "testsRun": 240,
+        "testsPassed": 198
+      }
+    },
+    {
+      "id": "rel6",
+      "version": "v4.0.0",
+      "deployment": "vision-api",
+      "environment": "production",
+      "tone": "warning",
+      "status": "degraded",
+      "releasedAt": "6 days ago",
+      "releasedBy": "Marcus Lin",
+      "commit": "9c4d2e1",
+      "branch": "main",
+      "changes": {
+        "features": ["Migrate to vision v4 backbone", "New attention head config"],
+        "fixes": [],
+        "perf": []
+      },
+      "metrics": {
+        "rolloutTime": "8m 22s",
+        "canaryDuration": "44m",
+        "autoRollback": false,
+        "testsRun": 624,
+        "testsPassed": 580
+      }
+    },
+    {
+      "id": "rel7",
+      "version": "v2.4.1",
+      "deployment": "retriever-edge",
+      "environment": "production",
+      "tone": "emerald",
+      "status": "live",
+      "releasedAt": "1 week ago",
+      "releasedBy": "Anya Volkov",
+      "commit": "1b8e9c2",
+      "branch": "main",
+      "changes": {
+        "features": ["Hybrid BM25 + dense retrieval fusion"],
+        "fixes": ["Fix chunker for code snippets"],
+        "perf": ["MRR@10 improved from 0.612 to 0.628"]
+      },
+      "metrics": {
+        "rolloutTime": "4m 38s",
+        "canaryDuration": "52m",
+        "autoRollback": false,
+        "testsRun": 928,
+        "testsPassed": 918
+      }
+    },
+    {
+      "id": "rel8",
+      "version": "v1.9.3",
+      "deployment": "batch-embeddings",
+      "environment": "production",
+      "tone": "emerald",
+      "status": "live",
+      "releasedAt": "2 weeks ago",
+      "releasedBy": "Diego Ferraro",
+      "commit": "5f7a1d2",
+      "branch": "main",
+      "changes": {
+        "features": ["Embeddings-v3 support"],
+        "fixes": ["Fix null pointer on empty batches"],
+        "perf": []
+      },
+      "metrics": {
+        "rolloutTime": "2m 18s",
+        "canaryDuration": "12m",
+        "autoRollback": false,
+        "testsRun": 412,
+        "testsPassed": 410
+      }
+    }
+  ]
+}

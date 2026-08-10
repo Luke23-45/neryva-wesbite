@@ -1,0 +1,160 @@
+{
+  "categories": [
+    { "id": "all", "label": "All templates", "count": 12 },
+    { "id": "support", "label": "Customer support", "count": 4 },
+    { "id": "sales", "label": "Sales", "count": 3 },
+    { "id": "research", "label": "Research", "count": 2 },
+    { "id": "ops", "label": "Operations", "count": 3 }
+  ],
+  "templates": [
+    {
+      "id": "t1",
+      "name": "Support Concierge",
+      "category": "support",
+      "description": "Tier-1 customer support agent that resolves common questions, escalates complex issues, and updates ticket systems.",
+      "icon": "headphones",
+      "tone": "lilac",
+      "model": "Reasoner Pro",
+      "integrations": ["Zendesk", "Slack", "Stripe"],
+      "uses": 4820,
+      "rating": 4.8,
+      "featured": true,
+      "tags": ["tier-1", "24/7", "multi-channel"]
+    },
+    {
+      "id": "t2",
+      "name": "Onboarding Guide",
+      "category": "support",
+      "description": "Walks new users through product setup, answers getting-started questions, and schedules follow-ups.",
+      "icon": "compass",
+      "tone": "emerald",
+      "model": "Instant Fast",
+      "integrations": ["Intercom", "Mailchimp", "Calendly"],
+      "uses": 3140,
+      "rating": 4.7
+    },
+    {
+      "id": "t3",
+      "name": "Refund Specialist",
+      "category": "support",
+      "description": "Handles refund requests with policy compliance. Verifies orders, processes refunds, and notifies customers.",
+      "icon": "receipt",
+      "tone": "warning",
+      "model": "Reasoner Pro",
+      "integrations": ["Stripe", "Shopify", "Slack"],
+      "uses": 1840,
+      "rating": 4.6
+    },
+    {
+      "id": "t4",
+      "name": "Knowledge Curator",
+      "category": "support",
+      "description": "Auto-curates help articles from support conversations. Identifies knowledge gaps and drafts new content.",
+      "icon": "book",
+      "tone": "azure",
+      "model": "Researcher Beta",
+      "integrations": ["Notion", "Confluence"],
+      "uses": 920,
+      "rating": 4.5
+    },
+    {
+      "id": "t5",
+      "name": "Sales Researcher",
+      "category": "sales",
+      "description": "Researches prospects before calls, summarizes recent news, funding, and tech stack. Preps the rep with context.",
+      "icon": "search",
+      "tone": "amethyst",
+      "model": "Researcher Beta",
+      "integrations": ["Salesforce", "LinkedIn", "Clearbit"],
+      "uses": 2680,
+      "rating": 4.7,
+      "featured": true,
+      "tags": ["prospecting", "enrichment"]
+    },
+    {
+      "id": "t6",
+      "name": "Lead Qualifier",
+      "category": "sales",
+      "description": "Engages inbound leads, asks discovery questions, and books meetings for AEs when qualified.",
+      "icon": "filter",
+      "tone": "emerald",
+      "model": "Instant Fast",
+      "integrations": ["HubSpot", "Calendly", "Slack"],
+      "uses": 4120,
+      "rating": 4.8
+    },
+    {
+      "id": "t7",
+      "name": "Quote Builder",
+      "category": "sales",
+      "description": "Generates accurate quotes based on customer needs, applies discounts, and produces PDF proposals.",
+      "icon": "calculator",
+      "tone": "azure",
+      "model": "Reasoner Pro",
+      "integrations": ["Salesforce", "Stripe", "DocuSign"],
+      "uses": 1240,
+      "rating": 4.5
+    },
+    {
+      "id": "t8",
+      "name": "Market Analyst",
+      "category": "research",
+      "description": "Synthesizes industry reports, earnings calls, and news into briefings for your team.",
+      "icon": "chart",
+      "tone": "lilac",
+      "model": "Researcher Beta",
+      "integrations": ["Notion", "Slack"],
+      "uses": 1840,
+      "rating": 4.6
+    },
+    {
+      "id": "t9",
+      "name": "Competitive Intel",
+      "category": "research",
+      "description": "Monitors competitor activity — pricing changes, new features, hiring — and alerts your team weekly.",
+      "icon": "binoculars",
+      "tone": "amethyst",
+      "model": "Researcher Beta",
+      "integrations": ["Slack", "Notion", "Linear"],
+      "uses": 820,
+      "rating": 4.7
+    },
+    {
+      "id": "t10",
+      "name": "Internal Helpdesk",
+      "category": "ops",
+      "description": "Answers IT questions, resets passwords, provisions access. Routes complex tickets to the right team.",
+      "icon": "wrench",
+      "tone": "azure",
+      "model": "Reasoner Pro",
+      "integrations": ["Okta", "Slack", "Jira"],
+      "uses": 2140,
+      "rating": 4.6
+    },
+    {
+      "id": "t11",
+      "name": "DevOps Assistant",
+      "category": "ops",
+      "description": "Triages incidents, summarizes logs, and posts status updates during outages.",
+      "icon": "terminal",
+      "tone": "warning",
+      "model": "Reasoner Pro",
+      "integrations": ["PagerDuty", "Datadog", "Slack"],
+      "uses": 1480,
+      "rating": 4.8,
+      "tags": ["incident-response", "sre"]
+    },
+    {
+      "id": "t12",
+      "name": "Data Analyst",
+      "category": "ops",
+      "description": "Answers business questions in plain English by querying your warehouse and returning tables + charts.",
+      "icon": "database",
+      "tone": "emerald",
+      "model": "Reasoner Pro",
+      "integrations": ["Snowflake", "BigQuery", "Slack"],
+      "uses": 1640,
+      "rating": 4.7
+    }
+  ]
+}

@@ -16,6 +16,13 @@ import {
   ShieldCheck,
   Menu as MenuIcon,
   X as XIcon,
+  Webhook,
+  Globe2,
+  Gauge,
+  FlaskConical,
+  Users,
+  BarChart3,
+  History,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
@@ -61,7 +68,7 @@ import {
 export type DeployNavItem = {
   label: string;
   to: string;
-  icon: 'dashboard' | 'pipelines' | 'deployments' | 'infrastructure' | 'logs' | 'settings' | 'alerts' | 'cost' | 'secrets' | 'compliance';
+  icon: 'dashboard' | 'pipelines' | 'deployments' | 'infrastructure' | 'logs' | 'settings' | 'alerts' | 'cost' | 'secrets' | 'compliance' | 'webhooks' | 'network' | 'scaling' | 'experiments' | 'teams' | 'usage' | 'releases';
 };
 
 export type RecentPipeline = { id: string; title: string };
@@ -86,6 +93,13 @@ const iconMap = {
   cost: DollarSign,
   secrets: KeyRound,
   compliance: ShieldCheck,
+  webhooks: Webhook,
+  network: Globe2,
+  scaling: Gauge,
+  experiments: FlaskConical,
+  teams: Users,
+  usage: BarChart3,
+  releases: History,
 } as const;
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -127,6 +141,13 @@ export function DeployShell({
     { id: 'cost', title: 'Cost & usage', subtitle: 'Spend breakdown and forecast', to: '/deployment/cost', section: 'Navigate', icon: <DollarSign size={14} strokeWidth={1.7} /> },
     { id: 'secrets', title: 'Secrets', subtitle: 'Encrypted vault', to: '/deployment/secrets', section: 'Navigate', icon: <KeyRound size={14} strokeWidth={1.7} /> },
     { id: 'compliance', title: 'Compliance', subtitle: 'Controls and audit log', to: '/deployment/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
+    { id: 'webhooks', title: 'Webhooks', subtitle: 'Outbound HTTP callbacks', to: '/deployment/webhooks', section: 'Navigate', icon: <Webhook size={14} strokeWidth={1.7} /> },
+    { id: 'network', title: 'Network', subtitle: 'Endpoints, VPC, DNS, CDN', to: '/deployment/network', section: 'Navigate', icon: <Globe2 size={14} strokeWidth={1.7} /> },
+    { id: 'scaling', title: 'Scaling', subtitle: 'Auto-scaling and capacity', to: '/deployment/scaling', section: 'Navigate', icon: <Gauge size={14} strokeWidth={1.7} /> },
+    { id: 'experiments', title: 'Experiments', subtitle: 'A/B tests and canaries', to: '/deployment/experiments', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
+    { id: 'teams', title: 'Teams', subtitle: 'Members, RBAC, service accounts', to: '/deployment/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
+    { id: 'usage', title: 'Usage', subtitle: 'Requests, compute, quotas', to: '/deployment/usage', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
+    { id: 'releases', title: 'Releases', subtitle: 'Release history and changelogs', to: '/deployment/releases', section: 'Navigate', icon: <History size={14} strokeWidth={1.7} /> },
     { id: 'settings', title: 'Settings', subtitle: 'Workspace, environments, access', to: '/deployment/settings', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
   ];
 

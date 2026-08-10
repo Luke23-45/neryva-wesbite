@@ -1,0 +1,135 @@
+{
+  "summary": {
+    "activeRules": 14,
+    "avgUtilization": 62,
+    "peakReplicas": 184,
+    "scaleEventsLast24h": 47
+  },
+  "rules": [
+    {
+      "id": "r1",
+      "name": "api-gateway — CPU",
+      "target": "api-gateway",
+      "metric": "CPU",
+      "desired": "60%",
+      "min": 4,
+      "max": 32,
+      "current": 18,
+      "cooldown": "90s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r2",
+      "name": "inference-fleet — Queue depth",
+      "target": "inference-fleet",
+      "metric": "Queue depth",
+      "desired": "<=8 / replica",
+      "min": 6,
+      "max": 64,
+      "current": 42,
+      "cooldown": "60s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r3",
+      "name": "batch-embeddings — RPS",
+      "target": "batch-embeddings",
+      "metric": "Requests/sec",
+      "desired": "70%",
+      "min": 2,
+      "max": 16,
+      "current": 6,
+      "cooldown": "120s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r4",
+      "name": "vision-api — p99 latency",
+      "target": "vision-api",
+      "metric": "p99 latency",
+      "desired": "<=420ms",
+      "min": 3,
+      "max": 24,
+      "current": 14,
+      "cooldown": "120s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r5",
+      "name": "retriever — Memory",
+      "target": "retriever",
+      "metric": "Memory",
+      "desired": "75%",
+      "min": 2,
+      "max": 12,
+      "current": 12,
+      "cooldown": "180s",
+      "status": "throttled",
+      "tone": "warning"
+    },
+    {
+      "id": "r6",
+      "name": "transcoder — GPU",
+      "target": "transcoder",
+      "metric": "GPU",
+      "desired": "70%",
+      "min": 4,
+      "max": 28,
+      "current": 8,
+      "cooldown": "90s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r7",
+      "name": "chat-router — Custom HTTP",
+      "target": "chat-router",
+      "metric": "Concurrent streams",
+      "desired": "<=120 / replica",
+      "min": 3,
+      "max": 20,
+      "current": 9,
+      "cooldown": "60s",
+      "status": "active",
+      "tone": "emerald"
+    },
+    {
+      "id": "r8",
+      "name": "analytics-writer — CPU",
+      "target": "analytics-writer",
+      "metric": "CPU",
+      "desired": "65%",
+      "min": 2,
+      "max": 10,
+      "current": 3,
+      "cooldown": "120s",
+      "status": "paused",
+      "tone": "neutral"
+    }
+  ],
+  "regions": [
+    { "code": "us-east-1", "name": "N. Virginia", "util": 78, "replicas": 64, "max": 96, "status": "hot", "tone": "warning" },
+    { "code": "us-west-2", "name": "Oregon", "util": 52, "replicas": 38, "max": 96, "status": "healthy", "tone": "emerald" },
+    { "code": "eu-west-1", "name": "Ireland", "util": 64, "replicas": 42, "max": 80, "status": "healthy", "tone": "emerald" },
+    { "code": "eu-central-1", "name": "Frankfurt", "util": 71, "replicas": 28, "max": 64, "status": "healthy", "tone": "emerald" },
+    { "code": "ap-southeast-1", "name": "Singapore", "util": 41, "replicas": 14, "max": 48, "status": "healthy", "tone": "emerald" },
+    { "code": "ap-northeast-1", "name": "Tokyo", "util": 58, "replicas": 22, "max": 48, "status": "healthy", "tone": "emerald" },
+    { "code": "sa-east-1", "name": "São Paulo", "util": 22, "replicas": 4, "max": 32, "status": "idle", "tone": "azure" },
+    { "code": "ap-south-1", "name": "Mumbai", "util": 36, "replicas": 8, "max": 32, "status": "healthy", "tone": "emerald" }
+  ],
+  "events": [
+    { "id": "e1", "time": "2m ago", "rule": "inference-fleet — Queue depth", "action": "scaled up", "from": 36, "to": 42, "tone": "azure" },
+    { "id": "e2", "time": "6m ago", "rule": "vision-api — p99 latency", "action": "scaled up", "from": 11, "to": 14, "tone": "azure" },
+    { "id": "e3", "time": "14m ago", "rule": "chat-router — Custom HTTP", "action": "scaled down", "from": 12, "to": 9, "tone": "warning" },
+    { "id": "e4", "time": "22m ago", "rule": "api-gateway — CPU", "action": "scaled up", "from": 14, "to": 18, "tone": "azure" },
+    { "id": "e5", "time": "38m ago", "rule": "transcoder — GPU", "action": "scaled down", "from": 10, "to": 8, "tone": "warning" },
+    { "id": "e6", "time": "1h ago", "rule": "retriever — Memory", "action": "scaled up (max)", "from": 10, "to": 12, "tone": "warning" },
+    { "id": "e7", "time": "2h ago", "rule": "inference-fleet — Queue depth", "action": "scaled up", "from": 30, "to": 36, "tone": "azure" },
+    { "id": "e8", "time": "3h ago", "rule": "batch-embeddings — RPS", "action": "scaled down", "from": 8, "to": 6, "tone": "warning" },
+    { "id": "e9", "time": "5h ago", "rule": "analytics-writer — CPU", "action": "paused", "from": 4, "to": 3, "tone": "neutral" }
+  ]
+}

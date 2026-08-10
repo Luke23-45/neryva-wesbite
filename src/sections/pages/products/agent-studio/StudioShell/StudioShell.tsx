@@ -54,6 +54,12 @@ import {
   Cpu,
   BarChart3,
   ShieldCheck,
+  Sparkles,
+  Code2,
+  Users,
+  Activity,
+  Gauge,
+  FlaskConical,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
@@ -64,7 +70,7 @@ import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalet
 export type StudioNavItem = {
   label: string;
   to: string;
-  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings' | 'knowledge' | 'models' | 'analytics' | 'compliance';
+  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings' | 'knowledge' | 'models' | 'analytics' | 'compliance' | 'templates' | 'api' | 'teams' | 'usage' | 'evaluations';
 };
 
 export type RecentChat = { id: string; title: string };
@@ -91,6 +97,11 @@ const iconMap = {
   models: Cpu,
   analytics: BarChart3,
   compliance: ShieldCheck,
+  templates: Sparkles,
+  api: Code2,
+  teams: Users,
+  usage: Activity,
+  evaluations: FlaskConical,
 } as const;
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -135,6 +146,11 @@ export function StudioShell({
     { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
     { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
     { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
+    { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
+    { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
+    { id: 'teams', title: 'Teams', subtitle: 'Members, invites, service accounts', to: '/agent-studio/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
+    { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <Activity size={14} strokeWidth={1.7} /> },
+    { id: 'evaluations', title: 'Evaluations', subtitle: 'Eval runs and datasets', to: '/agent-studio/evaluations', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
     { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
     { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
   ];

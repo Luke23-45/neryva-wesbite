@@ -37,6 +37,11 @@ import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKn
 import AgentStudioModelsPage from '@pages/products/agent_studio/AgentStudioModelsPage';
 import AgentStudioAnalyticsPage from '@pages/products/agent_studio/AgentStudioAnalyticsPage';
 import AgentStudioCompliancePage from '@pages/products/agent_studio/AgentStudioCompliancePage';
+import AgentStudioTemplatesPage from '@pages/products/agent_studio/AgentStudioTemplatesPage';
+import AgentStudioApiPage from '@pages/products/agent_studio/AgentStudioApiPage';
+import AgentStudioTeamsPage from '@pages/products/agent_studio/AgentStudioTeamsPage';
+import AgentStudioUsagePage from '@pages/products/agent_studio/AgentStudioUsagePage';
+import AgentStudioEvaluationsPage from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
 
 // Deployment app shell (auth-gated)
 import DeploymentShell from '@pages/products/deployment/DeploymentShell';
@@ -56,6 +61,13 @@ import DeploymentAlertsPage from '@pages/products/deployment/DeploymentAlertsPag
 import DeploymentCostPage from '@pages/products/deployment/DeploymentCostPage';
 import DeploymentSecretsPage from '@pages/products/deployment/DeploymentSecretsPage';
 import DeploymentCompliancePage from '@pages/products/deployment/DeploymentCompliancePage';
+import DeploymentWebhooksPage from '@pages/products/deployment/DeploymentWebhooksPage';
+import DeploymentNetworkPage from '@pages/products/deployment/DeploymentNetworkPage';
+import DeploymentScalingPage from '@pages/products/deployment/DeploymentScalingPage';
+import DeploymentExperimentsPage from '@pages/products/deployment/DeploymentExperimentsPage';
+import DeploymentTeamsPage from '@pages/products/deployment/DeploymentTeamsPage';
+import DeploymentUsagePage from '@pages/products/deployment/DeploymentUsagePage';
+import DeploymentReleasesPage from '@pages/products/deployment/DeploymentReleasesPage';
 
 import { requireAuth } from '@components/ProtectedRoute';
 
@@ -286,6 +298,36 @@ export const agentStudioComplianceRoute = createRoute({
   component: AgentStudioCompliancePage,
 });
 
+export const agentStudioTemplatesRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/templates',
+  component: AgentStudioTemplatesPage,
+});
+
+export const agentStudioApiRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/api',
+  component: AgentStudioApiPage,
+});
+
+export const agentStudioTeamsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/teams',
+  component: AgentStudioTeamsPage,
+});
+
+export const agentStudioUsageRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/usage',
+  component: AgentStudioUsagePage,
+});
+
+export const agentStudioEvaluationsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/evaluations',
+  component: AgentStudioEvaluationsPage,
+});
+
 // ─── Deployment (auth-gated app shell) ────────────────
 export const deploymentRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -404,6 +446,48 @@ export const deploymentComplianceRoute = createRoute({
   component: DeploymentCompliancePage,
 });
 
+export const deploymentWebhooksRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/webhooks',
+  component: DeploymentWebhooksPage,
+});
+
+export const deploymentNetworkRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/network',
+  component: DeploymentNetworkPage,
+});
+
+export const deploymentScalingRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/scaling',
+  component: DeploymentScalingPage,
+});
+
+export const deploymentExperimentsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/experiments',
+  component: DeploymentExperimentsPage,
+});
+
+export const deploymentTeamsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/teams',
+  component: DeploymentTeamsPage,
+});
+
+export const deploymentUsageRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/usage',
+  component: DeploymentUsagePage,
+});
+
+export const deploymentReleasesRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/releases',
+  component: DeploymentReleasesPage,
+});
+
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -431,6 +515,11 @@ export const routeDefinitions = [
     agentStudioActivityRoute,
     agentStudioAnalyticsRoute,
     agentStudioIntegrationsRoute.addChildren([agentStudioWebhooksRoute]),
+    agentStudioTemplatesRoute,
+    agentStudioApiRoute,
+    agentStudioTeamsRoute,
+    agentStudioUsageRoute,
+    agentStudioEvaluationsRoute,
     agentStudioComplianceRoute,
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
@@ -453,6 +542,13 @@ export const routeDefinitions = [
     deploymentCostRoute,
     deploymentSecretsRoute,
     deploymentComplianceRoute,
+    deploymentWebhooksRoute,
+    deploymentNetworkRoute,
+    deploymentScalingRoute,
+    deploymentExperimentsRoute,
+    deploymentTeamsRoute,
+    deploymentUsageRoute,
+    deploymentReleasesRoute,
     deploymentSettingsRoute.addChildren([
       deploymentSettingsIndexRoute,
       deploymentSettingsGeneralRoute,
