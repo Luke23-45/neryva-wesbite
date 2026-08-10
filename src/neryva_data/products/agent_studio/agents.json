@@ -1,10 +1,131 @@
 {
   "agents": [
-    { "id": "a1", "name": "Support Concierge", "description": "First-line customer support for billing and account issues", "status": "active", "model": "Reasoner Pro", "responseMs": 1240, "volume": 3210, "resolution": 95, "tone": "lilac", "channels": ["Web", "Email"], "updated": "2h ago" },
-    { "id": "a2", "name": "Onboarding Guide", "description": "Walks new customers through setup and integrations", "status": "active", "model": "Instant Fast", "responseMs": 880, "volume": 1820, "resolution": 93, "tone": "emerald", "channels": ["Web", "In-app"], "updated": "1d ago" },
-    { "id": "a3", "name": "Sales Researcher", "description": "Researches prospects and prepares briefs for the sales team", "status": "active", "model": "Researcher Beta", "responseMs": 2110, "volume": 940, "resolution": 88, "tone": "azure", "channels": ["Email"], "updated": "3h ago" },
-    { "id": "a4", "name": "Refund Specialist", "description": "Handles refund requests within policy guardrails", "status": "paused", "model": "Reasoner Pro", "responseMs": 1460, "volume": 460, "resolution": 90, "tone": "warning", "channels": ["Web"], "updated": "5d ago" },
-    { "id": "a5", "name": "Knowledge Curator", "description": "Indexes internal docs and answers questions on policies", "status": "draft", "model": "Reasoner Pro", "responseMs": 0, "volume": 0, "resolution": 0, "tone": "neutral", "channels": ["Web"], "updated": "Drafting" },
-    { "id": "a6", "name": "Voice Concierge", "description": "Phone-based customer support with streaming TTS", "status": "active", "model": "Instant Fast", "responseMs": 980, "volume": 720, "resolution": 91, "tone": "azure", "channels": ["Phone"], "updated": "12m ago" }
+    {
+      "id": "a1",
+      "name": "Support Concierge",
+      "description": "First-line customer support for billing and account issues",
+      "status": "active",
+      "model": "Reasoner Pro",
+      "responseMs": 1240,
+      "volume": 3210,
+      "resolution": 95,
+      "tone": "lilac",
+      "channels": ["Web", "Email"],
+      "updated": "2h ago",
+      "version": "v3.2.1",
+      "prompt": "You are the support concierge for Aurora Labs. Your job is to resolve billing and account questions with empathy, accuracy, and brevity. If a request is outside your scope, escalate to a human with a clear summary of what you tried.",
+      "guardrails": [
+        "Never refund more than $500 without human approval",
+        "Do not discuss competitors' pricing",
+        "Always confirm the customer's identity before sharing account details"
+      ],
+      "tools": ["stripe.lookup_charge", "zendesk.create_ticket", "slack.notify_channel"],
+      "knowledgeSources": ["Billing FAQ", "Refund Policy 2026", "Account Security Handbook"]
+    },
+    {
+      "id": "a2",
+      "name": "Onboarding Guide",
+      "description": "Walks new customers through setup and integrations",
+      "status": "active",
+      "model": "Instant Fast",
+      "responseMs": 880,
+      "volume": 1820,
+      "resolution": 93,
+      "tone": "emerald",
+      "channels": ["Web", "In-app"],
+      "updated": "1d ago",
+      "version": "v1.8.0",
+      "prompt": "You guide new customers through their first 7 days on the platform. Be encouraging, give specific next steps, and surface relevant integrations at the right moments.",
+      "guardrails": [
+        "Do not make promises about specific uptime SLAs",
+        "Always link to the docs rather than paraphrasing them"
+      ],
+      "tools": ["notion.search_docs", "salesforce.update_lead", "intercom.send_message"],
+      "knowledgeSources": ["Getting Started Guide", "Integration Catalog"]
+    },
+    {
+      "id": "a3",
+      "name": "Sales Researcher",
+      "description": "Researches prospects and prepares briefs for the sales team",
+      "status": "active",
+      "model": "Researcher Beta",
+      "responseMs": 2110,
+      "volume": 940,
+      "resolution": 88,
+      "tone": "azure",
+      "channels": ["Email"],
+      "updated": "3h ago",
+      "version": "v2.4.3",
+      "prompt": "You research enterprise accounts and prepare concise briefs for AEs. Always cite sources and flag pricing decisions for senior review.",
+      "guardrails": [
+        "Never publish a brief without AE approval",
+        "Mark unverified claims as 'low confidence'"
+      ],
+      "tools": ["snowflake.query", "hubspot.search_company", "clearbit.enrich"],
+      "knowledgeSources": ["Competitor Pricing 2026", "ICP Definitions"]
+    },
+    {
+      "id": "a4",
+      "name": "Refund Specialist",
+      "description": "Handles refund requests within policy guardrails",
+      "status": "paused",
+      "model": "Reasoner Pro",
+      "responseMs": 1460,
+      "volume": 460,
+      "resolution": 90,
+      "tone": "warning",
+      "channels": ["Web"],
+      "updated": "5d ago",
+      "version": "v1.2.0",
+      "prompt": "You process refund requests within published policy. Verify eligibility, gather the required fields, and complete the transaction or escalate with a clear reason.",
+      "guardrails": [
+        "Never refund outside the 14-day window without human approval",
+        "Always send a confirmation email"
+      ],
+      "tools": ["stripe.create_refund", "sendgrid.send_email"],
+      "knowledgeSources": ["Refund Policy 2026"]
+    },
+    {
+      "id": "a5",
+      "name": "Knowledge Curator",
+      "description": "Indexes internal docs and answers questions on policies",
+      "status": "draft",
+      "model": "Reasoner Pro",
+      "responseMs": 0,
+      "volume": 0,
+      "resolution": 0,
+      "tone": "neutral",
+      "channels": ["Web"],
+      "updated": "Drafting",
+      "version": "v0.0.1",
+      "prompt": "You answer questions about internal policies using the curated knowledge base. Always cite the source document.",
+      "guardrails": [
+        "Never answer without a source citation",
+        "Politely decline questions outside the indexed scope"
+      ],
+      "tools": ["notion.search_docs"],
+      "knowledgeSources": []
+    },
+    {
+      "id": "a6",
+      "name": "Voice Concierge",
+      "description": "Phone-based customer support with streaming TTS",
+      "status": "active",
+      "model": "Instant Fast",
+      "responseMs": 980,
+      "volume": 720,
+      "resolution": 91,
+      "tone": "azure",
+      "channels": ["Phone"],
+      "updated": "12m ago",
+      "version": "v1.0.4",
+      "prompt": "You handle inbound phone calls with streaming text-to-speech. Be concise — long monologues don't work on the phone.",
+      "guardrails": [
+        "Always confirm the caller's identity by phone number",
+        "Offer to email a transcript after every call"
+      ],
+      "tools": ["twilio.stream_tts", "zendesk.create_ticket"],
+      "knowledgeSources": ["Phone Support Playbook"]
+    }
   ]
 }

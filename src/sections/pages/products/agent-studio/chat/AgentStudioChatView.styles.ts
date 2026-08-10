@@ -8,11 +8,6 @@ export const ViewRoot = styled.div`
   min-height: 100vh;
 `;
 
-export const Topbar = styled.div`
-  display: none; /* ChatHeader renders inside the shared shell topbar slot via StudioShell;
-                     this is reserved for future per-chat header injection if needed */
-`;
-
 export const ChatArea = styled.main`
   flex: 1;
   display: flex;

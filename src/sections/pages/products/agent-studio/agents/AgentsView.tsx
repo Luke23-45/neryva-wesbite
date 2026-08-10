@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 import { Plus, MoreHorizontal, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { EmptyState } from '@components/common/ui/EmptyState';
+import { Modal } from '@components/common/ui/Modal';
 import agents from '@neryva_data/products/agent_studio/agents.json';
 
 import {
@@ -30,6 +32,12 @@ import {
   ProgressCell,
   ActionsCell,
   ActionButton,
+  TemplateGrid,
+  TemplateCard,
+  TemplateIcon,
+  TemplateTitle,
+  TemplateDesc,
+  TemplateButton,
 } from './AgentsView.styles';
 
 type AgentStatus = 'all' | 'active' | 'paused' | 'draft';
@@ -59,6 +67,8 @@ const toneToBar: Record<string, 'azure' | 'emerald' | 'lilac' | 'amber'> = {
 export function AgentsView() {
   const [filter, setFilter] = useState<AgentStatus>('all');
   const [search, setSearch] = useState('');
+  const [newAgentOpen, setNewAgentOpen] = useState(false);
+  const navigate = useNavigate();
 
   const list = useMemo(() => {
     return agents.agents.filter((a) => {
@@ -90,10 +100,8 @@ export function AgentsView() {
         <Panel
           action={
             <PrimaryButton
-              as={motion.button}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.985 }}
-              onClick={() => toast.success('Agent creation wizard — coming soon')}
+              type="button"
+              onClick={() => setNewAgentOpen(true)}
             >
               <Plus size={14} strokeWidth={2} />
               New agent
@@ -155,6 +163,16 @@ export function AgentsView() {
                   animate="visible"
                   variants={fadeUp}
                   custom={i + 2}
+                  onClick={() => navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: a.id } })}
+                  style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: a.id } });
+                    }
+                  }}
                 >
                   <Cell $w="34%">
                     <AgentMain>
@@ -188,7 +206,7 @@ export function AgentsView() {
                       <span style={{ fontSize: 11.5, color: 'rgba(229,231,235,0.55)' }}>{a.resolution}%</span>
                     </ProgressCell>
                   </Cell>
-                  <ActionsCell>
+                  <ActionsCell onClick={(e) => e.stopPropagation()}>
                     <ActionButton
                       aria-label={`Actions for ${a.name}`}
                       onClick={() => toast(`Actions for ${a.name}`, { icon: '⚙️' })}
@@ -202,6 +220,58 @@ export function AgentsView() {
           )}
         </Panel>
       </motion.div>
+
+      <Modal
+        open={newAgentOpen}
+        onClose={() => setNewAgentOpen(false)}
+        title="Create a new agent"
+        footer={
+          <button
+            type="button"
+            onClick={() => setNewAgentOpen(false)}
+            style={{
+              border: 0,
+              background: 'transparent',
+              color: 'rgba(229,231,235,0.7)',
+              fontFamily: 'inherit',
+              fontSize: 13,
+              padding: '8px 12px',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        }
+      >
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(229,231,235,0.7)' }}>
+          Start from a template — you can customize the system prompt, tools, and guardrails after.
+        </p>
+        <TemplateGrid>
+          {[
+            { title: 'Support concierge', desc: 'Billing & account help', hue: 'lilac' },
+            { title: 'Onboarding guide', desc: 'Walk new customers through setup', hue: 'emerald' },
+            { title: 'Sales researcher', desc: 'Prospect briefs for AEs', hue: 'azure' },
+            { title: 'Voice concierge', desc: 'Phone support with TTS', hue: 'azure' },
+            { title: 'Refund specialist', desc: 'Process refunds within policy', hue: 'amber' },
+            { title: 'Blank agent', desc: 'Build from scratch', hue: 'neutral' },
+          ].map((t) => (
+            <TemplateCard key={t.title}>
+              <TemplateIcon $hue={t.hue} aria-hidden="true" />
+              <TemplateTitle>{t.title}</TemplateTitle>
+              <TemplateDesc>{t.desc}</TemplateDesc>
+              <TemplateButton
+                type="button"
+                onClick={() => {
+                  toast.success(`Created ${t.title} — opening editor`);
+                  setNewAgentOpen(false);
+                }}
+              >
+                Use template
+              </TemplateButton>
+            </TemplateCard>
+          ))}
+        </TemplateGrid>
+      </Modal>
     </PageRoot>
   );
 }

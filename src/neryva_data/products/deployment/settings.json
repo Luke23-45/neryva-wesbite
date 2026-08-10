@@ -1,0 +1,40 @@
+{
+  "general": {
+    "workspaceName": "Aurora Labs",
+    "region": "us-west-2",
+    "defaultRuntime": "TensorRT-LLM",
+    "auditRetentionDays": 90,
+    "logRetentionDays": 30,
+    "autoRollback": true,
+    "canaryPercentage": 5
+  },
+  "environments": [
+    { "id": "e1", "name": "production", "region": "us-east-1", "replicas": 12, "status": "active", "approval": "manual", "autoPromote": false },
+    { "id": "e2", "name": "staging", "region": "eu-west-1", "replicas": 4, "status": "active", "approval": "auto", "autoPromote": true },
+    { "id": "e3", "name": "dev", "region": "us-west-2", "replicas": 2, "status": "active", "approval": "auto", "autoPromote": true },
+    { "id": "e4", "name": "canary", "region": "ap-southeast-1", "replicas": 2, "status": "active", "approval": "auto", "autoPromote": false }
+  ],
+  "notifications": {
+    "channels": [
+      { "id": "c1", "name": "Deploy alerts", "kind": "slack", "target": "#deploys", "events": ["deploy", "rollback"], "active": true },
+      { "id": "c2", "name": "On-call pager", "kind": "pagerduty", "target": "deploy-primary", "events": ["error", "alert"], "active": true },
+      { "id": "c3", "name": "Audit digest", "kind": "email", "target": "team@aurora.example", "events": ["audit"], "active": true },
+      { "id": "c4", "name": "Webhook receiver", "kind": "webhook", "target": "https://hooks.aurora.example/deploy", "events": ["deploy", "rollback", "error"], "active": false }
+    ]
+  },
+  "access": {
+    "members": [
+      { "id": "u1", "name": "Deployment", "email": "you@neryva.deploy", "role": "Owner", "status": "active", "lastActive": "now" },
+      { "id": "u2", "name": "Avery Kim", "email": "avery@aurora.example", "role": "Admin", "status": "active", "lastActive": "12m ago" },
+      { "id": "u3", "name": "Sara Chen", "email": "sara@aurora.example", "role": "Editor", "status": "active", "lastActive": "2h ago" },
+      { "id": "u4", "name": "Marcus Lee", "email": "marcus@aurora.example", "role": "Viewer", "status": "active", "lastActive": "5d ago" },
+      { "id": "u5", "name": "Jules Park", "email": "jules@aurora.example", "role": "Editor", "status": "invited", "lastActive": "—" }
+    ],
+    "auditLog": [
+      { "time": "12:48", "event": "Pipeline promoted to 100%", "actor": "Avery Kim" },
+      { "time": "11:02", "event": "API key rotated", "actor": "Deployment" },
+      { "time": "09:31", "event": "Slack channel connected", "actor": "Deployment" },
+      { "time": "Yesterday", "event": "Production replica scaled", "actor": "System" }
+    ]
+  }
+}

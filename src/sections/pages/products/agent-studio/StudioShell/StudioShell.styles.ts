@@ -16,7 +16,7 @@ export const ShellRoot = styled.section`
 `;
 
 /* ─── Sidebar ─── */
-export const ShellSidebar = styled.aside`
+export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
   position: sticky;
   top: 0;
   align-self: start;
@@ -26,9 +26,51 @@ export const ShellSidebar = styled.aside`
   padding: 16px 12px 14px;
   background: linear-gradient(180deg, #0d1016 0%, #0a0c11 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 50;
 
   ${({ theme }) => theme.media.tablet} {
-    display: none;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 280px;
+    transform: translateX(${({ $mobileOpen }) => ($mobileOpen ? '0' : '-100%')});
+    transition: transform ${({ theme }) => theme.transitions.standard};
+    box-shadow: ${({ $mobileOpen }) =>
+      $mobileOpen ? '24px 0 60px rgba(0, 0, 0, 0.5)' : 'none'};
+  }
+`;
+
+export const MobileOverlay = styled.div`
+  display: none;
+
+  ${({ theme }) => theme.media.tablet} {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 40;
+    backdrop-filter: blur(2px);
+  }
+`;
+
+export const MobileMenuButton = styled.button<{ $variant: 'menu' | 'close' }>`
+  display: none;
+
+  ${({ theme }) => theme.media.tablet} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    background: transparent;
+    color: rgba(229, 231, 235, 0.7);
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #f5f7fb;
+    }
   }
 `;
 

@@ -1,0 +1,114 @@
+{
+  "regions": [
+    {
+      "id": "r1",
+      "name": "us-east-1",
+      "location": "N. Virginia",
+      "status": "healthy",
+      "nodes": 24,
+      "cpu": "58%",
+      "memory": "52%",
+      "gpu": "68%",
+      "network": "12.4 Gbps",
+      "deployments": 14
+    },
+    {
+      "id": "r2",
+      "name": "us-east-2",
+      "location": "Ohio",
+      "status": "degraded",
+      "nodes": 18,
+      "cpu": "72%",
+      "memory": "68%",
+      "gpu": "78%",
+      "network": "8.2 Gbps",
+      "deployments": 9
+    },
+    {
+      "id": "r3",
+      "name": "us-west-1",
+      "location": "N. California",
+      "status": "healthy",
+      "nodes": 16,
+      "cpu": "48%",
+      "memory": "44%",
+      "gpu": "62%",
+      "network": "9.8 Gbps",
+      "deployments": 7
+    },
+    {
+      "id": "r4",
+      "name": "us-west-2",
+      "location": "Oregon",
+      "status": "healthy",
+      "nodes": 22,
+      "cpu": "62%",
+      "memory": "58%",
+      "gpu": "72%",
+      "network": "11.2 Gbps",
+      "deployments": 11
+    },
+    {
+      "id": "r5",
+      "name": "eu-west-1",
+      "location": "Ireland",
+      "status": "healthy",
+      "nodes": 20,
+      "cpu": "54%",
+      "memory": "48%",
+      "gpu": "64%",
+      "network": "10.4 Gbps",
+      "deployments": 10
+    },
+    {
+      "id": "r6",
+      "name": "eu-central-1",
+      "location": "Frankfurt",
+      "status": "healthy",
+      "nodes": 18,
+      "cpu": "44%",
+      "memory": "41%",
+      "gpu": "55%",
+      "network": "9.2 Gbps",
+      "deployments": 8
+    },
+    {
+      "id": "r7",
+      "name": "ap-southeast-1",
+      "location": "Singapore",
+      "status": "healthy",
+      "nodes": 14,
+      "cpu": "68%",
+      "memory": "62%",
+      "gpu": "74%",
+      "network": "7.8 Gbps",
+      "deployments": 6
+    },
+    {
+      "id": "r8",
+      "name": "ap-northeast-1",
+      "location": "Tokyo",
+      "status": "healthy",
+      "nodes": 12,
+      "cpu": "52%",
+      "memory": "48%",
+      "gpu": "58%",
+      "network": "6.4 Gbps",
+      "deployments": 5
+    }
+  ],
+  "totals": {
+    "regions": 8,
+    "nodes": 144,
+    "deployments": 70,
+    "rps": 30200,
+    "uptime": "99.98%"
+  },
+  "runtimes": [
+    { "name": "TensorRT-LLM", "deployments": 18, "utilization": "72%", "tone": "amber" },
+    { "name": "vLLM", "deployments": 12, "utilization": "64%", "tone": "azure" },
+    { "name": "ONNX Runtime", "deployments": 22, "utilization": "48%", "tone": "emerald" },
+    { "name": "PyTorch", "deployments": 8, "utilization": "82%", "tone": "warning" },
+    { "name": "TensorRT", "deployments": 10, "utilization": "58%", "tone": "azure" }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "logs": [
+    { "id": "l1", "time": "12:48:14.234", "level": "info", "source": "production-classifier-v2", "message": "Promoted to 100% traffic — rollout complete", "trace": "trace_8f2a1c" },
+    { "id": "l2", "time": "12:47:58.112", "level": "info", "source": "production-classifier-v2", "message": "Replica scaled from 8 → 12 (target rps: 8500)", "trace": "trace_8f2a1b" },
+    { "id": "l3", "time": "12:46:32.891", "level": "warn", "source": "edge-inference-fleet", "message": "p95 latency exceeded threshold: 412ms > 300ms in ap-southeast-1", "trace": "trace_7d4e2a" },
+    { "id": "l4", "time": "12:45:18.443", "level": "error", "source": "staging-reasoner-rollout", "message": "Auto-rollback triggered: error rate 0.34% > 0.25% threshold", "trace": "trace_6c3f9d" },
+    { "id": "l5", "time": "12:44:02.776", "level": "info", "source": "vision-api-v3-canary", "message": "Canary stage advanced to 25% traffic", "trace": "trace_5b2e8c" },
+    { "id": "l6", "time": "12:42:48.221", "level": "debug", "source": "embeddings-api-v2", "message": "Cache hit rate: 87.4% (rolling 5m)", "trace": "trace_4a1d7b" },
+    { "id": "l7", "time": "12:41:12.998", "level": "info", "source": "production-classifier-v2", "message": "Audit log batch shipped to s3://neryva-audit/2026/04/11/", "trace": "trace_3f0c6a" },
+    { "id": "l8", "time": "12:39:45.554", "level": "warn", "source": "staging-reasoner-rollout", "message": "GPU utilization at 84% — consider scaling replicas", "trace": "trace_2e9b5d" },
+    { "id": "l9", "time": "12:38:21.112", "level": "info", "source": "edge-inference-fleet", "message": "Autoscaler adjusted min replicas: 6 → 8 in eu-west-1", "trace": "trace_1d8a4c" },
+    { "id": "l10", "time": "12:36:58.887", "level": "debug", "source": "speech-to-text-prod", "message": "Cold start latency p99: 1.24s (target: <2s)", "trace": "trace_0c7b3b" },
+    { "id": "l11", "time": "12:35:32.443", "level": "info", "source": "production-classifier-v2", "message": "Health check passed — all 12 replicas ready", "trace": "trace_9b6a2a" },
+    { "id": "l12", "time": "12:34:14.221", "level": "error", "source": "vision-api-v3-canary", "message": "Inference timeout in 3 requests — model server overloaded", "trace": "trace_8a5c1d" },
+    { "id": "l13", "time": "12:32:48.776", "level": "info", "source": "batch-retraining-nightly", "message": "Job queued for 02:00 UTC — waiting on cluster capacity", "trace": "trace_7f4d0c" },
+    { "id": "l14", "time": "12:31:22.554", "level": "warn", "source": "edge-inference-fleet", "message": "Network egress approaching quota: 8.2/10 GB in us-east-2", "trace": "trace_6e3c9b" },
+    { "id": "l15", "time": "12:29:58.998", "level": "info", "source": "embeddings-api-v2", "message": "Deployed v2.1.3 to eu-central-1 — rollout complete", "trace": "trace_5d2b8a" },
+    { "id": "l16", "time": "12:28:34.221", "level": "debug", "source": "production-classifier-v2", "message": "Token throughput: 42.8k tok/s across 12 replicas", "trace": "trace_4c1a7d" },
+    { "id": "l17", "time": "12:27:12.887", "level": "info", "source": "speech-to-text-prod", "message": "Model warm-up complete — 6/6 replicas ready", "trace": "trace_3b0c6c" },
+    { "id": "l18", "time": "12:25:48.443", "level": "warn", "source": "staging-reasoner-rollout", "message": "Memory usage trending up: 72% (predicted peak: 85% in 15m)", "trace": "trace_2a9b5b" }
+  ]
+}

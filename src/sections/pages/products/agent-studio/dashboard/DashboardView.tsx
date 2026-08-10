@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, ArrowRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
@@ -7,6 +8,7 @@ import { Sparkline } from '@components/common/ui/Sparkline';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
+import { spring } from '@styles/motion';
 import dashboard from '@neryva_data/products/agent_studio/dashboard.json';
 
 import {
@@ -61,6 +63,12 @@ const activityToneMap: Record<string, 'success' | 'warning' | 'info' | 'error'> 
 
 export function DashboardView() {
   const data = dashboard;
+  const [range, setRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const points = range === '90d'
+    ? data.usage.points
+    : range === '7d'
+      ? data.usage.points.slice(-7)
+      : data.usage.points;
   return (
     <PageRoot>
       <PageHeader
@@ -100,10 +108,36 @@ export function DashboardView() {
 
       <TwoColumn>
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} style={{ flex: 1 }}>
-          <Panel title={data.usage.title} subtitle={data.usage.subtitle}>
+          <Panel
+            title={data.usage.title}
+            subtitle={data.usage.subtitle}
+            action={
+              <RangeToggle role="tablist" aria-label="Time range">
+                <RangePill
+                  $active={range === '7d'}
+                  layout
+                  transition={spring.snap}
+                />
+                {(['7d', '30d', '90d'] as const).map((r) => (
+                  <RangeBtn
+                    key={r}
+                    type="button"
+                    role="tab"
+                    aria-selected={range === r}
+                    $active={range === r}
+                    onClick={() => setRange(r)}
+                    whileTap={{ scale: 0.96 }}
+                    transition={spring.snap}
+                  >
+                    {r}
+                  </RangeBtn>
+                ))}
+              </RangeToggle>
+            }
+          >
             <ChartWrap>
               <StudioAreaChart
-                data={data.usage.points}
+                data={points}
                 series={data.usage.series.map((s) => ({
                   dataKey: s.key,
                   name: s.name,
@@ -117,7 +151,15 @@ export function DashboardView() {
         </motion.div>
 
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7} style={{ flex: 1 }}>
-          <Panel title="Activity" subtitle="Live events from your agents">
+          <Panel
+            title="Activity"
+            subtitle="Live events from your agents"
+            action={
+              <Link to="/agent-studio/activity" style={{ color: '#93c5fd', fontSize: 12.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                View all <ArrowRight size={11} strokeWidth={1.8} />
+              </Link>
+            }
+          >
             <ActivityList>
               {data.activity.map((a) => (
                 <ActivityRow key={a.id}>
@@ -192,8 +234,8 @@ export function DashboardView() {
         <SectionTitle>
           <Activity size={14} strokeWidth={1.7} />
           System health
-          <Link to="/agent-studio/integrations" style={{ marginLeft: 'auto', color: '#93c5fd', fontSize: 12.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            Status page <ArrowRight size={11} strokeWidth={1.8} />
+          <Link to="/agent-studio/activity" style={{ marginLeft: 'auto', color: '#93c5fd', fontSize: 12.5, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            View all activity <ArrowRight size={11} strokeWidth={1.8} />
           </Link>
         </SectionTitle>
         <HealthStrip>
@@ -209,3 +251,50 @@ export function DashboardView() {
     </PageRoot>
   );
 }
+
+/**
+ * iOS-style segmented control. The selection pill is a `motion.span`
+ * with `layout` so it slides between buttons with a snappy spring —
+ * matches the iOS Settings app top-level nav.
+ */
+import styled from 'styled-components';
+
+const RangeToggle = styled.div`
+  position: relative;
+  display: inline-flex;
+  gap: 0;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+`;
+
+const RangePill = styled(motion.span)<{ $active: boolean }>`
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: ${({ $active }) => ($active ? 'auto' : '3px')};
+  right: ${({ $active }) => ($active ? '3px' : 'auto')};
+  width: ${({ $active }) => ($active ? 'auto' : 'calc(33.33% - 2px)')};
+  border-radius: 7px;
+  background: rgba(245, 247, 251, 0.95);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.30);
+  z-index: 0;
+`;
+
+const RangeBtn = styled(motion.button)<{ $active: boolean }>`
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 7px;
+  color: ${({ $active }) => ($active ? '#0b0d12' : 'rgba(229, 231, 235, 0.65)')};
+  cursor: pointer;
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+  transition: color ${({ theme }) => theme.transitions.fast};
+`;

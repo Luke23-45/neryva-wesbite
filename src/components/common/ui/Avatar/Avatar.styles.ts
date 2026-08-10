@@ -20,6 +20,20 @@ export const Initials = styled.span`
   font-weight: 600;
   letter-spacing: 0.02em;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) inset;
+  overflow: hidden;
+`;
+
+/**
+ * Real-image variant — round, edge-to-edge cover, no inner shadow.
+ * Used when an avatar was uploaded instead of generated from initials.
+ */
+export const Image = styled.img`
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.04);
 `;
 
 export const Status = styled.span`

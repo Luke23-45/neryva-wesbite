@@ -1,0 +1,28 @@
+{
+  "nav": [
+    { "label": "Dashboard", "to": "/deployment/dashboard", "icon": "dashboard" },
+    { "label": "Pipelines", "to": "/deployment/pipelines", "icon": "pipelines" },
+    { "label": "Deployments", "to": "/deployment/deployments", "icon": "deployments" },
+    { "label": "Infrastructure", "to": "/deployment/infrastructure", "icon": "infrastructure" },
+    { "label": "Logs", "to": "/deployment/logs", "icon": "logs" },
+    { "label": "Settings", "to": "/deployment/settings", "icon": "settings" }
+  ],
+  "user": {
+    "initials": "DP",
+    "name": "Deployment",
+    "tier": "Scale",
+    "email": "you@neryva.deploy"
+  },
+  "workspace": {
+    "name": "Aurora Labs",
+    "plan": "Enterprise"
+  },
+  "searchPlaceholder": "Search Deploy…",
+  "recentPipelines": [
+    { "id": "p1", "title": "production-classifier-v2" },
+    { "id": "p2", "title": "staging-reasoner-rollout" },
+    { "id": "p3", "title": "edge-inference-fleet" },
+    { "id": "p4", "title": "batch-retraining-nightly" },
+    { "id": "p5", "title": "vision-api-v3-canary" }
+  ]
+}

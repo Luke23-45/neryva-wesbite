@@ -4,6 +4,7 @@
     { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
     { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
     { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
+    { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" },
     { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
     { "label": "Settings", "to": "/agent-studio/settings", "icon": "settings" }
   ],

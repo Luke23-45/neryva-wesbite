@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useMatchRoute } from '@tanstack/react-router';
+import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
 import {
   ShellRoot,
   ShellSidebar,
@@ -35,6 +35,8 @@ import {
   UpgradeTitle,
   UpgradeButton,
   ContentArea,
+  MobileMenuButton,
+  MobileOverlay,
 } from './StudioShell.styles';
 import {
   LayoutDashboard,
@@ -45,12 +47,19 @@ import {
   Settings as SettingsIcon,
   Search as SearchIcon,
   Plus,
+  Menu as MenuIcon,
+  X as XIcon,
+  Activity as ActivityIcon,
 } from 'lucide-react';
+import { NotificationsPopover } from '../NotificationsPopover';
+import { AccountMenu } from '../AccountMenu';
+import { ChatHeader } from '../chat/ChatHeader';
+import { UpgradeModal } from '../UpgradeModal';
 
 export type StudioNavItem = {
   label: string;
   to: string;
-  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'integrations' | 'settings';
+  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings';
 };
 
 export type RecentChat = { id: string; title: string };
@@ -61,6 +70,7 @@ type Props = {
   workspace: { name: string; plan: string };
   searchPlaceholder: string;
   recentChats: RecentChat[];
+  topbarExtra?: ReactNode;
   children: ReactNode;
 };
 
@@ -69,6 +79,7 @@ const iconMap = {
   chat: MessageSquare,
   agents: Bot,
   conversations: MessagesSquare,
+  activity: ActivityIcon,
   integrations: Plug,
   settings: SettingsIcon,
 } as const;
@@ -81,14 +92,21 @@ export function StudioShell({
   workspace,
   searchPlaceholder,
   recentChats,
+  topbarExtra,
   children,
 }: Props) {
   const [query, setQuery] = useState('');
+  const [mobileOpen, setMobileOpen] = useState(false);
   const matchRoute = useMatchRoute();
+  const location = useLocation();
+  const onChat = location.pathname === '/agent-studio/chat' || location.pathname.startsWith('/agent-studio/chat/');
 
   return (
     <ShellRoot>
+      {mobileOpen && <MobileOverlay onClick={() => setMobileOpen(false)} aria-hidden="true" />}
+
       <ShellSidebar
+        $mobileOpen={mobileOpen}
         as={motion.aside}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
@@ -111,6 +129,14 @@ export function StudioShell({
           <BrandWordmark>
             Studio<BrandDot aria-hidden="true">·</BrandDot>
           </BrandWordmark>
+          <MobileMenuButton
+            $variant="close"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+            style={{ marginLeft: 'auto' }}
+          >
+            <XIcon size={15} strokeWidth={1.8} />
+          </MobileMenuButton>
         </BrandRow>
 
         <SidebarSearch>
@@ -136,6 +162,7 @@ export function StudioShell({
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, ease: premiumEase, delay: 0.05 + i * 0.04 }}
+                  onClick={() => setMobileOpen(false)}
                 >
                   <Link
                     to={item.to}
@@ -158,7 +185,10 @@ export function StudioShell({
             .filter((c) => c.title.toLowerCase().includes(query.toLowerCase()))
             .slice(0, 6)
             .map((c) => (
-              <RecentItem key={c.id}>
+              <RecentItem
+                key={c.id}
+                onClick={() => setMobileOpen(false)}
+              >
                 <Link
                   to="/agent-studio/chat"
                   style={{ display: 'block', width: '100%' }}
@@ -180,13 +210,7 @@ export function StudioShell({
 
           <UpgradeCard>
             <UpgradeTitle>Upgrade to Scale</UpgradeTitle>
-            <UpgradeButton
-              as={motion.button}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.985 }}
-            >
-              Upgrade
-            </UpgradeButton>
+            <UpgradeModal />
           </UpgradeCard>
         </SidebarFooter>
       </ShellSidebar>
@@ -194,9 +218,17 @@ export function StudioShell({
       <ShellBody>
         <Topbar>
           <TopbarLeft>
+            <MobileMenuButton
+              $variant="menu"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <MenuIcon size={16} strokeWidth={1.8} />
+            </MobileMenuButton>
             <TopbarTitle>{workspace.name}</TopbarTitle>
             <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
             <TopbarSubtitle>Studio</TopbarSubtitle>
+            {topbarExtra ?? (onChat ? <ChatHeader /> : null)}
             <TopbarSearchHint>
               <SearchIcon size={11} strokeWidth={1.7} />
               Press / to search
@@ -206,18 +238,8 @@ export function StudioShell({
             <IconAction as={Link} to="/agent-studio/chat" aria-label="New chat">
               <Plus size={15} strokeWidth={1.8} />
             </IconAction>
-            <IconAction aria-label="Notifications">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                <path d="M10 21a2 2 0 004 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </IconAction>
-            <IconAction aria-label="Account">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.6" />
-                <path d="M4 21a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </IconAction>
+            <NotificationsPopover />
+            <AccountMenu user={user} workspace={workspace} />
           </TopbarRight>
         </Topbar>
         <ContentArea>{children}</ContentArea>

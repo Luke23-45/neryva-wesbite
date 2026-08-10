@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
-import { Plug } from 'lucide-react';
+import { Plug, ArrowRight } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
+import { Modal } from '@components/common/ui/Modal';
 import integrations from '@neryva_data/products/agent_studio/integrations.json';
 
 import {
@@ -23,6 +25,9 @@ import {
   StatusDot,
   StatusText,
   ActionButton,
+  ScopeList,
+  ScopeItem,
+  ScopeDot,
 } from './IntegrationsView.styles';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -60,6 +65,13 @@ const toneColor: Record<string, string> = {
 export function IntegrationsView() {
   const data = integrations;
   const [filter, setFilter] = useState(data.categories[0]);
+  const [connectTarget, setConnectTarget] = useState<null | (typeof data.connectors)[number]>(null);
+  const [scopes, setScopes] = useState<Record<string, boolean>>({
+    'Read messages': true,
+    'Send messages': true,
+    'Read channels': false,
+    'Manage channels': false,
+  });
 
   const list = useMemo(() => {
     if (filter === 'All') return data.connectors;
@@ -127,11 +139,13 @@ export function IntegrationsView() {
                     as={motion.button}
                     whileHover={{ y: -1 }}
                     whileTap={{ scale: 0.985 }}
-                    onClick={() =>
-                      toast.success(
-                        c.connected ? `Manage ${c.name}` : `Connect ${c.name} — coming soon`,
-                      )
-                    }
+                    onClick={() => {
+                      if (c.connected) {
+                        toast.success(`Manage ${c.name}`);
+                      } else {
+                        setConnectTarget(c);
+                      }
+                    }}
                   >
                     {c.connected ? 'Manage' : 'Connect'}
                   </ActionButton>
@@ -143,6 +157,39 @@ export function IntegrationsView() {
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={20}>
+        <Panel
+          title="Webhooks"
+          subtitle="Send every agent event to your own HTTP endpoint."
+          action={
+            <Link
+              to="/agent-studio/integrations/webhooks"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 12px',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.04)',
+                color: '#f5f7fb',
+                fontFamily: 'inherit',
+                fontSize: 12.5,
+                fontWeight: 500,
+                textDecoration: 'none',
+              }}
+            >
+              Configure <ArrowRight size={11} strokeWidth={1.8} />
+            </Link>
+          }
+        >
+          <div style={{ fontSize: 13.5, color: 'rgba(229,231,235,0.7)', lineHeight: 1.55 }}>
+            POST signed JSON payloads to your endpoint with HMAC-SHA256.
+            Subscribe to the events that matter and inspect deliveries in the log.
+          </div>
+        </Panel>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={21}>
         <Panel
           title="Need a custom integration?"
           subtitle="Build a connector with our SDK, or send events to any HTTPS endpoint."
@@ -164,6 +211,87 @@ export function IntegrationsView() {
           </div>
         </Panel>
       </motion.div>
+
+      <Modal
+        open={!!connectTarget}
+        onClose={() => setConnectTarget(null)}
+        title={
+          connectTarget ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Icon $color={toneColor[connectTarget.tone] ?? '#94a3b8'} style={{ width: 22, height: 22 }}>
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d={ICONS[connectTarget.id] ?? 'M5 5h14v14H5z'}
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              </Icon>
+              Connect {connectTarget.name}
+            </span>
+          ) as unknown as string : null
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setConnectTarget(null)}
+              style={{
+                border: '1px solid rgba(255,255,255,0.10)',
+                background: 'transparent',
+                color: 'rgba(229,231,235,0.85)',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                fontWeight: 500,
+                padding: '8px 14px',
+                borderRadius: 8,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                toast.success(`${connectTarget?.name} connected`);
+                setConnectTarget(null);
+              }}
+              style={{
+                border: 0,
+                background: 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)',
+                color: '#fff',
+                fontFamily: 'inherit',
+                fontSize: 13,
+                fontWeight: 500,
+                padding: '8px 14px',
+                borderRadius: 8,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+              }}
+            >
+              Authorize
+            </button>
+          </>
+        }
+      >
+        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(229,231,235,0.7)' }}>
+          {connectTarget?.description} Choose the scopes you want to grant.
+        </p>
+        <ScopeList>
+          {Object.entries(scopes).map(([label, on]) => (
+            <ScopeItem
+              key={label}
+              type="button"
+              onClick={() => setScopes((s) => ({ ...s, [label]: !s[label] }))}
+            >
+              <ScopeDot $on={on} aria-hidden="true">{on ? '✓' : ''}</ScopeDot>
+              <span style={{ fontSize: 13, color: '#f5f7fb' }}>{label}</span>
+            </ScopeItem>
+          ))}
+        </ScopeList>
+      </Modal>
     </PageRoot>
   );
 }

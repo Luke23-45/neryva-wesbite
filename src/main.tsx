@@ -26,6 +26,34 @@ router.update({
   },
 });
 
+/**
+ * Toast styling — matches the agent-studio dark chrome.
+ *
+ * Why dark? The studio shell is dark (#0b0d12), so a light toast over it
+ * would feel foreign. The frosted-glass treatment (backdrop-filter blur
+ * 14px) keeps it readable when it pops over varying backgrounds.
+ *
+ * - Success uses the emerald brand token (#05e3a4) for the leading dot
+ * - Error uses the red semantic color (#f87171)
+ * - Subtle 1px inner highlight mimics the panel border, so the toast
+ *   reads as part of the same family as the modal/dialog surfaces.
+ */
+const toastStyle: React.CSSProperties = {
+  background: 'rgba(15, 17, 22, 0.94)',
+  color: '#f5f7fb',
+  border: '1px solid rgba(255, 255, 255, 0.10)',
+  borderRadius: '12px',
+  fontSize: '13px',
+  fontWeight: 500,
+  padding: '10px 14px',
+  boxShadow:
+    '0 16px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+  minWidth: '220px',
+  maxWidth: '420px',
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
@@ -36,12 +64,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <RouterProvider router={router} />
             <Toaster
               position="bottom-right"
+              gutter={8}
               toastOptions={{
                 duration: 4000,
-                style: {
-                  background: theme.colors.surface,
-                  color: theme.colors.text.strong,
-                  borderRadius: theme.radii.md,
+                style: toastStyle,
+                success: {
+                  iconTheme: { primary: '#05e3a4', secondary: '#0b0d12' },
+                },
+                error: {
+                  iconTheme: { primary: '#f87171', secondary: '#0b0d12' },
                 },
               }}
             />

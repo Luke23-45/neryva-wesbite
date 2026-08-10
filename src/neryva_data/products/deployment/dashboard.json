@@ -1,0 +1,97 @@
+{
+  "kpis": [
+    {
+      "label": "Active deployments",
+      "value": "47",
+      "delta": { "value": "+4", "positive": true },
+      "spark": [38, 39, 41, 40, 42, 43, 44, 43, 45, 44, 46, 45, 47, 46, 47, 47],
+      "color": "#f59e0b",
+      "footnote": "across 6 regions"
+    },
+    {
+      "label": "Requests / sec",
+      "value": "12.4k",
+      "delta": { "value": "+18%", "positive": true },
+      "spark": [9.2, 9.8, 10.1, 10.6, 11.0, 11.4, 11.2, 11.6, 12.0, 11.8, 12.1, 12.3, 12.4, 12.2, 12.5, 12.4],
+      "color": "#60a5fa",
+      "footnote": "p50 sustained"
+    },
+    {
+      "label": "p95 latency",
+      "value": "284ms",
+      "delta": { "value": "-22ms", "positive": true },
+      "spark": [340, 332, 328, 320, 315, 310, 305, 300, 298, 295, 290, 288, 286, 285, 284, 284],
+      "color": "#05e3a4",
+      "footnote": "global average"
+    },
+    {
+      "label": "Error rate",
+      "value": "0.12%",
+      "delta": { "value": "-0.04pt", "positive": true },
+      "spark": [0.18, 0.17, 0.16, 0.16, 0.15, 0.15, 0.14, 0.14, 0.13, 0.13, 0.13, 0.12, 0.12, 0.12, 0.12, 0.12],
+      "color": "#34d399",
+      "footnote": "last 24 hours"
+    }
+  ],
+  "throughput": {
+    "title": "Request throughput",
+    "subtitle": "Requests per second across all regions — last 30 days",
+    "series": [
+      { "key": "served", "name": "Served", "color": "#f59e0b" },
+      { "key": "queued", "name": "Queued", "color": "#60a5fa" }
+    ],
+    "points": [
+      { "date": "Mar 12", "served": 8200, "queued": 140 },
+      { "date": "Mar 13", "served": 8500, "queued": 160 },
+      { "date": "Mar 14", "served": 8800, "queued": 150 },
+      { "date": "Mar 15", "served": 9100, "queued": 180 },
+      { "date": "Mar 16", "served": 9400, "queued": 170 },
+      { "date": "Mar 17", "served": 9600, "queued": 190 },
+      { "date": "Mar 18", "served": 9800, "queued": 200 },
+      { "date": "Mar 19", "served": 10100, "queued": 220 },
+      { "date": "Mar 20", "served": 10300, "queued": 210 },
+      { "date": "Mar 21", "served": 10600, "queued": 230 },
+      { "date": "Mar 22", "served": 10800, "queued": 240 },
+      { "date": "Mar 23", "served": 11000, "queued": 250 },
+      { "date": "Mar 24", "served": 11100, "queued": 260 },
+      { "date": "Mar 25", "served": 11300, "queued": 270 },
+      { "date": "Mar 26", "served": 11500, "queued": 280 },
+      { "date": "Mar 27", "served": 11600, "queued": 290 },
+      { "date": "Mar 28", "served": 11800, "queued": 300 },
+      { "date": "Mar 29", "served": 11900, "queued": 310 },
+      { "date": "Mar 30", "served": 12000, "queued": 320 },
+      { "date": "Mar 31", "served": 12100, "queued": 330 },
+      { "date": "Apr 1", "served": 12200, "queued": 340 },
+      { "date": "Apr 2", "served": 12300, "queued": 350 },
+      { "date": "Apr 3", "served": 12350, "queued": 355 },
+      { "date": "Apr 4", "served": 12400, "queued": 360 },
+      { "date": "Apr 5", "served": 12420, "queued": 365 },
+      { "date": "Apr 6", "served": 12450, "queued": 370 },
+      { "date": "Apr 7", "served": 12460, "queued": 372 },
+      { "date": "Apr 8", "served": 12430, "queued": 368 },
+      { "date": "Apr 9", "served": 12390, "queued": 360 },
+      { "date": "Apr 10", "served": 12400, "queued": 355 }
+    ]
+  },
+  "pipelines": [
+    { "id": "p1", "name": "production-classifier-v2", "stage": "Serving", "progress": 85, "status": "running", "env": "production", "tone": "emerald" },
+    { "id": "p2", "name": "staging-reasoner-rollout", "stage": "Optimization", "progress": 60, "status": "running", "env": "staging", "tone": "azure" },
+    { "id": "p3", "name": "edge-inference-fleet", "stage": "Operations", "progress": 92, "status": "healthy", "env": "production", "tone": "emerald" },
+    { "id": "p4", "name": "batch-retraining-nightly", "stage": "Provisioning", "progress": 30, "status": "queued", "env": "dev", "tone": "warning" },
+    { "id": "p5", "name": "vision-api-v3-canary", "stage": "Governance", "progress": 70, "status": "review", "env": "staging", "tone": "azure" }
+  ],
+  "activity": [
+    { "id": "ev1", "time": "12:48", "kind": "deploy", "title": "production-classifier-v2 promoted to 100%", "pipeline": "production-classifier-v2", "tone": "success" },
+    { "id": "ev2", "time": "12:31", "kind": "alert", "title": "p95 latency spike in us-east-2", "pipeline": "edge-inference-fleet", "tone": "warning" },
+    { "id": "ev3", "time": "12:14", "kind": "rollback", "title": "staging-reasoner auto-rollback triggered", "pipeline": "staging-reasoner-rollout", "tone": "error" },
+    { "id": "ev4", "time": "11:58", "kind": "audit", "title": "Audit log shipped to S3", "pipeline": "production-classifier-v2", "tone": "info" },
+    { "id": "ev5", "time": "11:42", "kind": "deploy", "title": "vision-api-v3-canary started rollout", "pipeline": "vision-api-v3-canary", "tone": "success" },
+    { "id": "ev6", "time": "11:21", "kind": "config", "title": "Autoscaler config updated", "pipeline": "edge-inference-fleet", "tone": "info" }
+  ],
+  "health": [
+    { "label": "API uptime", "value": "99.98%", "tone": "emerald" },
+    { "label": "Region health", "value": "6 / 6", "tone": "emerald" },
+    { "label": "Queue depth", "value": "355", "tone": "azure" },
+    { "label": "Active runs", "value": "23", "tone": "amber" }
+  ]
+}

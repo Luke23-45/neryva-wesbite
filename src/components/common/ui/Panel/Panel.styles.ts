@@ -24,9 +24,13 @@ export const PanelTitle = styled.h3`
   font-weight: 500;
   letter-spacing: -0.005em;
   color: #f5f7fb;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 `;
 
-export const PanelSubtitle = styled.p`
+export const PanelSubtitle = styled.div`
   margin: 0;
   font-size: 12.5px;
   color: rgba(229, 231, 235, 0.55);

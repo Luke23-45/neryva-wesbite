@@ -21,8 +21,11 @@ import AgentStudioShell from '@pages/products/agent_studio/AgentStudioShell';
 import AgentStudioChatPage from '@pages/products/agent_studio/AgentStudioChatPage';
 import AgentStudioDashboardPage from '@pages/products/agent_studio/AgentStudioDashboardPage';
 import AgentStudioAgentsPage from '@pages/products/agent_studio/AgentStudioAgentsPage';
+import AgentStudioAgentDetailPage from '@pages/products/agent_studio/AgentStudioAgentDetailPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
+import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
+import AgentStudioWebhooksPage from '@pages/products/agent_studio/AgentStudioWebhooksPage';
 import AgentStudioSettingsIndexPage from '@pages/products/agent_studio/AgentStudioSettingsIndexPage';
 import AgentStudioSettingsProfilePage from '@pages/products/agent_studio/AgentStudioSettingsProfilePage';
 import AgentStudioSettingsWorkspacePage from '@pages/products/agent_studio/AgentStudioSettingsWorkspacePage';
@@ -30,6 +33,21 @@ import AgentStudioSettingsTeamPage from '@pages/products/agent_studio/AgentStudi
 import AgentStudioSettingsBillingPage from '@pages/products/agent_studio/AgentStudioSettingsBillingPage';
 import AgentStudioSettingsSecurityPage from '@pages/products/agent_studio/AgentStudioSettingsSecurityPage';
 import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeysPage';
+
+// Deployment app shell (auth-gated)
+import DeploymentShell from '@pages/products/deployment/DeploymentShell';
+import DeploymentDashboardPage from '@pages/products/deployment/DeploymentDashboardPage';
+import DeploymentPipelinesPage from '@pages/products/deployment/DeploymentPipelinesPage';
+import DeploymentPipelineDetailPage from '@pages/products/deployment/DeploymentPipelineDetailPage';
+import DeploymentDeploymentsPage from '@pages/products/deployment/DeploymentDeploymentsPage';
+import DeploymentDeployDetailPage from '@pages/products/deployment/DeploymentDeployDetailPage';
+import DeploymentInfrastructurePage from '@pages/products/deployment/DeploymentInfrastructurePage';
+import DeploymentLogsPage from '@pages/products/deployment/DeploymentLogsPage';
+import DeploymentSettingsIndexPage from '@pages/products/deployment/DeploymentSettingsIndexPage';
+import DeploymentSettingsGeneralPage from '@pages/products/deployment/DeploymentSettingsGeneralPage';
+import DeploymentSettingsEnvironmentsPage from '@pages/products/deployment/DeploymentSettingsEnvironmentsPage';
+import DeploymentSettingsNotificationsPage from '@pages/products/deployment/DeploymentSettingsNotificationsPage';
+import DeploymentSettingsAccessPage from '@pages/products/deployment/DeploymentSettingsAccessPage';
 
 import { requireAuth } from '@components/ProtectedRoute';
 
@@ -155,16 +173,34 @@ export const agentStudioAgentsRoute = createRoute({
   component: AgentStudioAgentsPage,
 });
 
+export const agentStudioAgentDetailRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId',
+  component: AgentStudioAgentDetailPage,
+});
+
 export const agentStudioConversationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/conversations',
   component: AgentStudioConversationsPage,
 });
 
+export const agentStudioActivityRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/activity',
+  component: AgentStudioActivityPage,
+});
+
 export const agentStudioIntegrationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/integrations',
   component: AgentStudioIntegrationsPage,
+});
+
+export const agentStudioWebhooksRoute = createRoute({
+  getParentRoute: () => agentStudioIntegrationsRoute,
+  path: '/webhooks',
+  component: AgentStudioWebhooksPage,
 });
 
 export const agentStudioSettingsRoute = createRoute({
@@ -218,6 +254,100 @@ export const agentStudioSettingsApiKeysRoute = createRoute({
   component: AgentStudioSettingsApiKeysPage,
 });
 
+// ─── Deployment (auth-gated app shell) ────────────────
+export const deploymentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/deployment',
+  beforeLoad: requireAuth,
+  component: DeploymentShell,
+});
+
+export const deploymentIndexRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/',
+  beforeLoad: () => { throw redirect({ to: '/deployment/dashboard' }); },
+  component: () => null,
+});
+
+export const deploymentDashboardRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/dashboard',
+  component: DeploymentDashboardPage,
+});
+
+export const deploymentPipelinesRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/pipelines',
+  component: DeploymentPipelinesPage,
+});
+
+export const deploymentPipelineDetailRoute = createRoute({
+  getParentRoute: () => deploymentPipelinesRoute,
+  path: '/$pipelineId',
+  component: DeploymentPipelineDetailPage,
+});
+
+export const deploymentDeploymentsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/deployments',
+  component: DeploymentDeploymentsPage,
+});
+
+export const deploymentDeployDetailRoute = createRoute({
+  getParentRoute: () => deploymentDeploymentsRoute,
+  path: '/$deployId',
+  component: DeploymentDeployDetailPage,
+});
+
+export const deploymentInfrastructureRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/infrastructure',
+  component: DeploymentInfrastructurePage,
+});
+
+export const deploymentLogsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/logs',
+  component: DeploymentLogsPage,
+});
+
+export const deploymentSettingsRoute = createRoute({
+  getParentRoute: () => deploymentRoute,
+  path: '/settings',
+  component: DeploymentSettingsIndexPage,
+});
+
+export const deploymentSettingsIndexRoute = createRoute({
+  getParentRoute: () => deploymentSettingsRoute,
+  path: '/',
+  beforeLoad: () => { throw redirect({ to: '/deployment/settings/general' }); },
+  component: () => null,
+});
+
+export const deploymentSettingsGeneralRoute = createRoute({
+  getParentRoute: () => deploymentSettingsRoute,
+  path: '/general',
+  component: DeploymentSettingsGeneralPage,
+});
+
+export const deploymentSettingsEnvironmentsRoute = createRoute({
+  getParentRoute: () => deploymentSettingsRoute,
+  path: '/environments',
+  component: DeploymentSettingsEnvironmentsPage,
+});
+
+export const deploymentSettingsNotificationsRoute = createRoute({
+  getParentRoute: () => deploymentSettingsRoute,
+  path: '/notifications',
+  component: DeploymentSettingsNotificationsPage,
+});
+
+export const deploymentSettingsAccessRoute = createRoute({
+  getParentRoute: () => deploymentSettingsRoute,
+  path: '/access',
+  component: DeploymentSettingsAccessPage,
+});
+
 // ─── Route Tree ────────────────────────────────────────
 
 export const routeDefinitions = [
@@ -238,9 +368,10 @@ export const routeDefinitions = [
     agentStudioIndexRoute,
     agentStudioChatRoute,
     agentStudioDashboardRoute,
-    agentStudioAgentsRoute,
+    agentStudioAgentsRoute.addChildren([agentStudioAgentDetailRoute]),
     agentStudioConversationsRoute,
-    agentStudioIntegrationsRoute,
+    agentStudioActivityRoute,
+    agentStudioIntegrationsRoute.addChildren([agentStudioWebhooksRoute]),
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,
@@ -249,6 +380,21 @@ export const routeDefinitions = [
       agentStudioSettingsBillingRoute,
       agentStudioSettingsSecurityRoute,
       agentStudioSettingsApiKeysRoute,
+    ]),
+  ]),
+  deploymentRoute.addChildren([
+    deploymentIndexRoute,
+    deploymentDashboardRoute,
+    deploymentPipelinesRoute.addChildren([deploymentPipelineDetailRoute]),
+    deploymentDeploymentsRoute.addChildren([deploymentDeployDetailRoute]),
+    deploymentInfrastructureRoute,
+    deploymentLogsRoute,
+    deploymentSettingsRoute.addChildren([
+      deploymentSettingsIndexRoute,
+      deploymentSettingsGeneralRoute,
+      deploymentSettingsEnvironmentsRoute,
+      deploymentSettingsNotificationsRoute,
+      deploymentSettingsAccessRoute,
     ]),
   ]),
 ];

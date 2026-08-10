@@ -181,3 +181,67 @@ export const ActionButton = styled.button`
     border-color: rgba(255, 255, 255, 0.18);
   }
 `;
+
+/**
+ * Connect-modal scope picker. Each row is a row-style toggle with an
+ * iOS-style leading dot indicator. Used by the "Connect {service}"
+ * modal to show OAuth-style permission grants.
+ */
+export const ScopeList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+export const ScopeItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: #f5f7fb;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+`;
+
+/**
+ * iOS-style leading checkmark indicator. Toggles between an empty
+ * outlined circle and a filled accent gradient with a check glyph —
+ * the same shape as iOS list-row selection indicators.
+ */
+export const ScopeDot = styled.span<{ $on: boolean }>`
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: ${({ $on }) => ($on ? '#fff' : 'transparent')};
+  background: ${({ $on }) =>
+    $on
+      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      : 'rgba(255, 255, 255, 0.05)'};
+  border: 1px solid
+    ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
+  flex-shrink: 0;
+  transition: background ${({ theme }) => theme.transitions.standard},
+    color ${({ theme }) => theme.transitions.standard},
+    border-color ${({ theme }) => theme.transitions.standard};
+`;

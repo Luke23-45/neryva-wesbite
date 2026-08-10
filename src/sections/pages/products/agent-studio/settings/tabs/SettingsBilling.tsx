@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { Download, ArrowUpRight } from 'lucide-react';
+import { Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
+import { UpgradeModal } from '../../UpgradeModal/UpgradeModal';
 import settings from '@neryva_data/products/agent_studio/settings.json';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -23,28 +24,7 @@ export function SettingsBilling() {
         <Panel
           title="Current plan"
           subtitle={`Renews on ${b.renewal}`}
-          action={
-            <button
-              type="button"
-              onClick={() => toast.success('Plan switcher — coming soon')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 14px',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderRadius: 8,
-                background: 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)',
-                color: '#fff',
-                fontFamily: 'inherit',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Upgrade to Scale <ArrowUpRight size={13} strokeWidth={1.8} />
-            </button>
-          }
+          action={<UpgradeModal />}
         >
           <div
             style={{

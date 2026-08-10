@@ -158,7 +158,7 @@ export function ConversationsView() {
                   <span style={{ fontSize: 12, color: 'rgba(229,231,235,0.5)', fontWeight: 400 }}>
                     · {active.agent}
                   </span>
-                </DetailTitle> as unknown as string
+                </DetailTitle>
               }
               subtitle={
                 <DetailHeader>
@@ -173,7 +173,7 @@ export function ConversationsView() {
                   <DetailClose aria-label="Close detail">
                     <X size={14} strokeWidth={1.7} />
                   </DetailClose>
-                </DetailHeader> as unknown as string
+                </DetailHeader>
               }
             >
               <Transcript>

@@ -204,3 +204,74 @@ export const ActionButton = styled.button`
     color: #f5f7fb;
   }
 `;
+
+export const TemplateGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+`;
+
+export const TemplateCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color ${({ theme }) => theme.transitions.fast},
+    background ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+  }
+`;
+
+export const TemplateIcon = styled.div<{ $hue: string }>`
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: ${({ $hue }) =>
+    $hue === 'emerald'
+      ? 'rgba(5, 227, 164, 0.18)'
+      : $hue === 'azure'
+        ? 'rgba(37, 99, 235, 0.18)'
+        : $hue === 'lilac'
+          ? 'rgba(192, 132, 252, 0.18)'
+          : $hue === 'amber'
+            ? 'rgba(245, 158, 11, 0.18)'
+            : 'rgba(229, 231, 235, 0.10)'};
+`;
+
+export const TemplateTitle = styled.div`
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #f5f7fb;
+  margin-top: 4px;
+`;
+
+export const TemplateDesc = styled.div`
+  font-size: 12px;
+  color: rgba(229, 231, 235, 0.55);
+  line-height: 1.4;
+`;
+
+export const TemplateButton = styled.button`
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f7fb;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.10);
+  }
+`;
