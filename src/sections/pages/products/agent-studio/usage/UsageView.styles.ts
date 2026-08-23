@@ -1,70 +1,20 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-  max-width: 580px;
-`;
-
-export const SectionTitle = styled.h2`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0 12px;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13.5px;
-  font-weight: 500;
-  color: rgba(229, 231, 235, 0.85);
-`;
-
-export const KpiGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-
-  @media (max-width: 720px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-`;
+/** Data-viz gradients — chart fills, keyed by the tone names used in usage data. */
+const fillGradient = (
+  tone: string | undefined,
+): string =>
+  tone === 'azure'
+    ? 'linear-gradient(90deg, #93c5fd, #2563eb)'
+    : tone === 'amethyst'
+      ? 'linear-gradient(90deg, #d8b4fe, #a855f7)'
+      : tone === 'lilac'
+        ? 'linear-gradient(90deg, #c084fc, #9333ea)'
+        : tone === 'emerald'
+          ? 'linear-gradient(90deg, #34d399, #10b981)'
+          : tone === 'warning'
+            ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+            : 'linear-gradient(90deg, #c084fc, #2563eb)';
 
 export const KpiCard = styled.div`
   display: flex;
@@ -72,51 +22,46 @@ export const KpiCard = styled.div`
   gap: 4px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const KpiLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
-export const KpiValue = styled.div`
+export const KpiValue = styled.div<{ $tone?: 'warning' }>`
   font-size: 22px;
   font-weight: 500;
-  color: #f5f7fb;
   letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
+  color: ${({ theme, $tone }) => ($tone ? theme.app.status.warning.fg : theme.app.text.primary)};
 `;
 
 export const KpiMeta = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 2px;
 `;
 
-export const QuotaProgress = styled.div`
+export const MeterTrack = styled.div<{ $flush?: boolean }>`
   position: relative;
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.tint};
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: ${({ $flush }) => ($flush ? 0 : '8px')};
 `;
 
-export const QuotaFill = styled.div<{ $pct: number; $tone: string }>`
+export const MeterFill = styled.div<{ $pct: number; $tone?: string }>`
   position: absolute;
   inset: 0 auto 0 0;
   width: ${({ $pct }) => `${$pct}%`};
-  background: ${({ $tone }) =>
-    $tone === 'emerald'
-      ? 'linear-gradient(90deg, #34d399, #10b981)'
-      : $tone === 'warning'
-        ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-        : 'linear-gradient(90deg, #c084fc, #2563eb)'};
+  background: ${({ $tone }) => fillGradient($tone)};
   border-radius: 3px;
   transition: width ${({ theme }) => theme.transitions.standard};
 `;
@@ -127,8 +72,8 @@ export const ChartCard = styled.div`
   gap: 14px;
   padding: 20px 22px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const ChartHead = styled.div`
@@ -140,17 +85,18 @@ export const ChartHead = styled.div`
 `;
 
 export const ChartTitle = styled.div`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ChartLegend = styled.div`
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
 `;
 
 export const ChartBars = styled.div<{ $n: number }>`
@@ -174,7 +120,7 @@ export const Bar = styled.div<{ $h: number }>`
   width: 100%;
   height: ${({ $h }) => `${$h}%`};
   border-radius: 4px 4px 0 0;
-  background: linear-gradient(180deg, #c084fc 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   opacity: 0.85;
   transition: opacity ${({ theme }) => theme.transitions.fast};
 
@@ -187,7 +133,7 @@ export const BarLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
   letter-spacing: 0.04em;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   text-align: center;
 `;
 
@@ -207,8 +153,8 @@ export const BreakdownCard = styled.div`
   gap: 10px;
   padding: 18px 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const BreakdownTitle = styled.div`
@@ -216,9 +162,9 @@ export const BreakdownTitle = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const BreakdownItem = styled.div`
@@ -226,7 +172,7 @@ export const BreakdownItem = styled.div`
   flex-direction: column;
   gap: 4px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
 
   &:last-child {
     border-bottom: 0;
@@ -241,8 +187,8 @@ export const ItemTop = styled.div`
 `;
 
 export const ItemName = styled.div`
-  font-size: 13px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -253,17 +199,18 @@ export const ItemName = styled.div`
 `;
 
 export const ItemValue = styled.div`
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 `;
 
 export const ItemBar = styled.div`
   position: relative;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.04);
+  background: ${({ theme }) => theme.app.surface.tint};
   overflow: hidden;
 `;
 
@@ -271,16 +218,7 @@ export const ItemFill = styled.div<{ $pct: number; $tone?: string }>`
   position: absolute;
   inset: 0 auto 0 0;
   width: ${({ $pct }) => `${$pct}%`};
-  background: ${({ $tone }) =>
-    $tone === 'azure'
-      ? 'linear-gradient(90deg, #93c5fd, #2563eb)'
-      : $tone === 'amethyst'
-        ? 'linear-gradient(90deg, #d8b4fe, #a855f7)'
-        : $tone === 'lilac'
-          ? 'linear-gradient(90deg, #c084fc, #9333ea)'
-          : $tone === 'emerald'
-            ? 'linear-gradient(90deg, #34d399, #10b981)'
-            : 'linear-gradient(90deg, #c084fc, #2563eb)'};
+  background: ${({ $tone }) => fillGradient($tone)};
   border-radius: 2px;
 `;
 
@@ -288,16 +226,15 @@ export const ToneDot = styled.span<{ $tone: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $tone }) =>
+  flex-shrink: 0;
+  background: ${({ $tone, theme }) =>
     $tone === 'azure'
-      ? '#93c5fd'
+      ? theme.app.status.azure.fg
       : $tone === 'amethyst'
-        ? '#d8b4fe'
-        : $tone === 'lilac'
-          ? '#c084fc'
-          : $tone === 'emerald'
-            ? '#34d399'
-            : '#c084fc'};
+        ? theme.app.status.amethyst.fg
+        : $tone === 'emerald'
+          ? theme.app.status.emerald.fg
+          : theme.app.status.lilac.fg};
 `;
 
 export const QuotaGrid = styled.div`
@@ -316,8 +253,8 @@ export const QuotaCard = styled.div`
   gap: 8px;
   padding: 14px 16px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 export const QuotaTop = styled.div`
@@ -328,16 +265,16 @@ export const QuotaTop = styled.div`
 `;
 
 export const QuotaName = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const QuotaRenew = styled.div`
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   letter-spacing: 0.04em;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const QuotaBottom = styled.div`
@@ -345,11 +282,7 @@ export const QuotaBottom = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
-`;
-
-export const Mono = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
 `;

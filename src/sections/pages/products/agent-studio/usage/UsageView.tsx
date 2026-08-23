@@ -1,20 +1,15 @@
 import { motion } from 'framer-motion';
 import { Gauge, Layers } from 'lucide-react';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, SectionTitle, KpiGrid } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import usage from '@neryva_data/products/agent_studio/usage.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
-  SectionTitle,
-  KpiGrid,
   KpiCard,
   KpiLabel,
   KpiValue,
   KpiMeta,
-  QuotaProgress,
-  QuotaFill,
+  MeterTrack,
+  MeterFill,
   ChartCard,
   ChartHead,
   ChartTitle,
@@ -41,16 +36,6 @@ import {
   QuotaBottom,
 } from './UsageView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 function formatTokens(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
@@ -65,17 +50,15 @@ export function UsageView() {
   const dailyMax = Math.max(...usage.daily.map((d) => d.tokens));
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Usage</PageTitle>
-          <PageSubtitle>
-            Token consumption, costs, and quota limits across all agents and models in the workspace.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Usage</ViewTitle>
+        <ViewSubtitle>
+          Token consumption, costs, and quota limits across all agents and models in the workspace.
+        </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <KpiCard>
             <KpiLabel>Tokens (month)</KpiLabel>
@@ -94,20 +77,16 @@ export function UsageView() {
           </KpiCard>
           <KpiCard>
             <KpiLabel>Quota used</KpiLabel>
-            <KpiValue
-              style={{
-                color: usage.summary.quotaUsed > 80 ? '#fbbf24' : '#f5f7fb',
-              }}
-            >
+            <KpiValue $tone={usage.summary.quotaUsed > 80 ? 'warning' : undefined}>
               {usage.summary.quotaUsed}%
             </KpiValue>
             <KpiMeta>renews {usage.summary.renewsIn}</KpiMeta>
-            <QuotaProgress>
-              <QuotaFill
+            <MeterTrack>
+              <MeterFill
                 $pct={usage.summary.quotaUsed}
-                $tone={usage.summary.quotaUsed > 80 ? 'warning' : 'azure'}
+                $tone={usage.summary.quotaUsed > 80 ? 'warning' : undefined}
               />
-            </QuotaProgress>
+            </MeterTrack>
           </KpiCard>
           <KpiCard>
             <KpiLabel>Models active</KpiLabel>
@@ -117,7 +96,7 @@ export function UsageView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <ChartCard>
           <ChartHead>
             <ChartTitle>Daily token consumption (last 14 days)</ChartTitle>
@@ -125,13 +104,21 @@ export function UsageView() {
               <span>peak {formatTokens(dailyMax)}M</span>
             </ChartLegend>
           </ChartHead>
-          <ChartBars $n={usage.daily.length}>
+          <ChartBars
+            $n={usage.daily.length}
+            role="img"
+            aria-label="Daily token consumption bar chart, last 14 days"
+          >
             {usage.daily.map((d) => {
               const h = (d.tokens / dailyMax) * 100;
               return (
                 <BarWrap key={d.date}>
-                  <Bar $h={h} title={`${d.date} · ${d.tokens}M tokens · $${d.cost}`} />
-                  <BarLabel>{d.date.replace('Jul ', '')}</BarLabel>
+                  <Bar
+                    $h={h}
+                    title={`${d.date} · ${d.tokens}M tokens · $${d.cost}`}
+                    aria-label={`${d.date}: ${d.tokens}M tokens, $${d.cost}`}
+                  />
+                  <BarLabel aria-hidden="true">{d.date.replace('Jul ', '')}</BarLabel>
                 </BarWrap>
               );
             })}
@@ -139,7 +126,7 @@ export function UsageView() {
         </ChartCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
         <SectionTitle>
           <Layers size={14} strokeWidth={1.7} />
           Breakdown
@@ -151,7 +138,7 @@ export function UsageView() {
               <BreakdownItem key={m.id}>
                 <ItemTop>
                   <ItemName>
-                    <ToneDot $tone={m.tone} />
+                    <ToneDot $tone={m.tone} aria-hidden="true" />
                     {m.model}
                   </ItemName>
                   <ItemValue>
@@ -184,7 +171,7 @@ export function UsageView() {
         </BreakdownGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <SectionTitle>
           <Gauge size={14} strokeWidth={1.7} />
           Quotas & limits
@@ -198,16 +185,16 @@ export function UsageView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 5}
               >
                 <QuotaTop>
                   <QuotaName>{q.name}</QuotaName>
                   <QuotaRenew>{q.renews}</QuotaRenew>
                 </QuotaTop>
-                <QuotaProgress>
-                  <QuotaFill $pct={pct} $tone={q.tone} />
-                </QuotaProgress>
+                <MeterTrack $flush>
+                  <MeterFill $pct={pct} $tone={q.tone} />
+                </MeterTrack>
                 <QuotaBottom>
                   <span>
                     {formatNumber(q.used)} / {formatNumber(q.limit)}
@@ -219,6 +206,6 @@ export function UsageView() {
           })}
         </QuotaGrid>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
