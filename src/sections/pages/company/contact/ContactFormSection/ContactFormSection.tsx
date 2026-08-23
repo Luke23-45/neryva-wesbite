@@ -370,7 +370,7 @@ export function ContactFormSection({ data }: Props) {
                   <CheckboxLabel htmlFor="updates">{data.form.checkbox}</CheckboxLabel>
                 </CheckboxGroup>
 
-                <Disclaimer {data.form.disclaimer} />
+                <Disclaimer>{data.form.disclaimer}</Disclaimer>
 
                 <SubmitButton type="submit" disabled={contactMutation.isPending}>
                   {contactMutation.isPending ? 'Sending...' : data.form.submit}
