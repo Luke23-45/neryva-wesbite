@@ -340,7 +340,7 @@ const PlanCard = styled(motion.div)<{ $featured?: boolean; $selected: boolean }>
           ? 'rgba(96, 165, 250, 0.45)'
           : 'rgba(255, 255, 255, 0.06)'};
   background:
-    ${({ $featured, $selected }) =>
+    ${({ $featured }) =>
       $featured
         ? 'linear-gradient(180deg, rgba(192,132,252,0.08), rgba(37,99,235,0.04))'
         : 'rgba(255, 255, 255, 0.02)'};

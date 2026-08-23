@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, ShieldCheck, Copy as CopyIcon, Check } from 'lucide-react';
+import { Plus, Trash2, ShieldCheck, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -30,7 +30,7 @@ import settings from '@neryva_data/products/agent_studio/settings.json';
  */
 
 type Step = 'details' | 'scopes' | 'expiry' | 'reveal';
-type ScopeKey = (typeof SCOPES)[number]['key'];
+type ScopeKey = (typeof SCOPES)[number]['items'][number]['key'];
 type Expiry = '30d' | '90d' | '1y' | 'never';
 
 const SCOPES = [

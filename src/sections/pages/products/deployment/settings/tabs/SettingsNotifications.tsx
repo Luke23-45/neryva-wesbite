@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Slack, Hash, Mail, Webhook, Bell, Trash2 } from 'lucide-react';
+import { Plus, Slack, Mail, Webhook, Bell, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';

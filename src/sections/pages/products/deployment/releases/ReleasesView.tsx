@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Rocket, History, GitCommit } from 'lucide-react';
+import { History, GitCommit } from 'lucide-react';
 import releases from '@neryva_data/products/deployment/releases.json';
 import {
   PageRoot,

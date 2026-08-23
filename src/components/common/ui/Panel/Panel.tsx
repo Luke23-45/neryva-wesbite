@@ -5,7 +5,7 @@ type Props = {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export function Panel({ title, subtitle, action, children }: Props) {

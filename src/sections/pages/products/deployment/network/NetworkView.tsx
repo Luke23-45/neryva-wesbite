@@ -56,12 +56,6 @@ const fadeUp = {
   }),
 };
 
-const kindTone: Record<string, 'warning' | 'azure' | 'neutral'> = {
-  production: 'warning',
-  staging: 'azure',
-  private: 'neutral',
-};
-
 export function NetworkView() {
   return (
     <PageRoot>

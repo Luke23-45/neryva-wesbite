@@ -46,7 +46,7 @@ const statusTone: Record<string, 'success' | 'warning' | 'azure' | 'amber'> = {
   degraded: 'warning',
 };
 
-const runtimeTone: Record<string, 'amber' | 'azure' | 'emerald' | 'warning'> = {
+const runtimeTone: Record<string, 'amber' | 'azure' | 'emerald'> = {
   amber: 'amber',
   azure: 'azure',
   emerald: 'emerald',

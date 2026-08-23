@@ -99,7 +99,7 @@ export function ExperimentsView() {
           <TotalCard>
             <TotalLabel>Stat. significance</TotalLabel>
             <TotalValue>{experiments.summary.statSigRate}%</TotalValue>
-            <TotalMeta>p < 0.05 reached</TotalMeta>
+            <TotalMeta>p {'<'} 0.05 reached</TotalMeta>
           </TotalCard>
         </KpiGrid>
       </motion.div>

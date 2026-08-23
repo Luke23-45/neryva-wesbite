@@ -24,7 +24,6 @@ import {
   TableRow,
   Cell,
   PipelineName,
-  Metric,
   Bar,
   ActivityList,
   ActivityRow,

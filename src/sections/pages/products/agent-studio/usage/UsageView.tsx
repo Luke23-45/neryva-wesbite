@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Activity, BarChart3, Gauge, Layers } from 'lucide-react';
+import { Gauge, Layers } from 'lucide-react';
 import usage from '@neryva_data/products/agent_studio/usage.json';
 import {
   PageRoot,

@@ -16,8 +16,6 @@ import {
   KpiMeta,
   TwoCol,
   Card,
-  CardTitle,
-  CardSub,
   RunTable,
   TableHeader,
   TableRow,

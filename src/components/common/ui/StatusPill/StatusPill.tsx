@@ -1,6 +1,6 @@
 import { Pill } from './StatusPill.styles';
 
-export type StatusTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'emerald' | 'azure' | 'lilac' | 'amethyst';
+export type StatusTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'emerald' | 'azure' | 'lilac' | 'amethyst' | 'amber';
 
 type Props = {
   tone?: StatusTone;

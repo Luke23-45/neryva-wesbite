@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShieldCheck, Download, ScrollText, Globe, Activity, Lock } from 'lucide-react';
+import { ShieldCheck, Download, ScrollText, Globe, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { MetricCard } from '@components/common/ui/MetricCard';

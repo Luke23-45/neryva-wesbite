@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Activity, BarChart3, Gauge, Layers, Zap } from 'lucide-react';
+import { Gauge, Layers, Zap } from 'lucide-react';
 import usage from '@neryva_data/products/deployment/usage.json';
 import {
   PageRoot,
@@ -45,6 +45,7 @@ import {
   Th,
   Td,
   TonePill,
+  Mono,
 } from './UsageView.styles';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;

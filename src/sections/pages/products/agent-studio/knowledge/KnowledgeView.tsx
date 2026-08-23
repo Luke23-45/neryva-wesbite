@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Plus, Globe, FileText, BookOpen, RefreshCw, MoreHorizontal } from 'lucide-react';
+import { Plus, Globe, FileText, BookOpen, MoreHorizontal } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import knowledge from '@neryva_data/products/agent_studio/knowledge.json';
 import {

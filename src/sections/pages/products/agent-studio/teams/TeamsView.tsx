@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, Users, Mail, Clock, ShieldCheck, Check, X as XIcon } from 'lucide-react';
+import { Plus, Users, Mail, Clock, ShieldCheck } from 'lucide-react';
 import teams from '@neryva_data/products/agent_studio/teams.json';
 import {
   PageRoot,

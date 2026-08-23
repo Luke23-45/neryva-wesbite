@@ -11,6 +11,7 @@ const toneToColor: Record<StatusTone, { color: string; bg: string; border: strin
   azure: { color: '#93c5fd', bg: 'rgba(37, 99, 235, 0.10)', border: 'rgba(37, 99, 235, 0.30)' },
   lilac: { color: '#d8b4fe', bg: 'rgba(192, 132, 252, 0.10)', border: 'rgba(192, 132, 252, 0.30)' },
   amethyst: { color: '#d8b4fe', bg: 'rgba(168, 85, 247, 0.10)', border: 'rgba(168, 85, 247, 0.30)' },
+  amber: { color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.10)', border: 'rgba(245, 158, 11, 0.30)' },
 };
 
 export const Pill = styled.span<{ $tone: StatusTone }>`

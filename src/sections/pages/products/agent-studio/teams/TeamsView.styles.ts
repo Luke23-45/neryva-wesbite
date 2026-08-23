@@ -327,7 +327,7 @@ export const MiniBtn = styled.button<{ $variant?: 'primary' | 'ghost' }>`
   transition: background ${({ theme }) => theme.transitions.fast};
   border: 0;
 
-  ${({ $variant, theme }) =>
+  ${({ $variant }) =>
     $variant === 'primary'
       ? `
     background: rgba(192, 132, 252, 0.12);

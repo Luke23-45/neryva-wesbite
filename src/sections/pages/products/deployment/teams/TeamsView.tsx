@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Plus, Users, Mail, ShieldCheck, KeyRound, Check, X as XIcon } from 'lucide-react';
+import { Plus, Users, Mail, ShieldCheck, KeyRound, Check as CheckIcon, X as XIcon } from 'lucide-react';
 import teams from '@neryva_data/products/deployment/teams.json';
 import {
   PageRoot,
@@ -298,7 +298,7 @@ export function TeamsView() {
                   {roles.map((r) => (
                     <MatrixCell key={r}>
                       <Check $on={Boolean(row[r])}>
-                        {row[r] ? <Check size={11} strokeWidth={2.5} /> : <XIcon size={11} strokeWidth={1.5} />}
+                        {row[r] ? <CheckIcon size={11} strokeWidth={2.5} /> : <XIcon size={11} strokeWidth={1.5} />}
                       </Check>
                     </MatrixCell>
                   ))}

@@ -33,7 +33,6 @@ import {
   IconAction,
   UpgradeCard,
   UpgradeTitle,
-  UpgradeButton,
   ContentArea,
   MobileMenuButton,
   MobileOverlay,
@@ -58,7 +57,6 @@ import {
   Code2,
   Users,
   Activity,
-  Gauge,
   FlaskConical,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';

@@ -129,9 +129,9 @@ export const ChartLegend = styled.div`
   color: rgba(229, 231, 235, 0.55);
 `;
 
-export const ChartBars = styled.div`
+export const ChartBars = styled.div<{ $n: number }>`
   display: grid;
-  grid-template-columns: repeat(${({ $n }: { $n: number }) => $n}, minmax(0, 1fr));
+  grid-template-columns: repeat(${({ $n }) => $n}, minmax(0, 1fr));
   gap: 4px;
   height: 160px;
   align-items: end;

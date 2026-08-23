@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Copy as CopyIcon, Check, Smartphone, KeyRound, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';

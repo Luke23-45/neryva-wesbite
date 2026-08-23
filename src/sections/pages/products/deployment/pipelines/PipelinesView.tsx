@@ -19,7 +19,6 @@ import {
   CardTitle,
   Name,
   Description,
-  StatusRow,
   StageStrip,
   StageDot,
   MetricsRow,
