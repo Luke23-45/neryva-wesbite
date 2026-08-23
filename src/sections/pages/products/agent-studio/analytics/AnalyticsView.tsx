@@ -5,13 +5,17 @@ import { Sparkline } from '@components/common/ui/Sparkline';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, KpiGrid } from '@components/common/ui/ViewLayout';
+import {
+  DataTable,
+  DataHead,
+  DataRow,
+  DataCell,
+  CellPrimary,
+} from '@components/common/ui/DataTable';
+import { pageItem } from '@styles/motion';
 import analytics from '@neryva_data/products/agent_studio/analytics.json';
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
-  KpiGrid,
   TwoColumn,
   ChartWrap,
   DonutGrid,
@@ -24,29 +28,17 @@ import {
   LegendSwatch,
   LegendName,
   LegendValue,
-  AgentTable,
-  TableHeader,
-  TableRow,
-  Cell,
-  AgentName,
   Metric,
   TrendBadge,
+  ResolutionCell,
+  ResolutionBar,
+  EmptyValue,
   RegionGrid,
   RegionCard,
   RegionTop,
   RegionName,
   RegionShare,
 } from './AnalyticsView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 // Build SVG arcs for a donut chart
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
@@ -82,11 +74,10 @@ function DonutSvg({ data }: { data: { name: string; value: number; color: string
     return { d: path, color: d.color, key: d.name };
   });
   return (
-    <svg viewBox="0 0 200 200" width="200" height="200">
+    <svg viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="Conversations by channel">
       {arcs.map((a) => (
         <path key={a.key} d={a.d} fill={a.color} />
       ))}
-      <circle cx={cx} cy={cy} r={rInner - 1} fill="#0b0d12" />
     </svg>
   );
 }
@@ -94,15 +85,15 @@ function DonutSvg({ data }: { data: { name: string; value: number; color: string
 export function AnalyticsView() {
   const totalConvs = analytics.summary.totalConversations;
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <PageTitle>Analytics</PageTitle>
-        <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Analytics</ViewTitle>
+        <ViewSubtitle>
           Deep dive into agent performance, conversation channels, and regional usage.
-        </PageSubtitle>
-      </PageHeader>
+        </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <MetricCard
             label="Conversations"
@@ -136,7 +127,7 @@ export function AnalyticsView() {
       </motion.div>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
           <Panel title="Conversations & messages" subtitle="Last 7 days · daily totals">
             <ChartWrap>
               <StudioAreaChart
@@ -152,7 +143,7 @@ export function AnalyticsView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6}>
           <Panel title="Channel distribution" subtitle="Share of conversations by source">
             <DonutGrid>
               <Donut>
@@ -176,63 +167,68 @@ export function AnalyticsView() {
         </motion.div>
       </TwoColumn>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7}>
-        <Panel title="Top agents" subtitle="Performance and customer satisfaction by agent">
-          <AgentTable>
-            <TableHeader>
-              <Cell $w="32%">Agent</Cell>
-              <Cell $w="20%" $align="right">Conversations</Cell>
-              <Cell $w="16%" $align="right">Resolution</Cell>
-              <Cell $w="16%" $align="right">CSAT</Cell>
-              <Cell $w="16%" $align="right">Trend</Cell>
-            </TableHeader>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={7}>
+        <Panel
+          title="Top agents"
+          subtitle="Performance and customer satisfaction by agent"
+          flush
+        >
+          <DataTable>
+            <DataHead>
+              <DataCell $w="32%">Agent</DataCell>
+              <DataCell $w="20%" $align="right">Conversations</DataCell>
+              <DataCell $w="16%" $align="right">Resolution</DataCell>
+              <DataCell $w="16%" $align="right">CSAT</DataCell>
+              <DataCell $w="16%" $align="right">Trend</DataCell>
+            </DataHead>
             {analytics.topAgents.map((a, i) => (
-              <TableRow
+              <DataRow
                 key={a.name}
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 8}
+                $interactive={false}
               >
-                <Cell $w="32%">
-                  <AgentName>{a.name}</AgentName>
-                </Cell>
-                <Cell $w="20%" $align="right">
+                <DataCell $w="32%">
+                  <CellPrimary>{a.name}</CellPrimary>
+                </DataCell>
+                <DataCell $w="20%" $align="right">
                   <Metric>{a.conversations > 0 ? a.conversations.toLocaleString() : '—'}</Metric>
-                </Cell>
-                <Cell $w="16%" $align="right">
+                </DataCell>
+                <DataCell $w="16%" $align="right">
                   {a.resolution > 0 ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-                      <span style={{ width: 50 }}>
+                    <ResolutionCell>
+                      <ResolutionBar>
                         <ProgressBar value={a.resolution} tone={a.resolution >= 90 ? 'emerald' : 'azure'} />
-                      </span>
+                      </ResolutionBar>
                       <Metric>{a.resolution}%</Metric>
-                    </div>
+                    </ResolutionCell>
                   ) : (
-                    <span style={{ color: 'rgba(229, 231, 235, 0.40)' }}>—</span>
+                    <EmptyValue>—</EmptyValue>
                   )}
-                </Cell>
-                <Cell $w="16%" $align="right">
+                </DataCell>
+                <DataCell $w="16%" $align="right">
                   <Metric>{a.satisfaction > 0 ? `${a.satisfaction.toFixed(1)} / 5` : '—'}</Metric>
-                </Cell>
-                <Cell $w="16%" $align="right">
+                </DataCell>
+                <DataCell $w="16%" $align="right">
                   {a.trend !== 0 ? (
                     <TrendBadge $positive={a.trend > 0}>
                       {a.trend > 0 ? '+' : ''}
                       {a.trend}%
                     </TrendBadge>
                   ) : (
-                    <span style={{ color: 'rgba(229, 231, 235, 0.40)' }}>—</span>
+                    <EmptyValue>—</EmptyValue>
                   )}
-                </Cell>
-              </TableRow>
+                </DataCell>
+              </DataRow>
             ))}
-          </AgentTable>
+          </DataTable>
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={14}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
         <Panel title="Regional breakdown" subtitle="Conversation share by region — last 30 days">
           <RegionGrid>
             {analytics.byRegion.map((r, i) => (
@@ -241,7 +237,7 @@ export function AnalyticsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 15}
               >
                 <RegionTop>
@@ -257,6 +253,6 @@ export function AnalyticsView() {
           </RegionGrid>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
