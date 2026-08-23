@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Play, Copy as CopyIcon, BookOpen, KeyRound } from 'lucide-react';
+import { Play, KeyRound } from 'lucide-react';
+import { Segmented } from '@components/common/ui/Segmented';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import api from '@neryva_data/products/agent_studio/api.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
-  HeaderActions,
-  ActionBtn,
   TwoColumn,
   Sidebar,
   SidebarSection,
@@ -21,7 +18,7 @@ import {
   DetailHeader,
   DetailPath,
   Description,
-  SectionTitle,
+  SubsectionLabel,
   ParamsList,
   ParamRow,
   ParamLeft,
@@ -32,22 +29,13 @@ import {
   CodeRow,
   LineNumber,
   LineContent,
-  Tab,
-  TabBtn,
+  ExampleBar,
   TryBar,
   TryNote,
-  TryBtn,
+  TryNoteStrong,
 } from './ApiView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
+const SAMPLE_KEY = 'nv_live_4d2e7a91b6f3a8c1e2f5';
 
 const SAMPLE_REQUEST: Record<string, string> = {
   chat: `curl -X POST https://api.neryva.ai/v1/chat \\
@@ -146,9 +134,24 @@ const SAMPLE_RESPONSE: Record<string, string> = {
 }`,
 };
 
+type Tab = 'request' | 'response';
+const tabOptions: { value: Tab; label: string }[] = [
+  { value: 'request', label: 'Request' },
+  { value: 'response', label: 'Response' },
+];
+
+async function copyText(text: string, successMessage: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success(successMessage);
+  } catch {
+    toast.error('Clipboard unavailable');
+  }
+}
+
 export function ApiView() {
   const [activeId, setActiveId] = useState('chat');
-  const [tab, setTab] = useState<'request' | 'response'>('request');
+  const [tab, setTab] = useState<Tab>('request');
 
   const grouped = useMemo(() => {
     const out: Record<string, typeof api.endpoints> = {};
@@ -160,32 +163,36 @@ export function ApiView() {
   }, []);
 
   const active = api.endpoints.find((e) => e.id === activeId)!;
+  const hasResponse = Boolean(SAMPLE_RESPONSE[activeId]);
   const code = tab === 'request' ? SAMPLE_REQUEST[activeId] : SAMPLE_RESPONSE[activeId] ?? '';
 
+  const selectTab = (next: Tab) => {
+    if (next === 'response' && !hasResponse) return;
+    setTab(next);
+  };
+
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>API explorer</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewHeader>
+          <ViewTitle>API explorer</ViewTitle>
+          <ViewSubtitle>
             Interactive reference for the Neryva API. Every endpoint, every parameter, with runnable
             examples.
-          </PageSubtitle>
-        </TitleBlock>
-        <HeaderActions>
-          <ActionBtn type="button" onClick={() => toast.success('API key copied')}>
-            <KeyRound size={13} strokeWidth={1.8} />
-            Copy API key
-          </ActionBtn>
-          <ActionBtn type="button" $variant="primary" onClick={() => window.open('/docs', '_blank')}>
-            <BookOpen size={13} strokeWidth={1.8} />
-            Full docs
-          </ActionBtn>
-        </HeaderActions>
-      </PageHeader>
+          </ViewSubtitle>
+        </ViewHeader>
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          onClick={() => copyText(SAMPLE_KEY, 'API key copied')}
+        >
+          <KeyRound size={13} strokeWidth={1.8} />
+          Copy API key
+        </ActionButton>
+      </ViewHeaderRow>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
           <Sidebar>
             {Object.entries(grouped).map(([group, list]) => (
               <SidebarSection key={group}>
@@ -195,6 +202,7 @@ export function ApiView() {
                     key={e.id}
                     type="button"
                     $active={activeId === e.id}
+                    aria-current={activeId === e.id ? 'true' : undefined}
                     onClick={() => {
                       setActiveId(e.id);
                       setTab('request');
@@ -209,7 +217,7 @@ export function ApiView() {
           </Sidebar>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
           <Detail>
             <DetailHeader>
               <MethodBadge $method={active.method}>{active.method}</MethodBadge>
@@ -218,8 +226,8 @@ export function ApiView() {
             <Description>{active.description}</Description>
 
             <div>
-              <SectionTitle>Parameters</SectionTitle>
-              <ParamsList style={{ marginTop: 10 }}>
+              <SubsectionLabel>Parameters</SubsectionLabel>
+              <ParamsList>
                 {active.params.map((p) => (
                   <ParamRow key={p.name}>
                     <ParamLeft>
@@ -233,29 +241,22 @@ export function ApiView() {
             </div>
 
             <div>
-              <SectionTitle>Example</SectionTitle>
-              <Tab style={{ marginTop: 10 }}>
-                <TabBtn type="button" $active={tab === 'request'} onClick={() => setTab('request')}>
-                  Request
-                </TabBtn>
-                <TabBtn
-                  type="button"
-                  $active={tab === 'response'}
-                  onClick={() => setTab('response')}
-                  disabled={!SAMPLE_RESPONSE[activeId]}
-                  style={!SAMPLE_RESPONSE[activeId] ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+              <SubsectionLabel>Example</SubsectionLabel>
+              <ExampleBar>
+                <Segmented
+                  options={tabOptions}
+                  value={tab}
+                  onChange={selectTab}
+                  ariaLabel="Example type"
+                />
+                <ActionButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyText(code, 'Copied to clipboard')}
                 >
-                  Response
-                </TabBtn>
-                <ActionBtn
-                  type="button"
-                  onClick={() => toast.success('Copied to clipboard')}
-                  style={{ marginLeft: 'auto' }}
-                >
-                  <CopyIcon size={11} strokeWidth={1.8} />
                   Copy
-                </ActionBtn>
-              </Tab>
+                </ActionButton>
+              </ExampleBar>
               <CodeBlock>
                 {code.split('\n').map((line, i) => (
                   <CodeRow key={i}>
@@ -268,23 +269,28 @@ export function ApiView() {
 
             <TryBar>
               <TryNote>
-                <span style={{ color: 'rgba(229, 231, 235, 0.78)' }}>Try it</span> — your live API
-                key will be used to make the call.
+                <TryNoteStrong>Try it</TryNoteStrong> — your live API key will be used to make the
+                call.
               </TryNote>
-              <TryBtn
-                type="button"
+              <ActionButton
                 onClick={() => {
-                  toast.success('Request sent · 412ms · 200 OK');
-                  setTab('response');
+                  if (hasResponse) {
+                    setTab('response');
+                    toast.success('Request sent · 412ms · 200 OK');
+                  } else {
+                    toast('Live calls for this endpoint are coming to the explorer soon', {
+                      icon: '🚧',
+                    });
+                  }
                 }}
               >
                 <Play size={12} strokeWidth={1.8} />
                 Send request
-              </TryBtn>
+              </ActionButton>
             </TryBar>
           </Detail>
         </motion.div>
       </TwoColumn>
-    </PageRoot>
+    </ViewShell>
   );
 }

@@ -1,83 +1,5 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
-export const HeaderActions = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 9px;
-  border: 1px solid
-    ${({ $variant }) => ($variant === 'primary' ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
-  background: ${({ $variant }) =>
-    $variant === 'primary'
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
-      : 'transparent'};
-  color: #f5f7fb;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast},
-    border-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: ${({ $variant }) =>
-      $variant === 'primary'
-        ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
-        : 'rgba(255, 255, 255, 0.04)'};
-    border-color: rgba(255, 255, 255, 0.16);
-  }
-`;
-
 export const TwoColumn = styled.div`
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -101,10 +23,10 @@ export const SidebarSection = styled.div`
 export const SidebarLabel = styled.div`
   padding: 6px 12px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const SidebarItem = styled.button<{ $active: boolean }>`
@@ -115,15 +37,30 @@ export const SidebarItem = styled.button<{ $active: boolean }>`
   padding: 8px 12px;
   border: 0;
   border-radius: 8px;
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.06)' : 'transparent')};
-  font-family: inherit;
-  font-size: 13px;
-  color: ${({ $active }) => ($active ? '#f5f7fb' : 'rgba(229, 231, 235, 0.78)')};
+  background: ${({ $active, theme }) => ($active ? theme.app.surface.active : 'transparent')};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ $active, theme }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
   cursor: pointer;
   text-align: left;
-  transition: background ${({ theme }) => theme.transitions.fast};
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
+
+  span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 `;
 
 export const MethodBadge = styled.span<{ $method: string }>`
@@ -133,22 +70,22 @@ export const MethodBadge = styled.span<{ $method: string }>`
   padding: 2px 6px;
   border-radius: 4px;
   letter-spacing: 0.04em;
-  background: ${({ $method }) =>
+  background: ${({ $method, theme }) =>
     $method === 'GET'
-      ? 'rgba(52, 211, 153, 0.18)'
+      ? theme.app.status.success.bg
       : $method === 'POST'
-        ? 'rgba(96, 165, 250, 0.18)'
+        ? theme.app.status.info.bg
         : $method === 'PATCH'
-          ? 'rgba(245, 158, 11, 0.18)'
-          : 'rgba(248, 113, 113, 0.18)'};
-  color: ${({ $method }) =>
+          ? theme.app.status.warning.bg
+          : theme.app.status.error.bg};
+  color: ${({ $method, theme }) =>
     $method === 'GET'
-      ? '#34d399'
+      ? theme.app.status.success.fg
       : $method === 'POST'
-        ? '#93c5fd'
+        ? theme.app.status.info.fg
         : $method === 'PATCH'
-          ? '#fbbf24'
-          : '#f87171'};
+          ? theme.app.status.warning.fg
+          : theme.app.status.error.fg};
   flex-shrink: 0;
   min-width: 38px;
   text-align: center;
@@ -160,8 +97,8 @@ export const Detail = styled.div`
   gap: 18px;
   padding: 22px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 export const DetailHeader = styled.div`
@@ -173,26 +110,27 @@ export const DetailHeader = styled.div`
 
 export const DetailPath = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 15px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.title};
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
   flex: 1;
   min-width: 0;
+  word-break: break-all;
 `;
 
 export const Description = styled.div`
-  font-size: 13.5px;
-  color: rgba(229, 231, 235, 0.78);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
   line-height: 1.55;
 `;
 
-export const SectionTitle = styled.h3`
+export const SubsectionLabel = styled.h3`
   margin: 0;
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
 `;
 
@@ -200,6 +138,7 @@ export const ParamsList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 10px;
 `;
 
 export const ParamRow = styled.div`
@@ -209,8 +148,8 @@ export const ParamRow = styled.div`
   align-items: start;
   padding: 10px 12px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 export const ParamLeft = styled.div`
@@ -222,31 +161,32 @@ export const ParamLeft = styled.div`
 
 export const ParamName = styled.span<{ $required: boolean }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 
   &::before {
     content: '${({ $required }) => ($required ? '●' : '○')}';
-    color: ${({ $required }) => ($required ? '#fbbf24' : 'rgba(229, 231, 235, 0.45)')};
+    color: ${({ $required, theme }) =>
+      $required ? theme.app.status.warning.fg : theme.app.text.faint};
     margin-right: 6px;
   }
 `;
 
 export const ParamDesc = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.5;
 `;
 
 export const ParamType = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   padding: 3px 7px;
   border-radius: 5px;
-  background: rgba(192, 132, 252, 0.10);
-  border: 1px solid rgba(192, 132, 252, 0.30);
-  color: #d8b4fe;
+  background: ${({ theme }) => theme.app.status.lilac.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.lilac.border};
+  color: ${({ theme }) => theme.app.status.lilac.fg};
   letter-spacing: 0.02em;
   white-space: nowrap;
   align-self: center;
@@ -257,12 +197,20 @@ export const CodeBlock = styled.pre`
   padding: 16px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.30);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.85);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
   overflow-x: auto;
   line-height: 1.6;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.app.scrollbar};
+    border-radius: 4px;
+  }
 `;
 
 export const CodeRow = styled.div`
@@ -275,7 +223,7 @@ export const LineNumber = styled.span`
   flex-shrink: 0;
   width: 24px;
   text-align: right;
-  color: rgba(229, 231, 235, 0.30);
+  color: ${({ theme }) => theme.app.text.ghost};
   user-select: none;
 `;
 
@@ -284,31 +232,17 @@ export const LineContent = styled.code`
   white-space: pre;
 `;
 
-export const Tab = styled.div`
+export const ExampleBar = styled.div`
   display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-  padding: 3px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  width: fit-content;
-`;
-
-export const TabBtn = styled.button<{ $active: boolean }>`
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 0;
-  border-radius: 6px;
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.10)' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#f5f7fb' : 'rgba(229, 231, 235, 0.65)')};
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast};
+  gap: 10px;
+  margin: 10px 0 12px;
+  flex-wrap: wrap;
+
+  /* A trailing action (e.g. Copy) pushes to the right edge. */
+  & > button {
+    margin-left: auto;
+  }
 `;
 
 export const TryBar = styled.div`
@@ -317,26 +251,19 @@ export const TryBar = styled.div`
   justify-content: space-between;
   gap: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+
+  ${({ theme }) => theme.media.mobile} {
+    flex-direction: column;
+    align-items: stretch;
+  }
 `;
 
 export const TryNote = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
-export const TryBtn = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
-  color: #fff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+export const TryNoteStrong = styled.span`
+  color: ${({ theme }) => theme.app.text.secondary};
 `;

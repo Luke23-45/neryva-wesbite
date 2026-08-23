@@ -137,7 +137,7 @@ top to bottom; shells come before the pages they frame.
 | 1.10 | Analytics | `/analytics` | DONE |
 | 1.11 | Compliance | `/compliance` | DONE |
 | 1.12 | Templates | `/templates` | — |
-| 1.13 | API playground | `/api` | — |
+| 1.13 | API playground | `/api` | DONE |
 | 1.14 | Teams | `/teams` | — |
 | 1.15 | Usage | `/usage` | — |
 | 1.16 | Evaluations | `/evaluations` | — |
