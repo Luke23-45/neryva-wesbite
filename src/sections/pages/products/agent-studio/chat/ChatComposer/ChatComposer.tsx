@@ -1,5 +1,6 @@
 import { forwardRef, useState, type KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
+import { ease } from '@styles/motion';
 import {
   ComposerWrap,
   FieldShell,
@@ -17,11 +18,10 @@ type Props = {
   onSend?: (text: string) => void;
 };
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-
 export const ChatComposer = forwardRef<HTMLInputElement, Props>(
   ({ placeholder, mode, hint, onSend }, ref) => {
     const [value, setValue] = useState('');
+    const canSend = value.trim().length > 0;
 
     const submit = () => {
       const trimmed = value.trim();
@@ -43,11 +43,10 @@ export const ChatComposer = forwardRef<HTMLInputElement, Props>(
           as={motion.div}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: premiumEase, delay: 0.3 }}
-          $focused={value.length > 0}
+          transition={{ duration: 0.7, ease: ease.premium, delay: 0.3 }}
         >
-          <PlusButton aria-label="Attach file">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <PlusButton aria-label="Attach file" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
           </PlusButton>
@@ -61,21 +60,16 @@ export const ChatComposer = forwardRef<HTMLInputElement, Props>(
             aria-label="Message"
           />
 
-          <ModeBadge aria-label={`Mode: ${mode}`} type="button">
-            {mode}
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </ModeBadge>
+          <ModeBadge aria-label={`Response mode: ${mode}`}>{mode}</ModeBadge>
 
           <SendButton
             type="button"
             aria-label="Send message"
-            $enabled={value.trim().length > 0}
-            disabled={value.trim().length === 0}
+            $enabled={canSend}
+            disabled={!canSend}
             onClick={submit}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 d="M12 5v14M5 12l7-7 7 7"
                 stroke="currentColor"

@@ -1,19 +1,10 @@
 import styled, { keyframes } from 'styled-components';
 
-export const MessagesArea = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex: 1;
-`;
-
 export const EmptyState = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 24px;
 `;
 
 export const SuggestionList = styled.div`
@@ -36,16 +27,21 @@ export const SuggestionItem = styled.button`
   border-radius: 10px;
   text-align: left;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14.5px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 400;
-  color: rgba(229, 231, 235, 0.78);
+  color: ${({ theme }) => theme.app.text.secondary};
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.tint};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
   }
 `;
 
@@ -53,7 +49,7 @@ export const SuggestionIconWrap = styled.svg`
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const SuggestionLabel = styled.span`
@@ -74,33 +70,31 @@ export const Bubble = styled.div<{ $role: 'user' | 'agent' }>`
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 80%;
+  max-width: 86%;
   padding: 12px 14px;
   border-radius: 14px;
   align-self: ${({ $role }) => ($role === 'user' ? 'flex-end' : 'flex-start')};
-  background: ${({ $role }) =>
+  background: ${({ $role, theme }) =>
     $role === 'user'
       ? 'linear-gradient(135deg, rgba(192,132,252,0.18) 0%, rgba(37,99,235,0.18) 100%)'
-      : 'rgba(255,255,255,0.04)'};
+      : theme.app.surface.tint};
   border: 1px solid
-    ${({ $role }) =>
-      $role === 'user'
-        ? 'rgba(192, 132, 252, 0.30)'
-        : 'rgba(255, 255, 255, 0.08)'};
+    ${({ $role, theme }) => ($role === 'user' ? 'rgba(192, 132, 252, 0.30)' : theme.app.border.strong)};
 `;
 
 export const BubbleMeta = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const BubbleText = styled.div`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   line-height: 1.55;
-  color: rgba(245, 247, 251, 0.95);
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow-wrap: break-word;
 `;
 
 const blink = keyframes`
@@ -115,17 +109,23 @@ export const TypingBubble = styled.div`
   gap: 4px;
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
 `;
 
 export const TypingDot = styled.span<{ $delay: number }>`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(229, 231, 235, 0.65);
+  background: ${({ theme }) => theme.app.text.secondary};
   animation: ${blink} 1.2s ease-in-out infinite;
   animation-delay: ${({ $delay }) => $delay}s;
+`;
+
+export const TypingRow = styled.div`
+  display: flex;
+  gap: 5px;
+  padding: 4px 0;
 `;
 
 export const SuggestionInline = styled.div`
@@ -134,4 +134,28 @@ export const SuggestionInline = styled.div`
   gap: 6px;
   margin-top: 14px;
   justify-content: center;
+`;
+
+export const SuggestionChip = styled.button`
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
 `;

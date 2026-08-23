@@ -20,10 +20,10 @@ export const Crumbs = styled.nav`
   align-items: center;
   gap: 8px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
 
   ${({ theme }) => theme.media.mobile} {
     display: none;
@@ -32,12 +32,12 @@ export const Crumbs = styled.nav`
 
 export const Crumb = styled.span`
   &:last-child {
-    color: rgba(229, 231, 235, 0.78);
+    color: ${({ theme }) => theme.app.text.secondary};
   }
 `;
 
 export const CrumbDivider = styled.span`
-  color: rgba(229, 231, 235, 0.3);
+  color: ${({ theme }) => theme.app.text.ghost};
 `;
 
 export const ModelButton = styled.button`
@@ -45,18 +45,23 @@ export const ModelButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 6px 10px 6px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  background: ${({ theme }) => theme.app.surface.tint};
   border-radius: 10px;
   cursor: pointer;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: ${({ theme }) => theme.app.surface.active};
+    border-color: ${({ theme }) => theme.app.border.hover};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;
 
@@ -68,7 +73,7 @@ export const ModelBadge = styled.span<{ $hue: 'emerald' | 'azure' | 'lilac' | 'a
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 4px;
-  color: #0b0d12;
+  color: ${({ theme }) => theme.app.text.inverse};
   background: ${({ $hue }) =>
     $hue === 'emerald'
       ? '#05e3a4'
@@ -80,41 +85,21 @@ export const ModelBadge = styled.span<{ $hue: 'emerald' | 'azure' | 'lilac' | 'a
 `;
 
 export const ModelName = styled.span`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   letter-spacing: -0.005em;
+  white-space: nowrap;
 `;
 
 export const ModelChevron = styled.svg<{ $open: boolean }>`
   width: 13px;
   height: 13px;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   transform: rotate(${({ $open }) => ($open ? 180 : 0)}deg);
   transition: transform ${({ theme }) => theme.transitions.fast};
 `;
 
-export const RightCluster = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-`;
-
-export const IconAction = styled.button`
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: rgba(229, 231, 235, 0.55);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast},
-    color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    color: #f5f7fb;
-    background: rgba(255, 255, 255, 0.06);
-  }
+export const ModelOptionName = styled.span`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
 `;

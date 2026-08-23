@@ -6,10 +6,10 @@ export const Popover = styled.div`
   display: inline-flex;
 `;
 
-export const PopoverPanel = styled(motion.div)<{ $width?: number }>`
+export const PopoverPanel = styled(motion.div)<{ $width?: number; $align?: 'left' | 'right' }>`
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  ${({ $align }) => ($align === 'left' ? 'left: 0;' : 'right: 0;')}
   width: ${({ $width }) => $width ?? 320}px;
   max-width: calc(100vw - 32px);
   background: ${({ theme }) => theme.app.surface.glass};

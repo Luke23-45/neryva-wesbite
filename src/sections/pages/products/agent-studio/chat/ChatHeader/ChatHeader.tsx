@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
+import { ease } from '@styles/motion';
 import {
   Bar,
   LeftCluster,
@@ -10,9 +12,9 @@ import {
   ModelBadge,
   ModelName,
   ModelChevron,
-  RightCluster,
-  IconAction,
+  ModelOptionName,
 } from './ChatHeader.styles';
+import { Popover, PopoverPanel, MenuItem, MenuIcon, MenuLabel } from '../../Popover/Popover.styles';
 
 type Model = {
   id: string;
@@ -28,9 +30,26 @@ const models: Model[] = [
 ];
 
 export function ChatHeader() {
-  const [active] = useState(models[0].id);
+  const [activeId, setActiveId] = useState(models[0].id);
   const [open, setOpen] = useState(false);
-  const current = models.find((m) => m.id === active) ?? models[0];
+  const menuRef = useRef<HTMLDivElement>(null);
+  const current = models.find((m) => m.id === activeId) ?? models[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
 
   return (
     <Bar>
@@ -41,51 +60,61 @@ export function ChatHeader() {
           <Crumb>Untitled thread</Crumb>
         </Crumbs>
 
-        <ModelButton
-          as={motion.button}
-          whileTap={{ scale: 0.985 }}
-          onClick={() => setOpen((v) => !v)}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-        >
-          <ModelBadge $hue={current.hue}>{current.badge}</ModelBadge>
-          <ModelName>{current.name}</ModelName>
-          <ModelChevron $open={open} viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </ModelChevron>
-        </ModelButton>
+        <Popover ref={menuRef}>
+          <ModelButton
+            as={motion.button}
+            whileTap={{ scale: 0.985 }}
+            onClick={() => setOpen((v) => !v)}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+          >
+            <ModelBadge $hue={current.hue}>{current.badge}</ModelBadge>
+            <ModelName>{current.name}</ModelName>
+            <ModelChevron $open={open} viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            </ModelChevron>
+          </ModelButton>
+          <AnimatePresence>
+            {open && (
+              <PopoverPanel
+                role="listbox"
+                aria-label="Model"
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                transition={{ duration: 0.18, ease: ease.premium }}
+                $width={240}
+                $align="left"
+              >
+                {models.map((m) => {
+                  const selected = m.id === activeId;
+                  return (
+                    <MenuItem
+                      key={m.id}
+                      as="button"
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => {
+                        setActiveId(m.id);
+                        setOpen(false);
+                      }}
+                    >
+                      <MenuIcon>
+                        <ModelBadge $hue={m.hue}>{m.badge}</ModelBadge>
+                      </MenuIcon>
+                      <MenuLabel>
+                        <ModelOptionName>{m.name}</ModelOptionName>
+                      </MenuLabel>
+                      {selected && <Check size={13} strokeWidth={2} aria-hidden="true" />}
+                    </MenuItem>
+                  );
+                })}
+              </PopoverPanel>
+            )}
+          </AnimatePresence>
+        </Popover>
       </LeftCluster>
-
-      <RightCluster>
-        <IconAction aria-label="Share">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </IconAction>
-        <IconAction aria-label="Settings">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-            <path
-              d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1.11-1.56 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 005 14.6 1.7 1.7 0 003.44 13.56H3a2 2 0 110-4h.09A1.7 1.7 0 005 8.44 1.7 1.7 0 004.66 6.57l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009.36 4.08 1.7 1.7 0 0010.43 2.52V2a2 2 0 014 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.92 9.36 1.7 1.7 0 0021.48 10.43H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </IconAction>
-        <IconAction aria-label="Account">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M4 21a8 8 0 0116 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </IconAction>
-      </RightCluster>
     </Bar>
   );
 }

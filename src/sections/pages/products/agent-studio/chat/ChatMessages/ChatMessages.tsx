@@ -1,6 +1,7 @@
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { ease } from '@styles/motion';
 import {
-  MessagesArea,
   EmptyState,
   SuggestionList,
   SuggestionItem,
@@ -11,8 +12,10 @@ import {
   BubbleMeta,
   BubbleText,
   TypingBubble,
+  TypingRow,
   TypingDot,
   SuggestionInline,
+  SuggestionChip,
 } from './ChatMessages.styles';
 
 export type Message = {
@@ -30,8 +33,6 @@ type Props = {
   onSuggestionClick?: (text: string) => void;
 };
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-
 const iconPaths: Record<string, string> = {
   sparkles:
     'M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3zM18 14l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9.9-2z',
@@ -44,44 +45,49 @@ const iconPaths: Record<string, string> = {
 };
 
 export function ChatMessages({ messages = [], isTyping, suggestions = [], onSuggestionClick }: Props) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Keep the newest message in view as the conversation grows.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages.length, isTyping]);
+
   if (messages.length === 0) {
     return (
-      <MessagesArea>
-        <EmptyState>
-          <SuggestionList>
-            {suggestions.map((s, i) => (
-              <SuggestionItem
-                key={s.label}
-                as={motion.button}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, ease: premiumEase, delay: 0.35 + i * 0.07 }}
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => onSuggestionClick?.(s.label)}
-              >
-                <SuggestionIconWrap viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d={iconPaths[s.icon] ?? iconPaths.sparkles}
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                </SuggestionIconWrap>
-                <SuggestionLabel>{s.label}</SuggestionLabel>
-              </SuggestionItem>
-            ))}
-          </SuggestionList>
-        </EmptyState>
-      </MessagesArea>
+      <EmptyState>
+        <SuggestionList>
+          {suggestions.map((s, i) => (
+            <SuggestionItem
+              key={s.label}
+              as={motion.button}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: ease.premium, delay: 0.35 + i * 0.07 }}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => onSuggestionClick?.(s.label)}
+            >
+              <SuggestionIconWrap viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d={iconPaths[s.icon] ?? iconPaths.sparkles}
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </SuggestionIconWrap>
+              <SuggestionLabel>{s.label}</SuggestionLabel>
+            </SuggestionItem>
+          ))}
+        </SuggestionList>
+      </EmptyState>
     );
   }
 
   return (
-    <MessagesArea>
-      <MessageList>
+    <>
+      <MessageList role="log" aria-live="polite" aria-label="Conversation">
         {messages.map((m) => (
           <Bubble
             key={m.id}
@@ -89,7 +95,7 @@ export function ChatMessages({ messages = [], isTyping, suggestions = [], onSugg
             as={motion.div}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: premiumEase }}
+            transition={{ duration: 0.3, ease: ease.premium }}
           >
             <BubbleMeta>{m.role === 'user' ? 'You' : 'Neryva'}</BubbleMeta>
             <BubbleText>{m.text}</BubbleText>
@@ -100,41 +106,27 @@ export function ChatMessages({ messages = [], isTyping, suggestions = [], onSugg
             as={motion.div}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: premiumEase }}
+            transition={{ duration: 0.25, ease: ease.premium }}
           >
             <BubbleMeta>Neryva</BubbleMeta>
-            <div style={{ display: 'flex', gap: 5, padding: '4px 0' }}>
+            <TypingRow aria-label="Neryva is typing">
               <TypingDot $delay={0} />
               <TypingDot $delay={0.15} />
               <TypingDot $delay={0.3} />
-            </div>
+            </TypingRow>
           </TypingBubble>
         )}
+        <div ref={bottomRef} aria-hidden="true" />
       </MessageList>
       {onSuggestionClick && suggestions.length > 0 && (
         <SuggestionInline>
           {suggestions.slice(0, 2).map((s) => (
-            <button
-              key={s.label}
-              type="button"
-              onClick={() => onSuggestionClick(s.label)}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 999,
-                padding: '6px 12px',
-                color: 'rgba(229,231,235,0.7)',
-                fontFamily: 'inherit',
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <SuggestionChip key={s.label} type="button" onClick={() => onSuggestionClick(s.label)}>
               {s.label}
-            </button>
+            </SuggestionChip>
           ))}
         </SuggestionInline>
       )}
-    </MessagesArea>
+    </>
   );
 }

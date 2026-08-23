@@ -6,20 +6,17 @@ export const ComposerWrap = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding-bottom: 4px;
+  padding: 8px 0 4px;
 `;
 
-export const FieldShell = styled.div<{ $focused: boolean }>`
+export const FieldShell = styled.div`
   width: 100%;
-  max-width: 760px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 10px 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid
-    ${({ $focused }) =>
-      $focused ? 'rgba(147, 197, 253, 0.45)' : 'rgba(255, 255, 255, 0.10)'};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   border-radius: 16px;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
@@ -28,7 +25,7 @@ export const FieldShell = styled.div<{ $focused: boolean }>`
     box-shadow ${({ theme }) => theme.transitions.fast};
 
   &:focus-within {
-    border-color: rgba(147, 197, 253, 0.55);
+    border-color: ${({ theme }) => theme.app.border.focus};
     box-shadow:
       0 1px 0 rgba(255, 255, 255, 0.05) inset,
       0 12px 40px rgba(2, 6, 23, 0.55),
@@ -44,7 +41,7 @@ export const PlusButton = styled.button`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 8px;
   cursor: pointer;
   flex-shrink: 0;
@@ -52,8 +49,13 @@ export const PlusButton = styled.button`
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    color: #f5f7fb;
-    background: rgba(255, 255, 255, 0.06);
+    color: ${({ theme }) => theme.app.text.primary};
+    background: ${({ theme }) => theme.app.surface.active};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;
 
@@ -64,36 +66,40 @@ export const Input = styled.input`
   background: transparent;
   outline: none;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 400;
   letter-spacing: -0.005em;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   padding: 4px 0;
 
   &::placeholder {
-    color: rgba(229, 231, 235, 0.4);
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 
-export const ModeBadge = styled.button`
+/** Static mode indicator — becomes a picker when modes are real. */
+export const ModeBadge = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: 0;
-  cursor: pointer;
-  padding: 5px 8px 5px 10px;
+  gap: 6px;
+  padding: 5px 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(229, 231, 235, 0.85);
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 12px;
+  background: ${({ theme }) => theme.app.surface.active};
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
-  letter-spacing: -0.005em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
-  transition: background ${({ theme }) => theme.transitions.fast};
+  flex-shrink: 0;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.app.status.success.fg};
   }
 `;
 
@@ -104,24 +110,43 @@ export const SendButton = styled.button<{ $enabled: boolean }>`
   align-items: center;
   justify-content: center;
   border: 0;
-  cursor: ${({ $enabled }) => ($enabled ? 'pointer' : 'not-allowed')};
+  cursor: ${({ $enabled }) => ($enabled ? 'pointer' : 'default')};
   border-radius: 10px;
-  background: ${({ $enabled }) =>
-    $enabled
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
-      : 'rgba(255, 255, 255, 0.08)'};
-  color: ${({ $enabled }) => ($enabled ? '#fff' : 'rgba(229, 231, 235, 0.4)')};
+  background: ${({ $enabled, theme }) =>
+    $enabled ? theme.colors.gradients.primary : theme.app.surface.active};
+  color: ${({ $enabled, theme }) => ($enabled ? '#fff' : theme.app.text.ghost)};
   flex-shrink: 0;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast},
-    box-shadow ${({ theme }) => theme.transitions.fast};
-  box-shadow: ${({ $enabled }) =>
-    $enabled ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none'};
+    box-shadow ${({ theme }) => theme.transitions.fast},
+    transform ${({ theme }) => theme.transitions.fast};
+  box-shadow: ${({ $enabled }) => ($enabled ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none')};
+
+  &:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
 `;
 
 export const HintRow = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.4);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.ghost};
   letter-spacing: -0.005em;
+  text-align: center;
+`;
+
+export const HintKbd = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  display: inline-block;
+  padding: 0 5px;
+  margin: 0 2px;
+  border-radius: 4px;
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  color: ${({ theme }) => theme.app.text.muted};
 `;

@@ -126,7 +126,7 @@ top to bottom; shells come before the pages they frame.
 | # | Work item | Routes | Status |
 |---|---|---|---|
 | 1.1 | Studio shell: sidebar, topbar, search, notifications popover, account menu, mobile drawer | `/agent-studio` chrome | DONE |
-| 1.2 | Chat workspace (header, messages, composer) | `/chat` | — |
+| 1.2 | Chat workspace (header, messages, composer) | `/chat` | DONE |
 | 1.3 | Dashboard | `/dashboard` | — |
 | 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | — |
 | 1.5 | Conversations | `/conversations` | — |
@@ -218,3 +218,4 @@ One line per completed item — what changed and why. Newest last.
 |---|---|---|
 | 0.1 Foundations | Added `theme.app` dark token namespace (bg/surface/border/text/status/type/shadow); tokenized Panel (+`flush`), MetricCard, StatusPill; new kit primitives: ViewLayout, DataTable, Segmented, LinkAction, ActionButton; `pageItem` motion preset; `body.app-shell` dark scrollbars/color-scheme toggled by both shells | (this commit) |
 | 1.1 Studio shell | Grouped sidebar IA (Workspace/Knowledge/Insights/Platform/Settings); nav rows are real links with aria-current + parent-route highlighting; platform-aware ⌘K/Ctrl K hint; sidebar search now filters nav + recents; mobile drawer gets Escape + scroll lock; notifications popover gained read-state (mark all read, unread tints, badge count); account menu: removed dead /docs link, wired command-palette shortcut; Popover + CommandPalette fully tokenized; new tokens: surface.glass, border.hover | (this commit) |
+| 1.2 Chat workspace | Full-height layout: conversation column scrolls, composer pinned, auto-scroll on new messages; message list is a live region (aria-live); reply timer cleaned up on unmount; model picker is a real listbox menu (was a dead button); removed fake Share/Settings/Account buttons from chat topbar; composer mode chip is an honest static indicator; inline suggestion chips + focus rings everywhere; single 760px content column; all chat styles tokenized | (this commit) |
