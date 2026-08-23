@@ -1,13 +1,14 @@
 import styled from 'styled-components';
+import { Link } from '@tanstack/react-router';
 
 export const ShellRoot = styled.section`
   position: relative;
   width: 100%;
   min-height: 100vh;
-  background: #0b0d12;
+  background: ${({ theme }) => theme.app.bg.base};
   display: grid;
   grid-template-columns: 264px 1fr;
-  color: #e6e9ef;
+  color: ${({ theme }) => theme.app.text.body};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
 
   ${({ theme }) => theme.media.tablet} {
@@ -15,6 +16,7 @@ export const ShellRoot = styled.section`
   }
 `;
 
+/* ─── Sidebar ─── */
 export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
   position: sticky;
   top: 0;
@@ -23,8 +25,12 @@ export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
   display: flex;
   flex-direction: column;
   padding: 16px 12px 14px;
-  background: linear-gradient(180deg, #0d1016 0%, #0a0c11 100%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    180deg,
+    ${({ theme }) => theme.app.bg.raised} 0%,
+    ${({ theme }) => theme.app.bg.deep} 100%
+  );
+  border-right: 1px solid ${({ theme }) => theme.app.border.default};
   z-index: 50;
 
   ${({ theme }) => theme.media.tablet} {
@@ -33,18 +39,19 @@ export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
     width: 280px;
     transform: translateX(${({ $mobileOpen }) => ($mobileOpen ? '0' : '-100%')});
     transition: transform ${({ theme }) => theme.transitions.standard};
-    box-shadow: ${({ $mobileOpen }) =>
-      $mobileOpen ? '24px 0 60px rgba(0, 0, 0, 0.5)' : 'none'};
+    box-shadow: ${({ $mobileOpen, theme }) =>
+      $mobileOpen ? theme.app.shadow.drawer : 'none'};
   }
 `;
 
 export const MobileOverlay = styled.div`
   display: none;
+
   ${({ theme }) => theme.media.tablet} {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.55);
+    background: ${({ theme }) => theme.app.scrim};
     z-index: 40;
     backdrop-filter: blur(2px);
   }
@@ -52,6 +59,7 @@ export const MobileOverlay = styled.div`
 
 export const MobileMenuButton = styled.button<{ $variant: 'menu' | 'close' }>`
   display: none;
+
   ${({ theme }) => theme.media.tablet} {
     display: inline-flex;
     align-items: center;
@@ -60,12 +68,20 @@ export const MobileMenuButton = styled.button<{ $variant: 'menu' | 'close' }>`
     height: 30px;
     border: 0;
     background: transparent;
-    color: rgba(229, 231, 235, 0.7);
+    color: ${({ theme }) => theme.app.text.secondary};
     border-radius: 8px;
     cursor: pointer;
+    transition: background ${({ theme }) => theme.transitions.fast},
+      color ${({ theme }) => theme.transitions.fast};
+
     &:hover {
-      background: rgba(255, 255, 255, 0.06);
-      color: #f5f7fb;
+      background: ${({ theme }) => theme.app.surface.active};
+      color: ${({ theme }) => theme.app.text.primary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${({ theme }) => theme.app.border.focus};
+      outline-offset: 1px;
     }
   }
 `;
@@ -84,17 +100,17 @@ export const BrandMark = styled.svg`
 `;
 
 export const BrandWordmark = styled.span`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   display: inline-flex;
   align-items: baseline;
 `;
 
 export const BrandDot = styled.span`
   margin-left: 2px;
-  color: #f97316;
+  color: ${({ theme }) => theme.colors.accent.emerald};
   font-weight: 600;
 `;
 
@@ -104,13 +120,15 @@ export const SidebarSearch = styled.label`
   gap: 8px;
   padding: 8px 10px;
   margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 8px;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
+  transition: border-color ${({ theme }) => theme.transitions.fast};
+
   &:focus-within {
-    border-color: rgba(245, 158, 11, 0.45);
-    color: rgba(229, 231, 235, 0.85);
+    border-color: ${({ theme }) => theme.app.border.focus};
+    color: ${({ theme }) => theme.app.text.secondary};
   }
 `;
 
@@ -124,10 +142,11 @@ export const SidebarSearchInput = styled.input`
   background: transparent;
   outline: none;
   font-family: inherit;
-  font-size: 13px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+
   &::placeholder {
-    color: rgba(229, 231, 235, 0.4);
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 
@@ -135,24 +154,51 @@ export const NavSection = styled.nav`
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: 18px;
+  margin-bottom: 6px;
 `;
 
-export const NavItem = styled.div`
+export const NavGroupLabel = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.faint};
+  padding: 12px 10px 4px;
+
+  &:first-child {
+    padding-top: 2px;
+  }
+`;
+
+/** The nav row IS the link — full click target, real focus state. */
+export const NavItemLink = styled(Link)<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.78);
-  cursor: pointer;
+  color: ${({ theme, $active }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
+  text-decoration: none;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
+
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 `;
 
@@ -163,11 +209,11 @@ export const NavItemIcon = styled.span<{ $active: boolean }>`
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  color: ${({ $active }) => ($active ? '#0b0d12' : 'rgba(229, 231, 235, 0.6)')};
-  background: ${({ $active }) =>
-    $active ? 'linear-gradient(135deg, #f59e0b 0%, #2563eb 100%)' : 'transparent'};
+  color: ${({ theme, $active }) => ($active ? theme.app.text.inverse : theme.app.text.muted)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.gradients.primary : 'transparent')};
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+  flex-shrink: 0;
 `;
 
 export const RecentSection = styled.div`
@@ -176,35 +222,47 @@ export const RecentSection = styled.div`
   padding-bottom: 8px;
   margin-right: -6px;
   padding-right: 6px;
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 4px; }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.app.scrollbar};
+    border-radius: 4px;
+  }
 `;
 
 export const RecentLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   padding: 6px 10px 4px;
 `;
 
-export const RecentItem = styled.div`
+export const RecentItemLink = styled(Link)`
   display: block;
   padding: 7px 10px;
   border-radius: 7px;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.72);
-  cursor: pointer;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
   }
 `;
 
@@ -213,7 +271,7 @@ export const SidebarFooter = styled.div`
   flex-direction: column;
   gap: 10px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const UserCard = styled.div`
@@ -228,13 +286,13 @@ export const UserAvatar = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: linear-gradient(135deg, #f59e0b 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 600;
   letter-spacing: 0.02em;
 `;
@@ -247,17 +305,17 @@ export const UserMeta = styled.div`
 `;
 
 export const UserName = styled.span`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
 export const UserTier = styled.span`
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const UpgradeCard = styled.div`
@@ -267,38 +325,30 @@ export const UpgradeCard = styled.div`
   gap: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   background:
-    linear-gradient(180deg, rgba(245, 158, 11, 0.10), rgba(37, 99, 235, 0.06)),
-    rgba(255, 255, 255, 0.02);
+    linear-gradient(180deg, rgba(192, 132, 252, 0.10), rgba(37, 99, 235, 0.06)),
+    ${({ theme }) => theme.app.surface.subtle};
 `;
 
 export const UpgradeTitle = styled.div`
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.75);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
-export const UpgradeButton = styled.button`
-  border: 0;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #f5f7fb;
-  color: #0b0d12;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  transition: transform ${({ theme }) => theme.transitions.fast};
-`;
-
+/* ─── Body ─── */
 export const ShellBody = styled.div`
   display: flex;
   flex-direction: column;
   min-width: 0;
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(245, 158, 11, 0.10), transparent 60%),
+    radial-gradient(1200px 600px at 50% -10%, rgba(124, 92, 255, 0.10), transparent 60%),
     radial-gradient(900px 500px at 90% 10%, rgba(37, 99, 235, 0.08), transparent 60%),
-    linear-gradient(180deg, #0b0d12 0%, #0a0c10 100%);
+    linear-gradient(
+      180deg,
+      ${({ theme }) => theme.app.bg.base} 0%,
+      ${({ theme }) => theme.app.bg.deep} 100%
+    );
 `;
 
 export const Topbar = styled.div`
@@ -310,11 +360,14 @@ export const Topbar = styled.div`
   justify-content: space-between;
   gap: 16px;
   padding: 14px 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
   background: rgba(11, 13, 18, 0.7);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  ${({ theme }) => theme.media.mobile} { padding: 12px 18px; }
+
+  ${({ theme }) => theme.media.mobile} {
+    padding: 12px 18px;
+  }
 `;
 
 export const TopbarLeft = styled.div`
@@ -326,30 +379,51 @@ export const TopbarLeft = styled.div`
 
 export const TopbarTitle = styled.h1`
   margin: 0;
-  font-size: 14.5px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const TopbarSubtitle = styled.span`
-  font-size: 14.5px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
-export const TopbarSearchHint = styled.span`
+export const TopbarSearchHint = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   margin-left: 8px;
   padding: 4px 8px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.55);
-  ${({ theme }) => theme.media.mobile} { display: none; }
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  cursor: pointer;
+  transition: color ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.secondary};
+    border-color: ${({ theme }) => theme.app.border.strong};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  ${({ theme }) => theme.media.mobile} {
+    display: none;
+  }
+`;
+
+export const TopbarKbd = styled.span`
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-weight: 500;
 `;
 
 export const TopbarRight = styled.div`
@@ -366,14 +440,20 @@ export const IconAction = styled.a`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 8px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+
   &:hover {
-    color: #f5f7fb;
-    background: rgba(255, 255, 255, 0.06);
+    color: ${({ theme }) => theme.app.text.primary};
+    background: ${({ theme }) => theme.app.surface.active};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;
 
@@ -382,4 +462,5 @@ export const ContentArea = styled.main`
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-height: 0;
 `;

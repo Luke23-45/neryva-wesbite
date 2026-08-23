@@ -1,22 +1,47 @@
 {
   "nav": [
-    { "label": "Dashboard", "to": "/deployment/dashboard", "icon": "dashboard" },
-    { "label": "Pipelines", "to": "/deployment/pipelines", "icon": "pipelines" },
-    { "label": "Deployments", "to": "/deployment/deployments", "icon": "deployments" },
-    { "label": "Infrastructure", "to": "/deployment/infrastructure", "icon": "infrastructure" },
-    { "label": "Logs", "to": "/deployment/logs", "icon": "logs" },
-    { "label": "Alerts", "to": "/deployment/alerts", "icon": "alerts" },
-    { "label": "Cost", "to": "/deployment/cost", "icon": "cost" },
-    { "label": "Secrets", "to": "/deployment/secrets", "icon": "secrets" },
-    { "label": "Compliance", "to": "/deployment/compliance", "icon": "compliance" },
-    { "label": "Webhooks", "to": "/deployment/webhooks", "icon": "webhooks" },
-    { "label": "Network", "to": "/deployment/network", "icon": "network" },
-    { "label": "Scaling", "to": "/deployment/scaling", "icon": "scaling" },
-    { "label": "Experiments", "to": "/deployment/experiments", "icon": "experiments" },
-    { "label": "Teams", "to": "/deployment/teams", "icon": "teams" },
-    { "label": "Usage", "to": "/deployment/usage", "icon": "usage" },
-    { "label": "Releases", "to": "/deployment/releases", "icon": "releases" },
-    { "label": "Settings", "to": "/deployment/settings", "icon": "settings" }
+    {
+      "section": "Ship",
+      "items": [
+        { "label": "Dashboard", "to": "/deployment/dashboard", "icon": "dashboard" },
+        { "label": "Pipelines", "to": "/deployment/pipelines", "icon": "pipelines" },
+        { "label": "Deployments", "to": "/deployment/deployments", "icon": "deployments" },
+        { "label": "Releases", "to": "/deployment/releases", "icon": "releases" }
+      ]
+    },
+    {
+      "section": "Operate",
+      "items": [
+        { "label": "Infrastructure", "to": "/deployment/infrastructure", "icon": "infrastructure" },
+        { "label": "Logs", "to": "/deployment/logs", "icon": "logs" },
+        { "label": "Alerts", "to": "/deployment/alerts", "icon": "alerts" },
+        { "label": "Scaling", "to": "/deployment/scaling", "icon": "scaling" },
+        { "label": "Network", "to": "/deployment/network", "icon": "network" }
+      ]
+    },
+    {
+      "section": "Insights",
+      "items": [
+        { "label": "Cost", "to": "/deployment/cost", "icon": "cost" },
+        { "label": "Usage", "to": "/deployment/usage", "icon": "usage" },
+        { "label": "Experiments", "to": "/deployment/experiments", "icon": "experiments" }
+      ]
+    },
+    {
+      "section": "Platform",
+      "items": [
+        { "label": "Secrets", "to": "/deployment/secrets", "icon": "secrets" },
+        { "label": "Compliance", "to": "/deployment/compliance", "icon": "compliance" },
+        { "label": "Webhooks", "to": "/deployment/webhooks", "icon": "webhooks" },
+        { "label": "Teams", "to": "/deployment/teams", "icon": "teams" }
+      ]
+    },
+    {
+      "section": "Settings",
+      "items": [
+        { "label": "Settings", "to": "/deployment/settings/general", "icon": "settings" }
+      ]
+    }
   ],
   "user": {
     "initials": "DP",

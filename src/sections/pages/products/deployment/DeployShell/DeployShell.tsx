@@ -1,33 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useMatchRoute } from '@tanstack/react-router';
-import {
-  LayoutDashboard,
-  GitBranch,
-  Rocket,
-  Server,
-  ScrollText,
-  Settings as SettingsIcon,
-  Search as SearchIcon,
-  Plus,
-  Bell,
-  DollarSign,
-  KeyRound,
-  ShieldCheck,
-  Menu as MenuIcon,
-  X as XIcon,
-  Webhook,
-  Globe2,
-  Gauge,
-  FlaskConical,
-  Users,
-  BarChart3,
-  History,
-} from 'lucide-react';
-import { NotificationsPopover } from '../NotificationsPopover';
-import { AccountMenu } from '../AccountMenu';
-import { UpgradeModal } from '@/sections/pages/products/agent-studio/UpgradeModal/UpgradeModal';
-import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
+import { motion } from 'framer-motion';
+import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
 import {
   ShellRoot,
   ShellSidebar,
@@ -39,11 +12,12 @@ import {
   SidebarSearchIcon,
   SidebarSearchInput,
   NavSection,
-  NavItem,
+  NavGroupLabel,
+  NavItemLink,
   NavItemIcon,
   RecentSection,
   RecentLabel,
-  RecentItem,
+  RecentItemLink,
   SidebarFooter,
   UserCard,
   UserAvatar,
@@ -56,6 +30,7 @@ import {
   TopbarTitle,
   TopbarSubtitle,
   TopbarSearchHint,
+  TopbarKbd,
   TopbarRight,
   IconAction,
   UpgradeCard,
@@ -64,6 +39,34 @@ import {
   MobileMenuButton,
   MobileOverlay,
 } from './DeployShell.styles';
+import {
+  LayoutDashboard,
+  GitBranch,
+  Rocket,
+  Server,
+  ScrollText,
+  Settings as SettingsIcon,
+  Search as SearchIcon,
+  Plus,
+  Menu as MenuIcon,
+  X as XIcon,
+  Bell,
+  DollarSign,
+  KeyRound,
+  ShieldCheck,
+  Webhook,
+  Globe2,
+  Gauge,
+  FlaskConical,
+  Users,
+  BarChart3,
+  History,
+} from 'lucide-react';
+import { NotificationsPopover } from '../NotificationsPopover';
+import { AccountMenu } from '../AccountMenu';
+import { UpgradeModal } from '@/sections/pages/products/agent-studio/UpgradeModal/UpgradeModal';
+import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
+import { ease } from '@styles/motion';
 
 export type DeployNavItem = {
   label: string;
@@ -71,10 +74,15 @@ export type DeployNavItem = {
   icon: 'dashboard' | 'pipelines' | 'deployments' | 'infrastructure' | 'logs' | 'settings' | 'alerts' | 'cost' | 'secrets' | 'compliance' | 'webhooks' | 'network' | 'scaling' | 'experiments' | 'teams' | 'usage' | 'releases';
 };
 
+export type DeployNavGroup = {
+  section: string;
+  items: DeployNavItem[];
+};
+
 export type RecentPipeline = { id: string; title: string };
 
 type Props = {
-  nav: DeployNavItem[];
+  nav: DeployNavGroup[];
   user: { initials: string; name: string; tier: string; email: string };
   workspace: { name: string; plan: string };
   searchPlaceholder: string;
@@ -102,7 +110,8 @@ const iconMap = {
   releases: History,
 } as const;
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
+const isApplePlatform = () =>
+  typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 
 export function DeployShell({
   nav,
@@ -116,6 +125,8 @@ export function DeployShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const matchRoute = useMatchRoute();
+  const location = useLocation();
+  const modKey = isApplePlatform() ? '⌘' : 'Ctrl';
 
   useEffect(() => {
     document.body.classList.add('app-shell');
@@ -136,6 +147,41 @@ export function DeployShell({
     return () => document.removeEventListener('keydown', onKey);
   }, [paletteOpen]);
 
+  // Mobile drawer: Escape closes, body scroll locks while open.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    document.addEventListener('keydown', onEsc);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onEsc);
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
+
+  // Detail/sub routes keep their parent highlighted in the sidebar.
+  const isActive = (to: string) => {
+    const path = location.pathname;
+    if (to.startsWith('/deployment/pipelines')) return path.startsWith('/deployment/pipelines');
+    if (to.startsWith('/deployment/deployments')) return path.startsWith('/deployment/deployments');
+    if (to.startsWith('/deployment/settings')) return path.startsWith('/deployment/settings');
+    return !!matchRoute({ to, fuzzy: false });
+  };
+
+  const q = query.trim().toLowerCase();
+  const filteredGroups = nav
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.label.toLowerCase().includes(q)),
+    }))
+    .filter((group) => group.items.length > 0);
+  const filteredRecents = recentPipelines
+    .filter((p) => p.title.toLowerCase().includes(q))
+    .slice(0, 6);
+  const hasResults = filteredGroups.length > 0 || filteredRecents.length > 0;
+
   const commandItems: CommandItem[] = [
     { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/deployment/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
     { id: 'pipelines', title: 'Pipelines', subtitle: 'Deployment lifecycle', to: '/deployment/pipelines', section: 'Navigate', icon: <GitBranch size={14} strokeWidth={1.7} />, shortcut: ['P'] },
@@ -153,7 +199,7 @@ export function DeployShell({
     { id: 'teams', title: 'Teams', subtitle: 'Members, RBAC, service accounts', to: '/deployment/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
     { id: 'usage', title: 'Usage', subtitle: 'Requests, compute, quotas', to: '/deployment/usage', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
     { id: 'releases', title: 'Releases', subtitle: 'Release history and changelogs', to: '/deployment/releases', section: 'Navigate', icon: <History size={14} strokeWidth={1.7} /> },
-    { id: 'settings', title: 'Settings', subtitle: 'Workspace, environments, access', to: '/deployment/settings', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
+    { id: 'settings', title: 'Settings', subtitle: 'Workspace, environments, access', to: '/deployment/settings/general', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
   ];
 
   return (
@@ -165,7 +211,8 @@ export function DeployShell({
         as={motion.aside}
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.55, ease: premiumEase }}
+        transition={{ duration: 0.55, ease: ease.premium }}
+        aria-label="Deploy navigation"
       >
         <BrandRow>
           <BrandMark viewBox="0 0 32 32" aria-hidden="true">
@@ -201,53 +248,50 @@ export function DeployShell({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
           />
         </SidebarSearch>
 
         <NavSection>
-          <AnimatePresence initial={false}>
-            {nav.map((item, i) => {
-              const Icon = iconMap[item.icon];
-              const active = matchRoute({ to: item.to, fuzzy: false });
-              return (
-                <NavItem
-                  key={item.to}
-                  as={motion.div}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: premiumEase, delay: 0.05 + i * 0.04 }}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <Link
-                    to={item.to}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+          {filteredGroups.map((group, gi) => (
+            <div key={group.section}>
+              <NavGroupLabel>{group.section}</NavGroupLabel>
+              {group.items.map((item, i) => {
+                const Icon = iconMap[item.icon];
+                const active = isActive(item.to);
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: ease.premium, delay: 0.05 + (gi + i) * 0.03 }}
                   >
-                    <NavItemIcon $active={!!active}>
-                      <Icon size={15} strokeWidth={1.6} />
-                    </NavItemIcon>
-                    <span>{item.label}</span>
-                  </Link>
-                </NavItem>
-              );
-            })}
-          </AnimatePresence>
+                    <NavItemLink
+                      to={item.to}
+                      $active={active}
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <NavItemIcon $active={active}>
+                        <Icon size={15} strokeWidth={1.6} />
+                      </NavItemIcon>
+                      <span>{item.label}</span>
+                    </NavItemLink>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ))}
         </NavSection>
 
         <RecentSection>
           <RecentLabel>Recent pipelines</RecentLabel>
-          {recentPipelines
-            .filter((p) => p.title.toLowerCase().includes(query.toLowerCase()))
-            .slice(0, 6)
-            .map((p) => (
-              <RecentItem key={p.id} onClick={() => setMobileOpen(false)}>
-                <Link
-                  to="/deployment/pipelines"
-                  style={{ display: 'block', width: '100%' }}
-                >
-                  {p.title}
-                </Link>
-              </RecentItem>
-            ))}
+          {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
+          {filteredRecents.map((p) => (
+            <RecentItemLink key={p.id} to="/deployment/pipelines" onClick={() => setMobileOpen(false)}>
+              {p.title}
+            </RecentItemLink>
+          ))}
         </RecentSection>
 
         <SidebarFooter>
@@ -279,21 +323,9 @@ export function DeployShell({
             <TopbarTitle>{workspace.name}</TopbarTitle>
             <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
             <TopbarSubtitle>Deploy</TopbarSubtitle>
-            <TopbarSearchHint
-              role="button"
-              tabIndex={0}
-              onClick={() => setPaletteOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setPaletteOpen(true);
-                }
-              }}
-              aria-label="Open command palette"
-              style={{ cursor: 'pointer' }}
-            >
+            <TopbarSearchHint onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
               <SearchIcon size={11} strokeWidth={1.7} />
-              Press <strong style={{ color: 'rgba(229, 231, 235, 0.78)', fontWeight: 500 }}>⌘K</strong> to search
+              Press <TopbarKbd>{modKey} K</TopbarKbd> to search
             </TopbarSearchHint>
           </TopbarLeft>
           <TopbarRight>
@@ -301,7 +333,7 @@ export function DeployShell({
               <Plus size={15} strokeWidth={1.8} />
             </IconAction>
             <NotificationsPopover />
-            <AccountMenu user={user} workspace={workspace} />
+            <AccountMenu user={user} workspace={workspace} onOpenShortcuts={() => setPaletteOpen(true)} />
           </TopbarRight>
         </Topbar>
         <ContentArea>{children}</ContentArea>

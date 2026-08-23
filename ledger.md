@@ -152,7 +152,7 @@ top to bottom; shells come before the pages they frame.
 
 | # | Work item | Routes | Status |
 |---|---|---|---|
-| 2.1 | Deploy shell: sidebar, topbar, popovers, mobile drawer | `/deployment` chrome | — |
+| 2.1 | Deploy shell: sidebar, topbar, popovers, mobile drawer | `/deployment` chrome | DONE |
 | 2.2 | Dashboard | `/dashboard` | — |
 | 2.3 | Pipelines + pipeline detail | `/pipelines`, `/pipelines/$pipelineId` | — |
 | 2.4 | Deployments + deploy detail | `/deployments`, `/deployments/$deployId` | — |
