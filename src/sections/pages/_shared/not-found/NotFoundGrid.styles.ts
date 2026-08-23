@@ -162,3 +162,43 @@ export const BottomActionSection = styled.section`
     padding: 32px 24px;
   }
 `;
+
+/* ─── LEDGER CELL CONTENT ─── */
+export const CellLabel = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin-bottom: 14px;
+`;
+
+export const CellBody = styled.div`
+  max-width: 320px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+export const EscapeLink = styled.a`
+  display: block;
+  width: fit-content;
+  color: ${({ theme }) => theme.colors.text.primary};
+  text-decoration: none;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border };
+  transition: border-color ${({ theme }) => theme.transitions.fast};
+
+  & + & {
+    margin-top: 8px;
+  }
+
+  &:hover {
+    border-bottom-color: #050505;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #050505;
+    outline-offset: 3px;
+  }
+`;

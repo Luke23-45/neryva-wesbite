@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from '@tanstack/react-router';
 import { useUiStore } from '@store/uiStore';
 import CyclicPreviousButton from '@components/common/ui/CyclicPreviousButton/CyclicPreviousButton';
 import notFoundImage from '@assets/page/not_found/hero.png';
+import { ease } from '@styles/motion';
 
 import {
     MasterLayout,
@@ -10,12 +12,13 @@ import {
     ImageFrame,
     LedgerRow,
     LedgerCell,
+    CellLabel,
+    CellBody,
+    EscapeLink,
     CenterDisplay,
     HugeCode,
     BottomActionSection
 } from './NotFoundGrid.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 export default function NotFoundGrid() {
     const { setHeaderTheme } = useUiStore();
@@ -34,7 +37,7 @@ export default function NotFoundGrid() {
                     as={motion.div}
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1.2, ease: premiumEase }}
+                    transition={{ duration: 1.2, ease: ease.premium }}
                 >
                     <img
                         src={notFoundImage}
@@ -51,8 +54,13 @@ export default function NotFoundGrid() {
                     as={motion.div}
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: premiumEase, delay: 0.3 }}
+                    transition={{ duration: 0.8, ease: ease.premium, delay: 0.3 }}
                 >
+                    <CellLabel>System</CellLabel>
+                    <CellBody>
+                        The requested resource lies outside the operational bounds of this
+                        site. The address may be mistyped, moved, or retired.
+                    </CellBody>
                 </LedgerCell>
 
                 {/* COLUMN 2: Supreme Typographic Error Anchor */}
@@ -60,7 +68,7 @@ export default function NotFoundGrid() {
                     as={motion.div}
                     initial={{ opacity: 0, y: 32 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.9, ease: premiumEase, delay: 0.1 }}
+                    transition={{ duration: 0.9, ease: ease.premium, delay: 0.1 }}
                 >
                     <CenterDisplay>
                         <HugeCode>404</HugeCode>
@@ -72,8 +80,14 @@ export default function NotFoundGrid() {
                     as={motion.div}
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
+                    transition={{ duration: 0.8, ease: ease.premium, delay: 0.4 }}
                 >
+                    <CellLabel>Escape</CellLabel>
+                    <CellBody as="nav">
+                        <EscapeLink as={Link} to="/">Return to the homepage</EscapeLink>
+                        <EscapeLink as={Link} to="/research">Review our research</EscapeLink>
+                        <EscapeLink as={Link} to="/contact">Contact the team</EscapeLink>
+                    </CellBody>
                 </LedgerCell>
 
             </LedgerRow>
@@ -83,7 +97,7 @@ export default function NotFoundGrid() {
                 as={motion.section}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: premiumEase, delay: 0.5 }}
+                transition={{ duration: 0.8, ease: ease.premium, delay: 0.5 }}
             >
                 <CyclicPreviousButton label="Previous" />
             </BottomActionSection>
