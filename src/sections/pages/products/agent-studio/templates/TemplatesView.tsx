@@ -14,19 +14,17 @@ import {
   Wrench,
   Terminal,
   Database,
-  Search as SearchIcon,
   Star,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react';
+import { EmptyState } from '@components/common/ui/EmptyState';
+import { SearchField } from '@components/common/ui/SearchField';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import templates from '@neryva_data/products/agent_studio/templates.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
-  SearchBox,
-  SearchInput,
   FilterBar,
   FilterPill,
   Count,
@@ -39,22 +37,13 @@ import {
   Description,
   Meta,
   MetaItem,
+  ModelName,
   Integrations,
   IntegrationPill,
   Footer,
   Stats,
-  UseBtn,
+  RatingStar,
 } from './TemplatesView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
 
 const ICONS = {
   headphones: Headphones,
@@ -82,78 +71,100 @@ export function TemplatesView() {
   });
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Templates</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewHeader>
+          <ViewTitle>Templates</ViewTitle>
+          <ViewSubtitle>
             Pre-built agent templates for common use cases. Clone one, customize it, and ship in
             minutes instead of days.
-          </PageSubtitle>
-        </TitleBlock>
-        <SearchBox>
-          <SearchIcon size={13} strokeWidth={1.7} style={{ color: 'rgba(229, 231, 235, 0.55)' }} />
-          <SearchInput placeholder="Search templates…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </SearchBox>
-      </PageHeader>
+          </ViewSubtitle>
+        </ViewHeader>
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Search templates…"
+          ariaLabel="Search templates"
+          width={240}
+        />
+      </ViewHeaderRow>
 
-      <FilterBar as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <FilterBar as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={1}>
         {templates.categories.map((c) => (
-          <FilterPill key={c.id} type="button" $active={active === c.id} onClick={() => setActive(c.id)}>
+          <FilterPill
+            key={c.id}
+            type="button"
+            $active={active === c.id}
+            aria-pressed={active === c.id}
+            onClick={() => setActive(c.id)}
+          >
             {c.label}
-            <Count>{c.count}</Count>
+            <Count $active={active === c.id}>{c.count}</Count>
           </FilterPill>
         ))}
       </FilterBar>
 
-      <TemplateGrid>
-        {list.map((t, i) => {
-          const Icon = ICONS[t.icon as keyof typeof ICONS];
-          return (
-            <TemplateCard
-              key={t.id}
-              as={motion.div}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              custom={i + 2}
-            >
-              <CardTop>
-                <IconBox $tone={t.tone}>
-                  <Icon size={18} strokeWidth={1.7} />
-                </IconBox>
-                {t.featured && <FeaturedBadge>Featured</FeaturedBadge>}
-              </CardTop>
-              <Name>{t.name}</Name>
-              <Description>{t.description}</Description>
-              <Meta>
-                <MetaItem>Default model · <span style={{ color: 'rgba(229, 231, 235, 0.85)' }}>{t.model}</span></MetaItem>
-              </Meta>
-              <Integrations>
-                {t.integrations.map((i) => (
-                  <IntegrationPill key={i}>{i}</IntegrationPill>
-                ))}
-              </Integrations>
-              <Footer>
-                <Stats>
-                  <span>
-                    <Star size={10} strokeWidth={1.7} style={{ color: '#fbbf24', marginRight: 2 }} />
-                    {t.rating}
-                  </span>
-                  <span>{t.uses.toLocaleString()} uses</span>
-                </Stats>
-                <UseBtn
-                  type="button"
-                  onClick={() => toast.success(`${t.name} template cloned — configure it now`)}
-                >
-                  Use template
-                  <ArrowRight size={11} strokeWidth={1.8} />
-                </UseBtn>
-              </Footer>
-            </TemplateCard>
-          );
-        })}
-      </TemplateGrid>
-    </PageRoot>
+      {list.length === 0 ? (
+        <EmptyState
+          icon={<Sparkles size={26} strokeWidth={1.5} />}
+          title="No templates match"
+          description="Try a different category or search term."
+        />
+      ) : (
+        <TemplateGrid>
+          {list.map((t, i) => {
+            const Icon = ICONS[t.icon as keyof typeof ICONS];
+            return (
+              <TemplateCard
+                key={t.id}
+                as={motion.div}
+                initial="hidden"
+                animate="visible"
+                variants={pageItem}
+                custom={i + 2}
+              >
+                <CardTop>
+                  <IconBox $tone={t.tone}>
+                    <Icon size={18} strokeWidth={1.7} />
+                  </IconBox>
+                  {t.featured && <FeaturedBadge>Featured</FeaturedBadge>}
+                </CardTop>
+                <Name>{t.name}</Name>
+                <Description>{t.description}</Description>
+                <Meta>
+                  <MetaItem>
+                    Default model · <ModelName>{t.model}</ModelName>
+                  </MetaItem>
+                </Meta>
+                <Integrations>
+                  {t.integrations.map((integration) => (
+                    <IntegrationPill key={integration}>{integration}</IntegrationPill>
+                  ))}
+                </Integrations>
+                <Footer>
+                  <Stats>
+                    <span>
+                      <RatingStar aria-hidden="true">
+                        <Star size={10} strokeWidth={1.7} />
+                      </RatingStar>
+                      {t.rating}
+                    </span>
+                    <span>{t.uses.toLocaleString()} uses</span>
+                  </Stats>
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => toast.success(`${t.name} template cloned — configure it now`)}
+                  >
+                    Use template
+                    <ArrowRight size={11} strokeWidth={1.8} />
+                  </ActionButton>
+                </Footer>
+              </TemplateCard>
+            );
+          })}
+        </TemplateGrid>
+      )}
+    </ViewShell>
   );
 }
