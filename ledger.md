@@ -131,7 +131,7 @@ top to bottom; shells come before the pages they frame.
 | 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | DONE |
 | 1.5 | Conversations | `/conversations` | — |
 | 1.6 | Activity | `/activity` | — |
-| 1.7 | Integrations + webhooks | `/integrations`, `/integrations/webhooks` | — |
+| 1.7 | Integrations + webhooks | `/integrations`, `/integrations/webhooks` | DONE |
 | 1.8 | Knowledge | `/knowledge` | — |
 | 1.9 | Models | `/models` | — |
 | 1.10 | Analytics | `/analytics` | — |

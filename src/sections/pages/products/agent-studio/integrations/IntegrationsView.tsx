@@ -5,16 +5,15 @@ import toast from 'react-hot-toast';
 import { Plug, ArrowRight } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
+import { Segmented } from '@components/common/ui/Segmented';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import integrations from '@neryva_data/products/agent_studio/integrations.json';
 
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
-  Tabs,
-  Tab,
   Grid,
+  FilterRow,
   Card,
   CardHead,
   Icon,
@@ -24,17 +23,14 @@ import {
   CardFoot,
   StatusDot,
   StatusText,
-  ActionButton,
+  PanelCopy,
+  ModalIntro,
+  ModalTitleRow,
   ScopeList,
   ScopeItem,
   ScopeDot,
+  ScopeLabel,
 } from './IntegrationsView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 const ICONS: Record<string, string> = {
   slack: 'M5 9a2 2 0 114 0v6a2 2 0 11-4 0V9zm10 6a2 2 0 114 0 2 2 0 01-4 0zm-2-10a2 2 0 100 4h6a2 2 0 100-4h-6zM9 15a2 2 0 110 4 2 2 0 010-4zm10-2a2 2 0 100 4 2 2 0 000-4z',
@@ -53,6 +49,7 @@ const ICONS: Record<string, string> = {
   zapier: 'M5 12a3 3 0 116 0 3 3 0 01-6 0zm8 0a3 3 0 116 0 3 3 0 01-6 0z',
 };
 
+/** Brand accent per connector — content data, not theme surface colors. */
 const toneColor: Record<string, string> = {
   lilac: '#c084fc',
   azure: '#60a5fa',
@@ -64,7 +61,7 @@ const toneColor: Record<string, string> = {
 
 export function IntegrationsView() {
   const data = integrations;
-  const [filter, setFilter] = useState(data.categories[0]);
+  const [filter, setFilter] = useState<string>(data.categories[0]);
   const [connectTarget, setConnectTarget] = useState<null | (typeof data.connectors)[number]>(null);
   const [scopes, setScopes] = useState<Record<string, boolean>>({
     'Read messages': true,
@@ -78,30 +75,26 @@ export function IntegrationsView() {
     return data.connectors.filter((c) => c.category === filter);
   }, [filter, data]);
 
-  return (
-    <PageRoot>
-      <PageHeader
-        as={motion.div}
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={0}
-      >
-        <PageTitle>Integrations</PageTitle>
-        <PageSubtitle>
-          Connect your tools so your agents always have the full picture.
-        </PageSubtitle>
-      </PageHeader>
+  const categoryOptions = data.categories.map((c) => ({ value: c, label: c }));
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+  return (
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Integrations</ViewTitle>
+        <ViewSubtitle>Connect your tools so your agents always have the full picture.</ViewSubtitle>
+      </ViewHeader>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel>
-          <Tabs>
-            {data.categories.map((c) => (
-              <Tab key={c} $active={filter === c} onClick={() => setFilter(c)}>
-                {c}
-              </Tab>
-            ))}
-          </Tabs>
+          <FilterRow>
+            <Segmented
+              options={categoryOptions}
+              value={filter}
+              onChange={setFilter}
+              size="md"
+              ariaLabel="Filter integrations by category"
+            />
+          </FilterRow>
           <Grid>
             {list.map((c, i) => (
               <Card
@@ -109,7 +102,7 @@ export function IntegrationsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 2}
               >
                 <CardHead>
@@ -136,9 +129,8 @@ export function IntegrationsView() {
                     {c.connected ? 'Connected' : 'Not connected'}
                   </StatusText>
                   <ActionButton
-                    as={motion.button}
-                    whileHover={{ y: -1 }}
-                    whileTap={{ scale: 0.985 }}
+                    size="sm"
+                    variant={c.connected ? 'secondary' : 'primary'}
                     onClick={() => {
                       if (c.connected) {
                         toast.success(`Manage ${c.name}`);
@@ -156,70 +148,71 @@ export function IntegrationsView() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={20}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={20}>
         <Panel
           title="Webhooks"
           subtitle="Send every agent event to your own HTTP endpoint."
           action={
-            <Link
-              to="/agent-studio/integrations/webhooks"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '7px 12px',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderRadius: 8,
-                background: 'rgba(255,255,255,0.04)',
-                color: '#f5f7fb',
-                fontFamily: 'inherit',
-                fontSize: 12.5,
-                fontWeight: 500,
-                textDecoration: 'none',
-              }}
-            >
-              Configure <ArrowRight size={11} strokeWidth={1.8} />
-            </Link>
+            <ActionButton as={Link} to="/agent-studio/integrations/webhooks" variant="secondary" size="sm">
+              Configure
+              <ArrowRight size={11} strokeWidth={1.8} />
+            </ActionButton>
           }
         >
-          <div style={{ fontSize: 13.5, color: 'rgba(229,231,235,0.7)', lineHeight: 1.55 }}>
-            POST signed JSON payloads to your endpoint with HMAC-SHA256.
-            Subscribe to the events that matter and inspect deliveries in the log.
-          </div>
+          <PanelCopy>
+            POST signed JSON payloads to your endpoint with HMAC-SHA256. Subscribe to the events
+            that matter and inspect deliveries in the log.
+          </PanelCopy>
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={21}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={21}>
         <Panel
           title="Need a custom integration?"
           subtitle="Build a connector with our SDK, or send events to any HTTPS endpoint."
           action={
             <ActionButton
-              as={motion.button}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.985 }}
-              onClick={() => toast.success('Read the developer docs → /docs')}
+              variant="secondary"
+              size="sm"
+              onClick={() => toast('The interactive API explorer has request/response examples for every connector.')}
             >
               <Plug size={13} strokeWidth={1.8} />
-              View docs
+              Explore the API
             </ActionButton>
           }
         >
-          <div style={{ fontSize: 13.5, color: 'rgba(229,231,235,0.7)', lineHeight: 1.55 }}>
-            Every integration runs in an isolated runtime with row-level permission scoping.
-            You decide which agents can call which connectors, and every call is logged.
-          </div>
+          <PanelCopy>
+            Every integration runs in an isolated runtime with row-level permission scoping. You
+            decide which agents can call which connectors, and every call is logged.
+          </PanelCopy>
         </Panel>
       </motion.div>
 
       <Modal
         open={!!connectTarget}
         onClose={() => setConnectTarget(null)}
-        title={
-          connectTarget ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        title={connectTarget ? `Connect ${connectTarget.name}` : ''}
+        footer={
+          <>
+            <ActionButton variant="secondary" onClick={() => setConnectTarget(null)}>
+              Cancel
+            </ActionButton>
+            <ActionButton
+              onClick={() => {
+                toast.success(`${connectTarget?.name} connected`);
+                setConnectTarget(null);
+              }}
+            >
+              Authorize
+            </ActionButton>
+          </>
+        }
+      >
+        <ModalIntro>
+          {connectTarget ? (
+            <ModalTitleRow>
               <Icon $color={toneColor[connectTarget.tone] ?? '#94a3b8'} style={{ width: 22, height: 22 }}>
-                <svg viewBox="0 0 24 24" fill="none">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d={ICONS[connectTarget.id] ?? 'M5 5h14v14H5z'}
                     stroke="currentColor"
@@ -229,69 +222,24 @@ export function IntegrationsView() {
                   />
                 </svg>
               </Icon>
-              Connect {connectTarget.name}
-            </span>
-          ) as unknown as string : null
-        }
-        footer={
-          <>
-            <button
-              type="button"
-              onClick={() => setConnectTarget(null)}
-              style={{
-                border: '1px solid rgba(255,255,255,0.10)',
-                background: 'transparent',
-                color: 'rgba(229,231,235,0.85)',
-                fontFamily: 'inherit',
-                fontSize: 13,
-                fontWeight: 500,
-                padding: '8px 14px',
-                borderRadius: 8,
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                toast.success(`${connectTarget?.name} connected`);
-                setConnectTarget(null);
-              }}
-              style={{
-                border: 0,
-                background: 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)',
-                color: '#fff',
-                fontFamily: 'inherit',
-                fontSize: 13,
-                fontWeight: 500,
-                padding: '8px 14px',
-                borderRadius: 8,
-                cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
-              }}
-            >
-              Authorize
-            </button>
-          </>
-        }
-      >
-        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(229,231,235,0.7)' }}>
-          {connectTarget?.description} Choose the scopes you want to grant.
-        </p>
+              {connectTarget.description} Choose the scopes you want to grant.
+            </ModalTitleRow>
+          ) : null}
+        </ModalIntro>
         <ScopeList>
           {Object.entries(scopes).map(([label, on]) => (
             <ScopeItem
               key={label}
               type="button"
+              aria-pressed={on}
               onClick={() => setScopes((s) => ({ ...s, [label]: !s[label] }))}
             >
               <ScopeDot $on={on} aria-hidden="true">{on ? '✓' : ''}</ScopeDot>
-              <span style={{ fontSize: 13, color: '#f5f7fb' }}>{label}</span>
+              <ScopeLabel>{label}</ScopeLabel>
             </ScopeItem>
           ))}
         </ScopeList>
       </Modal>
-    </PageRoot>
+    </ViewShell>
   );
 }
