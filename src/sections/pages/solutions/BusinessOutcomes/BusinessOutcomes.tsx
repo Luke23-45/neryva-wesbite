@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import outcomesData from '@neryva_data/solutions/business_outcomes.json';
-import {
 import { ease } from '@styles/motion';
+import {
   Wrapper,
   InnerGrid,
   StickyHeader,

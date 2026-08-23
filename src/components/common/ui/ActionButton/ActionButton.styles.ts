@@ -1,5 +1,4 @@
 import styled, { css } from 'styled-components';
-import type { ButtonHTMLAttributes } from 'react';
 
 export type ActionVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ActionSize = 'sm' | 'md';

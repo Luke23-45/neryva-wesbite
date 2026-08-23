@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { Gauge, Globe2, Clock, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import scaling from '@neryva_data/products/deployment/scaling.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   SectionTitle,
   KpiGrid,
   TotalCard,

@@ -34,13 +34,13 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
   padding: 8px 14px;
   border-radius: 9px;
   border: 1px solid
-    ${({  $variant , theme }) =>
+    ${({  $variant  }) =>
       $variant === 'primary'
         ? 'transparent'
         : $variant === 'danger'
           ? 'rgba(248, 113, 113, 0.30)'
           : 'rgba(255, 255, 255, 0.10)'};
-  background: ${({  $variant , theme }) =>
+  background: ${({  $variant  }) =>
     $variant === 'primary'
       ? 'linear-gradient(135deg, #f59e0b 0%, #2563eb 100%)'
       : $variant === 'danger'
@@ -56,9 +56,9 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: ${({  $variant , theme }) =>
+    background: ${({  $variant  }) =>
       $variant === 'primary'
-        ? 'linear-gradient(135deg, ${({ theme }) => theme.app.status.warning.fg} 0%, #3b82f6 100%)'
+        ? 'linear-gradient(135deg, ${() => theme.app.status.warning.fg} 0%, #3b82f6 100%)'
         : $variant === 'danger'
           ? 'rgba(248, 113, 113, 0.16)'
           : 'rgba(255, 255, 255, 0.05)'};
@@ -105,11 +105,11 @@ export const StageItem = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid
-    ${({  $state , theme }) =>
+    ${({  $state  }) =>
       $state === 'active'
         ? 'rgba(245, 158, 11, 0.45)'
         : 'rgba(255, 255, 255, 0.06)'};
-  background: ${({  $state , theme }) =>
+  background: ${({  $state  }) =>
     $state === 'active'
       ? 'linear-gradient(180deg, rgba(245,158,11,0.06), rgba(37,99,235,0.03))'
       : 'rgba(255, 255, 255, 0.02)'};
@@ -125,20 +125,20 @@ export const StageMark = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: ${({  $state , theme }) =>
+  background: ${({  $state  }) =>
     $state === 'done'
       ? 'linear-gradient(135deg, #f59e0b 0%, #2563eb 100%)'
       : $state === 'active'
         ? 'rgba(245, 158, 11, 0.15)'
         : 'rgba(255, 255, 255, 0.04)'};
   border: 1px solid
-    ${({  $state , theme }) =>
+    ${({  $state  }) =>
       $state === 'done' ? 'transparent' : $state === 'active' ? 'rgba(245, 158, 11, 0.45)' : 'rgba(255, 255, 255, 0.08)'};
   color: ${({  $state , theme }) =>
     $state === 'done' ? '#fff' : $state === 'active' ? theme.app.status.warning.fg : theme.app.text.faint};
   position: relative;
 
-  ${({  $state , theme }) =>
+  ${({$state}) =>
     $state === 'active' &&
     `
     &::before {
@@ -192,7 +192,7 @@ export const Connector = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   margin-left: 30px;
   height: 6px;
   width: 1.5px;
-  background: ${({  $state , theme }) =>
+  background: ${({  $state  }) =>
     $state === 'done' ? 'rgba(245, 158, 11, 0.55)' : 'rgba(255, 255, 255, 0.08)'};
 `;
 

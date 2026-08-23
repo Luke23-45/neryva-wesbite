@@ -32,7 +32,7 @@ export const FilterPill = styled.button<{ $active: boolean }>`
   border: 1px solid
     ${({ $active }) => ($active ? 'rgba(245, 158, 11, 0.45)' : 'rgba(255, 255, 255, 0.08)')};
   background: ${({ $active }) =>
-    $active ? 'linear-gradient(180deg, ${({ theme }) => theme.app.status.warning.bg}, rgba(37,99,235,0.04))' : 'rgba(255, 255, 255, 0.02)'};
+    $active ? 'linear-gradient(180deg, ${() => theme.app.status.warning.bg}, rgba(37,99,235,0.04))' : 'rgba(255, 255, 255, 0.02)'};
   color: ${({ theme, $active }) => ($active ? theme.app.status.warning.fg : theme.app.text.muted)};
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.caption};

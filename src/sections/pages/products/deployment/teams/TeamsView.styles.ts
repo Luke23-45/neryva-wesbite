@@ -146,9 +146,9 @@ export const Avatar = styled.div<{ $tone: string }>`
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   color: #fff;
-  background: ${({  $tone , theme }) =>
+  background: ${({  $tone  }) =>
     $tone === 'warning'
-      ? 'linear-gradient(135deg, #f59e0b 0%, ${({ theme }) => theme.app.status.warning.fg} 100%)'
+      ? 'linear-gradient(135deg, #f59e0b 0%, ${() => theme.app.status.warning.fg} 100%)'
       : $tone === 'azure'
         ? 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'
         : $tone === 'emerald'
@@ -204,7 +204,7 @@ export const RolePill = styled.span<{ $tone: string }>`
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: ${({  $tone , theme }) =>
+  background: ${({  $tone  }) =>
     $tone === 'warning'
       ? 'rgba(245, 158, 11, 0.12)'
       : $tone === 'azure'
@@ -215,7 +215,7 @@ export const RolePill = styled.span<{ $tone: string }>`
   color: ${({  $tone , theme }) =>
     $tone === 'warning' ? theme.app.status.warning.fg : $tone === 'azure' ? theme.app.status.info.fg : $tone === 'emerald' ? theme.app.status.success.fg : theme.app.text.secondary};
   border: 1px solid
-    ${({  $tone , theme }) =>
+    ${({  $tone  }) =>
       $tone === 'warning'
         ? 'rgba(245, 158, 11, 0.30)'
         : $tone === 'azure'
@@ -281,27 +281,26 @@ export const MiniBtn = styled.button<{ $variant?: 'primary' | 'ghost' }>`
   transition: background ${({ theme }) => theme.transitions.fast};
   border: 0;
 
-  ${({  $variant , theme }) =>
+  ${({ $variant, theme }) =>
     $variant === 'primary'
       ? `
     background: rgba(245, 158, 11, 0.12);
-    color: ${({ theme }) => theme.app.status.warning.fg};
-    border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+    color: ${theme.app.status.warning.fg};
+    border: 1px solid ${theme.app.status.warning.border};
 
     &:hover {
       background: rgba(245, 158, 11, 0.18);
     }
   `
       : `
-    background: ${({ theme }) => theme.app.surface.tint};
-    color: ${({ theme }) => theme.app.text.secondary};
-    border: 1px solid ${({ theme }) => theme.app.border.default};
+    background: ${theme.app.surface.tint};
+    color: ${theme.app.text.secondary};
+    border: 1px solid ${theme.app.border.default};
 
     &:hover {
-      background: ${({ theme }) => theme.app.surface.active};
+      background: ${theme.app.surface.active};
     }
-  `}
-`;
+  `}`;
 
 export const ServiceGrid = styled.div`
   display: grid;
@@ -507,10 +506,10 @@ export const Check = styled.span<{ $on: boolean }>`
   width: 18px;
   height: 18px;
   border-radius: 4px;
-  background: ${({  $on , theme }) =>
+  background: ${({  $on  }) =>
     $on ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.04)'};
   border: 1px solid
-    ${({  $on , theme }) =>
+    ${({  $on  }) =>
       $on ? 'rgba(245, 158, 11, 0.40)' : 'rgba(255, 255, 255, 0.06)'};
   color: ${({ theme, $on }) => ($on ? theme.app.status.warning.fg : theme.app.text.ghost)};
 `;

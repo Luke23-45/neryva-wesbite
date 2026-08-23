@@ -148,12 +148,12 @@ export const ReplicaBar = styled.div`
 export const ReplicaFill = styled.div<{ $pct: number; $tone: string }>`
   position: absolute;
   inset: 0 auto 0 0;
-  width: ${({  $pct , theme }) => `${$pct}%`};
-  background: ${({  $tone , theme }) =>
+  width: ${({ $pct }) => `${$pct}%`};
+  background: ${({  $tone  }) =>
     $tone === 'emerald'
-      ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.success.fg}, #10b981)'
+      ? 'linear-gradient(90deg, #34d399, #10b981)'
       : $tone === 'warning'
-        ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.warning.fg}, #f59e0b)'
+        ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
         : 'linear-gradient(90deg, ${({ theme }) => theme.app.status.info.fg}, #60a5fa)'};
   border-radius: 4px;
   transition: width ${({ theme }) => theme.transitions.standard};

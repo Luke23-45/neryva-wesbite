@@ -7,8 +7,8 @@ import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import pipelinesData from '@neryva_data/products/deployment/pipelines.json';
 import logsData from '@neryva_data/products/deployment/logs.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   BackLink,
   StatusPillWrap,
   HeaderActions,

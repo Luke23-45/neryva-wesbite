@@ -6,8 +6,8 @@ import { Plus, ArrowRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import pipelines from '@neryva_data/products/deployment/pipelines.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   NewBtn,
   FilterBar,
   FilterPill,

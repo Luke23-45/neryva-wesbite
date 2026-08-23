@@ -2,7 +2,6 @@ import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/comm
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
 import { Panel } from '@components/common/ui/Panel';
 import { LinkAction } from '@components/common/ui/LinkAction';
 import { CellMono, CellMeta } from '@components/common/ui/DataTable';
@@ -144,7 +143,7 @@ export function DashboardView() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <ActivityTitle>{a.title}</ActivityTitle>
                     <ActivityAgent>
-                      {a.agent} · {a.pipeline}
+                      {a.pipeline}
                     </ActivityAgent>
                   </div>
                 </ActivityRow>

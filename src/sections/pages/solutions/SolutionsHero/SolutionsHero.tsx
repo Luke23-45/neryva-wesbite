@@ -5,8 +5,8 @@ import { useUiStore } from '@store/uiStore';
 import heroData from '@neryva_data/solutions/hero.json';
 import { SolutionsHeroVisual } from './SolutionsHeroVisual';
 
-import {
 import { ease } from '@styles/motion';
+import {
   HeroWrapper,
   InnerGrid,
   ContentColumn,

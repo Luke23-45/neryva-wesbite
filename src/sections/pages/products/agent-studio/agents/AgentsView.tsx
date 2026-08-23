@@ -44,6 +44,7 @@ import {
   TemplateIcon,
   TemplateTitle,
   TemplateDesc,
+  ToolbarArea,
 } from './AgentsView.styles';
 
 type AgentStatus = 'all' | 'active' | 'paused' | 'draft';

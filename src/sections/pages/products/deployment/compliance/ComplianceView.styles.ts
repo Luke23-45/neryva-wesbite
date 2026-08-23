@@ -168,7 +168,7 @@ export const AuditCategory = styled.span<{ $kind: string }>`
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 4px;
-  background: ${({  $kind , theme }) =>
+  background: ${({  $kind  }) =>
     $kind === 'security'
       ? 'rgba(96, 165, 250, 0.10)'
       : $kind === 'deploy'
@@ -232,7 +232,7 @@ export const ResidencySwatch = styled.div<{ $color: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({  $color , theme }) => $color};
+  background: ${({  $color  }) => $color};
   flex-shrink: 0;
 `;
 

@@ -9,8 +9,8 @@ import { Sparkline } from '@components/common/ui/Sparkline';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import compliance from '@neryva_data/products/deployment/compliance.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   ExportBtn,
   KpiGrid,
   SectionTitle,

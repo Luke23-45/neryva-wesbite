@@ -75,8 +75,8 @@ export const TableRow = styled.div`
 `;
 
 export const Cell = styled.div<{ $w: string; $align?: 'left' | 'right' }>`
-  width: ${({  $w , theme }) => $w};
-  text-align: ${({  $align , theme }) => $align ?? 'left'};
+  width: ${({  $w  }) => $w};
+  text-align: ${({  $align  }) => $align ?? 'left'};
   padding-right: 8px;
 `;
 
@@ -126,7 +126,7 @@ export const ActivityDot = styled.span<{ $tone: 'success' | 'warning' | 'info' |
     $tone === 'success' ? theme.app.status.success.fg :
     $tone === 'warning' ? theme.app.status.warning.fg :
     $tone === 'error' ? theme.app.status.error.fg : theme.app.status.info.fg};
-  box-shadow: 0 0 0 3px ${({  $tone , theme }) =>
+  box-shadow: 0 0 0 3px ${({  $tone  }) =>
     $tone === 'success' ? 'rgba(16,185,129,0.10)' :
     $tone === 'warning' ? 'rgba(245,158,11,0.10)' :
     $tone === 'error' ? 'rgba(239,68,68,0.10)' : 'rgba(59,130,246,0.10)'};

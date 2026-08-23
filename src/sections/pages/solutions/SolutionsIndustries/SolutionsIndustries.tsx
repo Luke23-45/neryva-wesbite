@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import industryData from '@neryva_data/solutions/industries.json';
 import { IndustryFeatureIcon } from '@assets/visual/solution/solutionindustry';
-import {
 import { ease } from '@styles/motion';
+import {
   Wrapper,
   InnerContainer,
   HeaderBlock,

@@ -2,8 +2,8 @@ import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/comm
 import { motion } from 'framer-motion';
 import { Gauge, Layers, Zap } from 'lucide-react';
 import usage from '@neryva_data/products/deployment/usage.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   SectionTitle,
   KpiGrid,
   KpiCard,

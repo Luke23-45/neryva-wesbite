@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { Globe2, Lock, ShieldCheck } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import network from '@neryva_data/products/deployment/network.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   SectionTitle,
   EndpointGrid,
   EndpointCard,

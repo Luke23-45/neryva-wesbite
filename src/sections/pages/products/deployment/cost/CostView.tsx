@@ -7,8 +7,8 @@ import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import cost from '@neryva_data/products/deployment/cost.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   BudgetCard,
   BudgetTop,
   BudgetLeft,

@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { FlaskConical, ShieldCheck } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import experiments from '@neryva_data/products/deployment/experiments.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   SectionTitle,
   KpiGrid,
   TotalCard,

@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Plus, Users, Mail, ShieldCheck, KeyRound, Check as CheckIcon, X as XIcon } from 'lucide-react';
 import teams from '@neryva_data/products/deployment/teams.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   InviteBtn,
   SectionTitle,
   KpiGrid,

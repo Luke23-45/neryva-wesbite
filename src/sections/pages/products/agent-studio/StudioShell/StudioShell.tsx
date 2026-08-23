@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
 import {
   ShellRoot,

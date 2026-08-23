@@ -5,8 +5,8 @@ import { Plus, Webhook, MoreHorizontal, Send, RotateCw, Copy as CopyIcon } from 
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import webhooks from '@neryva_data/products/deployment/webhooks.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   NewBtn,
   KpiGrid,
   TotalCard,

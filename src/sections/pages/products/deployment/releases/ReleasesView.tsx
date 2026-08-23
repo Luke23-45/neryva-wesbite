@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { History, GitCommit } from 'lucide-react';
 import releases from '@neryva_data/products/deployment/releases.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   SectionTitle,
   KpiGrid,
   KpiCard,

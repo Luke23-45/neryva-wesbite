@@ -5,8 +5,8 @@ import { Plus, ArrowUpRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import deployments from '@neryva_data/products/deployment/deployments.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   NewBtn,
   TableWrap,
   TableHeader,

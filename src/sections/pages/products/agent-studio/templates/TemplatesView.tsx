@@ -124,7 +124,7 @@ export function TemplatesView() {
                 custom={i + 2}
               >
                 <CardTop>
-                  <IconBox $tone={t.tone}>
+                  <IconBox $tone={t.tone as 'lilac' | 'emerald' | 'azure' | 'amethyst' | 'warning'}>
                     <Icon size={18} strokeWidth={1.7} />
                   </IconBox>
                   {t.featured && <FeaturedBadge>Featured</FeaturedBadge>}

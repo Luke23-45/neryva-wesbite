@@ -6,8 +6,8 @@ import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import infrastructure from '@neryva_data/products/deployment/infrastructure.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   TotalsGrid,
   TotalCard,
   TotalLabel,
@@ -139,11 +139,11 @@ export function InfrastructureView() {
                 }}
               >
                 <span>
-                  <StrongNum>{r.nodes}</strong> nodes
-                </StrongNum>
+                  <StrongNum>{r.nodes}</StrongNum> nodes
+                </span>
                 <span>
-                  <StrongNum>{r.deployments}</strong> deployments
-                </StrongNum>
+                  <StrongNum>{r.deployments}</StrongNum> deployments
+                </span>
                 <span>{r.network}</span>
               </div>
             </RegionCard>

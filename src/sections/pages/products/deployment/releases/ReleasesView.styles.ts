@@ -70,9 +70,9 @@ export const FilterPill = styled.button<{ $active?: boolean }>`
   padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid
-    ${({  $active , theme }) =>
+    ${({  $active  }) =>
       $active ? 'rgba(245, 158, 11, 0.40)' : 'rgba(255, 255, 255, 0.06)'};
-  background: ${({  $active , theme }) =>
+  background: ${({  $active  }) =>
     $active ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.02)'};
   color: ${({  $active , theme }) =>
     $active ? theme.app.status.warning.fg : theme.app.text.secondary};
@@ -81,7 +81,7 @@ export const FilterPill = styled.button<{ $active?: boolean }>`
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: ${({  $active , theme }) =>
+    background: ${({  $active  }) =>
       $active ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255, 255, 255, 0.06)'};
   }
 `;
@@ -157,7 +157,7 @@ export const StatusPill = styled.span<{ $tone: string }>`
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: ${({  $tone , theme }) =>
+  background: ${({  $tone  }) =>
     $tone === 'emerald'
       ? 'rgba(16, 185, 129, 0.12)'
       : $tone === 'warning'
@@ -168,7 +168,7 @@ export const StatusPill = styled.span<{ $tone: string }>`
   color: ${({  $tone , theme }) =>
     $tone === 'emerald' ? theme.app.status.success.fg : $tone === 'warning' ? theme.app.status.warning.fg : $tone === 'azure' ? theme.app.status.info.fg : theme.app.text.secondary};
   border: 1px solid
-    ${({  $tone , theme }) =>
+    ${({  $tone  }) =>
       $tone === 'emerald'
         ? 'rgba(16, 185, 129, 0.30)'
         : $tone === 'warning'
@@ -187,11 +187,11 @@ export const EnvPill = styled.span<{ $env: string }>`
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 4px;
-  background: ${({  $env , theme }) =>
+  background: ${({  $env  }) =>
     $env === 'production' ? 'rgba(245, 158, 11, 0.10)' : 'rgba(37, 99, 235, 0.10)'};
   color: ${({ theme, $env }) => ($env === 'production' ? theme.app.status.warning.fg : theme.app.status.info.fg)};
   border: 1px solid
-    ${({  $env , theme }) =>
+    ${({  $env  }) =>
       $env === 'production' ? 'rgba(245, 158, 11, 0.30)' : 'rgba(37, 99, 235, 0.30)'};
 `;
 
@@ -211,14 +211,14 @@ export const ChangeBlock = styled.div<{ $kind: 'features' | 'fixes' | 'perf' }>`
   gap: 6px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: ${({  $kind , theme }) =>
+  background: ${({  $kind  }) =>
     $kind === 'features'
       ? 'rgba(37, 99, 235, 0.06)'
       : $kind === 'fixes'
         ? 'rgba(16, 185, 129, 0.06)'
         : 'rgba(245, 158, 11, 0.06)'};
   border: 1px solid
-    ${({  $kind , theme }) =>
+    ${({  $kind  }) =>
       $kind === 'features'
         ? 'rgba(37, 99, 235, 0.20)'
         : $kind === 'fixes'

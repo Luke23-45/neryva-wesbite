@@ -6,8 +6,8 @@ import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import alerts from '@neryva_data/products/deployment/alerts.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   NewBtn,
   OnCallGrid,
   OnCallCard,

@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast';
-import { ViewShell, ViewHeader, ViewTitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
+import { ViewShell, ViewTitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { ArrowLeft, RotateCcw, Pause, Play, Server, Activity } from 'lucide-react';
 import { useNavigate, useParams } from '@tanstack/react-router';
@@ -9,8 +9,8 @@ import { Sparkline } from '@components/common/ui/Sparkline';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import deploymentsData from '@neryva_data/products/deployment/deployments.json';
-import {
 import { pageItem } from '@styles/motion';
+import {
   BackLink,
   VersionPill,
   Meta,

@@ -273,7 +273,7 @@ export const Pill = styled.span<{ $tone: string }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.04em;
-  background: ${({  $tone , theme }) =>
+  background: ${({  $tone  }) =>
     $tone === 'azure'
       ? 'rgba(37, 99, 235, 0.12)'
       : $tone === 'emerald'
@@ -282,7 +282,7 @@ export const Pill = styled.span<{ $tone: string }>`
   color: ${({  $tone , theme }) =>
     $tone === 'azure' ? '#60a5fa' : $tone === 'emerald' ? theme.app.status.success.fg : '#c4b5fd'};
   border: 1px solid
-    ${({  $tone , theme }) =>
+    ${({  $tone  }) =>
       $tone === 'azure'
         ? 'rgba(37, 99, 235, 0.30)'
         : $tone === 'emerald'

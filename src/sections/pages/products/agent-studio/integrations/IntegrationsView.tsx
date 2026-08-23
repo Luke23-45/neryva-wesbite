@@ -153,10 +153,12 @@ export function IntegrationsView() {
           title="Webhooks"
           subtitle="Send every agent event to your own HTTP endpoint."
           action={
-            <ActionButton as={Link} to="/agent-studio/integrations/webhooks" variant="secondary" size="sm">
-              Configure
-              <ArrowRight size={11} strokeWidth={1.8} />
-            </ActionButton>
+            <Link to="/agent-studio/integrations/webhooks">
+              <ActionButton variant="secondary" size="sm">
+                Configure
+                <ArrowRight size={11} strokeWidth={1.8} />
+              </ActionButton>
+            </Link>
           }
         >
           <PanelCopy>

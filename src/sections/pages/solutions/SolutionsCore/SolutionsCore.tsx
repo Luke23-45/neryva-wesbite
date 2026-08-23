@@ -4,8 +4,8 @@ import { ChevronRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import coreData from '@neryva_data/solutions/core_offers.json';
 import { EnterpriseFeatureIcon } from '@assets/visual/solution/solutioncoreicons';
-import {
 import { ease } from '@styles/motion';
+import {
   CoreWrapper,
   ProductSection,
   SectionHeader,

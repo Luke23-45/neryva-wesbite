@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import appsData from '@neryva_data/solutions/applications.json';
 import { AppliesFeatureIcon } from '@assets/visual/solution/solutionapplicatioinicon';
-import {
 import { ease } from '@styles/motion';
+import {
   AppsWrapper,
   InnerContainer,
   AppsHeader,
