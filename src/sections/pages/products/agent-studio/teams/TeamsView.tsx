@@ -1,38 +1,37 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Plus, Users, Mail, Clock, ShieldCheck } from 'lucide-react';
+import { Panel } from '@components/common/ui/Panel';
+import { Modal } from '@components/common/ui/Modal';
+import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
+import { Segmented } from '@components/common/ui/Segmented';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle, SectionTitle } from '@components/common/ui/ViewLayout';
+import {
+  DataTable,
+  DataHead,
+  DataRow,
+  DataCell,
+} from '@components/common/ui/DataTable';
+import { pageItem } from '@styles/motion';
 import teams from '@neryva_data/products/agent_studio/teams.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
-  InviteBtn,
   TotalsGrid,
   TotalCard,
   TotalLabel,
   TotalValue,
   TotalMeta,
-  SectionTitle,
-  MemberTable,
-  TableHeader,
-  TableRow,
-  Th,
-  Td,
   MemberCell,
   Avatar,
   MemberInfo,
   MemberName,
   MemberEmail,
-  TwoFactorBadge,
-  RolePill,
   PendingCard,
   PendingRow,
   PendingEmail,
   PendingMeta,
   PendingActions,
-  MiniBtn,
   GroupGrid,
   GroupCard,
   GroupTop,
@@ -51,35 +50,58 @@ import {
   MetaValue,
   ScopeRow,
   ScopePill,
+  InviteForm,
+  InviteLabel,
+  InviteInput,
 } from './TeamsView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
+type InviteRole = 'Admin' | 'Editor' | 'Viewer';
+const roleOptions: { value: InviteRole; label: string }[] = [
+  { value: 'Admin', label: 'Admin' },
+  { value: 'Editor', label: 'Editor' },
+  { value: 'Viewer', label: 'Viewer' },
+];
+
+const toneToStatus: Record<string, StatusTone> = {
+  lilac: 'lilac',
+  azure: 'azure',
+  emerald: 'emerald',
+  amber: 'warning',
 };
 
 export function TeamsView() {
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<InviteRole>('Editor');
+
+  const sendInvite = () => {
+    const email = inviteEmail.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Enter a valid email address');
+      return;
+    }
+    toast.success(`Invite sent to ${email} as ${inviteRole}`);
+    setInviteEmail('');
+    setInviteRole('Editor');
+    setInviteOpen(false);
+  };
+
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Teams</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewHeader>
+          <ViewTitle>Teams</ViewTitle>
+          <ViewSubtitle>
             Manage workspace members, invitations, service accounts, and access groups.
-          </PageSubtitle>
-        </TitleBlock>
-        <InviteBtn type="button" onClick={() => toast.success('Invite dialog opened')}>
+          </ViewSubtitle>
+        </ViewHeader>
+        <ActionButton size="sm" onClick={() => setInviteOpen(true)}>
           <Plus size={14} strokeWidth={2} />
           Invite member
-        </InviteBtn>
-      </PageHeader>
+        </ActionButton>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <TotalsGrid>
           <TotalCard>
             <TotalLabel>Seats</TotalLabel>
@@ -88,12 +110,12 @@ export function TeamsView() {
           </TotalCard>
           <TotalCard>
             <TotalLabel>Active members</TotalLabel>
-            <TotalValue style={{ color: '#34d399' }}>{teams.summary.activeMembers}</TotalValue>
+            <TotalValue $tone="success">{teams.summary.activeMembers}</TotalValue>
             <TotalMeta>last 30 days</TotalMeta>
           </TotalCard>
           <TotalCard>
             <TotalLabel>Pending invites</TotalLabel>
-            <TotalValue style={{ color: '#fbbf24' }}>{teams.summary.pendingInvites}</TotalValue>
+            <TotalValue $tone="warning">{teams.summary.pendingInvites}</TotalValue>
             <TotalMeta>awaiting accept</TotalMeta>
           </TotalCard>
           <TotalCard>
@@ -109,51 +131,64 @@ export function TeamsView() {
         </TotalsGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Users size={14} strokeWidth={1.7} />
           Members
         </SectionTitle>
-        <MemberTable>
-          <TableHeader>
-            <Th>Member</Th>
-            <Th>Role</Th>
-            <Th>Last active</Th>
-            <Th>Joined</Th>
-            <Th>2FA</Th>
-          </TableHeader>
-          {teams.members.map((m, i) => (
-            <TableRow
-              key={m.id}
-              as={motion.div}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              custom={i + 3}
-            >
-              <Td>
-                <MemberCell>
-                  <Avatar $tone={m.tone}>{m.avatarInitials}</Avatar>
-                  <MemberInfo>
-                    <MemberName>{m.name}</MemberName>
-                    <MemberEmail>{m.email}</MemberEmail>
-                  </MemberInfo>
-                </MemberCell>
-              </Td>
-              <Td>
-                <RolePill $tone={m.tone}>{m.role}</RolePill>
-              </Td>
-              <Td>{m.lastActive}</Td>
-              <Td>{m.joined}</Td>
-              <Td>
-                {m.twoFactor ? <TwoFactorBadge>2FA</TwoFactorBadge> : '—'}
-              </Td>
-            </TableRow>
-          ))}
-        </MemberTable>
+        <Panel flush>
+          <DataTable>
+            <DataHead>
+              <DataCell $w="36%">Member</DataCell>
+              <DataCell $w="16%">Role</DataCell>
+              <DataCell $w="18%">Last active</DataCell>
+              <DataCell $w="18%">Joined</DataCell>
+              <DataCell $w="12%">2FA</DataCell>
+            </DataHead>
+            {teams.members.map((m, i) => (
+              <DataRow
+                key={m.id}
+                as={motion.div}
+                initial="hidden"
+                animate="visible"
+                variants={pageItem}
+                custom={i + 3}
+                $interactive={false}
+              >
+                <DataCell $w="36%">
+                  <MemberCell>
+                    <Avatar $tone={m.tone}>{m.avatarInitials}</Avatar>
+                    <MemberInfo>
+                      <MemberName>{m.name}</MemberName>
+                      <MemberEmail>{m.email}</MemberEmail>
+                    </MemberInfo>
+                  </MemberCell>
+                </DataCell>
+                <DataCell $w="16%">
+                  <StatusPill tone={toneToStatus[m.tone] ?? 'neutral'} dot={false}>
+                    {m.role}
+                  </StatusPill>
+                </DataCell>
+                <DataCell $w="18%">
+                  <MemberEmail as="div">{m.lastActive}</MemberEmail>
+                </DataCell>
+                <DataCell $w="18%">
+                  <MemberEmail as="div">{m.joined}</MemberEmail>
+                </DataCell>
+                <DataCell $w="12%">
+                  {m.twoFactor ? (
+                    <StatusPill tone="success" dot={false}>2FA</StatusPill>
+                  ) : (
+                    <MemberEmail as="div">—</MemberEmail>
+                  )}
+                </DataCell>
+              </DataRow>
+            ))}
+          </DataTable>
+        </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={14}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
         <SectionTitle>
           <Mail size={14} strokeWidth={1.7} />
           Pending invites
@@ -168,27 +203,29 @@ export function TeamsView() {
                 </PendingMeta>
               </div>
               <PendingActions>
-                <RolePill $tone={p.tone}>{p.role}</RolePill>
-                <MiniBtn
-                  type="button"
-                  $variant="primary"
+                <StatusPill tone={toneToStatus[p.tone] ?? 'neutral'} dot={false}>
+                  {p.role}
+                </StatusPill>
+                <ActionButton
+                  size="sm"
                   onClick={() => toast.success(`Invite to ${p.email} resent`)}
                 >
                   Resend
-                </MiniBtn>
-                <MiniBtn
-                  type="button"
+                </ActionButton>
+                <ActionButton
+                  variant="secondary"
+                  size="sm"
                   onClick={() => toast.success(`Invite to ${p.email} revoked`)}
                 >
                   Revoke
-                </MiniBtn>
+                </ActionButton>
               </PendingActions>
             </PendingRow>
           ))}
         </PendingCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={15}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={15}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           Groups
@@ -200,12 +237,14 @@ export function TeamsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 16}
             >
               <GroupTop>
                 <GroupName>{g.name}</GroupName>
-                <RolePill $tone={g.tone}>{g.permission}</RolePill>
+                <StatusPill tone={toneToStatus[g.tone] ?? 'neutral'} dot={false}>
+                  {g.permission}
+                </StatusPill>
               </GroupTop>
               <GroupDesc>{g.description}</GroupDesc>
               <GroupBottom>
@@ -216,7 +255,7 @@ export function TeamsView() {
         </GroupGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={21}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={21}>
         <SectionTitle>
           <Clock size={14} strokeWidth={1.7} />
           Service accounts
@@ -228,7 +267,7 @@ export function TeamsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 22}
             >
               <ServiceTop>
@@ -236,7 +275,7 @@ export function TeamsView() {
                   <ServiceName>{s.name}</ServiceName>
                   <ServiceOwner>{s.owner}</ServiceOwner>
                 </div>
-                <RolePill $tone={s.tone}>service</RolePill>
+                <StatusPill tone="lilac" dot={false}>service</StatusPill>
               </ServiceTop>
               <ServiceMeta>
                 <MetaItem>
@@ -257,6 +296,43 @@ export function TeamsView() {
           ))}
         </ServiceGrid>
       </motion.div>
-    </PageRoot>
+
+      <Modal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        title="Invite a member"
+        footer={
+          <>
+            <ActionButton variant="secondary" onClick={() => setInviteOpen(false)}>
+              Cancel
+            </ActionButton>
+            <ActionButton onClick={sendInvite}>Send invite</ActionButton>
+          </>
+        }
+      >
+        <InviteForm>
+          <InviteLabel>
+            Email address
+            <InviteInput
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="teammate@company.com"
+              autoFocus
+            />
+          </InviteLabel>
+          <InviteLabel>
+            Role
+            <Segmented
+              options={roleOptions}
+              value={inviteRole}
+              onChange={setInviteRole}
+              size="md"
+              ariaLabel="Invite role"
+            />
+          </InviteLabel>
+        </InviteForm>
+      </Modal>
+    </ViewShell>
   );
 }
