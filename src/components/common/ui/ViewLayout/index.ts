@@ -1,6 +1,7 @@
 export {
   ViewShell,
   ViewHeader,
+  ViewHeaderRow,
   ViewTitle,
   ViewSubtitle,
   SectionTitle,

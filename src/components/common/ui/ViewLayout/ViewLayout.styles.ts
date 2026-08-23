@@ -26,6 +26,15 @@ export const ViewHeader = styled.div`
   gap: 6px;
 `;
 
+/** Header row: title block on the left, actions on the right. */
+export const ViewHeaderRow = styled.div`
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+`;
+
 export const ViewTitle = styled.h1`
   margin: 0;
   font-family: ${({ theme }) => theme.typography.fonts.sans};

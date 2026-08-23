@@ -135,7 +135,7 @@ top to bottom; shells come before the pages they frame.
 | 1.8 | Knowledge | `/knowledge` | — |
 | 1.9 | Models | `/models` | — |
 | 1.10 | Analytics | `/analytics` | DONE |
-| 1.11 | Compliance | `/compliance` | — |
+| 1.11 | Compliance | `/compliance` | DONE |
 | 1.12 | Templates | `/templates` | — |
 | 1.13 | API playground | `/api` | — |
 | 1.14 | Teams | `/teams` | — |
