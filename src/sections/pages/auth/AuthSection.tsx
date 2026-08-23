@@ -5,11 +5,13 @@ import { ArrowLeft, Mail } from 'lucide-react';
 import authData from '@neryva_data/auth/sections/auth.json';
 import { useAuthMutation } from '@/hooks/mutations/useAuthMutation';
 import { useAuthStore } from '@/store/authStore';
+import { ease } from '@styles/motion';
 import {
     AuthWrapper,
     ConsoleStage,
     FooterBar,
     FooterLinks,
+    FooterNote,
     BrandMotif,
     AuthTitle,
     AuthSub,
@@ -41,7 +43,6 @@ export default function AuthSection() {
     const [lastName, setLastName] = useState('');
     const [password, setPassword] = useState('');
     const [otp, setOtp] = useState('');
-    const [isSigningUp, setIsSigningUp] = useState(false);
 
     useEffect(() => {
         if (isAuthenticated && authStep !== 'verify') {
@@ -52,18 +53,24 @@ export default function AuthSection() {
     const handleNextStep = (e: React.FormEvent) => {
         e.preventDefault();
         if (authStep === 'initial' && email.includes('@')) {
-            if (mode === 'login') {
-                setAuthStep('login');
-            } else {
-                setAuthStep('signup');
-            }
+            setAuthStep(mode === 'login' ? 'login' : 'signup');
         } else if (authStep === 'signup') {
-            setIsSigningUp(true);
-            setTimeout(() => {
-                setIsSigningUp(false);
-                setAuthStep('verify');
-                setOtp('');
-            }, 3500);
+            authMutation.mutate(
+                {
+                    type: 'REGISTER',
+                    payload: {
+                        email,
+                        password,
+                        name: [firstName, lastName].filter(Boolean).join(' '),
+                    },
+                },
+                {
+                    onSuccess: () => {
+                        setOtp('');
+                        setAuthStep('verify');
+                    },
+                },
+                );
         } else if (authStep === 'login') {
             authMutation.mutate(
                 { type: 'LOGIN', payload: { email, password }, remember: true },
@@ -103,7 +110,7 @@ export default function AuthSection() {
     };
 
     const LogoMark = () => (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="70" height="70">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="70" height="70" aria-hidden="true">
             <defs>
                 <linearGradient id="authWingUpper" x1="0%" y1="100%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#c084fc" />
@@ -141,10 +148,9 @@ export default function AuthSection() {
 
     const d = authData.section;
 
-    const transitionConfig = {
-        duration: 0.5,
-        ease: [0.16, 1, 0.3, 1] as const,
-    };
+    const transitionConfig = { duration: 0.5, ease: ease.premium };
+
+    const footerLinks = authData.footer.links.filter((l) => l.url && l.url !== '#');
 
     return (
         <AuthWrapper>
@@ -171,17 +177,21 @@ export default function AuthSection() {
 
                             <FormBox onSubmit={handleVerifyOtp} style={{ alignItems: 'center', width: '100%' }}>
                                 <FieldGroup style={{ alignItems: 'center' }}>
-                                    <Label>Verification code</Label>
+                                    <Label htmlFor="otp-code">Verification code</Label>
                                     <OtpInput
+                                        id="otp-code"
                                         type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
                                         placeholder="000000"
                                         maxLength={6}
                                         required
+                                        autoFocus
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                     />
                                 </FieldGroup>
-                                <SubmitAction type="submit" disabled={otp.length !== 6}>
+                                <SubmitAction type="submit" disabled={otp.length !== 6 || authMutation.isPending}>
                                     Verify
                                 </SubmitAction>
                             </FormBox>
@@ -209,18 +219,20 @@ export default function AuthSection() {
                             <FormBox onSubmit={handleNextStep}>
                                 <FieldGroup>
                                     <LabelRow>
-                                        <Label>{d.email.label}</Label>
+                                        <Label htmlFor="auth-email">{d.email.label}</Label>
                                         {authStep === 'initial' && (
-                                            <HelpLink type="button" onClick={() => navigate({ to: '/auth', search: { forgot: 'true' } as any })}>
+                                            <HelpLink type="button" onClick={() => navigate({ to: '/contact' })}>
                                                 {d.email.helpLink}
                                             </HelpLink>
                                         )}
                                     </LabelRow>
                                     <Input
+                                        id="auth-email"
                                         type="email"
                                         placeholder={d.email.placeholder}
                                         required
                                         autoFocus
+                                        autoComplete="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         disabled={authStep === 'signup' || authStep === 'login'}
@@ -239,21 +251,25 @@ export default function AuthSection() {
                                         >
                                             <NameSplit>
                                                 <FieldGroup>
-                                                    <Label>{d.signup.firstName.label}</Label>
+                                                    <Label htmlFor="auth-first">First name</Label>
                                                     <Input
+                                                        id="auth-first"
                                                         type="text"
                                                         placeholder={d.signup.firstName.placeholder}
                                                         required
+                                                        autoComplete="given-name"
                                                         value={firstName}
                                                         onChange={(e) => setFirstName(e.target.value)}
                                                     />
                                                 </FieldGroup>
                                                 <FieldGroup>
-                                                    <Label>{d.signup.lastName.label}</Label>
+                                                    <Label htmlFor="auth-last">Last name</Label>
                                                     <Input
+                                                        id="auth-last"
                                                         type="text"
                                                         placeholder={d.signup.lastName.placeholder}
                                                         required
+                                                        autoComplete="family-name"
                                                         value={lastName}
                                                         onChange={(e) => setLastName(e.target.value)}
                                                     />
@@ -261,12 +277,14 @@ export default function AuthSection() {
                                             </NameSplit>
 
                                             <FieldGroup>
-                                                <Label>{d.signup.password.label}</Label>
+                                                <Label htmlFor="auth-password">{d.signup.password.label}</Label>
                                                 <Input
+                                                    id="auth-password"
                                                     type="password"
                                                     placeholder={d.signup.password.placeholder}
                                                     required
                                                     minLength={8}
+                                                    autoComplete="new-password"
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
                                                 />
@@ -284,11 +302,13 @@ export default function AuthSection() {
                                             style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px' }}
                                         >
                                             <FieldGroup>
-                                                <Label>Password</Label>
+                                                <Label htmlFor="auth-login-password">Password</Label>
                                                 <Input
+                                                    id="auth-login-password"
                                                     type="password"
                                                     placeholder="Enter your password"
                                                     required
+                                                    autoComplete="current-password"
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
                                                 />
@@ -298,8 +318,8 @@ export default function AuthSection() {
                                 </AnimatePresence>
 
                                 <motion.div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column' }}>
-                                    <SubmitAction type="submit" disabled={authMutation.isPending || isSigningUp}>
-                                        {authMutation.isPending || isSigningUp
+                                    <SubmitAction type="submit" disabled={authMutation.isPending}>
+                                        {authMutation.isPending
                                             ? 'Processing...'
                                             : authStep === 'initial'
                                                 ? d.actions.connectTerminal
@@ -340,10 +360,15 @@ export default function AuthSection() {
             </ConsoleStage>
 
             <FooterBar>
-                <FooterLinks>
-                    <a href={authData.footer.links[0].url}>{authData.footer.links[0].label}</a>
-                    <a href={authData.footer.links[1].url}>{authData.footer.links[1].label}</a>
-                </FooterLinks>
+                {footerLinks.length > 0 ? (
+                    <FooterLinks>
+                        {footerLinks.map((l) => (
+                            <a key={l.label} href={l.url}>{l.label}</a>
+                        ))}
+                    </FooterLinks>
+                ) : (
+                    <FooterNote>© {new Date().getFullYear()} Neryva</FooterNote>
+                )}
             </FooterBar>
 
         </AuthWrapper>

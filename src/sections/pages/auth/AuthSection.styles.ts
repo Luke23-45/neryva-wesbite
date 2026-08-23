@@ -78,7 +78,15 @@ export const FooterLinks = styled.div`
     text-decoration: none;
     transition: color 0.2s ease;
     &:hover { color: ${({ theme }) => theme.colors.text.primary}; }
+    &:focus-visible { outline: 2px solid ${({ theme }) => theme.colors.text.primary}; outline-offset: 2px; }
   }
+`;
+
+export const FooterNote = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.muted};
 `;
 
 export const BrandMotif = styled.div`
@@ -192,15 +200,25 @@ export const SubmitAction = styled.button`
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, opacity 0.2s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   }
-  
-  &:active {
+
+  &:active:not(:disabled) {
     transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.text.primary};
+    outline-offset: 3px;
   }
 `;
 
