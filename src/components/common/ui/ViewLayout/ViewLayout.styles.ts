@@ -56,6 +56,12 @@ export const SectionTitle = styled.h2`
   svg {
     color: ${({ theme }) => theme.app.text.muted};
   }
+
+  /* A trailing inline action (e.g. "View all →") pushes to the right edge. */
+  & > a,
+  & > button {
+    margin-left: auto;
+  }
 `;
 
 /** Standard dashboard grid: KPI row (4 → 2 → 1). */
