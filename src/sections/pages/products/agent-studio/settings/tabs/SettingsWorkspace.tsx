@@ -5,23 +5,18 @@ import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
-import { spring } from '@styles/motion';
+import { spring, pageItem } from '@styles/motion';
 import settings from '@neryva_data/products/agent_studio/settings.json';
 import { SaveRow } from './shared';
 
 /**
  * Settings → Workspace
  *
- * Apple-grade behaviors:
- * - Logo upload: hidden <input type="file">, drag-over state with
- *   accent ring, live preview. Hover the drop zone shows a tinted
- *   overlay with an "Upload" CTA.
+ * - Logo upload: hidden <input type="file">, drag-over state with accent
+ *   ring, live preview, keyboard accessible (Enter/Space opens picker).
  * - Brand color: 6 preset swatches + custom hex input. Selected swatch
- *   gets an iOS-style check ring (using `layoutId` so the ring glides
- *   between swatches when you click).
- * - Live preview chip showing the brand mark + name — uses the chosen
- *   color in its gradient. Clicking "Save" commits.
- * - The form fields use the existing TextInput (with hint, focus ring).
+ *   gets an iOS-style check ring (layoutId glide between swatches).
+ * - Live preview chip showing the brand mark + name in the chosen color.
  */
 
 const PRESETS = [
@@ -32,12 +27,6 @@ const PRESETS = [
   '#f97316', // orange
   '#ec4899', // pink
 ];
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 export function SettingsWorkspace() {
   const w = settings.workspace;
@@ -88,12 +77,21 @@ export function SettingsWorkspace() {
     }
   };
 
+  const onDropKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileRef.current?.click();
+    }
+  };
+
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="Workspace"
         subtitle="Identity, region, and defaults for your team."
-        action={<SaveRow onSave={() => toast.success('Workspace settings saved')} />}
+        action={
+          <SaveRow inline onSave={() => toast.success('Workspace settings saved')} />
+        }
       >
         <BrandGrid>
           {/* ─── Logo ─── */}
@@ -102,6 +100,10 @@ export function SettingsWorkspace() {
             <FieldHint>Shown in the studio sidebar and shared embeds. PNG / SVG / WebP, up to 2 MB.</FieldHint>
             <DropZone
               $drag={drag}
+              role="button"
+              tabIndex={0}
+              aria-label="Upload workspace logo"
+              onKeyDown={onDropKey}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDrag(true);
@@ -147,7 +149,7 @@ export function SettingsWorkspace() {
                 ref={fileRef}
                 type="file"
                 accept="image/*"
-                style={{ display: 'none' }}
+                className="sr-only"
                 onChange={(e) => onFile(e.target.files?.[0])}
                 aria-label="Upload logo"
               />
@@ -164,6 +166,7 @@ export function SettingsWorkspace() {
                   key={hex}
                   type="button"
                   $on={color === hex}
+                  aria-pressed={color === hex}
                   onClick={() => setColor(hex)}
                   whileTap={{ scale: 0.92 }}
                   transition={spring.snap}
@@ -182,9 +185,10 @@ export function SettingsWorkspace() {
               <HexPrefix>#</HexPrefix>
               <HexInput
                 type="text"
-                value={isCustom ? customHex.replace(/^#/, '') : customHex.replace(/^#/, '')}
+                value={customHex.replace(/^#/, '')}
                 placeholder="0ea5e9"
                 maxLength={6}
+                aria-label="Custom brand color hex"
                 onChange={(e) => {
                   const v = e.target.value.replace(/[^a-fA-F0-9]/g, '').slice(0, 6);
                   setCustomHex(`#${v}`);
@@ -264,14 +268,14 @@ const FieldGroup = styled.div`
 `;
 
 const FieldLabel = styled.div`
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 const FieldHint = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
   line-height: 1.5;
   margin-bottom: 4px;
 `;
@@ -282,19 +286,22 @@ const DropZone = styled(motion.div)<{ $drag: boolean }>`
   height: 120px;
   border-radius: 16px;
   border: 1.5px dashed
-    ${({ $drag }) => ($drag ? 'rgba(192, 132, 252, 0.65)' : 'rgba(255, 255, 255, 0.12)')};
-  background: ${({ $drag }) =>
-    $drag
-      ? 'rgba(192, 132, 252, 0.08)'
-      : 'rgba(255, 255, 255, 0.02)'};
+    ${({ $drag, theme }) => ($drag ? theme.app.status.lilac.fg : theme.app.border.hover)};
+  background: ${({ $drag, theme }) =>
+    $drag ? theme.app.status.lilac.bg : theme.app.surface.subtle};
   cursor: pointer;
   overflow: hidden;
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(192, 132, 252, 0.45);
-    background: rgba(192, 132, 252, 0.04);
+    border-color: ${({ theme }) => theme.app.status.lilac.border};
+    background: ${({ theme }) => theme.app.status.lilac.bg};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
   }
 `;
 
@@ -317,21 +324,21 @@ const UploadBadge = styled.span`
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(229, 231, 235, 0.78);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
   margin-bottom: 2px;
 `;
 
 const DropTitle = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.78);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.secondary};
   font-weight: 500;
 `;
 
 const DropHint = styled.div`
   font-size: 10.5px;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   line-height: 1.3;
 `;
 
@@ -350,7 +357,7 @@ const LogoOverlay = styled.div`
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   color: #fff;
   background: rgba(11, 13, 18, 0.65);
@@ -381,7 +388,12 @@ const RemoveBtn = styled.button`
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(248, 113, 113, 0.85);
+    background: ${({ theme }) => theme.app.status.error.fg};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;
 
@@ -405,7 +417,8 @@ const SwatchBtn = styled(motion.button)<{ $on: boolean }>`
   justify-content: center;
 
   &:focus-visible {
-    outline: none;
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
   }
 `;
 
@@ -443,19 +456,19 @@ const CustomHexRow = styled.div`
   gap: 8px;
   padding: 8px 12px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:focus-within {
-    border-color: rgba(192, 132, 252, 0.45);
+    border-color: ${({ theme }) => theme.app.border.focus};
   }
 `;
 
 const HexPrefix = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const HexInput = styled.input`
@@ -464,8 +477,8 @@ const HexInput = styled.input`
   background: transparent;
   outline: none;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 13px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
   text-transform: lowercase;
   padding: 0;
 `;
@@ -488,7 +501,7 @@ const BrandPreview = styled.div`
   padding: 10px 12px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.20);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
   margin-top: 4px;
 `;
 
@@ -508,20 +521,20 @@ const PreviewMeta = styled.div`
 `;
 
 const PreviewName = styled.span`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.01em;
 `;
 
 const PreviewTag = styled.span`
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 const Divider = styled.hr`
   border: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
   margin: 22px 0 18px;
 `;
 
