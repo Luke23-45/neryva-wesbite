@@ -132,7 +132,7 @@ top to bottom; shells come before the pages they frame.
 | 1.5 | Conversations | `/conversations` | DONE |
 | 1.6 | Activity | `/activity` | DONE |
 | 1.7 | Integrations + webhooks | `/integrations`, `/integrations/webhooks` | DONE |
-| 1.8 | Knowledge | `/knowledge` | — |
+| 1.8 | Knowledge | `/knowledge` | DONE |
 | 1.9 | Models | `/models` | — |
 | 1.10 | Analytics | `/analytics` | DONE |
 | 1.11 | Compliance | `/compliance` | DONE |
