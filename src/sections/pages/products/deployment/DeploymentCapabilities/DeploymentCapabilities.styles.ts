@@ -110,7 +110,7 @@ export const DeploymentCapabilitiesCellTitle = styled.h3`
 
 export const DeploymentCapabilitiesCellDesc = styled.p`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   line-height: 1.6;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.text.secondary};
@@ -118,6 +118,6 @@ export const DeploymentCapabilitiesCellDesc = styled.p`
   margin-top: auto;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 13px;
+    font-size: ${({ theme }) => theme.app.type.body};
   }
 `;

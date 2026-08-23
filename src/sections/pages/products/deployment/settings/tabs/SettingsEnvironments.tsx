@@ -1,3 +1,4 @@
+import { pageItem, ease } from '@styles/motion';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, MapPin, Server } from 'lucide-react';
@@ -8,12 +9,6 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { SaveRow } from './shared';
 import settings from '@neryva_data/products/deployment/settings.json';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 const EnvGrid = styled.div`
   display: grid;
@@ -31,8 +26,8 @@ const EnvCard = styled(motion.div)`
   gap: 14px;
   padding: 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 const EnvTop = styled.div`
@@ -43,9 +38,9 @@ const EnvTop = styled.div`
 `;
 
 const EnvName = styled.div`
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   display: flex;
   align-items: center;
@@ -56,8 +51,8 @@ const EnvMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 const EnvGrid2 = styled.div`
@@ -73,7 +68,7 @@ const MetaCell = styled.div`
   padding: 8px 12px;
   border-radius: 9px;
   background: rgba(0, 0, 0, 0.20);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 const MetaLabel = styled.div`
@@ -81,13 +76,13 @@ const MetaLabel = styled.div`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const MetaValue = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -96,8 +91,8 @@ const ToggleRow = styled.label`
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.85);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
   cursor: pointer;
 `;
 
@@ -105,7 +100,7 @@ export function SettingsEnvironments() {
   const [envs, setEnvs] = useState(settings.environments);
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="Environments"
         subtitle="Where deployments can land — promotion paths and approval policy."
@@ -121,7 +116,7 @@ export function SettingsEnvironments() {
               key={env.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...premiumEase, delay: i * 0.05 }}
+              transition={{ duration: 0.4, ease: ease.premium, delay: i * 0.05 }}
             >
               <EnvTop>
                 <EnvName>

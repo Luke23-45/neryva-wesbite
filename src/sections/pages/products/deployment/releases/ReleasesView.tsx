@@ -1,13 +1,10 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { History, GitCommit } from 'lucide-react';
 import releases from '@neryva_data/products/deployment/releases.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   SectionTitle,
   KpiGrid,
   KpiCard,
@@ -40,16 +37,6 @@ import {
   MetricValue,
 } from './ReleasesView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 type Filter = 'all' | 'live' | 'canary' | 'rolled-back' | 'degraded';
 const FILTERS: Array<{ key: Filter; label: string }> = [
   { key: 'all', label: 'All' },
@@ -64,17 +51,15 @@ export function ReleasesView() {
   const filtered = filter === 'all' ? releases.releases : releases.releases.filter((r) => r.status === filter);
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Releases</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Releases</ViewTitle>
+          <ViewSubtitle>
             Release history, changelogs, and rollout metrics across every deployment.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <KpiCard>
             <KpiLabel>Releases (30d)</KpiLabel>
@@ -99,7 +84,7 @@ export function ReleasesView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <FilterRow>
           {FILTERS.map((f) => (
             <FilterPill
@@ -114,7 +99,7 @@ export function ReleasesView() {
         </FilterRow>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
         <SectionTitle>
           <History size={14} strokeWidth={1.7} />
           Timeline ({filtered.length})
@@ -126,7 +111,7 @@ export function ReleasesView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 4}
             >
               <ReleaseTop>
@@ -233,6 +218,6 @@ export function ReleasesView() {
           ))}
         </Timeline>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

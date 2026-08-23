@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Plus, Webhook, MoreHorizontal, Send, RotateCw, Copy as CopyIcon } from 'lucide-react';
@@ -5,11 +6,7 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import webhooks from '@neryva_data/products/deployment/webhooks.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   NewBtn,
   KpiGrid,
   TotalCard,
@@ -38,16 +35,6 @@ import {
   EventCategory,
 } from './WebhooksView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 const statusTone: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
   active: 'success',
   paused: 'neutral',
@@ -68,22 +55,21 @@ const avgSuccess =
 
 export function WebhooksView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Webhooks</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Webhooks</ViewTitle>
+          <ViewSubtitle>
             Outbound HTTP callbacks for deployment, alert, and audit events. Signed with HMAC for
             security.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle></ViewHeader>
+        <NewBtn type="button"
+          onClick={() => toast.success('Webhook endpoint created')}>
           <Plus size={14} strokeWidth={2} />
           New webhook
         </NewBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <TotalCard>
             <TotalLabel>Endpoints</TotalLabel>
@@ -108,7 +94,7 @@ export function WebhooksView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Webhook size={14} strokeWidth={1.7} />
           Endpoints
@@ -120,7 +106,7 @@ export function WebhooksView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 3}
             >
               <HookTop>
@@ -203,7 +189,7 @@ export function WebhooksView() {
         </HookList>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={10}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={10}>
         <SectionTitle>Available event types</SectionTitle>
         <EventTypeGrid>
           {webhooks.events.map((e, i) => (
@@ -212,7 +198,7 @@ export function WebhooksView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 11}
             >
               <EventCategory>{e.category}</EventCategory>
@@ -222,6 +208,6 @@ export function WebhooksView() {
           ))}
         </EventTypeGrid>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

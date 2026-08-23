@@ -28,7 +28,7 @@ const Row = styled.div`
   justify-content: flex-end;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 const Button = styled.button`
@@ -41,8 +41,8 @@ const Button = styled.button`
   background: linear-gradient(135deg, #f59e0b 0%, #2563eb 100%);
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.warning.border};
 `;

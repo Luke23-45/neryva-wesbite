@@ -1,13 +1,10 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { FlaskConical, ShieldCheck } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import experiments from '@neryva_data/products/deployment/experiments.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   SectionTitle,
   KpiGrid,
   TotalCard,
@@ -38,16 +35,6 @@ import {
   GuardrailLimit,
 } from './ExperimentsView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 const kindLabel: Record<string, string> = {
   'champion-challenger': 'champion / challenger',
   canary: 'canary',
@@ -68,18 +55,16 @@ const liftTone = (lift: number) => {
 
 export function ExperimentsView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Experiments</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Experiments</ViewTitle>
+          <ViewSubtitle>
             A/B tests, canaries, and champion/challenger rollouts with statistical significance
             tracking.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <TotalCard>
             <TotalLabel>Running</TotalLabel>
@@ -104,7 +89,7 @@ export function ExperimentsView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <FlaskConical size={14} strokeWidth={1.7} />
           Active and recent experiments
@@ -116,7 +101,7 @@ export function ExperimentsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 3}
             >
               <ExpTop>
@@ -180,7 +165,7 @@ export function ExperimentsView() {
         </ExpGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={12}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           Global guardrails
@@ -194,7 +179,7 @@ export function ExperimentsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 13}
               >
                 <GuardrailTop>
@@ -207,6 +192,6 @@ export function ExperimentsView() {
           })}
         </GuardrailGrid>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

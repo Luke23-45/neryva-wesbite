@@ -1,58 +1,14 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
 export const SectionTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 8px 0 12px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const KpiGrid = styled.div`
@@ -71,29 +27,29 @@ export const KpiCard = styled.div`
   gap: 4px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const KpiLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const KpiValue = styled.div`
   font-size: 22px;
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
 `;
 
 export const KpiMeta = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 2px;
 `;
 
@@ -109,7 +65,7 @@ export const FilterPill = styled.button<{ $active?: boolean }>`
   align-items: center;
   gap: 4px;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   padding: 5px 11px;
   border-radius: 999px;
@@ -142,12 +98,12 @@ export const ReleaseCard = styled.div`
   gap: 14px;
   padding: 18px 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(245, 158, 11, 0.30);
+    border-color: ${({ theme }) => theme.app.status.warning.border};
   }
 `;
 
@@ -175,21 +131,21 @@ export const ReleaseHeader = styled.div`
 
 export const VersionTag = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #fbbf24;
+  color: ${({ theme }) => theme.app.status.warning.fg};
   letter-spacing: -0.005em;
 `;
 
 export const DeploymentName = styled.span`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ReleaseMeta = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
 `;
 
@@ -197,7 +153,7 @@ export const StatusPill = styled.span<{ $tone: string }>`
   display: inline-flex;
   align-items: center;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
@@ -233,7 +189,7 @@ export const EnvPill = styled.span<{ $env: string }>`
   border-radius: 4px;
   background: ${({ $env }) =>
     $env === 'production' ? 'rgba(245, 158, 11, 0.10)' : 'rgba(37, 99, 235, 0.10)'};
-  color: ${({ $env }) => ($env === 'production' ? '#fbbf24' : '#93c5fd')};
+  color: ${({ theme, $env }) => ($env === 'production' ? theme.app.status.warning.fg : theme.app.status.info.fg)};
   border: 1px solid
     ${({ $env }) =>
       $env === 'production' ? 'rgba(245, 158, 11, 0.30)' : 'rgba(37, 99, 235, 0.30)'};
@@ -289,7 +245,7 @@ export const ChangeLabel = styled.div<{ $kind: 'features' | 'fixes' | 'perf' }>`
 export const ChangeCount = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const ChangeList = styled.ul`
@@ -302,9 +258,9 @@ export const ChangeList = styled.ul`
 `;
 
 export const ChangeItem = styled.li`
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   line-height: 1.45;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 
   &::marker {
     color: rgba(229, 231, 235, 0.30);
@@ -312,8 +268,8 @@ export const ChangeItem = styled.li`
 `;
 
 export const Empty = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.faint};
   font-style: italic;
 `;
 
@@ -323,8 +279,8 @@ export const MetricsRow = styled.div`
   gap: 10px;
   padding: 10px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 
   @media (max-width: 760px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -342,11 +298,11 @@ export const MetricLabel = styled.div`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetricValue = styled.div<{ $tone?: string }>`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   color: ${({ $tone }) =>
     $tone === 'emerald'

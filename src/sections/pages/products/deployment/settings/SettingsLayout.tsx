@@ -13,12 +13,12 @@ export function SettingsLayout({ children }: { children: ReactNode }) {
   const matchRoute = useMatchRoute();
   return (
     <Shell>
-      <TabsBar>
+      <TabsBar aria-label="Settings sections">
         {TABS.map((t) => {
           const active = matchRoute({ to: t.to, fuzzy: false });
           return (
             <Tab key={t.to} $active={!!active}>
-              <TabLink as={Link} to={t.to}>
+              <TabLink as={Link} to={t.to} $active={!!active} aria-current={active ? 'page' : undefined}>
                 {t.label}
               </TabLink>
             </Tab>

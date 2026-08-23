@@ -1,67 +1,18 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
 export const BackLink = styled.a`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   text-decoration: none;
   margin-bottom: -4px;
   width: fit-content;
 
   &:hover {
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
   }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 24px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-  max-width: 640px;
 `;
 
 export const StatusPillWrap = styled.div`
@@ -98,7 +49,7 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
   color: ${({ $variant }) =>
     $variant === 'danger' ? '#f87171' : '#f5f7fb'};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
@@ -107,7 +58,7 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
   &:hover {
     background: ${({ $variant }) =>
       $variant === 'primary'
-        ? 'linear-gradient(135deg, #fbbf24 0%, #3b82f6 100%)'
+        ? 'linear-gradient(135deg, ${({ theme }) => theme.app.status.warning.fg} 0%, #3b82f6 100%)'
         : $variant === 'danger'
           ? 'rgba(248, 113, 113, 0.16)'
           : 'rgba(255, 255, 255, 0.05)'};
@@ -128,16 +79,16 @@ export const StageHeader = styled.div`
 `;
 
 export const StageTitle = styled.div`
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const StageProgress = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -214,14 +165,14 @@ export const StageBody = styled.div`
 `;
 
 export const StageName = styled.div`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
 `;
 
 export const StageStatus = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ $state }) =>
     $state === 'done' ? '#34d399' : $state === 'active' ? '#fbbf24' : 'rgba(229, 231, 235, 0.45)'};
   display: flex;
@@ -231,8 +182,8 @@ export const StageStatus = styled.div<{ $state: 'done' | 'active' | 'pending' }>
 
 export const StageTime = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 `;
@@ -271,22 +222,22 @@ export const MetaCell = styled.div`
   gap: 4px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const MetaLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetaValue = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -297,14 +248,14 @@ export const LogsPanel = styled.div`
   padding: 14px 16px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.30);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   max-height: 280px;
   overflow-y: auto;
 
   &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: ${({ theme }) => theme.app.surface.active}; border-radius: 4px; }
 `;
 
 export const LogLine = styled.div<{ $level: 'info' | 'warn' | 'error' | 'debug' }>`
@@ -319,7 +270,7 @@ export const LogLine = styled.div<{ $level: 'info' | 'warn' | 'error' | 'debug' 
 `;
 
 export const LogTime = styled.span`
-  color: rgba(229, 231, 235, 0.4);
+  color: ${({ theme }) => theme.app.text.ghost};
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 `;
@@ -329,7 +280,7 @@ export const LogLevel = styled.span<{ $level: 'info' | 'warn' | 'error' | 'debug
   width: 44px;
   text-transform: uppercase;
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.06em;
   color: ${({ $level }) =>
     $level === 'error' ? '#f87171' :

@@ -56,7 +56,7 @@ export const DeploymentHeroEyebrow = styled.div`
 
   span {
     font-family: ${({ theme }) => theme.typography.fonts.mono};
-    font-size: 11px;
+    font-size: ${({ theme }) => theme.app.type.micro};
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -105,7 +105,7 @@ export const DeploymentHeroSidebarMetric = styled.p`
   margin: 0;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 14px;
+    font-size: ${({ theme }) => theme.app.type.bodyLg};
   }
 `;
 
@@ -153,7 +153,7 @@ export const DeploymentHeroCtaPrimary = styled.a`
   background: ${({ theme }) => theme.colors.text.primary};
   color: ${({ theme }) => theme.colors.background.primary};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 500;
   border: none;
   border-radius: 4px;
@@ -162,7 +162,7 @@ export const DeploymentHeroCtaPrimary = styled.a`
   transition: opacity 0.2s ease, transform 0.2s ease;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: 14px;
+    font-size: ${({ theme }) => theme.app.type.bodyLg};
   }
 
   &:hover {

@@ -1,12 +1,9 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Gauge, Layers, Zap } from 'lucide-react';
 import usage from '@neryva_data/products/deployment/usage.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   SectionTitle,
   KpiGrid,
   KpiCard,
@@ -48,16 +45,6 @@ import {
   Mono,
 } from './UsageView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 function formatCount(n: number) {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -74,17 +61,15 @@ export function UsageView() {
   ).toFixed(1);
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Usage</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Usage</ViewTitle>
+          <ViewSubtitle>
             Request volume, compute, bandwidth, and rate limits across all deployments and regions.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <KpiCard>
             <KpiLabel>Requests (month)</KpiLabel>
@@ -109,7 +94,7 @@ export function UsageView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <ChartCard>
           <ChartHead>
             <ChartTitle>Daily request volume (last 14 days)</ChartTitle>
@@ -131,7 +116,7 @@ export function UsageView() {
         </ChartCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
         <SectionTitle>
           <Layers size={14} strokeWidth={1.7} />
           Breakdown
@@ -172,7 +157,7 @@ export function UsageView() {
         </BreakdownGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <SectionTitle>
           <Gauge size={14} strokeWidth={1.7} />
           Quotas
@@ -186,7 +171,7 @@ export function UsageView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 5}
               >
                 <QuotaTop>
@@ -208,7 +193,7 @@ export function UsageView() {
         </QuotaGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={10}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={10}>
         <SectionTitle>
           <Zap size={14} strokeWidth={1.7} />
           Rate limits
@@ -226,7 +211,7 @@ export function UsageView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 11}
             >
               <Td>
@@ -241,6 +226,6 @@ export function UsageView() {
           ))}
         </RateTable>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

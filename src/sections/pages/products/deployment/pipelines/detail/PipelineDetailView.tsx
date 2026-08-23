@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, Circle, Play, RotateCcw, Pause, GitBranch } from 'lucide-react';
 import { useNavigate, useParams } from '@tanstack/react-router';
@@ -6,12 +8,8 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import pipelinesData from '@neryva_data/products/deployment/pipelines.json';
 import logsData from '@neryva_data/products/deployment/logs.json';
 import {
-  PageRoot,
+import { pageItem } from '@styles/motion';
   BackLink,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
   StatusPillWrap,
   HeaderActions,
   ActionBtn,
@@ -38,16 +36,6 @@ import {
   LogLevel,
 } from './PipelineDetailView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.06 },
-  }),
-};
-
 const STAGE_DESCRIPTIONS: Record<string, string> = {
   Architecture: 'Define models, runtimes, and resource plan.',
   Provisioning: 'Allocate GPUs and provision clusters.',
@@ -71,12 +59,12 @@ export function PipelineDetailView() {
   const pipeline = pipelinesData.pipelines.find((p) => p.id === pipelineId);
   if (!pipeline) {
     return (
-      <PageRoot>
+      <ViewShell>
         <BackLink onClick={() => navigate({ to: '/deployment/pipelines' })}>
           <ArrowLeft size={12} strokeWidth={1.7} /> Back to pipelines
         </BackLink>
         <Panel title="Pipeline not found" subtitle={`No pipeline with id "${pipelineId}".`} />
-      </PageRoot>
+      </ViewShell>
     );
   }
 
@@ -87,40 +75,41 @@ export function PipelineDetailView() {
   const relatedLogs = logsData.logs.filter((l) => l.source === pipeline.name).slice(0, 8);
 
   return (
-    <PageRoot>
+    <ViewShell>
       <BackLink onClick={() => navigate({ to: '/deployment/pipelines' })}>
         <ArrowLeft size={12} strokeWidth={1.7} /> Back to pipelines
       </BackLink>
 
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>
             {pipeline.name}
             <StatusPillWrap>
               <StatusPill tone={pipeline.status === 'healthy' ? 'success' : pipeline.status === 'queued' ? 'warning' : 'azure'}>
                 {pipeline.status}
               </StatusPill>
             </StatusPillWrap>
-          </PageTitle>
-          <PageSubtitle>{pipeline.description}</PageSubtitle>
-        </TitleBlock>
+          </ViewTitle>
+          <ViewSubtitle>{pipeline.description}</ViewSubtitle></ViewHeader>
         <HeaderActions>
-          <ActionBtn type="button">
+          <ActionBtn type="button"
+          onClick={() => toast.success('Pipeline restarted')}>
             <Pause size={13} strokeWidth={1.8} />
             Pause
           </ActionBtn>
-          <ActionBtn type="button" $variant="ghost">
+          <ActionBtn type="button" $variant="ghost"
+          onClick={() => toast.success('Pipeline paused')}>
             <RotateCcw size={13} strokeWidth={1.8} />
             Rollback
           </ActionBtn>
-          <ActionBtn type="button" $variant="primary">
+          <ActionBtn type="button" $variant="primary"
+          onClick={() => toast.success('Promotion started')}>
             <Play size={13} strokeWidth={1.8} />
             Promote
           </ActionBtn>
         </HeaderActions>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
           title="Pipeline stages"
           subtitle={`${completedStages} of ${pipeline.stages.length} complete · ${progressPct}%`}
@@ -163,7 +152,7 @@ export function PipelineDetailView() {
       </motion.div>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2} style={{ flex: 1 }}>
           <Panel title="Configuration" subtitle="Runtime, model, and deployment metadata.">
             <MetaGrid>
               <MetaCell>
@@ -210,7 +199,7 @@ export function PipelineDetailView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3} style={{ flex: 1 }}>
           <Panel
             title="Recent activity"
             subtitle={
@@ -237,6 +226,6 @@ export function PipelineDetailView() {
           </Panel>
         </motion.div>
       </TwoColumn>
-    </PageRoot>
+    </ViewShell>
   );
 }

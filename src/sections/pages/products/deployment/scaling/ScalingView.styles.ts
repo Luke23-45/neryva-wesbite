@@ -1,58 +1,14 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
 export const SectionTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0 0 12px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const KpiGrid = styled.div`
@@ -71,29 +27,29 @@ export const TotalCard = styled.div`
   gap: 4px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const TotalLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const TotalValue = styled.div`
   font-size: 22px;
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
 `;
 
 export const TotalMeta = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 2px;
 `;
 
@@ -113,12 +69,12 @@ export const RuleCard = styled.div`
   gap: 12px;
   padding: 16px 18px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(245, 158, 11, 0.30);
+    border-color: ${({ theme }) => theme.app.status.warning.border};
   }
 `;
 
@@ -138,9 +94,9 @@ export const RuleLeft = styled.div`
 `;
 
 export const RuleName = styled.div`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
   display: flex;
   align-items: center;
@@ -149,9 +105,9 @@ export const RuleName = styled.div`
 `;
 
 export const RuleTarget = styled.div`
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const MetaGrid = styled.div`
@@ -171,13 +127,13 @@ export const MetaLabel = styled.div`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetaValue = styled.div`
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -185,7 +141,7 @@ export const ReplicaBar = styled.div`
   position: relative;
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.hover};
   overflow: hidden;
 `;
 
@@ -195,10 +151,10 @@ export const ReplicaFill = styled.div<{ $pct: number; $tone: string }>`
   width: ${({ $pct }) => `${$pct}%`};
   background: ${({ $tone }) =>
     $tone === 'emerald'
-      ? 'linear-gradient(90deg, #34d399, #10b981)'
+      ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.success.fg}, #10b981)'
       : $tone === 'warning'
-        ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-        : 'linear-gradient(90deg, #93c5fd, #60a5fa)'};
+        ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.warning.fg}, #f59e0b)'
+        : 'linear-gradient(90deg, ${({ theme }) => theme.app.status.info.fg}, #60a5fa)'};
   border-radius: 4px;
   transition: width ${({ theme }) => theme.transitions.standard};
 `;
@@ -222,8 +178,8 @@ export const RegionCard = styled.div`
   gap: 10px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const RegionTop = styled.div`
@@ -241,15 +197,15 @@ export const RegionLeft = styled.div`
 `;
 
 export const RegionCode = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
 `;
 
 export const RegionName = styled.div`
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const UtilRow = styled.div`
@@ -261,15 +217,15 @@ export const UtilRow = styled.div`
 
 export const UtilLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const UtilValue = styled.span<{ $tone: string }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   color: ${({ $tone }) =>
     $tone === 'emerald' ? '#34d399' : $tone === 'warning' ? '#fbbf24' : '#93c5fd'};
@@ -278,8 +234,8 @@ export const UtilValue = styled.span<{ $tone: string }>`
 export const ReplicaMeta = styled.div`
   display: flex;
   justify-content: space-between;
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -292,7 +248,7 @@ export const EventTable = styled.div`
   flex-direction: column;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const EventHead = styled.div`
@@ -300,8 +256,8 @@ export const EventHead = styled.div`
   grid-template-columns: 80px 1.8fr 1fr 0.8fr 0.8fr;
   gap: 12px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
 
   @media (max-width: 720px) {
     grid-template-columns: 1fr 1.4fr;
@@ -314,7 +270,7 @@ export const EventRow = styled.div`
   gap: 12px;
   padding: 10px 16px;
   background: rgba(255, 255, 255, 0.015);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
@@ -335,12 +291,12 @@ export const Th = styled.div`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const Td = styled.div`
-  font-size: 12.5px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
   min-width: 0;
 `;
 
@@ -349,7 +305,7 @@ export const Delta = styled.span<{ $tone: string }>`
   align-items: center;
   gap: 4px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ $tone }) =>
     $tone === 'azure' ? '#93c5fd' : $tone === 'warning' ? '#fbbf24' : 'rgba(229, 231, 235, 0.55)'};
 `;

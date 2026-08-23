@@ -153,24 +153,24 @@ top to bottom; shells come before the pages they frame.
 | # | Work item | Routes | Status |
 |---|---|---|---|
 | 2.1 | Deploy shell: sidebar, topbar, popovers, mobile drawer | `/deployment` chrome | DONE |
-| 2.2 | Dashboard | `/dashboard` | — |
-| 2.3 | Pipelines + pipeline detail | `/pipelines`, `/pipelines/$pipelineId` | — |
-| 2.4 | Deployments + deploy detail | `/deployments`, `/deployments/$deployId` | — |
-| 2.5 | Infrastructure | `/infrastructure` | — |
-| 2.6 | Logs | `/logs` | — |
-| 2.7 | Alerts | `/alerts` | — |
-| 2.8 | Cost | `/cost` | — |
-| 2.9 | Secrets | `/secrets` | — |
-| 2.10 | Compliance | `/compliance` | — |
-| 2.11 | Webhooks | `/webhooks` | — |
-| 2.12 | Network | `/network` | — |
-| 2.13 | Scaling | `/scaling` | — |
-| 2.14 | Experiments | `/experiments` | — |
-| 2.15 | Teams | `/teams` | — |
-| 2.16 | Usage | `/usage` | — |
-| 2.17 | Releases | `/releases` | — |
-| 2.18 | Settings: General + Environments | `/settings/general`, `/settings/environments` | — |
-| 2.19 | Settings: Notifications + Access | `/settings/notifications`, `/settings/access` | — |
+| 2.2 | Dashboard | `/dashboard` | DONE |
+| 2.3 | Pipelines + pipeline detail | `/pipelines`, `/pipelines/$pipelineId` | DONE |
+| 2.4 | Deployments + deploy detail | `/deployments`, `/deployments/$deployId` | DONE |
+| 2.5 | Infrastructure | `/infrastructure` | DONE |
+| 2.6 | Logs | `/logs` | DONE |
+| 2.7 | Alerts | `/alerts` | DONE |
+| 2.8 | Cost | `/cost` | DONE |
+| 2.9 | Secrets | `/secrets` | DONE |
+| 2.10 | Compliance | `/compliance` | DONE |
+| 2.11 | Webhooks | `/webhooks` | DONE |
+| 2.12 | Network | `/network` | DONE |
+| 2.13 | Scaling | `/scaling` | DONE |
+| 2.14 | Experiments | `/experiments` | DONE |
+| 2.15 | Teams | `/teams` | DONE |
+| 2.16 | Usage | `/usage` | DONE |
+| 2.17 | Releases | `/releases` | DONE |
+| 2.18 | Settings: General + Environments | `/settings/general`, `/settings/environments` | DONE |
+| 2.19 | Settings: Notifications + Access | `/settings/notifications`, `/settings/access` | DONE |
 
 ### Phase 3 — Standalone site pages
 

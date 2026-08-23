@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Download, ScrollText, Globe, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -8,11 +9,7 @@ import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import compliance from '@neryva_data/products/deployment/compliance.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   ExportBtn,
   KpiGrid,
   SectionTitle,
@@ -39,16 +36,6 @@ import {
   ResidencySwatch,
   ResidencyRegion,
 } from './ComplianceView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 const FRAMEWORK_TONE: Record<string, 'emerald' | 'azure' | 'neutral'> = {
   compliant: 'emerald',
@@ -78,15 +65,13 @@ const RESIDENCY_COLORS = ['#34d399', '#60a5fa', '#fbbf24'];
 
 export function ComplianceView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Compliance</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Compliance</ViewTitle>
+          <ViewSubtitle>
             Certifications, deployment controls, regional data residency, and an immutable audit
             trail.
-          </PageSubtitle>
-        </TitleBlock>
+          </ViewSubtitle></ViewHeader>
         <ExportBtn
           type="button"
           onClick={() => toast.success('Deployment compliance report exported')}
@@ -94,9 +79,9 @@ export function ComplianceView() {
           <Download size={13} strokeWidth={1.8} />
           Export report
         </ExportBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <MetricCard
             label="Frameworks"
@@ -129,7 +114,7 @@ export function ComplianceView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           Compliance frameworks
@@ -143,7 +128,7 @@ export function ComplianceView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 3}
               >
                 <FrameworkTop>
@@ -184,7 +169,7 @@ export function ComplianceView() {
       </motion.div>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={8} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={8} style={{ flex: 1 }}>
           <Panel
             title="Deployment controls"
             subtitle="Security configurations enforced on every deployment"
@@ -213,7 +198,7 @@ export function ComplianceView() {
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 9}
                 >
                   <ControlLeft>
@@ -229,7 +214,7 @@ export function ComplianceView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={18} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={18} style={{ flex: 1 }}>
           <Panel
             title="Regional residency"
             subtitle="Customer data stays in the assigned region"
@@ -258,7 +243,7 @@ export function ComplianceView() {
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 19}
                 >
                   <ResidencyLeft>
@@ -275,7 +260,7 @@ export function ComplianceView() {
         </motion.div>
       </TwoColumn>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={22}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={22}>
         <Panel
           title="Audit log"
           subtitle="Deployment, rollback, and configuration events — exported to cold storage"
@@ -304,7 +289,7 @@ export function ComplianceView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 23}
               >
                 <AuditTime>{a.time}</AuditTime>
@@ -316,6 +301,6 @@ export function ComplianceView() {
           </AuditList>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

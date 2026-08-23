@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Plus, Bell, AlertTriangle, Clock, MapPin, User } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
@@ -5,11 +7,7 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import alerts from '@neryva_data/products/deployment/alerts.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   NewBtn,
   OnCallGrid,
   OnCallCard,
@@ -37,16 +35,6 @@ import {
   ChannelPills,
   ChannelPill,
 } from './AlertsView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 const ON_CALL_ACCENTS: Record<string, string> = {
   primary: 'rgba(245, 158, 11, 0.40)',
@@ -82,22 +70,21 @@ const ruleSeverityLabel: Record<string, string> = {
 
 export function AlertsView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Alerts</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Alerts</ViewTitle>
+          <ViewSubtitle>
             Active incidents, alert rules, and on-call rotations. Get paged the moment something
             breaks.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle></ViewHeader>
+        <NewBtn type="button"
+          onClick={() => toast.success('New alert rule created')}>
           <Plus size={14} strokeWidth={2} />
           New rule
         </NewBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <SectionTitle>
           <Bell size={14} strokeWidth={1.7} />
           On-call rotation
@@ -112,7 +99,7 @@ export function AlertsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 2}
               >
                 <OnCallAvatar $tone={p.tone}>{initials}</OnCallAvatar>
@@ -127,7 +114,7 @@ export function AlertsView() {
         </OnCallGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
         <SectionTitle>
           <AlertTriangle size={14} strokeWidth={1.7} />
           Active incidents
@@ -139,7 +126,7 @@ export function AlertsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 6}
             >
               <IncidentDot $tone={inc.tone} />
@@ -176,7 +163,7 @@ export function AlertsView() {
         </IncidentList>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={11}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={11}>
         <Panel title="Alert rules" subtitle="Conditions that trigger pages and notifications">
           <RuleTable>
             <TableHeader>
@@ -193,7 +180,7 @@ export function AlertsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 12}
               >
                 <Cell $w="26%">
@@ -233,6 +220,6 @@ export function AlertsView() {
           </RuleTable>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

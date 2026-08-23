@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+import { ViewShell, ViewHeader, ViewTitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { ArrowLeft, RotateCcw, Pause, Play, Server, Activity } from 'lucide-react';
 import { useNavigate, useParams } from '@tanstack/react-router';
@@ -8,11 +10,8 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import deploymentsData from '@neryva_data/products/deployment/deployments.json';
 import {
-  PageRoot,
+import { pageItem } from '@styles/motion';
   BackLink,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
   VersionPill,
   Meta,
   HeaderActions,
@@ -34,16 +33,6 @@ import {
   ReplicaReady,
   ReplicaFailed,
 } from './DeployDetailView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.06 },
-  }),
-};
 
 const statusTone: Record<string, 'success' | 'warning' | 'azure' | 'amber'> = {
   healthy: 'success',
@@ -82,12 +71,12 @@ export function DeployDetailView() {
 
   if (!deploy) {
     return (
-      <PageRoot>
+      <ViewShell>
         <BackLink onClick={() => navigate({ to: '/deployment/deployments' })}>
           <ArrowLeft size={12} strokeWidth={1.7} /> Back to deployments
         </BackLink>
         <Panel title="Deployment not found" subtitle={`No deployment with id "${params.deployId}".`} />
-      </PageRoot>
+      </ViewShell>
     );
   }
 
@@ -97,18 +86,17 @@ export function DeployDetailView() {
   const errPct = parsePct(deploy.errorRate);
 
   return (
-    <PageRoot>
+    <ViewShell>
       <BackLink onClick={() => navigate({ to: '/deployment/deployments' })}>
         <ArrowLeft size={12} strokeWidth={1.7} /> Back to deployments
       </BackLink>
 
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>
             {deploy.name}
             <VersionPill>{deploy.version}</VersionPill>
             <StatusPill tone={statusTone[deploy.status]}>{deploy.status}</StatusPill>
-          </PageTitle>
+          </ViewTitle>
           <Meta>
             <StatusPill tone={envTone[deploy.env]} dot={false}>
               {deploy.env}
@@ -118,24 +106,26 @@ export function DeployDetailView() {
             <span>·</span>
             <span>Deployed {deploy.deployedAt} by {deploy.deployedBy}</span>
           </Meta>
-        </TitleBlock>
         <HeaderActions>
-          <ActionBtn type="button">
+          <ActionBtn type="button"
+          onClick={() => toast.success('Deployment restarted')}>
             <Pause size={13} strokeWidth={1.8} />
             Pause
           </ActionBtn>
-          <ActionBtn type="button" $variant="ghost">
+          <ActionBtn type="button" $variant="ghost"
+          onClick={() => toast.success('Rollback queued')}>
             <RotateCcw size={13} strokeWidth={1.8} />
             Rollback
           </ActionBtn>
-          <ActionBtn type="button" $variant="primary">
+          <ActionBtn type="button" $variant="primary"
+          onClick={() => toast.success('Traffic shifted')}>
             <Play size={13} strokeWidth={1.8} />
             Scale up
           </ActionBtn>
         </HeaderActions>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <MetricCard
             label="Throughput"
@@ -169,7 +159,7 @@ export function DeployDetailView() {
       </motion.div>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2} style={{ flex: 1 }}>
           <Panel
             title="Resource utilization"
             subtitle={
@@ -204,7 +194,7 @@ export function DeployDetailView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3} style={{ flex: 1 }}>
           <Panel
             title="Replicas"
             subtitle={
@@ -241,7 +231,7 @@ export function DeployDetailView() {
         </motion.div>
       </TwoColumn>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <Panel title="Configuration" subtitle="Image, endpoint, and deployment metadata.">
           <MetaGrid>
             <MetaCell>
@@ -279,6 +269,6 @@ export function DeployDetailView() {
           </MetaGrid>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

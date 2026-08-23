@@ -1,13 +1,10 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Globe2, Lock, ShieldCheck } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import network from '@neryva_data/products/deployment/network.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   SectionTitle,
   EndpointGrid,
   EndpointCard,
@@ -46,30 +43,18 @@ import {
   CdnValue,
 } from './NetworkView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 export function NetworkView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Network</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Network</ViewTitle>
+          <ViewSubtitle>
             Endpoints, private networking, DNS records, and CDN configuration for the deployment
             surface.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <SectionTitle>
           <Globe2 size={14} strokeWidth={1.7} />
           Public endpoints
@@ -81,7 +66,7 @@ export function NetworkView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 2}
             >
               <EndpointTop>
@@ -130,7 +115,7 @@ export function NetworkView() {
         </EndpointGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6}>
         <SectionTitle>
           <Lock size={14} strokeWidth={1.7} />
           VPC
@@ -171,7 +156,7 @@ export function NetworkView() {
         </VpcCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={8}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={8}>
         <SectionTitle>DNS records</SectionTitle>
         <Table>
           <TableHead>
@@ -199,7 +184,7 @@ export function NetworkView() {
         </Table>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={9}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={9}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           CDN
@@ -223,6 +208,6 @@ export function NetworkView() {
           </CdnMetric>
         </CdnCard>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Server, Globe } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
@@ -5,10 +6,7 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import infrastructure from '@neryva_data/products/deployment/infrastructure.json';
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   TotalsGrid,
   TotalCard,
   TotalLabel,
@@ -31,16 +29,6 @@ import {
   RuntimeCount,
 } from './InfrastructureView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
-
 const statusTone: Record<string, 'success' | 'warning' | 'azure' | 'amber'> = {
   healthy: 'success',
   degraded: 'warning',
@@ -60,15 +48,15 @@ function parsePct(s: string): number {
 
 export function InfrastructureView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <PageTitle>Infrastructure</PageTitle>
-        <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Infrastructure</ViewTitle>
+        <ViewSubtitle>
           Region health, cluster utilization, and runtime distribution across your fleet.
-        </PageSubtitle>
-      </PageHeader>
+        </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <TotalsGrid>
           <TotalCard>
             <TotalLabel>Regions</TotalLabel>
@@ -93,7 +81,7 @@ export function InfrastructureView() {
         </TotalsGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Globe size={14} strokeWidth={1.7} />
           Regions
@@ -105,7 +93,7 @@ export function InfrastructureView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 3}
             >
               <RegionTop>
@@ -162,7 +150,7 @@ export function InfrastructureView() {
         </RegionGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={12}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>
         <SectionTitle>
           <Server size={14} strokeWidth={1.7} />
           Runtimes
@@ -175,7 +163,7 @@ export function InfrastructureView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 13}
               >
                 <RuntimeTop>
@@ -203,6 +191,6 @@ export function InfrastructureView() {
           </RuntimeGrid>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

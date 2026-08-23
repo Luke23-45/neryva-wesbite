@@ -7,15 +7,9 @@ import { Panel } from '@components/common/ui/Panel';
 import { Avatar } from '@components/common/ui/Avatar';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { TextInput } from '@components/common/ui/TextInput';
-import { spring } from '@styles/motion';
+import { spring,  pageItem } from '@styles/motion';
 import { SaveRow } from './shared';
 import settings from '@neryva_data/products/deployment/settings.json';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 const ROLES = ['Owner', 'Admin', 'Editor', 'Viewer'] as const;
 type Role = (typeof ROLES)[number];
@@ -50,7 +44,7 @@ export function SettingsAccess() {
 
   return (
     <>
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel
           title="Members"
           subtitle="People with access to deployment operations."
@@ -128,7 +122,7 @@ export function SettingsAccess() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel title="Audit log" subtitle="Recent security and configuration events.">
           <div style={{ display: 'flex', flexDirection: 'column', margin: '0 -22px -22px' }}>
             {settings.access.auditLog.map((a, i) => (
@@ -250,18 +244,18 @@ const InviteBtn = styled(motion.button)`
   background: linear-gradient(135deg, #f59e0b 0%, #2563eb 100%);
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.warning.border};
   transition: opacity ${({ theme }) => theme.transitions.fast};
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.4;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(229, 231, 235, 0.55);
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.muted};
     box-shadow: none;
   }
 `;
@@ -275,20 +269,20 @@ const TableWrap = styled.div`
 const TableHeader = styled.div`
   display: flex;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const MemberRow = styled(motion.div)`
   display: flex;
   align-items: center;
   padding: 12px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
@@ -296,7 +290,7 @@ const MemberRow = styled(motion.div)`
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: ${({ theme }) => theme.app.surface.subtle};
   }
 `;
 
@@ -314,23 +308,23 @@ const RoleButton = styled(motion.button)<{ $open: boolean }>`
   border: 1px solid ${({ $open }) => ($open ? 'rgba(245, 158, 11, 0.45)' : 'rgba(255, 255, 255, 0.08)')};
   background: ${({ $open }) =>
     $open
-      ? 'linear-gradient(180deg, rgba(245,158,11,0.10), rgba(37,99,235,0.04))'
+      ? 'linear-gradient(180deg, ${({ theme }) => theme.app.status.warning.bg}, rgba(37,99,235,0.04))'
       : 'rgba(255, 255, 255, 0.03)'};
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-family: inherit;
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   svg {
-    color: rgba(229, 231, 235, 0.55);
+    color: ${({ theme }) => theme.app.text.muted};
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: ${({ theme }) => theme.app.surface.active};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -372,7 +366,7 @@ const Menu = styled(motion.div)`
   padding: 4px;
   border-radius: 12px;
   background: rgba(15, 17, 22, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:
@@ -391,10 +385,10 @@ const MenuItem = styled(motion.button)`
   border-radius: 8px;
   background: transparent;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   cursor: pointer;
   text-align: left;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   transition: background ${({ theme }) => theme.transitions.fast};
 `;
 

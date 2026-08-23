@@ -1,49 +1,5 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
 export const NewBtn = styled.button`
   display: inline-flex;
   align-items: center;
@@ -52,12 +8,12 @@ export const NewBtn = styled.button`
   background: linear-gradient(135deg, #f59e0b 0%, #2563eb 100%);
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.warning.border};
 `;
 
 export const KpiGrid = styled.div`
@@ -76,29 +32,29 @@ export const TotalCard = styled.div`
   gap: 4px;
   padding: 16px 18px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const TotalLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const TotalValue = styled.div`
   font-size: 22px;
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.015em;
   font-variant-numeric: tabular-nums;
 `;
 
 export const TotalMeta = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 2px;
 `;
 
@@ -114,12 +70,12 @@ export const HookCard = styled.div`
   gap: 14px;
   padding: 16px 18px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(245, 158, 11, 0.30);
+    border-color: ${({ theme }) => theme.app.status.warning.border};
   }
 `;
 
@@ -139,9 +95,9 @@ export const HookLeft = styled.div`
 `;
 
 export const HookName = styled.div`
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
   display: flex;
   align-items: center;
@@ -149,9 +105,9 @@ export const HookName = styled.div`
 `;
 
 export const HookUrl = styled.div`
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   word-break: break-all;
 `;
 
@@ -173,13 +129,13 @@ export const MetaLabel = styled.div`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetaValue = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -191,12 +147,12 @@ export const EventPills = styled.div`
 
 export const EventPill = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(245, 158, 11, 0.10);
-  border: 1px solid rgba(245, 158, 11, 0.30);
-  color: #fbbf24;
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  color: ${({ theme }) => theme.app.status.warning.fg};
   letter-spacing: 0.02em;
 `;
 
@@ -214,15 +170,15 @@ export const IconBtn = styled.button`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 7px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;
 
@@ -232,10 +188,10 @@ export const SectionTitle = styled.h2`
   gap: 8px;
   margin: 8px 0 14px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const EventTypeGrid = styled.div`
@@ -254,20 +210,20 @@ export const EventType = styled.div`
   gap: 4px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const EventTypeLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: #fbbf24;
+  color: ${({ theme }) => theme.app.status.warning.fg};
 `;
 
 export const EventTypeDesc = styled.span`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.45;
 `;
 
@@ -276,9 +232,9 @@ export const EventCategory = styled.span`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   align-self: flex-start;
   padding: 1px 5px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
+  background: ${({ theme }) => theme.app.surface.tint};
 `;

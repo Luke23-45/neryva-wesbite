@@ -1,58 +1,14 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
 export const ExportBtn = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f5f7fb;
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
@@ -61,8 +17,8 @@ export const ExportBtn = styled.button`
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: ${({ theme }) => theme.app.surface.active};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -85,10 +41,10 @@ export const SectionTitle = styled.h2`
   gap: 8px;
   margin: 8px 0 14px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const TwoColumn = styled.div`
@@ -120,8 +76,8 @@ export const FrameworkCard = styled.div`
   gap: 12px;
   padding: 18px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 export const FrameworkTop = styled.div`
@@ -131,17 +87,17 @@ export const FrameworkTop = styled.div`
 `;
 
 export const FrameworkName = styled.div`
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   display: flex;
   align-items: center;
   gap: 8px;
 `;
 
 export const FrameworkRenewal = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const ControlsList = styled.div`
@@ -157,8 +113,8 @@ export const ControlRow = styled.div`
   gap: 12px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const ControlLeft = styled.div`
@@ -169,14 +125,14 @@ export const ControlLeft = styled.div`
 `;
 
 export const ControlName = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ControlMeta = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const AuditList = styled.div`
@@ -190,7 +146,7 @@ export const AuditRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
 
   &:last-child {
     border-bottom: 0;
@@ -199,15 +155,15 @@ export const AuditRow = styled.div`
 
 export const AuditTime = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
   width: 88px;
   flex-shrink: 0;
 `;
 
 export const AuditCategory = styled.span<{ $kind: string }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 2px 7px;
@@ -238,14 +194,14 @@ export const AuditCategory = styled.span<{ $kind: string }>`
 
 export const AuditEvent = styled.div`
   flex: 1;
-  font-size: 13px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
   min-width: 0;
 `;
 
 export const AuditActor = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const ResidencyList = styled.div`
@@ -261,8 +217,8 @@ export const ResidencyRow = styled.div`
   gap: 12px;
   padding: 10px 12px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const ResidencyLeft = styled.div`
@@ -281,7 +237,7 @@ export const ResidencySwatch = styled.div<{ $color: string }>`
 `;
 
 export const ResidencyRegion = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;

@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, ArrowRight } from 'lucide-react';
@@ -5,11 +7,7 @@ import { Link } from '@tanstack/react-router';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import pipelines from '@neryva_data/products/deployment/pipelines.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   NewBtn,
   FilterBar,
   FilterPill,
@@ -27,16 +25,6 @@ import {
   MetricValue,
 } from './PipelinesView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
-
 const FILTERS = ['all', 'production', 'staging', 'dev'] as const;
 
 const statusTone: Record<string, 'success' | 'warning' | 'azure' | 'amber'> = {
@@ -51,21 +39,20 @@ export function PipelinesView() {
   const list = pipelines.pipelines.filter((p) => filter === 'all' || p.env === filter);
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Pipelines</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Pipelines</ViewTitle>
+          <ViewSubtitle>
             Track every stage of your deployment lifecycle — from architecture to operations.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle></ViewHeader>
+        <NewBtn type="button"
+          onClick={() => toast.success('Pipeline scaffold created')}>
           <Plus size={14} strokeWidth={2} />
           New pipeline
         </NewBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <FilterBar as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <FilterBar as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={1}>
         {FILTERS.map((f) => (
           <FilterPill
             key={f}
@@ -85,7 +72,7 @@ export function PipelinesView() {
             as={motion.div}
             initial="hidden"
             animate="visible"
-            variants={fadeUp}
+            variants={pageItem}
             custom={i + 2}
           >
             <CardTop>
@@ -159,6 +146,6 @@ export function PipelinesView() {
           </PipelineCard>
         ))}
       </PipelineGrid>
-    </PageRoot>
+    </ViewShell>
   );
 }

@@ -1,13 +1,10 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Plus, Users, Mail, ShieldCheck, KeyRound, Check as CheckIcon, X as XIcon } from 'lucide-react';
 import teams from '@neryva_data/products/deployment/teams.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   InviteBtn,
   SectionTitle,
   KpiGrid,
@@ -58,16 +55,6 @@ import {
   Check,
 } from './TeamsView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
-
 const roles: Array<keyof Omit<typeof teams.rbacMatrix[0], 'action'>> = [
   'owner',
   'admin',
@@ -78,22 +65,20 @@ const roles: Array<keyof Omit<typeof teams.rbacMatrix[0], 'action'>> = [
 
 export function TeamsView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Teams</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Teams</ViewTitle>
+          <ViewSubtitle>
             Workspace members, RBAC matrix, service accounts, and API tokens for the deployment
             surface.
-          </PageSubtitle>
-        </TitleBlock>
+          </ViewSubtitle>
         <InviteBtn type="button" onClick={() => toast.success('Invite dialog opened')}>
           <Plus size={14} strokeWidth={2} />
           Invite member
         </InviteBtn>
-      </PageHeader>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <KpiCard>
             <KpiLabel>Seats</KpiLabel>
@@ -123,7 +108,7 @@ export function TeamsView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Users size={14} strokeWidth={1.7} />
           Members
@@ -142,7 +127,7 @@ export function TeamsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 3}
             >
               <Td>
@@ -165,7 +150,7 @@ export function TeamsView() {
         </MemberTable>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={12}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>
         <SectionTitle>
           <Mail size={14} strokeWidth={1.7} />
           Pending invites
@@ -200,7 +185,7 @@ export function TeamsView() {
         </PendingCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={14}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           Service accounts
@@ -212,7 +197,7 @@ export function TeamsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 15}
             >
               <ServiceTop>
@@ -242,7 +227,7 @@ export function TeamsView() {
         </ServiceGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={22}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={22}>
         <SectionTitle>
           <KeyRound size={14} strokeWidth={1.7} />
           API tokens
@@ -261,7 +246,7 @@ export function TeamsView() {
               as={motion.div}
               initial="hidden"
               animate="visible"
-              variants={fadeUp}
+              variants={pageItem}
               custom={i + 23}
             >
               <Td>
@@ -278,7 +263,7 @@ export function TeamsView() {
         </TokenTable>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={26}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={26}>
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           RBAC matrix
@@ -308,6 +293,6 @@ export function TeamsView() {
           </MatrixTable>
         </MatrixCard>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

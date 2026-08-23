@@ -1,79 +1,38 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
 export const BackLink = styled.a`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   text-decoration: none;
   margin-bottom: -4px;
   width: fit-content;
   cursor: pointer;
 
   &:hover {
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
   }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-`;
-
-export const TitleBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 24px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
 `;
 
 export const VersionPill = styled.span`
   display: inline-block;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   padding: 3px 9px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: rgba(229, 231, 235, 0.78);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const Meta = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const HeaderActions = styled.div`
@@ -101,9 +60,9 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
       : $variant === 'danger'
         ? 'rgba(248, 113, 113, 0.08)'
         : 'transparent'};
-  color: ${({ $variant }) => ($variant === 'danger' ? '#f87171' : '#f5f7fb')};
+  color: ${({ theme, $variant }) => ($variant === 'danger' ? theme.app.status.error.fg : theme.app.text.primary)};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
@@ -149,22 +108,22 @@ export const MetaCell = styled.div`
   gap: 4px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const MetaLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetaValue = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
   word-break: break-all;
 `;
@@ -184,12 +143,12 @@ export const ResourceRow = styled.div`
 export const ResourceLabel = styled.div`
   display: flex;
   justify-content: space-between;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.85);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const ResourceValue = styled.span`
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -221,18 +180,18 @@ export const ReplicaMeta = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.85);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const ReplicaReady = styled.span`
-  color: #34d399;
+  color: ${({ theme }) => theme.app.status.success.fg};
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 `;
 
 export const ReplicaFailed = styled.span`
-  color: #f87171;
+  color: ${({ theme }) => theme.app.status.error.fg};
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 `;

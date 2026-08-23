@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, ArrowRight } from 'lucide-react';
@@ -8,14 +9,10 @@ import { Sparkline } from '@components/common/ui/Sparkline';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
-import { spring } from '@styles/motion';
+import { spring, pageItem } from '@styles/motion';
 import dashboard from '@neryva_data/products/deployment/dashboard.json';
 
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
   KpiGrid,
   TwoColumn,
   ChartWrap,
@@ -37,16 +34,6 @@ import {
   SectionTitle,
 } from './DashboardView.styles';
 import styled from 'styled-components';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: premiumEase, delay: i * 0.06 },
-  }),
-};
 
 const statusTone: Record<string, 'success' | 'warning' | 'neutral' | 'azure'> = {
   running: 'azure',
@@ -73,18 +60,18 @@ export function DashboardView() {
       : data.throughput.points;
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <PageTitle>Dashboard</PageTitle>
-        <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Dashboard</ViewTitle>
+        <ViewSubtitle>
           Monitor deployments, pipelines, and infrastructure health across all regions.
-        </PageSubtitle>
-      </PageHeader>
+        </ViewSubtitle>
+      </ViewHeader>
 
-      <Section as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <Section as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           {data.kpis.map((kpi, i) => (
-            <motion.div key={kpi.label} variants={fadeUp} custom={i + 2}>
+            <motion.div key={kpi.label} variants={pageItem} custom={i + 2}>
               <MetricCard
                 label={kpi.label}
                 value={kpi.value}
@@ -98,7 +85,7 @@ export function DashboardView() {
       </Section>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6} style={{ flex: 1 }}>
           <Panel
             title={data.throughput.title}
             subtitle={data.throughput.subtitle}
@@ -137,7 +124,7 @@ export function DashboardView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={7} style={{ flex: 1 }}>
           <Panel
             title="Activity"
             subtitle="Live events from your deployments"
@@ -175,7 +162,7 @@ export function DashboardView() {
         </motion.div>
       </TwoColumn>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={8}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={8}>
         <Panel
           title="Active pipelines"
           subtitle="Pipeline status and stage progress"
@@ -243,7 +230,7 @@ export function DashboardView() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={9}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={9}>
         <SectionTitle>
           <Activity size={14} strokeWidth={1.7} />
           System health
@@ -272,7 +259,7 @@ export function DashboardView() {
           ))}
         </HealthStrip>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
 
@@ -282,8 +269,8 @@ const RangeToggle = styled.div`
   gap: 0;
   padding: 3px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const RangePill = styled(motion.span)<{ $active: boolean }>`
@@ -305,7 +292,7 @@ const RangeBtn = styled(motion.button)<{ $active: boolean }>`
   border: 0;
   background: transparent;
   font-family: inherit;
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   padding: 5px 12px;
   border-radius: 7px;

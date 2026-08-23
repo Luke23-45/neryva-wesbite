@@ -1,14 +1,12 @@
+import toast from 'react-hot-toast';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Plus, ArrowUpRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import deployments from '@neryva_data/products/deployment/deployments.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   NewBtn,
   TableWrap,
   TableHeader,
@@ -22,16 +20,6 @@ import {
   ReplicaTrack,
   ReplicaFill,
 } from './DeploymentsView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
 
 const statusTone: Record<string, 'success' | 'warning' | 'azure' | 'amber'> = {
   healthy: 'success',
@@ -48,21 +36,20 @@ const envTone: Record<string, 'success' | 'warning' | 'azure' | 'neutral'> = {
 
 export function DeploymentsView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Deployments</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Deployments</ViewTitle>
+          <ViewSubtitle>
             Active model deployments across all environments and regions.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle></ViewHeader>
+        <NewBtn type="button"
+          onClick={() => toast.success('Deployment wizard opening')}>
           <Plus size={14} strokeWidth={2} />
           New deployment
         </NewBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.02)',
@@ -90,7 +77,7 @@ export function DeploymentsView() {
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 2}
                 >
                   <Cell $w="22%">
@@ -159,6 +146,6 @@ export function DeploymentsView() {
           </TableWrap>
         </div>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

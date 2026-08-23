@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
@@ -5,14 +6,9 @@ import toast from 'react-hot-toast';
 import { Plus, KeyRound, Copy as CopyIcon, RotateCw, Eye, EyeOff, MoreHorizontal, Lock } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
-import { spring } from '@styles/motion';
+import { spring,  pageItem } from '@styles/motion';
 import secrets from '@neryva_data/products/deployment/secrets.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
   NewBtn,
   TotalsGrid,
   TotalCard,
@@ -29,16 +25,6 @@ import {
   KindPill,
   Meta,
 } from './SecretsView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 const rotationTone: Record<string, 'emerald' | 'warning' | 'azure' | 'amber'> = {
   emerald: 'emerald',
@@ -67,22 +53,21 @@ export function SecretsView() {
   };
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Secrets</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader><ViewTitle>Secrets</ViewTitle>
+          <ViewSubtitle>
             Encrypted secrets shared across deployments. Rotate keys, audit access, and track
             rotation cadence.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle></ViewHeader>
+        <NewBtn type="button"
+          onClick={() => toast.success('New secret vault item')}>
           <Plus size={14} strokeWidth={2} />
           Add secret
         </NewBtn>
-      </PageHeader>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <TotalsGrid>
           <TotalCard>
             <TotalLabel>Secrets</TotalLabel>
@@ -107,7 +92,7 @@ export function SecretsView() {
         </TotalsGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Lock size={14} strokeWidth={1.7} />
           Stored secrets
@@ -150,7 +135,7 @@ export function SecretsView() {
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 3}
                 >
                   <Cell $w="32%">
@@ -220,7 +205,7 @@ export function SecretsView() {
           </SecretsTable>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
 
@@ -232,14 +217,14 @@ const IconBtn = styled(motion.button)`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 7px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;

@@ -18,8 +18,8 @@ export const TabsBar = styled.nav`
   gap: 4px;
   margin-bottom: 32px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 12px;
   width: fit-content;
   max-width: 100%;
@@ -33,24 +33,29 @@ export const TabsBar = styled.nav`
 
 export const Tab = styled.div<{ $active: boolean }>`
   border-radius: 8px;
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.08)' : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.app.text.primary : 'transparent')};
+  transition: background ${({ theme }) => theme.transitions.fast};
 `;
 
-export const TabLink = styled.a`
+export const TabLink = styled.a<{ $active: boolean }>`
   display: inline-block;
   padding: 8px 14px;
   border-radius: 8px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.7);
+  color: ${({ $active, theme }) => ($active ? theme.app.text.inverse : theme.app.text.secondary)};
   text-decoration: none;
   white-space: nowrap;
-  transition: color ${({ theme }) => theme.transitions.fast},
-    background ${({ theme }) => theme.transitions.fast};
+  transition: color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    color: #f5f7fb;
+    color: ${({ $active, theme }) => ($active ? theme.app.text.inverse : theme.app.text.primary)};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
   }
 `;
 

@@ -1,3 +1,4 @@
+import { pageItem, ease } from '@styles/motion';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Slack, Mail, Webhook, Bell, Trash2 } from 'lucide-react';
@@ -7,12 +8,6 @@ import { Panel } from '@components/common/ui/Panel';
 import { Switch } from '@components/common/ui/Switch';
 import { SaveRow } from './shared';
 import settings from '@neryva_data/products/deployment/settings.json';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 const KIND_ICONS = {
   slack: Slack,
@@ -40,14 +35,14 @@ const ChannelCard = styled(motion.div)`
   gap: 14px;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   transition: border-color ${({ theme }) => theme.transitions.fast},
     background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(245, 158, 11, 0.30);
-    background: rgba(255, 255, 255, 0.03);
+    border-color: ${({ theme }) => theme.app.status.warning.border};
+    background: ${({ theme }) => theme.app.surface.subtle};
   }
 `;
 
@@ -99,14 +94,14 @@ const ChannelTop = styled.div`
 `;
 
 const ChannelName = styled.div`
-  font-size: 14px;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 const ChannelTarget = styled.div`
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   word-break: break-all;
 `;
@@ -120,12 +115,12 @@ const EventPills = styled.div`
 
 const EventPill = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(245, 158, 11, 0.10);
-  border: 1px solid rgba(245, 158, 11, 0.30);
-  color: #fbbf24;
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  color: ${({ theme }) => theme.app.status.warning.fg};
   letter-spacing: 0.04em;
   text-transform: uppercase;
   font-weight: 500;
@@ -153,7 +148,7 @@ const DeleteBtn = styled.button`
 
   &:hover {
     background: rgba(248, 113, 113, 0.10);
-    color: #f87171;
+    color: ${({ theme }) => theme.app.status.error.fg};
   }
 `;
 
@@ -173,7 +168,7 @@ export function SettingsNotifications() {
   };
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="Notification channels"
         subtitle="Where deployment events are delivered."
@@ -191,7 +186,7 @@ export function SettingsNotifications() {
                 key={c.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...premiumEase, delay: i * 0.04 }}
+                transition={{ duration: 0.4, ease: ease.premium, delay: i * 0.04 }}
               >
                 <ChannelIcon $kind={c.kind}>
                   <Icon size={16} strokeWidth={1.7} />

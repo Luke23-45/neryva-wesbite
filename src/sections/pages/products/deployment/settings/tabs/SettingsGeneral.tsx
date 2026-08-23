@@ -1,3 +1,4 @@
+import { pageItem } from '@styles/motion';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -6,12 +7,6 @@ import { TextInput } from '@components/common/ui/TextInput';
 import { Switch } from '@components/common/ui/Switch';
 import { SaveRow } from './shared';
 import settings from '@neryva_data/products/deployment/settings.json';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 export function SettingsGeneral() {
   const g = settings.general;
@@ -24,7 +19,7 @@ export function SettingsGeneral() {
   const [canaryPct, setCanaryPct] = useState(String(g.canaryPercentage));
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="General"
         subtitle="Workspace defaults, regions, and operational policy."

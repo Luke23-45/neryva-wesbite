@@ -1,3 +1,4 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Panel } from '@components/common/ui/Panel';
 import { MetricCard } from '@components/common/ui/MetricCard';
@@ -7,11 +8,7 @@ import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import cost from '@neryva_data/products/deployment/cost.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   BudgetCard,
   BudgetTop,
   BudgetLeft,
@@ -36,16 +33,6 @@ import {
   CategoryValue,
   TrendBadge,
 } from './CostView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 const CATEGORY_COLORS: Record<string, string> = {
   amber: '#fbbf24',
@@ -74,17 +61,15 @@ export function CostView() {
   const forecastPct = (cost.summary.forecast / cost.summary.budget) * 100;
 
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Cost & usage</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Cost & usage</ViewTitle>
+          <ViewSubtitle>
             Spend across deployments, regions, and resource categories. Forecast vs. budget.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <BudgetCard>
           <BudgetTop>
             <BudgetLeft>
@@ -118,7 +103,7 @@ export function CostView() {
         </BudgetCard>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <KpiGrid>
           <MetricCard
             label="Total this month"
@@ -152,7 +137,7 @@ export function CostView() {
       </motion.div>
 
       <TwoColumn>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6} style={{ flex: 1 }}>
           <Panel title="Daily spend" subtitle="Last 7 days · USD">
             <ChartWrap>
               <StudioAreaChart
@@ -167,7 +152,7 @@ export function CostView() {
           </Panel>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7} style={{ flex: 1 }}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={7} style={{ flex: 1 }}>
           <Panel title="By category" subtitle="Where the spend goes">
             <CategoryList>
               {cost.byCategory.map((c, i) => (
@@ -176,7 +161,7 @@ export function CostView() {
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 8}
                 >
                   <CategoryTop>
@@ -200,7 +185,7 @@ export function CostView() {
         </motion.div>
       </TwoColumn>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={14}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
         <Panel title="By deployment" subtitle="Cost breakdown per active deployment">
           <BreakdownTable>
             <TableHeader>
@@ -217,7 +202,7 @@ export function CostView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 15}
               >
                 <Cell $w="38%">
@@ -258,6 +243,6 @@ export function CostView() {
           </BreakdownTable>
         </Panel>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }

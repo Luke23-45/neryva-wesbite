@@ -1,13 +1,10 @@
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Gauge, Globe2, Clock, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import scaling from '@neryva_data/products/deployment/scaling.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
+import { pageItem } from '@styles/motion';
   SectionTitle,
   KpiGrid,
   TotalCard,
@@ -44,16 +41,6 @@ import {
   Td,
   Delta,
 } from './ScalingView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
-};
 
 const ruleTone: Record<string, 'success' | 'warning' | 'neutral'> = {
   active: 'success',
@@ -94,17 +81,15 @@ function DeltaArrow({ tone, delta }: { tone: string; delta: number }) {
 
 export function ScalingView() {
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Scaling</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewTitle>Scaling</ViewTitle>
+          <ViewSubtitle>
             Auto-scaling rules, regional capacity, and replica lifecycle across all deployments.
-          </PageSubtitle>
-        </TitleBlock>
-      </PageHeader>
+          </ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <TotalCard>
             <TotalLabel>Active rules</TotalLabel>
@@ -129,7 +114,7 @@ export function ScalingView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <Gauge size={14} strokeWidth={1.7} />
           Auto-scaling rules
@@ -143,7 +128,7 @@ export function ScalingView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 3}
               >
                 <RuleTop>
@@ -191,7 +176,7 @@ export function ScalingView() {
         </RuleGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={12}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>
         <SectionTitle>
           <Globe2 size={14} strokeWidth={1.7} />
           Regional capacity
@@ -205,7 +190,7 @@ export function ScalingView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 13}
               >
                 <RegionTop>
@@ -237,7 +222,7 @@ export function ScalingView() {
         </RegionGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={21}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={21}>
         <SectionTitle>
           <Clock size={14} strokeWidth={1.7} />
           Recent scale events
@@ -273,6 +258,6 @@ export function ScalingView() {
           })}
         </EventTable>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
