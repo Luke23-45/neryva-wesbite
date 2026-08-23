@@ -1,7 +1,6 @@
 import footerData from '@neryva_data/navigation/footer.json';
 import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
 import {
-  Linkedin,
   Github
 } from 'lucide-react';
 // import { useNewsletterMutation } from '@/hooks/mutations/useNewsletterMutation';
@@ -78,9 +77,8 @@ export function Footer() {
         {/* ── LOWER COMPONENT ROW ── */}
         <BottomBand>
 
-          <SocialArray>
-            <a href="#" aria-label="LinkedIn"><Linkedin strokeWidth={1.8} /></a>
-            <a href="#" aria-label="GitHub"><Github strokeWidth={1.8} /></a>
+          <SocialArray aria-label="Neryva on GitHub">
+            <a href="https://github.com/neryva" aria-label="GitHub"><Github strokeWidth={1.8} /></a>
           </SocialArray>
 
           <CopyrightContainer>

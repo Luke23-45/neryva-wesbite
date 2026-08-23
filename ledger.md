@@ -187,9 +187,9 @@ top to bottom; shells come before the pages they frame.
 
 | # | Work item | Status |
 |---|---|---|
-| 4.1 | Consistency pass across both apps: shared patterns, tokens, motion, empty/error states | — |
-| 4.2 | Hygiene: fix in-scope canonical URLs; remove dead code (orphan `src/sections/pages/lab/**`, `src/components/page_components/lab/**`, `src/lib/data/lab.ts`, duplicate `deployment_` sections, `eslint.config.js.bak`, root `paths.tsx` scratch) | — |
-| 4.3 | Link audit resolution for in-scope surfaces (see `docs/dev/ztasks.md`): dead `/legal/*` links, `/sign-in` vs `/auth`, placeholder `#` links touched by our pages | — |
+| 4.1 | Consistency pass across both apps: shared patterns, tokens, motion, empty/error states | DONE |
+| 4.2 | Hygiene: fix in-scope canonical URLs; remove dead code (orphan `src/sections/pages/lab/**`, `src/components/page_components/lab/**`, `src/lib/data/lab.ts`, duplicate `deployment_` sections, `eslint.config.js.bak`, root `paths.tsx` scratch) | DONE |
+| 4.3 | Link audit resolution for in-scope surfaces (see `docs/dev/ztasks.md`): dead `/legal/*` links, `/sign-in` vs `/auth`, placeholder `#` links touched by our pages | DONE |
 
 ---
 

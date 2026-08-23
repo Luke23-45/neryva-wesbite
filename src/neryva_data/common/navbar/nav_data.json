@@ -14,7 +14,7 @@
                     },
                     {
                         "label": "Neryva AI Deployment",
-                        "href": "/products/neryva-ai-deployment",
+                        "href": "/products/ai-deployment",
                         "icon": "deployment"
                     }
                 ]
@@ -48,16 +48,6 @@
                         "label": "Events & Webinars",
                         "href": "/resources/events",
                         "icon": "events"
-                    }
-                ]
-            },
-            {
-                "title": "COMMUNITY",
-                "items": [
-                    {
-                        "label": "Developer Discord",
-                        "href": "https://discord.gg/your-invite",
-                        "icon": "discord"
                     }
                 ]
             }

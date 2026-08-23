@@ -1,1 +1,0 @@
-export { LabHero } from './LabHero';

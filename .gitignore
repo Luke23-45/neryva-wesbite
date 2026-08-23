@@ -25,3 +25,4 @@ docs
 *.sw?
 legacy
 errors.md
+tsconfig.tsbuildinfo

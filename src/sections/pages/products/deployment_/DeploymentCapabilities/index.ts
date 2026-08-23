@@ -1,1 +1,0 @@
-export { DeploymentCapabilities } from './DeploymentCapabilities';
