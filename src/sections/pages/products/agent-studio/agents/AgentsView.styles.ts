@@ -1,131 +1,8 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
-export const PageHeader = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-export const PageTitle = styled.h1`
-  margin: 0;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  color: #f5f7fb;
-`;
-
-export const PageSubtitle = styled.p`
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
-`;
-
-export const Toolbar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-`;
-
-export const FilterGroup = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-`;
-
-export const FilterChip = styled.button<{ $active: boolean }>`
-  border: 0;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 7px;
-  color: ${({ $active }) => ($active ? '#0b0d12' : 'rgba(229, 231, 235, 0.7)')};
-  background: ${({ $active }) => ($active ? '#f5f7fb' : 'transparent')};
-  transition: background ${({ theme }) => theme.transitions.fast},
-    color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    color: ${({ $active }) => ($active ? '#0b0d12' : '#f5f7fb')};
-  }
-`;
-
-export const PrimaryButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
-  color: #fff;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-`;
-
-export const TableWrap = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin: 0 -22px -22px;
-`;
-
-export const TableHeader = styled.div`
-  display: flex;
-  padding: 10px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
-`;
-
-export const TableRow = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 14px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  transition: background ${({ theme }) => theme.transitions.fast};
-
-  &:last-child {
-    border-bottom: 0;
-  }
-  &:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-`;
-
-export const Cell = styled.div<{ $w: string; $align?: 'left' | 'right' }>`
-  width: ${({ $w }) => $w};
-  text-align: ${({ $align }) => $align ?? 'left'};
-  padding-right: 8px;
+/** Toolbar zone inside a flush panel — matches panel gutters. */
+export const ToolbarArea = styled.div`
+  padding: 18px 22px 0;
 `;
 
 export const AgentMain = styled.div`
@@ -135,16 +12,23 @@ export const AgentMain = styled.div`
 `;
 
 export const AgentName = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const AgentDesc = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.4;
   margin-top: 2px;
+`;
+
+export const ChannelRow = styled.div`
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 `;
 
 export const ModelTag = styled.span`
@@ -152,24 +36,11 @@ export const ModelTag = styled.span`
   align-items: center;
   padding: 2px 7px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.78);
-`;
-
-export const SparkCell = styled.div`
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.85);
-  font-variant-numeric: tabular-nums;
-`;
-
-export const VolumeCell = styled.div`
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(229, 231, 235, 0.9);
-  font-variant-numeric: tabular-nums;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const ProgressCell = styled.div`
@@ -179,13 +50,13 @@ export const ProgressCell = styled.div`
   padding-right: 8px;
 `;
 
-export const ActionsCell = styled.div`
-  width: 44px;
-  display: flex;
-  justify-content: flex-end;
+export const ProgressLabel = styled.span`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
 `;
 
-export const ActionButton = styled.button`
+export const RowMenuButton = styled.button`
   width: 28px;
   height: 28px;
   display: inline-flex;
@@ -193,22 +64,38 @@ export const ActionButton = styled.button`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 6px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+export const ModalIntro = styled.p`
+  margin: 0 0 14px;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.5;
 `;
 
 export const TemplateGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+
+  ${({ theme }) => theme.media.mobile} {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const TemplateCard = styled.div`
@@ -217,14 +104,14 @@ export const TemplateCard = styled.div`
   gap: 6px;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   transition: border-color ${({ theme }) => theme.transitions.fast},
     background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
+    border-color: ${({ theme }) => theme.app.border.hover};
+    background: ${({ theme }) => theme.app.surface.tint};
   }
 `;
 
@@ -232,7 +119,7 @@ export const TemplateIcon = styled.div<{ $hue: string }>`
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: ${({ $hue }) =>
+  background: ${({ $hue, theme }) =>
     $hue === 'emerald'
       ? 'rgba(5, 227, 164, 0.18)'
       : $hue === 'azure'
@@ -241,37 +128,18 @@ export const TemplateIcon = styled.div<{ $hue: string }>`
           ? 'rgba(192, 132, 252, 0.18)'
           : $hue === 'amber'
             ? 'rgba(245, 158, 11, 0.18)'
-            : 'rgba(229, 231, 235, 0.10)'};
+            : theme.app.surface.active};
 `;
 
 export const TemplateTitle = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   margin-top: 4px;
 `;
 
 export const TemplateDesc = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.4;
-`;
-
-export const TemplateButton = styled.button`
-  align-self: flex-start;
-  margin-top: 4px;
-  padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f5f7fb;
-  font-family: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.10);
-  }
 `;

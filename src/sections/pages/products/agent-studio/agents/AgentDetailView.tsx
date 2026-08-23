@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
-import { ArrowLeft, Bot, Pause, Play, Copy as CopyIcon, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Bot, Pause, Play, Copy as CopyIcon, MessageSquare, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { MetricCard } from '@components/common/ui/MetricCard';
@@ -11,22 +12,19 @@ import { Tooltip } from '@components/common/ui/Tooltip';
 import { Avatar } from '@components/common/ui/Avatar';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { EmptyState } from '@components/common/ui/EmptyState';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, SectionTitle, KpiGrid } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import agents from '@neryva_data/products/agent_studio/agents.json';
-import { useState } from 'react';
 
 import {
-  PageRoot,
   BackLink,
   HeaderRow,
   HeaderMain,
   HeaderTitle,
   HeaderSub,
   ActionCluster,
-  ActionButton,
-  PrimaryButton,
-  Section,
-  SectionTitle,
-  KpiGrid,
   MetaGrid,
   MetaItem,
   MetaLabel,
@@ -39,13 +37,8 @@ import {
   GuardList,
   GuardItem,
   GuardDot,
+  EmptyNote,
 } from './AgentDetailView.styles';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.05 } }),
-};
 
 const statusTone = { active: 'success', paused: 'warning', draft: 'neutral' } as const;
 const toneToHue: Record<string, 'azure' | 'emerald' | 'lilac' | 'amethyst'> = {
@@ -60,19 +53,17 @@ export function AgentDetailView() {
 
   if (!agent) {
     return (
-      <PageRoot>
+      <ViewShell>
         <BackLink as={Link} to="/agent-studio/agents">
           <ArrowLeft size={13} strokeWidth={1.7} />
           Back to agents
         </BackLink>
-        <div style={{ padding: 60, textAlign: 'center' }}>
-          <Bot size={28} strokeWidth={1.5} style={{ color: 'rgba(229,231,235,0.5)', marginBottom: 8 }} />
-          <div style={{ fontSize: 16, color: '#f5f7fb', fontWeight: 500 }}>Agent not found</div>
-          <div style={{ fontSize: 13, color: 'rgba(229,231,235,0.55)', marginTop: 4 }}>
-            The agent you're looking for doesn't exist or was removed.
-          </div>
-        </div>
-      </PageRoot>
+        <EmptyState
+          icon={<Bot size={28} strokeWidth={1.5} />}
+          title="Agent not found"
+          description="The agent you're looking for doesn't exist or was removed."
+        />
+      </ViewShell>
     );
   }
 
@@ -84,15 +75,15 @@ export function AgentDetailView() {
   })();
 
   return (
-    <PageRoot>
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <ViewShell>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <BackLink as={Link} to="/agent-studio/agents">
           <ArrowLeft size={13} strokeWidth={1.7} />
           Back to agents
         </BackLink>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <HeaderRow>
           <HeaderMain>
             <Avatar
@@ -111,32 +102,37 @@ export function AgentDetailView() {
           </HeaderMain>
           <ActionCluster>
             <Tooltip label="Test this agent">
-              <ActionButton type="button" onClick={() => toast.success(`Opening test playground for ${agent.name}`)}>
+              <ActionButton variant="secondary" size="sm" onClick={() => toast.success(`Opening test playground for ${agent.name}`)}>
                 <MessageSquare size={13} strokeWidth={1.7} />
                 Test
               </ActionButton>
             </Tooltip>
             <Tooltip label="Duplicate agent">
-              <ActionButton type="button" onClick={() => toast.success('Cloned to a draft')}>
+              <ActionButton variant="secondary" size="sm" onClick={() => toast.success('Cloned to a draft')}>
                 <CopyIcon size={13} strokeWidth={1.7} />
                 Clone
               </ActionButton>
             </Tooltip>
             <Tooltip label={agent.status === 'paused' ? 'Resume agent' : 'Pause agent'}>
-              <PrimaryButton
-                type="button"
-                $variant={agent.status === 'paused' ? 'primary' : 'ghost'}
+              <ActionButton
+                variant={agent.status === 'paused' ? 'primary' : 'ghost'}
+                size="sm"
                 onClick={() => setConfirm('pause')}
               >
                 {agent.status === 'paused' ? <Play size={13} strokeWidth={1.8} /> : <Pause size={13} strokeWidth={1.8} />}
                 {agent.status === 'paused' ? 'Resume' : 'Pause'}
-              </PrimaryButton>
+              </ActionButton>
+            </Tooltip>
+            <Tooltip label="Delete agent">
+              <ActionButton variant="danger" size="sm" onClick={() => setConfirm('delete')} aria-label="Delete agent">
+                <Trash2 size={13} strokeWidth={1.7} />
+              </ActionButton>
             </Tooltip>
           </ActionCluster>
         </HeaderRow>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <KpiGrid>
           <MetricCard
             label="Volume (30d)"
@@ -165,7 +161,7 @@ export function AgentDetailView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={3}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
         <Panel title="System prompt" subtitle={`The prompt this agent runs on. ${agent.version}`} action={<CopyButton value={agent.prompt} label="Copy prompt" />}>
           <CodeBlock>
             <PromptTitle>System</PromptTitle>
@@ -174,56 +170,46 @@ export function AgentDetailView() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={4}>
-        <Section>
-          <SectionTitle>Guardrails</SectionTitle>
-          <GuardList>
-            {agent.guardrails.map((g) => (
-              <GuardItem key={g}>
-                <GuardDot aria-hidden="true" />
-                {g}
-              </GuardItem>
-            ))}
-          </GuardList>
-        </Section>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
+        <SectionTitle>Guardrails</SectionTitle>
+        <GuardList>
+          {agent.guardrails.map((g) => (
+            <GuardItem key={g}>
+              <GuardDot aria-hidden="true" />
+              {g}
+            </GuardItem>
+          ))}
+        </GuardList>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={5}>
-        <Section>
-          <SectionTitle>Tools & integrations</SectionTitle>
-          <ChipRow>
-            {agent.tools.map((t) => (
-              <Chip key={t}>
-                <code>{t}</code>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
+        <SectionTitle>Tools & integrations</SectionTitle>
+        <ChipRow>
+          {agent.tools.map((t) => (
+            <Chip key={t}>
+              <code>{t}</code>
+            </Chip>
+          ))}
+          {agent.tools.length === 0 && <EmptyNote>No tools attached.</EmptyNote>}
+        </ChipRow>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6}>
+        <SectionTitle>Knowledge sources</SectionTitle>
+        <ChipRow>
+          {agent.knowledgeSources.length === 0 ? (
+            <EmptyNote>No sources linked. The agent will fall back to its system prompt.</EmptyNote>
+          ) : (
+            agent.knowledgeSources.map((s) => (
+              <Chip key={s} $hue="azure">
+                {s}
               </Chip>
-            ))}
-            {agent.tools.length === 0 && (
-              <div style={{ fontSize: 12.5, color: 'rgba(229,231,235,0.5)' }}>No tools attached.</div>
-            )}
-          </ChipRow>
-        </Section>
+            ))
+          )}
+        </ChipRow>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={6}>
-        <Section>
-          <SectionTitle>Knowledge sources</SectionTitle>
-          <ChipRow>
-            {agent.knowledgeSources.length === 0 ? (
-              <div style={{ fontSize: 12.5, color: 'rgba(229,231,235,0.5)' }}>
-                No sources linked. The agent will fall back to its system prompt.
-              </div>
-            ) : (
-              agent.knowledgeSources.map((s) => (
-                <Chip key={s} $hue="azure">
-                  {s}
-                </Chip>
-              ))
-            )}
-          </ChipRow>
-        </Section>
-      </motion.div>
-
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={7}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={7}>
         <Panel title="Configuration" subtitle="Version, environment, and last update.">
           <MetaGrid>
             <MetaItem>
@@ -280,6 +266,6 @@ export function AgentDetailView() {
         }}
         onCancel={() => setConfirm(null)}
       />
-    </PageRoot>
+    </ViewShell>
   );
 }

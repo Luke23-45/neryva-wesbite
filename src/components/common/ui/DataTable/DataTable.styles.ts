@@ -25,7 +25,7 @@ export const DataHead = styled.div`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
-export const DataRow = styled.div<{ $interactive?: boolean }>`
+export const DataRow = styled.div<{ $interactive?: boolean; $clickable?: boolean }>`
   display: flex;
   align-items: center;
   padding: 12px 22px;
@@ -36,6 +36,8 @@ export const DataRow = styled.div<{ $interactive?: boolean }>`
     border-bottom: 0;
   }
 
+  ${({ $clickable }) => $clickable && 'cursor: pointer;'}
+
   ${({ $interactive = true }) =>
     $interactive &&
     `
@@ -43,6 +45,11 @@ export const DataRow = styled.div<{ $interactive?: boolean }>`
       background: rgba(255, 255, 255, 0.02);
     }
   `}
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
 `;
 
 export const DataCell = styled.div<{

@@ -1,33 +1,25 @@
 import styled from 'styled-components';
 
-export const PageRoot = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  width: 100%;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 32px 28px 80px;
-
-  ${({ theme }) => theme.media.mobile} {
-    padding: 24px 18px 56px;
-  }
-`;
-
 export const BackLink = styled.a`
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   text-decoration: none;
   width: fit-content;
   margin-bottom: -8px;
   transition: color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 `;
 
@@ -52,14 +44,14 @@ export const HeaderTitle = styled.h1`
   font-size: 24px;
   font-weight: 500;
   letter-spacing: -0.025em;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const HeaderSub = styled.p`
   margin: 4px 0 0;
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   line-height: 1.5;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   max-width: 600px;
 `;
 
@@ -70,69 +62,14 @@ export const ActionCluster = styled.div`
   flex-wrap: wrap;
 `;
 
-export const ActionButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f5f7fb;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.10);
-  }
-`;
-
-export const PrimaryButton = styled.button<{ $variant: 'primary' | 'ghost' }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: 0;
-  border-radius: 8px;
-  background: ${({ $variant }) =>
-    $variant === 'primary'
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
-      : 'rgba(255, 255, 255, 0.06)'};
-  color: #fff;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: ${({ $variant }) =>
-    $variant === 'primary' ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none'};
-`;
-
-export const Section = styled.section``;
-
-export const SectionTitle = styled.h2`
-  margin: 0 0 12px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: rgba(229, 231, 235, 0.85);
-`;
-
-export const KpiGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-
-  @media (max-width: 900px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-`;
-
 export const MetaGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+
+  ${({ theme }) => theme.media.mobile} {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const MetaItem = styled.div`
@@ -143,15 +80,15 @@ export const MetaItem = styled.div`
 
 export const MetaLabel = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const MetaValue = styled.div`
-  font-size: 13.5px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const CodeBlock = styled.pre`
@@ -159,21 +96,21 @@ export const CodeBlock = styled.pre`
   padding: 14px 16px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   line-height: 1.65;
-  color: rgba(245, 247, 251, 0.92);
+  color: ${({ theme }) => theme.app.text.primary};
   white-space: pre-wrap;
   word-break: break-word;
 `;
 
 export const PromptTitle = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   margin-bottom: 8px;
 `;
 
@@ -192,26 +129,30 @@ export const Chip = styled.span<{ $hue?: 'azure' | 'emerald' | 'lilac' }>`
   align-items: center;
   padding: 5px 10px;
   border-radius: 6px;
-  background: ${({ $hue }) =>
+  background: ${({ $hue, theme }) =>
     $hue === 'emerald'
-      ? 'rgba(5, 227, 164, 0.10)'
+      ? theme.app.status.emerald.bg
       : $hue === 'lilac'
-        ? 'rgba(192, 132, 252, 0.10)'
-        : 'rgba(96, 165, 250, 0.10)'};
+        ? theme.app.status.lilac.bg
+        : theme.app.status.info.bg};
   border: 1px solid
-    ${({ $hue }) =>
+    ${({ $hue, theme }) =>
       $hue === 'emerald'
-        ? 'rgba(5, 227, 164, 0.30)'
+        ? theme.app.status.emerald.border
         : $hue === 'lilac'
-          ? 'rgba(192, 132, 252, 0.30)'
-          : 'rgba(96, 165, 250, 0.30)'};
-  color: ${({ $hue }) =>
-    $hue === 'emerald' ? '#6ee7b7' : $hue === 'lilac' ? '#d8b4fe' : '#93c5fd'};
-  font-size: 12px;
+          ? theme.app.status.lilac.border
+          : theme.app.status.info.border};
+  color: ${({ $hue, theme }) =>
+    $hue === 'emerald'
+      ? theme.app.status.emerald.fg
+      : $hue === 'lilac'
+        ? theme.app.status.lilac.fg
+        : theme.app.status.info.fg};
+  font-size: ${({ theme }) => theme.app.type.caption};
 
   code {
     font-family: ${({ theme }) => theme.typography.fonts.mono};
-    font-size: 11.5px;
+    font-size: ${({ theme }) => theme.app.type.micro};
   }
 `;
 
@@ -230,16 +171,21 @@ export const GuardItem = styled.li`
   gap: 10px;
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.85);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const GuardDot = styled.span`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fbbf24;
+  background: ${({ theme }) => theme.app.status.warning.fg};
   flex-shrink: 0;
+`;
+
+export const EmptyNote = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;

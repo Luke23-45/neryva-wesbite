@@ -128,7 +128,7 @@ top to bottom; shells come before the pages they frame.
 | 1.1 | Studio shell: sidebar, topbar, search, notifications popover, account menu, mobile drawer | `/agent-studio` chrome | DONE |
 | 1.2 | Chat workspace (header, messages, composer) | `/chat` | DONE |
 | 1.3 | Dashboard | `/dashboard` | DONE |
-| 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | — |
+| 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | DONE |
 | 1.5 | Conversations | `/conversations` | — |
 | 1.6 | Activity | `/activity` | — |
 | 1.7 | Integrations + webhooks | `/integrations`, `/integrations/webhooks` | — |

@@ -5,4 +5,6 @@ export {
   ViewSubtitle,
   SectionTitle,
   KpiGrid,
+  Toolbar,
+  ToolbarGroup,
 } from './ViewLayout.styles';

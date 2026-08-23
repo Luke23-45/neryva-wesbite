@@ -1,55 +1,53 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus, MoreHorizontal, Filter } from 'lucide-react';
+import { Plus, MoreHorizontal } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { Modal } from '@components/common/ui/Modal';
+import { Segmented, type SegmentedOption } from '@components/common/ui/Segmented';
+import { SearchField } from '@components/common/ui/SearchField';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import {
+  ViewShell,
+  ViewHeader,
+  ViewTitle,
+  ViewSubtitle,
+  Toolbar,
+  ToolbarGroup,
+} from '@components/common/ui/ViewLayout';
+import {
+  DataTable,
+  DataHead,
+  DataRow,
+  DataCell,
+  CellMono,
+} from '@components/common/ui/DataTable';
+import { pageItem } from '@styles/motion';
 import agents from '@neryva_data/products/agent_studio/agents.json';
 
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
-  Toolbar,
-  FilterGroup,
-  FilterChip,
-  PrimaryButton,
-  TableWrap,
-  TableHeader,
-  TableRow,
-  Cell,
   AgentMain,
   AgentName,
   AgentDesc,
+  ChannelRow,
   ModelTag,
-  SparkCell,
-  VolumeCell,
   ProgressCell,
-  ActionsCell,
-  ActionButton,
+  ProgressLabel,
+  RowMenuButton,
+  ModalIntro,
   TemplateGrid,
   TemplateCard,
   TemplateIcon,
   TemplateTitle,
   TemplateDesc,
-  TemplateButton,
 } from './AgentsView.styles';
 
 type AgentStatus = 'all' | 'active' | 'paused' | 'draft';
 type Agent = (typeof agents.agents)[number];
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0, transition: { duration: 0.55, ease: premiumEase, delay: i * 0.05 },
-  }),
-};
 
 const statusTone: Record<Agent['status'], 'success' | 'warning' | 'neutral'> = {
   active: 'success',
@@ -63,6 +61,22 @@ const toneToBar: Record<string, 'azure' | 'emerald' | 'lilac' | 'amber'> = {
   lilac: 'lilac',
   warning: 'amber',
 };
+
+const filterOptions: SegmentedOption<AgentStatus>[] = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'draft', label: 'Draft' },
+];
+
+const TEMPLATES = [
+  { title: 'Support concierge', desc: 'Billing & account help', hue: 'lilac' },
+  { title: 'Onboarding guide', desc: 'Walk new customers through setup', hue: 'emerald' },
+  { title: 'Sales researcher', desc: 'Prospect briefs for AEs', hue: 'azure' },
+  { title: 'Voice concierge', desc: 'Phone support with TTS', hue: 'azure' },
+  { title: 'Refund specialist', desc: 'Process refunds within policy', hue: 'amber' },
+  { title: 'Blank agent', desc: 'Build from scratch', hue: 'neutral' },
+];
 
 export function AgentsView() {
   const [filter, setFilter] = useState<AgentStatus>('all');
@@ -81,142 +95,132 @@ export function AgentsView() {
     });
   }, [filter, search]);
 
-  return (
-    <PageRoot>
-      <PageHeader
-        as={motion.div}
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={0}
-      >
-        <PageTitle>Agents</PageTitle>
-        <PageSubtitle>
-          Your deployed AI agents — status, performance, and configuration.
-        </PageSubtitle>
-      </PageHeader>
+  const openAgent = (id: string) =>
+    navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: id } });
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+  return (
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Agents</ViewTitle>
+        <ViewSubtitle>
+          Your deployed AI agents — status, performance, and configuration.
+        </ViewSubtitle>
+      </ViewHeader>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
+          flush
           action={
-            <PrimaryButton
-              type="button"
-              onClick={() => setNewAgentOpen(true)}
-            >
+            <ActionButton size="sm" onClick={() => setNewAgentOpen(true)}>
               <Plus size={14} strokeWidth={2} />
               New agent
-            </PrimaryButton>
+            </ActionButton>
           }
         >
-          <Toolbar>
-            <FilterGroup>
-              <Filter size={13} strokeWidth={1.7} style={{ color: 'rgba(229,231,235,0.5)' }} />
-              {(['all', 'active', 'paused', 'draft'] as AgentStatus[]).map((s) => (
-                <FilterChip
-                  key={s}
-                  $active={filter === s}
-                  onClick={() => setFilter(s)}
-                >
-                  {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                </FilterChip>
-              ))}
-            </FilterGroup>
-            <input
-              aria-label="Search agents"
-              placeholder="Search agents…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 8,
-                color: '#f5f7fb',
-                fontSize: 13,
-                padding: '6px 10px',
-                minWidth: 200,
-                outline: 'none',
-              }}
-            />
-          </Toolbar>
+          <ToolbarArea>
+            <Toolbar>
+              <ToolbarGroup>
+                <Segmented
+                  options={filterOptions}
+                  value={filter}
+                  onChange={setFilter}
+                  size="md"
+                  ariaLabel="Filter agents by status"
+                />
+                <SearchField
+                  value={search}
+                  onChange={setSearch}
+                  placeholder="Search agents…"
+                  ariaLabel="Search agents"
+                />
+              </ToolbarGroup>
+            </Toolbar>
+          </ToolbarArea>
 
           {list.length === 0 ? (
-            <EmptyState
-              title="No agents match"
-              description="Try a different filter or search term."
-            />
+            <div style={{ padding: '0 22px 22px' }}>
+              <EmptyState
+                title="No agents match"
+                description="Try a different filter or search term."
+              />
+            </div>
           ) : (
-            <TableWrap>
-              <TableHeader>
-                <Cell $w="34%">Agent</Cell>
-                <Cell $w="14%">Status</Cell>
-                <Cell $w="16%">Model</Cell>
-                <Cell $w="10%" $align="right">Volume</Cell>
-                <Cell $w="13%">Latency</Cell>
-                <Cell $w="13%">Resolution</Cell>
-                <Cell $w="44px" />
-              </TableHeader>
+            <DataTable>
+              <DataHead>
+                <DataCell $w="34%">Agent</DataCell>
+                <DataCell $w="12%">Status</DataCell>
+                <DataCell $w="16%">Model</DataCell>
+                <DataCell $w="10%" $align="right">Volume</DataCell>
+                <DataCell $w="12%">Latency</DataCell>
+                <DataCell $w="16%">Resolution</DataCell>
+                <DataCell $w="44px" />
+              </DataHead>
               {list.map((a, i) => (
-                <TableRow
+                <DataRow
                   key={a.id}
                   as={motion.div}
                   initial="hidden"
                   animate="visible"
-                  variants={fadeUp}
+                  variants={pageItem}
                   custom={i + 2}
-                  onClick={() => navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: a.id } })}
+                  onClick={() => openAgent(a.id)}
                   style={{ cursor: 'pointer' }}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: a.id } });
+                      openAgent(a.id);
                     }
                   }}
                 >
-                  <Cell $w="34%">
+                  <DataCell $w="34%">
                     <AgentMain>
                       <AgentName>{a.name}</AgentName>
                       <AgentDesc>{a.description}</AgentDesc>
-                      <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                      <ChannelRow>
                         {a.channels.map((c) => (
                           <ModelTag key={c}>{c}</ModelTag>
                         ))}
-                      </div>
+                      </ChannelRow>
                     </AgentMain>
-                  </Cell>
-                  <Cell $w="14%">
+                  </DataCell>
+                  <DataCell $w="12%">
                     <StatusPill tone={statusTone[a.status]}>{a.status}</StatusPill>
-                  </Cell>
-                  <Cell $w="16%">
+                  </DataCell>
+                  <DataCell $w="16%">
                     <ModelTag>{a.model}</ModelTag>
-                  </Cell>
-                  <Cell $w="10%" $align="right">
-                    <VolumeCell>{a.volume.toLocaleString()}</VolumeCell>
-                  </Cell>
-                  <Cell $w="13%">
-                    <SparkCell>{a.status === 'draft' ? '—' : `${(a.responseMs / 1000).toFixed(2)}s`}</SparkCell>
-                  </Cell>
-                  <Cell $w="13%">
+                  </DataCell>
+                  <DataCell $w="10%" $align="right">
+                    <CellMono>{a.volume.toLocaleString()}</CellMono>
+                  </DataCell>
+                  <DataCell $w="12%">
+                    <CellMono>
+                      {a.status === 'draft' ? '—' : `${(a.responseMs / 1000).toFixed(2)}s`}
+                    </CellMono>
+                  </DataCell>
+                  <DataCell $w="16%">
                     <ProgressCell>
                       <ProgressBar
                         value={a.resolution}
                         tone={toneToBar[a.tone] ?? 'azure'}
                       />
-                      <span style={{ fontSize: 11.5, color: 'rgba(229,231,235,0.55)' }}>{a.resolution}%</span>
+                      <ProgressLabel>{a.resolution}%</ProgressLabel>
                     </ProgressCell>
-                  </Cell>
-                  <ActionsCell onClick={(e) => e.stopPropagation()}>
-                    <ActionButton
-                      aria-label={`Actions for ${a.name}`}
-                      onClick={() => toast(`Actions for ${a.name}`, { icon: '⚙️' })}
-                    >
-                      <MoreHorizontal size={15} strokeWidth={1.7} />
-                    </ActionButton>
-                  </ActionsCell>
-                </TableRow>
+                  </DataCell>
+                  <DataCell $w="44px">
+                    <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <RowMenuButton
+                        aria-label={`Actions for ${a.name}`}
+                        onClick={() => toast(`Actions for ${a.name}`, { icon: '⚙️' })}
+                      >
+                        <MoreHorizontal size={15} strokeWidth={1.7} />
+                      </RowMenuButton>
+                    </div>
+                  </DataCell>
+                </DataRow>
               ))}
-            </TableWrap>
+            </DataTable>
           )}
         </Panel>
       </motion.div>
@@ -226,52 +230,35 @@ export function AgentsView() {
         onClose={() => setNewAgentOpen(false)}
         title="Create a new agent"
         footer={
-          <button
-            type="button"
-            onClick={() => setNewAgentOpen(false)}
-            style={{
-              border: 0,
-              background: 'transparent',
-              color: 'rgba(229,231,235,0.7)',
-              fontFamily: 'inherit',
-              fontSize: 13,
-              padding: '8px 12px',
-              cursor: 'pointer',
-            }}
-          >
+          <ActionButton variant="ghost" size="sm" onClick={() => setNewAgentOpen(false)}>
             Cancel
-          </button>
+          </ActionButton>
         }
       >
-        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(229,231,235,0.7)' }}>
+        <ModalIntro>
           Start from a template — you can customize the system prompt, tools, and guardrails after.
-        </p>
+        </ModalIntro>
         <TemplateGrid>
-          {[
-            { title: 'Support concierge', desc: 'Billing & account help', hue: 'lilac' },
-            { title: 'Onboarding guide', desc: 'Walk new customers through setup', hue: 'emerald' },
-            { title: 'Sales researcher', desc: 'Prospect briefs for AEs', hue: 'azure' },
-            { title: 'Voice concierge', desc: 'Phone support with TTS', hue: 'azure' },
-            { title: 'Refund specialist', desc: 'Process refunds within policy', hue: 'amber' },
-            { title: 'Blank agent', desc: 'Build from scratch', hue: 'neutral' },
-          ].map((t) => (
+          {TEMPLATES.map((t) => (
             <TemplateCard key={t.title}>
               <TemplateIcon $hue={t.hue} aria-hidden="true" />
               <TemplateTitle>{t.title}</TemplateTitle>
               <TemplateDesc>{t.desc}</TemplateDesc>
-              <TemplateButton
-                type="button"
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                style={{ alignSelf: 'flex-start', marginTop: 4 }}
                 onClick={() => {
                   toast.success(`Created ${t.title} — opening editor`);
                   setNewAgentOpen(false);
                 }}
               >
                 Use template
-              </TemplateButton>
+              </ActionButton>
             </TemplateCard>
           ))}
         </TemplateGrid>
       </Modal>
-    </PageRoot>
+    </ViewShell>
   );
 }

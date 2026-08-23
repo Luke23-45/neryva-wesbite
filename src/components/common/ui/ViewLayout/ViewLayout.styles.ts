@@ -77,3 +77,20 @@ export const KpiGrid = styled.div`
     grid-template-columns: 1fr;
   }
 `;
+
+/** Filter + action row above a table or list. */
+export const Toolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+`;
+
+export const ToolbarGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+`;
