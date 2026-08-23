@@ -7,7 +7,7 @@ import { Modal } from '@components/common/ui/Modal';
 import { Switch } from '@components/common/ui/Switch';
 import { TextInput } from '@components/common/ui/TextInput';
 import { Panel } from '@components/common/ui/Panel';
-import { spring } from '@styles/motion';
+import { spring, pageItem } from '@styles/motion';
 import settings from '@neryva_data/products/agent_studio/settings.json';
 import { SaveRow } from './shared';
 
@@ -50,11 +50,7 @@ function makeSecret(): string {
   return s.match(/.{1,4}/g)!.join(' ');
 }
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
+
 
 export function SettingsSecurity() {
   const s = settings.security;
@@ -93,7 +89,7 @@ export function SettingsSecurity() {
 
   return (
     <>
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel title="Authentication" subtitle="Password and two-factor settings for your account.">
           <FieldRow>
             <TextInput
@@ -146,110 +142,48 @@ export function SettingsSecurity() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel title="Active sessions" subtitle="Where you are currently signed in.">
-          <div style={{ display: 'flex', flexDirection: 'column', margin: '0 -22px -22px' }}>
+          <SessionList>
             {s.sessions.map((sess) => {
               const isMobile = /iphone|android|mobile/i.test(sess.device);
               return (
-                <div
-                  key={sess.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 22px',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 8,
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      color: 'rgba(229,231,235,0.7)',
-                    }}
-                  >
+                <SessionRow key={sess.id}>
+                  <SessionIcon aria-hidden="true">
                     {isMobile ? <Smartphone size={15} strokeWidth={1.7} /> : <KeyRound size={15} strokeWidth={1.7} />}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 13.5, color: '#f5f7fb', fontWeight: 500 }}>
+                  </SessionIcon>
+                  <SessionInfo>
+                    <SessionName>
                       {sess.device}{' '}
-                      {sess.current && (
-                        <span
-                          style={{
-                            marginLeft: 6,
-                            padding: '2px 6px',
-                            borderRadius: 5,
-                            background: 'rgba(52, 211, 153, 0.10)',
-                            border: '1px solid rgba(52, 211, 153, 0.30)',
-                            color: '#34d399',
-                            fontFamily: "'IBM Plex Mono', monospace",
-                            fontSize: 10.5,
-                            letterSpacing: '0.06em',
-                            textTransform: 'uppercase',
-                          }}
-                        >
-                          this device
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'rgba(229,231,235,0.55)', marginTop: 2 }}>
+                      {sess.current && <CurrentTag>this device</CurrentTag>}
+                    </SessionName>
+                    <SessionMeta>
                       {sess.location} · {sess.lastActive}
-                    </div>
-                  </div>
+                    </SessionMeta>
+                  </SessionInfo>
                   {!sess.current && (
-                    <button
-                      type="button"
-                      onClick={() => toast.success('Session revoked')}
-                      style={{
-                        padding: '5px 10px',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 6,
-                        background: 'transparent',
-                        color: 'rgba(229,231,235,0.78)',
-                        fontFamily: 'inherit',
-                        fontSize: 12,
-                        cursor: 'pointer',
-                      }}
-                    >
+                    <RevokeBtn type="button" onClick={() => toast.success('Session revoked')}>
                       Revoke
-                    </button>
+                    </RevokeBtn>
                   )}
-                </div>
+                </SessionRow>
               );
             })}
-          </div>
+          </SessionList>
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <Panel title="Audit log" subtitle="Recent security and configuration events.">
-          <div style={{ display: 'flex', flexDirection: 'column', margin: '0 -22px -22px' }}>
+          <AuditList>
             {s.auditLog.map((a, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                  padding: '10px 22px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                }}
-              >
-                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'rgba(229,231,235,0.5)', width: 80 }}>
-                  {a.time}
-                </span>
-                <div style={{ flex: 1, fontSize: 13, color: '#f5f7fb' }}>{a.event}</div>
-                <span style={{ fontSize: 12, color: 'rgba(229,231,235,0.55)' }}>{a.actor}</span>
-              </div>
+              <AuditRow key={i}>
+                <AuditTime>{a.time}</AuditTime>
+                <AuditEvent>{a.event}</AuditEvent>
+                <AuditActor>{a.actor}</AuditActor>
+              </AuditRow>
             ))}
-          </div>
+          </AuditList>
         </Panel>
       </motion.div>
 
@@ -398,14 +332,12 @@ export function SettingsSecurity() {
             >
               <RecoveryBanner>
                 <ShieldCheck size={16} strokeWidth={1.8} />
-                <div>
-                  <div style={{ fontSize: 13, color: '#f5f7fb', fontWeight: 500 }}>
-                    Keep these somewhere safe
-                  </div>
-                  <div style={{ fontSize: 12, color: 'rgba(229,231,235,0.65)', marginTop: 2, lineHeight: 1.5 }}>
+                <BannerBody>
+                  <BannerTitle>Keep these somewhere safe</BannerTitle>
+                  <BannerText>
                     Each code works once. If you lose your authenticator, these are the only way back in.
-                  </div>
-                </div>
+                  </BannerText>
+                </BannerBody>
               </RecoveryBanner>
               <CodesGrid>
                 {recoveryCodes.map((c, i) => (
@@ -710,12 +642,13 @@ const OtpCell = styled.div<{ $filled: boolean }>`
   border-radius: 10px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 22px;
-  color: ${({ $filled }) => ($filled ? '#f5f7fb' : 'transparent')};
+  color: ${({ $filled, theme }) => ($filled ? theme.app.text.primary : 'transparent')};
   background: ${({ $filled }) =>
     $filled
       ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
       : 'rgba(255, 255, 255, 0.03)'};
-  border: 1px solid ${({ $filled }) => ($filled ? 'rgba(192, 132, 252, 0.30)' : 'rgba(255, 255, 255, 0.08)')};
+  border: 1px solid ${({ $filled, theme }) =>
+    $filled ? theme.app.status.lilac.border : theme.app.border.strong};
   transition: border-color ${({ theme }) => theme.transitions.fast},
     background ${({ theme }) => theme.transitions.fast};
 `;
@@ -828,4 +761,144 @@ const PrimaryBtn = styled(motion.button)`
   border-radius: 9px;
   cursor: pointer;
   box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
+`;
+
+// ─── sessions + audit + banner ───────────────────────────────────────
+const SessionList = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin: 0 -22px -22px;
+`;
+
+const SessionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+const SessionIcon = styled.div`
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
+  flex-shrink: 0;
+`;
+
+const SessionInfo = styled.div`
+  min-width: 0;
+  flex: 1;
+`;
+
+const SessionName = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CurrentTag = styled.span`
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: ${({ theme }) => theme.app.status.success.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.success.border};
+  color: ${({ theme }) => theme.app.status.success.fg};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+`;
+
+const SessionMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+`;
+
+const RevokeBtn = styled.button`
+  padding: 5px 10px;
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 6px;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.status.error.bg};
+    border-color: ${({ theme }) => theme.app.status.error.border};
+    color: ${({ theme }) => theme.app.status.error.fg};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+const AuditList = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin: 0 -22px -22px;
+`;
+
+const AuditRow = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 22px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+const AuditTime = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
+  width: 80px;
+  flex-shrink: 0;
+`;
+
+const AuditEvent = styled.div`
+  flex: 1;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+  min-width: 0;
+`;
+
+const AuditActor = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const BannerBody = styled.div``;
+
+const BannerTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-weight: 500;
+`;
+
+const BannerText = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+  line-height: 1.5;
 `;

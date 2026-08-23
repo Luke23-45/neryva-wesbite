@@ -7,7 +7,7 @@ import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
-import { spring, ease } from '@styles/motion';
+import { spring, pageItem } from '@styles/motion';
 import styled from 'styled-components';
 import settings from '@neryva_data/products/agent_studio/settings.json';
 
@@ -70,13 +70,6 @@ const STEPS: { id: Step; label: string }[] = [
   { id: 'expiry', label: 'Expiry' },
   { id: 'reveal', label: 'Reveal' },
 ];
-
-const premiumEase = ease.standard;
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 10 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.45, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 export function SettingsApiKeys() {
   const initialKeys = settings.apiKeys;
@@ -164,7 +157,7 @@ export function SettingsApiKeys() {
   };
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="API keys"
         subtitle="Programmatic access to your workspace. Keep these secret."
@@ -192,13 +185,13 @@ export function SettingsApiKeys() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...spring.spring, delay: i * 0.03 }}
             >
-              <div style={{ width: '30%', fontSize: 13.5, color: '#f5f7fb', fontWeight: 500 }}>{k.name}</div>
+              <KeyCellName>{k.name}</KeyCellName>
               <div style={{ width: '28%', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <KeyPill>{k.prefix}</KeyPill>
                 <CopyButton value={k.prefix} label="Copy" />
               </div>
-              <div style={{ width: '18%', fontSize: 12.5, color: 'rgba(229,231,235,0.65)', fontVariantNumeric: 'tabular-nums' }}>{k.created}</div>
-              <div style={{ width: '18%', fontSize: 12.5, color: 'rgba(229,231,235,0.65)' }}>{k.lastUsed}</div>
+              <KeyCellMeta>{k.created}</KeyCellMeta>
+              <KeyCellMeta>{k.lastUsed}</KeyCellMeta>
               <div style={{ width: '60px', display: 'flex', justifyContent: 'flex-end' }}>
                 <IconBtn
                   type="button"
@@ -213,9 +206,9 @@ export function SettingsApiKeys() {
             </TableRow>
           ))}
           {keys.length === 0 && (
-            <div style={{ padding: 32, textAlign: 'center', fontSize: 13, color: 'rgba(229,231,235,0.5)' }}>
+            <KeysEmpty>
               No API keys yet — create one to get started.
-            </div>
+            </KeysEmpty>
           )}
         </TableWrap>
       </Panel>
@@ -360,10 +353,10 @@ export function SettingsApiKeys() {
               <RevealSuccess>
                 <ShieldCheck size={20} strokeWidth={1.7} />
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: '#f5f7fb' }}>Key created</div>
-                  <div style={{ fontSize: 12.5, color: 'rgba(229,231,235,0.65)', marginTop: 2 }}>
+                  <CreatedTitle>Key created</CreatedTitle>
+                  <CreatedText>
                     "{name}" is ready. Copy it now — this is the only time the full secret will be shown.
-                  </div>
+                  </CreatedText>
                 </div>
               </RevealSuccess>
               <RevealBox>
@@ -544,14 +537,14 @@ const Dot = styled(motion.div)<{ $active: boolean; $reached: boolean }>`
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: ${({ $active, $reached }) => ($active ? '#fff' : $reached ? '#f5f7fb' : 'rgba(229, 231, 235, 0.5)')};
+  color: ${({ $active, $reached, theme }) => ($active ? '#fff' : $reached ? theme.app.text.primary : theme.app.text.faint)};
   background: ${({ $active, $reached }) =>
     $active
       ? '${({ theme }) => theme.colors.gradients.primary}'
       : $reached
         ? 'rgba(192, 132, 252, 0.20)'
         : 'rgba(255, 255, 255, 0.04)'};
-  border: 1px solid ${({ $active, $reached }) => ($active || $reached ? 'transparent' : 'rgba(255, 255, 255, 0.08)')};
+  border: 1px solid ${({ $active, $reached, theme }) => ($active || $reached ? 'transparent' : theme.app.border.strong)};
   flex-shrink: 0;
   transition: background ${({ theme }) => theme.transitions.standard},
     color ${({ theme }) => theme.transitions.standard};
@@ -664,7 +657,7 @@ const Toggle = styled(motion.button)<{ $on: boolean }>`
   width: 36px;
   height: 22px;
   border-radius: 999px;
-  border: 1px solid ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
+  border: 1px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.strong)};
   background: ${({ $on }) =>
     $on
       ? '${({ theme }) => theme.colors.gradients.primary}'
@@ -729,7 +722,7 @@ const Radio = styled.span<{ $on: boolean }>`
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.5px solid ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.18)')};
+  border: 1.5px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.hover)};
   background: ${({ $on }) =>
     $on
       ? '${({ theme }) => theme.colors.gradients.primary}'
@@ -811,4 +804,38 @@ const RevealNote = styled.div`
     font-family: ${({ theme }) => theme.typography.fonts.mono};
     color: ${({ theme }) => theme.app.text.secondary};
   }
+`;
+
+// ─── key list cells ──────────────────────────────────────────────────
+const KeyCellName = styled.div`
+  width: 30%;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const KeyCellMeta = styled.div`
+  width: 18%;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
+`;
+
+const KeysEmpty = styled.div`
+  padding: 32px;
+  text-align: center;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
+const CreatedTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CreatedText = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
 `;

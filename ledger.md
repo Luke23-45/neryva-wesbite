@@ -145,8 +145,8 @@ top to bottom; shells come before the pages they frame.
 | 1.18 | Settings: Workspace | `/settings/workspace` | DONE |
 | 1.19 | Settings: Team | `/settings/team` | DONE |
 | 1.20 | Settings: Billing + Upgrade modal | `/settings/billing` | DONE |
-| 1.21 | Settings: Security | `/settings/security` | — |
-| 1.22 | Settings: API keys | `/settings/api-keys` | — |
+| 1.21 | Settings: Security | `/settings/security` | DONE |
+| 1.22 | Settings: API keys | `/settings/api-keys` | DONE |
 
 ### Phase 2 — Deployment app (`/deployment`)
 
