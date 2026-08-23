@@ -415,23 +415,23 @@ const PrimaryButton = styled(motion.button)`
   align-items: center;
   gap: 6px;
   border: 0;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
 `;
 
 const GhostButton = styled.button`
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   background: transparent;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
@@ -440,8 +440,8 @@ const GhostButton = styled.button`
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: ${({ theme }) => theme.app.surface.hover};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -454,20 +454,20 @@ const TableWrap = styled.div`
 const TableHeader = styled.div`
   display: flex;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const TableRow = styled(motion.div)`
   display: flex;
   align-items: center;
   padding: 12px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
@@ -475,18 +475,18 @@ const TableRow = styled(motion.div)`
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: ${({ theme }) => theme.app.surface.subtle};
   }
 `;
 
 const KeyPill = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.78);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
   padding: 4px 8px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const IconBtn = styled(motion.button)`
@@ -541,13 +541,13 @@ const Dot = styled(motion.div)<{ $active: boolean; $reached: boolean }>`
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: ${({ $active, $reached }) => ($active ? '#fff' : $reached ? '#f5f7fb' : 'rgba(229, 231, 235, 0.5)')};
   background: ${({ $active, $reached }) =>
     $active
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      ? '${({ theme }) => theme.colors.gradients.primary}'
       : $reached
         ? 'rgba(192, 132, 252, 0.20)'
         : 'rgba(255, 255, 255, 0.04)'};
@@ -558,8 +558,8 @@ const Dot = styled(motion.div)<{ $active: boolean; $reached: boolean }>`
 `;
 
 const StepLabel = styled.span`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.6);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -584,7 +584,7 @@ const Helper = styled.div`
   background: rgba(96, 165, 250, 0.06);
   border: 1px solid rgba(96, 165, 250, 0.18);
   color: rgba(147, 197, 253, 0.85);
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   line-height: 1.5;
 
   svg {
@@ -594,8 +594,8 @@ const Helper = styled.div`
 `;
 
 const ScopeSummary = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   letter-spacing: 0.01em;
 `;
 
@@ -613,10 +613,10 @@ const ScopeGroup = styled.div`
 
 const ScopeGroupTitle = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   padding: 0 4px;
 `;
 
@@ -627,27 +627,27 @@ const ScopeRow = styled(motion.label)`
   gap: 12px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.10);
+    background: ${({ theme }) => theme.app.surface.tint};
+    border-color: ${({ theme }) => theme.app.border.strong};
   }
 `;
 
 const ScopeLabel = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 `;
 
 const ScopeDesc = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 1px;
 `;
 
@@ -655,7 +655,7 @@ const ScopeCode = styled.code`
   display: inline-block;
   margin-top: 4px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   color: rgba(147, 197, 253, 0.85);
 `;
 
@@ -667,7 +667,7 @@ const Toggle = styled(motion.button)<{ $on: boolean }>`
   border: 1px solid ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
   background: ${({ $on }) =>
     $on
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      ? '${({ theme }) => theme.colors.gradients.primary}'
       : 'rgba(255, 255, 255, 0.10)'};
   cursor: pointer;
   padding: 0;
@@ -694,8 +694,8 @@ const ToggleThumb = styled(motion.span)<{ $on: boolean }>`
 `;
 
 const ExpiryLabel = styled.div`
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.78);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
   margin-bottom: 6px;
 `;
 
@@ -732,7 +732,7 @@ const Radio = styled.span<{ $on: boolean }>`
   border: 1.5px solid ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.18)')};
   background: ${({ $on }) =>
     $on
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      ? '${({ theme }) => theme.colors.gradients.primary}'
       : 'transparent'};
   display: inline-flex;
   align-items: center;
@@ -743,18 +743,18 @@ const Radio = styled.span<{ $on: boolean }>`
 `;
 
 const ExpiryName = styled.span`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   flex: 1;
 `;
 
 const ExpiryHint = styled.span`
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba(5, 227, 164, 0.12);
-  color: #6ee7b7;
+  color: ${({ theme }) => theme.app.status.emerald.fg};
   letter-spacing: 0.02em;
 `;
 
@@ -774,7 +774,7 @@ const RevealSuccess = styled.div`
   border: 1px solid rgba(5, 227, 164, 0.25);
 
   svg {
-    color: #6ee7b7;
+    color: ${({ theme }) => theme.app.status.emerald.fg};
     flex-shrink: 0;
     margin-top: 2px;
   }
@@ -787,14 +787,14 @@ const RevealBox = styled.div`
   padding: 10px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.30);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
 `;
 
 const RevealSecret = styled.code`
   flex: 1;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
   background: transparent;
   border: 0;
   padding: 4px 6px;
@@ -803,12 +803,12 @@ const RevealSecret = styled.code`
 `;
 
 const RevealNote = styled.div`
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.5;
 
   code {
     font-family: ${({ theme }) => theme.typography.fonts.mono};
-    color: rgba(229, 231, 235, 0.78);
+    color: ${({ theme }) => theme.app.text.secondary};
   }
 `;

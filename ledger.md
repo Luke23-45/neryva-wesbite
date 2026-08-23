@@ -143,8 +143,8 @@ top to bottom; shells come before the pages they frame.
 | 1.16 | Evaluations | `/evaluations` | DONE |
 | 1.17 | Settings layout + Profile | `/settings/profile` | DONE |
 | 1.18 | Settings: Workspace | `/settings/workspace` | DONE |
-| 1.19 | Settings: Team | `/settings/team` | — |
-| 1.20 | Settings: Billing + Upgrade modal | `/settings/billing` | — |
+| 1.19 | Settings: Team | `/settings/team` | DONE |
+| 1.20 | Settings: Billing + Upgrade modal | `/settings/billing` | DONE |
 | 1.21 | Settings: Security | `/settings/security` | — |
 | 1.22 | Settings: API keys | `/settings/api-keys` | — |
 

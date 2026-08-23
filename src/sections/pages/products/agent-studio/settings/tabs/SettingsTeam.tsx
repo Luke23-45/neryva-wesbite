@@ -118,15 +118,13 @@ export function SettingsTeam() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...spring.spring, delay: i * 0.03 }}
               >
-                <div style={{ width: '34%', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <MemberCell>
                   <Avatar initials={initials} hue={hue} size={32} status={m.status === 'active' ? 'online' : 'idle'} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, color: '#f5f7fb', fontWeight: 500 }}>{m.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'rgba(229,231,235,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {m.email}
-                    </div>
-                  </div>
-                </div>
+                  <MemberInfo>
+                    <MemberName>{m.name}</MemberName>
+                    <MemberEmail>{m.email}</MemberEmail>
+                  </MemberInfo>
+                </MemberCell>
                 <div style={{ width: '24%' }}>
                   <RoleMenu current={m.role as Role} onChange={(r) => changeRole(m.id, r)} />
                 </div>
@@ -135,9 +133,7 @@ export function SettingsTeam() {
                     {m.status}
                   </StatusPill>
                 </div>
-                <div style={{ width: '18%', fontSize: 12.5, color: 'rgba(229,231,235,0.65)' }}>
-                  {m.lastActive}
-                </div>
+                <MemberLastActive>{m.lastActive}</MemberLastActive>
                 <div style={{ width: '44px', display: 'flex', justifyContent: 'flex-end' }}>
                   <MemberMore member={m} />
                 </div>
@@ -213,7 +209,7 @@ function RoleMenu({ current, onChange }: { current: Role; onChange: (r: Role) =>
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={spring.bouncy}
-                    style={{ display: 'inline-flex', color: '#05e3a4' }}
+                    className="role-check"
                   >
                     <Check size={13} strokeWidth={2.2} />
                   </motion.span>
@@ -310,6 +306,38 @@ function MemberMore({ member }: { member: Member }) {
 }
 
 // ─── styled ──────────────────────────────────────────────────────────
+const MemberCell = styled.div`
+  width: 34%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+`;
+
+const MemberInfo = styled.div`
+  min-width: 0;
+`;
+
+const MemberName = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const MemberEmail = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const MemberLastActive = styled.div`
+  width: 18%;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
 const InviteRow = styled.div`
   display: flex;
   gap: 8px;
@@ -325,21 +353,21 @@ const InviteBtn = styled(motion.button)`
   height: 36px;
   border: 0;
   border-radius: 9px;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
   transition: opacity ${({ theme }) => theme.transitions.fast};
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.4;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(229, 231, 235, 0.55);
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.muted};
     box-shadow: none;
   }
 `;
@@ -353,20 +381,20 @@ const TableWrap = styled.div`
 const TableHeader = styled.div`
   display: flex;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const MemberRow = styled(motion.div)`
   display: flex;
   align-items: center;
   padding: 12px 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:last-child {
@@ -374,7 +402,7 @@ const MemberRow = styled(motion.div)`
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.02);
+    background: ${({ theme }) => theme.app.surface.subtle};
   }
 `;
 
@@ -392,24 +420,24 @@ const RoleButton = styled(motion.button)<{ $open: boolean }>`
   border: 1px solid ${({ $open }) => ($open ? 'rgba(192, 132, 252, 0.45)' : 'rgba(255, 255, 255, 0.08)')};
   background: ${({ $open }) =>
     $open
-      ? 'linear-gradient(180deg, rgba(192,132,252,0.10), rgba(37,99,235,0.04))'
+      ? 'linear-gradient(180deg, ${({ theme }) => theme.app.status.lilac.bg}, rgba(37,99,235,0.04))'
       : 'rgba(255, 255, 255, 0.03)'};
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-family: inherit;
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   svg {
-    color: rgba(229, 231, 235, 0.55);
+    color: ${({ theme }) => theme.app.text.muted};
     transition: transform ${({ theme }) => theme.transitions.fast};
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.16);
+    background: ${({ theme }) => theme.app.surface.active};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -445,7 +473,7 @@ const Menu = styled(motion.div)<{ $align?: 'right' }>`
   padding: 4px;
   border-radius: 12px;
   background: rgba(15, 17, 22, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:
@@ -455,6 +483,11 @@ const Menu = styled(motion.div)<{ $align?: 'right' }>`
 `;
 
 const MenuItem = styled(motion.button)<{ $danger?: boolean }>`
+  .role-check {
+    display: inline-flex;
+    color: ${({ theme }) => theme.app.status.success.fg};
+  }
+
   display: flex;
   align-items: center;
   gap: 10px;
@@ -464,7 +497,7 @@ const MenuItem = styled(motion.button)<{ $danger?: boolean }>`
   border-radius: 8px;
   background: transparent;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   cursor: pointer;
   text-align: left;
   color: ${({ $danger }) => ($danger ? '#f87171' : '#f5f7fb')};
@@ -483,14 +516,14 @@ const MoreBtn = styled(motion.button)<{ $open: boolean }>`
   justify-content: center;
   border: 0;
   background: ${({ $open }) => ($open ? 'rgba(255, 255, 255, 0.06)' : 'transparent')};
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 7px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;

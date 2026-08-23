@@ -507,26 +507,26 @@ const TwoFaRow = styled.div`
   gap: 16px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const TwoFaTitle = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
 
   svg {
-    color: #6ee7b7;
+    color: ${({ theme }) => theme.app.status.emerald.fg};
   }
 `;
 
 const TwoFaSub = styled.div`
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-top: 4px;
   line-height: 1.5;
   max-width: 380px;
@@ -537,7 +537,7 @@ const EnabledPill = styled.span`
   border-radius: 999px;
   background: rgba(52, 211, 153, 0.12);
   border: 1px solid rgba(52, 211, 153, 0.30);
-  color: #6ee7b7;
+  color: ${({ theme }) => theme.app.status.emerald.fg};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 10px;
   letter-spacing: 0.06em;
@@ -558,15 +558,15 @@ const BackBtn = styled(motion.button)`
   align-items: center;
   justify-content: center;
   border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(229, 231, 235, 0.78);
+  background: ${({ theme }) => theme.app.surface.active};
+  color: ${({ theme }) => theme.app.text.secondary};
   border-radius: 6px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
     background: rgba(255, 255, 255, 0.12);
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;
 
@@ -578,8 +578,8 @@ const StepPanel = styled(motion.div)`
 
 const ScanLead = styled.p`
   margin: 0;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.7);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.55;
 `;
 
@@ -598,7 +598,7 @@ const QRFrame = styled.div`
   padding: 10px;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   aspect-ratio: 1;
 `;
@@ -611,8 +611,8 @@ const ScanSide = styled.div`
 `;
 
 const SecretLabel = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 const SecretRow = styled.div`
@@ -622,14 +622,14 @@ const SecretRow = styled.div`
   padding: 8px 10px;
   border-radius: 9px;
   background: rgba(0, 0, 0, 0.30);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const SecretCode = styled.code`
   flex: 1;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: 0.04em;
   word-break: break-all;
   line-height: 1.4;
@@ -642,32 +642,32 @@ const CopyMiniBtn = styled(motion.button)`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 6px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;
 
 const AccountMeta = styled.div`
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   padding: 4px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 const AccountLabel = styled.span`
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 const AccountValue = styled.span`
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -722,8 +722,8 @@ const OtpCell = styled.div<{ $filled: boolean }>`
 
 const VerifyNote = styled.p`
   margin: 0;
-  font-size: 12px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.faint};
   line-height: 1.55;
   text-align: center;
 `;
@@ -738,7 +738,7 @@ const RecoveryBanner = styled.div`
   border: 1px solid rgba(96, 165, 250, 0.18);
 
   svg {
-    color: #93c5fd;
+    color: ${({ theme }) => theme.app.status.info.fg};
     flex-shrink: 0;
     margin-top: 2px;
   }
@@ -756,22 +756,22 @@ const CodeRow = styled.div`
   gap: 8px;
   padding: 7px 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const CodeNum = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.4);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.ghost};
   width: 16px;
 `;
 
 const CodeText = styled.code`
   flex: 1;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: 0.02em;
 `;
 
@@ -783,24 +783,24 @@ const CodeCopy = styled(motion.button)`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(229, 231, 235, 0.55);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 5px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #f5f7fb;
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;
 
 const GhostBtn = styled.button`
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   background: transparent;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
@@ -809,8 +809,8 @@ const GhostBtn = styled.button`
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: ${({ theme }) => theme.app.surface.hover};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -819,13 +819,13 @@ const PrimaryBtn = styled(motion.button)`
   align-items: center;
   gap: 6px;
   border: 0;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+  box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
 `;

@@ -1,17 +1,22 @@
 import { motion } from 'framer-motion';
 import { Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import {
+  DataTable,
+  DataHead,
+  DataRow,
+  DataCell,
+  CellMono,
+  CellMeta,
+} from '@components/common/ui/DataTable';
+import { pageItem } from '@styles/motion';
 import { UpgradeModal } from '../../UpgradeModal/UpgradeModal';
 import settings from '@neryva_data/products/agent_studio/settings.json';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 export function SettingsBilling() {
   const b = settings.billing;
@@ -20,138 +25,135 @@ export function SettingsBilling() {
 
   return (
     <>
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel
           title="Current plan"
           subtitle={`Renews on ${b.renewal}`}
           action={<UpgradeModal />}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 12,
-              padding: '14px 16px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.06)',
-              background: 'rgba(255,255,255,0.02)',
-              marginBottom: 18,
-            }}
-          >
-            <div style={{ fontSize: 22, fontWeight: 500, color: '#f5f7fb' }}>{b.plan}</div>
-            <div style={{ fontSize: 14, color: 'rgba(229,231,235,0.65)' }}>{b.price}</div>
-            <div style={{ marginLeft: 'auto' }}>
+          <PlanCard>
+            <PlanName>{b.plan}</PlanName>
+            <PlanPrice>{b.price}</PlanPrice>
+            <PlanStatus>
               <StatusPill tone="success">active</StatusPill>
-            </div>
-          </div>
+            </PlanStatus>
+          </PlanCard>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <UsageStack>
             <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 13,
-                  color: 'rgba(229,231,235,0.85)',
-                  marginBottom: 6,
-                }}
-              >
+              <UsageRow>
                 <span>Messages this month</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#f5f7fb' }}>
+                <UsageValue>
                   {b.messagesUsed.toLocaleString()} / {b.messagesLimit.toLocaleString()}
-                </span>
-              </div>
+                </UsageValue>
+              </UsageRow>
               <ProgressBar value={msgPct} tone={msgPct > 85 ? 'amber' : 'azure'} />
             </div>
             <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 13,
-                  color: 'rgba(229,231,235,0.85)',
-                  marginBottom: 6,
-                }}
-              >
+              <UsageRow>
                 <span>Knowledge storage</span>
-                <span style={{ fontVariantNumeric: 'tabular-nums', color: '#f5f7fb' }}>
+                <UsageValue>
                   {b.storageUsedGb.toFixed(1)} GB / {b.storageLimitGb} GB
-                </span>
-              </div>
+                </UsageValue>
+              </UsageRow>
               <ProgressBar value={storagePct} tone="emerald" />
             </div>
-          </div>
+          </UsageStack>
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
-        <Panel title="Invoices" subtitle="Past invoices available as PDF">
-          <div style={{ display: 'flex', flexDirection: 'column', margin: '0 -22px -22px' }}>
-            <div
-              style={{
-                display: 'flex',
-                padding: '10px 22px',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                background: 'rgba(255,255,255,0.02)',
-                fontFamily: "'IBM Plex Mono', monospace",
-                fontSize: 10.5,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(229,231,235,0.5)',
-              }}
-            >
-              <div style={{ width: '34%' }}>Invoice</div>
-              <div style={{ width: '34%' }}>Period</div>
-              <div style={{ width: '18%', textAlign: 'right' }}>Amount</div>
-              <div style={{ width: '14%' }} />
-            </div>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+        <Panel title="Invoices" subtitle="Past invoices available as PDF" flush>
+          <DataTable>
+            <DataHead>
+              <DataCell $w="34%">Invoice</DataCell>
+              <DataCell $w="34%">Period</DataCell>
+              <DataCell $w="18%" $align="right">Amount</DataCell>
+              <DataCell $w="14%" />
+            </DataHead>
             {b.invoices.map((inv) => (
-              <div
-                key={inv.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 22px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                }}
-              >
-                <div style={{ width: '34%', fontSize: 13, color: '#f5f7fb', fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {inv.id}
-                </div>
-                <div style={{ width: '34%', fontSize: 13, color: 'rgba(229,231,235,0.85)' }}>{inv.period}</div>
-                <div style={{ width: '18%', textAlign: 'right', fontSize: 13, color: '#f5f7fb', fontVariantNumeric: 'tabular-nums' }}>
-                  {inv.amount}
-                </div>
-                <div style={{ width: '14%', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <StatusPill tone="success" dot={false}>
-                    {inv.status}
-                  </StatusPill>
-                  <button
-                    type="button"
-                    onClick={() => toast.success(`Downloading ${inv.id}.pdf`)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '4px 10px',
-                      border: '1px solid rgba(255,255,255,0.10)',
-                      borderRadius: 6,
-                      background: 'rgba(255,255,255,0.04)',
-                      color: '#f5f7fb',
-                      fontFamily: 'inherit',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Download size={11} strokeWidth={1.8} /> PDF
-                  </button>
-                </div>
-              </div>
+              <DataRow key={inv.id} $interactive={false}>
+                <DataCell $w="34%">
+                  <CellMono>{inv.id}</CellMono>
+                </DataCell>
+                <DataCell $w="34%">
+                  <CellMeta>{inv.period}</CellMeta>
+                </DataCell>
+                <DataCell $w="18%" $align="right">
+                  <CellMono>{inv.amount}</CellMono>
+                </DataCell>
+                <DataCell $w="14%">
+                  <InvoiceActions>
+                    <StatusPill tone="success" dot={false}>
+                      {inv.status}
+                    </StatusPill>
+                    <ActionButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => toast.success(`Downloading ${inv.id}.pdf`)}
+                    >
+                      <Download size={11} strokeWidth={1.8} /> PDF
+                    </ActionButton>
+                  </InvoiceActions>
+                </DataCell>
+              </DataRow>
             ))}
-          </div>
+          </DataTable>
         </Panel>
       </motion.div>
     </>
   );
 }
+
+// ─── styled ──────────────────────────────────────────────────────────
+const PlanCard = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  margin-bottom: 18px;
+`;
+
+const PlanName = styled.div`
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const PlanPrice = styled.div`
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const PlanStatus = styled.div`
+  margin-left: auto;
+`;
+
+const UsageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const UsageRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  margin-bottom: 6px;
+`;
+
+const UsageValue = styled.span`
+  font-variant-numeric: tabular-nums;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const InvoiceActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`;

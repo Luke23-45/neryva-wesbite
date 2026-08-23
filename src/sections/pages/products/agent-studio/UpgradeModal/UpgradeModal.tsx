@@ -243,10 +243,10 @@ const Trigger = styled(motion.button)`
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 8px;
-  background: #f5f7fb;
+  background: ${({ theme }) => theme.app.text.primary};
   color: #0b0d12;
   font-family: inherit;
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   display: inline-flex;
   align-items: center;
@@ -256,12 +256,12 @@ const Trigger = styled(motion.button)`
 
 const Subhead = styled.p`
   margin: 0 0 16px;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.65);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.55;
 
   strong {
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
     font-weight: 500;
   }
 `;
@@ -274,8 +274,8 @@ const BillingToggle = styled.div`
   padding: 3px;
   margin-bottom: 18px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 const CyclePill = styled(motion.div)<{ $active: boolean }>`
@@ -296,7 +296,7 @@ const CycleButton = styled.button`
   border: 0;
   background: transparent;
   font-family: inherit;
-  font-size: 12.5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   padding: 7px 10px;
   border-radius: 7px;
@@ -318,7 +318,7 @@ const SavePill = styled.span`
   padding: 2px 6px;
   border-radius: 999px;
   background: rgba(5, 227, 164, 0.18);
-  color: #6ee7b7;
+  color: ${({ theme }) => theme.app.status.emerald.fg};
   letter-spacing: 0.02em;
   font-weight: 500;
 `;
@@ -333,17 +333,17 @@ const PlanCard = styled(motion.div)<{ $featured?: boolean; $selected: boolean }>
   padding: 16px;
   border-radius: 14px;
   border: 1px solid
-    ${({ $featured, $selected }) =>
+    ${({ $featured, $selected, theme }) =>
       $selected && $featured
         ? 'rgba(192, 132, 252, 0.55)'
         : $selected
           ? 'rgba(96, 165, 250, 0.45)'
-          : 'rgba(255, 255, 255, 0.06)'};
+          : theme.app.border.default};
   background:
-    ${({ $featured }) =>
+    ${({ $featured, theme }) =>
       $featured
         ? 'linear-gradient(180deg, rgba(192,132,252,0.08), rgba(37,99,235,0.04))'
-        : 'rgba(255, 255, 255, 0.02)'};
+        : theme.app.surface.subtle};
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
@@ -355,7 +355,7 @@ const FeaturedHalo = styled(motion.div)`
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(192, 132, 252, 0.30), rgba(37, 99, 235, 0.18));
+  background: linear-gradient(135deg, ${({ theme }) => theme.app.status.lilac.border}, rgba(37, 99, 235, 0.18));
   filter: blur(18px);
   z-index: -1;
   pointer-events: none;
@@ -369,8 +369,8 @@ const MostPopular = styled.span`
   border-radius: 999px;
   background: rgba(192, 132, 252, 0.18);
   border: 1px solid rgba(192, 132, 252, 0.40);
-  color: #d8b4fe;
-  font-size: 10.5px;
+  color: ${({ theme }) => theme.app.status.lilac.fg};
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -389,9 +389,9 @@ const PlanName = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.01em;
 `;
 
@@ -399,10 +399,10 @@ const PlanRadio = styled.span<{ $on: boolean }>`
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.5px solid ${({ $on }) => ($on ? 'transparent' : 'rgba(255, 255, 255, 0.18)')};
-  background: ${({ $on }) =>
+  border: 1.5px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.hover)};
+  background: ${({ $on, theme }) =>
     $on
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      ? theme.colors.gradients.primary
       : 'transparent'};
   display: inline-flex;
   align-items: center;
@@ -420,20 +420,20 @@ const Price = styled.div`
 const PriceAmount = styled.span`
   font-size: 18px;
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 `;
 
 const PriceSuffix = styled.span`
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 const PlanTagline = styled.p`
   margin: 0 0 12px 26px;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.45;
 `;
 
@@ -450,28 +450,28 @@ const PerkItem = styled.li`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.78);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
 
   svg {
-    color: #6ee7b7;
+    color: ${({ theme }) => theme.app.status.emerald.fg};
     flex-shrink: 0;
   }
 `;
 
 const Footnote = styled.p`
   margin: 16px 0 0;
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
   line-height: 1.5;
 `;
 
 const GhostButton = styled.button`
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   background: transparent;
-  color: rgba(229, 231, 235, 0.85);
+  color: ${({ theme }) => theme.app.text.secondary};
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 14px;
   border-radius: 9px;
@@ -480,8 +480,8 @@ const GhostButton = styled.button`
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: ${({ theme }) => theme.app.surface.hover};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 `;
 
@@ -490,10 +490,10 @@ const PrimaryButton = styled(motion.button)`
   align-items: center;
   gap: 6px;
   border: 0;
-  background: linear-gradient(135deg, #c084fc 0%, #2563eb 100%);
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   padding: 8px 16px;
   border-radius: 9px;
