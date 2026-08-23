@@ -16,6 +16,18 @@ import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment
 import SolutionsPage from '@pages/solutions/SolutionsPage';
 import AuthPage from '@pages/auth/AuthPage';
 
+// Platform console (engine-backed) — /platform/**
+import PlatformShell from '@pages/platform/PlatformShell';
+import AuthCallbackPage from '@pages/platform/AuthCallbackPage';
+import PlatformHomePage from '@pages/platform/PlatformHomePage';
+import OrgMembersPage from '@pages/platform/OrgMembersPage';
+import ProjectsPage from '@pages/platform/ProjectsPage';
+import ApiKeysPage from '@pages/platform/ApiKeysPage';
+import { UsagePage, BillingPage } from '@pages/platform/UsageBillingPages';
+import AuditPage from '@pages/platform/AuditPage';
+import OrgSettingsPage from '@pages/platform/OrgSettingsPage';
+import StatusPage from '@pages/platform/StatusPage';
+
 // Agent Studio app shell (auth-gated) — uses the existing ChatWorkspace internally
 import AgentStudioShell from '@pages/products/agent_studio/AgentStudioShell';
 import AgentStudioChatPage from '@pages/products/agent_studio/AgentStudioChatPage';
@@ -140,6 +152,74 @@ export const solutionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/solutions',
   component: SolutionsPage,
+});
+
+// ── Platform console (/platform) — the engine-backed area ──────────────────
+
+export const authCallbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/platform/auth/callback',
+  component: AuthCallbackPage,
+});
+
+export const platformRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/platform',
+  component: PlatformShell,
+});
+
+export const platformIndexRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/',
+  component: PlatformHomePage,
+});
+
+export const platformMembersRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/organization/members',
+  component: OrgMembersPage,
+});
+
+export const platformProjectsRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/projects',
+  component: ProjectsPage,
+});
+
+export const platformApiKeysRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/api-keys',
+  component: ApiKeysPage,
+});
+
+export const platformUsageRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/usage',
+  component: UsagePage,
+});
+
+export const platformBillingRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/billing',
+  component: BillingPage,
+});
+
+export const platformAuditRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/audit',
+  component: AuditPage,
+});
+
+export const platformSettingsRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/settings',
+  component: OrgSettingsPage,
+});
+
+export const platformStatusRoute = createRoute({
+  getParentRoute: () => platformRoute,
+  path: '/status',
+  component: StatusPage,
 });
 
 export const secretRoute = createRoute({
@@ -521,7 +601,19 @@ export const routeDefinitions = [
     agentStudioUsageRoute,
     agentStudioEvaluationsRoute,
     agentStudioComplianceRoute,
-    agentStudioSettingsRoute.addChildren([
+    platformRoute.addChildren([
+    platformIndexRoute,
+    platformMembersRoute,
+    platformProjectsRoute,
+    platformApiKeysRoute,
+    platformUsageRoute,
+    platformBillingRoute,
+    platformAuditRoute,
+    platformSettingsRoute,
+    platformStatusRoute,
+  ]),
+  authCallbackRoute,
+  agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,
       agentStudioSettingsWorkspaceRoute,

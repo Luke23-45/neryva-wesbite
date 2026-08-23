@@ -10,6 +10,7 @@ import { router } from './router';
 import { GlobalStyles } from '@styles/GlobalStyles';
 import { theme } from '@styles/theme';
 import { AuthProvider } from '@/Context/AuthContext';
+import { OrgProvider } from '@/Context/OrgContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,7 +62,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider theme={theme}>
           <AuthProvider>
             <GlobalStyles />
-            <RouterProvider router={router} />
+            <OrgProvider>
+        <RouterProvider router={router} />
+      </OrgProvider>
             <Toaster
               position="bottom-right"
               gutter={8}

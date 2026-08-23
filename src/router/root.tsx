@@ -34,7 +34,7 @@ const pageTransition: any = {
   ease: [0.2, 0, 0, 1],
 };
 
-const APP_SHELL_PATHS = ['/agent-studio', '/deployment'];
+const APP_SHELL_PATHS = ['/agent-studio', '/deployment', '/platform'];
 
 export const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: function RootLayout() {
