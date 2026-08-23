@@ -34,20 +34,20 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
   padding: 8px 14px;
   border-radius: 9px;
   border: 1px solid
-    ${({ $variant }) =>
+    ${({  $variant , theme }) =>
       $variant === 'primary'
         ? 'transparent'
         : $variant === 'danger'
           ? 'rgba(248, 113, 113, 0.30)'
           : 'rgba(255, 255, 255, 0.10)'};
-  background: ${({ $variant }) =>
+  background: ${({  $variant , theme }) =>
     $variant === 'primary'
       ? 'linear-gradient(135deg, #f59e0b 0%, #2563eb 100%)'
       : $variant === 'danger'
         ? 'rgba(248, 113, 113, 0.08)'
         : 'transparent'};
-  color: ${({ $variant }) =>
-    $variant === 'danger' ? '#f87171' : '#f5f7fb'};
+  color: ${({  $variant , theme }) =>
+    $variant === 'danger' ? theme.app.status.error.fg : '#f5f7fb'};
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
@@ -56,7 +56,7 @@ export const ActionBtn = styled.button<{ $variant?: 'primary' | 'ghost' | 'dange
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: ${({ $variant }) =>
+    background: ${({  $variant , theme }) =>
       $variant === 'primary'
         ? 'linear-gradient(135deg, ${({ theme }) => theme.app.status.warning.fg} 0%, #3b82f6 100%)'
         : $variant === 'danger'
@@ -105,11 +105,11 @@ export const StageItem = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid
-    ${({ $state }) =>
+    ${({  $state , theme }) =>
       $state === 'active'
         ? 'rgba(245, 158, 11, 0.45)'
         : 'rgba(255, 255, 255, 0.06)'};
-  background: ${({ $state }) =>
+  background: ${({  $state , theme }) =>
     $state === 'active'
       ? 'linear-gradient(180deg, rgba(245,158,11,0.06), rgba(37,99,235,0.03))'
       : 'rgba(255, 255, 255, 0.02)'};
@@ -125,20 +125,20 @@ export const StageMark = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: ${({ $state }) =>
+  background: ${({  $state , theme }) =>
     $state === 'done'
       ? 'linear-gradient(135deg, #f59e0b 0%, #2563eb 100%)'
       : $state === 'active'
         ? 'rgba(245, 158, 11, 0.15)'
         : 'rgba(255, 255, 255, 0.04)'};
   border: 1px solid
-    ${({ $state }) =>
+    ${({  $state , theme }) =>
       $state === 'done' ? 'transparent' : $state === 'active' ? 'rgba(245, 158, 11, 0.45)' : 'rgba(255, 255, 255, 0.08)'};
-  color: ${({ $state }) =>
-    $state === 'done' ? '#fff' : $state === 'active' ? '#fbbf24' : 'rgba(229, 231, 235, 0.45)'};
+  color: ${({  $state , theme }) =>
+    $state === 'done' ? '#fff' : $state === 'active' ? theme.app.status.warning.fg : theme.app.text.faint};
   position: relative;
 
-  ${({ $state }) =>
+  ${({  $state , theme }) =>
     $state === 'active' &&
     `
     &::before {
@@ -173,8 +173,8 @@ export const StageName = styled.div`
 
 export const StageStatus = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ $state }) =>
-    $state === 'done' ? '#34d399' : $state === 'active' ? '#fbbf24' : 'rgba(229, 231, 235, 0.45)'};
+  color: ${({  $state , theme }) =>
+    $state === 'done' ? theme.app.status.success.fg : $state === 'active' ? theme.app.status.warning.fg : theme.app.text.faint};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -192,7 +192,7 @@ export const Connector = styled.div<{ $state: 'done' | 'active' | 'pending' }>`
   margin-left: 30px;
   height: 6px;
   width: 1.5px;
-  background: ${({ $state }) =>
+  background: ${({  $state , theme }) =>
     $state === 'done' ? 'rgba(245, 158, 11, 0.55)' : 'rgba(255, 255, 255, 0.08)'};
 `;
 
@@ -262,11 +262,11 @@ export const LogLine = styled.div<{ $level: 'info' | 'warn' | 'error' | 'debug' 
   display: flex;
   gap: 10px;
   align-items: baseline;
-  color: ${({ $level }) =>
-    $level === 'error' ? '#fca5a5' :
+  color: ${({  $level , theme }) =>
+    $level === 'error' ? theme.app.status.error.fg :
     $level === 'warn' ? '#fcd34d' :
-    $level === 'debug' ? 'rgba(229, 231, 235, 0.55)' :
-    'rgba(229, 231, 235, 0.85)'};
+    $level === 'debug' ? theme.app.text.muted :
+    theme.app.text.secondary};
 `;
 
 export const LogTime = styled.span`
@@ -282,9 +282,9 @@ export const LogLevel = styled.span<{ $level: 'info' | 'warn' | 'error' | 'debug
   font-weight: 600;
   font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.06em;
-  color: ${({ $level }) =>
-    $level === 'error' ? '#f87171' :
-    $level === 'warn' ? '#fbbf24' :
-    $level === 'debug' ? 'rgba(229, 231, 235, 0.4)' :
+  color: ${({  $level , theme }) =>
+    $level === 'error' ? theme.app.status.error.fg :
+    $level === 'warn' ? theme.app.status.warning.fg :
+    $level === 'debug' ? theme.app.text.ghost :
     '#60a5fa'};
 `;

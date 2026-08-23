@@ -1,3 +1,4 @@
+import styled from 'styled-components';
 import { pageItem } from '@styles/motion';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -81,9 +82,9 @@ export function SettingsGeneral() {
           }}
         >
           <div>
-            <div style={{ fontSize: 13.5, fontWeight: 500, color: '#f5f7fb' }}>
+            <SectionTitleText>
               Automatic rollback on error spike
-            </div>
+            </SectionTitleText>
             <div style={{ fontSize: 12.5, color: 'rgba(229, 231, 235, 0.55)', marginTop: 4, lineHeight: 1.5 }}>
               If a deployment's error rate exceeds the threshold during rollout, automatically revert
               to the previous stable version.
@@ -95,3 +96,9 @@ export function SettingsGeneral() {
     </motion.div>
   );
 }
+
+const SectionTitleText = styled.div`
+  font-size: ${'${({ theme }) => theme.app.type.body}'};
+  font-weight: 500;
+  color: ${'${({ theme }) => theme.app.text.primary}'};
+`;

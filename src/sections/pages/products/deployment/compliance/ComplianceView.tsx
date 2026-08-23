@@ -1,3 +1,4 @@
+import styled from 'styled-components';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, ViewHeaderRow } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Download, ScrollText, Globe, Lock } from 'lucide-react';
@@ -153,9 +154,9 @@ export function ComplianceView() {
                     }}
                   >
                     <span>Controls</span>
-                    <span style={{ color: '#f5f7fb', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                    <StrongNum>
                       {f.passingControls} / {f.controls}
-                    </span>
+                    </StrongNum>
                   </div>
                   <ProgressBar
                     value={pct}
@@ -304,3 +305,9 @@ export function ComplianceView() {
     </ViewShell>
   );
 }
+
+const StrongNum = styled.span`
+  color: ${({ theme }) => theme.app.text.primary};
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+`;

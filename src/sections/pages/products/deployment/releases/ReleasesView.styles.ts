@@ -70,18 +70,18 @@ export const FilterPill = styled.button<{ $active?: boolean }>`
   padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid
-    ${({ $active }) =>
+    ${({  $active , theme }) =>
       $active ? 'rgba(245, 158, 11, 0.40)' : 'rgba(255, 255, 255, 0.06)'};
-  background: ${({ $active }) =>
+  background: ${({  $active , theme }) =>
     $active ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.02)'};
-  color: ${({ $active }) =>
-    $active ? '#fbbf24' : 'rgba(229, 231, 235, 0.75)'};
+  color: ${({  $active , theme }) =>
+    $active ? theme.app.status.warning.fg : theme.app.text.secondary};
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: ${({ $active }) =>
+    background: ${({  $active , theme }) =>
       $active ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255, 255, 255, 0.06)'};
   }
 `;
@@ -157,7 +157,7 @@ export const StatusPill = styled.span<{ $tone: string }>`
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
     $tone === 'emerald'
       ? 'rgba(16, 185, 129, 0.12)'
       : $tone === 'warning'
@@ -165,10 +165,10 @@ export const StatusPill = styled.span<{ $tone: string }>`
         : $tone === 'azure'
           ? 'rgba(37, 99, 235, 0.12)'
           : 'rgba(255, 255, 255, 0.04)'};
-  color: ${({ $tone }) =>
-    $tone === 'emerald' ? '#34d399' : $tone === 'warning' ? '#fbbf24' : $tone === 'azure' ? '#93c5fd' : 'rgba(229, 231, 235, 0.75)'};
+  color: ${({  $tone , theme }) =>
+    $tone === 'emerald' ? theme.app.status.success.fg : $tone === 'warning' ? theme.app.status.warning.fg : $tone === 'azure' ? theme.app.status.info.fg : theme.app.text.secondary};
   border: 1px solid
-    ${({ $tone }) =>
+    ${({  $tone , theme }) =>
       $tone === 'emerald'
         ? 'rgba(16, 185, 129, 0.30)'
         : $tone === 'warning'
@@ -187,11 +187,11 @@ export const EnvPill = styled.span<{ $env: string }>`
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 4px;
-  background: ${({ $env }) =>
+  background: ${({  $env , theme }) =>
     $env === 'production' ? 'rgba(245, 158, 11, 0.10)' : 'rgba(37, 99, 235, 0.10)'};
   color: ${({ theme, $env }) => ($env === 'production' ? theme.app.status.warning.fg : theme.app.status.info.fg)};
   border: 1px solid
-    ${({ $env }) =>
+    ${({  $env , theme }) =>
       $env === 'production' ? 'rgba(245, 158, 11, 0.30)' : 'rgba(37, 99, 235, 0.30)'};
 `;
 
@@ -211,14 +211,14 @@ export const ChangeBlock = styled.div<{ $kind: 'features' | 'fixes' | 'perf' }>`
   gap: 6px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: ${({ $kind }) =>
+  background: ${({  $kind , theme }) =>
     $kind === 'features'
       ? 'rgba(37, 99, 235, 0.06)'
       : $kind === 'fixes'
         ? 'rgba(16, 185, 129, 0.06)'
         : 'rgba(245, 158, 11, 0.06)'};
   border: 1px solid
-    ${({ $kind }) =>
+    ${({  $kind , theme }) =>
       $kind === 'features'
         ? 'rgba(37, 99, 235, 0.20)'
         : $kind === 'fixes'
@@ -238,8 +238,8 @@ export const ChangeLabel = styled.div<{ $kind: 'features' | 'fixes' | 'perf' }>`
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: ${({ $kind }) =>
-    $kind === 'features' ? '#93c5fd' : $kind === 'fixes' ? '#34d399' : '#fbbf24'};
+  color: ${({  $kind , theme }) =>
+    $kind === 'features' ? theme.app.status.info.fg : $kind === 'fixes' ? theme.app.status.success.fg : theme.app.status.warning.fg};
 `;
 
 export const ChangeCount = styled.div`
@@ -263,7 +263,7 @@ export const ChangeItem = styled.li`
   color: ${({ theme }) => theme.app.text.secondary};
 
   &::marker {
-    color: rgba(229, 231, 235, 0.30);
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 
@@ -304,13 +304,13 @@ export const MetricLabel = styled.div`
 export const MetricValue = styled.div<{ $tone?: string }>`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: ${({ $tone }) =>
+  color: ${({  $tone , theme }) =>
     $tone === 'emerald'
-      ? '#34d399'
+      ? theme.app.status.success.fg
       : $tone === 'warning'
-        ? '#fbbf24'
+        ? theme.app.status.warning.fg
         : $tone === 'error'
-          ? '#f87171'
+          ? theme.app.status.error.fg
           : '#f5f7fb'};
   font-variant-numeric: tabular-nums;
 `;

@@ -97,10 +97,10 @@ export function SettingsAccess() {
                   <div style={{ width: '34%', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                     <Avatar initials={initials} hue={hue} size={32} status={m.status === 'active' ? 'online' : 'idle'} />
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, color: '#f5f7fb', fontWeight: 500 }}>{m.name}</div>
-                      <div style={{ fontSize: 11.5, color: 'rgba(229,231,235,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <MemberName>{m.name}</MemberName>
+                      <MemberEmail>
                         {m.email}
-                      </div>
+                      </MemberEmail>
                     </div>
                   </div>
                   <div style={{ width: '24%' }}>
@@ -111,9 +111,9 @@ export function SettingsAccess() {
                       {m.status}
                     </StatusPill>
                   </div>
-                  <div style={{ width: '18%', fontSize: 12.5, color: 'rgba(229,231,235,0.65)' }}>
+                  <MemberLastActive>
                     {m.lastActive}
-                  </div>
+                  </MemberLastActive>
                   <div style={{ width: '44px' }} />
                 </MemberRow>
               );
@@ -136,11 +136,11 @@ export function SettingsAccess() {
                   borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
                 }}
               >
-                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: 'rgba(229,231,235,0.5)', width: 80 }}>
+                <AuditTime>
                   {a.time}
-                </span>
-                <div style={{ flex: 1, fontSize: 13, color: '#f5f7fb' }}>{a.event}</div>
-                <span style={{ fontSize: 12, color: 'rgba(229,231,235,0.55)' }}>{a.actor}</span>
+                </AuditTime>
+                <AuditEvent>{a.event}</AuditEvent>
+                <AuditActor>{a.actor}</AuditActor>
               </div>
             ))}
           </div>
@@ -394,4 +394,44 @@ const MenuItem = styled(motion.button)`
 
 const MenuLabel = styled.span`
   flex: 1;
+`;
+
+const MemberName = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const MemberEmail = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const MemberLastActive = styled.div`
+  width: 18%;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const AuditTime = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
+  width: 80px;
+  flex-shrink: 0;
+`;
+
+const AuditEvent = styled.div`
+  flex: 1;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+  min-width: 0;
+`;
+
+const AuditActor = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 `;

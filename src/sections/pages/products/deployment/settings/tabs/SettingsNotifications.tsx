@@ -5,6 +5,7 @@ import { Plus, Slack, Mail, Webhook, Bell, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { Switch } from '@components/common/ui/Switch';
 import { SaveRow } from './shared';
 import settings from '@neryva_data/products/deployment/settings.json';
@@ -233,28 +234,12 @@ export function SettingsNotifications() {
           })}
         </ChannelList>
 
-        <button
-          type="button"
-          onClick={() => toast('Channel picker coming soon', { icon: '🔔' })}
-          style={{
-            marginTop: 18,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            border: '1px solid rgba(255, 255, 255, 0.10)',
-            borderRadius: 9,
-            background: 'rgba(255, 255, 255, 0.04)',
-            color: '#f5f7fb',
-            fontFamily: 'inherit',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={13} strokeWidth={2} />
-          Add channel
-        </button>
+        <div style={{ marginTop: 18 }}>
+          <ActionButton variant="secondary" onClick={() => toast('Channel picker coming soon', { icon: '🔔' })}>
+            <Plus size={13} strokeWidth={2} />
+            Add channel
+          </ActionButton>
+        </div>
       </Panel>
     </motion.div>
   );

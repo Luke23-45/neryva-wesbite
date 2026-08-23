@@ -168,7 +168,7 @@ export const AuditCategory = styled.span<{ $kind: string }>`
   text-transform: uppercase;
   padding: 2px 7px;
   border-radius: 4px;
-  background: ${({ $kind }) =>
+  background: ${({  $kind , theme }) =>
     $kind === 'security'
       ? 'rgba(96, 165, 250, 0.10)'
       : $kind === 'deploy'
@@ -178,16 +178,16 @@ export const AuditCategory = styled.span<{ $kind: string }>`
           : $kind === 'audit'
             ? 'rgba(168, 85, 247, 0.10)'
             : 'rgba(255, 255, 255, 0.04)'};
-  color: ${({ $kind }) =>
+  color: ${({  $kind , theme }) =>
     $kind === 'security'
-      ? '#93c5fd'
+      ? theme.app.status.info.fg
       : $kind === 'deploy'
-        ? '#fbbf24'
+        ? theme.app.status.warning.fg
         : $kind === 'rollback'
-          ? '#f87171'
+          ? theme.app.status.error.fg
           : $kind === 'audit'
             ? '#d8b4fe'
-            : 'rgba(229, 231, 235, 0.65)'};
+            : theme.app.text.muted};
   font-weight: 500;
   flex-shrink: 0;
 `;
@@ -232,7 +232,7 @@ export const ResidencySwatch = styled.div<{ $color: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $color }) => $color};
+  background: ${({  $color , theme }) => $color};
   flex-shrink: 0;
 `;
 

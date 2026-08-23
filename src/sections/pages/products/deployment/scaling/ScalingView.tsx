@@ -164,7 +164,7 @@ export function ScalingView() {
                 <ReplicaMeta>
                   <span>
                     Replicas:{' '}
-                    <Mono style={{ color: '#f5f7fb' }}>
+                    <Mono $strong>
                       {r.current} / {r.max}
                     </Mono>
                   </span>
@@ -210,7 +210,7 @@ export function ScalingView() {
                 <ReplicaMeta>
                   <span>
                     Replicas{' '}
-                    <Mono style={{ color: '#f5f7fb' }}>
+                    <Mono $strong>
                       {reg.replicas} / {reg.max}
                     </Mono>
                   </span>

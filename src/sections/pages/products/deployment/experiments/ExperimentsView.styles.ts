@@ -181,8 +181,8 @@ export const ResultLabel = styled.div`
 export const ResultValue = styled.div<{ $tone: string }>`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: ${({ $tone }) =>
-    $tone === 'emerald' ? '#34d399' : $tone === 'warning' ? '#fbbf24' : $tone === 'azure' ? '#93c5fd' : '#f5f7fb'};
+  color: ${({  $tone , theme }) =>
+    $tone === 'emerald' ? theme.app.status.success.fg : $tone === 'warning' ? theme.app.status.warning.fg : $tone === 'azure' ? theme.app.status.info.fg : '#f5f7fb'};
   font-variant-numeric: tabular-nums;
 `;
 

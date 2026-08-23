@@ -32,8 +32,8 @@ export const OnCallCard = styled.div<{ $accent: string }>`
   gap: 14px;
   padding: 16px 18px;
   border-radius: 12px;
-  border: 1px solid ${({ $accent }) => $accent};
-  background: linear-gradient(180deg, ${({ $accent }) => $accent.replace('0.40', '0.06')}, rgba(0, 0, 0, 0.20));
+  border: 1px solid ${({  $accent , theme }) => $accent};
+  background: linear-gradient(180deg, ${({  $accent , theme }) => $accent.replace('0.40', '0.06')}, rgba(0, 0, 0, 0.20));
 `;
 
 export const OnCallAvatar = styled.div<{ $tone: string }>`
@@ -47,7 +47,7 @@ export const OnCallAvatar = styled.div<{ $tone: string }>`
   font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 600;
   color: #fff;
-  background: ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
     $tone === 'azure'
       ? 'linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)'
       : $tone === 'lilac'
@@ -124,15 +124,15 @@ export const IncidentDot = styled.div<{ $tone: string }>`
   border-radius: 50%;
   margin-top: 6px;
   flex-shrink: 0;
-  background: ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
     $tone === 'warning'
-      ? '#fbbf24'
+      ? theme.app.status.warning.fg
       : $tone === 'error'
-        ? '#f87171'
+        ? theme.app.status.error.fg
         : $tone === 'azure'
           ? '#60a5fa'
           : 'rgba(255, 255, 255, 0.20)'};
-  box-shadow: 0 0 0 4px ${({ $tone }) =>
+  box-shadow: 0 0 0 4px ${({  $tone , theme }) =>
     $tone === 'warning'
       ? 'rgba(245, 158, 11, 0.12)'
       : $tone === 'error'
@@ -220,8 +220,8 @@ export const TableRow = styled.div`
 `;
 
 export const Cell = styled.div<{ $w: string; $align?: 'left' | 'right' }>`
-  width: ${({ $w }) => $w};
-  text-align: ${({ $align }) => $align ?? 'left'};
+  width: ${({  $w , theme }) => $w};
+  text-align: ${({  $align , theme }) => $align ?? 'left'};
   padding-right: 8px;
 `;
 

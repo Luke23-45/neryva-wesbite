@@ -148,8 +148,8 @@ export const ReplicaBar = styled.div`
 export const ReplicaFill = styled.div<{ $pct: number; $tone: string }>`
   position: absolute;
   inset: 0 auto 0 0;
-  width: ${({ $pct }) => `${$pct}%`};
-  background: ${({ $tone }) =>
+  width: ${({  $pct , theme }) => `${$pct}%`};
+  background: ${({  $tone , theme }) =>
     $tone === 'emerald'
       ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.success.fg}, #10b981)'
       : $tone === 'warning'
@@ -227,8 +227,8 @@ export const UtilValue = styled.span<{ $tone: string }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
-  color: ${({ $tone }) =>
-    $tone === 'emerald' ? '#34d399' : $tone === 'warning' ? '#fbbf24' : '#93c5fd'};
+  color: ${({  $tone , theme }) =>
+    $tone === 'emerald' ? theme.app.status.success.fg : $tone === 'warning' ? theme.app.status.warning.fg : theme.app.status.info.fg};
 `;
 
 export const ReplicaMeta = styled.div`
@@ -239,8 +239,10 @@ export const ReplicaMeta = styled.div`
   font-variant-numeric: tabular-nums;
 `;
 
-export const Mono = styled.span`
+export const Mono = styled.span<{ $strong?: boolean }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
+
+  ${({ $strong, theme }) => ($strong ? `color: ${theme.app.text.primary};` : '')}
 `;
 
 export const EventTable = styled.div`
@@ -306,6 +308,6 @@ export const Delta = styled.span<{ $tone: string }>`
   gap: 4px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ $tone }) =>
-    $tone === 'azure' ? '#93c5fd' : $tone === 'warning' ? '#fbbf24' : 'rgba(229, 231, 235, 0.55)'};
+  color: ${({  $tone , theme }) =>
+    $tone === 'azure' ? theme.app.status.info.fg : $tone === 'warning' ? theme.app.status.warning.fg : theme.app.text.muted};
 `;

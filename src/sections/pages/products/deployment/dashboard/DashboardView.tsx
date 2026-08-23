@@ -1,9 +1,11 @@
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, ArrowRight } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import { Panel } from '@components/common/ui/Panel';
+import { LinkAction } from '@components/common/ui/LinkAction';
+import { CellMono, CellMeta } from '@components/common/ui/DataTable';
 import { MetricCard } from '@components/common/ui/MetricCard';
 import { Sparkline } from '@components/common/ui/Sparkline';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
@@ -32,6 +34,8 @@ import {
   HealthValue,
   Section,
   SectionTitle,
+  ActivityTitle,
+  ActivityAgent,
 } from './DashboardView.styles';
 import styled from 'styled-components';
 
@@ -129,19 +133,7 @@ export function DashboardView() {
             title="Activity"
             subtitle="Live events from your deployments"
             action={
-              <Link
-                to="/deployment/logs"
-                style={{
-                  color: '#fbbf24',
-                  fontSize: 12.5,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                View all <ArrowRight size={11} strokeWidth={1.8} />
-              </Link>
+              <LinkAction to="/deployment/logs">View all</LinkAction>
             }
           >
             <ActivityList>
@@ -150,10 +142,10 @@ export function DashboardView() {
                   <ActivityTime>{a.time}</ActivityTime>
                   <ActivityDot $tone={activityToneMap[a.kind] ?? 'info'} aria-hidden="true" />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, color: '#f5f7fb' }}>{a.title}</div>
-                    <div style={{ fontSize: 11.5, color: 'rgba(229,231,235,0.55)', marginTop: 2 }}>
-                      {a.pipeline}
-                    </div>
+                    <ActivityTitle>{a.title}</ActivityTitle>
+                    <ActivityAgent>
+                      {a.agent} · {a.pipeline}
+                    </ActivityAgent>
                   </div>
                 </ActivityRow>
               ))}
@@ -167,16 +159,7 @@ export function DashboardView() {
           title="Active pipelines"
           subtitle="Pipeline status and stage progress"
           action={
-            <Link
-              to="/deployment/pipelines"
-              style={{
-                color: '#fbbf24',
-                fontSize: 12.5,
-                textDecoration: 'none',
-              }}
-            >
-              All pipelines →
-            </Link>
+            <LinkAction to="/deployment/pipelines">All pipelines</LinkAction>
           }
         >
           <PipelinesTable>
@@ -193,25 +176,10 @@ export function DashboardView() {
                   <PipelineName>{p.name}</PipelineName>
                 </Cell>
                 <Cell $w="14%">
-                  <span
-                    style={{
-                      fontFamily: "'IBM Plex Mono', monospace",
-                      fontSize: 12,
-                      color: 'rgba(229,231,235,0.7)',
-                    }}
-                  >
-                    {p.env}
-                  </span>
+                  <CellMono>{p.env}</CellMono>
                 </Cell>
                 <Cell $w="14%">
-                  <span
-                    style={{
-                      fontSize: 12.5,
-                      color: 'rgba(229,231,235,0.85)',
-                    }}
-                  >
-                    {p.stage}
-                  </span>
+                  <CellMeta>{p.stage}</CellMeta>
                 </Cell>
                 <Cell $w="14%">
                   <StatusPill tone={statusTone[p.status]}>{p.status}</StatusPill>
@@ -234,20 +202,7 @@ export function DashboardView() {
         <SectionTitle>
           <Activity size={14} strokeWidth={1.7} />
           System health
-          <Link
-            to="/deployment/infrastructure"
-            style={{
-              marginLeft: 'auto',
-              color: '#fbbf24',
-              fontSize: 12.5,
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            View infrastructure <ArrowRight size={11} strokeWidth={1.8} />
-          </Link>
+          <LinkAction to="/deployment/infrastructure">View infrastructure</LinkAction>
         </SectionTitle>
         <HealthStrip>
           {data.health.map((h) => (

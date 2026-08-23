@@ -87,7 +87,7 @@ export const ChartLegend = styled.div`
 
 export const ChartBars = styled.div<{ $n: number }>`
   display: grid;
-  grid-template-columns: repeat(${({ $n }) => $n}, minmax(0, 1fr));
+  grid-template-columns: repeat(${({  $n , theme }) => $n}, minmax(0, 1fr));
   gap: 4px;
   height: 160px;
   align-items: end;
@@ -104,7 +104,7 @@ export const BarWrap = styled.div`
 
 export const Bar = styled.div<{ $h: number }>`
   width: 100%;
-  height: ${({ $h }) => `${$h}%`};
+  height: ${({  $h , theme }) => `${$h}%`};
   border-radius: 4px 4px 0 0;
   background: linear-gradient(180deg, #f59e0b 0%, #2563eb 100%);
   opacity: 0.85;
@@ -202,8 +202,8 @@ export const ItemBar = styled.div`
 export const ItemFill = styled.div<{ $pct: number; $tone?: string }>`
   position: absolute;
   inset: 0 auto 0 0;
-  width: ${({ $pct }) => `${$pct}%`};
-  background: ${({ $tone }) =>
+  width: ${({  $pct , theme }) => `${$pct}%`};
+  background: ${({  $tone , theme }) =>
     $tone === 'azure'
       ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.info.fg}, #2563eb)'
       : $tone === 'warning'
@@ -218,14 +218,14 @@ export const ToneDot = styled.span<{ $tone: string }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
     $tone === 'azure'
-      ? '#93c5fd'
+      ? theme.app.status.info.fg
       : $tone === 'warning'
-        ? '#fbbf24'
+        ? theme.app.status.warning.fg
         : $tone === 'emerald'
-          ? '#34d399'
-          : '#fbbf24'};
+          ? theme.app.status.success.fg
+          : theme.app.status.warning.fg};
 `;
 
 export const QuotaGrid = styled.div`
@@ -289,8 +289,8 @@ export const QuotaProgress = styled.div`
 export const QuotaFill = styled.div<{ $pct: number; $tone: string }>`
   position: absolute;
   inset: 0 auto 0 0;
-  width: ${({ $pct }) => `${$pct}%`};
-  background: ${({ $tone }) =>
+  width: ${({  $pct , theme }) => `${$pct}%`};
+  background: ${({  $tone , theme }) =>
     $tone === 'emerald'
       ? 'linear-gradient(90deg, ${({ theme }) => theme.app.status.success.fg}, #10b981)'
       : $tone === 'warning'
@@ -363,16 +363,16 @@ export const TonePill = styled.span<{ $tone: string }>`
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
     $tone === 'emerald'
       ? 'rgba(16, 185, 129, 0.12)'
       : $tone === 'azure'
         ? 'rgba(37, 99, 235, 0.12)'
         : 'rgba(255, 255, 255, 0.04)'};
-  color: ${({ $tone }) =>
-    $tone === 'emerald' ? '#34d399' : $tone === 'azure' ? '#93c5fd' : 'rgba(229, 231, 235, 0.75)'};
+  color: ${({  $tone , theme }) =>
+    $tone === 'emerald' ? theme.app.status.success.fg : $tone === 'azure' ? theme.app.status.info.fg : theme.app.text.secondary};
   border: 1px solid
-    ${({ $tone }) =>
+    ${({  $tone , theme }) =>
       $tone === 'emerald'
         ? 'rgba(16, 185, 129, 0.30)'
         : $tone === 'azure'

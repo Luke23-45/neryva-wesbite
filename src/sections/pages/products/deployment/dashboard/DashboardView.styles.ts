@@ -75,8 +75,8 @@ export const TableRow = styled.div`
 `;
 
 export const Cell = styled.div<{ $w: string; $align?: 'left' | 'right' }>`
-  width: ${({ $w }) => $w};
-  text-align: ${({ $align }) => $align ?? 'left'};
+  width: ${({  $w , theme }) => $w};
+  text-align: ${({  $align , theme }) => $align ?? 'left'};
   padding-right: 8px;
 `;
 
@@ -91,7 +91,7 @@ export const PipelineName = styled.div`
 export const Metric = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: rgba(229, 231, 235, 0.9);
+  color: ${({ theme }) => theme.app.text.body};
   font-variant-numeric: tabular-nums;
 `;
 
@@ -122,11 +122,11 @@ export const ActivityDot = styled.span<{ $tone: 'success' | 'warning' | 'info' |
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: ${({ $tone }) =>
-    $tone === 'success' ? '#34d399' :
-    $tone === 'warning' ? '#fbbf24' :
-    $tone === 'error' ? '#f87171' : '#93c5fd'};
-  box-shadow: 0 0 0 3px ${({ $tone }) =>
+  background: ${({  $tone , theme }) =>
+    $tone === 'success' ? theme.app.status.success.fg :
+    $tone === 'warning' ? theme.app.status.warning.fg :
+    $tone === 'error' ? theme.app.status.error.fg : theme.app.status.info.fg};
+  box-shadow: 0 0 0 3px ${({  $tone , theme }) =>
     $tone === 'success' ? 'rgba(16,185,129,0.10)' :
     $tone === 'warning' ? 'rgba(245,158,11,0.10)' :
     $tone === 'error' ? 'rgba(239,68,68,0.10)' : 'rgba(59,130,246,0.10)'};
@@ -177,4 +177,21 @@ export const HealthValue = styled.div`
   letter-spacing: -0.015em;
   color: ${({ theme }) => theme.app.text.primary};
   font-variant-numeric: tabular-nums;
+`;
+
+export const ActivityTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const ActivityAgent = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;

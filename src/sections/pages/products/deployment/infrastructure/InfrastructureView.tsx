@@ -1,3 +1,4 @@
+import styled from 'styled-components';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { motion } from 'framer-motion';
 import { Server, Globe } from 'lucide-react';
@@ -138,11 +139,11 @@ export function InfrastructureView() {
                 }}
               >
                 <span>
-                  <strong style={{ color: '#f5f7fb', fontWeight: 500 }}>{r.nodes}</strong> nodes
-                </span>
+                  <StrongNum>{r.nodes}</strong> nodes
+                </StrongNum>
                 <span>
-                  <strong style={{ color: '#f5f7fb', fontWeight: 500 }}>{r.deployments}</strong> deployments
-                </span>
+                  <StrongNum>{r.deployments}</strong> deployments
+                </StrongNum>
                 <span>{r.network}</span>
               </div>
             </RegionCard>
@@ -182,7 +183,7 @@ export function InfrastructureView() {
                     }}
                   >
                     <span>utilization</span>
-                    <span style={{ color: '#f5f7fb', fontWeight: 500 }}>{rt.utilization}</span>
+                    <StrongNum>{rt.utilization}</StrongNum>
                   </div>
                   <ProgressBar value={parsePct(rt.utilization)} tone={runtimeTone[rt.tone] ?? 'azure'} />
                 </div>
@@ -194,3 +195,9 @@ export function InfrastructureView() {
     </ViewShell>
   );
 }
+
+const StrongNum = styled.span`
+  color: ${({ theme }) => theme.app.text.primary};
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+`;

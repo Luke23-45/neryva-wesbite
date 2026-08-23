@@ -5,6 +5,7 @@ import { Plus, MapPin, Server } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { SaveRow } from './shared';
@@ -157,27 +158,15 @@ export function SettingsEnvironments() {
           ))}
         </EnvGrid>
 
-        <button
-          type="button"
-          style={{
-            marginTop: 18,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 14px',
-            border: '1px solid rgba(255, 255, 255, 0.10)',
-            borderRadius: 9,
-            background: 'rgba(255, 255, 255, 0.04)',
-            color: '#f5f7fb',
-            fontFamily: 'inherit',
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={13} strokeWidth={2} />
-          Add environment
-        </button>
+        <div style={{ marginTop: 18 }}>
+          <ActionButton
+            variant="secondary"
+            onClick={() => toast.success('Environment scaffold created')}
+          >
+            <Plus size={13} strokeWidth={2} />
+            Add environment
+          </ActionButton>
+        </div>
       </Panel>
     </motion.div>
   );
