@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X as XIcon, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -6,31 +6,23 @@ import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { Avatar } from '@components/common/ui/Avatar';
-import { spring } from '@styles/motion';
+import { spring, pageItem } from '@styles/motion';
 import settings from '@neryva_data/products/agent_studio/settings.json';
 import { SaveRow } from './shared';
 
 /**
  * Settings → Profile
  *
- * Apple-grade behaviors:
- * - Avatar upload: hidden file input, click the photo to open system
+ * - Avatar upload: hidden file input; click the photo to open the system
  *   picker. Hover overlay shows a Camera glyph + "Update" CTA.
- *   Crop preview is circular (with a subtle ring) — matches iOS Photos
- *   app pattern.
- * - "Remove" button only appears when a custom photo is set, and
- *   restores the initials+gradient default.
- * - All values persist to localStorage so a refresh keeps the photo.
+ * - "Remove" only appears when a custom photo is set, restoring the
+ *   initials+gradient default.
+ * - Values persist to localStorage so a refresh keeps the photo.
  */
 
 const STORAGE_KEY = 'studio.profile.avatar';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 export function SettingsProfile() {
   const data = settings.profile;
@@ -99,12 +91,8 @@ export function SettingsProfile() {
     }
   };
 
-  useEffect(() => {
-    // Keep name in sync if user hasn't typed yet — but here we just leave it.
-  }, []);
-
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel title="Identity" subtitle="How you appear in your workspace and to your agents.">
         <IdentityRow>
           <PhotoSlot
@@ -123,31 +111,21 @@ export function SettingsProfile() {
             </PhotoOverlay>
           </PhotoSlot>
           <PhotoActions>
-            <UploadBtn
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              whileTap={{ scale: 0.97 }}
-              transition={spring.snap}
-            >
+            <ActionButton variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
               <Upload size={13} strokeWidth={1.8} />
               Upload photo
-            </UploadBtn>
+            </ActionButton>
             {avatar && (
-              <RemoveBtn
-                type="button"
-                onClick={removeAvatar}
-                whileTap={{ scale: 0.97 }}
-                transition={spring.snap}
-              >
+              <ActionButton variant="danger" size="sm" onClick={removeAvatar}>
                 <XIcon size={13} strokeWidth={1.8} />
                 Remove
-              </RemoveBtn>
+              </ActionButton>
             )}
             <input
               ref={fileRef}
               type="file"
               accept="image/*"
-              style={{ display: 'none' }}
+              className="sr-only"
               onChange={(e) => onPick(e.target.files?.[0])}
               aria-label="Profile photo file"
             />
@@ -164,9 +142,9 @@ export function SettingsProfile() {
           <TextInput label="Timezone" value={tz} onChange={(e) => setTz(e.target.value)} />
           <TextInput label="Locale" value={loc} onChange={(e) => setLoc(e.target.value)} />
         </FieldGrid>
-        <div style={{ marginTop: 14 }}>
+        <BioRow>
           <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-        </div>
+        </BioRow>
         <SaveRow onSave={() => toast.success('Profile saved')} />
       </Panel>
     </motion.div>
@@ -193,17 +171,17 @@ const PhotoSlot = styled(motion.div)`
   cursor: pointer;
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    border-color: rgba(192, 132, 252, 0.55);
+    border-color: ${({ theme }) => theme.app.status.lilac.border};
   }
 
   &:focus-visible {
     outline: none;
-    border-color: rgba(147, 197, 253, 0.55);
+    border-color: ${({ theme }) => theme.app.border.focus};
     box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.32);
   }
 `;
@@ -237,51 +215,6 @@ const PhotoActions = styled.div`
   flex-wrap: wrap;
 `;
 
-const UploadBtn = styled(motion.button)`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f5f7fb;
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast},
-    border-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.10);
-    border-color: rgba(255, 255, 255, 0.18);
-  }
-`;
-
-const RemoveBtn = styled(motion.button)`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: transparent;
-  color: rgba(229, 231, 235, 0.7);
-  font-family: inherit;
-  font-size: 12.5px;
-  font-weight: 500;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.fast},
-    border-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    background: rgba(248, 113, 113, 0.10);
-    border-color: rgba(248, 113, 113, 0.30);
-    color: rgba(248, 113, 113, 1);
-  }
-`;
-
 const PhotoMeta = styled.div`
   display: flex;
   flex-direction: column;
@@ -290,11 +223,11 @@ const PhotoMeta = styled.div`
 `;
 
 const PhotoMetaRow = styled.div`
-  font-size: 12.5px;
-  color: rgba(229, 231, 235, 0.6);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
 
   strong {
-    color: #f5f7fb;
+    color: ${({ theme }) => theme.app.text.primary};
     font-weight: 500;
   }
 `;
@@ -307,4 +240,8 @@ const FieldGrid = styled.div`
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
   }
+`;
+
+const BioRow = styled.div`
+  margin-top: 14px;
 `;
