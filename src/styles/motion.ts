@@ -102,3 +102,19 @@ export const lift = {
   whileTap: { scale: 0.985 },
   transition: spring.snap,
 };
+
+// ─── App page reveal ──────────────────────────────────────────────────
+/**
+ * Standard dashboard page entrance: fade-up with the premium ease,
+ * staggered by index. Pass the element's order as `custom`.
+ *
+ *   <motion.div variants={pageItem} initial="hidden" animate="visible" custom={0}>
+ */
+export const pageItem: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: ease.premium, delay: 0.05 + i * 0.06 },
+  }),
+};

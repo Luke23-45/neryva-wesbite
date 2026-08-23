@@ -114,4 +114,32 @@ export const GlobalStyles = createGlobalStyle`
     white-space: nowrap;
     border: 0;
   }
+
+  /* App shells (Agent Studio / Deployment) — dark chrome.
+     The shells toggle this class on <body> while mounted. */
+  body.app-shell {
+    background-color: ${({ theme }) => theme.app.bg.base};
+    color-scheme: ${({ theme }) => theme.app.colorScheme};
+    scrollbar-color: ${({ theme }) => theme.app.scrollbar} transparent;
+  }
+
+  body.app-shell ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  body.app-shell ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  body.app-shell ::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.app.scrollbar};
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  body.app-shell ::-webkit-scrollbar-thumb:hover {
+    background-color: ${({ theme }) => theme.app.surface.active};
+  }
 `;

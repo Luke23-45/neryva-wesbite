@@ -121,6 +121,11 @@ export function StudioShell({
   const onChat = location.pathname === '/agent-studio/chat' || location.pathname.startsWith('/agent-studio/chat/');
 
   useEffect(() => {
+    document.body.classList.add('app-shell');
+    return () => document.body.classList.remove('app-shell');
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();

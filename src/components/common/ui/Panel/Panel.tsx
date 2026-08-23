@@ -5,10 +5,12 @@ type Props = {
   title?: ReactNode;
   subtitle?: ReactNode;
   action?: ReactNode;
+  /** Removes PanelBody padding — for tables/lists that run edge to edge. */
+  flush?: boolean;
   children?: ReactNode;
 };
 
-export function Panel({ title, subtitle, action, children }: Props) {
+export function Panel({ title, subtitle, action, flush = false, children }: Props) {
   const hasHeader = title != null || subtitle != null || action != null;
   return (
     <PanelRoot>
@@ -21,7 +23,7 @@ export function Panel({ title, subtitle, action, children }: Props) {
           {action && <PanelAside>{action}</PanelAside>}
         </PanelHeader>
       )}
-      <PanelBody>{children}</PanelBody>
+      <PanelBody $flush={flush}>{children}</PanelBody>
     </PanelRoot>
   );
 }

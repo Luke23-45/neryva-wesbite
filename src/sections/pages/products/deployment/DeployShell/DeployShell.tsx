@@ -118,6 +118,11 @@ export function DeployShell({
   const matchRoute = useMatchRoute();
 
   useEffect(() => {
+    document.body.classList.add('app-shell');
+    return () => document.body.classList.remove('app-shell');
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();

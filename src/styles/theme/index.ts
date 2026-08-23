@@ -6,6 +6,7 @@ import { radii } from './radii';
 import { shadows } from './shadows';
 import { transitions } from './transitions';
 import { zIndices } from './zIndices';
+import { app } from './app';
 
 export const theme = {
   colors,
@@ -18,6 +19,7 @@ export const theme = {
   shadows,
   transitions,
   zIndices,
+  app,
 } as const;
 
 export type Theme = typeof theme;

@@ -5,8 +5,8 @@ export const Card = styled.div`
   flex-direction: column;
   gap: 8px;
   padding: 18px 20px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 14px;
   min-height: 138px;
   position: relative;
@@ -15,20 +15,21 @@ export const Card = styled.div`
 
 export const Label = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.5);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const Value = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: 30px;
+  font-size: ${({ theme }) => theme.app.type.metric};
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1.05;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
+  font-variant-numeric: tabular-nums;
 `;
 
 export const Row = styled.div`
@@ -44,11 +45,13 @@ export const Delta = styled.span<{ $positive: boolean }>`
   gap: 2px;
   padding: 2px 6px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
-  color: ${({ $positive }) => ($positive ? '#6ee7b7' : '#fca5a5')};
-  background: ${({ $positive }) =>
-    $positive ? 'rgba(16, 185, 129, 0.10)' : 'rgba(239, 68, 68, 0.10)'};
+  font-variant-numeric: tabular-nums;
+  color: ${({ theme, $positive }) =>
+    $positive ? theme.app.status.emerald.fg : theme.app.status.error.fg};
+  background: ${({ theme, $positive }) =>
+    $positive ? theme.app.status.success.bg : theme.app.status.error.bg};
 `;
 
 export const SparkWrap = styled.div`
@@ -61,6 +64,6 @@ export const SparkWrap = styled.div`
 `;
 
 export const Footnote = styled.span`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
 `;
