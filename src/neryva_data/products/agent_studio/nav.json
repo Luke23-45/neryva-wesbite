@@ -1,21 +1,46 @@
 {
   "nav": [
-    { "label": "Dashboard", "to": "/agent-studio/dashboard", "icon": "dashboard" },
-    { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
-    { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
-    { "label": "Knowledge", "to": "/agent-studio/knowledge", "icon": "knowledge" },
-    { "label": "Models", "to": "/agent-studio/models", "icon": "models" },
-    { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
-    { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" },
-    { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
-    { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
-    { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates" },
-    { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" },
-    { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" },
-    { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
-    { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations" },
-    { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
-    { "label": "Settings", "to": "/agent-studio/settings", "icon": "settings" }
+    {
+      "section": "Workspace",
+      "items": [
+        { "label": "Dashboard", "to": "/agent-studio/dashboard", "icon": "dashboard" },
+        { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
+        { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
+        { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
+        { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" }
+      ]
+    },
+    {
+      "section": "Knowledge",
+      "items": [
+        { "label": "Knowledge", "to": "/agent-studio/knowledge", "icon": "knowledge" },
+        { "label": "Models", "to": "/agent-studio/models", "icon": "models" },
+        { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates" }
+      ]
+    },
+    {
+      "section": "Insights",
+      "items": [
+        { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
+        { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
+        { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations" }
+      ]
+    },
+    {
+      "section": "Platform",
+      "items": [
+        { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
+        { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" },
+        { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
+        { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" }
+      ]
+    },
+    {
+      "section": "Settings",
+      "items": [
+        { "label": "Settings", "to": "/agent-studio/settings/profile", "icon": "settings" }
+      ]
+    }
   ],
   "user": {
     "initials": "NV",

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { Search as SearchIcon, ArrowRight } from 'lucide-react';
+import { ease } from '@styles/motion';
 import {
   Overlay,
   Palette,
@@ -19,6 +20,7 @@ import {
   ItemTitle,
   ItemSub,
   ItemShortcut,
+  ActiveArrow,
   Empty,
   Footer,
   FooterLeft,
@@ -42,8 +44,6 @@ type Props = {
   items: CommandItem[];
   brand: 'studio' | 'deploy';
 };
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 export function CommandPalette({ open, onClose, items, brand }: Props) {
   const [query, setQuery] = useState('');
@@ -122,7 +122,7 @@ export function CommandPalette({ open, onClose, items, brand }: Props) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: premiumEase }}
+          transition={{ duration: 0.18, ease: ease.premium }}
         >
           <Palette
             onClick={(e) => e.stopPropagation()}
@@ -130,7 +130,7 @@ export function CommandPalette({ open, onClose, items, brand }: Props) {
             initial={{ opacity: 0, y: -16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ duration: 0.22, ease: premiumEase }}
+            transition={{ duration: 0.22, ease: ease.premium }}
           >
             <SearchRow>
               <SearchIconWrap>
@@ -185,7 +185,7 @@ export function CommandPalette({ open, onClose, items, brand }: Props) {
                             </ItemShortcut>
                           )}
                           {idx === active && (
-                            <ArrowRight size={12} strokeWidth={1.7} style={{ color: 'rgba(229, 231, 235, 0.55)' }} />
+                            <ActiveArrow aria-hidden="true"><ArrowRight size={12} strokeWidth={1.7} /></ActiveArrow>
                           )}
                         </Item>
                       );
@@ -198,7 +198,7 @@ export function CommandPalette({ open, onClose, items, brand }: Props) {
             <Footer>
               <FooterLeft>
                 <span>
-                  <Kbd style={{ marginRight: 6 }}>esc</Kbd>to close
+                  <Kbd>esc</Kbd>to close
                 </span>
               </FooterLeft>
               <FooterRight>

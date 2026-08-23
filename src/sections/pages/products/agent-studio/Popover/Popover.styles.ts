@@ -12,10 +12,10 @@ export const PopoverPanel = styled(motion.div)<{ $width?: number }>`
   right: 0;
   width: ${({ $width }) => $width ?? 320}px;
   max-width: calc(100vw - 32px);
-  background: rgba(15, 17, 22, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: ${({ theme }) => theme.app.surface.glass};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   border-radius: 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: ${({ theme }) => theme.app.shadow.popover};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   overflow: hidden;
@@ -31,9 +31,9 @@ export const PopoverHeader = styled.div`
 `;
 
 export const PopoverTitle = styled.div`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
 `;
 
@@ -41,13 +41,19 @@ export const PopoverAction = styled.button`
   background: transparent;
   border: 0;
   font-family: inherit;
-  font-size: 11.5px;
-  color: rgba(147, 197, 253, 0.85);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.link};
   cursor: pointer;
   padding: 0;
+  transition: color ${({ theme }) => theme.transitions.fast};
 
-  &:hover {
-    color: #93c5fd;
+  &:hover:not(:disabled) {
+    color: ${({ theme }) => theme.app.text.linkHover};
+  }
+
+  &:disabled {
+    color: ${({ theme }) => theme.app.text.faint};
+    cursor: default;
   }
 `;
 
@@ -61,15 +67,20 @@ export const MenuItem = styled.a<{ $tone?: 'default' | 'danger' }>`
   border: 0;
   background: transparent;
   font-family: inherit;
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: ${({ $tone }) => ($tone === 'danger' ? '#fca5a5' : '#e6e9ef')};
+  color: ${({ theme, $tone }) => ($tone === 'danger' ? theme.app.status.error.fg : theme.app.text.body)};
   cursor: pointer;
   text-decoration: none;
   transition: background ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: ${({ theme }) => theme.app.surface.active};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
   }
 `;
 
@@ -77,7 +88,7 @@ export const MenuIcon = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(229, 231, 235, 0.6);
+  color: ${({ theme }) => theme.app.text.muted};
   flex-shrink: 0;
 `;
 
@@ -91,20 +102,20 @@ export const MenuLabel = styled.span`
 
 export const MenuHint = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
   margin-left: 12px;
   flex-shrink: 0;
 `;
 
 export const Divider = styled.div`
   height: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => theme.app.border.default};
 `;
 
 export const Empty = styled.div`
   padding: 24px 16px;
   text-align: center;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
 `;

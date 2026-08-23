@@ -35,13 +35,15 @@ export const app = {
     tint: 'rgba(255, 255, 255, 0.04)',   // wells, inputs, inactive segments
     hover: 'rgba(255, 255, 255, 0.05)',  // hover tint
     active: 'rgba(255, 255, 255, 0.08)', // pressed / emphasized fill
+    glass: 'rgba(15, 17, 22, 0.95)',     // popovers, command palette, menus
   },
 
   /** Hairlines. */
   border: {
     hairline: 'rgba(255, 255, 255, 0.04)', // internal dividers, table rows
     default: 'rgba(255, 255, 255, 0.06)',  // panels, topbars, inputs
-    strong: 'rgba(255, 255, 255, 0.08)',   // emphasized edges, hover borders
+    strong: 'rgba(255, 255, 255, 0.08)',   // emphasized edges
+    hover: 'rgba(255, 255, 255, 0.16)',    // brightened edge on hover
     focus: 'rgba(147, 197, 253, 0.45)',    // focused input border
   },
 

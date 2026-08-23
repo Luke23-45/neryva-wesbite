@@ -1,9 +1,9 @@
 import { Outlet } from '@tanstack/react-router';
-import { StudioShell, type StudioNavItem, type RecentChat } from '@/sections/pages/products/agent-studio/StudioShell';
+import { StudioShell, type StudioNavGroup, type RecentChat } from '@/sections/pages/products/agent-studio/StudioShell';
 import navData from '@neryva_data/products/agent_studio/nav.json';
 
 type NavJson = {
-  nav: StudioNavItem[];
+  nav: StudioNavGroup[];
   user: { initials: string; name: string; tier: string; email: string };
   workspace: { name: string; plan: string };
   searchPlaceholder: string;

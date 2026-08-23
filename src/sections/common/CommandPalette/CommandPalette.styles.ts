@@ -4,7 +4,7 @@ export const Overlay = styled.div`
   position: fixed;
   inset: 0;
   z-index: 600;
-  background: rgba(0, 0, 0, 0.50);
+  background: ${({ theme }) => theme.app.scrim};
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
@@ -16,13 +16,12 @@ export const Overlay = styled.div`
 export const Palette = styled.div`
   width: 100%;
   max-width: 640px;
-  background: rgba(15, 17, 22, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: ${({ theme }) => theme.app.surface.glass};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
   border-radius: 16px;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-    0 32px 80px rgba(0, 0, 0, 0.6),
-    0 8px 24px rgba(0, 0, 0, 0.4);
+    ${({ theme }) => theme.app.shadow.popover};
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   overflow: hidden;
@@ -36,11 +35,11 @@ export const SearchRow = styled.div`
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const SearchIcon = styled.span`
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
   display: inline-flex;
 `;
 
@@ -50,11 +49,11 @@ export const SearchInput = styled.input`
   background: transparent;
   outline: none;
   font-family: inherit;
-  font-size: 15px;
-  color: #f5f7fb;
+  font-size: ${({ theme }) => theme.app.type.title};
+  color: ${({ theme }) => theme.app.text.primary};
 
   &::placeholder {
-    color: rgba(229, 231, 235, 0.40);
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 
@@ -63,8 +62,12 @@ export const KbdHint = styled.div`
   align-items: center;
   gap: 6px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+
+  ${({ theme }) => theme.media.mobile} {
+    display: none;
+  }
 `;
 
 export const Kbd = styled.span`
@@ -75,9 +78,9 @@ export const Kbd = styled.span`
   height: 18px;
   padding: 0 5px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  color: rgba(229, 231, 235, 0.78);
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  color: ${({ theme }) => theme.app.text.secondary};
   font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -88,8 +91,13 @@ export const Results = styled.div`
   overflow-y: auto;
   padding: 8px;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.app.scrollbar};
+    border-radius: 4px;
+  }
 `;
 
 export const Section = styled.div`
@@ -99,10 +107,10 @@ export const Section = styled.div`
 export const SectionLabel = styled.div`
   padding: 6px 12px 4px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10.5px;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(229, 231, 235, 0.45);
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const Item = styled.button<{ $active: boolean }>`
@@ -113,14 +121,19 @@ export const Item = styled.button<{ $active: boolean }>`
   padding: 9px 12px;
   border: 0;
   border-radius: 8px;
-  background: ${({ $active }) => ($active ? 'rgba(255, 255, 255, 0.06)' : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.app.surface.active : 'transparent')};
   font-family: inherit;
-  font-size: 13.5px;
-  color: ${({ $active }) => ($active ? '#f5f7fb' : 'rgba(229, 231, 235, 0.85)')};
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ $active, theme }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
   cursor: pointer;
   text-align: left;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
 `;
 
 export const ItemIcon = styled.span<{ $active: boolean }>`
@@ -130,9 +143,8 @@ export const ItemIcon = styled.span<{ $active: boolean }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: ${({ $active }) =>
-    $active ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)'};
-  color: ${({ $active }) => ($active ? '#f5f7fb' : 'rgba(229, 231, 235, 0.65)')};
+  background: ${({ $active, theme }) => ($active ? theme.app.surface.active : theme.app.surface.tint)};
+  color: ${({ $active, theme }) => ($active ? theme.app.text.primary : theme.app.text.muted)};
   flex-shrink: 0;
 `;
 
@@ -145,15 +157,21 @@ export const ItemBody = styled.div`
 `;
 
 export const ItemTitle = styled.div`
-  font-size: 13.5px;
+  font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
-  color: #f5f7fb;
+  color: ${({ theme }) => theme.app.text.primary};
   letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 export const ItemSub = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.55);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 export const ItemShortcut = styled.div`
@@ -162,11 +180,16 @@ export const ItemShortcut = styled.div`
   gap: 4px;
 `;
 
+export const ActiveArrow = styled.span`
+  display: inline-flex;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
 export const Empty = styled.div`
   padding: 40px 16px;
   text-align: center;
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.5);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const Footer = styled.div`
@@ -175,7 +198,7 @@ export const Footer = styled.div`
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
   background: rgba(0, 0, 0, 0.20);
 `;
 
@@ -183,11 +206,11 @@ export const FooterLeft = styled.div`
   display: flex;
   align-items: center;
   gap: 14px;
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const FooterRight = styled.div`
-  font-size: 11.5px;
-  color: rgba(229, 231, 235, 0.45);
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
 `;
