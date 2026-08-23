@@ -1,30 +1,35 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { Plus, FlaskConical, Database, CheckCircle2 } from 'lucide-react';
+import { Panel } from '@components/common/ui/Panel';
+import { Modal } from '@components/common/ui/Modal';
+import { Segmented } from '@components/common/ui/Segmented';
+import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
+import { ActionButton } from '@components/common/ui/ActionButton';
+import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle, SectionTitle, KpiGrid } from '@components/common/ui/ViewLayout';
+import {
+  DataTable,
+  DataHead,
+  DataRow,
+  DataCell,
+} from '@components/common/ui/DataTable';
+import { pageItem } from '@styles/motion';
 import evaluations from '@neryva_data/products/agent_studio/evaluations.json';
 import {
-  PageRoot,
-  PageHeader,
-  TitleBlock,
-  PageTitle,
-  PageSubtitle,
-  NewBtn,
-  SectionTitle,
-  KpiGrid,
+  TwoCol,
+  Card,
   KpiCard,
   KpiLabel,
   KpiValue,
   KpiMeta,
-  TwoCol,
-  Card,
-  RunTable,
-  TableHeader,
-  TableRow,
-  Th,
-  Td,
   RunName,
   RunAgent,
+  PassCell,
+  PassValue,
   PassBar,
   PassFill,
+  PassLabel,
   DatasetGrid,
   DatasetCard,
   DatasetTop,
@@ -38,36 +43,50 @@ import {
   ScorerName,
   ScorerMeta,
   ScorerRuns,
-  KindPill,
+  RunForm,
+  RunLabel,
 } from './EvaluationsView.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 },
-  }),
+const toneToStatus: Record<string, StatusTone> = {
+  emerald: 'emerald',
+  azure: 'azure',
+  lilac: 'lilac',
+  amethyst: 'amethyst',
+  warning: 'warning',
+  error: 'error',
 };
 
 export function EvaluationsView() {
+  const [runOpen, setRunOpen] = useState(false);
+  const [dataset, setDataset] = useState(evaluations.datasets[0]?.name ?? '');
+  const [agent, setAgent] = useState(evaluations.runs[0]?.agent ?? '');
+
+  const datasetOptions = evaluations.datasets.map((d) => ({ value: d.name, label: d.name }));
+  const agentOptions = Array.from(
+    new Set(evaluations.runs.map((r) => r.agent)),
+  ).map((a) => ({ value: a, label: a }));
+
+  const startRun = () => {
+    toast.success(`Eval run queued · ${dataset} × ${agent}`);
+    setRunOpen(false);
+  };
+
   return (
-    <PageRoot>
-      <PageHeader as={motion.div} initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-        <TitleBlock>
-          <PageTitle>Evaluations</PageTitle>
-          <PageSubtitle>
+    <ViewShell>
+      <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewHeader>
+          <ViewTitle>Evaluations</ViewTitle>
+          <ViewSubtitle>
             Regression suites, benchmarks, and safety checks for all production agents.
-          </PageSubtitle>
-        </TitleBlock>
-        <NewBtn type="button">
+          </ViewSubtitle>
+        </ViewHeader>
+        <ActionButton size="sm" onClick={() => setRunOpen(true)}>
           <Plus size={14} strokeWidth={2} />
           New eval run
-        </NewBtn>
-      </PageHeader>
+        </ActionButton>
+      </ViewHeaderRow>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <KpiGrid>
           <KpiCard>
             <KpiLabel>Datasets</KpiLabel>
@@ -77,11 +96,13 @@ export function EvaluationsView() {
           <KpiCard>
             <KpiLabel>Runs (30d)</KpiLabel>
             <KpiValue>{evaluations.summary.runsThisMonth}</KpiValue>
-            <KpiMeta>{Math.round(evaluations.summary.runsThisMonth / 30 * 10) / 10}/day avg</KpiMeta>
+            <KpiMeta>
+              {Math.round((evaluations.summary.runsThisMonth / 30) * 10) / 10}/day avg
+            </KpiMeta>
           </KpiCard>
           <KpiCard>
             <KpiLabel>Pass rate</KpiLabel>
-            <KpiValue style={{ color: '#34d399' }}>{evaluations.summary.passingRate}%</KpiValue>
+            <KpiValue $tone="success">{evaluations.summary.passingRate}%</KpiValue>
             <KpiMeta>across all suites</KpiMeta>
           </KpiCard>
           <KpiCard>
@@ -92,59 +113,72 @@ export function EvaluationsView() {
         </KpiGrid>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionTitle>
           <FlaskConical size={14} strokeWidth={1.7} />
           Recent runs
         </SectionTitle>
-        <RunTable>
-          <TableHeader>
-            <Th>Run</Th>
-            <Th>Dataset</Th>
-            <Th>Status</Th>
-            <Th>Pass rate</Th>
-            <Th>p95</Th>
-            <Th>Duration</Th>
-            <Th>Started</Th>
-          </TableHeader>
-          {evaluations.runs.map((r, i) => (
-            <TableRow
-              key={r.id}
-              as={motion.div}
-              initial="hidden"
-              animate="visible"
-              variants={fadeUp}
-              custom={i + 3}
-            >
-              <Td>
-                <RunName>{r.name}</RunName>
-                <RunAgent>{r.agent}</RunAgent>
-              </Td>
-              <Td>{r.dataset}</Td>
-              <Td>
-                <KindPill $tone={r.tone}>{r.status}</KindPill>
-              </Td>
-              <Td>
-                <div style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-                  {r.passed} / {r.total}
-                </div>
-                <PassBar>
-                  <PassFill $pct={r.passRate} $tone={r.tone} />
-                </PassBar>
-                <div style={{ fontSize: 11, color: 'rgba(229, 231, 235, 0.55)', marginTop: 2 }}>
-                  {r.passRate}%
-                </div>
-              </Td>
-              <Td>{r.p95Latency}ms</Td>
-              <Td>{r.duration}</Td>
-              <Td>{r.startedAt}</Td>
-            </TableRow>
-          ))}
-        </RunTable>
+        <Panel flush>
+          <DataTable>
+            <DataHead>
+              <DataCell $w="22%">Run</DataCell>
+              <DataCell $w="16%">Dataset</DataCell>
+              <DataCell $w="12%">Status</DataCell>
+              <DataCell $w="18%">Pass rate</DataCell>
+              <DataCell $w="10%" $align="right">p95</DataCell>
+              <DataCell $w="10%">Duration</DataCell>
+              <DataCell $w="12%">Started</DataCell>
+            </DataHead>
+            {evaluations.runs.map((r, i) => (
+              <DataRow
+                key={r.id}
+                as={motion.div}
+                initial="hidden"
+                animate="visible"
+                variants={pageItem}
+                custom={i + 3}
+                $interactive={false}
+              >
+                <DataCell $w="22%">
+                  <RunName>{r.name}</RunName>
+                  <RunAgent>{r.agent}</RunAgent>
+                </DataCell>
+                <DataCell $w="16%">
+                  <RunAgent as="div">{r.dataset}</RunAgent>
+                </DataCell>
+                <DataCell $w="12%">
+                  <StatusPill tone={toneToStatus[r.tone] ?? 'neutral'} dot={false}>
+                    {r.status}
+                  </StatusPill>
+                </DataCell>
+                <DataCell $w="18%">
+                  <PassCell>
+                    <PassValue>
+                      {r.passed} / {r.total}
+                    </PassValue>
+                    <PassBar>
+                      <PassFill $pct={r.passRate} $tone={r.tone} />
+                    </PassBar>
+                    <PassLabel>{r.passRate}%</PassLabel>
+                  </PassCell>
+                </DataCell>
+                <DataCell $w="10%" $align="right">
+                  <RunAgent as="div">{r.p95Latency}ms</RunAgent>
+                </DataCell>
+                <DataCell $w="10%">
+                  <RunAgent as="div">{r.duration}</RunAgent>
+                </DataCell>
+                <DataCell $w="12%">
+                  <RunAgent as="div">{r.startedAt}</RunAgent>
+                </DataCell>
+              </DataRow>
+            ))}
+          </DataTable>
+        </Panel>
       </motion.div>
 
       <TwoCol>
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={12}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>
           <SectionTitle>
             <Database size={14} strokeWidth={1.7} />
             Datasets
@@ -156,7 +190,7 @@ export function EvaluationsView() {
                 as={motion.div}
                 initial="hidden"
                 animate="visible"
-                variants={fadeUp}
+                variants={pageItem}
                 custom={i + 13}
               >
                 <DatasetTop>
@@ -164,7 +198,9 @@ export function EvaluationsView() {
                     <DatasetName>{d.name}</DatasetName>
                     <DatasetMeta>{d.agent}</DatasetMeta>
                   </DatasetLeft>
-                  <KindPill $tone={d.tone}>{d.kind}</KindPill>
+                  <StatusPill tone={toneToStatus[d.tone] ?? 'neutral'} dot={false}>
+                    {d.kind}
+                  </StatusPill>
                 </DatasetTop>
                 <DatasetBottom>
                   <DatasetExamples>{d.examples.toLocaleString()} examples</DatasetExamples>
@@ -175,7 +211,7 @@ export function EvaluationsView() {
           </DatasetGrid>
         </motion.div>
 
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={14}>
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
           <SectionTitle>
             <CheckCircle2 size={14} strokeWidth={1.7} />
             Scorers
@@ -193,6 +229,43 @@ export function EvaluationsView() {
           </Card>
         </motion.div>
       </TwoCol>
-    </PageRoot>
+
+      <Modal
+        open={runOpen}
+        onClose={() => setRunOpen(false)}
+        title="Start an eval run"
+        footer={
+          <>
+            <ActionButton variant="secondary" onClick={() => setRunOpen(false)}>
+              Cancel
+            </ActionButton>
+            <ActionButton onClick={startRun}>Start run</ActionButton>
+          </>
+        }
+      >
+        <RunForm>
+          <RunLabel>
+            Dataset
+            <Segmented
+              options={datasetOptions}
+              value={dataset}
+              onChange={setDataset}
+              size="md"
+              ariaLabel="Eval dataset"
+            />
+          </RunLabel>
+          <RunLabel>
+            Agent
+            <Segmented
+              options={agentOptions}
+              value={agent}
+              onChange={setAgent}
+              size="md"
+              ariaLabel="Agent to evaluate"
+            />
+          </RunLabel>
+        </RunForm>
+      </Modal>
+    </ViewShell>
   );
 }
