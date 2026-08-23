@@ -1,36 +1,35 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Star, X } from 'lucide-react';
+import { Star, X, MessagesSquare } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
+import { SearchField } from '@components/common/ui/SearchField';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
+import { pageItem } from '@styles/motion';
 import conversations from '@neryva_data/products/agent_studio/conversations.json';
 
 import {
-  PageRoot,
-  PageHeader,
-  PageTitle,
-  PageSubtitle,
   Layout,
   ListPane,
   Filters,
   FilterSelect,
-  FilterSearchWrap,
-  FilterSearchIcon,
-  FilterSearch,
   List,
   Row,
   RowMain,
   RowTop,
-  RowAgent,
-  RowChannel,
+  RowUser,
+  RowTime,
   RowPreview,
   RowMeta,
+  RowAgent,
+  RowChannel,
   Rating,
   DetailPane,
   DetailHeader,
   DetailMeta,
   DetailTitle,
+  DetailTitleAgent,
   DetailClose,
   Transcript,
   Bubble,
@@ -39,12 +38,6 @@ import {
 } from './ConversationsView.styles';
 
 type StatusKey = 'resolved' | 'open' | 'escalated';
-
-const premiumEase = [0.16, 1, 0.3, 1] as const;
-const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
-};
 
 const statusTone: Record<StatusKey, 'success' | 'info' | 'warning'> = {
   resolved: 'success',
@@ -57,7 +50,7 @@ export function ConversationsView() {
   const [agentFilter, setAgentFilter] = useState(data.agents[0]);
   const [statusFilter, setStatusFilter] = useState(data.statuses[0]);
   const [query, setQuery] = useState('');
-  const [activeId, setActiveId] = useState<string>(data.conversations[0].id);
+  const [activeId, setActiveId] = useState<string | null>(data.conversations[0].id);
 
   const list = useMemo(() => {
     return data.conversations.filter((c) => {
@@ -74,41 +67,39 @@ export function ConversationsView() {
     });
   }, [agentFilter, statusFilter, query, data]);
 
-  const active = data.conversations.find((c) => c.id === activeId) ?? data.conversations[0];
+  const active = activeId ? data.conversations.find((c) => c.id === activeId) : undefined;
 
   return (
-    <PageRoot>
-      <PageHeader
-        as={motion.div}
-        initial="hidden"
-        animate="visible"
-        variants={fadeUp}
-        custom={0}
-      >
-        <PageTitle>Conversations</PageTitle>
-        <PageSubtitle>
-          Review transcripts, outcomes, and escalations across every channel.
-        </PageSubtitle>
-      </PageHeader>
+    <ViewShell>
+      <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <ViewTitle>Conversations</ViewTitle>
+        <ViewSubtitle>Review transcripts, outcomes, and escalations across every channel.</ViewSubtitle>
+      </ViewHeader>
 
-      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Layout>
           <ListPane>
             <Filters>
-              <FilterSelect value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)}>
+              <FilterSelect
+                value={agentFilter}
+                onChange={(e) => setAgentFilter(e.target.value)}
+                aria-label="Filter by agent"
+              >
                 {data.agents.map((a) => <option key={a}>{a}</option>)}
               </FilterSelect>
-              <FilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <FilterSelect
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label="Filter by status"
+              >
                 {data.statuses.map((s) => <option key={s}>{s}</option>)}
               </FilterSelect>
-              <FilterSearchWrap>
-                <FilterSearchIcon><Search size={13} strokeWidth={1.7} /></FilterSearchIcon>
-                <FilterSearch
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search…"
-                />
-              </FilterSearchWrap>
+              <SearchField
+                value={query}
+                onChange={setQuery}
+                placeholder="Search…"
+                ariaLabel="Search conversations"
+              />
             </Filters>
 
             {list.length === 0 ? (
@@ -118,27 +109,31 @@ export function ConversationsView() {
                 {list.map((c, i) => (
                   <Row
                     key={c.id}
+                    type="button"
                     $active={c.id === activeId}
+                    aria-current={c.id === activeId ? 'true' : undefined}
                     onClick={() => setActiveId(c.id)}
-                    as={motion.div}
+                    as={motion.button}
                     initial="hidden"
                     animate="visible"
-                    variants={fadeUp}
+                    variants={pageItem}
                     custom={i}
                   >
                     <RowMain>
                       <RowTop>
-                        <strong style={{ fontWeight: 500, color: '#f5f7fb' }}>{c.user}</strong>
-                        <span style={{ fontSize: 11, color: 'rgba(229,231,235,0.4)' }}>{c.time}</span>
+                        <RowUser>{c.user}</RowUser>
+                        <RowTime>{c.time}</RowTime>
                       </RowTop>
                       <RowPreview>{c.preview}</RowPreview>
                       <RowMeta>
                         <RowAgent>{c.agent}</RowAgent>
                         <RowChannel>· {c.channel}</RowChannel>
-                        <StatusPill tone={statusTone[c.status as StatusKey]} dot={false}>{c.status}</StatusPill>
+                        <StatusPill tone={statusTone[c.status as StatusKey]} dot={false}>
+                          {c.status}
+                        </StatusPill>
                         {c.rating > 0 && (
                           <Rating>
-                            <Star size={11} fill="#fbbf24" strokeWidth={0} />
+                            <Star size={11} fill="#fbbf24" strokeWidth={0} aria-label={`${c.rating} star rating`} />
                             {c.rating}
                           </Rating>
                         )}
@@ -151,51 +146,61 @@ export function ConversationsView() {
           </ListPane>
 
           <DetailPane>
-            <Panel
-              title={
-                <DetailTitle>
-                  {active.user}
-                  <span style={{ fontSize: 12, color: 'rgba(229,231,235,0.5)', fontWeight: 400 }}>
-                    · {active.agent}
-                  </span>
-                </DetailTitle>
-              }
-              subtitle={
-                <DetailHeader>
-                  <DetailMeta>
-                    <StatusPill tone={statusTone[active.status as StatusKey]} dot={false}>{active.status}</StatusPill>
-                    <span>{active.channel}</span>
-                    <span>·</span>
-                    <span>{active.messages} messages</span>
-                    <span>·</span>
-                    <span>{active.duration}</span>
-                  </DetailMeta>
-                  <DetailClose aria-label="Close detail">
-                    <X size={14} strokeWidth={1.7} />
-                  </DetailClose>
-                </DetailHeader>
-              }
-            >
-              <Transcript>
-                {active.transcript.map((m, i) => (
-                  <Bubble
-                    key={i}
-                    $role={m.role as 'user' | 'agent'}
-                    as={motion.div}
-                    initial="hidden"
-                    animate="visible"
-                    variants={fadeUp}
-                    custom={i}
-                  >
-                    <BubbleMeta>{m.role === 'user' ? active.user : active.agent}</BubbleMeta>
-                    <BubbleText>{m.text}</BubbleText>
-                  </Bubble>
-                ))}
-              </Transcript>
-            </Panel>
+            {active ? (
+              <Panel
+                title={
+                  <DetailTitle>
+                    {active.user}
+                    <DetailTitleAgent>· {active.agent}</DetailTitleAgent>
+                  </DetailTitle>
+                }
+                subtitle={
+                  <DetailHeader>
+                    <DetailMeta>
+                      <StatusPill tone={statusTone[active.status as StatusKey]} dot={false}>
+                        {active.status}
+                      </StatusPill>
+                      <span>{active.channel}</span>
+                      <span>·</span>
+                      <span>{active.messages} messages</span>
+                      <span>·</span>
+                      <span>{active.duration}</span>
+                    </DetailMeta>
+                    <DetailClose aria-label="Close detail" onClick={() => setActiveId(null)}>
+                      <X size={14} strokeWidth={1.7} />
+                    </DetailClose>
+                  </DetailHeader>
+                }
+              >
+                <Transcript>
+                  {active.transcript.map((m, i) => (
+                    <Bubble
+                      key={i}
+                      $role={m.role as 'user' | 'agent'}
+                      as={motion.div}
+                      initial="hidden"
+                      animate="visible"
+                      variants={pageItem}
+                      custom={i}
+                    >
+                      <BubbleMeta>{m.role === 'user' ? active.user : active.agent}</BubbleMeta>
+                      <BubbleText>{m.text}</BubbleText>
+                    </Bubble>
+                  ))}
+                </Transcript>
+              </Panel>
+            ) : (
+              <Panel>
+                <EmptyState
+                  icon={<MessagesSquare size={26} strokeWidth={1.5} />}
+                  title="No conversation selected"
+                  description="Pick a conversation from the list to read its transcript."
+                />
+              </Panel>
+            )}
           </DetailPane>
         </Layout>
       </motion.div>
-    </PageRoot>
+    </ViewShell>
   );
 }
