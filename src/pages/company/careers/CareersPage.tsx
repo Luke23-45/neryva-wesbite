@@ -10,7 +10,7 @@ export default function CareersPage() {
       <PageHead
         title="Careers"
         description="Join Neryva Lab. We are looking for exceptional researchers, engineers, and operators."
-        canonicalPath="/lab/careers"
+        canonicalPath="/company/careers"
       />
 
       <main>

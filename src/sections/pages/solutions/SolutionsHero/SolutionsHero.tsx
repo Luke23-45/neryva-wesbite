@@ -6,6 +6,7 @@ import heroData from '@neryva_data/solutions/hero.json';
 import { SolutionsHeroVisual } from './SolutionsHeroVisual';
 
 import {
+import { ease } from '@styles/motion';
   HeroWrapper,
   InnerGrid,
   ContentColumn,
@@ -19,7 +20,6 @@ import {
   IconContainer,
 } from './SolutionsHero.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 32 },
@@ -28,7 +28,7 @@ const fadeUp = {
     y: 0,
     transition: {
       duration: 0.9,
-      ease: premiumEase,
+      ease: ease.premium,
       delay: custom * 0.12,
     },
   }),
@@ -140,7 +140,7 @@ export function SolutionsHero() {
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.4, ease: premiumEase, delay: 0.4 }}
+            transition={{ duration: 1.4, ease: ease.premium, delay: 0.4 }}
             style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
           >
             {/* Whatever visual component gets routed here will sit in flawless proportion to text */}

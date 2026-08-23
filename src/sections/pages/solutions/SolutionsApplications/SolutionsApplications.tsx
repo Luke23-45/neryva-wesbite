@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import appsData from '@neryva_data/solutions/applications.json';
 import { AppliesFeatureIcon } from '@assets/visual/solution/solutionapplicatioinicon';
 import {
+import { ease } from '@styles/motion';
   AppsWrapper,
   InnerContainer,
   AppsHeader,
@@ -15,7 +16,6 @@ import {
   CellDesc,
 } from './SolutionsApplications.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -24,7 +24,7 @@ const fadeUp = {
     y: 0,
     transition: {
       duration: 0.8,
-      ease: premiumEase,
+      ease: ease.premium,
       delay: custom * 0.1,
     },
   }),

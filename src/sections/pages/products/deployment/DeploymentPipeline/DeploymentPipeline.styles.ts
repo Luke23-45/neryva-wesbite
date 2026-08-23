@@ -70,7 +70,7 @@ export const DeploymentPipelineSidebarItem = styled.button<{ $active: boolean }>
   cursor: pointer;
 
   font-family: ${({ theme }) => theme.typography.fonts.sans};
-  font-size: ${({ theme }) => theme.app.type.title};
+  font-size: 15px;
   line-height: 1.4;
   letter-spacing: -0.01em;
   text-align: left;
@@ -106,7 +106,7 @@ export const DeploymentPipelineSidebarItem = styled.button<{ $active: boolean }>
   }
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.app.type.body};
+    font-size: 13px;
   }
 `;
 
@@ -191,7 +191,7 @@ export const DeploymentPipelineVisualBlock = styled.div`
 
   background-color: #F8F9FA;
   background-image:
-    radial-gradient(ellipse 70% 55% at 18% 8%, ${({ theme }) => theme.app.status.lilac.bg}, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 18% 8%, rgba(192, 132, 252, 0.10), transparent 60%),
     radial-gradient(ellipse 75% 60% at 88% 96%, rgba(37, 99, 235, 0.07), transparent 65%);
   animation: deployment-visual-block-breathe 16s ease-in-out infinite;
 
@@ -300,7 +300,7 @@ export const DeploymentPipelineVisualCaption = styled.div`
 
 export const DeploymentPipelineVisualTypeLabel = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.app.type.micro};
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -317,7 +317,7 @@ export const DeploymentPipelineVisualTypeLabel = styled.span`
 `;
 
 export const DeploymentPipelineVisualDescription = styled.p`
-  font-size: ${({ theme }) => theme.app.type.body};
+  font-size: 13px;
   line-height: 1.5;
   color: ${({ theme }) => theme.colors.text.secondary};
   text-align: center;
@@ -327,7 +327,7 @@ export const DeploymentPipelineVisualDescription = styled.p`
   z-index: 1;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.app.type.micro};
+    font-size: 11px;
   }
 `;
 
@@ -389,7 +389,7 @@ export const DeploymentPipelineFeatureDescription = styled.p`
   margin: 0;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.app.type.bodyLg};
+    font-size: 14px;
   }
 `;
 

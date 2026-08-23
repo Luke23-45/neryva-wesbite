@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import outcomesData from '@neryva_data/solutions/business_outcomes.json';
 import {
+import { ease } from '@styles/motion';
   Wrapper,
   InnerGrid,
   StickyHeader,
@@ -14,7 +15,6 @@ import {
   HoverPill
 } from './BusinessOutcomes.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 export function BusinessOutcomes() {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
@@ -29,7 +29,7 @@ export function BusinessOutcomes() {
           initial={{ opacity: 0, x: -24 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.8, ease: premiumEase }}
+          transition={{ duration: 0.8, ease: ease.premium }}
         >
           <Title>{outcomesData.title}</Title>
           <Description>{outcomesData.description}</Description>
@@ -51,7 +51,7 @@ export function BusinessOutcomes() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-40px' }}
                 // Cascading sequence entry animation per row
-                transition={{ duration: 0.8, ease: premiumEase, delay: idx * 0.08 }}
+                transition={{ duration: 0.8, ease: ease.premium, delay: idx * 0.08 }}
               >
 
                 {/* ── THE APPLE-STYLE PHYSICS PILL ── */}

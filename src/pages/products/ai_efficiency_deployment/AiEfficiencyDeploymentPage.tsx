@@ -11,7 +11,7 @@ export default function AiEfficiencyDeploymentPage() {
       <PageHead
         title="Neryva AI Deployment"
         description={heroData.description}
-        canonicalPath="/products/neryva-ai-deployment"
+        canonicalPath="/products/ai-deployment"
       />
       <DeploymentHero />
       <DeploymentUseCases />

@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router';
 import coreData from '@neryva_data/solutions/core_offers.json';
 import { EnterpriseFeatureIcon } from '@assets/visual/solution/solutioncoreicons';
 import {
+import { ease } from '@styles/motion';
   CoreWrapper,
   ProductSection,
   SectionHeader,
@@ -23,14 +24,13 @@ import {
   CardDesc,
 } from './SolutionsCore.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (custom: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: premiumEase, delay: custom * 0.1 },
+    transition: { duration: 0.8, ease: ease.premium, delay: custom * 0.1 },
   }),
 };
 

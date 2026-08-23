@@ -139,13 +139,13 @@ export const DeploymentUseCasesAppTitle = styled.h3`
 `;
 
 export const DeploymentUseCasesAppDesc = styled.p`
-  font-size: ${({ theme }) => theme.app.type.title};
+  font-size: 15px;
   line-height: 1.7;
   color: ${({ theme }) => theme.colors.text.secondary};
   margin: 0;
   max-width: 90%;
 
   ${({ theme }) => theme.media.mobile} {
-    font-size: ${({ theme }) => theme.app.type.body};
+    font-size: 13px;
   }
 `;

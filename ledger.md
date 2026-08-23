@@ -176,9 +176,9 @@ top to bottom; shells come before the pages they frame.
 
 | # | Work item | Routes | Status |
 |---|---|---|---|
-| 3.1 | Solutions | `/solutions` | — |
-| 3.2 | Product marketing: Agent Studio | `/products/neryva-agent-studio` | — |
-| 3.3 | Product marketing: AI Deployment | `/products/ai-deployment` | — |
+| 3.1 | Solutions | `/solutions` | DONE |
+| 3.2 | Product marketing: Agent Studio | `/products/neryva-agent-studio` | DONE |
+| 3.3 | Product marketing: AI Deployment | `/products/ai-deployment` | DONE |
 | 3.4 | Auth (multi-step sign-in/sign-up/OTP) | `/auth` | DONE |
 | 3.5 | Secret reveal (deliberately minimal — refine, don't decorate) | `/secret` | DONE |
 | 3.6 | Global 404 | `*` | DONE |

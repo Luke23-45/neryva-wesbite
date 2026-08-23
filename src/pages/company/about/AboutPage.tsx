@@ -14,7 +14,7 @@ export default function AboutPage() {
       <PageHead
         title="About"
         description="The mission and team of Neryva Lab."
-        canonicalPath="/lab/about"
+        canonicalPath="/company/about"
       />
 
       <main>

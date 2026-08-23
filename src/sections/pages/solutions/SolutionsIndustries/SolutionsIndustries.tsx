@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import industryData from '@neryva_data/solutions/industries.json';
 import { IndustryFeatureIcon } from '@assets/visual/solution/solutionindustry';
 import {
+import { ease } from '@styles/motion';
   Wrapper,
   InnerContainer,
   HeaderBlock,
@@ -23,14 +24,13 @@ import {
   AppDesc
 } from './SolutionsIndustries.styles';
 
-const premiumEase = [0.16, 1, 0.3, 1] as const;
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: (custom: number) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: premiumEase, delay: custom * 0.08 },
+    transition: { duration: 0.7, ease: ease.premium, delay: custom * 0.08 },
   }),
 };
 
@@ -57,7 +57,7 @@ export function SolutionsIndustries() {
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.8, ease: premiumEase }}
+          transition={{ duration: 0.8, ease: ease.premium }}
         >
           <Title>{header.title}</Title>
           <Desc>{header.description}</Desc>
