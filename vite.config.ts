@@ -35,6 +35,21 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
+      // The engine, fully same-origin in dev: API + OP endpoints all route
+      // through this prefix (CORS stays closed on the engine by policy —
+      // a cross-origin token exchange would be blocked without it).
+      '/engine': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/engine/, ''),
+      },
+      // The Agent Studio runtime, for the API explorer's live GETs (I-5).
+      // Same-origin in dev; the edge routes /runtime in production.
+      '/runtime': {
+        target: process.env.RUNTIME_PROXY_TARGET || 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/runtime/, ''),
+      },
     },
   },
   build: {

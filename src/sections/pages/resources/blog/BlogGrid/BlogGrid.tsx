@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';

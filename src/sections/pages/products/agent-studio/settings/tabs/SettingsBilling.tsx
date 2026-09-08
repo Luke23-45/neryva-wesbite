@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Download } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ArrowRight } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { StatusPill } from '@components/common/ui/StatusPill';
-import { ActionButton } from '@components/common/ui/ActionButton';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
 import {
   DataTable,
   DataHead,
@@ -15,94 +16,155 @@ import {
   CellMeta,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
+import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type EntitlementRow } from '@hooks/engine/queries';
 import { UpgradeModal } from '../../UpgradeModal/UpgradeModal';
-import settings from '@neryva_data/products/agent_studio/settings.json';
+
+/**
+ * Settings → Billing — the live summary (ledger D-3: summary + deep-link;
+ * the full ledger plane lives at /platform/billing).
+ *
+ * D-1 boundary: plan names and prices are NOT rendered here — the
+ * entitlement state, period, quota meters, and invoices are real; how
+ * plans display is a deferred decision owned by the upgrade surfaces.
+ * PDF downloads are ⛔ E-13 — no fake download buttons.
+ */
+
+function stateTone(state: string): 'success' | 'azure' | 'warning' | 'error' | 'neutral' {
+  if (state === 'active') return 'success';
+  if (state === 'trial') return 'azure';
+  if (state === 'past_due') return 'warning';
+  if (state === 'suspended') return 'error';
+  return 'neutral';
+}
 
 export function SettingsBilling() {
-  const b = settings.billing;
-  const msgPct = (b.messagesUsed / b.messagesLimit) * 100;
-  const storagePct = (b.storageUsedGb / b.storageLimitGb) * 100;
+  const entitlements = useEntitlements();
+  const row: EntitlementRow | undefined = entitlements.data?.entitlements.find((e) => e.product === 'agent_studio');
+  const limits = useOrgLimits();
+  const meters = parseQuotaMeters(limits.data, 'agent_studio');
+
+  const daysLeft = row?.msRemaining ? Math.ceil(row.msRemaining / 86_400_000) : null;
 
   return (
     <>
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel
-          title="Current plan"
-          subtitle={`Renews on ${b.renewal}`}
+          title="Agent Studio"
+          subtitle={periodSubtitle(row, daysLeft)}
           action={<UpgradeModal />}
         >
           <PlanCard>
-            <PlanName>{b.plan}</PlanName>
-            <PlanPrice>{b.price}</PlanPrice>
+            <PlanName>Entitlement</PlanName>
             <PlanStatus>
-              <StatusPill tone="success">active</StatusPill>
+              {row ? (
+                <StatusPill tone={stateTone(row.status)} dot={false}>
+                  {row.status.replace('_', ' ')}
+                </StatusPill>
+              ) : entitlements.isPending ? (
+                <Skeleton $h="22px" $w="92px" $r="999px" />
+              ) : (
+                <StatusPill tone="neutral" dot={false}>not enabled</StatusPill>
+              )}
             </PlanStatus>
           </PlanCard>
 
-          <UsageStack>
-            <div>
-              <UsageRow>
-                <span>Messages this month</span>
-                <UsageValue>
-                  {b.messagesUsed.toLocaleString()} / {b.messagesLimit.toLocaleString()}
-                </UsageValue>
-              </UsageRow>
-              <ProgressBar value={msgPct} tone={msgPct > 85 ? 'amber' : 'azure'} />
-            </div>
-            <div>
-              <UsageRow>
-                <span>Knowledge storage</span>
-                <UsageValue>
-                  {b.storageUsedGb.toFixed(1)} GB / {b.storageLimitGb} GB
-                </UsageValue>
-              </UsageRow>
-              <ProgressBar value={storagePct} tone="emerald" />
-            </div>
-          </UsageStack>
+          {meters.length > 0 && (
+            <UsageStack>
+              {meters.map((meter) => {
+                const pct = meter.limit !== null && meter.limit > 0 ? (meter.used / meter.limit) * 100 : 0;
+                return (
+                  <div key={meter.label}>
+                    <UsageRow>
+                      <span>{meter.label}</span>
+                      <UsageValue>
+                        {meter.used.toLocaleString()}
+                        {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ''}
+                      </UsageValue>
+                    </UsageRow>
+                    <ProgressBar value={pct} tone={pct > 85 ? 'amber' : 'azure'} />
+                  </div>
+                );
+              })}
+            </UsageStack>
+          )}
         </Panel>
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel title="Invoices" subtitle="Past invoices available as PDF" flush>
-          <DataTable>
-            <DataHead>
-              <DataCell $w="34%">Invoice</DataCell>
-              <DataCell $w="34%">Period</DataCell>
-              <DataCell $w="18%" $align="right">Amount</DataCell>
-              <DataCell $w="14%" />
-            </DataHead>
-            {b.invoices.map((inv) => (
-              <DataRow key={inv.id} $interactive={false}>
-                <DataCell $w="34%">
-                  <CellMono>{inv.id}</CellMono>
-                </DataCell>
-                <DataCell $w="34%">
-                  <CellMeta>{inv.period}</CellMeta>
-                </DataCell>
-                <DataCell $w="18%" $align="right">
-                  <CellMono>{inv.amount}</CellMono>
-                </DataCell>
-                <DataCell $w="14%">
-                  <InvoiceActions>
-                    <StatusPill tone="success" dot={false}>
-                      {inv.status}
-                    </StatusPill>
-                    <ActionButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => toast.success(`Downloading ${inv.id}.pdf`)}
-                    >
-                      <Download size={11} strokeWidth={1.8} /> PDF
-                    </ActionButton>
-                  </InvoiceActions>
-                </DataCell>
-              </DataRow>
-            ))}
-          </DataTable>
+        <Panel
+          title="Invoices"
+          subtitle="Billing periods close into invoices here."
+          flush
+          action={
+            <InvoiceLink to="/platform/billing">
+              Full ledgers & billing <ArrowRight size={12} strokeWidth={1.8} />
+            </InvoiceLink>
+          }
+        >
+          <QueryView
+            query={useInvoices()}
+            skeleton={<Skeleton $h="160px" $r="12px" />}
+            isEmpty={(d) => (d.invoices ?? []).length === 0}
+            empty={{ title: 'No invoices yet', description: 'Invoices appear once a billing period closes.' }}
+          >
+            {(data) => (
+              <DataTable>
+                <DataHead>
+                  <DataCell $w="34%">Invoice</DataCell>
+                  <DataCell $w="34%">Period</DataCell>
+                  <DataCell $w="18%" $align="right">Amount</DataCell>
+                  <DataCell $w="14%">Status</DataCell>
+                </DataHead>
+                {(data.invoices as Array<Record<string, unknown>>).map((inv, i) => {
+                  const id = typeof inv.id === 'string' ? inv.id : typeof inv.invoice_id === 'string' ? inv.invoice_id : `invoice-${i}`;
+                  const period = typeof inv.period === 'string' ? inv.period : typeof inv.created_at === 'string' ? inv.created_at.slice(0, 10) : '—';
+                  const amount = typeof inv.amount === 'number' ? `$${inv.amount.toFixed(2)}` : typeof inv.amount === 'string' ? inv.amount : '—';
+                  const status = typeof inv.status === 'string' ? inv.status : '—';
+                  return (
+                    <DataRow key={id} $interactive={false}>
+                      <DataCell $w="34%">
+                        <CellMono>{id}</CellMono>
+                      </DataCell>
+                      <DataCell $w="34%">
+                        <CellMeta>{period}</CellMeta>
+                      </DataCell>
+                      <DataCell $w="18%" $align="right">
+                        <CellMono>{amount}</CellMono>
+                      </DataCell>
+                      <DataCell $w="14%">
+                        <StatusPill
+                          tone={status === 'paid' ? 'success' : status === 'void' ? 'neutral' : 'warning'}
+                          dot={false}
+                        >
+                          {status}
+                        </StatusPill>
+                      </DataCell>
+                    </DataRow>
+                  );
+                })}
+              </DataTable>
+            )}
+          </QueryView>
         </Panel>
       </motion.div>
     </>
   );
+}
+
+function periodSubtitle(row: EntitlementRow | undefined, daysLeft: number | null): string {
+  if (!row) {
+    return 'Enable Agent Studio for this organization from the console.';
+  }
+  if (row.status === 'trial' && daysLeft !== null) {
+    return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in the trial.`;
+  }
+  if (row.periodEnd) {
+    const at = Date.parse(row.periodEnd);
+    if (!Number.isNaN(at)) {
+      return `Current period ends ${new Date(at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}.`;
+    }
+  }
+  return 'Usage counts against this organization’s plan limits.';
 }
 
 // ─── styled ──────────────────────────────────────────────────────────
@@ -124,11 +186,6 @@ const PlanName = styled.div`
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
-const PlanPrice = styled.div`
-  font-size: ${({ theme }) => theme.app.type.bodyLg};
-  color: ${({ theme }) => theme.app.text.muted};
-`;
-
 const PlanStatus = styled.div`
   margin-left: auto;
 `;
@@ -145,6 +202,7 @@ const UsageRow = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
   margin-bottom: 6px;
+  text-transform: capitalize;
 `;
 
 const UsageValue = styled.span`
@@ -152,8 +210,18 @@ const UsageValue = styled.span`
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
-const InvoiceActions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+const InvoiceLink = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.secondary};
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+    text-decoration: underline;
+  }
 `;

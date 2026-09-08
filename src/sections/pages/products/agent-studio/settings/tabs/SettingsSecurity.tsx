@@ -1,116 +1,101 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Copy as CopyIcon, Check, Smartphone, KeyRound, ChevronLeft } from 'lucide-react';
+import { ShieldCheck, Copy as CopyIcon, Check, Smartphone, KeyRound, ChevronLeft, AlertTriangle, Download } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Modal } from '@components/common/ui/Modal';
 import { Switch } from '@components/common/ui/Switch';
 import { TextInput } from '@components/common/ui/TextInput';
 import { Panel } from '@components/common/ui/Panel';
+import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { spring, pageItem } from '@styles/motion';
-import settings from '@neryva_data/products/agent_studio/settings.json';
+import { useMfa, useEnrollTotp, useActivateTotp, useDisableTotp, useRotateRecoveryCodes, parseEnrollment, otpauthFromSecret } from '@hooks/studio/useMfa';
+import { useSessions, useRevokeSession, useRevokeAllSessions } from '@hooks/studio/useSessions';
+import { useAccount, useChangePassword, useDeletionStatus, useRequestAccountDeletion, useCancelAccountDeletion } from '@hooks/studio/useAccount';
+import { useAudit } from '@hooks/engine/queries';
+import { useOrg } from '@/Context/OrgContext';
 import { SaveRow } from './shared';
 
 /**
- * Settings → Security
- *
- * Apple-grade behaviors:
- * - Two-factor toggle is real and triggers the multi-step enable flow
- *   when flipped on. Disabling shows a confirm dialog.
- * - The enable flow has 3 steps: scan QR → verify 6-digit code → save
- *   recovery codes. Each step crossfades with a spring.
- * - The "QR" is a procedural SVG (looks like a real QR — finder patterns
- *   in 3 corners, deterministic dot fill from the secret). This avoids
- *   pulling in a QR library just for a demo.
- * - 6-digit input is a single field with auto-advance — typed digits
- *   flow through with a spring-scaled digit preview.
- * - Recovery codes: 10 codes in a 2-column grid. Each has a copy icon
- *   that confirms with a brief ✓ swap.
+ * Settings → Security (ledger T-3) — every flow here is real:
+ * - Password change through POST /auth/me/password (current password verified
+ *   server-side; errors surface verbatim).
+ * - TOTP: enroll returns the server-issued provisioning material, rendered
+ *   as a genuine QR; activation verifies a live code; disabling requires a
+ *   step-up proof with a confirmation dialog.
+ * - Recovery codes come from the engine's rotation endpoint — one-time
+ *   display, copy-all, download.
+ * - Sessions: live list with per-session and revoke-all.
+ * - Security audit: the org's hash-chained audit trail (role-gated).
+ * - Danger zone: account deletion with status + cancel.
  */
 
 type Step = 'scan' | 'verify' | 'codes';
 
-const RECOVERY_CODE_COUNT = 10;
-
-function makeRecoveryCodes(): string[] {
-  const words = ['swift', 'calm', 'frost', 'glow', 'amber', 'quartz', 'river', 'spark', 'cloud', 'dusk'];
-  const out: string[] = [];
-  for (let i = 0; i < RECOVERY_CODE_COUNT; i += 1) {
-    const w = words[(i * 3 + Math.floor(Math.random() * words.length)) % words.length];
-    const n = String(Math.floor(1000 + Math.random() * 9000));
-    out.push(`${w}-${n}`);
-  }
-  return out;
-}
-
-function makeSecret(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let s = '';
-  for (let i = 0; i < 32; i += 1) s += chars[Math.floor(Math.random() * chars.length)];
-  return s.match(/.{1,4}/g)!.join(' ');
-}
-
-
-
 export function SettingsSecurity() {
-  const s = settings.security;
-  const [twoFa, setTwoFa] = useState(s.twoFactor);
-  const [step, setStep] = useState<Step | null>(null);
-  const [secret] = useState(() => makeSecret());
-  const [recoveryCodes] = useState(() => makeRecoveryCodes());
-  const [code, setCode] = useState('');
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
+  const account = useAccount();
+  const mfa = useMfa();
+  const { role } = useOrg();
+  const canSeeAudit = role !== 'reader';
 
-  const openFlow = () => {
-    setCode('');
-    setStep('scan');
+  const [step, setStep] = useState<Step | null>(null);
+  const [enrollment, setEnrollment] = useState<{ otpauthUrl: string | null; secret: string | null } | null>(null);
+  const [code, setCode] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [disableConfirm, setDisableConfirm] = useState(false);
+
+  const enroll = useEnrollTotp();
+  const activate = useActivateTotp();
+  const disable = useDisableTotp();
+  const rotateCodes = useRotateRecoveryCodes();
+  const twoFa = mfa.data?.enabled ?? false;
+
+  const openFlow = async () => {
+    try {
+      const raw = await enroll.mutateAsync();
+      setEnrollment(parseEnrollment(raw));
+      setCode('');
+      setStep('scan');
+    } catch {
+      /* the hook surfaced the error */
+    }
   };
 
   const closeFlow = () => {
     setStep(null);
     setCode('');
+    setEnrollment(null);
   };
 
-  const verifyAndAdvance = () => {
+  const verifyAndAdvance = async () => {
     if (code.length !== 6) {
       toast.error('Enter the 6-digit code');
       return;
     }
-    setStep('codes');
+    try {
+      await activate.mutateAsync(code.trim());
+      const rotated = await rotateCodes.mutateAsync();
+      setRecoveryCodes(rotated.codes ?? []);
+      setStep('codes');
+    } catch {
+      /* activation errors surface via toast; stay on the verify step */
+    }
   };
 
-  const enable = () => {
-    setTwoFa(true);
+  const finishEnable = () => {
     closeFlow();
-    toast.success('Two-factor enabled');
+    toast.success('Two-factor authentication is on');
   };
 
   return (
     <>
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel title="Authentication" subtitle="Password and two-factor settings for your account.">
-          <FieldRow>
-            <TextInput
-              label="Current password"
-              type="password"
-              value={currentPwd}
-              onChange={(e) => setCurrentPwd(e.target.value)}
-            />
-            <TextInput
-              label="New password"
-              type="password"
-              value={newPwd}
-              onChange={(e) => setNewPwd(e.target.value)}
-            />
-            <TextInput
-              label="Confirm new password"
-              type="password"
-              value={confirmPwd}
-              onChange={(e) => setConfirmPwd(e.target.value)}
-            />
-          </FieldRow>
+          <PasswordFields />
           <TwoFaRow>
             <div>
               <TwoFaTitle>
@@ -125,67 +110,27 @@ export function SettingsSecurity() {
             <Switch
               checked={twoFa}
               onChange={(next) => {
-                if (next) openFlow();
-                else setTwoFa(false);
+                if (next) {
+                  void openFlow();
+                } else {
+                  setDisableConfirm(true);
+                }
               }}
+              disabled={enroll.isPending || mfa.isPending}
             />
           </TwoFaRow>
-          <SaveRow
-            onSave={() => {
-              if (newPwd && newPwd !== confirmPwd) {
-                toast.error('Passwords do not match');
-                return;
-              }
-              toast.success('Security settings saved');
-            }}
-          />
         </Panel>
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel title="Active sessions" subtitle="Where you are currently signed in.">
-          <SessionList>
-            {s.sessions.map((sess) => {
-              const isMobile = /iphone|android|mobile/i.test(sess.device);
-              return (
-                <SessionRow key={sess.id}>
-                  <SessionIcon aria-hidden="true">
-                    {isMobile ? <Smartphone size={15} strokeWidth={1.7} /> : <KeyRound size={15} strokeWidth={1.7} />}
-                  </SessionIcon>
-                  <SessionInfo>
-                    <SessionName>
-                      {sess.device}{' '}
-                      {sess.current && <CurrentTag>this device</CurrentTag>}
-                    </SessionName>
-                    <SessionMeta>
-                      {sess.location} · {sess.lastActive}
-                    </SessionMeta>
-                  </SessionInfo>
-                  {!sess.current && (
-                    <RevokeBtn type="button" onClick={() => toast.success('Session revoked')}>
-                      Revoke
-                    </RevokeBtn>
-                  )}
-                </SessionRow>
-              );
-            })}
-          </SessionList>
+          <SessionsPanel />
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
-        <Panel title="Audit log" subtitle="Recent security and configuration events.">
-          <AuditList>
-            {s.auditLog.map((a, i) => (
-              <AuditRow key={i}>
-                <AuditTime>{a.time}</AuditTime>
-                <AuditEvent>{a.event}</AuditEvent>
-                <AuditActor>{a.actor}</AuditActor>
-              </AuditRow>
-            ))}
-          </AuditList>
-        </Panel>
-      </motion.div>
+      {canSeeAudit && <SecurityAudit />}
+
+      <DangerZone />
 
       {/* ─── 2FA enable flow ─── */}
       <Modal
@@ -215,10 +160,20 @@ export function SettingsSecurity() {
         footer={
           step === 'codes' ? (
             <>
-              <GhostBtn type="button" onClick={() => toast.success('Recovery codes regenerated')}>
+              <GhostBtn
+                type="button"
+                disabled={rotateCodes.isPending}
+                onClick={async () => {
+                  const rotated = await rotateCodes.mutateAsync().catch(() => null);
+                  if (rotated) {
+                    setRecoveryCodes(rotated.codes ?? []);
+                    toast.success('New codes generated — the old ones no longer work');
+                  }
+                }}
+              >
                 Regenerate
               </GhostBtn>
-              <PrimaryBtn type="button" onClick={enable} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+              <PrimaryBtn type="button" onClick={finishEnable} whileTap={{ scale: 0.97 }} transition={spring.snap}>
                 <Check size={13} strokeWidth={2} />
                 I've saved them
               </PrimaryBtn>
@@ -226,7 +181,8 @@ export function SettingsSecurity() {
           ) : step === 'verify' ? (
             <PrimaryBtn
               type="button"
-              onClick={verifyAndAdvance}
+              disabled={code.length !== 6 || activate.isPending}
+              onClick={() => void verifyAndAdvance()}
               whileTap={{ scale: 0.97 }}
               transition={spring.snap}
             >
@@ -235,6 +191,7 @@ export function SettingsSecurity() {
           ) : (
             <PrimaryBtn
               type="button"
+              disabled={!enrollment}
               onClick={() => setStep('verify')}
               whileTap={{ scale: 0.97 }}
               transition={spring.snap}
@@ -245,7 +202,7 @@ export function SettingsSecurity() {
         }
       >
         <AnimatePresence mode="wait">
-          {step === 'scan' && (
+          {step === 'scan' && enrollment && (
             <StepPanel
               key="scan"
               initial={{ opacity: 0, y: 10 }}
@@ -258,26 +215,37 @@ export function SettingsSecurity() {
               </ScanLead>
               <ScanRow>
                 <QRFrame>
-                  <QRCodeSvg value={secret} />
+                  <QRCodeSVG
+                    value={enrollment.otpauthUrl ?? otpauthFromSecret(enrollment.secret ?? '', account.data?.email ?? null)}
+                    size={140}
+                    level="M"
+                    bgColor="#ffffff"
+                    fgColor="#0b0d12"
+                    style={{ width: '100%', height: '100%' }}
+                  />
                 </QRFrame>
                 <ScanSide>
-                  <SecretLabel>Or enter this setup key manually</SecretLabel>
-                  <SecretRow>
-                    <SecretCode>{secret}</SecretCode>
-                    <CopyMiniBtn
-                      type="button"
-                      aria-label="Copy setup key"
-                      onClick={() => {
-                        navigator.clipboard.writeText(secret.replace(/\s/g, ''));
-                        toast.success('Setup key copied');
-                      }}
-                    >
-                      <CopyIcon size={11} strokeWidth={1.8} />
-                    </CopyMiniBtn>
-                  </SecretRow>
+                  {enrollment.secret && (
+                    <>
+                      <SecretLabel>Or enter this setup key manually</SecretLabel>
+                      <SecretRow>
+                        <SecretCode>{enrollment.secret}</SecretCode>
+                        <CopyMiniBtn
+                          type="button"
+                          aria-label="Copy setup key"
+                          onClick={() => {
+                            navigator.clipboard.writeText(enrollment.secret?.replace(/\s/g, '') ?? '');
+                            toast.success('Setup key copied');
+                          }}
+                        >
+                          <CopyIcon size={11} strokeWidth={1.8} />
+                        </CopyMiniBtn>
+                      </SecretRow>
+                    </>
+                  )}
                   <AccountMeta>
                     <AccountLabel>Account</AccountLabel>
-                    <AccountValue>{settings.profile.email}</AccountValue>
+                    <AccountValue>{account.data?.email ?? '—'}</AccountValue>
                   </AccountMeta>
                   <AccountMeta>
                     <AccountLabel>Type</AccountLabel>
@@ -322,7 +290,7 @@ export function SettingsSecurity() {
             </StepPanel>
           )}
 
-          {step === 'codes' && (
+          {step === 'codes' && recoveryCodes !== null && (
             <StepPanel
               key="codes"
               initial={{ opacity: 0, y: 10 }}
@@ -341,12 +309,12 @@ export function SettingsSecurity() {
               </RecoveryBanner>
               <CodesGrid>
                 {recoveryCodes.map((c, i) => (
-                  <CodeRow key={c}>
+                  <CodeRow key={`${c}-${i}`}>
                     <CodeNum>{i + 1}.</CodeNum>
                     <CodeText>{c}</CodeText>
                     <CodeCopy
                       type="button"
-                      aria-label={`Copy ${c}`}
+                      aria-label={`Copy code ${i + 1}`}
                       onClick={() => {
                         navigator.clipboard.writeText(c);
                         toast.success('Code copied');
@@ -359,64 +327,246 @@ export function SettingsSecurity() {
                   </CodeRow>
                 ))}
               </CodesGrid>
+              <DownloadRow>
+                <GhostBtn
+                  type="button"
+                  onClick={() => {
+                    const text = `Neryva recovery codes\n\n${recoveryCodes.join('\n')}\n`;
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const anchor = document.createElement('a');
+                    anchor.href = url;
+                    anchor.download = 'neryva-recovery-codes.txt';
+                    anchor.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Download size={12} strokeWidth={1.8} />
+                  Download as text
+                </GhostBtn>
+              </DownloadRow>
             </StepPanel>
           )}
         </AnimatePresence>
       </Modal>
+
+      <ConfirmDialog
+        open={disableConfirm}
+        title="Disable two-factor authentication?"
+        message="Your account will be protected by your password only. You can turn it back on at any time."
+        destructive
+        confirmLabel="Disable"
+        onConfirm={() => {
+          disable.mutate(undefined, {
+            onSuccess: () => toast.success('Two-factor authentication is off'),
+          });
+          setDisableConfirm(false);
+        }}
+        onCancel={() => setDisableConfirm(false)}
+      />
     </>
   );
 }
 
-// ─── Pseudo-QR (no library needed for a demo) ────────────────────────
-function QRCodeSvg({ value }: { value: string }) {
-  // Deterministic 25×25 grid. Three finder patterns in 3 corners
-  // (the recognizable QR squares). Middle fill is hashed from the value.
-  const size = 25;
-  const cells: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+// ─── Password change ─────────────────────────────────────────────────
+function PasswordFields() {
+  const change = useChangePassword();
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
 
-  // Finder pattern: 7×7 squares in TL, TR, BL with a 3×3 center.
-  const finder = (cx: number, cy: number) => {
-    for (let y = 0; y < 7; y += 1) {
-      for (let x = 0; x < 7; x += 1) {
-        const isBorder = x === 0 || x === 6 || y === 0 || y === 6;
-        const isCore = x >= 2 && x <= 4 && y >= 2 && y <= 4;
-        cells[cy + y][cx + x] = isBorder || isCore;
-      }
+  const save = () => {
+    if (!currentPwd || !newPwd) {
+      toast.error('Enter your current and new password');
+      return;
     }
+    if (newPwd !== confirmPwd) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (newPwd === currentPwd) {
+      toast.error('The new password must be different');
+      return;
+    }
+    change.mutate(
+      { currentPassword: currentPwd, newPassword: newPwd },
+      {
+        onSuccess: () => {
+          toast.success('Password updated');
+          setCurrentPwd('');
+          setNewPwd('');
+          setConfirmPwd('');
+        },
+      },
+    );
   };
-  finder(0, 0);
-  finder(size - 7, 0);
-  finder(0, size - 7);
 
-  // Fill the middle based on a hash of `value` for stable appearance.
-  const hash = (s: string) => {
-    let h = 5381;
-    for (let i = 0; i < s.length; i += 1) h = (h * 33) ^ s.charCodeAt(i);
-    return Math.abs(h);
-  };
-  let h = hash(value);
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      // Skip finder zones.
-      if ((x < 8 && y < 8) || (x >= size - 8 && y < 8) || (x < 8 && y >= size - 8)) continue;
-      h = (h * 1664525 + 1013904223) >>> 0;
-      cells[y][x] = (h & 0xff) > 128;
-    }
-  }
-
-  const rects: React.ReactNode[] = [];
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      if (cells[y][x]) {
-        rects.push(<rect key={`${x}-${y}`} x={x} y={y} width="1" height="1" fill="#0b0d12" />);
-      }
-    }
-  }
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%" shapeRendering="crispEdges">
-      <rect width={size} height={size} fill="#fff" />
-      {rects}
-    </svg>
+    <>
+      <FieldRow>
+        <TextInput label="Current password" type="password" value={currentPwd} onChange={(e) => setCurrentPwd(e.target.value)} autoComplete="current-password" />
+        <TextInput label="New password" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" />
+        <TextInput label="Confirm new password" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} autoComplete="new-password" />
+      </FieldRow>
+      <SaveRow onSave={save} saveLabel="Update password" disabled={change.isPending} />
+    </>
+  );
+}
+
+// ─── Sessions ────────────────────────────────────────────────────────
+function SessionsPanel() {
+  const sessions = useSessions();
+  const revoke = useRevokeSession();
+  const revokeAll = useRevokeAllSessions();
+  const [confirmAll, setConfirmAll] = useState(false);
+  const rows = sessions.data ?? [];
+  const others = rows.filter((s) => !s.current).length;
+
+  return (
+    <>
+      <SessionActions>
+        <ActionButton variant="secondary" size="sm" disabled={others === 0 || revokeAll.isPending} onClick={() => setConfirmAll(true)}>
+          Revoke all other devices
+        </ActionButton>
+      </SessionActions>
+      <QueryView
+        query={sessions}
+        skeleton={<Skeleton $h="180px" $r="12px" />}
+        isEmpty={(d) => d.length === 0}
+        empty={{ title: 'No active sessions', description: 'Sign-ins appear here as you use Neryva across devices.' }}
+      >
+        {(data) => (
+          <SessionList>
+            {data.map((sess) => {
+              const isMobile = /iphone|android|mobile/i.test(sess.label);
+              return (
+                <SessionRow key={sess.id}>
+                  <SessionIcon aria-hidden="true">
+                    {isMobile ? <Smartphone size={15} strokeWidth={1.7} /> : <KeyRound size={15} strokeWidth={1.7} />}
+                  </SessionIcon>
+                  <SessionInfo>
+                    <SessionName>
+                      {sess.label}{' '}
+                      {sess.current && <CurrentTag>this device</CurrentTag>}
+                    </SessionName>
+                    {sess.meta && <SessionMeta>{sess.meta}</SessionMeta>}
+                  </SessionInfo>
+                  {!sess.current && (
+                    <RevokeBtn
+                      type="button"
+                      disabled={revoke.isPending}
+                      onClick={() => revoke.mutate(sess.id, { onSuccess: () => toast.success('Session revoked') })}
+                    >
+                      Revoke
+                    </RevokeBtn>
+                  )}
+                </SessionRow>
+              );
+            })}
+          </SessionList>
+        )}
+      </QueryView>
+
+      <ConfirmDialog
+        open={confirmAll}
+        title="Revoke all other sessions?"
+        message="Every signed-in device except this one will be signed out and need to sign in again."
+        destructive
+        confirmLabel="Revoke all"
+        onConfirm={() => {
+          revokeAll.mutate(undefined, { onSuccess: () => toast.success('Other sessions revoked') });
+          setConfirmAll(false);
+        }}
+        onCancel={() => setConfirmAll(false)}
+      />
+    </>
+  );
+}
+
+// ─── Security audit (org trail, role-gated) ──────────────────────────
+function SecurityAudit() {
+  const audit = useAudit({ limit: 10 });
+  return (
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
+      <Panel title="Security activity" subtitle="The most recent events from your organization’s audit trail." flush>
+        <QueryView
+          query={audit}
+          skeleton={<Skeleton $h="180px" $r="12px" />}
+          isEmpty={(d) => d.events.length === 0}
+          empty={{ title: 'No events yet', description: 'Security-relevant actions in your organization appear here.' }}
+        >
+          {(data) => (
+            <AuditList>
+              {data.events.map((event) => (
+                <AuditRow key={event.id}>
+                  <AuditTime>{event.created_at.slice(0, 10)}</AuditTime>
+                  <AuditEvent>{event.action}</AuditEvent>
+                  <AuditActor>{event.actor_type}</AuditActor>
+                </AuditRow>
+              ))}
+            </AuditList>
+          )}
+        </QueryView>
+      </Panel>
+    </motion.div>
+  );
+}
+
+// ─── Danger zone ─────────────────────────────────────────────────────
+function DangerZone() {
+  const deletion = useDeletionStatus({ pollWhilePending: true });
+  const requestDeletion = useRequestAccountDeletion();
+  const cancelDeletion = useCancelAccountDeletion();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const pending = deletion.data && deletion.data.status !== 'none' ? deletion.data : null;
+
+  return (
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
+      <Panel title="Danger zone" subtitle="Irreversible account actions.">
+        {pending && pending.status !== 'none' ? (
+          <PendingDelete>
+            <AlertTriangle size={15} strokeWidth={1.8} aria-hidden="true" />
+            <div>
+              <PendingTitle>Deletion {pending.status === 'scheduled' ? 'scheduled' : 'requested'}</PendingTitle>
+              <PendingMeta>
+                {pending.scheduledPurgeAt
+                  ? `Purge runs ${new Date(Date.parse(pending.scheduledPurgeAt)).toLocaleString()}. Sign in before then to cancel.`
+                  : 'Your account is scheduled for deletion.'}
+              </PendingMeta>
+            </div>
+            <ActionButton variant="secondary" size="sm" disabled={cancelDeletion.isPending} onClick={() => cancelDeletion.mutate(undefined, { onSuccess: () => toast.success('Deletion cancelled') })}>
+              Cancel deletion
+            </ActionButton>
+          </PendingDelete>
+        ) : (
+          <DeleteRow>
+            <DeleteInfo>
+              <DeleteTitle>Delete your account</DeleteTitle>
+              <DeleteMeta>
+                Your organizations keep running without you; memberships end and your personal data is purged per the retention policy.
+              </DeleteMeta>
+            </DeleteInfo>
+            <ActionButton variant="danger" size="sm" disabled={requestDeletion.isPending} onClick={() => setConfirmDelete(true)}>
+              Delete account
+            </ActionButton>
+          </DeleteRow>
+        )}
+      </Panel>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete your account?"
+        message="This schedules your account for deletion. You lose access everywhere, and the purge is irreversible once it runs. Organizations you own should be transferred first."
+        destructive
+        confirmLabel="Schedule deletion"
+        onConfirm={() => {
+          requestDeletion.mutate(undefined, { onSuccess: () => toast.success('Deletion scheduled — you can cancel until the purge runs') });
+          setConfirmDelete(false);
+        }}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </motion.div>
   );
 }
 
@@ -728,7 +878,15 @@ const CodeCopy = styled(motion.button)`
   }
 `;
 
+const DownloadRow = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
 const GhostBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   background: transparent;
   color: ${({ theme }) => theme.app.text.secondary};
@@ -741,9 +899,19 @@ const GhostBtn = styled.button`
   transition: background ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
   &:hover {
     background: ${({ theme }) => theme.app.surface.hover};
     border-color: ${({ theme }) => theme.app.border.hover};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;
 
@@ -761,9 +929,20 @@ const PrimaryBtn = styled(motion.button)`
   border-radius: 9px;
   cursor: pointer;
   box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
-// ─── sessions + audit + banner ───────────────────────────────────────
+// ─── sessions + audit + danger zone ──────────────────────────────────
+const SessionActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+`;
+
 const SessionList = styled.div`
   display: flex;
   flex-direction: column;
@@ -804,6 +983,9 @@ const SessionName = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const CurrentTag = styled.span`
@@ -837,6 +1019,11 @@ const RevokeBtn = styled.button`
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.app.status.error.bg};
@@ -897,6 +1084,63 @@ const BannerTitle = styled.div`
 `;
 
 const BannerText = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+  line-height: 1.5;
+`;
+
+const DeleteRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+`;
+
+const DeleteInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const DeleteTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.status.error.fg};
+`;
+
+const DeleteMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 3px;
+  line-height: 1.5;
+`;
+
+const PendingDelete = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: ${({ theme }) => theme.app.status.error.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+
+  > svg {
+    color: ${({ theme }) => theme.app.status.error.fg};
+    flex-shrink: 0;
+  }
+
+  > div:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+  }
+`;
+
+const PendingTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const PendingMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   margin-top: 2px;

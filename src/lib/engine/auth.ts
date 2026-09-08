@@ -8,7 +8,7 @@
  * store is the bridge the API client binds to (bindTokenSource).
  */
 import { create } from 'zustand';
-import { bindTokenSource, ENGINE_URL } from './client';
+import { bindTokenSource, ENGINE_BASE } from './client';
 
 const CLIENT_ID = 'neryva-console';
 const SCOPES = 'openid email profile offline_access';
@@ -16,7 +16,7 @@ const CALLBACK_PATH = '/platform/auth/callback';
 const REFRESH_KEY = 'neryva.refresh_token';
 const RETURN_KEY = 'neryva.post_login_return';
 
-const authBase = `${ENGINE_URL}/auth`;
+const authBase = `${ENGINE_BASE}/auth`;
 
 // ── PKCE helpers ─────────────────────────────────────────────────────────────
 
@@ -69,7 +69,23 @@ export const useSessionStore = create<SessionState>((set) => ({
 interface TokenResponse {
   access_token: string;
   refresh_token?: string;
+  id_token?: string;
   expires_in?: number;
+}
+
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Proactive refresh: renew ~60s before expiry so UI never sees a dead token. */
+function scheduleProactiveRefresh(expiresInSeconds?: number): void {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+  const seconds = expiresInSeconds ?? 14 * 60;
+  const lead = Math.min(60, Math.floor(seconds / 3));
+  refreshTimer = setTimeout(() => {
+    void refreshTokens().catch(() => undefined);
+  }, Math.max(5, (seconds - lead)) * 1000);
 }
 
 async function tokenGrant(body: Record<string, string>): Promise<TokenResponse | null> {
@@ -88,6 +104,10 @@ async function applyTokens(tokens: TokenResponse): Promise<void> {
   if (tokens.refresh_token) {
     sessionStorage.setItem(REFRESH_KEY, tokens.refresh_token);
   }
+  if (tokens.id_token) {
+    sessionStorage.setItem('neryva.id_token', tokens.id_token);
+  }
+  scheduleProactiveRefresh(tokens.expires_in);
   let account: SessionState['account'] = null;
   try {
     const info = await fetch(`${authBase}/me`, { headers: { authorization: `Bearer ${tokens.access_token}` } });

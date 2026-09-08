@@ -1,8 +1,24 @@
+/**
+ * The notification center (ledger S-1) — live engine notifications with
+ * unread badge, per-item and mark-all read, plus operator announcements
+ * (S-5) with per-user dismissal. Polled every 60s; errors degrade to an
+ * inline retry row, never a dead panel.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Bell } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { Bell, Megaphone, RefreshCw, X } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { LinkAction } from '@components/common/ui/LinkAction';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ease } from '@styles/motion';
+import {
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotificationsList,
+  type NotificationItem,
+} from '@hooks/studio/useNotifications';
+import { useStudioStatus } from '@hooks/studio/useStudioStatus';
 import {
   BellDot,
   NotifButton,
@@ -14,25 +30,64 @@ import {
   NotifDetail,
   NotifTime,
   NotifFooter,
+  AnnouncementRow,
+  AnnouncementIcon,
+  AnnouncementBody,
+  AnnouncementLabel,
+  AnnouncementTitle,
+  AnnouncementMessage,
+  AnnouncementTime,
+  DismissButton,
+  EmptyWrap,
+  EmptyTitle,
+  EmptyBody,
+  StateRow,
+  RetryLink,
 } from './NotificationsPopover.styles';
 import { Popover, PopoverPanel, PopoverHeader, PopoverTitle, PopoverAction } from '../Popover/Popover.styles';
 
-type Tone = 'success' | 'warning' | 'error' | 'info';
+const DISMISSED_KEY = 'neryva.announcements.dismissed';
 
-const NOTIFICATIONS: { id: string; title: string; detail: string; time: string; tone: Tone }[] = [
-  { id: 'n1', title: 'Refund edge case escalated', detail: 'Support Concierge → Avery Kim', time: '2m ago', tone: 'warning' },
-  { id: 'n2', title: 'Conversation resolved', detail: 'Onboarding Guide · Sara K.', time: '14m ago', tone: 'success' },
-  { id: 'n3', title: 'Salesforce sync timeout', detail: '1 of 3 calls failed — retry queued', time: '1h ago', tone: 'error' },
-  { id: 'n4', title: 'New agent published', detail: 'Voice Concierge is live on Phone', time: '3h ago', tone: 'info' },
-  { id: 'n5', title: '10,000 conversations this month', detail: 'You crossed a milestone — nice work.', time: 'Yesterday', tone: 'success' },
-];
+function readDismissed(): ReadonlySet<string> {
+  try {
+    const raw = window.localStorage.getItem(DISMISSED_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? new Set(parsed.filter((v): v is string => typeof v === 'string')) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function relativeTime(iso: string | null): string | null {
+  if (!iso) {
+    return null;
+  }
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) {
+    return null;
+  }
+  return formatDistanceToNow(at, { addSuffix: true });
+}
+
+/** A notification's own in-app link, if it is one we're willing to open. */
+function internalLink(item: NotificationItem): string | null {
+  return item.link !== null && item.link.startsWith('/') && !item.link.startsWith('//') ? item.link : null;
+}
 
 export function NotificationsPopover() {
   const [open, setOpen] = useState(false);
-  const [readIds, setReadIds] = useState<ReadonlySet<string>>(new Set());
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => readDismissed());
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  const unread = NOTIFICATIONS.filter((n) => !readIds.has(n.id)).length;
+  const list = useNotificationsList();
+  const status = useStudioStatus();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
+
+  const items = list.data?.items ?? [];
+  const unread = list.data?.unread ?? 0;
+  const announcements = (status.data?.announcements ?? []).filter((a) => !dismissed.has(a.id));
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +105,23 @@ export function NotificationsPopover() {
     };
   }, [open]);
 
-  const markAllRead = () => setReadIds(new Set(NOTIFICATIONS.map((n) => n.id)));
+  const dismissAnnouncement = (id: string) => {
+    const next = new Set(readDismissed());
+    next.add(id);
+    window.localStorage.setItem(DISMISSED_KEY, JSON.stringify([...next]));
+    setDismissed(next);
+  };
+
+  const openNotification = (item: NotificationItem) => {
+    if (!item.read) {
+      markRead.mutate(item.id);
+    }
+    const link = internalLink(item);
+    if (link) {
+      setOpen(false);
+      void navigate({ to: link });
+    }
+  };
 
   return (
     <Popover ref={ref}>
@@ -78,24 +149,81 @@ export function NotificationsPopover() {
           >
             <PopoverHeader>
               <PopoverTitle>Notifications</PopoverTitle>
-              <PopoverAction type="button" onClick={markAllRead} disabled={unread === 0}>
+              <PopoverAction
+                type="button"
+                onClick={() => markAllRead.mutate()}
+                disabled={unread === 0 || markAllRead.isPending}
+              >
                 Mark all read
               </PopoverAction>
             </PopoverHeader>
             <NotifList>
-              {NOTIFICATIONS.map((n) => {
-                const unreadRow = !readIds.has(n.id);
-                return (
-                  <NotifRow key={n.id} $unread={unreadRow}>
-                    <NotifDot $tone={n.tone} aria-hidden="true" />
-                    <NotifBody>
-                      <NotifTitle $unread={unreadRow}>{n.title}</NotifTitle>
-                      <NotifDetail>{n.detail}</NotifDetail>
-                      <NotifTime>{n.time}</NotifTime>
-                    </NotifBody>
-                  </NotifRow>
-                );
-              })}
+              {announcements.map((a) => (
+                <AnnouncementRow key={a.id}>
+                  <AnnouncementIcon aria-hidden="true">
+                    <Megaphone size={14} strokeWidth={1.7} />
+                  </AnnouncementIcon>
+                  <AnnouncementBody>
+                    <AnnouncementLabel>Announcement</AnnouncementLabel>
+                    <AnnouncementTitle>{a.title}</AnnouncementTitle>
+                    {a.message && <AnnouncementMessage>{a.message}</AnnouncementMessage>}
+                    <AnnouncementTime>{relativeTime(a.createdAt) ?? 'Recently'}</AnnouncementTime>
+                  </AnnouncementBody>
+                  <DismissButton type="button" aria-label="Dismiss announcement" onClick={() => dismissAnnouncement(a.id)}>
+                    <X size={13} strokeWidth={1.7} />
+                  </DismissButton>
+                </AnnouncementRow>
+              ))}
+
+              {list.isPending && items.length === 0 && (
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <StateRow key={i} aria-hidden="true">
+                      <Skeleton $h="30px" $w="100%" $r="6px" />
+                    </StateRow>
+                  ))}
+                </>
+              )}
+
+              {list.isError && (
+                <StateRow>
+                  Couldn’t load notifications —{' '}
+                  <RetryLink type="button" onClick={() => void list.refetch()}>
+                    <RefreshCw size={11} strokeWidth={1.8} /> try again
+                  </RetryLink>
+                </StateRow>
+              )}
+
+              {!list.isPending && !list.isError && items.length === 0 && (
+                <EmptyWrap>
+                  <EmptyTitle>You’re all caught up</EmptyTitle>
+                  <EmptyBody>
+                    Notifications about your agents, usage, and the platform land here.
+                  </EmptyBody>
+                </EmptyWrap>
+              )}
+
+              {items.map((item) => (
+                <NotifRow
+                  key={item.id}
+                  type="button"
+                  $unread={!item.read}
+                  onClick={() => openNotification(item)}
+                  aria-label={item.read ? item.title : `${item.title} (unread)`}
+                >
+                  <NotifDot
+                    $tone={item.read ? 'info' : 'warning'}
+                    aria-hidden="true"
+                  />
+                  <NotifBody>
+                    <NotifTitle $unread={!item.read}>{item.title}</NotifTitle>
+                    {item.message && <NotifDetail>{item.message}</NotifDetail>}
+                    <NotifTime>
+                      {relativeTime(item.createdAt) ?? item.category ?? ''}
+                    </NotifTime>
+                  </NotifBody>
+                </NotifRow>
+              ))}
             </NotifList>
             <NotifFooter>
               <LinkAction to="/agent-studio/activity" arrow>

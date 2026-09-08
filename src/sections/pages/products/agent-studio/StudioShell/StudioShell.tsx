@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
 import {
@@ -18,6 +18,7 @@ import {
   RecentSection,
   RecentLabel,
   RecentItemLink,
+  RecentEmpty,
   SidebarFooter,
   UserCard,
   UserAvatar,
@@ -36,6 +37,7 @@ import {
   UpgradeCard,
   UpgradeTitle,
   ContentArea,
+  BannerSlot,
   MobileMenuButton,
   MobileOverlay,
 } from './StudioShell.styles';
@@ -60,12 +62,16 @@ import {
   Users,
   Activity,
   FlaskConical,
+  KeyRound,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
-import { ChatHeader } from '../chat/ChatHeader';
 import { UpgradeModal } from '../UpgradeModal';
 import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
+import { useCan } from '@lib/engine/capabilities';
+import { useAssistants } from '@hooks/studio/useAssistants';
+import { useConversations } from '@hooks/studio/useStudioConversations';
+import { useMembers, useKeys } from '@hooks/engine/queries';
 import { ease } from '@styles/motion';
 
 export type StudioNavItem = {
@@ -79,15 +85,20 @@ export type StudioNavGroup = {
   items: StudioNavItem[];
 };
 
-export type RecentChat = { id: string; title: string };
+export type RecentChat = { id: string; title: string; to: string };
 
 type Props = {
   nav: StudioNavGroup[];
   user: { initials: string; name: string; tier: string; email: string };
   workspace: { name: string; plan: string };
   searchPlaceholder: string;
-  recentChats: RecentChat[];
+  /** Real recent conversations; null while the list is still loading. */
+  recentChats: RecentChat[] | null;
   topbarExtra?: ReactNode;
+  /** The active-org switcher for the topbar (replaces the static title). */
+  topbarOrg?: ReactNode;
+  /** Entitlement-mode strip (trial countdown, payment alert, …). */
+  banner?: ReactNode;
   children: ReactNode;
 };
 
@@ -113,6 +124,26 @@ const iconMap = {
 const isApplePlatform = () =>
   typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 
+/** The static Navigate section of the command palette. */
+const STATIC_NAV_ITEMS: CommandItem[] = [
+  { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/agent-studio/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
+  { id: 'chat', title: 'Chat', subtitle: 'Conversational playground', to: '/agent-studio/chat', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} />, shortcut: ['C'] },
+  { id: 'agents', title: 'Agents', subtitle: 'Manage and configure agents', to: '/agent-studio/agents', section: 'Navigate', icon: <Bot size={14} strokeWidth={1.7} />, shortcut: ['A'] },
+  { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
+  { id: 'models', title: 'Models', subtitle: 'AI models and routing', to: '/agent-studio/models', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
+  { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessagesSquare size={14} strokeWidth={1.7} /> },
+  { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
+  { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
+  { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
+  { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
+  { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
+  { id: 'teams', title: 'Teams', subtitle: 'Members, invites, service accounts', to: '/agent-studio/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
+  { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <Activity size={14} strokeWidth={1.7} /> },
+  { id: 'evaluations', title: 'Evaluations', subtitle: 'Eval runs and datasets', to: '/agent-studio/evaluations', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
+  { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
+  { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings/profile', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
+];
+
 export function StudioShell({
   nav,
   user,
@@ -120,6 +151,8 @@ export function StudioShell({
   searchPlaceholder,
   recentChats,
   topbarExtra,
+  topbarOrg,
+  banner,
   children,
 }: Props) {
   const [query, setQuery] = useState('');
@@ -127,8 +160,17 @@ export function StudioShell({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const matchRoute = useMatchRoute();
   const location = useLocation();
+  const can = useCan('agent_studio');
+  const canWrite = can('studio:write');
+
+  // Palette + recents read real data. Conversations always load (the
+  // sidebar recents use them, calm 15s staleness); members/keys/assistants
+  // fetch only while the palette is open so the shell stays cheap.
+  const assistants = useAssistants({ enabled: paletteOpen });
+  const conversations = useConversations({ enabled: true });
+  const members = useMembers({}, { enabled: paletteOpen });
+  const keys = useKeys({ enabled: paletteOpen });
   const modKey = isApplePlatform() ? '⌘' : 'Ctrl';
-  const onChat = location.pathname === '/agent-studio/chat' || location.pathname.startsWith('/agent-studio/chat/');
 
   useEffect(() => {
     document.body.classList.add('app-shell');
@@ -179,27 +221,55 @@ export function StudioShell({
       items: group.items.filter((item) => item.label.toLowerCase().includes(q)),
     }))
     .filter((group) => group.items.length > 0);
-  const filteredRecents = recentChats.filter((c) => c.title.toLowerCase().includes(q)).slice(0, 6);
+  const filteredRecents = (recentChats ?? []).filter((c) => c.title.toLowerCase().includes(q)).slice(0, 6);
   const hasResults = filteredGroups.length > 0 || filteredRecents.length > 0;
 
-  const commandItems: CommandItem[] = [
-    { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/agent-studio/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
-    { id: 'chat', title: 'Chat', subtitle: 'Conversational playground', to: '/agent-studio/chat', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} />, shortcut: ['C'] },
-    { id: 'agents', title: 'Agents', subtitle: 'Manage and configure agents', to: '/agent-studio/agents', section: 'Navigate', icon: <Bot size={14} strokeWidth={1.7} />, shortcut: ['A'] },
-    { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
-    { id: 'models', title: 'Models', subtitle: 'AI models and routing', to: '/agent-studio/models', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
-    { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessagesSquare size={14} strokeWidth={1.7} /> },
-    { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
-    { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
-    { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
-    { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
-    { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
-    { id: 'teams', title: 'Teams', subtitle: 'Members, invites, service accounts', to: '/agent-studio/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
-    { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <Activity size={14} strokeWidth={1.7} /> },
-    { id: 'evaluations', title: 'Evaluations', subtitle: 'Eval runs and datasets', to: '/agent-studio/evaluations', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
-    { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
-    { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings/profile', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
-  ];
+  // The launcher indexes the workspace: static pages plus live agents,
+  // conversations, members, and keys (loaded while the palette is open).
+  const commandItems = useMemo<CommandItem[]>(() => {
+    const items: CommandItem[] = [...STATIC_NAV_ITEMS];
+    for (const agent of (assistants.data ?? []).slice(0, 8)) {
+      items.push({
+        id: `agent-${agent.id}`,
+        title: agent.name,
+        subtitle: agent.status ?? 'Agent',
+        to: `/agent-studio/agents/${agent.id}`,
+        section: 'Agents',
+        icon: <Bot size={14} strokeWidth={1.7} />,
+      });
+    }
+    for (const conversation of (conversations.data ?? []).slice(0, 8)) {
+      items.push({
+        id: `conversation-${conversation.id}`,
+        title: conversation.title,
+        subtitle: 'Conversation',
+        to: `/agent-studio/conversations?chat=${encodeURIComponent(conversation.id)}`,
+        section: 'Conversations',
+        icon: <MessagesSquare size={14} strokeWidth={1.7} />,
+      });
+    }
+    for (const member of (members.data?.members ?? []).slice(0, 6)) {
+      items.push({
+        id: `member-${member.accountId}`,
+        title: member.displayName ?? member.email,
+        subtitle: 'Member',
+        to: '/agent-studio/teams',
+        section: 'Members & keys',
+        icon: <Users size={14} strokeWidth={1.7} />,
+      });
+    }
+    for (const key of (keys.data?.keys ?? []).slice(0, 6)) {
+      items.push({
+        id: `key-${key.id}`,
+        title: key.name,
+        subtitle: 'API key',
+        to: '/agent-studio/settings/api-keys',
+        section: 'Members & keys',
+        icon: <KeyRound size={14} strokeWidth={1.7} />,
+      });
+    }
+    return items;
+  }, [assistants.data, conversations.data, members.data, keys.data]);
 
   return (
     <ShellRoot>
@@ -286,12 +356,19 @@ export function StudioShell({
 
         <RecentSection>
           <RecentLabel>Recent chats</RecentLabel>
-          {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
-          {filteredRecents.map((c) => (
-            <RecentItemLink key={c.id} to="/agent-studio/chat" onClick={() => setMobileOpen(false)}>
-              {c.title}
-            </RecentItemLink>
-          ))}
+          {recentChats !== null && (
+            <>
+              {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
+              {filteredRecents.map((c) => (
+                <RecentItemLink key={c.id} to={c.to} onClick={() => setMobileOpen(false)}>
+                  {c.title}
+                </RecentItemLink>
+              ))}
+              {recentChats.length === 0 && !q && (
+                <RecentEmpty to="/agent-studio/chat">Start your first chat →</RecentEmpty>
+              )}
+            </>
+          )}
         </RecentSection>
 
         <SidebarFooter>
@@ -320,23 +397,37 @@ export function StudioShell({
             >
               <MenuIcon size={16} strokeWidth={1.8} />
             </MobileMenuButton>
-            <TopbarTitle>{workspace.name}</TopbarTitle>
+            {topbarOrg ?? <TopbarTitle>{workspace.name}</TopbarTitle>}
             <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
             <TopbarSubtitle>Studio</TopbarSubtitle>
-            {topbarExtra ?? (onChat ? <ChatHeader /> : null)}
+            {topbarExtra}
             <TopbarSearchHint onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
               <SearchIcon size={11} strokeWidth={1.7} />
               Press <TopbarKbd>{modKey} K</TopbarKbd> to search
             </TopbarSearchHint>
           </TopbarLeft>
           <TopbarRight>
-            <IconAction as={Link} to="/agent-studio/chat" aria-label="New chat">
-              <Plus size={15} strokeWidth={1.8} />
-            </IconAction>
+            {canWrite ? (
+              <IconAction as={Link} to="/agent-studio/chat" aria-label="New chat">
+                <Plus size={15} strokeWidth={1.8} />
+              </IconAction>
+            ) : (
+              <IconAction
+                as="button"
+                type="button"
+                disabled
+                title="Your role can’t start chats in this workspace — ask an owner, admin, or developer."
+                aria-label="New chat (unavailable for your role)"
+                style={{ cursor: 'not-allowed', opacity: 0.4 }}
+              >
+                <Plus size={15} strokeWidth={1.8} />
+              </IconAction>
+            )}
             <NotificationsPopover />
             <AccountMenu user={user} workspace={workspace} onOpenShortcuts={() => setPaletteOpen(true)} />
           </TopbarRight>
         </Topbar>
+        {banner && <BannerSlot>{banner}</BannerSlot>}
         <ContentArea>{children}</ContentArea>
       </ShellBody>
       <CommandPalette
@@ -344,6 +435,7 @@ export function StudioShell({
         onClose={() => setPaletteOpen(false)}
         items={commandItems}
         brand="studio"
+        loading={paletteOpen && (assistants.isPending || conversations.isPending || members.isPending || keys.isPending)}
       />
     </ShellRoot>
   );

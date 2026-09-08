@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import styled from 'styled-components';
+import { RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ease } from '@styles/motion';
 import {
@@ -24,6 +26,12 @@ export type Message = {
   text: string;
 };
 
+export type ChatNotice = {
+  id: string;
+  kind: 'tool' | 'usage' | 'status' | 'error';
+  text: string;
+};
+
 type Suggestion = { icon: string; label: string };
 
 type Props = {
@@ -31,6 +39,9 @@ type Props = {
   isTyping?: boolean;
   suggestions?: Suggestion[];
   onSuggestionClick?: (text: string) => void;
+  notices?: ChatNotice[];
+  onRegenerate?: () => void;
+  showRegenerate?: boolean;
 };
 
 const iconPaths: Record<string, string> = {
@@ -44,7 +55,14 @@ const iconPaths: Record<string, string> = {
     'M12 5a7 7 0 100 14 7 7 0 000-14zm0-3v2m0 16v2M3 12h2m14 0h2M5.6 5.6l1.4 1.4m10 10l1.4 1.4M5.6 18.4l1.4-1.4m10-10l1.4-1.4',
 };
 
-export function ChatMessages({ messages = [], isTyping, suggestions = [], onSuggestionClick }: Props) {
+const noticeTone: Record<ChatNotice['kind'], string> = {
+  tool: '#60a5fa',
+  usage: '#94a3b8',
+  status: '#c084fc',
+  error: '#f87171',
+};
+
+export function ChatMessages({ messages = [], isTyping, suggestions = [], onSuggestionClick, notices = [], onRegenerate, showRegenerate }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Keep the newest message in view as the conversation grows.
@@ -101,6 +119,12 @@ export function ChatMessages({ messages = [], isTyping, suggestions = [], onSugg
             <BubbleText>{m.text}</BubbleText>
           </Bubble>
         ))}
+        {notices.map((n) => (
+          <NoticeRow key={n.id} role="status">
+            <NoticeDot $tone={noticeTone[n.kind]} aria-hidden="true" />
+            {n.text}
+          </NoticeRow>
+        ))}
         {isTyping && (
           <TypingBubble
             as={motion.div}
@@ -125,8 +149,34 @@ export function ChatMessages({ messages = [], isTyping, suggestions = [], onSugg
               {s.label}
             </SuggestionChip>
           ))}
+          {showRegenerate && onRegenerate && (
+            <SuggestionChip type="button" onClick={onRegenerate}>
+              <RefreshCw size={11} strokeWidth={1.8} /> Regenerate
+            </SuggestionChip>
+          )}
         </SuggestionInline>
       )}
     </>
   );
 }
+
+const NoticeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const NoticeDot = styled.span<{ $tone: string }>`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: ${({ $tone }) => $tone};
+  flex-shrink: 0;
+`;

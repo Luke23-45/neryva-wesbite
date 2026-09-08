@@ -17,6 +17,16 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false,
+      // Engine errors are typed: retry transient failures only (5xx /
+      // network), never 4xx — a 403 must surface immediately, not retry.
+      retry: (failureCount, error) => {
+        const status = (error as { status?: number }).status;
+        if (typeof status === 'number') {
+          return status >= 500 && failureCount < 2;
+        }
+        return failureCount < 2; // network/unknown → bounded retry
+      },
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     },
   },
 });

@@ -34,6 +34,7 @@ import AgentStudioChatPage from '@pages/products/agent_studio/AgentStudioChatPag
 import AgentStudioDashboardPage from '@pages/products/agent_studio/AgentStudioDashboardPage';
 import AgentStudioAgentsPage from '@pages/products/agent_studio/AgentStudioAgentsPage';
 import AgentStudioAgentDetailPage from '@pages/products/agent_studio/AgentStudioAgentDetailPage';
+import AgentStudioAgentEditPage from '@pages/products/agent_studio/AgentStudioAgentEditPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
@@ -81,7 +82,7 @@ import DeploymentTeamsPage from '@pages/products/deployment/DeploymentTeamsPage'
 import DeploymentUsagePage from '@pages/products/deployment/DeploymentUsagePage';
 import DeploymentReleasesPage from '@pages/products/deployment/DeploymentReleasesPage';
 
-import { requireAuth } from '@components/ProtectedRoute';
+import { requireEngineSession } from '@lib/engine/session-gate';
 
 // Lazy-loaded secret page (separate JS chunk)
 const SecretPage = lazy(() => import('@pages/secret/SecretPage'));
@@ -242,7 +243,7 @@ export const authRoute = createRoute({
 export const agentStudioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/agent-studio',
-  beforeLoad: requireAuth,
+  beforeLoad: () => requireEngineSession(),
   component: AgentStudioShell,
 });
 
@@ -277,6 +278,12 @@ export const agentStudioAgentDetailRoute = createRoute({
   getParentRoute: () => agentStudioAgentsRoute,
   path: '/$agentId',
   component: AgentStudioAgentDetailPage,
+});
+
+export const agentStudioAgentEditRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId/edit',
+  component: AgentStudioAgentEditPage,
 });
 
 export const agentStudioConversationsRoute = createRoute({
@@ -412,7 +419,7 @@ export const agentStudioEvaluationsRoute = createRoute({
 export const deploymentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/deployment',
-  beforeLoad: requireAuth,
+  beforeLoad: () => requireEngineSession(),
   component: DeploymentShell,
 });
 
@@ -584,11 +591,26 @@ export const routeDefinitions = [
   solutionsRoute,
   secretRoute,
   authRoute,
+  // The OP callback + the /platform console are declared on the root route
+  // and live at the top level of the tree — the callback must never sit
+  // under a guarded shell, and /platform renders its own sign-in state.
+  authCallbackRoute,
+  platformRoute.addChildren([
+    platformIndexRoute,
+    platformMembersRoute,
+    platformProjectsRoute,
+    platformApiKeysRoute,
+    platformUsageRoute,
+    platformBillingRoute,
+    platformAuditRoute,
+    platformSettingsRoute,
+    platformStatusRoute,
+  ]),
   agentStudioRoute.addChildren([
     agentStudioIndexRoute,
     agentStudioChatRoute,
     agentStudioDashboardRoute,
-    agentStudioAgentsRoute.addChildren([agentStudioAgentDetailRoute]),
+    agentStudioAgentsRoute.addChildren([agentStudioAgentDetailRoute, agentStudioAgentEditRoute]),
     agentStudioKnowledgeRoute,
     agentStudioModelsRoute,
     agentStudioConversationsRoute,
@@ -601,19 +623,7 @@ export const routeDefinitions = [
     agentStudioUsageRoute,
     agentStudioEvaluationsRoute,
     agentStudioComplianceRoute,
-    platformRoute.addChildren([
-    platformIndexRoute,
-    platformMembersRoute,
-    platformProjectsRoute,
-    platformApiKeysRoute,
-    platformUsageRoute,
-    platformBillingRoute,
-    platformAuditRoute,
-    platformSettingsRoute,
-    platformStatusRoute,
-  ]),
-  authCallbackRoute,
-  agentStudioSettingsRoute.addChildren([
+    agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,
       agentStudioSettingsWorkspaceRoute,

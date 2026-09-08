@@ -43,9 +43,10 @@ type Props = {
   onClose: () => void;
   items: CommandItem[];
   brand: 'studio' | 'deploy';
+  loading?: boolean;
 };
 
-export function CommandPalette({ open, onClose, items, brand }: Props) {
+export function CommandPalette({ open, onClose, items, brand, loading }: Props) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +153,9 @@ export function CommandPalette({ open, onClose, items, brand }: Props) {
             </SearchRow>
 
             <Results>
-              {flat.length === 0 ? (
+              {loading && flat.length === 0 ? (
+                <Empty>Searching…</Empty>
+              ) : flat.length === 0 ? (
                 <Empty>No results for "{query}"</Empty>
               ) : (
                 Object.entries(grouped).map(([section, list]) => (

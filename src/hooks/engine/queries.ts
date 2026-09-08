@@ -31,11 +31,14 @@ export interface MemberRow {
   groups?: Array<{ id: string; name: string }>;
 }
 
-export function useMembers(params: { q?: string; status?: string; limit?: number; offset?: number } = {}) {
-  const orgId = useOrgRequired();
+export function useMembers(params: { q?: string; status?: string; limit?: number; offset?: number } = {}, options?: { enabled?: boolean }) {
+  // Null-safe (vs useOrgRequired): palette/search consumers render during
+  // org resolution and must not crash — the query simply stays disabled.
+  const { orgId } = useOrg();
   return useQuery({
     queryKey: ['engine', 'members', orgId, params],
     queryFn: () => engine<{ members: MemberRow[]; total: number }>(`/console/org/${orgId}/members`, { query: { ...params } }),
+    enabled: (options?.enabled ?? true) && !!orgId,
   });
 }
 
@@ -103,11 +106,12 @@ export interface KeyRow {
   createdAt: string;
 }
 
-export function useKeys() {
-  const orgId = useOrgRequired();
+export function useKeys(options?: { enabled?: boolean }) {
+  const { orgId } = useOrg();
   return useQuery({
     queryKey: ['engine', 'keys', orgId],
     queryFn: () => engine<{ keys: KeyRow[] }>(`/console/org/${orgId}/keys`),
+    enabled: (options?.enabled ?? true) && !!orgId,
   });
 }
 
@@ -281,5 +285,65 @@ export function useOnboarding() {
     queryKey: ['engine', 'onboarding'],
     queryFn: () => engine<Record<string, unknown>>('/console/onboarding'),
     staleTime: 5 * 60_000,
+  });
+}
+
+// ── Org limits (billing tab meters) ────────────────────────────────────────
+
+export interface QuotaMeter {
+  label: string;
+  used: number;
+  limit: number | null;
+}
+
+function meterLabelFromKey(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b(monthly|events|spend|usd)\b/gi, (m) => m.toUpperCase() === 'USD' ? 'USD' : m)
+    .trim();
+}
+
+/** Defensive walk: any `{used|spent|current, limit|max}` pair becomes a meter. */
+export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
+  if (typeof raw !== 'object' || raw === null) {
+    return [];
+  }
+  const record = raw as Record<string, unknown>;
+  const scope =
+    (typeof record.products === 'object' && record.products !== null && (record.products as Record<string, unknown>)[product]) ??
+    (typeof record.quotas === 'object' && record.quotas !== null ? (record.quotas as Record<string, unknown>)[product] : undefined) ??
+    record[product] ??
+    record;
+  if (typeof scope !== 'object' || scope === null) {
+    return [];
+  }
+  const meters: QuotaMeter[] = [];
+  for (const [key, value] of Object.entries(scope as Record<string, unknown>)) {
+    if (typeof value !== 'object' || value === null) {
+      continue;
+    }
+    const bucket = value as Record<string, unknown>;
+    const used = bucket.used ?? bucket.spent ?? bucket.current;
+    const limit = bucket.limit ?? bucket.max ?? null;
+    if (typeof used !== 'number') {
+      continue;
+    }
+    meters.push({
+      label: meterLabelFromKey(key),
+      used,
+      limit: typeof limit === 'number' ? limit : null,
+    });
+  }
+  return meters;
+}
+
+export function useOrgLimits(options?: { enabled?: boolean }) {
+  // Null-safe: settings/billing render during org resolution.
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ['engine', 'limits', orgId],
+    queryFn: () => engine<Record<string, unknown>>(`/console/org/${orgId}/limits`),
+    enabled: (options?.enabled ?? true) && !!orgId,
+    staleTime: 60_000,
   });
 }

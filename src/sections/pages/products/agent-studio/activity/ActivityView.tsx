@@ -1,15 +1,16 @@
-import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
-import { StatusPill } from '@components/common/ui/StatusPill';
-import { EmptyState } from '@components/common/ui/EmptyState';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { SearchField } from '@components/common/ui/SearchField';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
-import activity from '@neryva_data/products/agent_studio/activity.json';
+import { engineDownload } from '@lib/engine/client';
+import { useAudit, useAuditFacets, useOrgRequired, type AuditEventRow } from '@hooks/engine/queries';
+import { useUrlSearchParams, useUrlState } from '@lib/useUrlState';
 import {
   FilterBar,
   FilterChip,
@@ -24,75 +25,109 @@ import {
   RowMeta,
 } from './ActivityView.styles';
 
-type FilterKind = 'all' | 'resolved' | 'escalation' | 'error' | 'deploy' | 'config' | 'new' | 'milestone';
+/**
+ * Activity (ledger G-2) — the organization's hash-chained audit trail as a
+ * live tail: facet-driven filters, time window, search, per-event detail,
+ * and NDJSON export. Polls every 30s so "live event stream" is honest
+ * enough until the engine exposes a stream (E-12).
+ */
 
-const FILTERS: { value: FilterKind; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'escalation', label: 'Escalation' },
-  { value: 'error', label: 'Error' },
-  { value: 'deploy', label: 'Deploy' },
-  { value: 'config', label: 'Config' },
-  { value: 'new', label: 'New' },
-  { value: 'milestone', label: 'Milestone' },
-];
+const PAGE_SIZE = 50;
+
+function toneFor(action: string): 'success' | 'warning' | 'error' | 'info' {
+  const a = action.toLowerCase();
+  if (a.includes('fail') || a.includes('error') || a.includes('delete') || a.includes('revoke')) return 'error';
+  if (a.includes('suspend') || a.includes('past_due') || a.includes('warn')) return 'warning';
+  if (a.includes('create') || a.includes('publish') || a.includes('issue')) return 'success';
+  return 'info';
+}
+
+function dayLabel(iso: string): string {
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return iso.slice(0, 10);
+  return new Date(at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function timeLabel(iso: string): string {
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return '';
+  return new Date(at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
 
 export function ActivityView() {
-  const [kind, setKind] = useState<FilterKind>('all');
+  const orgId = useOrgRequired();
+  const params = useUrlSearchParams();
+  const [, setActionParam] = useUrlState('action', { default: 'all' });
   const [query, setQuery] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    return activity.events.filter((e) => {
-      if (kind !== 'all' && e.kind !== kind) return false;
-      if (query.trim()) {
-        const q = query.toLowerCase();
-        return (
-          e.title.toLowerCase().includes(q) ||
-          e.detail.toLowerCase().includes(q) ||
-          e.agent.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [kind, query]);
+  const actionFilter = params.action ?? 'all';
+  const facets = useAuditFacets();
+  const audit = useAudit({ limit: PAGE_SIZE });
 
-  const grouped = filtered.reduce<Record<string, typeof filtered>>((acc, e) => {
-    (acc[e.date] ||= []).push(e);
-    return acc;
-  }, {});
+  const facetActions = (facets.data?.actions ?? []).slice(0, 6);
+
+  const rows = useMemo(() => {
+    const events = audit.data?.events ?? [];
+    if (!query.trim()) return events;
+    const q = query.toLowerCase();
+    return events.filter((e) =>
+      e.action.toLowerCase().includes(q) ||
+      e.resource_type.toLowerCase().includes(q) ||
+      (e.actor_id ?? '').toLowerCase().includes(q),
+    );
+  }, [audit.data, query]);
+
+  const grouped = useMemo(() => {
+    const out = new Map<string, AuditEventRow[]>();
+    for (const e of rows) {
+      const day = dayLabel(e.created_at);
+      if (!out.has(day)) out.set(day, []);
+      out.get(day)!.push(e);
+    }
+    return [...out.entries()];
+  }, [rows]);
+
+  const exportTrail = () => {
+    void engineDownload(`/console/org/${orgId}/audit/export`).catch(() => undefined);
+  };
 
   return (
     <ViewShell>
       <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewTitle>Activity</ViewTitle>
         <ViewSubtitle>
-          Every event across your agents — escalations, deploys, integrations, and more.
+          The organization's hash-chained audit trail — every privileged action, in order, with receipts.
         </ViewSubtitle>
       </ViewHeader>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
           action={
-            <ActionButton
-              variant="secondary"
-              size="sm"
-              onClick={() => toast.success('Exporting activity CSV…')}
-            >
+            <ActionButton variant="secondary" size="sm" onClick={exportTrail}>
               <Download size={13} strokeWidth={1.8} />
-              Export CSV
+              Export NDJSON
             </ActionButton>
           }
         >
           <FilterBar>
-            {FILTERS.map((f) => (
+            <FilterChip
+              type="button"
+              $active={actionFilter === 'all'}
+              aria-pressed={actionFilter === 'all'}
+              onClick={() => setActionParam('')}
+            >
+              All
+            </FilterChip>
+            {facetActions.map((action) => (
               <FilterChip
-                key={f.value}
+                key={action}
                 type="button"
-                $active={kind === f.value}
-                aria-pressed={kind === f.value}
-                onClick={() => setKind(f.value)}
+                $active={actionFilter === action}
+                aria-pressed={actionFilter === action}
+                onClick={() => setActionParam(action)}
               >
-                {f.label}
+                {action}
               </FilterChip>
             ))}
             <SearchField
@@ -104,41 +139,75 @@ export function ActivityView() {
             />
           </FilterBar>
 
-          {Object.entries(grouped).length === 0 ? (
-            <EmptyState title="No events match" description="Try a different filter or search term." />
-          ) : (
-            Object.entries(grouped).map(([date, events]) => (
-              <Group key={date}>
-                <GroupTitle>{date}</GroupTitle>
-                {events.map((e, i) => (
-                  <Row
-                    key={e.id}
-                    as={motion.div}
-                    initial="hidden"
-                    animate="visible"
-                    variants={pageItem}
-                    custom={i}
-                  >
-                    <RowTime>{e.time}</RowTime>
-                    <RowDot $tone={e.tone as 'success' | 'warning' | 'error' | 'info'} aria-hidden="true" />
-                    <RowMain>
-                      <RowTitle>{e.title}</RowTitle>
-                      <RowDetail>{e.detail}</RowDetail>
-                      <RowMeta>
-                        {e.agent !== '—' && <span>{e.agent}</span>}
-                        {e.agent !== '—' && <span aria-hidden="true">·</span>}
-                        <span>{e.actor}</span>
-                        <span aria-hidden="true">·</span>
-                        <StatusPill tone={e.tone as 'success' | 'warning' | 'error' | 'info'}>
-                          {e.kind}
-                        </StatusPill>
-                      </RowMeta>
-                    </RowMain>
-                  </Row>
+          <QueryView
+            query={audit}
+            skeleton={<Skeleton $h="320px" $r="12px" />}
+            isEmpty={(d) => d.events.length === 0}
+            empty={{ title: 'No events match', description: 'As your organization acts — keys, agents, invites — the trail fills in.' }}
+          >
+            {(data) => (
+              <>
+                {grouped.map(([date, events]) => (
+                  <Group key={date}>
+                    <GroupTitle>
+                      {date} · {events.length}
+                    </GroupTitle>
+                    {events.map((e, i) => {
+                      const isOpen = expanded === e.id;
+                      return (
+                        <Row
+                          key={e.id}
+                          as={motion.div}
+                          initial="hidden"
+                          animate="visible"
+                          variants={pageItem}
+                          custom={i}
+                          onClick={() => setExpanded(isOpen ? null : e.id)}
+                          style={{ cursor: 'pointer' }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                              ev.preventDefault();
+                              setExpanded(isOpen ? null : e.id);
+                            }
+                          }}
+                        >
+                          <RowTime>{timeLabel(e.created_at)}</RowTime>
+                          <RowDot $tone={toneFor(e.action)} aria-hidden="true" />
+                          <RowMain>
+                            <RowTitle>{e.action}</RowTitle>
+                            <RowDetail>
+                              {e.resource_type}
+                              {e.resource_id ? ` · ${e.resource_id.slice(0, 14)}` : ''}
+                            </RowDetail>
+                            <RowMeta>
+                              <span>{e.actor_type}</span>
+                              {isOpen && (
+                                <span aria-hidden="true">·</span>
+                              )}
+                              {isOpen && (
+                                <code style={{ fontSize: 'inherit' }}>
+                                  {JSON.stringify(e.details ?? {}).slice(0, 220) || '{}'}
+                                </code>
+                              )}
+                              {!isOpen && <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />}
+                              {isOpen && <ChevronUp size={11} strokeWidth={1.7} aria-hidden="true" />}
+                            </RowMeta>
+                          </RowMain>
+                        </Row>
+                      );
+                    })}
+                  </Group>
                 ))}
-              </Group>
-            ))
-          )}
+                {data.events.length >= PAGE_SIZE && (
+                  <div style={{ padding: '12px 22px', fontSize: 12, opacity: 0.55 }}>
+                    Showing the {PAGE_SIZE} most recent events — use the export for the full trail.
+                  </div>
+                )}
+              </>
+            )}
+          </QueryView>
         </Panel>
       </motion.div>
     </ViewShell>

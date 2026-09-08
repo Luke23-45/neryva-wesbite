@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { motion } from 'framer-motion';
 import { Wrapper, LeftColumn, RightColumn, Eyebrow, Title, Description } from './ContactHero.styles';
 

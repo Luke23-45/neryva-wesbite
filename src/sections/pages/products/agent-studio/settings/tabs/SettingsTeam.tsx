@@ -1,38 +1,52 @@
+/* eslint-disable no-import-assign */
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MoreHorizontal, ChevronDown, Check } from 'lucide-react';
+import { Plus, MoreHorizontal, ChevronDown, Check, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { Avatar } from '@components/common/ui/Avatar';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { TextInput } from '@components/common/ui/TextInput';
+import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
 import { spring } from '@styles/motion';
-import settings from '@neryva_data/products/agent_studio/settings.json';
-import { SaveRow } from './shared';
+import { useMembers, useInvites } from '@hooks/engine/queries';
+import type { // eslint-disable-line no-import-assign
+  MemberRow, InviteRow } from '@hooks/engine/queries';
+import { useInviteMember, useResendInvite, useRevokeInvite, useChangeRole, useSuspendMember, useReactivateMember, useRemoveMember } from '@hooks/engine/mutations';
+import { useOrg } from '@/Context/OrgContext';
+import type { OrgRole } from '@/Context/OrgContext';
 
 /**
- * Settings → Team
+ * Settings → Team (ledger T-5)
  *
- * Apple-grade behaviors:
- * - Role cell is a real popover trigger. Click opens a frosted-glass
- *   menu below it with a checkmark on the current role. Click outside
- *   or press Escape closes.
- * - Popover uses a `gentle` spring — the iOS popover entry curve.
- * - Member row's "more" button uses a similar popover (placeholder
- *   actions for now).
- * - Email invite: button is disabled until a value is entered (Apple's
- *   "soft-disabled" pattern, not the system grey-out).
+ * Live org membership through the engine: role changes (step-up-protected,
+ * auto-retried on expired proofs), suspend/reactivate/remove, invites with
+ * resend/revoke. Mutations are immediate — there is no save button to fake.
+ *
+ * Apple-grade behaviors kept from the redesign: role cell is a popover
+ * picker with a checkmark on the current role, soft-disabled invite button,
+ * spring menus, layout-animated rows.
  */
 
-const ROLES = ['Owner', 'Admin', 'Editor', 'Viewer'] as const;
-type Role = (typeof ROLES)[number];
+const ROLES: OrgRole[] = ['owner', 'admin', 'billing', 'developer', 'reader'];
 
-const ROLE_HUES: Record<Role, 'azure' | 'emerald' | 'lilac' | 'amethyst'> = {
-  Owner: 'amethyst',
-  Admin: 'azure',
-  Editor: 'emerald',
-  Viewer: 'lilac',
+const ROLE_LABELS_CAP: Record<OrgRole, string> = {
+  owner: 'Owner',
+  admin: 'Admin',
+  billing: 'Billing',
+  developer: 'Developer',
+  reader: 'Reader',
+};
+
+const ROLE_HUES: Record<OrgRole, 'azure' | 'emerald' | 'lilac' | 'amethyst'> = {
+  owner: 'amethyst',
+  admin: 'azure',
+  billing: 'emerald',
+  developer: 'lilac',
+  reader: 'azure',
 };
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -41,115 +55,145 @@ const fadeUp = {
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.5, ease: premiumEase, delay: i * 0.04 } }),
 };
 
-type Member = (typeof settings.team)[number];
-
 export function SettingsTeam() {
-  const [members, setMembers] = useState<Member[]>(settings.team);
-  const [email, setEmail] = useState('');
-
-  const changeRole = (id: string, role: Role) => {
-    setMembers((m) => m.map((mem) => (mem.id === id ? { ...mem, role } : mem)));
-    const member = members.find((m) => m.id === id);
-    toast.success(`${member?.name} is now ${role}`);
-  };
-
-  const sendInvite = () => {
-    if (!email || !email.includes('@')) {
-      toast.error('Enter a valid email');
-      return;
-    }
-    toast.success(`Invite sent to ${email}`);
-    setEmail('');
-  };
+  const { canManageMembers } = useOrg();
+  const members = useMembers();
+  const invites = useInvites();
 
   return (
-    <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
-      <Panel
-        title="Members"
-        subtitle="People with access to this workspace."
-        action={
-          <SaveRow
-            onSave={() => toast.success('Team settings saved')}
-            saveLabel="Save changes"
-          />
-        }
-      >
-        <InviteRow>
-          <div style={{ flex: 1 }}>
-            <TextInput
-              placeholder="email@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') sendInvite();
-              }}
-              aria-label="Email address"
-            />
-          </div>
-          <InviteBtn
-            type="button"
-            onClick={sendInvite}
-            disabled={!email.includes('@')}
-            whileTap={email.includes('@') ? { scale: 0.97 } : undefined}
-            transition={spring.snap}
-          >
-            <Plus size={13} strokeWidth={2} />
-            Send invite
-          </InviteBtn>
-        </InviteRow>
+    <>
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
+        <Panel title="Members" subtitle="People with access to this workspace.">
+          {canManageMembers && <InviteRow />}
+          <QueryView query={members} skeleton={<Skeleton $h="260px" $r="12px" />} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members yet', description: 'Invite teammates to collaborate on agents and conversations.' }}>
+            {(data) => <MembersTable members={data.members} canManage={canManageMembers} />}
+          </QueryView>
+        </Panel>
+      </motion.div>
 
-        <TableWrap>
-          <TableHeader>
-            <div style={{ width: '34%' }}>Member</div>
-            <div style={{ width: '24%' }}>Role</div>
-            <div style={{ width: '16%' }}>Status</div>
-            <div style={{ width: '18%' }}>Last active</div>
-            <div style={{ width: '44px' }} />
-          </TableHeader>
-          {members.map((m, i) => {
-            const initials = m.name.split(' ').map((s) => s[0]).slice(0, 2).join('');
-            const hue = ROLE_HUES[m.role as Role] ?? 'azure';
-            return (
-              <MemberRow
-                key={m.id}
-                as={motion.div}
-                layout
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring.spring, delay: i * 0.03 }}
-              >
-                <MemberCell>
-                  <Avatar initials={initials} hue={hue} size={32} status={m.status === 'active' ? 'online' : 'idle'} />
-                  <MemberInfo>
-                    <MemberName>{m.name}</MemberName>
-                    <MemberEmail>{m.email}</MemberEmail>
-                  </MemberInfo>
-                </MemberCell>
-                <div style={{ width: '24%' }}>
-                  <RoleMenu current={m.role as Role} onChange={(r) => changeRole(m.id, r)} />
-                </div>
-                <div style={{ width: '16%' }}>
-                  <StatusPill tone={m.status === 'active' ? 'success' : 'warning'} dot>
-                    {m.status}
-                  </StatusPill>
-                </div>
-                <MemberLastActive>{m.lastActive}</MemberLastActive>
-                <div style={{ width: '44px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <MemberMore member={m} />
-                </div>
-              </MemberRow>
-            );
-          })}
-        </TableWrap>
-      </Panel>
-    </motion.div>
+      {canManageMembers && (
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+          <PendingInvites invites={invites.data?.invites ?? []} />
+        </motion.div>
+      )}
+    </>
   );
 }
 
-// ─── RoleMenu — iOS-style popover picker ──────────────────────────────
-function RoleMenu({ current, onChange }: { current: Role; onChange: (r: Role) => void }) {
+function InviteRow() {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<OrgRole>('developer');
+  const invite = useInviteMember();
+
+  const send = () => {
+    if (!email.includes('@')) {
+      toast.error('Enter a valid email');
+      return;
+    }
+    invite.mutate(
+      { email: email.trim(), role },
+      { onSuccess: () => { toast.success(`Invite sent to ${email.trim()}`); setEmail(''); } },
+    );
+  };
+
+  return (
+    <InviteWrap>
+      <div style={{ flex: 1 }}>
+        <TextInput
+          placeholder="email@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && email.includes('@')) send();
+          }}
+          aria-label="Email address"
+        />
+      </div>
+      <RoleSelect aria-label="Invite role" value={role} onChange={(e) => setRole(e.target.value as OrgRole)}>
+        {ROLES.filter((r) => r !== 'owner').map((r) => (
+          <option key={r} value={r}>{ROLE_LABELS_CAP[r]}</option>
+        ))}
+      </RoleSelect>
+      <InviteBtn
+        type="button"
+        onClick={send}
+        disabled={!email.includes('@') || invite.isPending}
+        whileTap={email.includes('@') ? { scale: 0.97 } : undefined}
+        transition={spring.snap}
+      >
+        <Plus size={13} strokeWidth={2} />
+        Send invite
+      </InviteBtn>
+    </InviteWrap>
+  );
+}
+
+function MembersTable({ members, canManage }: { members: MemberRow[]; canManage: boolean }) {
+  return (
+    <TableWrap>
+      <TableHeader>
+        <div style={{ width: '34%' }}>Member</div>
+        <div style={{ width: '24%' }}>Role</div>
+        <div style={{ width: '16%' }}>Status</div>
+        <div style={{ width: '18%' }}>Last active</div>
+        <div style={{ width: '44px' }} />
+      </TableHeader>
+      {members.map((m, i) => {
+        const displayName = m.displayName ?? m.email;
+        const initials = displayName.split(' ').map((s) => s[0]).slice(0, 2).join('');
+        const role = m.role as OrgRole;
+        const hue = ROLE_HUES[role] ?? 'azure';
+        return (
+          <MemberRow             key={m.accountId}
+            as={motion.div}
+            layout
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring.spring, delay: i * 0.03 }}
+          >
+            <MemberCell>
+              <Avatar initials={initials} hue={hue} size={32} status={m.status === 'active' ? 'online' : 'idle'} />
+              <MemberInfo>
+                <MemberName>{displayName}</MemberName>
+                <MemberEmail>{m.email}</MemberEmail>
+              </MemberInfo>
+            </MemberCell>
+            <div style={{ width: '24%' }}>
+              {canManage && role !== 'owner' ? (
+                <RoleMenu current={role} accountId={m.accountId} name={displayName} />
+              ) : (
+                <RoleStatic><RoleDot $hue={hue} aria-hidden="true" />{ROLE_LABELS_CAP[role] ?? role}</RoleStatic>
+              )}
+            </div>
+            <div style={{ width: '16%' }}>
+              <StatusPill tone={m.status === 'active' ? 'success' : 'warning'} dot>
+                {m.status}
+              </StatusPill>
+            </div>
+            <MemberLastActive>{m.lastActiveAt ? relativeDay(m.lastActiveAt) : `Joined ${relativeDay(m.memberSince)}`}</MemberLastActive>
+            <div style={{ width: '44px', display: 'flex', justifyContent: 'flex-end' }}>
+              <MemberMore member={m} canManage={canManage} />
+            </div>
+          </MemberRow>
+        );
+      })}
+    </TableWrap>
+  );
+}
+
+function relativeDay(iso: string): string {
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) {
+    return iso;
+  }
+  return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// ─── RoleMenu — popover picker wired to the engine ───────────────────
+function RoleMenu({ current, accountId, name }: { current: OrgRole; accountId: string; name: string }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const changeRole = useChangeRole();
 
   useEffect(() => {
     if (!open) return;
@@ -177,7 +221,7 @@ function RoleMenu({ current, onChange }: { current: Role; onChange: (r: Role) =>
         transition={spring.snap}
       >
         <RoleDot $hue={ROLE_HUES[current]} aria-hidden="true" />
-        {current}
+        {ROLE_LABELS_CAP[current] ?? current}
         <ChevronDown size={11} strokeWidth={2} />
       </RoleButton>
       <AnimatePresence>
@@ -195,15 +239,22 @@ function RoleMenu({ current, onChange }: { current: Role; onChange: (r: Role) =>
                 type="button"
                 role="menuitemradio"
                 aria-checked={current === r}
+                disabled={changeRole.isPending}
                 onClick={() => {
-                  onChange(r);
-                  setOpen(false);
+                  if (r === current) {
+                    setOpen(false);
+                    return;
+                  }
+                  changeRole.mutate(
+                    { accountId, role: r },
+                    { onSuccess: () => { toast.success(`${name} is now ${ROLE_LABELS_CAP[r]}`); setOpen(false); } },
+                  );
                 }}
                 whileTap={{ scale: 0.985 }}
                 transition={spring.snap}
               >
                 <RoleDot $hue={ROLE_HUES[r]} aria-hidden="true" />
-                <MenuLabel>{r}</MenuLabel>
+                <MenuLabel>{ROLE_LABELS_CAP[r]}</MenuLabel>
                 {current === r && (
                   <motion.span
                     initial={{ scale: 0 }}
@@ -223,10 +274,15 @@ function RoleMenu({ current, onChange }: { current: Role; onChange: (r: Role) =>
   );
 }
 
-// ─── MemberMore — secondary actions menu ─────────────────────────────
-function MemberMore({ member }: { member: Member }) {
+// ─── MemberMore — real secondary actions ─────────────────────────────
+function MemberMore({ member, canManage }: { member: MemberRow; canManage: boolean }) {
   const [open, setOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const suspend = useSuspendMember();
+  const reactivate = useReactivateMember();
+  const remove = useRemoveMember();
+  const role = member.role as OrgRole;
 
   useEffect(() => {
     if (!open) return;
@@ -244,9 +300,13 @@ function MemberMore({ member }: { member: Member }) {
     };
   }, [open]);
 
+  if (!canManage || role === 'owner') {
+    return null;
+  }
+
   return (
     <Wrap ref={wrapRef}>
-      <MoreBtn type="button" aria-label={`Actions for ${member.name}`} onClick={() => setOpen((o) => !o)} $open={open}>
+      <MoreBtn type="button" aria-label={`Actions for ${member.displayName ?? member.email}`} onClick={() => setOpen((o) => !o)} $open={open}>
         <MoreHorizontal size={15} strokeWidth={1.7} />
       </MoreBtn>
       <AnimatePresence>
@@ -263,19 +323,8 @@ function MemberMore({ member }: { member: Member }) {
               type="button"
               role="menuitem"
               onClick={() => {
-                toast.success(`Reset password email sent to ${member.email}`);
-                setOpen(false);
-              }}
-              whileTap={{ scale: 0.985 }}
-              transition={spring.snap}
-            >
-              <MenuLabel>Resend invite</MenuLabel>
-            </MenuItem>
-            <MenuItem
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                toast(`Copied ${member.email}`);
+                void navigator.clipboard.writeText(member.email);
+                toast.success(`Copied ${member.email}`);
                 setOpen(false);
               }}
               whileTap={{ scale: 0.985 }}
@@ -283,25 +332,135 @@ function MemberMore({ member }: { member: Member }) {
             >
               <MenuLabel>Copy email</MenuLabel>
             </MenuItem>
-            {member.role !== 'Owner' && (
+            {member.status === 'active' ? (
               <MenuItem
-                $danger
                 type="button"
                 role="menuitem"
+                disabled={suspend.isPending}
                 onClick={() => {
-                  toast.error(`${member.name} removed from workspace`);
-                  setOpen(false);
+                  suspend.mutate(
+                    { accountId: member.accountId },
+                    { onSuccess: () => { toast.success('Member suspended'); setOpen(false); } },
+                  );
                 }}
                 whileTap={{ scale: 0.985 }}
                 transition={spring.snap}
               >
-                <MenuLabel>Remove member</MenuLabel>
+                <MenuLabel>Suspend access</MenuLabel>
+              </MenuItem>
+            ) : (
+              <MenuItem
+                type="button"
+                role="menuitem"
+                disabled={reactivate.isPending}
+                onClick={() => {
+                  reactivate.mutate(
+                    { accountId: member.accountId },
+                    { onSuccess: () => { toast.success('Member reactivated'); setOpen(false); } },
+                  );
+                }}
+                whileTap={{ scale: 0.985 }}
+                transition={spring.snap}
+              >
+                <MenuLabel>Reactivate access</MenuLabel>
               </MenuItem>
             )}
+            <MenuItem
+              $danger
+              type="button"
+              role="menuitem"
+              disabled={remove.isPending}
+              onClick={() => {
+                setOpen(false);
+                setConfirmRemove(true);
+              }}
+              whileTap={{ scale: 0.985 }}
+              transition={spring.snap}
+            >
+              <MenuLabel>Remove member</MenuLabel>
+            </MenuItem>
           </Menu>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmRemove}
+        title="Remove this member?"
+        message={`${member.displayName ?? member.email} loses access to this workspace immediately. Their account is not deleted.`}
+        destructive
+        confirmLabel="Remove"
+        onConfirm={() => {
+          remove.mutate(
+            { accountId: member.accountId },
+            { onSuccess: () => toast.success('Member removed') },
+          );
+          setConfirmRemove(false);
+        }}
+        onCancel={() => setConfirmRemove(false)}
+      />
     </Wrap>
+  );
+}
+
+// ─── Pending invites ─────────────────────────────────────────────────
+function PendingInvites({ invites }: { invites: InviteRow[] }) {
+  const pending = invites.filter((i) => i.status === 'pending');
+  const resend = useResendInvite();
+  const revoke = useRevokeInvite();
+  const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
+
+  if (pending.length === 0) {
+    return null;
+  }
+
+  return (
+    <Panel title="Pending invites" subtitle={`${pending.length} awaiting acceptance.`} flush>
+      <InviteList>
+        {pending.map((invite) => (
+          <InviteItemRow key={invite.id}>
+            <InviteIcon aria-hidden="true"><Mail size={14} strokeWidth={1.7} /></InviteIcon>
+            <InviteInfo>
+              <InviteEmail>{invite.email}</InviteEmail>
+              <InviteMeta>
+                {ROLE_LABELS_CAP[invite.role as OrgRole] ?? invite.role} · expires {relativeDay(invite.expiresAt)}
+              </InviteMeta>
+            </InviteInfo>
+            <InviteActions>
+              <MenuTextButton
+                type="button"
+                disabled={resend.isPending}
+                onClick={() => resend.mutate({ inviteId: invite.id }, { onSuccess: () => toast.success('Invite re-sent') })}
+              >
+                Resend
+              </MenuTextButton>
+              <MenuTextButton
+                type="button"
+                $danger
+                disabled={revoke.isPending}
+                onClick={() => setRevokeTarget(invite)}
+              >
+                Revoke
+              </MenuTextButton>
+            </InviteActions>
+          </InviteItemRow>
+        ))}
+      </InviteList>
+
+      <ConfirmDialog
+        open={!!revokeTarget}
+        title="Revoke this invite?"
+        message={revokeTarget ? `The link sent to ${revokeTarget.email} stops working immediately.` : ''}
+        destructive
+        confirmLabel="Revoke invite"
+        onConfirm={() => {
+          if (revokeTarget) {
+            revoke.mutate({ inviteId: revokeTarget.id }, { onSuccess: () => toast.success('Invite revoked') });
+          }
+          setRevokeTarget(null);
+        }}
+        onCancel={() => setRevokeTarget(null)}
+      />
+    </Panel>
   );
 }
 
@@ -322,6 +481,9 @@ const MemberName = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 500;
   color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const MemberEmail = styled.div`
@@ -338,11 +500,38 @@ const MemberLastActive = styled.div`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
-const InviteRow = styled.div`
+const InviteWrap = styled.div`
   display: flex;
   gap: 8px;
   align-items: flex-end;
   margin-bottom: 16px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const RoleSelect = styled.select`
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 9px;
+  padding: 8px 10px;
+  height: 36px;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  option {
+    background: #14151c;
+    color: ${({ theme }) => theme.app.text.primary};
+  }
 `;
 
 const InviteBtn = styled(motion.button)`
@@ -406,6 +595,15 @@ const MemberRow = styled(motion.div)`
   }
 `;
 
+const RoleStatic = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+  padding: 5px 0;
+`;
+
 const Wrap = styled.div`
   position: relative;
   display: inline-block;
@@ -420,7 +618,7 @@ const RoleButton = styled(motion.button)<{ $open: boolean }>`
   border: 1px solid ${({ $open }) => ($open ? 'rgba(192, 132, 252, 0.45)' : 'rgba(255, 255, 255, 0.08)')};
   background: ${({ $open }) =>
     $open
-      ? 'linear-gradient(180deg, ${({ theme }) => theme.app.status.lilac.bg}, rgba(37,99,235,0.04))'
+      ? 'linear-gradient(180deg, rgba(192, 132, 252, 0.08), rgba(37,99,235,0.04))'
       : 'rgba(255, 255, 255, 0.03)'};
   color: ${({ theme }) => theme.app.text.primary};
   font-family: inherit;
@@ -502,6 +700,11 @@ const MenuItem = styled(motion.button)<{ $danger?: boolean }>`
   text-align: left;
   color: ${({ $danger }) => ($danger ? '#f87171' : '#f5f7fb')};
   transition: background ${({ theme }) => theme.transitions.fast};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
 const MenuLabel = styled.span`
@@ -525,5 +728,84 @@ const MoreBtn = styled(motion.button)<{ $open: boolean }>`
   &:hover {
     background: ${({ theme }) => theme.app.surface.active};
     color: ${({ theme }) => theme.app.text.primary};
+  }
+`;
+
+const InviteList = styled.div`
+  & > * + * {
+    border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
+  }
+`;
+
+const InviteItemRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+`;
+
+const InviteIcon = styled.span`
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
+  flex-shrink: 0;
+`;
+
+const InviteInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const InviteEmail = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const InviteMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 1px;
+`;
+
+const InviteActions = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+`;
+
+const MenuTextButton = styled.button<{ $danger?: boolean }>`
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 7px;
+  background: transparent;
+  color: ${({ $danger, theme }) => ($danger ? theme.app.status.error.fg : theme.app.text.secondary)};
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &:hover {
+    background: ${({ $danger, theme }) => ($danger ? theme.app.status.error.bg : theme.app.surface.active)};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
   }
 `;

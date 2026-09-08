@@ -3,42 +3,106 @@
     {
       "section": "Workspace",
       "items": [
-        { "label": "Dashboard", "to": "/agent-studio/dashboard", "icon": "dashboard" },
-        { "label": "Chat", "to": "/agent-studio/chat", "icon": "chat" },
-        { "label": "Agents", "to": "/agent-studio/agents", "icon": "agents" },
-        { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations" },
-        { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" }
+        {
+          "label": "Dashboard",
+          "to": "/agent-studio/dashboard",
+          "icon": "dashboard"
+        },
+        {
+          "label": "Chat",
+          "to": "/agent-studio/chat",
+          "icon": "chat"
+        },
+        {
+          "label": "Agents",
+          "to": "/agent-studio/agents",
+          "icon": "agents"
+        },
+        {
+          "label": "Conversations",
+          "to": "/agent-studio/conversations",
+          "icon": "conversations"
+        },
+        {
+          "label": "Activity",
+          "to": "/agent-studio/activity",
+          "icon": "activity"
+        }
       ]
     },
     {
       "section": "Knowledge",
       "items": [
-        { "label": "Knowledge", "to": "/agent-studio/knowledge", "icon": "knowledge" },
-        { "label": "Models", "to": "/agent-studio/models", "icon": "models" },
-        { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates" }
+        {
+          "label": "Knowledge",
+          "to": "/agent-studio/knowledge",
+          "icon": "knowledge"
+        },
+        {
+          "label": "Models",
+          "to": "/agent-studio/models",
+          "icon": "models"
+        },
+        {
+          "label": "Templates",
+          "to": "/agent-studio/templates",
+          "icon": "templates"
+        }
       ]
     },
     {
       "section": "Insights",
       "items": [
-        { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
-        { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
-        { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations" }
+        {
+          "label": "Analytics",
+          "to": "/agent-studio/analytics",
+          "icon": "analytics"
+        },
+        {
+          "label": "Usage",
+          "to": "/agent-studio/usage",
+          "icon": "usage"
+        },
+        {
+          "label": "Evaluations",
+          "to": "/agent-studio/evaluations",
+          "icon": "evaluations"
+        }
       ]
     },
     {
       "section": "Platform",
       "items": [
-        { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
-        { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" },
-        { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
-        { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" }
+        {
+          "label": "Integrations",
+          "to": "/agent-studio/integrations",
+          "icon": "integrations"
+        },
+        {
+          "label": "API explorer",
+          "to": "/agent-studio/api",
+          "icon": "api"
+        },
+        {
+          "label": "Compliance",
+          "to": "/agent-studio/compliance",
+          "icon": "compliance"
+        },
+        {
+          "label": "Teams",
+          "to": "/agent-studio/teams",
+          "icon": "teams"
+        }
       ]
     },
     {
       "section": "Settings",
       "items": [
-        { "label": "Settings", "to": "/agent-studio/settings/profile", "icon": "settings" }
+        {
+          "label": "Settings",
+          "to": "/agent-studio/settings/profile",
+          "icon": "settings"
+        }
       ]
     }
   ],
@@ -52,12 +116,5 @@
     "name": "Aurora Labs",
     "plan": "Pro"
   },
-  "searchPlaceholder": "Search Studio…",
-  "recentChats": [
-    { "id": "h1", "title": "Quarterly brief — Q4 strategy" },
-    { "id": "h2", "title": "Draft: investor update memo" },
-    { "id": "h3", "title": "Refactor onboarding flow" },
-    { "id": "h4", "title": "Audit translation coverage" },
-    { "id": "h5", "title": "Spreadsheet → narrative" }
-  ]
+  "searchPlaceholder": "Search Studio…"
 }

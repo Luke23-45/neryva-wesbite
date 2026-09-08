@@ -1,0 +1,2326 @@
+{
+  "generatedFrom": "products/neryva_agent_studio/contracts/openapi/openapi.v1.json",
+  "openapi": "3.1.0",
+  "title": "Neryva Agent Studio",
+  "version": "v1",
+  "endpointCount": 119,
+  "endpoints": [
+    {
+      "id": "get_/api/v1/gateway/circuit-breakers",
+      "path": "/api/v1/gateway/circuit-breakers",
+      "method": "get",
+      "tag": "Admin Console",
+      "summary": "List Circuit Breakers",
+      "description": "Per-deployment cooldown state. Every catalog deployment is listed;\ndeployments without a failure record are closed. Redis down returns\nthe catalog with everything closed (cooldown checks fail open).",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/gateway/circuit-breakers/reset",
+      "path": "/api/v1/gateway/circuit-breakers/reset",
+      "method": "post",
+      "tag": "Admin Console",
+      "summary": "Reset Circuit Breakers",
+      "description": "Clear cooldown state: one deployment (provider+model), one provider,\nor all deployments when neither is given.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/models",
+      "path": "/api/v1/models",
+      "method": "get",
+      "tag": "Admin Console",
+      "summary": "List Models",
+      "description": "The process-wide model catalog, with enablement overrides applied.\n\n``capabilities``/``max_output_tokens``/``tier``/``region_availability``\nare not tracked by the catalog and are returned empty/0.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "put_/api/v1/models/{model_id}",
+      "path": "/api/v1/models/{model_id}",
+      "method": "put",
+      "tag": "Admin Console",
+      "summary": "Update Model",
+      "description": "Set a deployment's enablement status (process-scoped).",
+      "params": [
+        {
+          "name": "model_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/evals",
+      "path": "/api/v1/evals",
+      "method": "post",
+      "tag": "Evals",
+      "summary": "Create Eval Run",
+      "description": "Replay one stored conversation through the production pipeline and\nrecord the outcome as an immutable eval.replay audit event.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/evals",
+      "path": "/api/v1/evals",
+      "method": "get",
+      "tag": "Evals",
+      "summary": "List Eval Runs",
+      "description": "Latest eval runs, newest first.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": "Scope to one tenant",
+          "type": null
+        },
+        {
+          "name": "type",
+          "in": "query",
+          "required": false,
+          "description": "Filter by run type",
+          "type": null
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/evals/{eval_id}",
+      "path": "/api/v1/evals/{eval_id}",
+      "method": "get",
+      "tag": "Evals",
+      "summary": "Get Eval Run",
+      "description": null,
+      "params": [
+        {
+          "name": "eval_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/evals/{eval_id}/cases",
+      "path": "/api/v1/evals/{eval_id}/cases",
+      "method": "get",
+      "tag": "Evals",
+      "summary": "Get Eval Cases",
+      "description": "Per-turn failures recorded by the replay report.",
+      "params": [
+        {
+          "name": "eval_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/harness/compare",
+      "path": "/api/v1/harness/compare",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Run a single prompt against multiple models simultaneously",
+      "description": "Execute a comparison prompt against multiple provider/model pairs.\n\nResults are collected in parallel and returned together for side-by-side\ncomparison. All calls are tagged internal (AGENTS.md boundary).",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/harness/replay-corpus",
+      "path": "/api/v1/harness/replay-corpus",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Replay a redacted eval corpus through a pinned deployment (operator only)",
+      "description": "Replay P6-7 redacted eval cases through one pinned provider/model.\n\nEach case runs independently (corpora are sampled pairs, not threads),\nthrough the same production gateway the customer runtime uses, on the\ninternal harness slot — no cus…",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/harness/sessions",
+      "path": "/api/v1/harness/sessions",
+      "method": "get",
+      "tag": "Harness (Internal Only)",
+      "summary": "List harness sessions (operator only)",
+      "description": null,
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/harness/sessions",
+      "path": "/api/v1/harness/sessions",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Create a harness session (operator only)",
+      "description": null,
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/harness/sessions/{session_id}",
+      "path": "/api/v1/harness/sessions/{session_id}",
+      "method": "get",
+      "tag": "Harness (Internal Only)",
+      "summary": "Get a harness session",
+      "description": null,
+      "params": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "delete_/api/v1/harness/sessions/{session_id}",
+      "path": "/api/v1/harness/sessions/{session_id}",
+      "method": "delete",
+      "tag": "Harness (Internal Only)",
+      "summary": "Delete a harness session",
+      "description": null,
+      "params": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/harness/sessions/{session_id}/fork",
+      "path": "/api/v1/harness/sessions/{session_id}/fork",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Fork a harness session at a message boundary",
+      "description": "Fork any thread at a message boundary (Arch §7.1, P7-5).\n\nCreates a new active session that copies the original's history up to the\nfork point. The original session's ID and history stay unchanged; both\ncan then be resumed independently. T…",
+      "params": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/harness/sessions/{session_id}/messages",
+      "path": "/api/v1/harness/sessions/{session_id}/messages",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Send a message in a harness session",
+      "description": null,
+      "params": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/harness/sessions/{session_id}/replay",
+      "path": "/api/v1/harness/sessions/{session_id}/replay",
+      "method": "post",
+      "tag": "Harness (Internal Only)",
+      "summary": "Replay a session with a different model/provider",
+      "description": "Replay all user turns from an existing session through a new model.\n\nCreates a new session with the same user messages, re-running each\nthrough the specified provider/model. Used for model comparison via\ncontrolled replay (Arch §13, P7-5 r…",
+      "params": [
+        {
+          "name": "session_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/chat/completions",
+      "path": "/api/v1/chat/completions",
+      "method": "post",
+      "tag": "OpenAI-Compatible",
+      "summary": "Chat Completions",
+      "description": "OpenAI-compatible chat completions endpoint.\n\nSupports both streaming (``stream: true``) and non-streaming modes.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/auth/mfa",
+      "path": "/api/v1/auth/mfa",
+      "method": "delete",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Mfa Disable",
+      "description": "Disable MFA (requires a valid proof when already enabled).",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/auth/mfa/confirm",
+      "path": "/api/v1/auth/mfa/confirm",
+      "method": "post",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Mfa Confirm",
+      "description": "Verify a live code against the pending secret and activate MFA.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/auth/mfa/proof",
+      "path": "/api/v1/auth/mfa/proof",
+      "method": "post",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Mfa Proof",
+      "description": "Verify a live code and mint a short-lived proof for privileged ops.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/auth/mfa/setup",
+      "path": "/api/v1/auth/mfa/setup",
+      "method": "post",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Mfa Setup",
+      "description": "Generate a pending TOTP secret (encrypted at rest). Confirm to activate.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/auth/mfa/status",
+      "path": "/api/v1/auth/mfa/status",
+      "method": "get",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Mfa Status",
+      "description": null,
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/auth/oidc/authorize",
+      "path": "/api/v1/auth/oidc/authorize",
+      "method": "get",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Oidc Authorize",
+      "description": "Start the authorization-code flow; redirects to the IdP.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/auth/oidc/callback",
+      "path": "/api/v1/auth/oidc/callback",
+      "method": "get",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Oidc Callback",
+      "description": "IdP callback: exchange the code, verify the id_token, hand the\nfrontend a one-time exchange code (never the bearer token).",
+      "params": [
+        {
+          "name": "code",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "state",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "error",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "error_description",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/auth/oidc/exchange",
+      "path": "/api/v1/auth/oidc/exchange",
+      "method": "post",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Oidc Exchange",
+      "description": "Exchange a one-time code for an operator session bearer token.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/auth/oidc/status",
+      "path": "/api/v1/auth/oidc/status",
+      "method": "get",
+      "tag": "Operator Auth (SSO/MFA)",
+      "summary": "Oidc Status",
+      "description": "Whether SSO is enabled on this deployment (drives the login page).",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/api-keys",
+      "path": "/api/v1/api-keys",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Api Keys",
+      "description": "List API keys (raw keys are never returned).",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/api-keys",
+      "path": "/api/v1/api-keys",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Create Api Key",
+      "description": "Create an API key. The raw key is returned exactly once.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/api-keys/{key_id}",
+      "path": "/api/v1/api-keys/{key_id}",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Revoke Api Key",
+      "description": "Revoke an API key.",
+      "params": [
+        {
+          "name": "key_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/audit/events",
+      "path": "/api/v1/audit/events",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Audit Events",
+      "description": "List audit events (immutable admin trail).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/audit/export",
+      "path": "/api/v1/audit/export",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Export Audit Events",
+      "description": "Export the immutable audit trail as a downloadable JSON file.\n\nRecords are append-only (no update/delete endpoints exist), so the\nexport is a stable point-in-time snapshot suitable for compliance\nevidence (ISO-42001 A.9).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/auth/me",
+      "path": "/api/v1/auth/me",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Auth Me",
+      "description": "Return the principal resolved from the caller's API key.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/conversations",
+      "path": "/api/v1/conversations",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Process Conversation",
+      "description": "Process a conversation message.\n\nIdempotent when the client sends an ``Idempotency-Key`` header: the\nfirst response is stored and replayed verbatim for repeat requests\n(matrix 1.7). The user turn is also written to the durable thread\nwith …",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/conversations/{conversation_id}/pause",
+      "path": "/api/v1/conversations/{conversation_id}/pause",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Pause Conversation",
+      "description": "Pause a conversation: the HITL hold gate blocks new messages (423).",
+      "params": [
+        {
+          "name": "conversation_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/conversations/{conversation_id}/resume",
+      "path": "/api/v1/conversations/{conversation_id}/resume",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Resume Conversation",
+      "description": "Resume a paused conversation, lifting the HITL hold gate.",
+      "params": [
+        {
+          "name": "conversation_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/conversations/stream",
+      "path": "/api/v1/conversations/stream",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Stream Conversation",
+      "description": "Stream a conversation response over Server-Sent Events.\n\nEmits ``session``, ``delta`` (token-level), ``guardrails`` and ``result``\n(or ``error``) events. The response is generated via the LLM's\n``stream_chat``; guardrails and policy checks…",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/escalations",
+      "path": "/api/v1/escalations",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Escalations",
+      "description": "List escalation records. Tenant-bound keys only see their own tenant.",
+      "params": [
+        {
+          "name": "status_filter",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/escalations/{escalation_id}/assign",
+      "path": "/api/v1/escalations/{escalation_id}/assign",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Assign Escalation",
+      "description": "Assign the escalation to an operator (``pending`` -> ``in_review``).",
+      "params": [
+        {
+          "name": "escalation_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/escalations/{escalation_id}/resolve",
+      "path": "/api/v1/escalations/{escalation_id}/resolve",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Resolve Escalation",
+      "description": "Resolve the escalation (operator approval gate complete).",
+      "params": [
+        {
+          "name": "escalation_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/eval/replay",
+      "path": "/api/v1/eval/replay",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Enqueue Eval Replay",
+      "description": "Queue replay of a stored conversation through the pipeline (202).",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/health",
+      "path": "/api/v1/health",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Health Check",
+      "description": "Health check endpoint.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/retention/run",
+      "path": "/api/v1/retention/run",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Run Retention",
+      "description": "Queue a retention cleanup pass for a tenant (202).",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/session-tokens",
+      "path": "/api/v1/session-tokens",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Mint a short-lived end-user session token (anonymous bootstrap)",
+      "description": null,
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/session-tokens/me",
+      "path": "/api/v1/session-tokens/me",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Resolve the current session token (device continuity)",
+      "description": null,
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/session-tokens/revoke",
+      "path": "/api/v1/session-tokens/revoke",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Revoke a session token",
+      "description": null,
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/tenants",
+      "path": "/api/v1/tenants",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Tenants",
+      "description": "List tenants. Tenant-bound keys only see their own tenant.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants",
+      "path": "/api/v1/tenants",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Create Tenant",
+      "description": "Create a new tenant.",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}",
+      "path": "/api/v1/tenants/{tenant_id}",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Get Tenant",
+      "description": "Get a tenant by ID.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "delete_/api/v1/tenants/{tenant_id}",
+      "path": "/api/v1/tenants/{tenant_id}",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Offboard Tenant",
+      "description": "Offboard: erase tenant data, revoke its API keys, delete the tenant.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/compliance",
+      "path": "/api/v1/tenants/{tenant_id}/compliance",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Get Compliance Posture",
+      "description": "Compliance posture (P5-11): Art. 50 disclosure metadata + the\nre-verification checklist as of the last verification date.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/compliance/incidents",
+      "path": "/api/v1/tenants/{tenant_id}/compliance/incidents",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Report Compliance Incident",
+      "description": "Art. 73 incident reporting hook (P5-11): record the incident on the\nimmutable audit trail.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/compliance/risk-assessment",
+      "path": "/api/v1/tenants/{tenant_id}/compliance/risk-assessment",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Record Compliance Risk Assessment",
+      "description": "Record a per-tenant risk-assessment artifact (Annex III, P5-11).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "put_/api/v1/tenants/{tenant_id}/config",
+      "path": "/api/v1/tenants/{tenant_id}/config",
+      "method": "put",
+      "tag": "Other",
+      "summary": "Update Tenant Config",
+      "description": "Update a tenant's row-level settings from the console config tab.\n\nPersisted directly on the tenant row (the runtime's authoritative\nsource for these fields) and recorded on the audit trail.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/config-versions",
+      "path": "/api/v1/tenants/{tenant_id}/config-versions",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Create Tenant Config Version",
+      "description": "Append a new immutable config version (draft) for a tenant.\n\nThe config payload must carry id/name/slug matching the tenant;\npublish/rollback are separate explicit operations.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/config-versions/{version}/auto-rollback",
+      "path": "/api/v1/tenants/{tenant_id}/config-versions/{version}/auto-rollback",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Auto Rollback Tenant Config Version",
+      "description": "Auto-rollback on regression (P5-2): re-promote the prior version.\n\nMarks the failing published version ``regressed`` (a failed eval gate —\nit cannot be re-promoted until re-validated) and fully re-publishes the\npreviously live version. Mir…",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "integer"
+        },
+        {
+          "name": "reason",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/config-versions/{version}/evaluate",
+      "path": "/api/v1/tenants/{tenant_id}/config-versions/{version}/evaluate",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Evaluate Tenant Config Version",
+      "description": "Record an eval-suite result on a draft (P5-2 pipeline, P6-6 slot).\n\nA failing suite blocks promotion at the publish gate; the result and\nper-metric details are retained on the immutable version record for the\naudit trail.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/config-versions/{version}/publish",
+      "path": "/api/v1/tenants/{tenant_id}/config-versions/{version}/publish",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Publish Tenant Config Version",
+      "description": "Publish a draft (or re-promote any version); supersedes the old one.\n\nGated on the P5-2 pipeline: a version that failed validation or its eval\nsuite cannot be promoted. ``canary_percent`` (0-100) turns the publish\ninto a canary rollout — t…",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "integer"
+        },
+        {
+          "name": "canary_percent",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/config-versions/{version}/rollback",
+      "path": "/api/v1/tenants/{tenant_id}/config-versions/{version}/rollback",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Rollback Tenant Config Version",
+      "description": "Rollback: re-promote a previously published (superseded) version.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "delete_/api/v1/tenants/{tenant_id}/data",
+      "path": "/api/v1/tenants/{tenant_id}/data",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Erase Tenant Data",
+      "description": "GDPR erasure: delete all tenant data; tenant + audit trail retained.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "put_/api/v1/tenants/{tenant_id}/deployment-shape",
+      "path": "/api/v1/tenants/{tenant_id}/deployment-shape",
+      "method": "put",
+      "tag": "Other",
+      "summary": "Set Tenant Deployment Shape",
+      "description": "Set the tenant's deployment shape (shared | dedicated) and return the\nresulting isolation config (P5-12).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/documents",
+      "path": "/api/v1/tenants/{tenant_id}/documents",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Ingest Document",
+      "description": "Queue a knowledge document for chunking + embedding (202, async).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/tenants/{tenant_id}/end-users/{end_user_id}/data",
+      "path": "/api/v1/tenants/{tenant_id}/end-users/{end_user_id}/data",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Erase End User Data",
+      "description": "DSR erasure: delete one end user's data and revoke their sessions.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "end_user_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/end-users/{end_user_id}/export",
+      "path": "/api/v1/tenants/{tenant_id}/end-users/{end_user_id}/export",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Export End User Data",
+      "description": "DSR export: portable JSON bundle of one end user's data.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "end_user_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/gdpr/export",
+      "path": "/api/v1/tenants/{tenant_id}/gdpr/export",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Export Tenant Gdpr",
+      "description": "GDPR data-subject export: portable JSON bundle of all tenant data.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/metrics",
+      "path": "/api/v1/tenants/{tenant_id}/metrics",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Get Tenant Metrics",
+      "description": "Tenant-scoped metrics (P5-10): conversations, messages, end users,\nescalations, governance evidence, webhook deliveries.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/models",
+      "path": "/api/v1/tenants/{tenant_id}/models",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Model Catalog",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/models",
+      "path": "/api/v1/tenants/{tenant_id}/models",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Add Model Catalog Entry",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/tenants/{tenant_id}/models/{entry_id}",
+      "path": "/api/v1/tenants/{tenant_id}/models/{entry_id}",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Delete Model Catalog Entry",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "entry_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/onboard",
+      "path": "/api/v1/tenants/{tenant_id}/onboard",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Onboard Tenant",
+      "description": "Run the onboarding checklist (P5-10): default deny-by-default surface,\nisolation namespaces/prefixes, budget defaults, tenant-bound operator key.\n\nIdempotent: steps already provisioned are reported as such. The raw\noperator key is returned…",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/onboarding",
+      "path": "/api/v1/tenants/{tenant_id}/onboarding",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Get Onboarding Checklist",
+      "description": "Report the onboarding checklist state for a tenant (P5-10).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "put_/api/v1/tenants/{tenant_id}/provider-keys/{provider}",
+      "path": "/api/v1/tenants/{tenant_id}/provider-keys/{provider}",
+      "method": "put",
+      "tag": "Other",
+      "summary": "Set Tenant Provider Key",
+      "description": "Set or rotate a tenant's provider credential (BYOK, Arch 6.3.9).\n\nThe key is envelope-encrypted before storage and never returned,\nlogged, or exposed in traces. Rotation bumps ``key_version``.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "provider",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/surfaces",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Create a surface (first active surface becomes the default)",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/surfaces",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List surfaces",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Get a surface",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "surface_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "put_/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "method": "put",
+      "tag": "Other",
+      "summary": "Update a surface",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "surface_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces/{surface_id}",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Delete a surface",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "surface_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/surfaces/default",
+      "path": "/api/v1/tenants/{tenant_id}/surfaces/default",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Resolve the default surface",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/archive",
+      "path": "/api/v1/threads/{thread_id}/archive",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Move a thread to the cold-tier archive (P1-7)",
+      "description": "Enqueue a ``thread.archive`` worker job (202).\n\nThe worker dumps the full durable payload (thread, messages, parts,\nevents) to region-pinned object storage and flips the archived marker\n— hot queries and the retention sweep then ignore the…",
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": false,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/feedback",
+      "path": "/api/v1/threads/{thread_id}/feedback",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Record end-user feedback on a thread (session-token auth)",
+      "description": "Record a thumbs up/down on a thread from the widget.\n\nAuth is the end-user session token; the thread must belong to the\nsession's tenant. Feedback is stored on the immutable audit trail\n(append-only, P5-9) for future analytics.",
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/fork",
+      "path": "/api/v1/threads/{thread_id}/fork",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Fork a thread at a message boundary (append-only)",
+      "description": null,
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "at_seq",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": {
+        "required": false,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/messages/{message_id}/edit",
+      "path": "/api/v1/threads/{thread_id}/messages/{message_id}/edit",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Edit a user message (append-only: new user message + successor)",
+      "description": null,
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "message_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/regenerate",
+      "path": "/api/v1/threads/{thread_id}/regenerate",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Regenerate an assistant message (append-only)",
+      "description": null,
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/threads/{thread_id}/restore",
+      "path": "/api/v1/threads/{thread_id}/restore",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Restore a thread from the cold-tier archive (P1-7)",
+      "description": "Enqueue a ``thread.restore`` worker job (202).\n\nThe worker downloads the cold-tier payload, verifies its checksum and\nthread id, then clears the archived marker so the thread is visible to\nhot queries again. A corrupt payload raises and th…",
+      "params": [
+        {
+          "name": "thread_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": false,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/webhooks/events",
+      "path": "/api/v1/webhooks/events",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Webhook Events",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "event_type",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/webhooks/events/{event_id}/deliveries",
+      "path": "/api/v1/webhooks/events/{event_id}/deliveries",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Webhook Deliveries",
+      "description": null,
+      "params": [
+        {
+          "name": "event_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/webhooks/events/{event_id}/replay",
+      "path": "/api/v1/webhooks/events/{event_id}/replay",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Replay Webhook Event",
+      "description": "Re-enqueue delivery of a stored event to every matching subscription.\n\nReplays are idempotent per event+subscription pair, so a repeated call\ncan never double-deliver (queue-level idempotency key).",
+      "params": [
+        {
+          "name": "event_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/webhooks/subscriptions",
+      "path": "/api/v1/webhooks/subscriptions",
+      "method": "get",
+      "tag": "Other",
+      "summary": "List Webhook Subscriptions",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/webhooks/subscriptions",
+      "path": "/api/v1/webhooks/subscriptions",
+      "method": "post",
+      "tag": "Other",
+      "summary": "Create Webhook Subscription",
+      "description": null,
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/webhooks/subscriptions/{subscription_id}",
+      "path": "/api/v1/webhooks/subscriptions/{subscription_id}",
+      "method": "delete",
+      "tag": "Other",
+      "summary": "Delete Webhook Subscription",
+      "description": null,
+      "params": [
+        {
+          "name": "subscription_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/health",
+      "path": "/health",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Health Check",
+      "description": null,
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/health/live",
+      "path": "/health/live",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Liveness Check",
+      "description": "Liveness: process + ASGI reachable, no external dependencies.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/metrics",
+      "path": "/metrics",
+      "method": "get",
+      "tag": "Other",
+      "summary": "Metrics Endpoint",
+      "description": "Prometheus metrics exposition.",
+      "params": [],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/policies",
+      "path": "/api/v1/tenants/{tenant_id}/policies",
+      "method": "get",
+      "tag": "Policies",
+      "summary": "List Policies",
+      "description": "All policy sets for a tenant (every status, newest version first).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/policies",
+      "path": "/api/v1/tenants/{tenant_id}/policies",
+      "method": "post",
+      "tag": "Policies",
+      "summary": "Create Policy Set",
+      "description": "Create a new policy set (draft or review; publish is explicit).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/tenants/{tenant_id}/policies/{policy_id}",
+      "path": "/api/v1/tenants/{tenant_id}/policies/{policy_id}",
+      "method": "get",
+      "tag": "Policies",
+      "summary": "Get Policy Set",
+      "description": null,
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "put_/api/v1/tenants/{tenant_id}/policies/{policy_id}",
+      "path": "/api/v1/tenants/{tenant_id}/policies/{policy_id}",
+      "method": "put",
+      "tag": "Policies",
+      "summary": "Update Policy Set",
+      "description": "Edit a draft in place; editing a published set creates a new draft\nrevision on top (published revisions stay immutable).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/policies/{policy_id}/publish",
+      "path": "/api/v1/tenants/{tenant_id}/policies/{policy_id}/publish",
+      "method": "post",
+      "tag": "Policies",
+      "summary": "Publish Policy Set",
+      "description": "Promote a draft to published; the runtime switches on the next request.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "policy_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tenants/{tenant_id}/policies/simulate",
+      "path": "/api/v1/tenants/{tenant_id}/policies/simulate",
+      "method": "post",
+      "tag": "Policies",
+      "summary": "Simulate Policy Set",
+      "description": "Dry-run a draft policy set against recent stored traffic.\n\nReplays the draft against the redacted content of the tenant's recent\nassistant messages using the same evaluation engine as the runtime\n(deny-by-default included) and reports per-…",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/prompts",
+      "path": "/api/v1/prompts",
+      "method": "get",
+      "tag": "Prompts",
+      "summary": "List Prompts",
+      "description": "List all prompt names + versions for a tenant.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/prompts",
+      "path": "/api/v1/prompts",
+      "method": "post",
+      "tag": "Prompts",
+      "summary": "Create Prompt",
+      "description": "Create the first version of a prompt (starts disabled).",
+      "params": [],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "post_/api/v1/prompts/{name}/activate",
+      "path": "/api/v1/prompts/{name}/activate",
+      "method": "post",
+      "tag": "Prompts",
+      "summary": "Activate Version",
+      "description": "Activate a version (optionally as an A/B variant share).",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/prompts/{name}/versions",
+      "path": "/api/v1/prompts/{name}/versions",
+      "method": "get",
+      "tag": "Prompts",
+      "summary": "List Versions",
+      "description": null,
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/prompts/{name}/versions",
+      "path": "/api/v1/prompts/{name}/versions",
+      "method": "post",
+      "tag": "Prompts",
+      "summary": "Add Version",
+      "description": "Add a new version of an existing prompt (starts disabled).",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/prompts/{name}/versions/{version}",
+      "path": "/api/v1/prompts/{name}/versions/{version}",
+      "method": "delete",
+      "tag": "Prompts",
+      "summary": "Delete Version",
+      "description": null,
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "version",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "integer"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/tools",
+      "path": "/api/v1/tools",
+      "method": "get",
+      "tag": "Tools",
+      "summary": "List Tools",
+      "description": "List the tenant's registered tools (MCP servers) with redacted config.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "patch_/api/v1/tools/{name}",
+      "path": "/api/v1/tools/{name}",
+      "method": "patch",
+      "tag": "Tools",
+      "summary": "Update Tool",
+      "description": "Update an MCP server's config (fields merge; token re-encrypted).",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "delete_/api/v1/tools/{name}",
+      "path": "/api/v1/tools/{name}",
+      "method": "delete",
+      "tag": "Tools",
+      "summary": "Delete Tool",
+      "description": "Remove the tool registration entirely.",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tools/{name}/connect-test",
+      "path": "/api/v1/tools/{name}/connect-test",
+      "method": "post",
+      "tag": "Tools",
+      "summary": "Connect Test Mcp",
+      "description": "Connect to the MCP server and list the tools it would contribute.",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tools/{name}/disable",
+      "path": "/api/v1/tools/{name}/disable",
+      "method": "post",
+      "tag": "Tools",
+      "summary": "Disable Tool",
+      "description": "Disable a registered tool (gate denies immediately).",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tools/{name}/enable",
+      "path": "/api/v1/tools/{name}/enable",
+      "method": "post",
+      "tag": "Tools",
+      "summary": "Enable Tool",
+      "description": "Enable a registered tool (still subject to the surface allowlist).",
+      "params": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "post_/api/v1/tools/mcp",
+      "path": "/api/v1/tools/mcp",
+      "method": "post",
+      "tag": "Tools",
+      "summary": "Register Mcp Server",
+      "description": "Register an MCP server as a disabled tool source (enable to activate).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": {
+        "required": true,
+        "fields": []
+      }
+    },
+    {
+      "id": "get_/api/v1/traces",
+      "path": "/api/v1/traces",
+      "method": "get",
+      "tag": "Traces",
+      "summary": "List Traces",
+      "description": "Newest-first trace entries, derived from the spend-event ledger.",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": "Scope to one tenant",
+          "type": null
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/traces/{trace_id}",
+      "path": "/api/v1/traces/{trace_id}",
+      "method": "get",
+      "tag": "Traces",
+      "summary": "Get Trace",
+      "description": null,
+      "params": [
+        {
+          "name": "trace_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/usage/chargeback",
+      "path": "/api/v1/usage/chargeback",
+      "method": "get",
+      "tag": "Usage & Billing",
+      "summary": "Usage Chargeback",
+      "description": "Chargeback report for customer invoicing (P2 §3.8).\n\nReturns line-item rows: one per (provider, model, surface, day) tuple,\nplus tenant rollups. JSON or CSV.\n\nSuper-admins get the platform-wide report; tenant-bound principals\nare scoped to…",
+      "params": [
+        {
+          "name": "since",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "until",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "format",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/usage/events",
+      "path": "/api/v1/usage/events",
+      "method": "get",
+      "tag": "Usage & Billing",
+      "summary": "Usage Events",
+      "description": "Newest spend events (drill-down feed).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": "integer"
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/usage/quota",
+      "path": "/api/v1/usage/quota",
+      "method": "get",
+      "tag": "Usage & Billing",
+      "summary": "Usage Quota",
+      "description": "Durable USD quota windows (limit vs spent per window).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "scope_type",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/usage/summary",
+      "path": "/api/v1/usage/summary",
+      "method": "get",
+      "tag": "Usage & Billing",
+      "summary": "Usage Summary",
+      "description": "Platform usage totals, broken down per tenant (or own tenant only\nfor tenant-bound principals).",
+      "params": [
+        {
+          "name": "since",
+          "in": "query",
+          "required": false,
+          "description": "ISO-8601 start",
+          "type": null
+        },
+        {
+          "name": "until",
+          "in": "query",
+          "required": false,
+          "description": "ISO-8601 end",
+          "type": null
+        }
+      ],
+      "body": null
+    },
+    {
+      "id": "get_/api/v1/usage/tenants/{tenant_id}",
+      "path": "/api/v1/usage/tenants/{tenant_id}",
+      "method": "get",
+      "tag": "Usage & Billing",
+      "summary": "Usage Tenant Detail",
+      "description": "Per-tenant usage: totals plus per-model, per-surface and per-day\nbreakdowns (last 90 days by default).",
+      "params": [
+        {
+          "name": "tenant_id",
+          "in": "path",
+          "required": true,
+          "description": null,
+          "type": "string"
+        },
+        {
+          "name": "since",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        },
+        {
+          "name": "until",
+          "in": "query",
+          "required": false,
+          "description": null,
+          "type": null
+        }
+      ],
+      "body": null
+    }
+  ]
+}

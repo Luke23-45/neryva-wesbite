@@ -383,6 +383,11 @@ export const TopbarTitle = styled.h1`
   font-weight: 500;
   letter-spacing: -0.01em;
   color: ${({ theme }) => theme.app.text.primary};
+  min-width: 0;
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 export const TopbarSubtitle = styled.span`
@@ -463,4 +468,32 @@ export const ContentArea = styled.main`
   flex-direction: column;
   width: 100%;
   min-height: 0;
+`;
+
+export const BannerSlot = styled.div`
+  padding: 0 24px;
+  margin-top: 18px;
+
+  > * {
+    max-width: 100%;
+  }
+`;
+
+export const RecentEmpty = styled(Link)`
+  display: block;
+  padding: 6px 12px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.ghost};
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.secondary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
 `;

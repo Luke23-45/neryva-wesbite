@@ -107,3 +107,38 @@ export const HealthValue = styled.div`
 export const Bar = styled.div`
   padding-right: 8px;
 `;
+
+// ── Onboarding checklist (S-6) ──────────────────────────────────────────────
+
+export const OnboardList = styled.div`
+  & > * + * {
+    border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
+  }
+`;
+
+export const OnboardRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+`;
+
+export const OnboardCheck = styled.span<{ $done: boolean }>`
+  display: inline-flex;
+  color: ${({ theme, $done }) => ($done ? theme.app.status.success.fg : theme.app.text.ghost)};
+  flex-shrink: 0;
+`;
+
+export const OnboardLabel = styled.span<{ $done: boolean }>`
+  flex: 1;
+  min-width: 0;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme, $done }) => ($done ? theme.app.text.ghost : theme.app.text.primary)};
+  text-decoration: ${({ $done }) => ($done ? 'line-through' : 'none')};
+`;
+
+export const OnboardProgress = styled.span`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
+`;

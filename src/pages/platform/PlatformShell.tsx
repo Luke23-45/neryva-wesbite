@@ -17,12 +17,14 @@ import {
   Settings,
   Activity,
   LogOut,
-  ChevronDown,
 } from 'lucide-react';
 import { useSessionStore, beginLogin, logout } from '@lib/engine/auth';
 import { useOrg, ROLE_LABELS, type OrgRole } from '@/Context/OrgContext';
 import { useProjects } from '@hooks/engine/queries';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { StepUpModal } from '@components/platform/StepUpModal';
+import { OrgSwitcher } from '@components/platform/OrgSwitcher';
+import { SignInOptions } from '@components/platform/SignInOptions';
 
 const Shell = styled.div`
   display: flex;
@@ -83,17 +85,6 @@ const TopGroup = styled.div`
   min-width: 0;
 `;
 
-const OrgSelect = styled.select`
-  background: rgba(255, 255, 255, 0.05);
-  color: #eceef4;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: 13px;
-  max-width: 240px;
-  cursor: pointer;
-`;
-
 const PlainSelect = styled.select`
   background: transparent;
   color: rgba(236, 238, 244, 0.7);
@@ -142,7 +133,7 @@ export default function PlatformShell() {
   const status = useSessionStore((s) => s.status);
   const account = useSessionStore((s) => s.account);
   const hydrate = useSessionStore((s) => s.hydrate);
-  const { orgs, orgId, role, name, setActive } = useOrg();
+  const { orgs, orgId, role, name } = useOrg();
   const projects = useProjects();
 
   useEffect(() => {
@@ -189,6 +180,7 @@ export default function PlatformShell() {
             >
               Sign in with Neryva
             </button>
+            <SignInOptions />
           </Content>
         </Main>
       </Shell>
@@ -213,14 +205,7 @@ export default function PlatformShell() {
       <Main>
         <TopBar>
           <TopGroup>
-            <OrgSelect value={orgId ?? ''} onChange={(e) => { setActive(e.target.value); void navigate({ to: '/platform' }); }}>
-              {orgs.map((org) => (
-                <option key={org.orgId} value={org.orgId}>
-                  {org.name ?? org.orgId}
-                </option>
-              ))}
-            </OrgSelect>
-            <ChevronDown size={13} opacity={0.4} />
+            <OrgSwitcher onSwitch={() => void navigate({ to: '/platform' })} />
             {projects.data?.projects?.length ? (
               <PlainSelect defaultValue="">
                 <option value="">All projects</option>
@@ -249,6 +234,7 @@ export default function PlatformShell() {
         <Content>
           <Outlet />
         </Content>
+        <StepUpModal />
       </Main>
     </Shell>
   );

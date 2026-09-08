@@ -165,7 +165,7 @@ export function DeployDetailView() {
             subtitle={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Server size={12} strokeWidth={1.7} /> Live cluster metrics
-              </span> as any
+              </span>
             }
           >
             <ResourceBlock>
@@ -200,7 +200,7 @@ export function DeployDetailView() {
             subtitle={
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Activity size={12} strokeWidth={1.7} /> Per-instance readiness
-              </span> as any
+              </span>
             }
           >
             <ReplicaBlock>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useEffect, useState } from 'react';
 import { useTheme } from 'styled-components';
 import { motion } from 'framer-motion';

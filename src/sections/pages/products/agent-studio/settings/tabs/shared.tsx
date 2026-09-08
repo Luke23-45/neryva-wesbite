@@ -7,13 +7,15 @@ type Props = {
   saveLabel?: string;
   /** Renders without the footer chrome — for use inside a Panel header action. */
   inline?: boolean;
+  /** Real mutations disable the affordance while pending / when gated. */
+  disabled?: boolean;
 };
 
 /** Footer row shared by every settings tab — the one "save" affordance. */
-export function SaveRow({ onSave, saveLabel = 'Save changes', inline = false }: Props) {
+export function SaveRow({ onSave, saveLabel = 'Save changes', inline = false, disabled = false }: Props) {
   return (
     <Row $inline={inline}>
-      <ActionButton size={inline ? 'sm' : 'md'} onClick={onSave}>
+      <ActionButton size={inline ? 'sm' : 'md'} onClick={onSave} disabled={disabled}>
         <Save size={13} strokeWidth={1.8} />
         {saveLabel}
       </ActionButton>

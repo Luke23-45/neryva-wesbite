@@ -189,3 +189,44 @@ export const EmptyNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
 `;
+
+export const VersionList = styled.div`
+  & > * + * {
+    border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
+  }
+`;
+
+export const VersionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+`;
+
+export const VersionMain = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+export const VersionId = styled.div`
+  display: flex;
+  align-items: center;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
+  word-break: break-all;
+`;
+
+export const VersionMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+`;
+
+export const VersionActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+`;

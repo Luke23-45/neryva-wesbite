@@ -5,18 +5,24 @@ import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
 import { spring, pageItem } from '@styles/motion';
-import settings from '@neryva_data/products/agent_studio/settings.json';
+import { useOrgProfile, useProjects } from '@hooks/engine/queries';
+import { useUpdateOrgSettings } from '@hooks/engine/mutations';
+import { useOrg } from '@/Context/OrgContext';
 import { SaveRow } from './shared';
 
 /**
- * Settings → Workspace
+ * Settings → Workspace (ledger T-2)
  *
- * - Logo upload: hidden <input type="file">, drag-over state with accent
- *   ring, live preview, keyboard accessible (Enter/Space opens picker).
- * - Brand color: 6 preset swatches + custom hex input. Selected swatch
- *   gets an iOS-style check ring (layoutId glide between swatches).
- * - Live preview chip showing the brand mark + name in the chosen color.
+ * - Every field saves through PATCH /console/org/:orgId/settings — name,
+ *   region, support email, default project, retention, branding (color)
+ *   and preferences (default model).
+ * - Brand color seeds from the org's saved branding; the logo is
+ *   localStorage-backed until server-side asset storage lands (⛔ E-14),
+ *   but it now rehydrates on mount (the old write-without-read bug).
+ * - Saves are admin-gated per the access model.
  */
 
 const PRESETS = [
@@ -28,20 +34,54 @@ const PRESETS = [
   '#ec4899', // pink
 ];
 
-export function SettingsWorkspace() {
-  const w = settings.workspace;
-  const [name, setName] = useState(w.name);
-  const [region, setRegion] = useState(w.region);
-  const [supportEmail, setSupportEmail] = useState(w.supportEmail);
-  const [defaultModel, setDefaultModel] = useState(w.defaultModel);
-  const [retention, setRetention] = useState(String(w.retentionDays));
+const LOGO_KEY = 'studio.workspace.logo';
 
-  const [logo, setLogo] = useState<string | null>(null);
+interface OrgProfileData {
+  org: { id: string; name: string; region: string | null; retentionDays: number | null };
+  settings: { supportEmail: string | null; defaultProjectId: string | null; branding: Record<string, unknown>; preferences: Record<string, unknown> };
+}
+
+export function SettingsWorkspace() {
+  const profile = useOrgProfile();
+  return (
+    <QueryView query={profile} skeleton={<Skeleton $h="420px" $r="12px" />}>
+      {(data) => <WorkspaceForm key={data.org.id} data={data} />}
+    </QueryView>
+  );
+}
+
+function WorkspaceForm({ data }: { data: OrgProfileData }) {
+  const { atLeast } = useOrg();
+  const canManage = atLeast('admin');
+  const projects = useProjects();
+  const update = useUpdateOrgSettings();
+
+  const branding = data.settings.branding ?? {};
+  const preferences = data.settings.preferences ?? {};
+  const brandingColor = typeof branding.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(branding.color) ? branding.color : null;
+  const seededModel = typeof preferences.default_model === 'string' ? preferences.default_model : 'reasoner';
+
+  const [name, setName] = useState(data.org.name);
+  const [region, setRegion] = useState(data.org.region ?? '');
+  const [supportEmail, setSupportEmail] = useState(data.settings.supportEmail ?? '');
+  const [defaultProjectId, setDefaultProjectId] = useState(data.settings.defaultProjectId ?? '');
+  const [defaultModel, setDefaultModel] = useState(seededModel);
+  const [retention, setRetention] = useState(String(data.org.retentionDays ?? 30));
+
+  // Logo: rehydrated on mount (the old code wrote but never read back).
+  const [logo, setLogo] = useState<string | null>(() => {
+    try {
+      const stored = localStorage.getItem(LOGO_KEY);
+      return stored && stored !== '' ? stored : null;
+    } catch {
+      return null;
+    }
+  });
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [color, setColor] = useState<string>('#c084fc');
-  const [customHex, setCustomHex] = useState<string>('#0ea5e9');
+  const [color, setColor] = useState<string>(brandingColor ?? '#c084fc');
+  const [customHex, setCustomHex] = useState<string>(brandingColor ?? '#0ea5e9');
 
   const isCustom = !PRESETS.includes(color);
 
@@ -60,9 +100,9 @@ export function SettingsWorkspace() {
       const result = typeof reader.result === 'string' ? reader.result : null;
       setLogo(result);
       try {
-        localStorage.setItem('studio.workspace.logo', result ?? '');
+        localStorage.setItem(LOGO_KEY, result ?? '');
       } catch {
-        /* localStorage quota — ignore for the demo */
+        /* localStorage quota — E-14 replaces this with server storage */
       }
     };
     reader.readAsDataURL(file);
@@ -71,7 +111,7 @@ export function SettingsWorkspace() {
   const removeLogo = () => {
     setLogo(null);
     try {
-      localStorage.removeItem('studio.workspace.logo');
+      localStorage.removeItem(LOGO_KEY);
     } catch {
       /* ignore */
     }
@@ -84,13 +124,37 @@ export function SettingsWorkspace() {
     }
   };
 
+  const save = () => {
+    const retentionDays = Number(retention);
+    if (!Number.isFinite(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+      toast.error('Retention must be between 1 and 3650 days');
+      return;
+    }
+    update.mutate(
+      {
+        name: name.trim(),
+        region: region.trim() || undefined,
+        support_email: supportEmail.trim() || undefined,
+        default_project_id: defaultProjectId || undefined,
+        retention_days: Math.round(retentionDays),
+        branding: { color },
+        preferences: { default_model: defaultModel },
+      },
+      { onSuccess: () => toast.success('Workspace settings saved') },
+    );
+  };
+
   return (
     <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="Workspace"
         subtitle="Identity, region, and defaults for your team."
         action={
-          <SaveRow inline onSave={() => toast.success('Workspace settings saved')} />
+          canManage ? (
+            <SaveRow inline onSave={save} disabled={update.isPending} />
+          ) : (
+            <InlineNote>Admins manage workspace settings</InlineNote>
+          )
         }
       >
         <BrandGrid>
@@ -219,30 +283,49 @@ export function SettingsWorkspace() {
             label="Workspace name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            disabled={!canManage}
           />
           <TextInput
             label="Region"
             value={region}
             onChange={(e) => setRegion(e.target.value)}
             hint="us-west-2, eu-central-1, ap-southeast-1"
+            disabled={!canManage}
           />
           <TextInput
             label="Support email"
             value={supportEmail}
             onChange={(e) => setSupportEmail(e.target.value)}
             type="email"
+            disabled={!canManage}
           />
+          <SelectField label="Default project">
+            <WorkspaceSelect
+              value={defaultProjectId}
+              onChange={(e) => setDefaultProjectId(e.target.value)}
+              aria-label="Default project"
+              disabled={!canManage}
+            >
+              <option value="">No default project</option>
+              {(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </WorkspaceSelect>
+            <FieldHint>New keys and agents default to this project.</FieldHint>
+          </SelectField>
           <TextInput
             label="Default model"
             value={defaultModel}
             onChange={(e) => setDefaultModel(e.target.value)}
             hint="reasoner | instant | researcher"
+            disabled={!canManage}
           />
           <TextInput
             label="Conversation retention (days)"
             value={retention}
             onChange={(e) => setRetention(e.target.value)}
             hint="How long transcripts are stored before automatic deletion"
+            disabled={!canManage}
           />
         </FieldGrid>
       </Panel>
@@ -546,4 +629,50 @@ const FieldGrid = styled.div`
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
   }
+`;
+
+function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <SelectFieldBox>
+      <FieldLabel>{label}</FieldLabel>
+      {children}
+    </SelectFieldBox>
+  );
+}
+
+const SelectFieldBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const WorkspaceSelect = styled.select`
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  option {
+    background: #14151c;
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+`;
+
+const InlineNote = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.faint};
 `;

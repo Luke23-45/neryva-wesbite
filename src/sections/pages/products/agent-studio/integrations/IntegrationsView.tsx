@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
-import toast from 'react-hot-toast';
-import { Plug, ArrowRight } from 'lucide-react';
+import { Plug, ArrowRight, Lock } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
-import { Modal } from '@components/common/ui/Modal';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -21,15 +19,8 @@ import {
   CardCategory,
   CardDescription,
   CardFoot,
-  StatusDot,
   StatusText,
   PanelCopy,
-  ModalIntro,
-  ModalTitleRow,
-  ScopeList,
-  ScopeItem,
-  ScopeDot,
-  ScopeLabel,
 } from './IntegrationsView.styles';
 
 const ICONS: Record<string, string> = {
@@ -62,13 +53,6 @@ const toneColor: Record<string, string> = {
 export function IntegrationsView() {
   const data = integrations;
   const [filter, setFilter] = useState<string>(data.categories[0]);
-  const [connectTarget, setConnectTarget] = useState<null | (typeof data.connectors)[number]>(null);
-  const [scopes, setScopes] = useState<Record<string, boolean>>({
-    'Read messages': true,
-    'Send messages': true,
-    'Read channels': false,
-    'Manage channels': false,
-  });
 
   const list = useMemo(() => {
     if (filter === 'All') return data.connectors;
@@ -124,22 +108,17 @@ export function IntegrationsView() {
                 </CardHead>
                 <CardDescription>{c.description}</CardDescription>
                 <CardFoot>
-                  <StatusDot $connected={c.connected} aria-hidden="true" />
-                  <StatusText $connected={c.connected}>
-                    {c.connected ? 'Connected' : 'Not connected'}
+                  <StatusText>
+                    {c.category}
                   </StatusText>
                   <ActionButton
                     size="sm"
-                    variant={c.connected ? 'secondary' : 'primary'}
-                    onClick={() => {
-                      if (c.connected) {
-                        toast.success(`Manage ${c.name}`);
-                      } else {
-                        setConnectTarget(c);
-                      }
-                    }}
+                    variant="secondary"
+                    disabled
+                    title="Connector launches with the integrations plane — the OAuth architecture (ledger D-5) is being decided."
                   >
-                    {c.connected ? 'Manage' : 'Connect'}
+                    <Lock size={12} strokeWidth={1.8} />
+                    Connect
                   </ActionButton>
                 </CardFoot>
               </Card>
@@ -173,14 +152,13 @@ export function IntegrationsView() {
           title="Need a custom integration?"
           subtitle="Build a connector with our SDK, or send events to any HTTPS endpoint."
           action={
-            <ActionButton
-              variant="secondary"
-              size="sm"
-              onClick={() => toast('The interactive API explorer has request/response examples for every connector.')}
-            >
-              <Plug size={13} strokeWidth={1.8} />
-              Explore the API
-            </ActionButton>
+            <Link to="/agent-studio/api">
+              <ActionButton variant="secondary" size="sm">
+                <Plug size={13} strokeWidth={1.8} />
+                Explore the API
+                <ArrowRight size={11} strokeWidth={1.8} />
+              </ActionButton>
+            </Link>
           }
         >
           <PanelCopy>
@@ -190,58 +168,6 @@ export function IntegrationsView() {
         </Panel>
       </motion.div>
 
-      <Modal
-        open={!!connectTarget}
-        onClose={() => setConnectTarget(null)}
-        title={connectTarget ? `Connect ${connectTarget.name}` : ''}
-        footer={
-          <>
-            <ActionButton variant="secondary" onClick={() => setConnectTarget(null)}>
-              Cancel
-            </ActionButton>
-            <ActionButton
-              onClick={() => {
-                toast.success(`${connectTarget?.name} connected`);
-                setConnectTarget(null);
-              }}
-            >
-              Authorize
-            </ActionButton>
-          </>
-        }
-      >
-        <ModalIntro>
-          {connectTarget ? (
-            <ModalTitleRow>
-              <Icon $color={toneColor[connectTarget.tone] ?? '#94a3b8'} style={{ width: 22, height: 22 }}>
-                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path
-                    d={ICONS[connectTarget.id] ?? 'M5 5h14v14H5z'}
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                </svg>
-              </Icon>
-              {connectTarget.description} Choose the scopes you want to grant.
-            </ModalTitleRow>
-          ) : null}
-        </ModalIntro>
-        <ScopeList>
-          {Object.entries(scopes).map(([label, on]) => (
-            <ScopeItem
-              key={label}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setScopes((s) => ({ ...s, [label]: !s[label] }))}
-            >
-              <ScopeDot $on={on} aria-hidden="true">{on ? '✓' : ''}</ScopeDot>
-              <ScopeLabel>{label}</ScopeLabel>
-            </ScopeItem>
-          ))}
-        </ScopeList>
-      </Modal>
-    </ViewShell>
+</ViewShell>
   );
 }

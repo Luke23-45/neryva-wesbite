@@ -6,7 +6,7 @@
  * orgId, role, projects (+ active project), and per-product entitlement
  * states with helpers for the access-model banner/read-only modes.
  */
-import { createContext, useContext, useEffect, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { engine, setActiveOrg } from '@lib/engine/client';
 import { useSessionStore } from '@lib/engine/auth';
@@ -49,7 +49,7 @@ interface HomeResponse {
   products: Array<{ key: string; entitlement_state: EntitlementState }>;
 }
 
-const OrgContext = createContext<OrgContextValue | null>(null);
+export const OrgContext = createContext<OrgContextValue | null>(null);
 
 export function OrgProvider({ children }: { children: ReactNode }) {
   const status = useSessionStore((s) => s.status);
@@ -64,12 +64,14 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   const orgs = home.data?.orgs ?? [];
   const stored = typeof window !== 'undefined' ? window.localStorage.getItem(ACTIVE_ORG_KEY) : null;
+  const [override, setOverride] = useState<string | null>(null);
   const active = useMemo(() => {
     if (!orgs.length) {
       return null;
     }
-    return orgs.find((o) => o.orgId === stored) ?? orgs[0];
-  }, [orgs, stored]);
+    const wanted = override ?? stored;
+    return orgs.find((o) => o.orgId === wanted) ?? orgs[0];
+  }, [orgs, stored, override]);
 
   useEffect(() => {
     if (active) {
@@ -91,7 +93,10 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       orgs,
       role,
       name: active?.name ?? null,
-      setActive: (next) => window.localStorage.setItem(ACTIVE_ORG_KEY, next),
+      setActive: (next) => {
+        setOverride(next);
+        window.localStorage.setItem(ACTIVE_ORG_KEY, next);
+      },
       atLeast: (minimum) => role !== null && ROLE_RANK[role] >= ROLE_RANK[minimum],
       canManageMembers: role === 'owner' || role === 'admin',
       entitlementState: (product) => stateByProduct.get(product) ?? 'none',

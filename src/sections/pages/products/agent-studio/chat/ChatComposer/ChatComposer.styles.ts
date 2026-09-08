@@ -78,31 +78,6 @@ export const Input = styled.input`
 `;
 
 /** Static mode indicator — becomes a picker when modes are real. */
-export const ModeBadge = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.app.surface.active};
-  color: ${({ theme }) => theme.app.text.secondary};
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.app.type.micro};
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: ${({ theme }) => theme.app.status.success.fg};
-  }
-`;
-
 export const SendButton = styled.button<{ $enabled: boolean }>`
   width: 34px;
   height: 34px;

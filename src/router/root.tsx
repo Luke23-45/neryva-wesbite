@@ -29,7 +29,7 @@ const pageVariants = {
   exit: { opacity: 0, y: -8 },
 };
 
-const pageTransition: any = {
+const pageTransition: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
   duration: 0.24,
   ease: [0.2, 0, 0, 1],
 };

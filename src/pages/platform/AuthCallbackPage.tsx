@@ -18,7 +18,11 @@ export default function AuthCallbackPage() {
     handleAuthCallback(window.location.search)
       .then((target) => {
         if (!cancelled) {
-          void navigate({ to: target.startsWith('/platform') ? target : '/platform', replace: true });
+          // beginLogin stashes the pre-login path (any in-app deep link).
+          // Only in-app paths are honored — anything else falls back to the
+          // console root.
+          const safe = target.startsWith('/') && !target.startsWith('//') ? target : '/platform';
+          void navigate({ to: safe, replace: true });
         }
       })
       .catch((err: Error) => {

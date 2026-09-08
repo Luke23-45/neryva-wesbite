@@ -1,32 +1,33 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, ShieldCheck, Check } from 'lucide-react';
+import { Plus, Trash2, ShieldCheck, Check, RefreshCw, FolderInput } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
+import { StatusPill } from '@components/common/ui/StatusPill';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { spring, pageItem } from '@styles/motion';
 import styled from 'styled-components';
-import settings from '@neryva_data/products/agent_studio/settings.json';
+import { useKeys, useProjects, type KeyRow } from '@hooks/engine/queries';
+import { useIssueKey, useRevokeKey } from '@hooks/engine/mutations';
+import { useKeyDetail, useRotateKey, useUpdateKey, useBindKey, useUnbindKey, expiresAtFromChoice } from '@hooks/studio/useStudioKeys';
+import { useOrg } from '@/Context/OrgContext';
 
 /**
- * Settings → API keys
- *
- * Apple-grade behaviors:
- * - Multi-step create modal. Each step has its own subtle fade+rise entry
- *   so the eye knows it has progressed. The progress dots at the top
- *   fill with a spring animation as you advance.
- * - Scope toggles are real iOS-style switches grouped by category.
- * - Expiry is a segmented control with a sliding selection pill
- *   (same pattern as the UpgradeModal billing toggle).
- * - The "reveal" step shows the secret in a tinted green box — matches
- *   GitHub/Stripe's "this is shown once" pattern, with copy + done CTA.
- * - Revoke uses the standard ConfirmDialog (destructive styling).
- * - Newly created keys are inserted into the local list so the table
- *   updates without a refresh (the new row slides in with a layout
- *   animation).
+ * Settings → API keys (ledger T-4) — fully engine-backed:
+ * - Issue: the 4-step wizard submits to the engine (step-up protected,
+ *   auto-retried on expired proofs); the reveal step shows the real
+ *   server-minted secret exactly once.
+ * - Rotate: re-mints server-side with the same reveal-once contract.
+ * - Rename/rescope (PATCH), revoke, per-key detail (binding, usage
+ *   counters), and project binding via the studio-furniture plane.
+ * - Scopes are submitted as chosen; the engine validates and any
+ *   validation error surfaces verbatim.
  */
 
 type Step = 'details' | 'scopes' | 'expiry' | 'reveal';
@@ -71,38 +72,43 @@ const STEPS: { id: Step; label: string }[] = [
   { id: 'reveal', label: 'Reveal' },
 ];
 
+const DEFAULT_SCOPES: Record<ScopeKey, boolean> = {
+  'agents:read': true,
+  'agents:write': false,
+  'conversations:read': true,
+  'conversations:write': false,
+  'analytics:read': true,
+  'billing:read': false,
+};
+
 export function SettingsApiKeys() {
-  const initialKeys = settings.apiKeys;
-  const [keys, setKeys] = useState(initialKeys);
+  const { atLeast } = useOrg();
+  const canManage = atLeast('developer');
+  const keys = useKeys();
+  const revoke = useRevokeKey();
+
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('details');
 
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<Record<ScopeKey, boolean>>({
-    'agents:read': true,
-    'agents:write': false,
-    'conversations:read': true,
-    'conversations:write': false,
-    'analytics:read': true,
-    'billing:read': false,
-  });
+  const [role, setRole] = useState<'operator' | 'auditor'>('operator');
+  const [scopes, setScopes] = useState<Record<ScopeKey, boolean>>(DEFAULT_SCOPES);
   const [expiry, setExpiry] = useState<Expiry>('90d');
   const [generated, setGenerated] = useState<string | null>(null);
+  const issue = useIssueKey();
 
-  const [revokeTarget, setRevokeTarget] = useState<null | { id: string; name: string; prefix: string; created: string; lastUsed: string }>(null);
+  const [revokeTarget, setRevokeTarget] = useState<KeyRow | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [rotateTarget, setRotateTarget] = useState<KeyRow | null>(null);
+  const rotate = useRotateKey();
+  const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
 
   const openCreate = () => {
     setName('');
+    setRole('operator');
     setStep('details');
     setGenerated(null);
-    setScopes({
-      'agents:read': true,
-      'agents:write': false,
-      'conversations:read': true,
-      'conversations:write': false,
-      'analytics:read': true,
-      'billing:read': false,
-    });
+    setScopes(DEFAULT_SCOPES);
     setExpiry('90d');
     setOpen(true);
   };
@@ -116,7 +122,7 @@ export function SettingsApiKeys() {
     }, 250);
   };
 
-  const goNext = () => {
+  const goNext = async () => {
     if (step === 'details') {
       if (!name.trim()) {
         toast.error('Give the key a name to identify it later');
@@ -131,22 +137,20 @@ export function SettingsApiKeys() {
       }
       setStep('expiry');
     } else if (step === 'expiry') {
-      // Generate.
-      const secret = `nv_live_${randomString(20)}.${randomString(32)}`;
-      setGenerated(secret);
-      const today = new Date().toISOString().slice(0, 10);
-      const prefix = `nv_live_${secret.slice(8, 14)}…`;
-      setKeys((k) => [
-        {
-          id: `key-${Date.now()}`,
-          name,
-          prefix,
-          created: today,
-          lastUsed: '—',
-        },
-        ...k,
-      ]);
-      setStep('reveal');
+      // The engine mints the key — step-up is handled by the mutation
+      // (auto-retry with a fresh proof on step_up_required).
+      try {
+        const created = await issue.mutateAsync({
+          name: name.trim(),
+          role,
+          scopes: Object.entries(scopes).filter(([, on]) => on).map(([key]) => key),
+          expires_at: expiresAtFromChoice(expiry),
+        });
+        setGenerated(created.key);
+        setStep('reveal');
+      } catch {
+        /* the hook surfaced the error; stay on the step */
+      }
     }
   };
 
@@ -156,61 +160,92 @@ export function SettingsApiKeys() {
     else if (step === 'reveal') setStep('expiry');
   };
 
+  const startRotate = () => {
+    if (!rotateTarget) return;
+    rotate.mutate(
+      { keyId: rotateTarget.id },
+      {
+        onSuccess: (result) => {
+          setRotatedSecret(result.key ?? result.secret ?? null);
+        },
+      },
+    );
+  };
+
   return (
     <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
       <Panel
         title="API keys"
         subtitle="Programmatic access to your workspace. Keep these secret."
         action={
-          <PrimaryButton type="button" onClick={openCreate} whileTap={{ scale: 0.97 }} transition={spring.snap}>
-            <Plus size={13} strokeWidth={2} />
-            New key
-          </PrimaryButton>
+          canManage ? (
+            <PrimaryButton type="button" onClick={openCreate} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+              <Plus size={13} strokeWidth={2} />
+              New key
+            </PrimaryButton>
+          ) : undefined
         }
       >
-        <TableWrap>
-          <TableHeader>
-            <div style={{ width: '30%' }}>Name</div>
-            <div style={{ width: '28%' }}>Key</div>
-            <div style={{ width: '18%' }}>Created</div>
-            <div style={{ width: '18%' }}>Last used</div>
-            <div style={{ width: '60px' }} />
-          </TableHeader>
-          {keys.map((k, i) => (
-            <TableRow
-              key={k.id}
-              as={motion.div}
-              layout
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...spring.spring, delay: i * 0.03 }}
-            >
-              <KeyCellName>{k.name}</KeyCellName>
-              <div style={{ width: '28%', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <KeyPill>{k.prefix}</KeyPill>
-                <CopyButton value={k.prefix} label="Copy" />
-              </div>
-              <KeyCellMeta>{k.created}</KeyCellMeta>
-              <KeyCellMeta>{k.lastUsed}</KeyCellMeta>
-              <div style={{ width: '60px', display: 'flex', justifyContent: 'flex-end' }}>
-                <IconBtn
-                  type="button"
-                  onClick={() => setRevokeTarget(k)}
-                  aria-label={`Revoke ${k.name}`}
-                  whileTap={{ scale: 0.9 }}
-                  transition={spring.snap}
+        <QueryView query={keys} skeleton={<Skeleton $h="220px" $r="12px" />} isEmpty={(d) => d.keys.length === 0} empty={{ title: 'No API keys yet', description: canManage ? 'Create one to get started — the secret is shown exactly once.' : 'Ask an owner, admin, or developer to create one.' }}>
+          {(data) => (
+            <TableWrap>
+              <TableHeader>
+                <div style={{ width: '30%' }}>Name</div>
+                <div style={{ width: '28%' }}>Key</div>
+                <div style={{ width: '18%' }}>Created</div>
+                <div style={{ width: '18%' }}>Last used</div>
+                <div style={{ width: canManage ? '60px' : '0' }} />
+              </TableHeader>
+              {data.keys.map((k, i) => (
+                <TableRow
+                  key={k.id}
+                  as={motion.div}
+                  layout
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...spring.spring, delay: i * 0.03 }}
                 >
-                  <Trash2 size={13} strokeWidth={1.7} />
-                </IconBtn>
-              </div>
-            </TableRow>
-          ))}
-          {keys.length === 0 && (
-            <KeysEmpty>
-              No API keys yet — create one to get started.
-            </KeysEmpty>
+                  <KeyCellName>
+                    <NameButton type="button" onClick={() => setDetailId(k.id)} title="Key details">
+                      {k.name}
+                    </NameButton>
+                    <NameMeta>
+                      {k.revoked ? <StatusPill tone="neutral" dot={false}>revoked</StatusPill> : k.expiresAt ? <span>expires {k.expiresAt.slice(0, 10)}</span> : <span>no expiry</span>}
+                    </NameMeta>
+                  </KeyCellName>
+                  <div style={{ width: '28%', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <KeyPill>{k.prefix}</KeyPill>
+                    <CopyButton value={k.prefix} label="Copy" />
+                  </div>
+                  <KeyCellMeta>{k.createdAt.slice(0, 10)}</KeyCellMeta>
+                  <KeyCellMeta>{k.lastUsedAt ? k.lastUsedAt.slice(0, 10) : '—'}</KeyCellMeta>
+                  {canManage && (
+                    <div style={{ width: '60px', display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                      <IconBtn
+                        type="button"
+                        onClick={() => { setRotateTarget(k); setRotatedSecret(null); }}
+                        aria-label={`Rotate ${k.name}`}
+                        whileTap={{ scale: 0.9 }}
+                        transition={spring.snap}
+                      >
+                        <RefreshCw size={13} strokeWidth={1.7} />
+                      </IconBtn>
+                      <IconBtn
+                        type="button"
+                        onClick={() => setRevokeTarget(k)}
+                        aria-label={`Revoke ${k.name}`}
+                        whileTap={{ scale: 0.9 }}
+                        transition={spring.snap}
+                      >
+                        <Trash2 size={13} strokeWidth={1.7} />
+                      </IconBtn>
+                    </div>
+                  )}
+                </TableRow>
+              ))}
+            </TableWrap>
           )}
-        </TableWrap>
+        </QueryView>
       </Panel>
 
       <Modal
@@ -235,7 +270,7 @@ export function SettingsApiKeys() {
                   Cancel
                 </GhostButton>
               )}
-              <PrimaryButton type="button" onClick={goNext} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+              <PrimaryButton type="button" onClick={() => void goNext()} disabled={issue.isPending} whileTap={{ scale: 0.97 }} transition={spring.snap}>
                 {step === 'expiry' ? 'Generate key' : 'Continue'}
               </PrimaryButton>
             </>
@@ -274,6 +309,12 @@ export function SettingsApiKeys() {
                 hint="Helps you identify this key later — it isn't shared."
                 autoFocus
               />
+              <SelectField label="Key role">
+                <RolePicker value={role} onChange={(e) => setRole(e.target.value as 'operator' | 'auditor')} aria-label="Key role">
+                  <option value="operator">Operator — read and act</option>
+                  <option value="auditor">Auditor — read-only, audit scoped</option>
+                </RolePicker>
+              </SelectField>
               <Helper>
                 <ShieldCheck size={13} strokeWidth={1.8} />
                 Treat every API key like a password. Don't commit keys to source control.
@@ -371,6 +412,55 @@ export function SettingsApiKeys() {
         </StepBody>
       </Modal>
 
+      {/* ─── Rotate: server re-mints; reveal-once ─── */}
+      <Modal
+        open={!!rotateTarget}
+        onClose={() => setRotateTarget(null)}
+        title={rotatedSecret ? 'New key secret' : `Rotate "${rotateTarget?.name ?? ''}"?`}
+        width={520}
+        footer={
+          rotatedSecret ? (
+            <PrimaryButton type="button" onClick={() => { setRotateTarget(null); setRotatedSecret(null); }} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+              <Check size={13} strokeWidth={2} />
+              Done
+            </PrimaryButton>
+          ) : (
+            <>
+              <GhostButton type="button" onClick={() => setRotateTarget(null)}>Cancel</GhostButton>
+              <PrimaryButton type="button" disabled={rotate.isPending} onClick={startRotate} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+                <RefreshCw size={13} strokeWidth={2} />
+                Rotate now
+              </PrimaryButton>
+            </>
+          )
+        }
+      >
+        {rotatedSecret ? (
+          <RevealWrap>
+            <RevealSuccess>
+              <ShieldCheck size={20} strokeWidth={1.7} />
+              <div>
+                <CreatedTitle>Key rotated</CreatedTitle>
+                <CreatedText>The old secret stopped working the moment the new one was issued.</CreatedText>
+              </div>
+            </RevealSuccess>
+            <RevealBox>
+              <RevealSecret>{rotatedSecret}</RevealSecret>
+              <CopyButton value={rotatedSecret} label="Copy key" />
+            </RevealBox>
+            <RevealNote>This is the only time the new secret is shown.</RevealNote>
+          </RevealWrap>
+        ) : (
+          <RotateNote>
+            <ShieldCheck size={13} strokeWidth={1.8} />
+            Rotation issues a new secret for "{rotateTarget?.name}" and invalidates the old one immediately. Services using the old key must be updated.
+          </RotateNote>
+        )}
+      </Modal>
+
+      {/* ─── Key detail drawer: binding, counters ─── */}
+      {detailId && <KeyDrawer keyId={detailId} onClose={() => setDetailId(null)} />}
+
       <ConfirmDialog
         open={!!revokeTarget}
         title="Revoke API key?"
@@ -383,8 +473,10 @@ export function SettingsApiKeys() {
         confirmLabel="Revoke"
         onConfirm={() => {
           if (revokeTarget) {
-            toast.error(`"${revokeTarget.name}" revoked`);
-            setKeys((ks) => ks.filter((x) => x.id !== revokeTarget.id));
+            revoke.mutate(
+              { keyId: revokeTarget.id },
+              { onSuccess: () => toast.success(`"${revokeTarget.name}" revoked`) },
+            );
           }
           setRevokeTarget(null);
         }}
@@ -394,12 +486,101 @@ export function SettingsApiKeys() {
   );
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────
-function randomString(len: number) {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let s = '';
-  for (let i = 0; i < len; i += 1) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
+// ─── Key detail drawer ───────────────────────────────────────────────
+function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
+  const detail = useKeyDetail(keyId);
+  const projects = useProjects();
+  const update = useUpdateKey();
+  const bind = useBindKey();
+  const unbind = useUnbindKey();
+  const [rename, setRename] = useState<string | null>(null);
+
+  const info = detail.data;
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Key details"
+      width={520}
+      footer={
+        <PrimaryButton type="button" onClick={onClose} whileTap={{ scale: 0.97 }} transition={spring.snap}>
+          Close
+        </PrimaryButton>
+      }
+    >
+      {!info ? (
+        <Skeleton $h="200px" $r="12px" />
+      ) : (
+        <DetailStack>
+          <DetailGrid>
+            <DetailLabel>Name</DetailLabel>
+            <DetailValue>
+              {rename === null ? (
+                <NameButton type="button" onClick={() => setRename(info.name ?? '')} title="Rename">{info.name ?? '—'}</NameButton>
+              ) : (
+                <RenameRow>
+                  <div style={{ flex: 1 }}>
+                    <TextInput value={rename} onChange={(e) => setRename(e.target.value)} aria-label="Key name" autoFocus />
+                  </div>
+                  <ActionButton
+                    variant="primary"
+                    size="sm"
+                    disabled={!rename.trim() || update.isPending}
+                    onClick={() => update.mutate({ keyId: info.id, name: rename.trim() }, { onSuccess: () => { setRename(null); toast.success('Key renamed'); } })}
+                  >
+                    Save
+                  </ActionButton>
+                  <ActionButton variant="secondary" size="sm" onClick={() => setRename(null)}>Cancel</ActionButton>
+                </RenameRow>
+              )}
+            </DetailValue>
+            <DetailLabel>Prefix</DetailLabel>
+            <DetailValue><KeyPill>{info.prefix ?? '—'}</KeyPill></DetailValue>
+            <DetailLabel>Role</DetailLabel>
+            <DetailValue>{info.role ?? '—'}</DetailValue>
+            <DetailLabel>Scopes</DetailLabel>
+            <DetailValue>{info.scopes.length > 0 ? info.scopes.join(', ') : '—'}</DetailValue>
+            <DetailLabel>Created</DetailLabel>
+            <DetailValue>{info.createdAt?.slice(0, 10) ?? '—'}</DetailValue>
+            <DetailLabel>Expires</DetailLabel>
+            <DetailValue>{info.expiresAt ? info.expiresAt.slice(0, 10) : 'no expiry'}</DetailValue>
+            <DetailLabel>Last used</DetailLabel>
+            <DetailValue>{info.lastUsedAt ? info.lastUsedAt.slice(0, 10) : 'never'}</DetailValue>
+            <DetailLabel>Requests</DetailLabel>
+            <DetailValue>{info.usageCount !== null ? info.usageCount.toLocaleString() : '—'}</DetailValue>
+          </DetailGrid>
+
+          <BindingBox>
+            <DetailLabel>Project binding</DetailLabel>
+            <BindingRow>
+              <div style={{ flex: 1 }}>
+                <RolePicker
+                  value={info.projectId ?? ''}
+                  onChange={(e) => {
+                    const projectId = e.target.value;
+                    if (projectId) {
+                      bind.mutate({ keyId: info.id, projectId }, { onSuccess: () => toast.success('Key bound to project') });
+                    } else {
+                      unbind.mutate({ keyId: info.id }, { onSuccess: () => toast.success('Key unbound') });
+                    }
+                  }}
+                  aria-label="Bound project"
+                >
+                  <option value="">Not bound — works across projects</option>
+                  {(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </RolePicker>
+              </div>
+              <BindingHint aria-hidden="true"><FolderInput size={13} strokeWidth={1.8} /></BindingHint>
+            </BindingRow>
+            <BindingNote>Bound keys only act within their project — the engine enforces it on every call.</BindingNote>
+          </BindingBox>
+        </DetailStack>
+      )}
+    </Modal>
+  );
 }
 
 // ─── styled ──────────────────────────────────────────────────────────
@@ -417,6 +598,11 @@ const PrimaryButton = styled(motion.button)`
   border-radius: 9px;
   cursor: pointer;
   box-shadow: 0 4px 14px ${({ theme }) => theme.app.status.azure.border};
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
 const GhostButton = styled.button`
@@ -490,15 +676,93 @@ const IconBtn = styled(motion.button)`
   justify-content: center;
   border: 0;
   background: transparent;
-  color: rgba(248, 113, 113, 0.7);
+  color: ${({ theme }) => theme.app.text.muted};
   border-radius: 7px;
   cursor: pointer;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
-    background: rgba(248, 113, 113, 0.10);
-    color: rgba(248, 113, 113, 1);
+    background: ${({ theme }) => theme.app.surface.active};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+const NameButton = styled.button`
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+  }
+`;
+
+const NameMeta = styled.div`
+  margin-top: 2px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.ghost};
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <SelectFieldBox>
+      <SelectLabel>{label}</SelectLabel>
+      {children}
+    </SelectFieldBox>
+  );
+}
+
+const SelectFieldBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const SelectLabel = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+const RolePicker = styled.select`
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  option {
+    background: #14151c;
+    color: ${({ theme }) => theme.app.text.primary};
   }
 `;
 
@@ -538,9 +802,9 @@ const Dot = styled(motion.div)<{ $active: boolean; $reached: boolean }>`
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: ${({ $active, $reached, theme }) => ($active ? '#fff' : $reached ? theme.app.text.primary : theme.app.text.faint)};
-  background: ${({ $active, $reached }) =>
+  background: ${({ $active, $reached, theme }) =>
     $active
-      ? '${({ theme }) => theme.colors.gradients.primary}'
+      ? theme.colors.gradients.primary
       : $reached
         ? 'rgba(192, 132, 252, 0.20)'
         : 'rgba(255, 255, 255, 0.04)'};
@@ -658,9 +922,9 @@ const Toggle = styled(motion.button)<{ $on: boolean }>`
   height: 22px;
   border-radius: 999px;
   border: 1px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.strong)};
-  background: ${({ $on }) =>
+  background: ${({ $on, theme }) =>
     $on
-      ? '${({ theme }) => theme.colors.gradients.primary}'
+      ? theme.colors.gradients.primary
       : 'rgba(255, 255, 255, 0.10)'};
   cursor: pointer;
   padding: 0;
@@ -723,9 +987,9 @@ const Radio = styled.span<{ $on: boolean }>`
   height: 18px;
   border-radius: 50%;
   border: 1.5px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.hover)};
-  background: ${({ $on }) =>
+  background: ${({ $on, theme }) =>
     $on
-      ? '${({ theme }) => theme.colors.gradients.primary}'
+      ? theme.colors.gradients.primary
       : 'transparent'};
   display: inline-flex;
   align-items: center;
@@ -806,12 +1070,28 @@ const RevealNote = styled.div`
   }
 `;
 
-// ─── key list cells ──────────────────────────────────────────────────
+const RotateNote = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: rgba(96, 165, 250, 0.06);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  color: rgba(147, 197, 253, 0.85);
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: 1.5;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+`;
+
+// ─── key list cells + detail drawer ──────────────────────────────────
 const KeyCellName = styled.div`
   width: 30%;
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 500;
-  color: ${({ theme }) => theme.app.text.primary};
+  min-width: 0;
 `;
 
 const KeyCellMeta = styled.div`
@@ -821,11 +1101,65 @@ const KeyCellMeta = styled.div`
   font-variant-numeric: tabular-nums;
 `;
 
-const KeysEmpty = styled.div`
-  padding: 32px;
-  text-align: center;
-  font-size: ${({ theme }) => theme.app.type.body};
+const DetailStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const DetailGrid = styled.div`
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px 14px;
+  align-items: center;
+`;
+
+const DetailLabel = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.faint};
+`;
+
+const DetailValue = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.primary};
+  min-width: 0;
+  word-break: break-word;
+`;
+
+const RenameRow = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+`;
+
+const BindingBox = styled.div`
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const BindingRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const BindingHint = styled.span`
+  color: ${({ theme }) => theme.app.text.muted};
+  display: inline-flex;
+`;
+
+const BindingNote = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.5;
 `;
 
 const CreatedTitle = styled.div`

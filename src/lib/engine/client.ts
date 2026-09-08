@@ -12,7 +12,16 @@
  *    entitlement_required, past_due, rate_limited, …)
  */
 
-export const ENGINE_URL = (import.meta.env.VITE_ENGINE_URL as string | undefined ?? 'http://localhost:3001').replace(/\/$/, '');
+/**
+ * The engine base for every request. Dev routes through the Vite proxy
+ * (fully same-origin — OP cookies first-party, no CORS); production is
+ * same-origin via the edge, so BASE is '' there too. VITE_ENGINE_URL is
+ * only for non-standard topologies (e.g. a separate engine domain with
+ * CORS deliberately opened).
+ */
+export const ENGINE_BASE: string = import.meta.env.DEV && !import.meta.env.VITE_ENGINE_URL
+  ? '/engine'
+  : (import.meta.env.VITE_ENGINE_URL as string | undefined ?? '').replace(/\/$/, '');
 
 export type EngineErrorCode =
   | 'unauthenticated'
@@ -61,6 +70,16 @@ export function bindTokenSource(source: TokenSource): void {
   tokenSource = source;
 }
 
+/**
+ * The current Authorization header value — for transports that bypass
+ * `engine()` and can't use the fetch-wrapper auth path (fetch-based SSE).
+ * Returns null when signed out; callers decide what that means for them.
+ */
+export function authorizationHeader(): string | null {
+  const token = tokenSource?.getAccessToken();
+  return token ? `Bearer ${token}` : null;
+}
+
 /** Org scope — set by OrgProvider; undefined on unscoped calls. */
 let activeOrgId: string | null = null;
 export function setActiveOrg(orgId: string | null): void {
@@ -81,7 +100,7 @@ export interface EngineRequestInit {
 }
 
 function buildUrl(path: string, query?: EngineRequestInit['query']): string {
-  const url = new URL(`${ENGINE_URL}${path.startsWith('/') ? path : `/${path}`}`);
+  const url = new URL(`${ENGINE_BASE}${path.startsWith('/') ? path : `/${path}`}`, window.location.origin);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined && value !== '') {

@@ -24,13 +24,6 @@ export const AgentDesc = styled.div`
   margin-top: 2px;
 `;
 
-export const ChannelRow = styled.div`
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-`;
-
 export const ModelTag = styled.span`
   display: inline-flex;
   align-items: center;
@@ -41,19 +34,6 @@ export const ModelTag = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
   color: ${({ theme }) => theme.app.text.secondary};
-`;
-
-export const ProgressCell = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-right: 8px;
-`;
-
-export const ProgressLabel = styled.span`
-  font-size: ${({ theme }) => theme.app.type.micro};
-  color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: tabular-nums;
 `;
 
 export const RowMenuButton = styled.button`
@@ -98,16 +78,22 @@ export const TemplateGrid = styled.div`
   }
 `;
 
-export const TemplateCard = styled.div`
+export const TemplateCard = styled.div<{ $selected?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ $selected, theme }) => ($selected ? theme.app.status.lilac.border : theme.app.border.default)};
+  background: ${({ $selected, theme }) => ($selected ? theme.app.status.lilac.bg : theme.app.surface.subtle)};
+  cursor: pointer;
   transition: border-color ${({ theme }) => theme.transitions.fast},
     background ${({ theme }) => theme.transitions.fast};
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+  }
 
   &:hover {
     border-color: ${({ theme }) => theme.app.border.hover};

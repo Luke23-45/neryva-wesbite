@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import programsData from '@neryva_data/home/sections/research_overview.json';

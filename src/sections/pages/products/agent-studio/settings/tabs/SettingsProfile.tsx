@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, X as XIcon, Camera } from 'lucide-react';
+import { Upload, X as XIcon, Camera, MailCheck, Link2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
@@ -8,29 +8,67 @@ import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { Avatar } from '@components/common/ui/Avatar';
+import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { QueryView } from '@components/common/ui/AsyncStates';
+import { useAccount, useUpdateAccount, useRequestEmailVerification, useRequestEmailChange, useConfirmEmailChange, useIdentities, useUnlinkIdentity, type AccountInfo, type AccountIdentity } from '@hooks/studio/useAccount';
 import { spring, pageItem } from '@styles/motion';
-import settings from '@neryva_data/products/agent_studio/settings.json';
 import { SaveRow } from './shared';
 
 /**
- * Settings → Profile
+ * Settings → Profile (ledger T-1)
  *
- * - Avatar upload: hidden file input; click the photo to open the system
- *   picker. Hover overlay shows a Camera glyph + "Update" CTA.
- * - "Remove" only appears when a custom photo is set, restoring the
- *   initials+gradient default.
- * - Values persist to localStorage so a refresh keeps the photo.
+ * - Identity fields save through PATCH /auth/me; a name change also
+ *   updates the OP session store so the chrome follows without re-login.
+ * - Email is owned by the account, not editable inline: verification and
+ *   change flows run through the engine's request/confirm endpoints.
+ * - Linked identities list + unlink.
+ * - Avatar upload: ⛔ E-14 (server-side avatar storage pending) — the
+ *   picker persists to localStorage meanwhile; never presented as synced.
  */
 
 const STORAGE_KEY = 'studio.profile.avatar';
 
+const TIMEZONE_FALLBACK = ['UTC', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Zurich', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney'];
+
+function timezoneOptions(): string[] {
+  try {
+    const supported = (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
+    if (typeof supported === 'function') {
+      return supported('timeZone');
+    }
+  } catch {
+    /* older runtimes — fall through to the shortlist */
+  }
+  return TIMEZONE_FALLBACK;
+}
+
+const LOCALES = ['en', 'en-US', 'en-GB', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ko', 'zh-CN'];
+
 export function SettingsProfile() {
-  const data = settings.profile;
-  const [name, setName] = useState(data.name);
-  const [email, setEmail] = useState(data.email);
-  const [bio, setBio] = useState(data.bio);
-  const [tz, setTz] = useState(data.timezone);
-  const [loc, setLoc] = useState(data.locale);
+  const account = useAccount();
+  return (
+    <QueryView query={account} skeleton={<Skeleton $h="280px" $r="12px" />} isEmpty={(d) => d === null} empty={{ title: 'Account unavailable', description: 'Your account details could not be loaded — try refreshing.' }}>
+      {(info) => info && <ProfileForm key={info.id} info={info} />}
+    </QueryView>
+  );
+}
+
+function ProfileForm({ info }: { info: AccountInfo }) {
+  const update = useUpdateAccount();
+  const requestVerification = useRequestEmailVerification();
+  const requestEmailChange = useRequestEmailChange();
+  const confirmEmailChange = useConfirmEmailChange();
+
+  const [name, setName] = useState(info.name ?? '');
+  const [tz, setTz] = useState(info.timezone ?? 'UTC');
+  const [loc, setLoc] = useState(info.locale ?? 'en');
+  const [bio, setBio] = useState('');
+
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [changeCode, setChangeCode] = useState('');
+  const [changeRequested, setChangeRequested] = useState(false);
 
   const [avatar, setAvatar] = useState<string | null>(() => {
     try {
@@ -91,62 +129,225 @@ export function SettingsProfile() {
     }
   };
 
-  return (
-    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
-      <Panel title="Identity" subtitle="How you appear in your workspace and to your agents.">
-        <IdentityRow>
-          <PhotoSlot
-            role="button"
-            tabIndex={0}
-            onClick={() => fileRef.current?.click()}
-            onKeyDown={onKey}
-            whileTap={{ scale: 0.97 }}
-            transition={spring.snap}
-            aria-label="Upload profile photo"
-          >
-            <Avatar initials={initials || 'NV'} hue="azure" size={64} status="online" src={avatar ?? undefined} />
-            <PhotoOverlay>
-              <Camera size={14} strokeWidth={1.7} />
-              Update
-            </PhotoOverlay>
-          </PhotoSlot>
-          <PhotoActions>
-            <ActionButton variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
-              <Upload size={13} strokeWidth={1.8} />
-              Upload photo
-            </ActionButton>
-            {avatar && (
-              <ActionButton variant="danger" size="sm" onClick={removeAvatar}>
-                <XIcon size={13} strokeWidth={1.8} />
-                Remove
-              </ActionButton>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => onPick(e.target.files?.[0])}
-              aria-label="Profile photo file"
-            />
-            <PhotoMeta>
-              <PhotoMetaRow><strong>{name || 'Your name'}</strong></PhotoMetaRow>
-              <PhotoMetaRow>{email || 'email@example.com'}</PhotoMetaRow>
-            </PhotoMeta>
-          </PhotoActions>
-        </IdentityRow>
+  const save = () => {
+    update.mutate(
+      { name: name.trim() || undefined, timezone: tz, locale: loc, bio: bio.trim() || undefined },
+      { onSuccess: () => toast.success('Profile saved') },
+    );
+  };
 
-        <FieldGrid>
-          <TextInput label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
-          <TextInput label="Email" value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
-          <TextInput label="Timezone" value={tz} onChange={(e) => setTz(e.target.value)} />
-          <TextInput label="Locale" value={loc} onChange={(e) => setLoc(e.target.value)} />
-        </FieldGrid>
-        <BioRow>
-          <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-        </BioRow>
-        <SaveRow onSave={() => toast.success('Profile saved')} />
+  return (
+    <>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <Panel title="Identity" subtitle="How you appear in your workspace and to your agents.">
+          <IdentityRow>
+            <PhotoSlot
+              role="button"
+              tabIndex={0}
+              onClick={() => fileRef.current?.click()}
+              onKeyDown={onKey}
+              whileTap={{ scale: 0.97 }}
+              transition={spring.snap}
+              aria-label="Upload profile photo"
+            >
+              <Avatar initials={initials || 'NV'} hue="azure" size={64} status="online" src={avatar ?? undefined} />
+              <PhotoOverlay>
+                <Camera size={14} strokeWidth={1.7} />
+                Update
+              </PhotoOverlay>
+            </PhotoSlot>
+            <PhotoActions>
+              <ActionButton variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
+                <Upload size={13} strokeWidth={1.8} />
+                Upload photo
+              </ActionButton>
+              {avatar && (
+                <ActionButton variant="danger" size="sm" onClick={removeAvatar}>
+                  <XIcon size={13} strokeWidth={1.8} />
+                  Remove
+                </ActionButton>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => onPick(e.target.files?.[0])}
+                aria-label="Profile photo file"
+              />
+              <PhotoMeta>
+                <PhotoMetaRow><strong>{name || 'Your name'}</strong></PhotoMetaRow>
+                <PhotoMetaRow>{info.email ?? '—'}</PhotoMetaRow>
+              </PhotoMeta>
+            </PhotoActions>
+          </IdentityRow>
+
+          <FieldGrid>
+            <TextInput label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
+            <SelectField label="Timezone">
+              <ProfileSelect value={tz} onChange={(e) => setTz(e.target.value)} aria-label="Timezone">
+                {timezoneOptions().map((zone) => (
+                  <option key={zone} value={zone}>{zone}</option>
+                ))}
+              </ProfileSelect>
+            </SelectField>
+            <SelectField label="Locale">
+              <ProfileSelect value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Locale">
+                {LOCALES.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </ProfileSelect>
+            </SelectField>
+          </FieldGrid>
+          <BioRow>
+            <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
+          </BioRow>
+          <SaveRow onSave={save} />
+        </Panel>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+        <Panel title="Email & sign-in" subtitle="Your sign-in address and how it’s verified.">
+          <EmailRow>
+            <EmailMain>
+              <EmailValue>{info.email ?? '—'}</EmailValue>
+              {info.emailVerified === true && (
+                <VerifiedPill><MailCheck size={11} strokeWidth={1.8} /> verified</VerifiedPill>
+              )}
+              {info.emailVerified === false && (
+                <UnverifiedPill>not verified</UnverifiedPill>
+              )}
+            </EmailMain>
+            <EmailActions>
+              {info.emailVerified === false && (
+                <ActionButton
+                  variant="secondary"
+                  size="sm"
+                  disabled={requestVerification.isPending}
+                  onClick={() => requestVerification.mutate(undefined, { onSuccess: () => toast.success('Verification email sent') })}
+                >
+                  <MailCheck size={13} strokeWidth={1.8} />
+                  Verify email
+                </ActionButton>
+              )}
+              <ActionButton variant="secondary" size="sm" onClick={() => { setChangeEmailOpen((v) => !v); setChangeRequested(false); }}>
+                Change email
+              </ActionButton>
+            </EmailActions>
+          </EmailRow>
+
+          {(changeEmailOpen || info.pendingEmail) && (
+            <EmailChangeBox>
+              {info.pendingEmail && !changeRequested && (
+                <PendingNote>
+                  A change to <strong>{info.pendingEmail}</strong> is awaiting confirmation — check that inbox for the code.
+                </PendingNote>
+              )}
+              {!changeRequested ? (
+                <>
+                  <EmailChangeRow>
+                    <div style={{ flex: 1 }}>
+                      <TextInput
+                        label="New email address"
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="you@company.com"
+                      />
+                    </div>
+                    <ActionButton
+                      variant="secondary"
+                      size="sm"
+                      disabled={!newEmail.includes('@') || requestEmailChange.isPending}
+                      onClick={() => requestEmailChange.mutate(newEmail.trim(), { onSuccess: () => setChangeRequested(true) })}
+                    >
+                      Send confirmation
+                    </ActionButton>
+                  </EmailChangeRow>
+                </>
+              ) : (
+                <EmailChangeRow>
+                  <div style={{ flex: 1 }}>
+                    <TextInput
+                      label="Confirmation code"
+                      value={changeCode}
+                      onChange={(e) => setChangeCode(e.target.value)}
+                      placeholder="6-digit code from your new inbox"
+                      autoFocus
+                    />
+                  </div>
+                  <ActionButton
+                    variant="primary"
+                    size="sm"
+                    disabled={changeCode.trim().length < 4 || confirmEmailChange.isPending}
+                    onClick={() => confirmEmailChange.mutate(changeCode.trim(), { onSuccess: () => { toast.success('Email updated'); setChangeEmailOpen(false); setChangeRequested(false); setNewEmail(''); setChangeCode(''); } })}
+                  >
+                    Confirm change
+                  </ActionButton>
+                </EmailChangeRow>
+              )}
+            </EmailChangeBox>
+          )}
+        </Panel>
+      </motion.div>
+
+      <LinkedIdentities />
+
+      {/* ⛔ E-14: avatar is local-only until server-side asset storage lands. */}
+    </>
+  );
+}
+
+function LinkedIdentities() {
+  const identities = useIdentities();
+  const unlink = useUnlinkIdentity();
+  const [target, setTarget] = useState<AccountIdentity | null>(null);
+
+  return (
+    <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
+      <Panel title="Connected sign-in" subtitle="External accounts linked to your Neryva Account.">
+        <QueryView
+          query={identities}
+          skeleton={<Skeleton $h="72px" $r="10px" />}
+          empty={{ title: 'No linked accounts', description: 'You sign in with your email. Social sign-in accounts you link appear here.' }}
+        >
+          {(rows) => (
+            <IdentityList>
+              {rows.map((identity) => (
+                <IdentityRowBox key={identity.id}>
+                  <IdentityIcon aria-hidden="true"><Link2 size={14} strokeWidth={1.7} /></IdentityIcon>
+                  <IdentityInfo>
+                    <IdentityProvider>{identity.provider}</IdentityProvider>
+                    {identity.identifier && <IdentityMeta>{identity.identifier}</IdentityMeta>}
+                  </IdentityInfo>
+                  <ActionButton variant="secondary" size="sm" onClick={() => setTarget(identity)}>
+                    Unlink
+                  </ActionButton>
+                </IdentityRowBox>
+              ))}
+            </IdentityList>
+          )}
+        </QueryView>
       </Panel>
+
+      <ConfirmDialog
+        open={!!target}
+        title="Unlink this account?"
+        message={
+          target
+            ? `You will no longer be able to sign in with ${target.provider}${target.identifier ? ` (${target.identifier})` : ''}. This cannot be undone from here.`
+            : ''
+        }
+        destructive
+        confirmLabel="Unlink"
+        onConfirm={() => {
+          if (target) {
+            unlink.mutate(target.id, { onError: () => toast.error('The account stays linked') });
+          }
+          setTarget(null);
+        }}
+        onCancel={() => setTarget(null)}
+      />
     </motion.div>
   );
 }
@@ -244,4 +445,181 @@ const FieldGrid = styled.div`
 
 const BioRow = styled.div`
   margin-top: 14px;
+`;
+
+function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <SelectFieldBox>
+      <SelectLabel>{label}</SelectLabel>
+      {children}
+    </SelectFieldBox>
+  );
+}
+
+const SelectFieldBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const SelectLabel = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+const ProfileSelect = styled.select`
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  option {
+    background: #14151c;
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+`;
+
+const EmailRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+`;
+
+const EmailMain = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const EmailValue = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const Pill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
+`;
+
+const VerifiedPill = styled(Pill)`
+  background: ${({ theme }) => theme.app.status.success.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.success.border};
+  color: ${({ theme }) => theme.app.status.success.fg};
+`;
+
+const UnverifiedPill = styled(Pill)`
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  color: ${({ theme }) => theme.app.status.warning.fg};
+`;
+
+const EmailActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const EmailChangeBox = styled.div`
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 11px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const EmailChangeRow = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+
+  @media (max-width: 560px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const PendingNote = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.5;
+`;
+
+const IdentityList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const IdentityRowBox = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+const IdentityIcon = styled.span`
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
+  flex-shrink: 0;
+`;
+
+const IdentityInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const IdentityProvider = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const IdentityMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;

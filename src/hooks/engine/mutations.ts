@@ -2,23 +2,39 @@
  * Engine mutation hooks — every write surface the /platform area performs.
  * Toasts fire on success/error here so pages stay declarative; the query
  * cache is invalidated per domain after a successful write.
+ *
+ * Error UX flows through `toastEngineError` (single source of copy), and
+ * privileged mutations that hit `step_up_required` — typically an expired
+ * proof between page-level pre-check and server check — re-prompt through
+ * `requestStepUp` and retry once with the fresh proof.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { engine, ApiError } from '@lib/engine/client';
+import { engine } from '@lib/engine/client';
+import { toastEngineError } from '@lib/engine/errors';
+import { requestStepUp, isStepUpRequired } from '@lib/engine/stepup';
 import { useOrgRequired } from './queries';
 
 function useEngineMutation<TInput, TOutput>(
   buildCall: (orgId: string, input: TInput) => { path: string; init?: Parameters<typeof engine>[1] },
   invalidates: string[],
   successMessage?: string,
+  opts?: { act?: string },
 ) {
   const orgId = useOrgRequired();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: TInput) => {
       const { path, init } = buildCall(orgId, input);
-      return engine<TOutput>(path, init);
+      try {
+        return await engine<TOutput>(path, init);
+      } catch (error) {
+        if (opts?.act && isStepUpRequired(error)) {
+          const proof = await requestStepUp(opts.act);
+          return engine<TOutput>(path, { ...init, mfaProof: proof });
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       if (successMessage) {
@@ -28,10 +44,7 @@ function useEngineMutation<TInput, TOutput>(
         void queryClient.invalidateQueries({ queryKey: ['engine', key] });
       }
     },
-    onError: (error) => {
-      const message = error instanceof ApiError ? error.message : 'Something went wrong — try again.';
-      toast.error(message);
-    },
+    onError: (error) => toastEngineError(error),
   });
 }
 
@@ -45,6 +58,7 @@ export function useInviteMember() {
     }),
     ['invites', 'org-summary'],
     'Invitation sent',
+    { act: 'Invite member' },
   );
 }
 
@@ -82,6 +96,7 @@ export function useChangeRole() {
     }),
     ['members', 'home'],
     'Role updated',
+    { act: 'Change member role' },
   );
 }
 
@@ -111,17 +126,15 @@ export function useRemoveMember() {
 
 export function useLeaveOrg() {
   const queryClient = useQueryClient();
+  const orgId = useOrgRequired();
   return useMutation({
-    mutationFn: async () => {
-      const orgId = useOrgRequired();
-      return engine(`/console/org/${orgId}/members/leave`, { method: 'POST' });
-    },
+    mutationFn: async () => engine(`/console/org/${orgId}/members/leave`, { method: 'POST' }),
     onSuccess: () => {
       toast.success('You left the organization');
       window.localStorage.removeItem('neryva.active_org');
       void queryClient.invalidateQueries({ queryKey: ['engine'] });
     },
-    onError: (error) => toast.error(error instanceof ApiError ? error.message : 'Could not leave the organization'),
+    onError: (error) => toastEngineError(error, 'Could not leave the organization'),
   });
 }
 
@@ -171,6 +184,8 @@ export function useIssueKey() {
       return { path: `/console/org/${orgId}/keys`, init: { method: 'POST', body, idempotent: true, ...(mfaProof ? { mfaProof } : {}) } };
     },
     ['keys'],
+    undefined,
+    { act: 'Issue API key' },
   );
 }
 
@@ -225,6 +240,8 @@ export function useCreateServiceAccount() {
       return { path: `/console/org/${orgId}/service-accounts`, init: { method: 'POST', body, idempotent: true, ...(mfaProof ? { mfaProof } : {}) } };
     },
     ['service-accounts', 'org-summary'],
+    undefined,
+    { act: 'Create service account' },
   );
 }
 
@@ -232,6 +249,8 @@ export function useRotateServiceAccountToken() {
   return useEngineMutation<{ id: string; mfaProof?: string }, { token: string }>(
     (orgId, input) => ({ path: `/console/org/${orgId}/service-accounts/${input.id}/rotate`, init: { method: 'POST', ...(input.mfaProof ? { mfaProof: input.mfaProof } : {}) } }),
     ['service-accounts'],
+    undefined,
+    { act: 'Rotate service-account token' },
   );
 }
 
@@ -266,6 +285,7 @@ export function useStartTrial() {
     (orgId, input) => ({ path: `/console/org/${orgId}/entitlements/${input.product}/trial`, init: { method: 'POST', body: { ...(input.days ? { days: input.days } : {}) }, idempotent: true } }),
     ['entitlements', 'home'],
     'Trial started',
+    { act: 'Start trial' },
   );
 }
 
@@ -274,6 +294,7 @@ export function useTransferOwnership() {
     (orgId, input) => ({ path: `/console/org/${orgId}/transfer-ownership`, init: { method: 'POST', body: { target_account_id: input.targetAccountId }, idempotent: true, mfaProof: input.mfaProof } }),
     ['members', 'home'],
     'Ownership transferred',
+    { act: 'Transfer ownership' },
   );
 }
 
@@ -281,6 +302,8 @@ export function useRequestOrgDeletion() {
   return useEngineMutation<{ mfaProof: string }, { scheduled_purge_at: string }>(
     (orgId, input) => ({ path: `/console/org/${orgId}/delete`, init: { method: 'POST', body: { confirmation: 'delete' }, idempotent: true, mfaProof: input.mfaProof } }),
     ['deletion-status', 'entitlements', 'home'],
+    undefined,
+    { act: 'Delete organization' },
   );
 }
 
@@ -289,5 +312,6 @@ export function useCancelOrgDeletion() {
     (orgId, input) => ({ path: `/console/org/${orgId}/delete/cancel`, init: { method: 'POST', mfaProof: input.mfaProof } }),
     ['deletion-status', 'entitlements', 'home'],
     'Deletion cancelled',
+    { act: 'Cancel organization deletion' },
   );
 }

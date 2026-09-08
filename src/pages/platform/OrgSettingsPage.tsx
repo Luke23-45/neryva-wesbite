@@ -17,6 +17,7 @@ import {
   useTransferOwnership, useRequestOrgDeletion, useCancelOrgDeletion,
 } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
+import { requestStepUp } from '@lib/engine/stepup';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
@@ -271,7 +272,6 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState('agent-studio:read');
-  const [mfaProof, setMfaProof] = useState('');
   const [issued, setIssued] = useState<string | null>(null);
 
   return (
@@ -280,7 +280,7 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
       <Panel
         flush
         action={canManage ? (
-          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setScopes('agent-studio:read'); setMfaProof(''); setIssued(null); setCreateOpen(true); }}>
+          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setScopes('agent-studio:read'); setIssued(null); setCreateOpen(true); }}>
             <Bot size={13} /> New service account
           </ActionButton>
         ) : undefined}
@@ -313,7 +313,7 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
                     </DataCell>
                     <DataCell>
                       {canManage && account.status === 'active' && (
-                        <ActionButton variant="ghost" size="sm" onClick={() => rotate.mutate({ id: account.id, mfaProof }, { onSuccess: (result) => setIssued(result.token) })}>
+                        <ActionButton variant="ghost" size="sm" onClick={() => { void requestStepUp('Rotate service-account token').then((proof) => rotate.mutate({ id: account.id, mfaProof: proof }, { onSuccess: (result) => setIssued(result.token) })).catch(() => undefined); }}>
                           <RefreshCw size={12} /> Rotate
                         </ActionButton>
                       )}
@@ -334,7 +334,6 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
       {canManage && (
         <Toolbar style={{ marginTop: 10 }}>
           <ToolbarGroup>
-            <TextInput name="sa-mfa" placeholder="MFA proof for rotate/create (v1.…)" value={mfaProof} onChange={(e) => setMfaProof(e.target.value)} style={{ maxWidth: 320 }} />
           </ToolbarGroup>
         </Toolbar>
       )}
@@ -351,13 +350,19 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
               <ActionButton variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</ActionButton>
               <ActionButton
                 variant="primary"
-                disabled={name.trim().length < 1 || mfaProof.trim().length < 8 || create.isPending}
-                onClick={() =>
+                disabled={name.trim().length < 1 || create.isPending}
+                onClick={async () => {
+                  let proof: string;
+                  try {
+                    proof = await requestStepUp('Create service account');
+                  } catch {
+                    return;
+                  }
                   create.mutate(
-                    { name, scopes: scopes.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean), mfaProof },
+                    { name, scopes: scopes.split(/[,\s]+/).map((s) => s.trim()).filter(Boolean), mfaProof: proof },
                     { onSuccess: (result) => setIssued(result.token) },
                   )
-                }
+                }}
               >
                 Create
               </ActionButton>
@@ -374,7 +379,6 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
           <Form>
             <TextInput label="Name" name="sa-name" placeholder="ci-pipelines" value={name} onChange={(e) => setName(e.target.value)} />
             <TextInput label="Scopes (space or comma separated)" name="sa-scopes" value={scopes} onChange={(e) => setScopes(e.target.value)} />
-            <TextInput label="MFA proof" name="sa-mfa2" placeholder="v1.…" value={mfaProof} onChange={(e) => setMfaProof(e.target.value)} hint="Token minting is step-up gated." />
           </Form>
         )}
       </Modal>
@@ -400,7 +404,6 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
   const requestDeletion = useRequestOrgDeletion();
   const cancelDeletion = useCancelOrgDeletion();
 
-  const [proof, setProof] = useState('');
   const [transferTarget, setTransferTarget] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [typed, setTyped] = useState('');
@@ -413,7 +416,6 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
       {!isOwner && <DangerNote>Only the organization owner can transfer ownership or delete the organization.</DangerNote>}
       {isOwner && (
         <Form>
-          <TextInput label="MFA proof (required for both acts)" name="danger-mfa" placeholder="v1.…" value={proof} onChange={(e) => setProof(e.target.value)} hint="Privileged acts demand a fresh step-up proof." />
           <Panel title="Transfer ownership" subtitle="Promote another member to owner; you become an admin.">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <select value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)} style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
@@ -422,7 +424,7 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
                   <option key={m.accountId} value={m.accountId}>{m.displayName ?? m.email} ({m.email})</option>
                 ))}
               </select>
-              <ActionButton variant="secondary" disabled={!transferTarget || proof.length < 8 || transfer.isPending} onClick={() => transfer.mutate({ targetAccountId: transferTarget, mfaProof: proof })}>
+              <ActionButton variant="secondary" disabled={!transferTarget || transfer.isPending} onClick={() => { void requestStepUp('Transfer ownership').then((mfaProof) => transfer.mutate({ targetAccountId: transferTarget, mfaProof })).catch(() => undefined); }}>
                 <Crown size={13} /> Transfer ownership
               </ActionButton>
             </div>
@@ -434,7 +436,7 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
                   <AlertTriangle size={12} style={{ verticalAlign: -2, marginRight: 4 }} />
                   Deletion scheduled — permanent purge on {pending.scheduled_purge_at ? new Date(pending.scheduled_purge_at).toLocaleDateString() : '—'}. Export your data from the audit page first.
                 </DangerNote>
-                <ActionButton variant="secondary" disabled={proof.length < 8 || cancelDeletion.isPending} onClick={() => cancelDeletion.mutate({ mfaProof: proof })}>
+                <ActionButton variant="secondary" disabled={cancelDeletion.isPending} onClick={() => { void requestStepUp('Cancel organization deletion').then((mfaProof) => cancelDeletion.mutate({ mfaProof })).catch(() => undefined); }}>
                   Cancel deletion
                 </ActionButton>
               </div>
@@ -456,8 +458,12 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
             <ActionButton variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</ActionButton>
             <ActionButton
               variant="danger"
-              disabled={typed !== 'delete' || proof.length < 8 || requestDeletion.isPending}
-              onClick={() => requestDeletion.mutate({ mfaProof: proof }, { onSuccess: () => setDeleteOpen(false) })}
+              disabled={typed !== 'delete' || requestDeletion.isPending}
+              onClick={() => {
+                void requestStepUp('Delete organization').then((mfaProof) =>
+                  requestDeletion.mutate({ mfaProof }, { onSuccess: () => setDeleteOpen(false) }),
+                ).catch(() => undefined);
+              }}
             >
               Schedule deletion
             </ActionButton>

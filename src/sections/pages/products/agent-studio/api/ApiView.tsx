@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Play, KeyRound } from 'lucide-react';
@@ -6,7 +7,7 @@ import { Segmented } from '@components/common/ui/Segmented';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
-import api from '@neryva_data/products/agent_studio/api.json';
+import catalogJson from '@neryva_data/products/agent_studio/api-catalog.json';
 import {
   TwoColumn,
   Sidebar,
@@ -35,104 +36,47 @@ import {
   TryNoteStrong,
 } from './ApiView.styles';
 
-const SAMPLE_KEY = 'nv_live_4d2e7a91b6f3a8c1e2f5';
+/**
+ * API explorer (ledger I-4/I-5) — generated from the runtime's pinned
+ * OpenAPI contract (regenerate: `node scripts/generate-api-catalog.mjs`).
+ *
+ * The request builder composes real calls from the endpoint's parameters;
+ * GET requests execute live through the runtime proxy with the key you
+ * paste (kept in memory for this tab only — never persisted). Mutating
+ * methods show the exact curl instead of firing. The fake sample key,
+ * hand-written examples, and the single fake response are gone.
+ */
 
-const SAMPLE_REQUEST: Record<string, string> = {
-  chat: `curl -X POST https://api.neryva.ai/v1/chat \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "agent_id": "agt_support_concierge",
-    "messages": [
-      { "role": "user", "content": "How do I reset my password?" }
-    ],
-    "stream": true,
-    "temperature": 0.3
-  }'`,
-  'chat-stream': `curl -X POST https://api.neryva.ai/v1/chat/stream \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -H "Accept: text/event-stream" \\
-  -d '{
-    "agent_id": "agt_support_concierge",
-    "messages": [
-      { "role": "user", "content": "Help me onboard" }
-    ]
-  }'`,
-  'agents-list': `curl https://api.neryva.ai/v1/agents?limit=50 \\
-  -H "Authorization: Bearer nv_live_..."`,
-  'agents-create': `curl -X POST https://api.neryva.ai/v1/agents \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Refund Specialist",
-    "model": "reasoner-pro",
-    "system_prompt": "You are a refund specialist. Be concise and empathetic.",
-    "tools": [
-      { "type": "function", "function": { "name": "lookup_order" } }
-    ]
-  }'`,
-  'agents-retrieve': `curl https://api.neryva.ai/v1/agents/agt_support_concierge \\
-  -H "Authorization: Bearer nv_live_..."`,
-  'agents-update': `curl -X PATCH https://api.neryva.ai/v1/agents/agt_support_concierge \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "system_prompt": "Updated prompt here."
-  }'`,
-  'agents-delete': `curl -X DELETE https://api.neryva.ai/v1/agents/agt_legacy \\
-  -H "Authorization: Bearer nv_live_..."`,
-  'knowledge-sources': `curl -X POST https://api.neryva.ai/v1/knowledge/sources \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "kind": "url",
-    "url": "https://docs.aurora.example",
-    "name": "Product documentation"
-  }'`,
-  'knowledge-query': `curl -X POST https://api.neryva.ai/v1/knowledge/query \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "query": "refund policy",
-    "top_k": 5
-  }'`,
-  'conversations-list': `curl "https://api.neryva.ai/v1/conversations?agent_id=agt_support&from=2026-04-01" \\
-  -H "Authorization: Bearer nv_live_..."`,
-  'webhooks-create': `curl -X POST https://api.neryva.ai/v1/webhooks \\
-  -H "Authorization: Bearer nv_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "url": "https://hooks.aurora.example/agent",
-    "events": ["agent.published", "conversation.resolved"],
-    "secret": "whsec_..."
-  }'`,
-  'analytics-usage': `curl "https://api.neryva.ai/v1/analytics/usage?from=2026-04-01&to=2026-04-30&group_by=day" \\
-  -H "Authorization: Bearer nv_live_..."`,
-};
+interface CatalogParam {
+  name: string;
+  in: string;
+  required: boolean;
+  description: string | null;
+  type: string | null;
+}
 
-const SAMPLE_RESPONSE: Record<string, string> = {
-  chat: `{
-  "id": "msg_8f3a1c",
-  "object": "chat.completion",
-  "agent_id": "agt_support_concierge",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "To reset your password, click 'Forgot password' on the sign-in page…"
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 142,
-    "completion_tokens": 84,
-    "total_tokens": 226
-  }
-}`,
-};
+interface CatalogEndpoint {
+  id: string;
+  path: string;
+  method: string;
+  tag: string;
+  summary: string;
+  description: string | null;
+  params: CatalogParam[];
+  body: { required: boolean; fields: Array<{ name: string; type: string; required: boolean }> } | null;
+}
+
+interface Catalog {
+  title: string;
+  version: string;
+  endpointCount: number;
+  endpoints: CatalogEndpoint[];
+}
+
+const catalog = catalogJson as unknown as Catalog;
+
+/** Dev: the Vite proxy forwards /runtime → the local runtime. Prod: the edge routes it. */
+const RUNTIME_BASE = (import.meta.env.VITE_RUNTIME_BASE as string | undefined) ?? '/runtime';
 
 type Tab = 'request' | 'response';
 const tabOptions: { value: Tab; label: string }[] = [
@@ -149,27 +93,96 @@ async function copyText(text: string, successMessage: string) {
   }
 }
 
+interface SendResult {
+  status: number;
+  statusText: string;
+  ms: number;
+  body: string;
+}
+
 export function ApiView() {
-  const [activeId, setActiveId] = useState('chat');
+  const [activeId, setActiveId] = useState(catalog.endpoints[0]?.id ?? '');
   const [tab, setTab] = useState<Tab>('request');
+  const [apiKey, setApiKey] = useState('');
+  const [paramValues, setParamValues] = useState<Record<string, string>>({});
+  const [bodyText, setBodyText] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<SendResult | null>(null);
+  const [sending, setSending] = useState(false);
 
   const grouped = useMemo(() => {
-    const out: Record<string, typeof api.endpoints> = {};
-    for (const e of api.endpoints) {
-      if (!out[e.group]) out[e.group] = [];
-      out[e.group].push(e);
+    const out: Record<string, CatalogEndpoint[]> = {};
+    for (const e of catalog.endpoints) {
+      if (!out[e.tag]) out[e.tag] = [];
+      out[e.tag].push(e);
     }
     return out;
   }, []);
 
-  const active = api.endpoints.find((e) => e.id === activeId)!;
-  const hasResponse = Boolean(SAMPLE_RESPONSE[activeId]);
-  const code = tab === 'request' ? SAMPLE_REQUEST[activeId] : SAMPLE_RESPONSE[activeId] ?? '';
+  const active = catalog.endpoints.find((e) => e.id === activeId) ?? catalog.endpoints[0];
 
-  const selectTab = (next: Tab) => {
-    if (next === 'response' && !hasResponse) return;
-    setTab(next);
+  const paramKey = (p: CatalogParam) => `${active.id}|${p.in}|${p.name}`;
+  const paramValue = (p: CatalogParam) => paramValues[paramKey(p)] ?? '';
+
+  const builtPath = useMemo(() => {
+    let path = active.path;
+    for (const p of active.params.filter((x) => x.in === 'path')) {
+      const value = paramValue(p).trim();
+      path = path.replace(`{${p.name}}`, value ? encodeURIComponent(value) : `{${p.name}}`);
+    }
+    const query = active.params
+      .filter((x) => x.in === 'query')
+      .filter((x) => paramValue(x).trim() !== '')
+      .map((x) => `${encodeURIComponent(x.name)}=${encodeURIComponent(paramValue(x).trim())}`);
+    return query.length > 0 ? `${path}?${query.join('&')}` : path;
+  }, [active, paramValues]);
+
+  const bodyTextFor = useMemo(() => {
+    if (!active.body) return undefined;
+    return bodyText[active.id] ?? JSON.stringify(Object.fromEntries(active.body.fields.map((f) => [f.name, defaultForType(f.type)])), null, 2);
+  }, [active, bodyText]);
+
+  const setBody = (next: string) => setBodyText((m) => ({ ...m, [active.id]: next }));
+
+  const curl = useMemo(() => {
+    const lines = [`curl -X ${active.method.toUpperCase()} "https://api.neryva.ai${builtPath}" \\`, `  -H "Authorization: Bearer nv_live_..."`];
+    if (active.body) {
+      lines.push(`  -H "Content-Type: application/json" \\`);
+      lines.push(`  -d '${bodyTextFor ?? '{}'}'`);
+    }
+    return lines.join('\n');
+  }, [active, builtPath, bodyTextFor]);
+
+  const send = async () => {
+    if (active.method !== 'get') {
+      toast.error('Try-it is GET-only in this explorer — mutating calls use the curl');
+      return;
+    }
+    setSending(true);
+    setTab('response');
+    const started = performance.now();
+    try {
+      const response = await fetch(`${RUNTIME_BASE}${builtPath}`, {
+        headers: {
+          accept: 'application/json',
+          ...(apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {}),
+        },
+      });
+      const text = await response.text();
+      setResult({
+        status: response.status,
+        statusText: response.statusText,
+        ms: Math.round(performance.now() - started),
+        body: pretty(text),
+      });
+    } catch {
+      setResult({ status: 0, statusText: 'network error', ms: Math.round(performance.now() - started), body: 'The request could not reach the runtime.' });
+    } finally {
+      setSending(false);
+    }
   };
+
+  const code = tab === 'request' ? curl : result ? `HTTP ${result.status} ${result.statusText} · ${result.ms}ms\n\n${result.body}` : 'Send the request to see the live response here.';
+  const responseReady = tab === 'response' && result !== null;
 
   return (
     <ViewShell>
@@ -177,18 +190,10 @@ export function ApiView() {
         <ViewHeader>
           <ViewTitle>API explorer</ViewTitle>
           <ViewSubtitle>
-            Interactive reference for the Neryva API. Every endpoint, every parameter, with runnable
-            examples.
+            Generated from the runtime's OpenAPI contract — {catalog.endpointCount} endpoints. Build a request,
+            copy the curl, or fire GETs live.
           </ViewSubtitle>
         </ViewHeader>
-        <ActionButton
-          variant="secondary"
-          size="sm"
-          onClick={() => copyText(SAMPLE_KEY, 'API key copied')}
-        >
-          <KeyRound size={13} strokeWidth={1.8} />
-          Copy API key
-        </ActionButton>
       </ViewHeaderRow>
 
       <TwoColumn>
@@ -206,6 +211,7 @@ export function ApiView() {
                     onClick={() => {
                       setActiveId(e.id);
                       setTab('request');
+                      setResult(null);
                     }}
                   >
                     <MethodBadge $method={e.method}>{e.method}</MethodBadge>
@@ -223,22 +229,59 @@ export function ApiView() {
               <MethodBadge $method={active.method}>{active.method}</MethodBadge>
               <DetailPath>{active.path}</DetailPath>
             </DetailHeader>
-            <Description>{active.description}</Description>
+            {active.description && <Description>{active.description}</Description>}
 
-            <div>
-              <SubsectionLabel>Parameters</SubsectionLabel>
-              <ParamsList>
-                {active.params.map((p) => (
-                  <ParamRow key={p.name}>
-                    <ParamLeft>
-                      <ParamName $required={p.required}>{p.name}</ParamName>
-                      <ParamDesc>{p.desc}</ParamDesc>
-                    </ParamLeft>
-                    <ParamType>{p.type}</ParamType>
-                  </ParamRow>
-                ))}
-              </ParamsList>
-            </div>
+            {active.params.length > 0 && (
+              <div>
+                <SubsectionLabel>Parameters</SubsectionLabel>
+                <ParamsList>
+                  {active.params.map((p) => (
+                    <ParamRow key={`${p.in}:${p.name}`}>
+                      <ParamLeft>
+                        <ParamName $required={p.required}>{p.name}</ParamName>
+                        <ParamDesc>{p.description ?? `${p.in} parameter`}</ParamDesc>
+                      </ParamLeft>
+                      <ParamType>{p.type ?? p.in}</ParamType>
+                      {(p.in === 'path' || p.in === 'query') && (
+                        <ParamValueInput
+                          value={paramValue(p)}
+                          onChange={(e) => setParamValues((m) => ({ ...m, [paramKey(p)]: e.target.value }))}
+                          placeholder={p.in === 'path' ? 'value' : 'filter value'}
+                          aria-label={`Value for ${p.name}`}
+                        />
+                      )}
+                    </ParamRow>
+                  ))}
+                </ParamsList>
+              </div>
+            )}
+
+            {active.body && (
+              <div>
+                <SubsectionLabel>
+                  Request body {active.body.required ? '(required)' : '(optional)'}
+                </SubsectionLabel>
+                <BodyEditor
+                  value={bodyTextFor ?? '{}'}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={Math.min(12, Math.max(4, (bodyTextFor ?? '').split('\n').length))}
+                  spellCheck={false}
+                  aria-label="Request body JSON"
+                />
+                {active.body.fields.length > 0 && (
+                  <ParamsList>
+                    {active.body.fields.map((f) => (
+                      <ParamRow key={f.name}>
+                        <ParamLeft>
+                          <ParamName $required={f.required}>{f.name}</ParamName>
+                        </ParamLeft>
+                        <ParamType>{f.type}</ParamType>
+                      </ParamRow>
+                    ))}
+                  </ParamsList>
+                )}
+              </div>
+            )}
 
             <div>
               <SubsectionLabel>Example</SubsectionLabel>
@@ -246,7 +289,7 @@ export function ApiView() {
                 <Segmented
                   options={tabOptions}
                   value={tab}
-                  onChange={selectTab}
+                  onChange={setTab}
                   ariaLabel="Example type"
                 />
                 <ActionButton
@@ -268,29 +311,118 @@ export function ApiView() {
             </div>
 
             <TryBar>
+              <TryKeyWrap>
+                <KeyRound size={13} strokeWidth={1.8} aria-hidden="true" />
+                <TryKeyInput
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Paste an org API key (nv_live_…) — stays in this tab"
+                  aria-label="API key for live requests"
+                  autoComplete="off"
+                />
+              </TryKeyWrap>
               <TryNote>
-                <TryNoteStrong>Try it</TryNoteStrong> — your live API key will be used to make the
-                call.
+                <TryNoteStrong>Try it</TryNoteStrong> — {active.method === 'get' ? 'GET requests fire live through the runtime proxy.' : 'Mutating calls show the exact curl — fire it from your terminal.'}
               </TryNote>
               <ActionButton
-                onClick={() => {
-                  if (hasResponse) {
-                    setTab('response');
-                    toast.success('Request sent · 412ms · 200 OK');
-                  } else {
-                    toast('Live calls for this endpoint are coming to the explorer soon', {
-                      icon: '🚧',
-                    });
-                  }
-                }}
+                disabled={active.method !== 'get' || sending}
+                title={active.method !== 'get' ? 'Try-it is GET-only — mutating calls use the curl' : undefined}
+                onClick={() => void send()}
               >
                 <Play size={12} strokeWidth={1.8} />
-                Send request
+                {sending ? 'Sending…' : 'Send request'}
               </ActionButton>
             </TryBar>
+            {tab === 'response' && !responseReady && !sending && (
+              <TryNote>
+                <TryNoteStrong>No response yet</TryNoteStrong> — send the request to capture status, latency, and body.
+              </TryNote>
+            )}
           </Detail>
         </motion.div>
       </TwoColumn>
     </ViewShell>
   );
 }
+
+function defaultForType(type: string): string {
+  if (type === 'string') return '';
+  if (type === 'integer' || type === 'number') return '0';
+  if (type === 'boolean') return 'false';
+  if (type === 'array') return '[]';
+  return 'null';
+}
+
+function pretty(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2).slice(0, 50_000);
+  } catch {
+    return text.slice(0, 50_000);
+  }
+}
+
+const ParamValueInput = styled.input`
+  width: 150px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 7px;
+  color: ${({ theme }) => theme.app.text.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  padding: 5px 8px;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  &::placeholder {
+    color: ${({ theme }) => theme.app.text.ghost};
+  }
+`;
+
+const BodyEditor = styled.textarea`
+  width: 100%;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 10px;
+  color: ${({ theme }) => theme.app.text.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: 1.55;
+  padding: 12px;
+  resize: vertical;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+const TryKeyWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  color: ${({ theme }) => theme.app.text.muted};
+
+  &:focus-within {
+    border-color: ${({ theme }) => theme.app.border.focus};
+  }
+`;
+
+const TryKeyInput = styled.input`
+  flex: 1;
+  border: 0;
+  background: transparent;
+  outline: none;
+  color: ${({ theme }) => theme.app.text.primary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.caption};
+`;

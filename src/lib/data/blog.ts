@@ -10,7 +10,7 @@ const blogPosts: Record<string, BlogPost> = {
 
 /** All posts (index-level, for the grid) */
 export function getBlogPosts() {
-  return (blogIndex as { items: any[] }).items;
+  return (blogIndex as { items: unknown[] }).items;
 }
 
 /** All category labels */

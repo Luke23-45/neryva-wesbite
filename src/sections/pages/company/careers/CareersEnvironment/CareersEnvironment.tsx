@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Section } from '@/sections/common/layout/Section';

@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useKeys, type KeyRow } from '@hooks/engine/queries';
 import { useIssueKey, useRevokeKey } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
+import { requestStepUp } from '@lib/engine/stepup';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
@@ -59,7 +60,6 @@ export default function ApiKeysPage() {
   const [role, setRole] = useState<(typeof ORG_KEY_ROLES)[number]>('operator');
   const [scopes, setScopes] = useState('agent-studio:read');
   const [expiresAt, setExpiresAt] = useState('');
-  const [mfaProof, setMfaProof] = useState('');
   const [issued, setIssued] = useState<{ key: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<KeyRow | null>(null);
@@ -75,7 +75,7 @@ export default function ApiKeysPage() {
         title="Keys"
         flush
         action={canManage ? (
-          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setRole('operator'); setScopes('agent-studio:read'); setExpiresAt(''); setMfaProof(''); setIssued(null); setOpen(true); }}>
+          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setRole('operator'); setScopes('agent-studio:read'); setExpiresAt(''); setIssued(null); setOpen(true); }}>
             <KeyRound size={13} /> Issue key
           </ActionButton>
         ) : undefined}
@@ -133,8 +133,14 @@ export default function ApiKeysPage() {
               <ActionButton variant="ghost" onClick={() => setOpen(false)}>Cancel</ActionButton>
               <ActionButton
                 variant="primary"
-                disabled={name.trim().length < 1 || mfaProof.trim().length < 8 || issue.isPending}
-                onClick={() =>
+                disabled={name.trim().length < 1 || issue.isPending}
+                onClick={async () => {
+                  let mfaProof: string;
+                  try {
+                    mfaProof = await requestStepUp('Issue API key');
+                  } catch {
+                    return;
+                  }
                   issue.mutate(
                     {
                       name,
@@ -149,8 +155,8 @@ export default function ApiKeysPage() {
                         void keys.refetch();
                       },
                     },
-                  )
-                }
+                  );
+                }}
               >
                 Issue key
               </ActionButton>
@@ -193,7 +199,6 @@ export default function ApiKeysPage() {
               <ScopesInput value={scopes} onChange={(e) => setScopes(e.target.value)} />
             </div>
             <TextInput label="Expires (optional)" name="key-expiry" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
-            <TextInput label="MFA proof" name="key-mfa" placeholder="v1.… (fresh step-up proof)" value={mfaProof} onChange={(e) => setMfaProof(e.target.value)} hint="Key creation is step-up gated — paste a fresh MFA proof." />
           </div>
         )}
       </Modal>
