@@ -4,11 +4,13 @@
  * access-model (owned → summary; none → brief + trial CTA).
  */
 import { Link } from '@tanstack/react-router';
+import { useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { Rocket } from 'lucide-react';
 import { engine } from '@lib/engine/client';
 import { useSessionStore } from '@lib/engine/auth';
+import { clearInviteBanner, readInviteBanner } from '@lib/engine/invite-stash';
 import { useOrg } from '@/Context/OrgContext';
 import { useOrgSummary, useEntitlements } from '@hooks/engine/queries';
 import { useStartTrial } from '@hooks/engine/mutations';
@@ -58,6 +60,35 @@ const CardFooter = styled.div`
   gap: 8px;
 `;
 
+// Invite-join context banner (first-run ledger F2-5): one-shot, written by the
+// invite page on redeem success. Shown only while it names the current org;
+// explicit dismiss, never auto.
+const InviteBanner = styled.div`
+  border: 1px solid rgba(5, 227, 164, 0.35);
+  background: rgba(5, 227, 164, 0.07);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+`;
+
+const InviteBannerDismiss = styled.button`
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+`;
+
 const toneFor = (state: string) =>
   state === 'active' ? 'success' : state === 'trial' ? 'azure' : state === 'past_due' ? 'warning' : state === 'suspended' ? 'error' : state === 'expired' ? 'neutral' : 'neutral';
 
@@ -84,12 +115,36 @@ export default function PlatformHomePage() {
     enabled: status === 'authenticated',
   });
 
+  // One-shot join banner from the invite flow (read once per mount; the
+  // invite page wrote it alongside the redeem). Shown only for the org it
+  // names — switching orgs hides it rather than misattributing it.
+  const [inviteBanner, setInviteBanner] = useState(readInviteBanner);
+  const showInviteBanner = inviteBanner !== null && inviteBanner.orgId === orgId;
+  const dismissInviteBanner = () => {
+    clearInviteBanner();
+    setInviteBanner(null);
+  };
+
   return (
     <ViewShell>
       <ViewHeader>
         <ViewTitle>{name ? `${name}` : 'Console'}</ViewTitle>
         <ViewSubtitle>Your organizations, products, and usage — one plane.</ViewSubtitle>
       </ViewHeader>
+
+      {showInviteBanner && inviteBanner && (
+        <InviteBanner role="status">
+          <span>
+            {inviteBanner.invitedBy} invited you to <strong>{inviteBanner.orgName}</strong> as{' '}
+            {inviteBanner.role}. Meet the workspace — open a{' '}
+            <Link to="/agent-studio/chat">shared conversation</Link> or run the team&apos;s assistant,
+            not settings you can&apos;t touch.
+          </span>
+          <InviteBannerDismiss type="button" onClick={dismissInviteBanner}>
+            Dismiss
+          </InviteBannerDismiss>
+        </InviteBanner>
+      )}
 
       {!orgId ? (
         <ErrorState title="No organization yet" message="Your personal organization is created at signup — sign out and back in if this persists." />

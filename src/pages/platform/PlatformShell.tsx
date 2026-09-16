@@ -18,7 +18,7 @@ import {
   Activity,
   LogOut,
 } from 'lucide-react';
-import { useSessionStore, beginLogin, logout } from '@lib/engine/auth';
+import { useSessionStore, logout } from '@lib/engine/auth';
 import { useOrg, ROLE_LABELS, type OrgRole } from '@/Context/OrgContext';
 import { useProjects } from '@hooks/engine/queries';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
@@ -175,7 +175,7 @@ export default function PlatformShell() {
               The console uses your Neryva Account — the same identity across the platform, studio, and billing.
             </p>
             <button
-              onClick={() => void beginLogin()}
+              onClick={() => void navigate({ to: '/auth', search: { return: window.location.pathname } })}
               style={{ marginTop: 16, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontWeight: 600, cursor: 'pointer' }}
             >
               Sign in with Neryva

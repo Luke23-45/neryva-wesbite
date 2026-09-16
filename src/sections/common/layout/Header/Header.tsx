@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useMatchRoute } from '@tanstack/react-router';
 import { Menu, X, ChevronRight } from 'lucide-react';
 import { useUiStore } from '@store/uiStore';
+import { useSessionStore } from '@lib/engine/auth';
+import { useIsAuthenticated } from '@hooks/auth/useSession';
 import { getMainNav } from '@lib/data/navigation';
 import LogoIcon from '@assets/brand/transparent/logo-transparent-dark.svg?react';
 import { NavMotifIcon, type NavMotifKind } from '@assets/visual/navigation/NavMotifs';
@@ -50,6 +52,17 @@ export function Header() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The header lives on marketing pages too (no route guard hydrates there),
+  // so it resolves the OP session itself — logged-in visitors see
+  // "Start building", everyone else keeps "Sign In".
+  const sessionStatus = useSessionStore((s) => s.status);
+  const isAuthenticated = useIsAuthenticated();
+
+  useEffect(() => {
+    if (sessionStatus === 'unknown') {
+      void useSessionStore.getState().hydrate();
+    }
+  }, [sessionStatus]);
 
   // Scroll-aware: track scroll position for header background transition
   useEffect(() => {
@@ -201,9 +214,37 @@ export function Header() {
           {/* RIGHT: CTAs & Mobile Toggle */}
           <HeaderRight>
             <DesktopActions>
-              <ButtonGhost as={Link} to="/auth" $isDark={isDark}>
-                Sign In
-              </ButtonGhost>
+              {isAuthenticated ? (
+                <NavItemWrapper
+                  onMouseEnter={() => handleMouseEnter('start-building')}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <ButtonPrimary as={Link} to="/agent-studio/dashboard" $isDark={isDark}>
+                    Start building
+                  </ButtonPrimary>
+                  <DropdownPanel
+                    $isOpen={openDropdown === 'start-building'}
+                    onMouseEnter={() => handleMouseEnter('start-building')}
+                    onMouseLeave={handleMouseLeave}
+                  >
+                    <DropdownItem
+                      as={Link}
+                      to="/agent-studio/dashboard"
+                      onClick={() => setOpenDropdown(null)}
+                    >
+                      <MenuGlyph>
+                        <NavMotifIcon kind="assistant" />
+                      </MenuGlyph>
+                      Agent Studio
+                      <DropdownArrow aria-hidden="true"><ChevronRight size={18} strokeWidth={2.25} /></DropdownArrow>
+                    </DropdownItem>
+                  </DropdownPanel>
+                </NavItemWrapper>
+              ) : (
+                <ButtonGhost as={Link} to="/auth" $isDark={isDark}>
+                  Sign In
+                </ButtonGhost>
+              )}
               <ButtonPrimary as={Link} to="/contact" $isDark={isDark}>
                 Contact Us
               </ButtonPrimary>
@@ -296,9 +337,15 @@ export function Header() {
         </MobileNavScroll>
 
         <MobileActions>
-          <ButtonGhost as={Link} to="/auth" onClick={closeMobileNav}>
-            Sign In
-          </ButtonGhost>
+          {isAuthenticated ? (
+            <ButtonPrimary as={Link} to="/agent-studio/dashboard" onClick={closeMobileNav}>
+              Start building
+            </ButtonPrimary>
+          ) : (
+            <ButtonGhost as={Link} to="/auth" onClick={closeMobileNav}>
+              Sign In
+            </ButtonGhost>
+          )}
             <ButtonPrimary as={Link} to="/contact" onClick={closeMobileNav}>
               Contact Us
             </ButtonPrimary>

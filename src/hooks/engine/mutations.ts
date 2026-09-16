@@ -19,7 +19,7 @@ function useEngineMutation<TInput, TOutput>(
   buildCall: (orgId: string, input: TInput) => { path: string; init?: Parameters<typeof engine>[1] },
   invalidates: string[],
   successMessage?: string,
-  opts?: { act?: string },
+  opts?: { act?: string; silentError?: boolean },
 ) {
   const orgId = useOrgRequired();
   const queryClient = useQueryClient();
@@ -44,29 +44,64 @@ function useEngineMutation<TInput, TOutput>(
         void queryClient.invalidateQueries({ queryKey: ['engine', key] });
       }
     },
-    onError: (error) => toastEngineError(error),
+    // Team-loop T1-4: invite-create renders exact inline copy (with a
+    // reactivate action for `member_suspended`) — a generic toast on top of
+    // that inline error would double-report the same sentence.
+    onError: (error) => {
+      if (!opts?.silentError) {
+        toastEngineError(error);
+      }
+    },
   });
 }
 
 // ── Invites ─────────────────────────────────────────────────────────────────
 
+export type InviteDelivery = 'email' | 'manual';
+
+export interface InviteCreateResult {
+  inviteId: string;
+  email: string;
+  /** Present ONLY on `delivery: 'manual'` — shown once, never re-fetched (hash-only storage). */
+  accept_url?: string;
+  expires_at?: string;
+}
+
+export interface InviteResendResult {
+  ok: true;
+  expires_at: string;
+  /** Present ONLY on `delivery: 'manual'` — shown once, never re-fetched. */
+  accept_url?: string;
+}
+
 export function useInviteMember() {
-  return useEngineMutation<{ email: string; role: string; mfaProof?: string }, { inviteId: string }>(
+  return useEngineMutation<
+    { email: string; role: string; delivery?: InviteDelivery; mfaProof?: string },
+    InviteCreateResult
+  >(
     (orgId, input) => ({
       path: `/console/org/${orgId}/invites`,
-      init: { method: 'POST', body: { email: input.email, role: input.role }, idempotent: true, ...(input.mfaProof ? { mfaProof: input.mfaProof } : {}) },
+      init: {
+        method: 'POST',
+        body: { email: input.email, role: input.role, ...(input.delivery ? { delivery: input.delivery } : {}) },
+        idempotent: true,
+        ...(input.mfaProof ? { mfaProof: input.mfaProof } : {}),
+      },
     }),
     ['invites', 'org-summary'],
-    'Invitation sent',
-    { act: 'Invite member' },
+    undefined,
+    { act: 'Invite member', silentError: true },
   );
 }
 
 export function useResendInvite() {
-  return useEngineMutation<{ inviteId: string }, unknown>(
-    (orgId, input) => ({ path: `/console/org/${orgId}/invites/${input.inviteId}/resend`, init: { method: 'POST' } }),
+  return useEngineMutation<{ inviteId: string; delivery?: InviteDelivery }, InviteResendResult>(
+    (orgId, input) => ({
+      path: `/console/org/${orgId}/invites/${input.inviteId}/resend`,
+      init: { method: 'POST', body: { ...(input.delivery ? { delivery: input.delivery } : {}) }, idempotent: true },
+    }),
     ['invites'],
-    'Invitation re-sent with a fresh link',
+    undefined,
   );
 }
 
@@ -267,6 +302,27 @@ export function useEnableServiceAccount() {
     (orgId, input) => ({ path: `/console/org/${orgId}/service-accounts/${input.id}/enable`, init: { method: 'POST' } }),
     ['service-accounts', 'org-summary'],
     'Service account enabled',
+  );
+}
+
+/**
+ * Delete a service account (team-loop T4-4). The engine demands a fresh MFA
+ * proof even for admins (`DELETE :orgId/service-accounts/:id` —
+ * `assertFreshMfaProof`: deleting an identity that may hold a live token is
+ * privileged). The `act` wires the step-up retry so the proof modal appears
+ * on demand instead of stranding the click on `step_up_required`. This
+ * supersedes the legacy gap-module hook (`hooks/studio/useStudioTeams`,
+ * which cannot retry step-up) — that file re-exports this implementation.
+ */
+export function useDeleteServiceAccount() {
+  return useEngineMutation<{ id: string; mfaProof?: string }, unknown>(
+    (orgId, input) => ({
+      path: `/console/org/${orgId}/service-accounts/${input.id}`,
+      init: { method: 'DELETE', ...(input.mfaProof ? { mfaProof: input.mfaProof } : {}) },
+    }),
+    ['service-accounts', 'org-summary'],
+    'Service account deleted',
+    { act: 'Delete service account' },
   );
 }
 

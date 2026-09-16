@@ -1,15 +1,14 @@
 import { Helmet } from 'react-helmet-async';
-import authData from '@neryva_data/auth/sections/auth.json';
-import AuthSection from '@/sections/pages/auth/AuthSection';
+import LoginSection from '@/sections/pages/auth/LoginSection';
 
 export default function AuthPage() {
     return (
         <>
             <Helmet>
-                <title>{authData.page.title}</title>
-                <meta name="description" content={authData.page.description} />
+                <title>Sign in — Neryva</title>
+                <meta name="description" content="Sign in to Neryva — one account for everything you build here. New accounts are created automatically on first sign-in." />
             </Helmet>
-            <AuthSection />
+            <LoginSection />
 
         </>
     );

@@ -35,9 +35,10 @@ describe('parseAssistants', () => {
         { agent_id: 'a2' },
       ],
     });
+    // Full AssistantSummary shape (description/model included) — exact match.
     expect(assistants).toEqual([
-      { id: 'a1', name: 'Support Concierge', status: 'active' },
-      { id: 'a2', name: 'Untitled agent', status: null },
+      { id: 'a1', name: 'Support Concierge', description: null, status: 'active', model: null },
+      { id: 'a2', name: 'Untitled agent', description: null, status: null, model: null },
     ]);
   });
 

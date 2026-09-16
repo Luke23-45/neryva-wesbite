@@ -18,6 +18,7 @@ import {
   DataCell,
 } from '@components/common/ui/DataTable';
 import { CopyButton } from '@components/common/ui/CopyButton';
+import { toastEngineError } from '@lib/engine/errors';
 import { pageItem } from '@styles/motion';
 import { useOrg } from '@/Context/OrgContext';
 import type { OrgRole } from '@/Context/OrgContext';
@@ -38,8 +39,8 @@ import {
   useRotateServiceAccountToken,
   useDisableServiceAccount,
   useEnableServiceAccount,
+  useDeleteServiceAccount,
 } from '@hooks/engine/mutations';
-import { useDeleteServiceAccount } from '@hooks/studio/useStudioTeams';
 import {
   TotalsGrid,
   TotalCard,
@@ -99,7 +100,7 @@ const ROLE_TONES: Record<OrgRole, StatusTone> = {
 const INVITE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
 
 export function TeamsView() {
-  const { canManageMembers } = useOrg();
+  const { canManageMembers, role } = useOrg();
   const summary = useOrgSummary();
   const members = useMembers();
   const invites = useInvites();
@@ -223,7 +224,7 @@ export function TeamsView() {
         </Panel>
       </motion.div>
 
-      {canManageMembers && (invites.data?.invites.filter((i) => i.status === 'pending').length ?? 0) > 0 && (
+      {(invites.data?.invites.filter((i) => i.status === 'pending').length ?? 0) > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
           <SectionTitle>
             <Mail size={14} strokeWidth={1.7} />
@@ -233,9 +234,12 @@ export function TeamsView() {
         </motion.div>
       )}
 
-      {canManageMembers && <GroupsSection />}
+      {/* Team-loop §4: every role reads the inventory (groups readable by all
+          roles server-side; service accounts by all-but-reader). Mutating
+          buttons stay owner/admin-gated inside each section. */}
+      <GroupsSection />
 
-      {canManageMembers && <ServiceAccountsSection />}
+      {role !== 'reader' && <ServiceAccountsSection />}
 
       <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </ViewShell>
@@ -254,16 +258,36 @@ function shortDate(iso: string): string {
   return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
 }
 
-// ─── Pending invites ─────────────────────────────────────────────────
+// ─── Pending invites (readable by every role; actions owner/admin only) ────
 function PendingInvitesCard() {
+  const { canManageMembers } = useOrg();
   const invites = useInvites();
   const resend = useResendInvite();
   const revoke = useRevokeInvite();
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null);
+  // Rotation-only re-access (team-loop §1B): Copy is never re-offered on a
+  // stored row — a manual resend rotates and shows the new link once here.
+  const [rotated, setRotated] = useState<{ email: string; accept_url: string } | null>(null);
   const pending = (invites.data?.invites ?? []).filter((i) => i.status === 'pending');
 
   return (
     <>
+      {rotated && (
+        <PendingCard>
+          <PendingRow>
+            <div>
+              <PendingEmail>New link for {rotated.email} (shown once)</PendingEmail>
+              <PendingMeta>Previous link died on rotation. Copy is not re-offered — resend again to rotate.</PendingMeta>
+            </div>
+            <PendingActions>
+              <CopyButton value={rotated.accept_url} label="Copy link" />
+              <ActionButton variant="secondary" size="sm" onClick={() => setRotated(null)}>
+                Done
+              </ActionButton>
+            </PendingActions>
+          </PendingRow>
+        </PendingCard>
+      )}
       <PendingCard>
         {pending.map((p) => (
           <PendingRow key={p.id}>
@@ -274,21 +298,50 @@ function PendingInvitesCard() {
               </PendingMeta>
             </div>
             <PendingActions>
-              <ActionButton
-                size="sm"
-                disabled={resend.isPending}
-                onClick={() => resend.mutate({ inviteId: p.id }, { onSuccess: () => toast.success(`Invite re-sent to ${p.email}`) })}
-              >
-                Resend
-              </ActionButton>
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                disabled={revoke.isPending}
-                onClick={() => setRevokeTarget({ id: p.id, email: p.email })}
-              >
-                Revoke
-              </ActionButton>
+              {canManageMembers ? (
+                <>
+                  <ActionButton
+                    size="sm"
+                    disabled={resend.isPending}
+                    title="Rotate the token and re-email the fresh link"
+                    onClick={() => resend.mutate({ inviteId: p.id, delivery: 'email' }, { onSuccess: () => toast.success(`Invite re-sent to ${p.email}`) })}
+                  >
+                    Resend
+                  </ActionButton>
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    disabled={resend.isPending}
+                    title="Rotate the token and show the new link once"
+                    onClick={() =>
+                      resend.mutate(
+                        { inviteId: p.id, delivery: 'manual' },
+                        {
+                          onSuccess: (result) => {
+                            if (result.accept_url) {
+                              setRotated({ email: p.email, accept_url: result.accept_url });
+                            } else {
+                              toast.success(`Invite re-sent to ${p.email}`);
+                            }
+                          },
+                        },
+                      )
+                    }
+                  >
+                    Link
+                  </ActionButton>
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    disabled={revoke.isPending}
+                    onClick={() => setRevokeTarget({ id: p.id, email: p.email })}
+                  >
+                    Revoke
+                  </ActionButton>
+                </>
+              ) : (
+                <PendingMeta>Awaiting owner/admin action</PendingMeta>
+              )}
             </PendingActions>
           </PendingRow>
         ))}
@@ -312,8 +365,9 @@ function PendingInvitesCard() {
   );
 }
 
-// ─── Groups ──────────────────────────────────────────────────────────
+// ─── Groups (readable by every role; create/delete owner/admin only) ────
 function GroupsSection() {
+  const { canManageMembers } = useOrg();
   const groups = useGroups();
   const create = useCreateGroup();
   const remove = useDeleteGroup();
@@ -328,10 +382,12 @@ function GroupsSection() {
         <SectionTitle>
           <ShieldCheck size={14} strokeWidth={1.7} />
           Groups
-          <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setCreateOpen(true); }}>
-            <Plus size={13} strokeWidth={2} />
-            New group
-          </ActionButton>
+          {canManageMembers && (
+            <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setCreateOpen(true); }}>
+              <Plus size={13} strokeWidth={2} />
+              New group
+            </ActionButton>
+          )}
         </SectionTitle>
         <QueryView query={groups} skeleton={<Skeleton $h="140px" $r="12px" />} isEmpty={(d) => d.groups.length === 0} empty={{ title: 'No groups', description: 'Groups bundle members for shared access — create one to get started.' }}>
           {(data) => (
@@ -354,9 +410,11 @@ function GroupsSection() {
                   {g.description && <GroupDesc>{g.description}</GroupDesc>}
                   <GroupBottom>
                     <GroupMembers>Group</GroupMembers>
-                    <IconGhostBtn type="button" aria-label={`Delete group ${g.name}`} onClick={() => setDeleteTarget({ id: g.id, name: g.name })}>
-                      <Trash2 size={13} strokeWidth={1.7} />
-                    </IconGhostBtn>
+                    {canManageMembers && (
+                      <IconGhostBtn type="button" aria-label={`Delete group ${g.name}`} title="Delete group" onClick={() => setDeleteTarget({ id: g.id, name: g.name })}>
+                        <Trash2 size={13} strokeWidth={1.7} />
+                      </IconGhostBtn>
+                    )}
                   </GroupBottom>
                 </GroupCard>
               ))}
@@ -414,8 +472,9 @@ function GroupsSection() {
   );
 }
 
-// ─── Service accounts ────────────────────────────────────────────────
+// ─── Service accounts (readable by all-but-reader; all writes owner/admin) ─
 function ServiceAccountsSection() {
+  const { canManageMembers } = useOrg();
   const accounts = useServiceAccounts();
   const create = useCreateServiceAccount();
   const rotate = useRotateServiceAccountToken();
@@ -437,10 +496,12 @@ function ServiceAccountsSection() {
         <SectionTitle>
           <Clock size={14} strokeWidth={1.7} />
           Service accounts
-          <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setScopes('studio:read'); setCreateOpen(true); }}>
-            <Plus size={13} strokeWidth={2} />
-            New service account
-          </ActionButton>
+          {canManageMembers && (
+            <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setScopes('studio:read'); setCreateOpen(true); }}>
+              <Plus size={13} strokeWidth={2} />
+              New service account
+            </ActionButton>
+          )}
         </SectionTitle>
         <QueryView query={accounts} skeleton={<Skeleton $h="160px" $r="12px" />} isEmpty={(d) => d.serviceAccounts.length === 0} empty={{ title: 'No service accounts', description: 'Machine accounts for CI and integrations — their token is shown exactly once.' }}>
           {(data) => (
@@ -476,37 +537,39 @@ function ServiceAccountsSection() {
                       <ScopePill key={sc}>{sc}</ScopePill>
                     ))}
                   </ScopeRow>
-                  <ServiceActions>
-                    <IconGhostBtn
-                      type="button"
-                      aria-label={`Rotate token for ${s.name}`}
-                      title="Rotate token"
-                      disabled={rotate.isPending}
-                      onClick={() => { setRotateTarget({ id: s.id, name: s.name }); setIssuedToken(null); }}
-                    >
-                      <RefreshCw size={13} strokeWidth={1.7} />
-                    </IconGhostBtn>
-                    <IconGhostBtn
-                      type="button"
-                      aria-label={s.status === 'active' ? `Disable ${s.name}` : `Enable ${s.name}`}
-                      title={s.status === 'active' ? 'Disable' : 'Enable'}
-                      disabled={disable.isPending || enable.isPending}
-                      onClick={() => (s.status === 'active'
-                        ? disable.mutate({ id: s.id }, { onSuccess: () => toast.success('Service account disabled') })
-                        : enable.mutate({ id: s.id }, { onSuccess: () => toast.success('Service account enabled') }))}
-                    >
-                      <Power size={13} strokeWidth={1.7} />
-                    </IconGhostBtn>
-                    <IconGhostBtn
-                      type="button"
-                      aria-label={`Delete ${s.name}`}
-                      title="Delete"
-                      disabled={del.isPending}
-                      onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
-                    >
-                      <Trash2 size={13} strokeWidth={1.7} />
-                    </IconGhostBtn>
-                  </ServiceActions>
+                  {canManageMembers && (
+                    <ServiceActions>
+                      <IconGhostBtn
+                        type="button"
+                        aria-label={`Rotate token for ${s.name}`}
+                        title="Rotate token"
+                        disabled={rotate.isPending}
+                        onClick={() => { setRotateTarget({ id: s.id, name: s.name }); setIssuedToken(null); }}
+                      >
+                        <RefreshCw size={13} strokeWidth={1.7} />
+                      </IconGhostBtn>
+                      <IconGhostBtn
+                        type="button"
+                        aria-label={s.status === 'active' ? `Disable ${s.name}` : `Enable ${s.name}`}
+                        title={s.status === 'active' ? 'Disable' : 'Enable'}
+                        disabled={disable.isPending || enable.isPending}
+                        onClick={() => (s.status === 'active'
+                          ? disable.mutate({ id: s.id }, { onSuccess: () => toast.success('Service account disabled') })
+                          : enable.mutate({ id: s.id }, { onSuccess: () => toast.success('Service account enabled') }))}
+                      >
+                        <Power size={13} strokeWidth={1.7} />
+                      </IconGhostBtn>
+                      <IconGhostBtn
+                        type="button"
+                        aria-label={`Delete ${s.name}`}
+                        title="Delete"
+                        disabled={del.isPending}
+                        onClick={() => setDeleteTarget({ id: s.id, name: s.name })}
+                      >
+                        <Trash2 size={13} strokeWidth={1.7} />
+                      </IconGhostBtn>
+                    </ServiceActions>
+                  )}
                 </ServiceCard>
               ))}
             </ServiceGrid>
@@ -620,7 +683,10 @@ function ServiceAccountsSection() {
         confirmLabel="Delete"
         onConfirm={() => {
           if (deleteTarget) {
-            del.mutate(deleteTarget.id, { onSuccess: () => toast.success('Service account deleted') });
+            // Success + error copy both live in the hook (incl. step-up
+            // retry for the engine's fresh-proof demand) — no caller toast,
+            // or the same sentence reports twice.
+            del.mutate({ id: deleteTarget.id });
           }
           setDeleteTarget(null);
         }}
@@ -630,11 +696,22 @@ function ServiceAccountsSection() {
   );
 }
 
-// ─── Invite modal ────────────────────────────────────────────────────
+// ─── Invite modal (team-loop T1/T2: delivery + shown-once manual link) ────
 function InviteModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { role: myRole, name: orgName } = useOrg();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgRole>('developer');
+  const [delivery, setDelivery] = useState<'email' | 'manual'>('manual');
+  const [manual, setManual] = useState<{ accept_url: string; expires_at?: string; email: string } | null>(null);
   const invite = useInviteMember();
+  const isOwner = myRole === 'owner';
+  const roleOptions = isOwner ? INVITE_ROLES : INVITE_ROLES.filter((r) => r !== 'admin');
+
+  const close = () => {
+    setManual(null);
+    setEmail('');
+    onClose();
+  };
 
   const send = () => {
     const trimmed = email.trim();
@@ -642,46 +719,112 @@ function InviteModal({ open, onClose }: { open: boolean; onClose: () => void }) 
       toast.error('Enter a valid email address');
       return;
     }
+    if (role === 'admin' && !isOwner) {
+      toast.error('Only an owner may invite someone as admin.');
+      return;
+    }
     invite.mutate(
-      { email: trimmed, role },
-      { onSuccess: () => { toast.success(`Invite sent to ${trimmed}`); setEmail(''); onClose(); } },
+      { email: trimmed, role, delivery },
+      {
+        onSuccess: (result) => {
+          if (delivery === 'manual' && result.accept_url) {
+            setManual({ accept_url: result.accept_url, expires_at: result.expires_at, email: trimmed });
+            return;
+          }
+          toast.success(`Invite sent to ${trimmed}`);
+          setEmail('');
+          onClose();
+        },
+        // The hook is silent on error (OrgMembersPage renders inline copy) —
+        // this modal has no inline slot, so toast the verbatim server message.
+        onError: (error) => {
+          toastEngineError(error);
+        },
+      },
     );
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
-      title="Invite a member"
+      onClose={close}
+      title={manual ? 'Share the invitation link' : 'Invite a member'}
       footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton disabled={invite.isPending} onClick={send}>Send invite</ActionButton>
-        </>
+        manual ? (
+          <>
+            <ActionButton variant="secondary" onClick={close}>Done</ActionButton>
+          </>
+        ) : (
+          <>
+            <ActionButton variant="secondary" onClick={close}>
+              Cancel
+            </ActionButton>
+            <ActionButton disabled={invite.isPending} onClick={send}>{delivery === 'manual' ? 'Create link' : 'Send invite'}</ActionButton>
+          </>
+        )
       }
     >
-      <InviteForm>
-        <InviteLabel>
-          Email address
-          <InviteInput
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="teammate@company.com"
-            autoFocus
-          />
-        </InviteLabel>
-        <InviteLabel>
-          Role
-          <RoleSelect value={role} onChange={(e) => setRole(e.target.value as OrgRole)} aria-label="Invite role">
-            {INVITE_ROLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </RoleSelect>
-        </InviteLabel>
-      </InviteForm>
+      {manual ? (
+        <InviteForm>
+          <InviteLabel>
+            One-time link for {manual.email} (shown once — resend to generate a new one)
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <InviteInput type="text" readOnly value={manual.accept_url} aria-label="One-time invitation link" onFocus={(e) => e.target.select()} />
+              <CopyButton value={manual.accept_url} label="Copy link" />
+            </div>
+          </InviteLabel>
+          <InviteLabel>
+            Share
+            <div style={{ display: 'flex', gap: 8 }}>
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const subject = `You've been invited to ${orgName ?? 'your workspace'} as ${role}`;
+                  const body = [
+                    `You have been invited to join ${orgName ?? 'your workspace'} as ${role}.`,
+                    '',
+                    manual.accept_url,
+                    '',
+                    'This link is single-use. Sign in with the invited address — other addresses will be rejected.',
+                  ].join('\n');
+                  window.location.href = `mailto:${encodeURIComponent(manual.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                }}
+              >
+                Compose email
+              </ActionButton>
+            </div>
+          </InviteLabel>
+        </InviteForm>
+      ) : (
+        <InviteForm>
+          <InviteLabel>
+            Email address
+            <InviteInput
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="teammate@company.com"
+              autoFocus
+            />
+          </InviteLabel>
+          <InviteLabel>
+            Role
+            <RoleSelect value={role} onChange={(e) => setRole(e.target.value as OrgRole)} aria-label="Invite role">
+              {roleOptions.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </RoleSelect>
+          </InviteLabel>
+          <InviteLabel>
+            Delivery
+            <RoleSelect value={delivery} onChange={(e) => setDelivery(e.target.value as 'email' | 'manual')} aria-label="Delivery method">
+              <option value="manual">Manual / copy-link (primary)</option>
+              <option value="email">Email (engine sends)</option>
+            </RoleSelect>
+          </InviteLabel>
+        </InviteForm>
+      )}
     </Modal>
   );
 }

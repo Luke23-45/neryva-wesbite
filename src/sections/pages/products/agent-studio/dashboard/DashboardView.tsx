@@ -88,10 +88,28 @@ export function DashboardView() {
 
   const meters = parseQuotaMeters(limits.data, 'agent_studio');
   const spendMeter = meters.find((m) => m.label.toLowerCase().includes('spend') || m.label.toLowerCase().includes('usd'));
-  const onboardingItems = onboarding.data ?? [];
+  const onboardingItems = onboarding.data?.items ?? [];
   const onboardingLeft = onboardingItems.filter((item) => !item.done);
+  const activation = onboarding.data?.activation;
   const showOnboarding = onboardingItems.length > 0 && onboardingLeft.length > 0;
   const chart = parseSeries(series.data);
+
+  const activationLabel = (() => {
+    if (!activation) {
+      return null;
+    }
+    if (activation.activated && activation.firstActivationAt) {
+      const ms = Date.parse(activation.firstActivationAt);
+      const when = Number.isNaN(ms)
+        ? ''
+        : ` · ${new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`;
+      return `First value achieved${when}`;
+    }
+    if (activation.activated) {
+      return 'First value achieved';
+    }
+    return 'First value — run any assistant to activate';
+  })();
 
   return (
     <ViewShell>
@@ -120,6 +138,14 @@ export function DashboardView() {
                   {!item.done && item.href && <LinkAction to={item.href}>Set up</LinkAction>}
                 </OnboardRow>
               ))}
+              {activation && activationLabel && (
+                <OnboardRow key="first-value">
+                  <OnboardCheck $done={activation.activated} aria-hidden="true">
+                    {activation.activated ? <CheckCircle2 size={16} strokeWidth={1.7} /> : <Circle size={16} strokeWidth={1.7} />}
+                  </OnboardCheck>
+                  <OnboardLabel $done={activation.activated}>{activationLabel}</OnboardLabel>
+                </OnboardRow>
+              )}
             </OnboardList>
           </Panel>
         </motion.div>

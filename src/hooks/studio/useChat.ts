@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
+import { markActivation } from '@lib/engine/activation';
 import { useEventStream } from '@hooks/engine/useEventStream';
 import type { SseMessage } from '@lib/engine/sse';
 
@@ -308,10 +309,23 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   });
 
   const finalize = (state: string, failed: boolean) => {
+    const runId = activeRunId;
     setActiveRunId(null);
     setPhase(failed ? 'error' : 'done');
     if (failed) {
       setNotices((prev) => [...prev, { id: `err-${Date.now()}`, kind: 'error', text: `The run ended with state "${state}".` }]);
+    } else {
+      // First-run ledger F3-1: a successful run in the org IS the activation
+      // event (production or test-run — both complete here). Case-insensitive:
+      // the parser preserves the server's case (COMPLETED) while terminal
+      // detection lowercases. Mark in-session once per org per tab and refresh
+      // server truth; the server's earliest-COMPLETED query stays the record
+      // (never these marks).
+      const lowerState = state.toLowerCase();
+      const succeeded = lowerState === 'completed' || lowerState === 'succeeded';
+      if (succeeded && runId && markActivation(orgId, runId)) {
+        void queryClient.invalidateQueries({ queryKey: ['studio', 'onboarding'] });
+      }
     }
     void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-messages', orgId, conversationId] });
     void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-runs', orgId, conversationId] });

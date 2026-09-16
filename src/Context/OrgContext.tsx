@@ -9,7 +9,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { engine, setActiveOrg } from '@lib/engine/client';
-import { useSessionStore } from '@lib/engine/auth';
+import { invalidateOrgScope, invalidateAuthScope } from '@lib/queryClient';
+import { useSessionStore, onSessionCleared } from '@lib/engine/auth';
 
 export type OrgRole = 'owner' | 'admin' | 'billing' | 'developer' | 'reader';
 export type EntitlementState = 'none' | 'trial' | 'active' | 'past_due' | 'suspended' | 'expired';
@@ -36,6 +37,13 @@ export interface OrgContextValue {
   role: OrgRole | null;
   name: string | null;
   setActive: (orgId: string) => void;
+  /**
+   * Adopt a server-issued org (invite redeem): bypasses the membership
+   * pre-check — the server just added us; the home refetch reconciles the
+   * list. Until the refetch lands, the active org resolves null (never a
+   * wrong org).
+   */
+  adoptOrg: (orgId: string) => void;
   atLeast: (role: OrgRole) => boolean;
   canManageMembers: boolean;
   entitlementState: (product: string) => EntitlementState;
@@ -56,28 +64,74 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const authenticated = status === 'authenticated';
 
   const home = useQuery({
-    queryKey: ['engine', 'home'],
+    queryKey: ['org', 'home'],
     queryFn: () => engine<HomeResponse>('/console/home'),
     enabled: authenticated,
     staleTime: 30_000,
   });
 
   const orgs = home.data?.orgs ?? [];
-  const stored = typeof window !== 'undefined' ? window.localStorage.getItem(ACTIVE_ORG_KEY) : null;
+  // The stored org is state (not a render-time localStorage read) so
+  // cross-tab switches propagate and the active-org memo stays honest.
+  const [stored, setStored] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? window.localStorage.getItem(ACTIVE_ORG_KEY) : null,
+  );
   const [override, setOverride] = useState<string | null>(null);
+  // Server-issued adoption in flight (invite redeem): the membership list does
+  // not include the org until the home refetch lands.
+  const [adopted, setAdopted] = useState<string | null>(null);
+
+  // Session death drops the org context synchronously (inside clear(), before
+  // any logout redirect): a stale org id must never leak into the next
+  // account, and cached org/auth queries must never flash another user's data.
+  useEffect(
+    () =>
+      onSessionCleared(() => {
+        setOverride(null);
+        setStored(null);
+        setAdopted(null);
+        try {
+          window.localStorage.removeItem(ACTIVE_ORG_KEY);
+        } catch {
+          /* private mode — in-memory state still drops */
+        }
+        void invalidateOrgScope();
+        void invalidateAuthScope();
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ACTIVE_ORG_KEY) {
+        setStored(event.newValue);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const active = useMemo(() => {
-    if (!orgs.length) {
+    // Logged-out tabs hold no org context even while stale query data lingers
+    // (invalidation is async) — otherwise the persist effect below would
+    // re-write the org id that session death just removed.
+    if (!authenticated || !orgs.length) {
+      return null;
+    }
+    if (adopted && !orgs.some((o) => o.orgId === adopted)) {
+      // Adopt-in-flight: the server added us but the home refetch has not
+      // landed — null, never a wrong org. Resolves via override below.
       return null;
     }
     const wanted = override ?? stored;
     return orgs.find((o) => o.orgId === wanted) ?? orgs[0];
-  }, [orgs, stored, override]);
+  }, [authenticated, adopted, orgs, stored, override]);
 
   useEffect(() => {
-    if (active) {
+    if (active && authenticated) {
       window.localStorage.setItem(ACTIVE_ORG_KEY, active.orgId);
     }
-  }, [active]);
+  }, [active, authenticated]);
 
   const orgId = active?.orgId ?? null;
   useEffect(() => {
@@ -94,8 +148,37 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       role,
       name: active?.name ?? null,
       setActive: (next) => {
+        // Refuse orgs outside the membership list — a stale/foreign id must
+        // fall back to a real context, never ride the X-Neryva-Org header.
+        if (!orgs.some((o) => o.orgId === next)) {
+          return;
+        }
         setOverride(next);
-        window.localStorage.setItem(ACTIVE_ORG_KEY, next);
+        setStored(next);
+        try {
+          window.localStorage.setItem(ACTIVE_ORG_KEY, next);
+        } catch {
+          /* private mode — in-memory state still switches */
+        }
+        // Org-scoped queries are keyed ['org', orgId, …] — one prefix
+        // invalidation re-resolves every view against the new org.
+        void invalidateOrgScope();
+      },
+      adoptOrg: (next) => {
+        // Server-issued adoption (invite redeem): the membership list does not
+        // include the org yet, so the pre-check above cannot apply — the
+        // server just added us. The header + storage update immediately; the
+        // active memo stays null until the home refetch reconciles the list.
+        setAdopted(next);
+        setOverride(next);
+        setStored(next);
+        try {
+          window.localStorage.setItem(ACTIVE_ORG_KEY, next);
+        } catch {
+          /* private mode — in-memory state still adopts */
+        }
+        setActiveOrg(next);
+        void invalidateOrgScope();
       },
       atLeast: (minimum) => role !== null && ROLE_RANK[role] >= ROLE_RANK[minimum],
       canManageMembers: role === 'owner' || role === 'admin',

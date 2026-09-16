@@ -9,130 +9,65 @@
  * beginLogin entry as the platform shell.
  */
 import { useEffect, type ReactNode } from 'react';
-import styled from 'styled-components';
-import { useSessionStore, beginLogin } from '@lib/engine/auth';
+import { beginLogin, useSessionStore } from '@lib/engine/auth';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
-import { SignInOptions } from './SignInOptions';
-
-const GateShell = styled.div`
-  min-height: 100vh;
-  background: #0a0a0f;
-  color: #eceef4;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-`;
-
-const Card = styled.div`
-  max-width: 440px;
-  display: flex;
-  flex-direction: column;
-`;
-
-const Title = styled.h2`
-  margin: 0 0 8px;
-  font-size: 20px;
-  font-weight: 600;
-`;
-
-const Body = styled.p`
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.7;
-  line-height: 1.55;
-  max-width: 460px;
-`;
-
-const SignInButton = styled.button`
-  margin-top: 18px;
-  align-self: flex-start;
-  padding: 10px 20px;
-  border-radius: 8px;
-  border: none;
-  background: #6366f1;
-  color: #fff;
-  font-weight: 600;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: background 150ms ease;
-
-  &:hover {
-    background: #5558e8;
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(165, 168, 245, 0.8);
-    outline-offset: 2px;
-  }
-`;
-
-/** Dark skeleton in the shape of an app shell — no marketing chrome flash. */
-const LoadingShell = styled.div`
-  min-height: 100vh;
-  background: #0a0a0f;
-  display: flex;
-`;
-
-const LoadingSidebar = styled.div`
-  width: 232px;
-  flex-shrink: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 20px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-const LoadingMain = styled.div`
-  flex: 1;
-  padding: 28px 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
 
 export function SessionGate({ children }: { children: ReactNode }) {
   const status = useSessionStore((s) => s.status);
-  const hydrate = useSessionStore((s) => s.hydrate);
 
   useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
+    if (status === 'unknown') {
+      void useSessionStore.getState().hydrate();
+    }
+  }, [status]);
 
-  if (status === 'unknown') {
-    return (
-      <LoadingShell>
-        <LoadingSidebar>
-          <Skeleton $h="18px" $w="120px" />
-          <Skeleton $h="13px" />
-          <Skeleton $h="13px" $w="80%" />
-          <Skeleton $h="13px" $w="65%" />
-          <Skeleton $h="13px" $w="75%" />
-        </LoadingSidebar>
-        <LoadingMain>
-          <Skeleton $h="32px" $w="240px" />
-          <Skeleton $h="120px" $r="12px" />
-          <Skeleton $h="120px" $r="12px" $w="70%" />
-        </LoadingMain>
-      </LoadingShell>
-    );
+  if (status === 'authenticated') {
+    return <>{children}</>;
   }
 
   if (status === 'anonymous') {
     return (
-      <GateShell>
-        <Card>
-          <Title>Your session ended</Title>
-          <Body>
-            Sign back in with your Neryva Account — the same identity across the platform, the studio, and billing. You’ll
-            return to exactly where you were.
-          </Body>
-          <SignInButton onClick={() => void beginLogin()}>Sign in with Neryva</SignInButton>
-          <SignInOptions />
-        </Card>
-      </GateShell>
+      <div
+        style={{
+          minHeight: '60vh',
+          display: 'grid',
+          placeItems: 'center',
+          color: '#eceef4',
+          textAlign: 'center',
+          padding: 24,
+        }}
+      >
+        <div style={{ maxWidth: 420 }}>
+          <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Your session ended</h2>
+          <p style={{ color: '#9aa3b2', fontSize: 14, margin: '0 0 20px' }}>
+            Sign in again to continue — you will return to exactly where you were.
+          </p>
+          <button
+            type="button"
+            onClick={() => void beginLogin()}
+            style={{
+              padding: '10px 22px',
+              borderRadius: 8,
+              border: 0,
+              background: '#05e3a4',
+              color: '#06231b',
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div style={{ padding: 24, maxWidth: 720 }}>
+      <Skeleton $h="22px" $w="240px" />
+      <Skeleton $h="14px" />
+      <Skeleton $h="14px" $w="70%" />
+    </div>
+  );
 }

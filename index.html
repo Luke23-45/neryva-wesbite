@@ -21,6 +21,9 @@
     <link rel="manifest" href="/manifest.json" />
 
     <!-- ── Theme Color (browser chrome) ─────────────────────────── -->
+    <!-- Team-loop T2-5 fallback: invite `?token=` must never leak via Referer. Per-page Helmet sets it on /platform/invites/*; this global fallback covers direct loads. -->
+    <meta name="referrer" content="no-referrer" />
+
     <meta name="theme-color" content="#a855f7" />
     <!-- Dark/light theme variants -->
     <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#a855f7" />

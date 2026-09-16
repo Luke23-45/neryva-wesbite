@@ -335,3 +335,94 @@ export const OtpInput = styled.input`
     box-shadow: 0 0 0 1px #050505;
   }
 `;
+
+/* ── OAUTH PROVIDER BUTTONS ── */
+export const ProviderList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+`;
+
+export const ProviderButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 52px;
+  width: 100%;
+  background-color: #ffffff;
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10);
+    border-color: #050505;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.text.primary};
+    outline-offset: 3px;
+  }
+`;
+
+export const DividerRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  margin: 8px 0;
+  color: ${({ theme }) => theme.colors.text.muted};
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 13px;
+  font-weight: 500;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid ${({ theme }) => theme.colors.border};
+  }
+`;
+
+export const ProviderNote = styled.p`
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.colors.text.muted};
+  margin: 20px 0 0 0;
+  text-align: center;
+`;
+
+export const FormError = styled.p`
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 16px 0 0 0;
+  text-align: center;
+`;

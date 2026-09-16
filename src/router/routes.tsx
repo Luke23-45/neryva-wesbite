@@ -19,6 +19,8 @@ import AuthPage from '@pages/auth/AuthPage';
 // Platform console (engine-backed) — /platform/**
 import PlatformShell from '@pages/platform/PlatformShell';
 import AuthCallbackPage from '@pages/platform/AuthCallbackPage';
+import WelcomePage from '@pages/platform/WelcomePage';
+import InvitePage from '@pages/platform/InvitePage';
 import PlatformHomePage from '@pages/platform/PlatformHomePage';
 import OrgMembersPage from '@pages/platform/OrgMembersPage';
 import ProjectsPage from '@pages/platform/ProjectsPage';
@@ -82,7 +84,7 @@ import DeploymentTeamsPage from '@pages/products/deployment/DeploymentTeamsPage'
 import DeploymentUsagePage from '@pages/products/deployment/DeploymentUsagePage';
 import DeploymentReleasesPage from '@pages/products/deployment/DeploymentReleasesPage';
 
-import { requireEngineSession } from '@lib/engine/session-gate';
+import { requireEngineSession, requireOnboardedSession } from '@lib/engine/session-gate';
 
 // Lazy-loaded secret page (separate JS chunk)
 const SecretPage = lazy(() => import('@pages/secret/SecretPage'));
@@ -163,9 +165,39 @@ export const authCallbackRoute = createRoute({
   component: AuthCallbackPage,
 });
 
+// First-run welcome (ledger F1): top-level so it owns its session logic —
+// never under a guarded shell. Accepts the post-continue target as ?return=.
+export const welcomeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/platform/welcome',
+  validateSearch: (search: Record<string, unknown>) => ({
+    return: typeof search.return === 'string' ? search.return : undefined,
+  }),
+  component: WelcomePage,
+});
+
+// Invite acceptance (ledger F2): top-level AND public-shell — anonymous
+// visitors must see the invite preview before signing in, so guarded shells
+// (and their sign-in cards) must never wrap it. The engine emails exactly
+// this shape: /platform/invites/:inviteId?token= (token in body on API calls).
+export const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/platform/invites/$inviteId',
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: InvitePage,
+});
+
+// The console area. Guarded by the ONBOARDING gate only: anonymous visitors
+// are PlatformShell's business (it renders the sign-in card), while an
+// authenticated account that still owes /platform/welcome is redirected there
+// with its deep link preserved (F1-7). /platform/welcome, /platform/invites/*
+// and the OP callback are top-level routes, so this can never self-redirect.
 export const platformRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/platform',
+  beforeLoad: () => requireOnboardedSession(),
   component: PlatformShell,
 });
 
@@ -243,7 +275,13 @@ export const authRoute = createRoute({
 export const agentStudioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/agent-studio',
-  beforeLoad: () => requireEngineSession(),
+  beforeLoad: async () => {
+    // Session first (anonymous → branded /auth), then the first-run gate
+    // (F1-7): an account that still owes /platform/welcome lands there with
+    // this deep link preserved as ?return=.
+    await requireEngineSession();
+    await requireOnboardedSession();
+  },
   component: AgentStudioShell,
 });
 
@@ -419,7 +457,11 @@ export const agentStudioEvaluationsRoute = createRoute({
 export const deploymentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/deployment',
-  beforeLoad: () => requireEngineSession(),
+  beforeLoad: async () => {
+    // Same two-step gate as /agent-studio: session, then first-run (F1-7).
+    await requireEngineSession();
+    await requireOnboardedSession();
+  },
   component: DeploymentShell,
 });
 
@@ -594,7 +636,11 @@ export const routeDefinitions = [
   // The OP callback + the /platform console are declared on the root route
   // and live at the top level of the tree — the callback must never sit
   // under a guarded shell, and /platform renders its own sign-in state.
+  // The welcome + invite pages join them here for the same reason: welcome
+  // redirects non-fresh visitors itself, and invite previews anonymously.
   authCallbackRoute,
+  welcomeRoute,
+  inviteRoute,
   platformRoute.addChildren([
     platformIndexRoute,
     platformMembersRoute,

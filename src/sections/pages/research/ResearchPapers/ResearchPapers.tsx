@@ -183,41 +183,55 @@ export function ResearchPapers() {
                       {year}
                     </YearHeader>
 
-                    {papers.map((paper, i) => (
-                      <AnimatedPaperRow
-                        key={paper.title}
-                        // Casts the component to Link if URL exists, maintaining correct DOM structure
-                        // @ts-expect-error TS complains about 'as' with framer-motion and styled-components
-                        as={paper.url ? Link : 'div'}
-                        to={paper.url || undefined}
-                        $accent={programAccents[paper.program] || theme.colors.text.primary}
+                    {papers.map((paper, i) => {
+                      // The row itself is always a motion div (this
+                      // framer-motion version does not polymorph `as` onto a
+                      // router Link); a paper with a URL wraps the row in a
+                      // style-neutral Link instead of becoming one.
+                      const row = (
+                        <AnimatedPaperRow
+                          as="div"
+                          $accent={programAccents[paper.program] || theme.colors.text.primary}
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{
+                            duration: 0.6,
+                            ease: premiumEase,
+                            delay: i * 0.05, // Elegant cascading entrance
+                          }}
+                        >
+                          <PaperLeft>
+                            <PaperTitle>{paper.title}</PaperTitle>
+                            <PaperMeta>
+                              <StatusBadge $status={paper.status}>
+                                {paper.status}
+                              </StatusBadge>
+                              {paper.venue && (
+                                <VenueSpan>
+                                  {paper.venue}
+                                </VenueSpan>
+                              )}
+                            </PaperMeta>
+                          </PaperLeft>
 
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{
-                          duration: 0.6,
-                          ease: premiumEase,
-                          delay: i * 0.05, // Elegant cascading entrance
-                        }}
-                      >
-                        <PaperLeft>
-                          <PaperTitle>{paper.title}</PaperTitle>
-                          <PaperMeta>
-                            <StatusBadge $status={paper.status}>
-                              {paper.status}
-                            </StatusBadge>
-                            {paper.venue && (
-                              <VenueSpan>
-                                {paper.venue}
-                              </VenueSpan>
-                            )}
-                          </PaperMeta>
-                        </PaperLeft>
-
-                        <DateSpan>{paper.date.substring(0, 7)}</DateSpan>
-                      </AnimatedPaperRow>
-                    ))}
+                          <DateSpan>{paper.date.substring(0, 7)}</DateSpan>
+                        </AnimatedPaperRow>
+                      );
+                      return paper.url ? (
+                        <Link
+                          key={paper.title}
+                          to={paper.url}
+                          style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+                        >
+                          {row}
+                        </Link>
+                      ) : (
+                        <div key={paper.title} style={{ display: 'block' }}>
+                          {row}
+                        </div>
+                      );
+                    })}
                   </YearGroup>
                 ))}
             </List>

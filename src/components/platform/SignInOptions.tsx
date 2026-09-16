@@ -5,7 +5,7 @@
  * the flow itself). Renders nothing when none are configured or the probe
  * fails — the button above it always works.
  */
-import { useLoginProviders } from '@hooks/engine/useLoginProviders';
+import { useLoginProviders } from '@hooks/auth/useLoginProviders';
 
 export function SignInOptions() {
   const { data } = useLoginProviders();

@@ -4,10 +4,12 @@
  *
  * Architecture note: social initiation is uid-bound by design (the engine
  * refuses to redirect strangers to an IdP — `/login/:uid/social/:provider`
- * validates a real OP interaction). The console therefore never starts a
- * social flow directly; `beginLogin()` opens the OP, whose interaction page
- * renders exactly these providers. The console reflects availability so
- * the entry screen never promises less than the OP delivers.
+ * validates a real OP interaction). The console therefore never deep-links
+ * an IdP; it names the chosen provider on the authorize URL
+ * (`beginLogin(returnTo, { connection: key })`) and the OP routes straight
+ * to that provider's initiate, skipping its generic page. This hook feeds
+ * exactly the keys the OP will honor, so the entry screen never promises
+ * less — or more — than the OP delivers.
  */
 import { useQuery } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
@@ -19,7 +21,7 @@ export interface LoginProvider {
 
 export function useLoginProviders() {
   return useQuery({
-    queryKey: ['engine', 'login-providers'],
+    queryKey: ['auth', 'login-providers'],
     queryFn: () => engine<{ providers: LoginProvider[] }>('/login/providers'),
     staleTime: 10 * 60_000,
   });

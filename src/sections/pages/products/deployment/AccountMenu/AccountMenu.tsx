@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { User, Settings, Keyboard, LogOut, Bell, Building2 } from 'lucide-react';
 import { ease } from '@styles/motion';
+import { logout } from '@lib/engine/auth';
 import {
   Trigger,
   Header,
@@ -110,9 +111,8 @@ export function AccountMenu({ user, workspace, onOpenShortcuts }: Props) {
                 type="button"
                 $tone="danger"
                 onClick={() => {
-                  localStorage.removeItem('accessToken');
-                  sessionStorage.removeItem('accessToken');
-                  window.location.href = '/auth';
+                  setOpen(false);
+                  void logout();
                 }}
               >
                 <MenuIcon><LogOut size={14} strokeWidth={1.7} /></MenuIcon>

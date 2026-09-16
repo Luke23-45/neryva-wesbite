@@ -17,6 +17,12 @@ export function useOrgRequired(): string {
 
 // ── Org furniture ──────────────────────────────────────────────────────────
 
+/**
+ * Engine `MemberRow` (`memberships.service.ts:16-30` + groups joined in
+ * `listMembers`): identity + membership + provenance. `invitedBy` /
+ * `suspendedAt` / `suspendedBy` ride the suspension/reactivate copy and the
+ * member audit trail — carried, never dropped.
+ */
 export interface MemberRow {
   accountId: string;
   email: string;
@@ -28,6 +34,9 @@ export interface MemberRow {
   lastLoginAt: string | null;
   memberSince: string;
   lastActiveAt: string | null;
+  invitedBy: string | null;
+  suspendedAt: string | null;
+  suspendedBy: string | null;
   groups?: Array<{ id: string; name: string }>;
 }
 
@@ -52,12 +61,19 @@ export function useOrgSummary() {
         pendingInvites: number;
         serviceAccounts: { total: number; active: number };
         groups: number;
-        seats: Array<{ product: string; seats: number | null; activeMembers: number; utilization: number | null; state: string }>;
+        maxMembers: number;
+        seats: Array<{ product: string; plan: string; seats: number | null; activeMembers: number; utilization: number | null; state: string }>;
       }>(`/console/org/${orgId}/summary`),
     staleTime: 15_000,
   });
 }
 
+/**
+ * Engine `InviteView` (`invites.service.ts:20-33`): the hash-free invite row.
+ * `acceptedAt` / `revokedAt` / `attempts` explain terminal rows (expired vs
+ * revoked vs locked); `updatedAt` orders re-sends. Never carries URL/token
+ * (hash-only storage) — see `toView`.
+ */
 export interface InviteRow {
   id: string;
   email: string;
@@ -65,8 +81,12 @@ export interface InviteRow {
   status: 'pending' | 'accepted' | 'revoked' | 'expired';
   invitedBy: string;
   createdAt: string;
+  updatedAt: string;
   expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
   resendCount: number;
+  attempts: number;
 }
 
 export function useInvites() {

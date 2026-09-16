@@ -3,33 +3,14 @@ import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import { ThemeProvider } from 'styled-components';
 import { Toaster } from 'react-hot-toast';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 
 import { router } from './router';
 import { GlobalStyles } from '@styles/GlobalStyles';
 import { theme } from '@styles/theme';
-import { AuthProvider } from '@/Context/AuthContext';
+import { queryClient } from '@lib/queryClient';
 import { OrgProvider } from '@/Context/OrgContext';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: false,
-      // Engine errors are typed: retry transient failures only (5xx /
-      // network), never 4xx — a 403 must surface immediately, not retry.
-      retry: (failureCount, error) => {
-        const status = (error as { status?: number }).status;
-        if (typeof status === 'number') {
-          return status >= 500 && failureCount < 2;
-        }
-        return failureCount < 2; // network/unknown → bounded retry
-      },
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-    },
-  },
-});
 
 router.update({
   context: {
@@ -70,9 +51,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
-          <AuthProvider>
-            <GlobalStyles />
-            <OrgProvider>
+          <GlobalStyles />
+          <OrgProvider>
         <RouterProvider router={router} />
       </OrgProvider>
             <Toaster
@@ -89,8 +69,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 },
               }}
             />
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
       </QueryClientProvider>
     </HelmetProvider>
   </React.StrictMode>

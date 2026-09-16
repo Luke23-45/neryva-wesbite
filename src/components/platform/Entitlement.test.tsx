@@ -37,6 +37,7 @@ function orgValue(overrides: { role?: OrgRole; state?: EntitlementState }): OrgC
     role,
     name: 'Aurora Labs',
     setActive: () => undefined,
+    adoptOrg: () => undefined,
     atLeast: () => role === 'owner' || role === 'admin' || role === 'developer',
     canManageMembers: role === 'owner' || role === 'admin',
     entitlementState: () => state,
