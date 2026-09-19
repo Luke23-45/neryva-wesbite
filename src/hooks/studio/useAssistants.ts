@@ -11,8 +11,19 @@ export interface AssistantSummary {
   id: string;
   name: string;
   description: string | null;
-  status: string | null;
+  /** Derived lifecycle: disabled | live | new (identity rows carry no status column). */
+  status: 'disabled' | 'live' | 'new';
+  /** Publish pointer (null until first publish) — drives setup-funnel + fleet badges without N+1 version reads. */
+  activeVersionId: string | null;
   model: string | null;
+  updatedAt: string | null;
+  /**
+   * Lifecycle passthrough (same list response, no extra reads — powers the
+   * Overview needs-attention queue with reasons). Null when the row lacks them.
+   */
+  degradedUntil: string | null;
+  degradedReason: string | null;
+  disabledReason: string | null;
 }
 
 function str(value: unknown): string | null {
@@ -28,7 +39,7 @@ export function parseAssistants(raw: unknown): AssistantSummary[] {
     return [];
   }
   return list
-    .map((entry) => {
+    .map((entry): AssistantSummary | null => {
       if (typeof entry !== 'object' || entry === null) {
         return null;
       }
@@ -37,18 +48,23 @@ export function parseAssistants(raw: unknown): AssistantSummary[] {
       if (!id) {
         return null;
       }
-      const policy = typeof item.model_policy === 'object' && item.model_policy !== null
-        ? (item.model_policy as Record<string, unknown>)
-        : null;
-      const allowed = policy && Array.isArray(policy.allowed_models)
-        ? policy.allowed_models.filter((m): m is string => typeof m === 'string')
-        : [];
+      // Identity rows carry no status/model columns (definitions live on
+      // versions): derive the lifecycle state honestly — disabled > live >
+      // new. Model resolution per row is an N+1 the list endpoint does not
+      // offer; the fleet view enriches this in the operate pass (F-E5).
+      const disabledAt = str(item.disabledAt) ?? str(item.disabled_at);
+      const activeVersionId = str(item.activeVersionId) ?? str(item.active_version_id);
       return {
         id,
         name: str(item.name) ?? str(item.display_name) ?? str(item.title) ?? 'Untitled agent',
         description: str(item.description) ?? str(item.summary),
-        status: str(item.status) ?? str(item.state),
-        model: str(item.model) ?? (allowed.length > 0 ? allowed[0] : null),
+        status: disabledAt ? 'disabled' : activeVersionId ? 'live' : 'new',
+        activeVersionId,
+        model: null,
+        updatedAt: str(item.updatedAt) ?? str(item.updated_at),
+        degradedUntil: str(item.degradedUntil) ?? str(item.degraded_until),
+        degradedReason: str(item.degradedReason) ?? str(item.degraded_reason),
+        disabledReason: str(item.disabledReason) ?? str(item.disabled_reason),
       } satisfies AssistantSummary;
     })
     .filter((a): a is AssistantSummary => a !== null);

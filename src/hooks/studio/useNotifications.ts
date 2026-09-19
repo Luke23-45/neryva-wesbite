@@ -18,6 +18,8 @@ export interface NotificationItem {
   link: string | null;
   createdAt: string | null;
   read: boolean;
+  /** Engine `data` payload (e.g. drift `{assistant_id, drifted}`) — C10 matches on it. */
+  data: Record<string, unknown> | null;
 }
 
 function str(value: unknown): string | null {
@@ -47,6 +49,7 @@ export function normalizeNotification(raw: unknown): NotificationItem | null {
     link: str(record.link) ?? str(record.href) ?? str(record.path),
     createdAt: str(record.created_at) ?? str(record.createdAt),
     read: readAt !== null || record.read === true,
+    data: typeof record.data === 'object' && record.data !== null ? (record.data as Record<string, unknown>) : null,
   };
 }
 

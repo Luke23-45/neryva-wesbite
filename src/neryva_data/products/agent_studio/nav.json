@@ -1,108 +1,93 @@
 {
-  "nav": [
+  "domains": [
     {
-      "section": "Workspace",
+      "key": "dashboard",
+      "label": "Dashboard",
+      "subtitle": "Org home",
+      "icon": "dashboard",
+      "landing": "/agent-studio/dashboard",
+      "single": true,
+      "items": []
+    },
+    {
+      "key": "chat",
+      "label": "Chat",
+      "subtitle": "Talk to your agents",
+      "icon": "chat",
+      "landing": "/agent-studio/chat",
+      "single": true,
+      "items": []
+    },
+    {
+      "key": "agents",
+      "label": "Agents",
+      "subtitle": "Build and operate agents",
+      "icon": "agents",
+      "landing": "/agent-studio/agents",
       "items": [
-        {
-          "label": "Dashboard",
-          "to": "/agent-studio/dashboard",
-          "icon": "dashboard"
-        },
-        {
-          "label": "Chat",
-          "to": "/agent-studio/chat",
-          "icon": "chat"
-        },
-        {
-          "label": "Agents",
-          "to": "/agent-studio/agents",
-          "icon": "agents"
-        },
-        {
-          "label": "Conversations",
-          "to": "/agent-studio/conversations",
-          "icon": "conversations"
-        },
-        {
-          "label": "Activity",
-          "to": "/agent-studio/activity",
-          "icon": "activity"
-        }
+        { "label": "Overview", "to": "/agent-studio/agents/overview", "icon": "dashboard" },
+        { "label": "All agents", "to": "/agent-studio/agents", "icon": "agents", "badge": "count" },
+        { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates", "badge": "count" },
+        { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations", "badge": "count" },
+        { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations", "badge": "attention" }
       ]
     },
     {
-      "section": "Knowledge",
+      "key": "libraries",
+      "label": "Libraries",
+      "subtitle": "Shared, governed, reusable",
+      "icon": "knowledge",
+      "landing": "/agent-studio/knowledge",
       "items": [
-        {
-          "label": "Knowledge",
-          "to": "/agent-studio/knowledge",
-          "icon": "knowledge"
-        },
-        {
-          "label": "Models",
-          "to": "/agent-studio/models",
-          "icon": "models"
-        },
-        {
-          "label": "Templates",
-          "to": "/agent-studio/templates",
-          "icon": "templates"
-        }
+        { "label": "Documents", "to": "/agent-studio/knowledge", "icon": "knowledge", "badge": "attention" },
+        { "label": "Memory", "to": "/agent-studio/memory", "icon": "chat" },
+        { "label": "Datasets", "to": "/agent-studio/datasets", "icon": "evaluations" },
+        { "label": "Tools", "to": "/agent-studio/tools", "icon": "tools", "badge": "count" },
+        { "label": "Providers & Models", "to": "/agent-studio/models", "icon": "models", "badge": "attention" }
       ]
     },
     {
-      "section": "Insights",
+      "key": "insights",
+      "label": "Insights",
+      "subtitle": "Observe, never mutate",
+      "icon": "analytics",
+      "landing": "/agent-studio/analytics",
       "items": [
-        {
-          "label": "Analytics",
-          "to": "/agent-studio/analytics",
-          "icon": "analytics"
-        },
-        {
-          "label": "Usage",
-          "to": "/agent-studio/usage",
-          "icon": "usage"
-        },
-        {
-          "label": "Evaluations",
-          "to": "/agent-studio/evaluations",
-          "icon": "evaluations"
-        }
+        { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
+        { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
+        { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" }
       ]
     },
     {
-      "section": "Platform",
+      "key": "platform",
+      "label": "Platform",
+      "subtitle": "Connect and govern",
+      "icon": "integrations",
+      "landing": "/agent-studio/integrations",
       "items": [
-        {
-          "label": "Integrations",
-          "to": "/agent-studio/integrations",
-          "icon": "integrations"
-        },
-        {
-          "label": "API explorer",
-          "to": "/agent-studio/api",
-          "icon": "api"
-        },
-        {
-          "label": "Compliance",
-          "to": "/agent-studio/compliance",
-          "icon": "compliance"
-        },
-        {
-          "label": "Teams",
-          "to": "/agent-studio/teams",
-          "icon": "teams"
-        }
+        { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
+        { "label": "Webhooks", "to": "/agent-studio/integrations/webhooks", "icon": "api" },
+        { "label": "Channels", "to": "/agent-studio/channels", "icon": "channels" },
+        { "label": "Approvals", "to": "/agent-studio/approvals", "icon": "approvals", "badge": "attention" },
+        { "label": "Blocks", "to": "/agent-studio/blocks", "icon": "blocks", "roles": ["owner", "admin"] },
+        { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
+        { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" },
+        { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" }
       ]
     },
     {
-      "section": "Settings",
+      "key": "settings",
+      "label": "Settings",
+      "subtitle": "Workspace administration",
+      "icon": "settings",
+      "landing": "/agent-studio/settings/profile",
       "items": [
-        {
-          "label": "Settings",
-          "to": "/agent-studio/settings/profile",
-          "icon": "settings"
-        }
+        { "label": "Profile", "to": "/agent-studio/settings/profile", "icon": "settings" },
+        { "label": "Workspace", "to": "/agent-studio/settings/workspace", "icon": "settings" },
+        { "label": "Team", "to": "/agent-studio/settings/team", "icon": "teams" },
+        { "label": "Billing", "to": "/agent-studio/settings/billing", "icon": "usage" },
+        { "label": "Security", "to": "/agent-studio/settings/security", "icon": "approvals" },
+        { "label": "API keys", "to": "/agent-studio/settings/api-keys", "icon": "api" }
       ]
     }
   ],

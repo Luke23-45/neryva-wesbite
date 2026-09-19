@@ -18,6 +18,7 @@ const statusLabel: Record<AttachmentUpload['status'], string> = {
   processing: 'processing',
   ready: 'ready',
   failed: 'failed',
+  quarantined: 'quarantined',
 };
 
 type Props = {
@@ -57,11 +58,11 @@ export const ChatComposer = forwardRef<HTMLInputElement, Props>(
         {attachments.length > 0 && (
           <AttachmentStrip role="list" aria-label="Attachments">
             {attachments.map((a) => (
-              <AttachmentChip key={a.sessionId} $failed={a.status === 'failed'} role="listitem">
-                <FileText size={11} strokeWidth={1.8} aria-hidden="true" />
-                <span>{a.filename}</span>
-                <AttachmentState>{statusLabel[a.status]}</AttachmentState>
-              </AttachmentChip>
+                <AttachmentChip key={a.sessionId} $failed={a.status === 'failed' || a.status === 'quarantined'} role="listitem">
+                  <FileText size={11} strokeWidth={1.8} aria-hidden="true" />
+                  <span>{a.filename}</span>
+                  <AttachmentState title={a.lastError ?? undefined}>{statusLabel[a.status]}</AttachmentState>
+                </AttachmentChip>
             ))}
           </AttachmentStrip>
         )}

@@ -189,3 +189,89 @@ export const FilterBar = styled.div`
   gap: 6px;
   align-items: center;
 `;
+
+/** Compat reason rows (shared — gallery cards + detail modal). */
+export const ReasonList = styled.ul`
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+export const ReasonRow = styled.li`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  flex-wrap: wrap;
+`;
+
+export const ReasonCode = styled.span`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 12px;
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  border-radius: 6px;
+  padding: 1px 6px;
+`;
+
+/** Install-blocked banner (shared — cards render it from the blocks read). */
+export const BlockedBanner = styled.div`
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: ${({ theme }) => theme.app.status.error.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+  color: ${({ theme }) => theme.app.status.error.fg};
+`;
+
+/** Detail modal tabs + sections (shared — gallery + library detail). */
+export const TabRow = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+`;
+
+export const Tab = styled.button<{ $on: boolean }>`
+  border: 1px solid ${({ $on, theme }) => ($on ? theme.app.status.lilac.border : theme.app.border.strong)};
+  background: ${({ $on, theme }) => ($on ? theme.app.status.lilac.bg : 'transparent')};
+  color: ${({ $on, theme }) => ($on ? theme.app.text.primary : theme.app.text.secondary)};
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+`;
+
+export const DetailSection = styled.div`
+  margin-bottom: 16px;
+
+  h4 {
+    margin: 0 0 6px;
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  p,
+  li {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  ul {
+    margin: 6px 0;
+    padding-left: 18px;
+  }
+`;
+
+export const Rubric = styled.div`
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;

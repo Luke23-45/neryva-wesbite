@@ -1,227 +1,450 @@
 /**
- * Agent authoring (ledger A-1..A-5) — the full assistants lifecycle over
- * the engine: list/detail/create, immutable versions (draft → publish →
- * retire), rollback, export/import, and the definition model the editor
- * round-trips.
+ * Agent authoring (team_setup_ledger.md E0/F-D) — the full assistants
+ * lifecycle over the engine, on the EXACT contract
+ * (`engine/src/modules/assistants/assistants.controller.ts`,
+ * `assistants.service.ts`, `validation.ts`, `dto.ts`):
  *
- * The definition mirrors the agent-definition v1 contract
- * (`products/agent-studio/contracts/agent-definition/v1.schema.json`).
- * Server payloads are parsed defensively — partial definitions merge over
- * the defaults — so the engine stays the source of truth while the UI
- * survives contract refinement during integration.
+ * - wire shape is the engine payload (see `@lib/engine/agent-payload` —
+ *   the ONLY mapping module; this hook never maps inline);
+ * - version writes send the FULL payload at top level (R-1: CreateVersionDto
+ *   admits instructions/model_params/budget_policy since the ENG-1 patch);
+ * - draft edits carry `If-Match: <hash>` (stale → 412 with both hashes);
+ * - every mutation is idempotent; every failure toasts verbatim.
+ *
+ * Row truths: assistants `{id, organization_id, name, description,
+ * active_version_id, disabled_at/by/reason, …}` (camelCase drizzle rows);
+ * versions carry `version` (0 = DRAFT sentinel), `status`, `hash`, the five
+ * policy columns + instructions/model_params/budget_policy. The assistant
+ * GET carries NO definition — definitions live on versions.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { engine, engineDownload } from '@lib/engine/client';
+import { engine, engineDownload, ApiError } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
-import { runWithStepUp } from '@lib/engine/stepup';
 import { useOrg } from '@/Context/OrgContext';
+import {
+  defaultConsumer,
+  fromEnginePayload,
+  toEnginePayload,
+  type ConsumerDefinition,
+  type ConsumerTool,
+} from '@lib/engine/agent-payload';
+import { validateConsumer } from '@lib/engine/setup-caps';
+import { useModelAvailability } from './useSetupModels';
+import { BUILT_IN_TOOLS, useToolCatalog } from './useSetupTools';
+import { useAssistantTemplate } from './useSetupTemplates';
+import { useEvalRuns } from './useSetupEval';
+import { useDocuments } from './useSetupKnowledge';
+import { describeRequiredCheck } from '@/sections/pages/products/agent-studio/builder/lib/eval-model';
+import {
+  classifyPublishRefusal,
+  derivePublishReadiness,
+  type PublishReadinessRow,
+  type ReadinessVerdict,
+} from '@/sections/pages/products/agent-studio/builder/lib/publish-model';
 
-// ─── Definition model ────────────────────────────────────────────────
+/** Editor model = the consumer definition (single mapping module owns it). */
+export type AgentDefinition = ConsumerDefinition;
+export type ToolPolicy = ConsumerTool;
 
-export interface ToolPolicy {
+/** Picker values for memory scope — all 4 engine options, `user` first (the
+ *  engine + contract default; C08 resolved the stale "omit user" guidance). */
+export const MEMORY_SCOPES = ['user', 'none', 'conversation', 'org'] as const;
+
+export const defaultDefinition = defaultConsumer;
+/** @deprecated import validateConsumer from `@lib/engine/setup-caps` instead. */
+export const validateDefinition = validateConsumer;
+
+// ─── Reads ─────────────────────────────────────────────────────────────
+
+export interface AssistantDetail {
   id: string;
-  /** When a human must approve this tool's calls. */
-  approval: 'never' | 'on_effect' | 'always';
-}
-
-export interface AgentDefinition {
-  instructions: string;
-  model_policy: {
-    allowed_models: string[];
-    fallback_enabled: boolean;
-    max_output_tokens: number;
-  };
-  context_policy: {
-    history_limit: number;
-    summary_enabled: boolean;
-    knowledge_sources: string[];
-    memory_scope: string;
-    max_context_tokens: number;
-  };
-  tools: ToolPolicy[];
-  guardrails: {
-    pii_redaction: boolean;
-    input_policy: string;
-    output_policy: string;
-  };
-  budget_policy: {
-    max_model_calls: number;
-    max_tool_calls: number;
-    max_wall_clock_ms: number;
-    max_token_budget: number;
-    max_cost_cents: number;
-    max_recursion_depth: number;
-  };
-  retrieval_policy: {
-    knowledge_max_results: number;
-    memory_max_results: number;
-    hybrid_retrieval: boolean;
-  };
-  brand: string;
-}
-
-export const MEMORY_SCOPES = ['none', 'conversation', 'org'] as const;
-
-/** ⛔ E-1 interim: the model allowlist is static until the registry lands. */
-export const MODEL_CATALOG = ['reasoner', 'instant', 'researcher'];
-
-export function defaultDefinition(): AgentDefinition {
-  return {
-    instructions: '',
-    model_policy: {
-      allowed_models: [MODEL_CATALOG[0]],
-      fallback_enabled: true,
-      max_output_tokens: 4096,
-    },
-    context_policy: {
-      history_limit: 20,
-      summary_enabled: true,
-      knowledge_sources: [],
-      memory_scope: 'conversation',
-      max_context_tokens: 32_000,
-    },
-    tools: [],
-    guardrails: {
-      pii_redaction: true,
-      input_policy: '',
-      output_policy: '',
-    },
-    budget_policy: {
-      max_model_calls: 12,
-      max_tool_calls: 12,
-      max_wall_clock_ms: 120_000,
-      max_token_budget: 100_000,
-      max_cost_cents: 500,
-      max_recursion_depth: 3,
-    },
-    retrieval_policy: {
-      knowledge_max_results: 6,
-      memory_max_results: 4,
-      hybrid_retrieval: true,
-    },
-    brand: '',
-  };
+  name: string;
+  description: string | null;
+  activeVersionId: string | null;
+  disabledAt: string | null;
+  disabledBy: string | null;
+  disabledReason: string | null;
+  /** Degraded waiver clock (C15 — absent on older engines, never invented). */
+  degradedUntil: string | null;
+  degradedReason: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
-function numOr(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function boolOr(value: unknown, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
-
-function obj(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-}
-
-/** Merge a (possibly partial) server definition over the defaults. */
-export function parseDefinition(raw: unknown): AgentDefinition {
-  const base = defaultDefinition();
+function parseDetail(raw: unknown): AssistantDetail | null {
   if (typeof raw !== 'object' || raw === null) {
-    return base;
+    return null;
   }
-  const r = raw as Record<string, unknown>;
-  const model = obj(r.model_policy);
-  const context = obj(r.context_policy);
-  const guardrails = obj(r.guardrails);
-  const budget = obj(r.budget_policy);
-  const retrieval = obj(r.retrieval_policy);
-
-  const allowedModels = Array.isArray(model.allowed_models)
-    ? model.allowed_models.filter((m): m is string => typeof m === 'string')
-    : base.model_policy.allowed_models;
-
-  const tools = Array.isArray(r.tools)
-    ? r.tools
-        .map((t) => {
-          const tool = obj(t);
-          const id = str(tool.id) ?? str(tool.tool_id) ?? str(tool.name);
-          if (!id) {
-            return null;
-          }
-          const approval = str(tool.approval) ?? str(tool.approval_requirement) ?? 'never';
-          return {
-            id,
-            approval: (['never', 'on_effect', 'always'].includes(approval) ? approval : 'never') as ToolPolicy['approval'],
-          } satisfies ToolPolicy;
-        })
-        .filter((t): t is ToolPolicy => t !== null)
-    : base.tools;
-
-  const knowledgeSources = Array.isArray(context.knowledge_sources)
-    ? context.knowledge_sources.filter((s): s is string => typeof s === 'string')
-    : base.context_policy.knowledge_sources;
-
+  const record = raw as Record<string, unknown>;
+  const nested = typeof record.assistant === 'object' && record.assistant !== null ? (record.assistant as Record<string, unknown>) : record;
+  const id = str(nested.id) ?? str(nested.assistant_id);
+  if (!id) {
+    return null;
+  }
+  const pick = (...keys: string[]): string | null => {
+    for (const key of keys) {
+      const hit = str(nested[key]);
+      if (hit) {
+        return hit;
+      }
+    }
+    return null;
+  };
   return {
-    instructions: str(r.instructions) ?? base.instructions,
-    model_policy: {
-      allowed_models: allowedModels.length > 0 ? allowedModels : base.model_policy.allowed_models,
-      fallback_enabled: boolOr(model.fallback_enabled, base.model_policy.fallback_enabled),
-      max_output_tokens: numOr(model.max_output_tokens, base.model_policy.max_output_tokens),
-    },
-    context_policy: {
-      history_limit: numOr(context.history_limit, base.context_policy.history_limit),
-      summary_enabled: boolOr(context.summary_enabled, base.context_policy.summary_enabled),
-      knowledge_sources: knowledgeSources,
-      memory_scope: str(context.memory_scope) ?? base.context_policy.memory_scope,
-      max_context_tokens: numOr(context.max_context_tokens, base.context_policy.max_context_tokens),
-    },
-    tools,
-    guardrails: {
-      pii_redaction: boolOr(guardrails.pii_redaction, base.guardrails.pii_redaction),
-      input_policy: str(guardrails.input_policy) ?? base.guardrails.input_policy,
-      output_policy: str(guardrails.output_policy) ?? base.guardrails.output_policy,
-    },
-    budget_policy: {
-      max_model_calls: numOr(budget.max_model_calls, base.budget_policy.max_model_calls),
-      max_tool_calls: numOr(budget.max_tool_calls, base.budget_policy.max_tool_calls),
-      max_wall_clock_ms: numOr(budget.max_wall_clock_ms, base.budget_policy.max_wall_clock_ms),
-      max_token_budget: numOr(budget.max_token_budget, base.budget_policy.max_token_budget),
-      max_cost_cents: numOr(budget.max_cost_cents, base.budget_policy.max_cost_cents),
-      max_recursion_depth: numOr(budget.max_recursion_depth, base.budget_policy.max_recursion_depth),
-    },
-    retrieval_policy: {
-      knowledge_max_results: numOr(retrieval.knowledge_max_results, base.retrieval_policy.knowledge_max_results),
-      memory_max_results: numOr(retrieval.memory_max_results, base.retrieval_policy.memory_max_results),
-      hybrid_retrieval: boolOr(retrieval.hybrid_retrieval, base.retrieval_policy.hybrid_retrieval),
-    },
-    brand: str(r.brand) ?? base.brand,
+    id,
+    name: pick('name', 'display_name') ?? 'Untitled agent',
+    description: pick('description', 'summary'),
+    activeVersionId: pick('activeVersionId', 'active_version_id', 'published_version_id'),
+    disabledAt: pick('disabledAt', 'disabled_at'),
+    disabledBy: pick('disabledBy', 'disabled_by'),
+    disabledReason: pick('disabledReason', 'disabled_reason'),
+    degradedUntil: pick('degradedUntil', 'degraded_until'),
+    degradedReason: pick('degradedReason', 'degraded_reason'),
+    createdAt: pick('createdAt', 'created_at'),
+    updatedAt: pick('updatedAt', 'updated_at'),
   };
 }
 
-// ─── Validation ──────────────────────────────────────────────────────
+const AUTHORING_KEY = ['studio', 'assistants'] as const;
 
-/** Returns the first blocking problem, or null when the draft is valid. */
-export function validateDefinition(d: AgentDefinition): string | null {
-  if (!d.instructions.trim()) {
-    return 'Instructions are required — the agent has nothing to run on without them.';
-  }
-  if (d.model_policy.allowed_models.length === 0) {
-    return 'Pick at least one allowed model.';
-  }
-  if (d.model_policy.max_output_tokens <= 0 || d.model_policy.max_output_tokens > 200_000) {
-    return 'Max output tokens must be between 1 and 200,000.';
-  }
-  if (d.context_policy.history_limit < 0 || d.context_policy.max_context_tokens <= 0) {
-    return 'Context limits must be non-negative (history) and positive (context tokens).';
-  }
-  for (const [key, value] of Object.entries(d.budget_policy)) {
-    if (value < 0) {
-      return `Budget "${key.replace(/_/g, ' ')}" cannot be negative.`;
-    }
-  }
-  if (d.tools.some((t) => !t.id.trim())) {
-    return 'Every tool needs an id.';
-  }
-  return null;
+export function useAssistant(assistantId: string | null, options?: { enabled?: boolean }) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...AUTHORING_KEY, orgId, 'detail', assistantId],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}`),
+    enabled: (options?.enabled ?? true) && !!orgId && !!assistantId,
+    staleTime: 15_000,
+    select: parseDetail,
+  });
 }
 
-// ─── Structured diff (A-4) ───────────────────────────────────────────
+export interface AgentVersion {
+  id: string;
+  /** Monotonic number (0 = DRAFT sentinel). */
+  version: number;
+  status: string | null;
+  hash: string | null;
+  createdAt: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+  rollbackOf: string | null;
+  definition: AgentDefinition | null;
+  /** Row write time — C10 staleness compares it against run finish (D10). */
+  updatedAt: string | null;
+  /** Fork point / restored target (C15 lineage — absent on older engines). */
+  parentVersionId: string | null;
+}
+
+export function parseVersions(raw: unknown): AgentVersion[] {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const list = Array.isArray(raw) ? raw : [record.versions, record.items].find(Array.isArray) ?? [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list
+    .map((entry): AgentVersion | null => {
+      if (typeof entry !== 'object' || entry === null) {
+        return null;
+      }
+      const item = entry as Record<string, unknown>;
+      const id = str(item.id) ?? str(item.version_id);
+      if (!id) {
+        return null;
+      }
+      const version = typeof item.version === 'number' ? item.version : null;
+      return {
+        id,
+        version: version ?? 0,
+        status: str(item.status) ?? str(item.state),
+        hash: str(item.hash),
+        createdAt: str(item.createdAt) ?? str(item.created_at),
+        publishedAt: str(item.publishedAt) ?? str(item.published_at),
+        publishedBy: str(item.publishedBy) ?? str(item.published_by) ?? str(item.created_by) ?? str(item.author),
+        rollbackOf: str(item.rollbackOf) ?? str(item.rollback_of),
+        parentVersionId: str(item.parentVersionId) ?? str(item.parent_version_id),
+        updatedAt: str(item.updatedAt) ?? str(item.updated_at),
+        definition: fromEnginePayload(item),
+      } satisfies AgentVersion;
+    })
+    .filter((v): v is AgentVersion => v !== null);
+}
+
+export function useAssistantVersions(assistantId: string | null) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...AUTHORING_KEY, orgId, 'versions', assistantId],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/versions`),
+    enabled: !!orgId && !!assistantId,
+    staleTime: 15_000,
+    select: parseVersions,
+  });
+}
+
+/** The editable definition: the DRAFT version when one exists, else the active version, else blank. */
+export function useAssistantDefinition(assistantId: string | null) {
+  const versions = useAssistantVersions(assistantId);
+  const detail = useAssistant(assistantId);
+  return {
+    ...versions,
+    data:
+      versions.data === undefined
+        ? undefined
+        : (() => {
+            const rows = versions.data;
+            const draft = rows.find((v) => v.status === 'DRAFT') ?? null;
+            const active = detail.data?.activeVersionId ? rows.find((v) => v.id === detail.data?.activeVersionId) ?? null : null;
+            const source = draft ?? active;
+            return {
+              definition: source?.definition ?? defaultConsumer(),
+              versionId: source?.id ?? null,
+              hash: source?.hash ?? null,
+              status: source?.status ?? null,
+              isDraft: draft !== null,
+            };
+          })(),
+  };
+}
+
+export interface VersionProvenance {
+  template: { slug: string; version: string; definition_hash: string | null } | null;
+  manifestHash: string | null;
+  updateAvailable: 'major' | 'minor' | 'none';
+  lastEvaluation: { decision: string; score: string | null; finishedAt: string | null } | null;
+}
+
+export function parseProvenance(raw: unknown): VersionProvenance | null {
+  if (typeof raw !== 'object' || raw === null) {
+    return null;
+  }
+  const record = raw as Record<string, unknown>;
+  const nested = typeof record.provenance === 'object' && record.provenance !== null ? (record.provenance as Record<string, unknown>) : record;
+  const template = typeof nested.template === 'object' && nested.template !== null ? (nested.template as Record<string, unknown>) : null;
+  const last = typeof nested.last_evaluation === 'object' && nested.last_evaluation !== null ? (nested.last_evaluation as Record<string, unknown>) : null;
+  const update = str(nested.update_available);
+  return {
+    template: template && str(template.slug) ? { slug: str(template.slug) as string, version: str(template.version) ?? '', definition_hash: str(template.definition_hash) } : null,
+    manifestHash: str(nested.manifest_hash),
+    updateAvailable: update === 'major' || update === 'minor' ? update : 'none',
+    lastEvaluation: last && str(last.decision) ? { decision: str(last.decision) as string, score: str(last.score), finishedAt: str(last.finished_at) } : null,
+  };
+}
+
+export function useVersionProvenance(assistantId: string | null, versionId: string | null) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...AUTHORING_KEY, orgId, 'provenance', assistantId, versionId],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/provenance`),
+    enabled: !!orgId && !!assistantId && !!versionId,
+    staleTime: 30_000,
+    select: parseProvenance,
+  });
+}
+
+export interface KnowledgeHealthPin {
+  sourceSlug: string;
+  resolved: boolean;
+  documentId: string | null;
+  state: string | null;
+  /** Per-model embedding coverage (C05 — engine returns it; null on older engines). */
+  embeddingComplete: boolean | null;
+}
+
+export function parseKnowledgeHealth(raw: unknown): { degraded: boolean; pins: KnowledgeHealthPin[] } {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const pins = Array.isArray(record.pins) ? record.pins : [];
+  return {
+    degraded: record.degraded === true,
+    pins: pins
+      .map((entry) => {
+        if (typeof entry !== 'object' || entry === null) {
+          return null;
+        }
+        const pin = entry as Record<string, unknown>;
+        return {
+          sourceSlug: str(pin.source_slug) ?? '',
+          resolved: pin.resolved === true,
+          documentId: str(pin.document_id),
+          state: str(pin.state),
+          embeddingComplete: typeof pin.embedding_complete === 'boolean' ? pin.embedding_complete : null,
+        } satisfies KnowledgeHealthPin;
+      })
+      .filter((p): p is KnowledgeHealthPin => p !== null),
+  };
+}
+
+/** ACTIVE-version pins × live document states — drives the degraded banner. All roles. */
+export function useKnowledgeHealth(assistantId: string | null) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...AUTHORING_KEY, orgId, 'knowledge-health', assistantId],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/knowledge-health`),
+    enabled: !!orgId && !!assistantId,
+    staleTime: 30_000,
+    select: parseKnowledgeHealth,
+  });
+}
+
+// ─── Publish readiness (C14 — single derivation, both surfaces) ──────
+
+// Row/gate shapes live in the pure model (unit-tested without queries);
+// this module only feeds them query data and re-exports the shapes.
+export type {
+  DerivedReadiness,
+  PublishGateId,
+  PublishReadinessRow,
+  PublishVersionLite,
+  ReadinessVerdict,
+  RefusalFix,
+} from '@/sections/pages/products/agent-studio/builder/lib/publish-model';
+
+export interface PublishReadiness {
+  version: AgentVersion | null;
+  activeVersion: AgentVersion | null;
+  templateSlug: string | null;
+  templateVersion: string | null;
+  rows: PublishReadinessRow[];
+  verdict: ReadinessVerdict;
+  /** True when every REQUIRED row passes (or the degraded one is acked). */
+  publishable: boolean;
+  needsAcknowledge: boolean;
+  unresolvedSlugs: string[];
+  unreadySlugs: string[];
+  /** Advisory only — deep-equal content still re-pins a drifted manifest. */
+  noChangeHint: boolean;
+  requiredChecks: Array<{ label: string; detail: string | null }>;
+  decision: string | null;
+  decisionFinishedAt: string | null;
+  evalRunning: boolean;
+  isPending: boolean;
+  isError: boolean;
+  retry: () => void;
+}
+
+/**
+ * The publish gate read — thin query composer over the pure
+ * `derivePublishReadiness` (PLAN.md §5 — the ship section and the detail
+ * panel share this, never two derivations). Composed reads only — no
+ * dedicated required-checks endpoint exists (PLAN §8 D1).
+ */
+export function usePublishReadiness(
+  assistantId: string | null,
+  versionId: string | null,
+  options?: { acknowledged?: boolean; enabled?: boolean },
+): PublishReadiness {
+  const acknowledged = options?.acknowledged === true;
+  const enabled = (options?.enabled ?? true) && !!assistantId && !!versionId;
+  const versions = useAssistantVersions(enabled ? assistantId : null);
+  const detail = useAssistant(enabled ? assistantId : null);
+  const provenance = useVersionProvenance(enabled ? assistantId : null, enabled ? versionId : null);
+  const templateSlug = provenance.data?.template?.slug ?? null;
+  const templateVersion = provenance.data?.template?.version ?? null;
+  const template = useAssistantTemplate(enabled ? templateSlug : null, templateVersion ?? undefined);
+  const models = useModelAvailability(enabled ? { enabled: true } : { enabled: false });
+  const catalog = useToolCatalog(enabled ? { enabled: true } : { enabled: false });
+  const health = useKnowledgeHealth(enabled ? assistantId : null);
+  const documents = useDocuments();
+  const evalRuns = useEvalRuns(undefined, { enabled });
+
+  const version = versions.data?.find((v) => v.id === versionId) ?? null;
+  const activeVersion = detail.data?.activeVersionId
+    ? (versions.data?.find((v) => v.id === detail.data?.activeVersionId) ?? null)
+    : null;
+  const definition = version?.definition ?? null;
+
+  const libraryStates: Record<string, string | undefined> = {};
+  for (const doc of documents.data ?? []) {
+    if (doc.sourceSlug) {
+      libraryStates[doc.sourceSlug] = doc.state;
+    }
+  }
+
+  const derived = derivePublishReadiness({
+    version:
+      version && definition
+        ? {
+            id: version.id,
+            version: version.version,
+            status: version.status,
+            hash: version.hash,
+            updatedAt: version.updatedAt,
+            definition,
+          }
+        : null,
+    versionsLoaded: versions.data !== undefined,
+    activeDefinition: activeVersion?.definition ?? null,
+    templateRequired: Array.isArray(template.data?.releasePolicy?.required)
+      ? (template.data?.releasePolicy?.required as unknown[])
+      : [],
+    templateLoaded: provenance.data !== undefined && (templateSlug === null || template.data !== undefined),
+    models: models.data?.map((m) => ({ ref: m.ref, usable: m.usable })),
+    catalog: catalog.data?.map((t) => ({ name: t.name, enabled: t.enabled, hash: t.hash })),
+    toolBuiltins: BUILT_IN_TOOLS,
+    healthPins: health.data?.pins,
+    libraryStates,
+    documentsLoaded: documents.data !== undefined,
+    evalRuns: evalRuns.data?.map((r) => ({
+      assistantVersionId: r.assistantVersionId,
+      state: r.state,
+      decision: r.decision,
+      isShadow: r.isShadow,
+      startedAt: r.startedAt,
+      finishedAt: r.finishedAt,
+    })),
+    acknowledged,
+  });
+
+  const isPending =
+    versions.isPending ||
+    detail.isPending ||
+    provenance.isPending ||
+    (templateSlug !== null && template.isPending) ||
+    models.isPending ||
+    catalog.isPending ||
+    health.isPending ||
+    documents.isPending ||
+    evalRuns.isPending;
+  const isError =
+    versions.isError ||
+    detail.isError ||
+    provenance.isError ||
+    (templateSlug !== null && template.isError) ||
+    models.isError ||
+    catalog.isError ||
+    health.isError ||
+    documents.isError ||
+    evalRuns.isError;
+
+  return {
+    version,
+    activeVersion,
+    templateSlug,
+    templateVersion,
+    ...derived,
+    requiredChecks: (Array.isArray(template.data?.releasePolicy?.required)
+      ? (template.data?.releasePolicy?.required as unknown[])
+      : []
+    ).map(describeRequiredCheck),
+    isPending,
+    isError,
+    retry: () => {
+      void versions.refetch();
+      void detail.refetch();
+      void provenance.refetch();
+      void template.refetch();
+      void models.refetch();
+      void catalog.refetch();
+      void health.refetch();
+      void documents.refetch();
+      void evalRuns.refetch();
+    },
+  };
+}
+
+// ─── Structured diff ───────────────────────────────────────────────────
 
 export interface DefinitionDiffRow {
   path: string;
@@ -266,115 +489,7 @@ export function diffDefinitions(from: AgentDefinition, to: AgentDefinition): Def
   return rows.sort((x, y) => x.path.localeCompare(y.path));
 }
 
-// ─── Assistant reads/writes ──────────────────────────────────────────
-
-export interface AssistantDetail {
-  id: string;
-  name: string;
-  description: string | null;
-  status: string | null;
-  definition: AgentDefinition;
-  currentVersionId: string | null;
-}
-
-function parseDetail(raw: unknown): AssistantDetail | null {
-  if (typeof raw !== 'object' || raw === null) {
-    return null;
-  }
-  const record = raw as Record<string, unknown>;
-  const nested = typeof record.assistant === 'object' && record.assistant !== null ? (record.assistant as Record<string, unknown>) : record;
-  const id = str(nested.id) ?? str(nested.assistant_id);
-  if (!id) {
-    return null;
-  }
-  const definitionRaw = nested.definition ?? nested.config ?? nested.snapshot ?? null;
-  return {
-    id,
-    name: str(nested.name) ?? str(nested.display_name) ?? 'Untitled agent',
-    description: str(nested.description) ?? str(nested.summary),
-    status: str(nested.status) ?? str(nested.state),
-    definition: parseDefinition(definitionRaw),
-    currentVersionId: str(nested.current_version_id) ?? str(nested.published_version_id) ?? str(nested.version_id),
-  };
-}
-
-const AUTHORING_KEY = ['studio', 'assistants'] as const;
-
-export function useAssistant(assistantId: string | null, options?: { enabled?: boolean }) {
-  const { orgId } = useOrg();
-  return useQuery({
-    queryKey: [...AUTHORING_KEY, orgId, 'detail', assistantId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}`),
-    enabled: (options?.enabled ?? true) && !!orgId && !!assistantId,
-    staleTime: 15_000,
-    select: parseDetail,
-  });
-}
-
-export function useCreateAssistant() {
-  const { orgId } = useOrg();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { name: string; description?: string; definition?: AgentDefinition }) =>
-      engine<{ id?: string; assistant_id?: string }>(`/console/org/${orgId}/assistants`, {
-        method: 'POST',
-        body: {
-          name: input.name,
-          ...(input.description ? { description: input.description } : {}),
-          ...(input.definition ? { definition: input.definition } : {}),
-        },
-        idempotent: true,
-      }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] }),
-    onError: (error) => toastEngineError(error, 'Could not create the agent'),
-  });
-}
-
-export interface AgentVersion {
-  id: string;
-  status: string | null;
-  createdAt: string | null;
-  createdBy: string | null;
-  definition: AgentDefinition | null;
-}
-
-export function parseVersions(raw: unknown): AgentVersion[] {
-  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = Array.isArray(raw) ? raw : [record.versions, record.items].find(Array.isArray) ?? [];
-  if (!Array.isArray(list)) {
-    return [];
-  }
-  return list
-    .map((entry) => {
-      if (typeof entry !== 'object' || entry === null) {
-        return null;
-      }
-      const item = entry as Record<string, unknown>;
-      const id = str(item.id) ?? str(item.version_id);
-      if (!id) {
-        return null;
-      }
-      return {
-        id,
-        status: str(item.status) ?? str(item.state),
-        createdAt: str(item.created_at),
-        createdBy: str(item.created_by) ?? str(item.author),
-        definition: item.definition !== undefined ? parseDefinition(item.definition) : null,
-      } satisfies AgentVersion;
-    })
-    .filter((v): v is AgentVersion => v !== null);
-}
-
-export function useAssistantVersions(assistantId: string | null) {
-  const { orgId } = useOrg();
-  return useQuery({
-    queryKey: [...AUTHORING_KEY, orgId, 'versions', assistantId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/versions`),
-    enabled: !!orgId && !!assistantId,
-    staleTime: 15_000,
-    select: parseVersions,
-  });
-}
+// ─── Writes ────────────────────────────────────────────────────────────
 
 function useInvalidateAuthoring() {
   const queryClient = useQueryClient();
@@ -383,7 +498,43 @@ function useInvalidateAuthoring() {
   };
 }
 
-/** Saves the edited definition as a new immutable draft version. */
+export interface CreateAssistantResult {
+  assistantId: string | null;
+  versionId: string | null;
+  template: string | null;
+  hash: string | null;
+}
+
+export function useCreateAssistant() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; description?: string; template?: { slug: string; version?: string }; definition?: AgentDefinition }) => {
+      const raw = await engine<Record<string, unknown>>(`/console/org/${orgId}/assistants`, {
+        method: 'POST',
+        body: {
+          name: input.name,
+          ...(input.description ? { description: input.description } : {}),
+          ...(input.template ? { template: input.template } : {}),
+          ...(input.definition ? { definition: toEnginePayload(input.definition) } : {}),
+        },
+        idempotent: true,
+      });
+      const assistant = typeof raw.assistant === 'object' && raw.assistant !== null ? (raw.assistant as Record<string, unknown>) : {};
+      const result: CreateAssistantResult = {
+        assistantId: str(assistant.id) ?? str(raw.assistant_id) ?? null,
+        versionId: str(raw.version_id) ?? null,
+        template: str(raw.template),
+        hash: str(raw.hash),
+      };
+      await queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] });
+      return result;
+    },
+    onError: (error) => toastEngineError(error, 'Could not create the agent'),
+  });
+}
+
+/** Saves the edited definition as a new immutable draft version (full payload at top level — R-1). */
 export function useSaveDraftVersion(assistantId: string | null) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
@@ -391,7 +542,7 @@ export function useSaveDraftVersion(assistantId: string | null) {
     mutationFn: async (definition: AgentDefinition) =>
       engine(`/console/org/${orgId}/assistants/${assistantId}/versions`, {
         method: 'POST',
-        body: { definition },
+        body: toEnginePayload(definition),
         idempotent: true,
       }),
     onSuccess: () => invalidate(),
@@ -399,20 +550,100 @@ export function useSaveDraftVersion(assistantId: string | null) {
   });
 }
 
-/** Publishes a draft version (privileged — step-up with auto-retry). */
-export function usePublishVersion(assistantId: string | null) {
+/**
+ * Iterative draft edit with optimistic concurrency. If-Match carries the
+ * hash from the freshest version GET (REQUIRED — the server 400s without
+ * it); a stale hash 412s with both hashes for merge-or-reload (F-D4).
+ */
+export function useUpdateDraftVersion(assistantId: string | null, versionId: string | null) {
+  const { orgId } = useOrg();
+  const invalidate = useInvalidateAuthoring();
+  return useMutation({
+    mutationFn: async (input: { definition: AgentDefinition; expectedHash: string }) =>
+      engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/draft`, {
+        method: 'PUT',
+        body: toEnginePayload(input.definition),
+        headers: { 'If-Match': input.expectedHash },
+        idempotent: true,
+      }),
+    onSuccess: () => invalidate(),
+    // 412s are owned by the editor's merge-or-reload panel (both hashes +
+    // diff) — a toast here would double-surface the same refusal.
+    onError: (error) => {
+      if (!(error instanceof ApiError && error.status === 412)) {
+        toastEngineError(error, 'Could not save the draft');
+      }
+    },
+  });
+}
+
+/** Abandons a DRAFT (published history untouched). */
+export function useDiscardDraft(assistantId: string | null) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
     mutationFn: async (versionId: string) =>
-      runWithStepUp('Publish agent version', (proof) =>
-        engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/publish`, {
-          method: 'POST',
-          ...(proof ? { mfaProof: proof } : {}),
-        }),
-      ),
+      engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/draft`, { method: 'DELETE', idempotent: true }),
     onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not publish the version'),
+    onError: (error) => toastEngineError(error, 'Could not discard the draft'),
+  });
+}
+
+/**
+ * Publishes a draft version (owner/admin). No step-up: the engine demands no
+ * fresh proof on this route — runWithStepUp would only ever add a phantom
+ * MFA prompt, so this calls the engine directly and honestly.
+ *
+ * Typed refusals (400/409 — the publish ceremony owns them) skip the toast;
+ * the caller MUST render the branch (see `classifyPublishRefusal`). Anything
+ * untyped still toasts verbatim as the fallback.
+ */
+export interface PublishedVersionRef {
+  id: string | null;
+  version: number | null;
+  hash: string | null;
+}
+
+export function parsePublishedVersion(raw: unknown): PublishedVersionRef {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const row = typeof record.version === 'object' && record.version !== null ? (record.version as Record<string, unknown>) : record;
+  const pickStr = (...keys: string[]): string | null => {
+    for (const key of keys) {
+      if (typeof row[key] === 'string' && (row[key] as string).trim() !== '') {
+        return row[key] as string;
+      }
+    }
+    return null;
+  };
+  const num = typeof row.version === 'number' && Number.isFinite(row.version) ? (row.version as number) : null;
+  return { id: pickStr('id', 'version_id'), version: num, hash: pickStr('hash') };
+}
+
+export function usePublishVersion(assistantId: string | null) {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateAuthoring();
+  return useMutation({
+    mutationFn: async (input: { versionId: string; acknowledgeDegradedKnowledge?: boolean }) => {
+      const raw = await engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/versions/${input.versionId}/publish`, {
+        method: 'POST',
+        body: input.acknowledgeDegradedKnowledge === true ? { acknowledge_degraded_knowledge: true } : {},
+        idempotent: true,
+      });
+      return parsePublishedVersion(raw);
+    },
+    onSuccess: () => {
+      invalidate();
+      // Pointer swing moves eval + operate truth too (decision freshness,
+      // banners, rollouts read the active version) — assistants-only
+      // invalidation would leave them stale.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'setup', 'eval'] });
+    },
+    onError: (error) => {
+      if (classifyPublishRefusal(error) === 'unknown') {
+        toastEngineError(error, 'Could not publish the version');
+      }
+    },
   });
 }
 
@@ -421,24 +652,71 @@ export function useRetireVersion(assistantId: string | null) {
   const invalidate = useInvalidateAuthoring();
   return useMutation({
     mutationFn: async (versionId: string) =>
-      engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/retire`, { method: 'POST' }),
+      engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/retire`, { method: 'POST', idempotent: true }),
     onSuccess: () => invalidate(),
     onError: (error) => toastEngineError(error, 'Could not retire the version'),
   });
 }
 
-/** Assistant-level rollback: re-publishes the prior version's content. */
+/** Assistant-level rollback: to_version_id is REQUIRED (the server 400s `{}`). Same typed-refusal contract as publish. */
 export function useRollbackAssistant(assistantId: string | null) {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateAuthoring();
+  return useMutation({
+    mutationFn: async (input: { toVersionId: string; acknowledgeDegradedKnowledge?: boolean }) => {
+      const raw = await engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/rollback`, {
+        method: 'POST',
+        body: {
+          to_version_id: input.toVersionId,
+          ...(input.acknowledgeDegradedKnowledge === true ? { acknowledge_degraded_knowledge: true } : {}),
+        },
+        idempotent: true,
+      });
+      return parsePublishedVersion(raw);
+    },
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'setup', 'eval'] });
+    },
+    onError: (error) => {
+      if (classifyPublishRefusal(error) === 'unknown') {
+        toastEngineError(error, 'Could not roll back the agent');
+      }
+    },
+  });
+}
+
+/** Pre-publish test conversation pinned to the version (draft-capable). Returns conversation/message/run ids. */
+export function useTestRun(assistantId: string | null) {
+  const { orgId } = useOrg();
+  return useMutation({
+    mutationFn: async (input: { versionId: string; text: string }) =>
+      engine<{ conversation_id?: string; message_id?: string; run_id?: string | null }>(
+        `/console/org/${orgId}/assistants/${assistantId}/versions/${input.versionId}/test-runs`,
+        { method: 'POST', body: { text: input.text }, idempotent: true },
+      ),
+    onError: (error) => toastEngineError(error, 'Could not start the test run'),
+  });
+}
+
+/** Formal evaluation (R-2: drafts evaluate pre-publish with a synthesized snapshot). Returns `{eval_run_id}`. */
+export function useEvaluateVersion(assistantId: string | null) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
-    mutationFn: async (input: { toVersionId?: string }) =>
-      engine(`/console/org/${orgId}/assistants/${assistantId}/rollback`, {
+    mutationFn: async (input: { versionId: string; datasetId?: string; environment?: string; attemptsPerCase?: number }) =>
+      engine<{ eval_run_id?: string }>(`/console/org/${orgId}/assistants/${assistantId}/versions/${input.versionId}/evaluate`, {
         method: 'POST',
-        body: input.toVersionId ? { to_version_id: input.toVersionId } : {},
+        body: {
+          ...(input.datasetId ? { dataset_id: input.datasetId } : {}),
+          ...(input.environment ? { environment: input.environment } : {}),
+          ...(typeof input.attemptsPerCase === 'number' ? { attempts_per_case: input.attemptsPerCase } : {}),
+        },
+        idempotent: true,
       }),
     onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not roll back the agent'),
+    onError: (error) => toastEngineError(error, 'Could not start the evaluation'),
   });
 }
 
@@ -467,33 +745,43 @@ export function useImportVersion(assistantId: string | null) {
   });
 }
 
-/** Clone: fetch the source's definition and create a new agent from it. */
+/** Clone: fetch the source's active/draft definition and create a new agent from it (round-tripped through the mapper). */
 export function useCloneAssistant() {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
     mutationFn: async (input: { assistantId: string; name?: string }) => {
-      const source = await engine<unknown>(`/console/org/${orgId}/assistants/${input.assistantId}`);
-      const detail = parseDetail(source);
+      const versions = parseVersions(await engine<unknown>(`/console/org/${orgId}/assistants/${input.assistantId}/versions`));
+      const detail = parseDetail(await engine<unknown>(`/console/org/${orgId}/assistants/${input.assistantId}`));
       if (!detail) {
         throw new Error('The agent to clone could not be read');
       }
-      return engine<{ id?: string; assistant_id?: string }>(`/console/org/${orgId}/assistants`, {
+      const draft = versions.find((v) => v.status === 'DRAFT') ?? null;
+      const active = detail.activeVersionId ? (versions.find((v) => v.id === detail.activeVersionId) ?? null) : null;
+      const definition = (draft ?? active)?.definition ?? defaultConsumer();
+      const created = await engine<Record<string, unknown>>(`/console/org/${orgId}/assistants`, {
         method: 'POST',
         body: {
           name: input.name ?? `${detail.name} (copy)`,
           ...(detail.description ? { description: detail.description } : {}),
-          definition: detail.definition,
+          definition: toEnginePayload(definition),
         },
         idempotent: true,
       });
+      const createdAssistant = typeof created.assistant === 'object' && created.assistant !== null ? (created.assistant as Record<string, unknown>) : {};
+      return {
+        assistantId: str(createdAssistant.id) ?? null,
+        versionId: str(created.version_id) ?? null,
+        template: null,
+        hash: str(created.hash) ?? null,
+      } satisfies CreateAssistantResult;
     },
     onSuccess: () => invalidate(),
     onError: (error) => toastEngineError(error, 'Could not clone the agent'),
   });
 }
 
-/** Version snapshot — fetched lazily for the version diff. */
+/** Version snapshot — fetched lazily for the version diff (snapshot + provenance). */
 export function useVersionSnapshot(assistantId: string | null, versionId: string | null) {
   const { orgId } = useOrg();
   return useQuery({
@@ -501,7 +789,11 @@ export function useVersionSnapshot(assistantId: string | null, versionId: string
     queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/snapshot`),
     enabled: !!orgId && !!assistantId && !!versionId,
     staleTime: 60_000,
-    select: (raw: unknown) => parseDefinition(raw),
+    select: (raw: unknown) => {
+      const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+      const snapshot = typeof record.snapshot === 'object' && record.snapshot !== null ? record.snapshot : raw;
+      return { definition: fromEnginePayload(snapshot), provenance: parseProvenance(raw) };
+    },
   });
 }
 
@@ -510,9 +802,34 @@ export function useDeleteAssistant() {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
-    mutationFn: async (assistantId: string) =>
-      engine<{ ok: true }>(`/console/org/${orgId}/assistants/${assistantId}`, { method: 'DELETE' }),
+    mutationFn: async (assistantId: string) => engine<{ ok: true }>(`/console/org/${orgId}/assistants/${assistantId}`, { method: 'DELETE' }),
     onSuccess: () => invalidate(),
     onError: (error) => toastEngineError(error, 'Could not delete the agent — archive its conversations first'),
+  });
+}
+
+/** Kill switch: disable (audited, blocks run acceptance) / enable. */
+export function useDisableAssistant(assistantId: string | null) {
+  const { orgId } = useOrg();
+  const invalidate = useInvalidateAuthoring();
+  return useMutation({
+    mutationFn: async (reason?: string) =>
+      engine(`/console/org/${orgId}/assistants/${assistantId}/disable`, {
+        method: 'POST',
+        body: reason ? { reason } : {},
+        idempotent: true,
+      }),
+    onSuccess: () => invalidate(),
+    onError: (error) => toastEngineError(error, 'Could not disable the agent'),
+  });
+}
+
+export function useEnableAssistant(assistantId: string | null) {
+  const { orgId } = useOrg();
+  const invalidate = useInvalidateAuthoring();
+  return useMutation({
+    mutationFn: async () => engine(`/console/org/${orgId}/assistants/${assistantId}/enable`, { method: 'POST', idempotent: true }),
+    onSuccess: () => invalidate(),
+    onError: (error) => toastEngineError(error, 'Could not enable the agent'),
   });
 }

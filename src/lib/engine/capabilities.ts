@@ -77,3 +77,37 @@ export function useCan(product: string): (scope: string) => boolean {
   const state = entitlementState(product);
   return useCallback((scope: string) => canPerform(role, state, scope), [role, state]);
 }
+
+// ─── Setup-plane acts (team_setup_ledger.md §8) ─────────────────────────
+// Agent setup is org-axis only (no product entitlement): the engine's
+// @Roles decide, the UI mirrors. Two tiers — makers (owner/admin/developer)
+// author drafts, test, evaluate, link connectors, manage tools/memories;
+// governors (owner/admin) publish, roll back, retire, disable, kill, move
+// rollout/release pointers, manage blocks, BYOK, enablements, OAuth apps,
+// and review candidates. Reads stay open to every role the route allows
+// (all incl. billing for most setup reads) — no gate needed for reads.
+
+export type SetupAct = 'setup:author' | 'setup:govern';
+
+const SETUP_AUTHORS: readonly OrgRole[] = ['owner', 'admin', 'developer'];
+const SETUP_GOVERNORS: readonly OrgRole[] = ['owner', 'admin'];
+
+/** Pure role check for setup acts. Hidden button ≠ security boundary — the engine enforces regardless. */
+export function canSetup(role: OrgRole | null, act: SetupAct): boolean {
+  if (!role) {
+    return false;
+  }
+  return act === 'setup:govern' ? SETUP_GOVERNORS.includes(role) : SETUP_AUTHORS.includes(role);
+}
+
+/** Denied-state copy: names the required tier and the caller's role (discoverability beats blankness). */
+export function setupDeniedCopy(role: OrgRole | null, act: SetupAct): string {
+  const needed = act === 'setup:govern' ? 'an owner or admin' : 'an owner, admin, or developer';
+  const yours = role ? `your role is ${role}` : 'you are not a member of this organization';
+  return `This action requires ${needed} — ${yours}.`;
+}
+
+export function useCanSetup(): (act: SetupAct) => boolean {
+  const { role } = useOrg();
+  return useCallback((act: SetupAct) => canSetup(role, act), [role]);
+}

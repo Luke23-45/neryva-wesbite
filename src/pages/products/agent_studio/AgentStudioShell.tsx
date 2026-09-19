@@ -8,7 +8,7 @@
  * render is a deferred decision (ledger D-1).
  */
 import { Outlet } from '@tanstack/react-router';
-import { StudioShell, type StudioNavGroup } from '@/sections/pages/products/agent-studio/StudioShell';
+import { StudioShell, type NavConfig } from '@/sections/pages/products/agent-studio/StudioShell';
 import { SessionGate } from '@components/platform/SessionGate';
 import { EntitlementBanner } from '@components/platform/Entitlement';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
@@ -20,13 +20,14 @@ import { StatusBanner } from '@/sections/pages/products/agent-studio/StatusBanne
 import navData from '@neryva_data/products/agent_studio/nav.json';
 
 type NavJson = {
-  nav: StudioNavGroup[];
+  domains: NavConfig['domains'];
   user: { initials: string; name: string; tier: string; email: string };
   workspace: { name: string; plan: string };
   searchPlaceholder: string;
 };
 
 const data = navData as NavJson;
+const navConfig: NavConfig = { domains: data.domains };
 
 function initialsOf(name: string | null, email: string | null, fallback: string): string {
   const source = name?.trim() || email?.split('@')[0] || '';
@@ -70,7 +71,7 @@ export default function AgentStudioShellPage() {
   return (
     <SessionGate>
       <StudioShell
-        nav={data.nav}
+        nav={navConfig}
         user={user}
         workspace={workspace}
         searchPlaceholder={data.searchPlaceholder}

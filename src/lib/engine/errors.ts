@@ -14,12 +14,14 @@ import { ApiError } from './client';
 
 export type EngineErrorKind =
   | 'auth' // session dead — re-entry
-  | 'paywall' // 402 past_due — writes paused, billing CTA
+  | 'paywall' // 402 past_due / seat_limit_reached — billing or seats CTA
   | 'entitlement' // 403 entitlement_required — trial/review CTA
   | 'forbidden' // 403 role-based
-  | 'rate' // 429
-  | 'retry' // 5xx / network / conflict — worth trying again
-  | 'input' // validation_failed / not_found / conflict — user-fixable
+  | 'rate' // 429 / quota_exceeded(events)
+  | 'retry' // 5xx / network / serialization_failure — worth trying again
+  | 'conflict' // 409 gate refusals + 412 stale — fix-path panels, not bare toasts
+  | 'input' // validation_failed / not_found — user-fixable
+  | 'gone' // resource_purged — retention/GDPR tombstone
   | 'generic';
 
 export interface EngineErrorView {
@@ -103,6 +105,46 @@ export function describeEngineError(error: unknown): EngineErrorView {
         tone: 'error',
         title: 'Not found',
         message: 'This resource doesn’t exist or was removed.',
+        retryable: false,
+      };
+    case 'seat_limit_reached':
+      return {
+        kind: 'paywall',
+        tone: 'warning',
+        title: 'No seats left',
+        message: error.message || 'All seats are in use — add seats to invite more members.',
+        retryable: false,
+      };
+    case 'quota_exceeded':
+      return {
+        kind: 'rate',
+        tone: 'warning',
+        title: 'Limit reached',
+        message: error.message || 'A usage limit was reached — retry after the window resets.',
+        retryable: true,
+      };
+    case 'precondition_failed':
+      return {
+        kind: 'conflict',
+        tone: 'warning',
+        title: 'Changed since you opened it',
+        message: 'Someone saved a newer version while you were editing. Reload their changes and re-apply yours — nothing was overwritten.',
+        retryable: false,
+      };
+    case 'serialization_failure':
+      return {
+        kind: 'retry',
+        tone: 'error',
+        title: 'Busy — safe to retry',
+        message: 'The request collided with another change. Retry with the same input.',
+        retryable: true,
+      };
+    case 'resource_purged':
+      return {
+        kind: 'gone',
+        tone: 'error',
+        title: 'Removed',
+        message: error.message || 'This resource was removed and is no longer available.',
         retryable: false,
       };
     case 'validation_failed':

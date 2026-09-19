@@ -1,13 +1,13 @@
 import styled from 'styled-components';
 import { Link } from '@tanstack/react-router';
 
-export const ShellRoot = styled.section`
+export const ShellRoot = styled.section<{ $collapsed?: boolean }>`
   position: relative;
   width: 100%;
   min-height: 100vh;
   background: ${({ theme }) => theme.app.bg.base};
   display: grid;
-  grid-template-columns: 264px 1fr;
+  grid-template-columns: ${({ $collapsed }) => ($collapsed ? '76px 1fr' : '264px 1fr')};
   color: ${({ theme }) => theme.app.text.body};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
 
@@ -17,7 +17,7 @@ export const ShellRoot = styled.section`
 `;
 
 /* ─── Sidebar ─── */
-export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
+export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean; $collapsed?: boolean }>`
   position: sticky;
   top: 0;
   align-self: start;
@@ -25,6 +25,19 @@ export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean }>`
   display: flex;
   flex-direction: column;
   padding: 16px 12px 14px;
+  ${({ $collapsed }) =>
+    $collapsed &&
+    `
+    width: 76px;
+    padding-left: 8px;
+    padding-right: 8px;
+    nav a {
+      justify-content: center;
+    }
+    .collapse-hide {
+      display: none;
+    }
+  `}
   background: linear-gradient(
     180deg,
     ${({ theme }) => theme.app.bg.raised} 0%,
@@ -99,7 +112,7 @@ export const BrandMark = styled.svg`
   flex-shrink: 0;
 `;
 
-export const BrandWordmark = styled.span`
+export const BrandWordmark = styled.span.attrs({ className: 'collapse-hide' })`
   font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -114,7 +127,7 @@ export const BrandDot = styled.span`
   font-weight: 600;
 `;
 
-export const SidebarSearch = styled.label`
+export const SidebarSearch = styled.label.attrs({ className: 'collapse-hide' })`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -157,7 +170,7 @@ export const NavSection = styled.nav`
   margin-bottom: 6px;
 `;
 
-export const NavGroupLabel = styled.div`
+export const NavGroupLabel = styled.div.attrs({ className: 'collapse-hide' })`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: 500;
@@ -216,7 +229,7 @@ export const NavItemIcon = styled.span<{ $active: boolean }>`
   flex-shrink: 0;
 `;
 
-export const RecentSection = styled.div`
+export const RecentSection = styled.div.attrs({ className: 'collapse-hide' })`
   flex: 1;
   overflow-y: auto;
   padding-bottom: 8px;
@@ -266,7 +279,7 @@ export const RecentItemLink = styled(Link)`
   }
 `;
 
-export const SidebarFooter = styled.div`
+export const SidebarFooter = styled.div.attrs({ className: 'collapse-hide' })`
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -495,5 +508,127 @@ export const RecentEmpty = styled(Link)`
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 1px;
+  }
+`;
+
+/* ─── Dynamic sidebar levels (SIDEBAR_LEDGER.md §§3-4; additive only) ─── */
+
+/** Builder-mode return link in the topbar (sidebar hidden on builder routes). */
+export const TopbarBackLink = styled(Link)`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.secondary};
+  text-decoration: none;
+  border-radius: 6px;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+  }
+`;
+
+/** Row label (carries the collapse-hide hook; icons and badges stay visible). */
+export const NavItemLabel = styled.span.attrs({ className: 'collapse-hide' })`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+/** Collapse toggle in the brand row (persisted per account). */
+export const CollapseButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.muted};
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
+`;
+
+/** Slide container for the level 1 ⇄ level 2 swap (framer-motion drives it). */
+export const NavLevelSlide = styled.div`
+  overflow: hidden;
+`;
+
+/** Back row: a chrome action (returns to level 1 on the SAME route), never a destination. */
+export const NavBackButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  margin-bottom: 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.secondary};
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: -2px;
+  }
+`;
+
+/**
+ * Badge pill for nav rows. Dot + optional count, never color alone (the count
+ * text or the row label always names the state). Null-safe: parents render
+ * nothing until values resolve.
+ */
+export const NavBadge = styled.span<{ $tone: 'attention' | 'info' }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: 600;
+  flex-shrink: 0;
+  color: ${({ theme, $tone }) =>
+    $tone === 'attention' ? theme.app.status.warning.fg : theme.app.status.info.fg};
+  background: ${({ theme, $tone }) =>
+    $tone === 'attention' ? theme.app.status.warning.bg : theme.app.status.info.bg};
+  border: 1px solid
+    ${({ theme, $tone }) =>
+      $tone === 'attention' ? theme.app.status.warning.border : theme.app.status.info.border};
+
+  &:empty {
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border-radius: 999px;
   }
 `;

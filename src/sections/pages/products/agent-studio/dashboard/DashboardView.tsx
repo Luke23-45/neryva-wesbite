@@ -35,6 +35,7 @@ import { useEntitlements, useAudit, useOrgLimits, parseQuotaMeters } from '@hook
 import { parseSeries, rangeDates, useUsageSeries } from '@hooks/engine/usage';
 import { useStudioStatus } from '@hooks/studio/useStudioStatus';
 import { useOrg } from '@/Context/OrgContext';
+import { SetupChecklist } from './SetupChecklist';
 
 import {
   TwoColumn,
@@ -150,6 +151,10 @@ export function DashboardView() {
           </Panel>
         </motion.div>
       )}
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
+        <SetupChecklist />
+      </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <KpiGrid>
@@ -301,7 +306,7 @@ export function DashboardView() {
                       <CellPrimary>{a.name}</CellPrimary>
                     </DataCell>
                     <DataCell $w="20%">
-                      {a.status ? <StatusPill tone={a.status === 'active' ? 'success' : 'neutral'}>{a.status}</StatusPill> : <span style={{ opacity: 0.4 }}>—</span>}
+                      <StatusPill tone={a.status === 'live' ? 'success' : a.status === 'disabled' ? 'warning' : 'neutral'}>{a.status}</StatusPill>
                     </DataCell>
                     <DataCell $w="24%">
                       {a.model ? <CellMono>{a.model}</CellMono> : <span style={{ opacity: 0.4 }}>—</span>}

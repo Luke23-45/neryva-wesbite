@@ -31,14 +31,20 @@ describe('parseAssistants', () => {
   it('extracts agents from the reasonable envelopes', () => {
     const assistants = parseAssistants({
       assistants: [
-        { id: 'a1', display_name: 'Support Concierge', state: 'active' },
+        // Identity rows carry NO status/model columns (definitions live on
+        // versions): lifecycle derives disabled > live > new; updatedAt
+        // passes through; model stays null (no N+1 on the list path).
+        { id: 'a1', display_name: 'Support Concierge', active_version_id: 'v1', updated_at: '2026-09-16T10:00:00Z', degraded_until: '2026-09-24T00:00:00Z', degraded_reason: 'unresolved:faq' },
         { agent_id: 'a2' },
+        { id: 'a3', name: 'Old', disabled_at: '2026-09-15T10:00:00Z' },
       ],
     });
-    // Full AssistantSummary shape (description/model included) — exact match.
+    // Full AssistantSummary shape — exact match (activeVersionId drives funnel/publish rows without N+1 reads;
+    // degraded/disabled passthrough powers the Overview queue from the same response).
     expect(assistants).toEqual([
-      { id: 'a1', name: 'Support Concierge', description: null, status: 'active', model: null },
-      { id: 'a2', name: 'Untitled agent', description: null, status: null, model: null },
+      { id: 'a1', name: 'Support Concierge', description: null, status: 'live', activeVersionId: 'v1', model: null, updatedAt: '2026-09-16T10:00:00Z', degradedUntil: '2026-09-24T00:00:00Z', degradedReason: 'unresolved:faq', disabledReason: null },
+      { id: 'a2', name: 'Untitled agent', description: null, status: 'new', activeVersionId: null, model: null, updatedAt: null, degradedUntil: null, degradedReason: null, disabledReason: null },
+      { id: 'a3', name: 'Old', description: null, status: 'disabled', activeVersionId: null, model: null, updatedAt: null, degradedUntil: null, degradedReason: null, disabledReason: null },
     ]);
   });
 

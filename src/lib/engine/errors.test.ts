@@ -57,4 +57,33 @@ describe('describeEngineError', () => {
     expect(view.kind).toBe('generic');
     expect(view.message).toBe('render blew up');
   });
+
+  it('maps seat_limit_reached to the seats paywall without retry', () => {
+    const view = describeEngineError(new ApiError(402, 'seat_limit_reached', 'Payment required: all seats are in use'));
+    expect(view.kind).toBe('paywall');
+    expect(view.message).toContain('seats are in use');
+    expect(view.retryable).toBe(false);
+  });
+
+  it('maps quota_exceeded to a retryable rate panel', () => {
+    const view = describeEngineError(new ApiError(429, 'quota_exceeded', 'Monthly event limit reached'));
+    expect(view.kind).toBe('rate');
+    expect(view.retryable).toBe(true);
+  });
+
+  it('maps precondition_failed to the merge-or-reload panel (never a bare retry)', () => {
+    const view = describeEngineError(new ApiError(412, 'precondition_failed', 'Resource changed since it was read', { expected: 'a', current: 'b' }));
+    expect(view.kind).toBe('conflict');
+    expect(view.message).toContain('Reload');
+    expect(view.retryable).toBe(false);
+  });
+
+  it('maps serialization_failure to safe-retry and resource_purged to gone', () => {
+    const retry = describeEngineError(new ApiError(409, 'serialization_failure', 'serialization failure, retry'));
+    expect(retry.kind).toBe('retry');
+    expect(retry.retryable).toBe(true);
+    const gone = describeEngineError(new ApiError(410, 'resource_purged', 'purged'));
+    expect(gone.kind).toBe('gone');
+    expect(gone.retryable).toBe(false);
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canPerform } from './capabilities';
+import { canPerform, canSetup, setupDeniedCopy } from './capabilities';
 import type { OrgRole } from '@/Context/OrgContext';
 
 const ROLES: OrgRole[] = ['owner', 'admin', 'billing', 'developer', 'reader'];
@@ -54,5 +54,28 @@ describe('canPerform — the access-model matrix', () => {
   it('no role → nothing; unknown scope → nothing', () => {
     expect(canPerform(null, 'active', 'studio:read')).toBe(false);
     expect(canPerform('owner', 'active', 'studio:explode')).toBe(false);
+  });
+});
+
+describe('canSetup — the setup-plane tiers (ledger §8)', () => {
+  it('authors: owner/admin/developer; governors: owner/admin', () => {
+    for (const role of ['owner', 'admin', 'developer'] as OrgRole[]) {
+      expect(canSetup(role, 'setup:author')).toBe(true);
+    }
+    for (const role of ['owner', 'admin'] as OrgRole[]) {
+      expect(canSetup(role, 'setup:govern')).toBe(true);
+    }
+    expect(canSetup('developer', 'setup:govern')).toBe(false);
+    for (const role of ['billing', 'reader'] as OrgRole[]) {
+      expect(canSetup(role, 'setup:author')).toBe(false);
+      expect(canSetup(role, 'setup:govern')).toBe(false);
+    }
+    expect(canSetup(null, 'setup:author')).toBe(false);
+  });
+
+  it('denied copy names the tier and the caller role', () => {
+    expect(setupDeniedCopy('developer', 'setup:govern')).toContain('owner or admin');
+    expect(setupDeniedCopy('developer', 'setup:govern')).toContain('developer');
+    expect(setupDeniedCopy(null, 'setup:author')).toContain('not a member');
   });
 });

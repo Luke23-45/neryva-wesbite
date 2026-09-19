@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { Link, useLocation, useMatchRoute } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Link, useLocation } from '@tanstack/react-router';
 import {
   ShellRoot,
   ShellSidebar,
@@ -8,13 +8,12 @@ import {
   BrandMark,
   BrandWordmark,
   BrandDot,
+  CollapseButton,
   SidebarSearch,
   SidebarSearchIcon,
   SidebarSearchInput,
   NavSection,
-  NavGroupLabel,
-  NavItemLink,
-  NavItemIcon,
+  NavLevelSlide,
   RecentSection,
   RecentLabel,
   RecentItemLink,
@@ -30,65 +29,65 @@ import {
   TopbarLeft,
   TopbarTitle,
   TopbarSubtitle,
+  TopbarBackLink,
   TopbarSearchHint,
   TopbarKbd,
   TopbarRight,
   IconAction,
-  UpgradeCard,
-  UpgradeTitle,
   ContentArea,
   BannerSlot,
   MobileMenuButton,
   MobileOverlay,
 } from './StudioShell.styles';
 import {
-  LayoutDashboard,
   MessageSquare,
-  Bot,
-  MessagesSquare,
-  Plug,
-  Settings as SettingsIcon,
   Search as SearchIcon,
   Plus,
   Menu as MenuIcon,
   X as XIcon,
-  Activity as ActivityIcon,
+  ChevronsLeft,
+  ChevronsRight,
+  Bot,
+  Users,
+  KeyRound,
+  LayoutDashboard,
   BookOpen,
   Cpu,
-  BarChart3,
+  Wrench,
   ShieldCheck,
+  BarChart3,
+  Plug,
   Sparkles,
   Code2,
-  Users,
-  Activity,
+  Activity as ActivityIcon,
   FlaskConical,
-  KeyRound,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
-import { UpgradeModal } from '../UpgradeModal';
 import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
 import { useCan } from '@lib/engine/capabilities';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useConversations } from '@hooks/studio/useStudioConversations';
 import { useMembers, useKeys } from '@hooks/engine/queries';
+import { useOrg } from '@/Context/OrgContext';
 import { ease } from '@styles/motion';
-
-export type StudioNavItem = {
-  label: string;
-  to: string;
-  icon: 'dashboard' | 'chat' | 'agents' | 'conversations' | 'activity' | 'integrations' | 'settings' | 'knowledge' | 'models' | 'analytics' | 'compliance' | 'templates' | 'api' | 'teams' | 'usage' | 'evaluations';
-};
-
-export type StudioNavGroup = {
-  section: string;
-  items: StudioNavItem[];
-};
+import {
+  resolveDomain,
+  resolveItem,
+  resolveLevel,
+  type NavConfig,
+} from './nav-config';
+import { SidebarDomains } from './SidebarDomains';
+import { SidebarSection } from './SidebarSection';
+import { useNavBadges } from './useNavBadges';
+import { useSidebarPrefs } from './useSidebarPrefs';
 
 export type RecentChat = { id: string; title: string; to: string };
 
 type Props = {
-  nav: StudioNavGroup[];
+  /** v2 domain config (SIDEBAR_LEDGER.md §2 — single source of truth). */
+  nav: NavConfig;
   user: { initials: string; name: string; tier: string; email: string };
   workspace: { name: string; plan: string };
   searchPlaceholder: string;
@@ -102,47 +101,36 @@ type Props = {
   children: ReactNode;
 };
 
-const iconMap = {
-  dashboard: LayoutDashboard,
-  chat: MessageSquare,
-  agents: Bot,
-  conversations: MessagesSquare,
-  activity: ActivityIcon,
-  integrations: Plug,
-  settings: SettingsIcon,
-  knowledge: BookOpen,
-  models: Cpu,
-  analytics: BarChart3,
-  compliance: ShieldCheck,
-  templates: Sparkles,
-  api: Code2,
-  teams: Users,
-  usage: Activity,
-  evaluations: FlaskConical,
-} as const;
-
-const isApplePlatform = () =>
-  typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
-
 /** The static Navigate section of the command palette. */
 const STATIC_NAV_ITEMS: CommandItem[] = [
   { id: 'dash', title: 'Dashboard', subtitle: 'Overview and live activity', to: '/agent-studio/dashboard', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
   { id: 'chat', title: 'Chat', subtitle: 'Conversational playground', to: '/agent-studio/chat', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} />, shortcut: ['C'] },
   { id: 'agents', title: 'Agents', subtitle: 'Manage and configure agents', to: '/agent-studio/agents', section: 'Navigate', icon: <Bot size={14} strokeWidth={1.7} />, shortcut: ['A'] },
+  { id: 'agents-overview', title: 'Agents overview', subtitle: 'Fleet health and what needs attention', to: '/agent-studio/agents/overview', section: 'Navigate', icon: <LayoutDashboard size={14} strokeWidth={1.7} /> },
+  { id: 'agents-new', title: 'New agent', subtitle: 'Guided circuit builder', to: '/agent-studio/agents/new', section: 'Create', icon: <Plus size={14} strokeWidth={1.7} /> },
+  { id: 'memory', title: 'Memory', subtitle: 'What your agents remember', to: '/agent-studio/memory', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
+  { id: 'datasets', title: 'Datasets', subtitle: 'Evaluation datasets', to: '/agent-studio/datasets', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
+  { id: 'blocks', title: 'Blocks', subtitle: 'Governance kill switches', to: '/agent-studio/blocks', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
   { id: 'models', title: 'Models', subtitle: 'AI models and routing', to: '/agent-studio/models', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
-  { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessagesSquare size={14} strokeWidth={1.7} /> },
+  { id: 'tools', title: 'Tools', subtitle: 'Tool catalog and bindings', to: '/agent-studio/tools', section: 'Navigate', icon: <Wrench size={14} strokeWidth={1.7} /> },
+  { id: 'channels', title: 'Channels', subtitle: 'WhatsApp, Messenger, Telegram, widget', to: '/agent-studio/channels', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
+  { id: 'approvals', title: 'Approvals', subtitle: 'Human review queue for tool calls', to: '/agent-studio/approvals', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
+  { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
   { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
   { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
   { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
   { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
   { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
   { id: 'teams', title: 'Teams', subtitle: 'Members, invites, service accounts', to: '/agent-studio/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
-  { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <Activity size={14} strokeWidth={1.7} /> },
+  { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
   { id: 'evaluations', title: 'Evaluations', subtitle: 'Eval runs and datasets', to: '/agent-studio/evaluations', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
   { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings/profile', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
 ];
+
+const isApplePlatform = () =>
+  typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.userAgent);
 
 export function StudioShell({
   nav,
@@ -158,10 +146,12 @@ export function StudioShell({
   const [query, setQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const matchRoute = useMatchRoute();
   const location = useLocation();
   const can = useCan('agent_studio');
   const canWrite = can('studio:write');
+  const { role } = useOrg();
+  const badges = useNavBadges(nav);
+  const { collapsed, toggleCollapsed, pinnedLevel1, pinLevel1 } = useSidebarPrefs(location.pathname);
 
   // Palette + recents read real data. Conversations always load (the
   // sidebar recents use them, calm 15s staleness); members/keys/assistants
@@ -205,24 +195,65 @@ export function StudioShell({
     };
   }, [mobileOpen]);
 
-  // Detail/sub routes keep their parent highlighted in the sidebar.
-  const isActive = (to: string) => {
-    const path = location.pathname;
-    if (to.startsWith('/agent-studio/agents')) return path.startsWith('/agent-studio/agents');
-    if (to.startsWith('/agent-studio/settings')) return path.startsWith('/agent-studio/settings');
-    if (to.startsWith('/agent-studio/integrations')) return path.startsWith('/agent-studio/integrations');
-    return !!matchRoute({ to, fuzzy: false });
-  };
+  // ── Level derivation (pure, every render — cold-load safe) ──
+  const level = resolveLevel(location.pathname, nav);
+  const isBuilder = level.kind === 'builder';
+  const domain = level.kind === 'section' ? level.domain : null;
+  // The back-row pin shows level 1 on the SAME route (session chrome only).
+  const showLevel1 = !isBuilder && (pinnedLevel1 || level.kind !== 'section' || level.level === 1);
+  // Breadcrumb truth always follows the ROUTE (even under the level-1 pin —
+  // orientation must never lie about where the user is).
+  const activeDomain =
+    level.kind === 'section' ? (resolveDomain(location.pathname, nav) ?? level.domain) : null;
+  const activeItem =
+    level.kind === 'section' && activeDomain !== null
+      ? resolveItem(location.pathname, activeDomain)
+      : null;
+
+  // Focus on level/domain change (skip first paint: cold-load must not steal
+  // focus from deep-link targets). The announcement below is DERIVED, not
+  // stated — aria-live regions announce on content change, so no effect needed.
+  const backRef = useRef<HTMLButtonElement | null>(null);
+  const slideRef = useRef<HTMLDivElement | null>(null);
+  const prevLevelKey = useRef<string | null>(null);
+  const levelKey = isBuilder ? 'builder' : showLevel1 ? 'l1' : `l2:${activeDomain?.key ?? 'none'}`;
+  useEffect(() => {
+    if (prevLevelKey.current === null) {
+      prevLevelKey.current = levelKey;
+      return;
+    }
+    if (prevLevelKey.current === levelKey) return;
+    prevLevelKey.current = levelKey;
+    if (levelKey === 'l1' || levelKey === 'builder') {
+      slideRef.current?.focus({ preventScroll: true });
+    } else {
+      backRef.current?.focus({ preventScroll: true });
+    }
+  }, [levelKey]);
+  const announcement =
+    levelKey === 'builder'
+      ? 'Agent builder'
+      : showLevel1
+        ? 'Studio sections'
+        : `${activeDomain?.label ?? 'Section'} section`;
+
+  // Desktop Esc on level 2 (outside inputs) steps back to level 1.
+  // Precedence: modal > mobile drawer > level-up (ledger §4.6).
+  useEffect(() => {
+    if (mobileOpen || showLevel1 || isBuilder) return;
+    const onEsc = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName ?? '';
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      e.preventDefault();
+      pinLevel1();
+    };
+    document.addEventListener('keydown', onEsc);
+    return () => document.removeEventListener('keydown', onEsc);
+  }, [mobileOpen, showLevel1, isBuilder, pinLevel1]);
 
   const q = query.trim().toLowerCase();
-  const filteredGroups = nav
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => item.label.toLowerCase().includes(q)),
-    }))
-    .filter((group) => group.items.length > 0);
   const filteredRecents = (recentChats ?? []).filter((c) => c.title.toLowerCase().includes(q)).slice(0, 6);
-  const hasResults = filteredGroups.length > 0 || filteredRecents.length > 0;
+  const hasResults = filteredRecents.length > 0 || q.length === 0;
 
   // The launcher indexes the workspace: static pages plus live agents,
   // conversations, members, and keys (loaded while the palette is open).
@@ -245,7 +276,7 @@ export function StudioShell({
         subtitle: 'Conversation',
         to: `/agent-studio/conversations?chat=${encodeURIComponent(conversation.id)}`,
         section: 'Conversations',
-        icon: <MessagesSquare size={14} strokeWidth={1.7} />,
+        icon: <MessageSquare size={14} strokeWidth={1.7} />,
       });
     }
     for (const member of (members.data?.members ?? []).slice(0, 6)) {
@@ -271,121 +302,142 @@ export function StudioShell({
     return items;
   }, [assistants.data, conversations.data, members.data, keys.data]);
 
+  const closeMobile = () => setMobileOpen(false);
+  const slideKey = isBuilder ? 'builder' : showLevel1 ? 'level-1' : `level-2:${domain?.key ?? 'none'}`;
+
   return (
-    <ShellRoot>
-      {mobileOpen && <MobileOverlay onClick={() => setMobileOpen(false)} aria-hidden="true" />}
+    <ShellRoot $collapsed={collapsed}>
+      {mobileOpen && <MobileOverlay onClick={closeMobile} aria-hidden="true" />}
 
-      <ShellSidebar
-        $mobileOpen={mobileOpen}
-        as={motion.aside}
-        initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.55, ease: ease.premium }}
-        aria-label="Studio navigation"
-      >
-        <BrandRow>
-          <BrandMark viewBox="0 0 32 32" aria-hidden="true">
-            <defs>
-              <linearGradient id="shell-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#c084fc" />
-                <stop offset="0.55" stopColor="#2563eb" />
-                <stop offset="1" stopColor="#05e3a4" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M6 26V8.5C6 7.12 7.12 6 8.5 6h7.2c3.59 0 6.5 2.91 6.5 6.5S19.29 19 15.7 19H11v7H6z"
-              fill="url(#shell-mark)"
+      {!isBuilder && (
+        <ShellSidebar
+          $mobileOpen={mobileOpen}
+          $collapsed={collapsed}
+          as={motion.aside}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, ease: ease.premium }}
+          aria-label="Studio navigation"
+        >
+          <BrandRow>
+            <BrandMark viewBox="0 0 32 32" aria-hidden="true">
+              <defs>
+                <linearGradient id="shell-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#c084fc" />
+                  <stop offset="0.55" stopColor="#2563eb" />
+                  <stop offset="1" stopColor="#05e3a4" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M6 26V8.5C6 7.12 7.12 6 8.5 6h7.2c3.59 0 6.5 2.91 6.5 6.5S19.29 19 15.7 19H11v7H6z"
+                fill="url(#shell-mark)"
+              />
+            </BrandMark>
+            <BrandWordmark>
+              Studio<BrandDot aria-hidden="true">·</BrandDot>
+            </BrandWordmark>
+            <CollapseButton
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+            >
+              {collapsed ? <ChevronsRight size={15} strokeWidth={1.8} /> : <ChevronsLeft size={15} strokeWidth={1.8} />}
+            </CollapseButton>
+            <MobileMenuButton
+              $variant="close"
+              onClick={closeMobile}
+              aria-label="Close menu"
+              style={{ marginLeft: 'auto' }}
+            >
+              <XIcon size={15} strokeWidth={1.8} />
+            </MobileMenuButton>
+          </BrandRow>
+
+          <SidebarSearch>
+            <SidebarSearchIcon>
+              <SearchIcon size={14} strokeWidth={1.7} />
+            </SidebarSearchIcon>
+            <SidebarSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
             />
-          </BrandMark>
-          <BrandWordmark>
-            Studio<BrandDot aria-hidden="true">·</BrandDot>
-          </BrandWordmark>
-          <MobileMenuButton
-            $variant="close"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-            style={{ marginLeft: 'auto' }}
+          </SidebarSearch>
+
+          <NavSection
+            ref={slideRef}
+            tabIndex={-1}
+            aria-label={showLevel1 || domain === null ? 'Studio sections' : `${domain.label} section`}
           >
-            <XIcon size={15} strokeWidth={1.8} />
-          </MobileMenuButton>
-        </BrandRow>
+            <AnimatePresence mode="wait" initial={false}>
+              <NavLevelSlide
+                as={motion.div}
+                key={slideKey}
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -12 }}
+                transition={{ duration: 0.2, ease: ease.premium }}
+              >
+                {showLevel1 || domain === null ? (
+                  <SidebarDomains
+                    config={nav}
+                    activeKey={activeDomain?.key ?? null}
+                    badges={badges}
+                    query={query}
+                    role={role ?? null}
+                    onNavigate={closeMobile}
+                  />
+                ) : (
+                  <SidebarSection
+                    domain={domain}
+                    activeTo={activeItem?.to ?? null}
+                    badges={badges}
+                    query={query}
+                    role={role ?? null}
+                    onNavigate={closeMobile}
+                    onBack={pinLevel1}
+                    backRef={backRef}
+                  />
+                )}
+              </NavLevelSlide>
+            </AnimatePresence>
+          </NavSection>
 
-        <SidebarSearch>
-          <SidebarSearchIcon>
-            <SearchIcon size={14} strokeWidth={1.7} />
-          </SidebarSearchIcon>
-          <SidebarSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-          />
-        </SidebarSearch>
-
-        <NavSection>
-          {filteredGroups.map((group, gi) => (
-            <div key={group.section}>
-              <NavGroupLabel>{group.section}</NavGroupLabel>
-              {group.items.map((item, i) => {
-                const Icon = iconMap[item.icon];
-                const active = isActive(item.to);
-                return (
-                  <motion.div
-                    key={item.to}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, ease: ease.premium, delay: 0.05 + (gi + i) * 0.03 }}
-                  >
-                    <NavItemLink
-                      to={item.to}
-                      $active={active}
-                      aria-current={active ? 'page' : undefined}
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      <NavItemIcon $active={active}>
-                        <Icon size={15} strokeWidth={1.6} />
-                      </NavItemIcon>
-                      <span>{item.label}</span>
-                    </NavItemLink>
-                  </motion.div>
-                );
-              })}
-            </div>
-          ))}
-        </NavSection>
-
-        <RecentSection>
-          <RecentLabel>Recent chats</RecentLabel>
-          {recentChats !== null && (
-            <>
-              {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
-              {filteredRecents.map((c) => (
-                <RecentItemLink key={c.id} to={c.to} onClick={() => setMobileOpen(false)}>
-                  {c.title}
-                </RecentItemLink>
-              ))}
-              {recentChats.length === 0 && !q && (
-                <RecentEmpty to="/agent-studio/chat">Start your first chat →</RecentEmpty>
+          {showLevel1 && (
+            <RecentSection>
+              <RecentLabel>Recent chats</RecentLabel>
+              {recentChats !== null && (
+                <>
+                  {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
+                  {filteredRecents.map((c) => (
+                    <RecentItemLink key={c.id} to={c.to} onClick={closeMobile}>
+                      {c.title}
+                    </RecentItemLink>
+                  ))}
+                  {recentChats.length === 0 && !q && (
+                    <RecentEmpty to="/agent-studio/chat">Start your first chat →</RecentEmpty>
+                  )}
+                </>
               )}
-            </>
+            </RecentSection>
           )}
-        </RecentSection>
 
-        <SidebarFooter>
-          <UserCard>
-            <UserAvatar aria-hidden="true">{user.initials}</UserAvatar>
-            <UserMeta>
-              <UserName>{workspace.name}</UserName>
-              <UserTier>{workspace.plan}</UserTier>
-            </UserMeta>
-          </UserCard>
-
-          <UpgradeCard>
-            <UpgradeTitle>Upgrade to Scale</UpgradeTitle>
-            <UpgradeModal />
-          </UpgradeCard>
-        </SidebarFooter>
-      </ShellSidebar>
+          <SidebarFooter>
+            <UserCard>
+              <UserAvatar aria-hidden="true">{user.initials}</UserAvatar>
+              <UserMeta>
+                <UserName>{workspace.name}</UserName>
+                <UserTier>{workspace.plan}</UserTier>
+              </UserMeta>
+            </UserCard>
+          </SidebarFooter>
+          <span aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+            {announcement}
+          </span>
+        </ShellSidebar>
+      )}
 
       <ShellBody>
         <Topbar>
@@ -397,9 +449,21 @@ export function StudioShell({
             >
               <MenuIcon size={16} strokeWidth={1.8} />
             </MobileMenuButton>
-            {topbarOrg ?? <TopbarTitle>{workspace.name}</TopbarTitle>}
-            <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
-            <TopbarSubtitle>Studio</TopbarSubtitle>
+            {isBuilder ? (
+              <TopbarBackLink to="/agent-studio/agents">← Agents</TopbarBackLink>
+            ) : (
+              <>
+                {topbarOrg ?? <TopbarTitle>{workspace.name}</TopbarTitle>}
+                <TopbarSubtitle aria-hidden="true">·</TopbarSubtitle>
+                <TopbarSubtitle>Studio</TopbarSubtitle>
+              </>
+            )}
+            {!isBuilder && activeDomain !== null && (
+              <TopbarSubtitle>
+                {activeDomain.label}
+                {activeItem !== null ? ` / ${activeItem.label}` : ''}
+              </TopbarSubtitle>
+            )}
             {topbarExtra}
             <TopbarSearchHint onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
               <SearchIcon size={11} strokeWidth={1.7} />

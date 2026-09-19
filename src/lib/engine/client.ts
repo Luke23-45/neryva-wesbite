@@ -29,6 +29,8 @@ export type EngineErrorCode =
   | 'forbidden'
   | 'entitlement_required'
   | 'past_due'
+  | 'seat_limit_reached'
+  | 'quota_exceeded'
   | 'step_up_required'
   | 'not_found'
   | 'validation_failed'
@@ -36,6 +38,9 @@ export type EngineErrorCode =
   | 'idempotency_in_flight'
   | 'idempotency_conflict'
   | 'conflict'
+  | 'precondition_failed'
+  | 'resource_purged'
+  | 'serialization_failure'
   | 'internal_error'
   | 'service_unavailable'
   | 'network_error';
@@ -93,6 +98,8 @@ export interface EngineRequestInit {
   idempotent?: boolean;
   /** Step-up MFA proof (privileged acts: role→owner/admin, transfer, deletion, key issue). */
   mfaProof?: string;
+  /** Extra headers (e.g. `If-Match` for optimistic-concurrency draft writes). Merged over generated headers. */
+  headers?: Record<string, string>;
   /** Override the org header explicitly (e.g. a different org's scoped call). */
   orgId?: string | null;
   query?: Record<string, string | number | boolean | undefined>;
@@ -127,6 +134,8 @@ const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set([
   'forbidden',
   'entitlement_required',
   'past_due',
+  'seat_limit_reached',
+  'quota_exceeded',
   'step_up_required',
   'not_found',
   'validation_failed',
@@ -134,6 +143,9 @@ const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set([
   'idempotency_in_flight',
   'idempotency_conflict',
   'conflict',
+  'precondition_failed',
+  'resource_purged',
+  'serialization_failure',
   'internal_error',
   'service_unavailable',
   'network_error',
@@ -150,8 +162,16 @@ function defaultCodeForStatus(status: number): EngineErrorCode {
   if (status === 404) {
     return 'not_found';
   }
+  if (status === 402) {
+    // Non-envelope 402s (edge pages): the engine always envelopes (past_due
+    // vs seat_limit_reached), so this is only the no-body fallback.
+    return 'past_due';
+  }
   if (status === 409) {
     return 'conflict';
+  }
+  if (status === 412) {
+    return 'precondition_failed';
   }
   if (status === 429) {
     return 'rate_limited';
@@ -214,6 +234,11 @@ async function execute<T>(path: string, init: EngineRequestInit, retryOn401: boo
   }
   if (init.mfaProof) {
     headers['x-mfa-proof'] = init.mfaProof;
+  }
+  if (init.headers) {
+    for (const [key, value] of Object.entries(init.headers)) {
+      headers[key.toLowerCase()] = value;
+    }
   }
 
   const response = await fetch(buildUrl(path, init.query), {

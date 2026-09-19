@@ -21,6 +21,7 @@ import PlatformShell from '@pages/platform/PlatformShell';
 import AuthCallbackPage from '@pages/platform/AuthCallbackPage';
 import WelcomePage from '@pages/platform/WelcomePage';
 import InvitePage from '@pages/platform/InvitePage';
+import ConnectorsOAuthPage from '@pages/platform/ConnectorsOAuthPage';
 import PlatformHomePage from '@pages/platform/PlatformHomePage';
 import OrgMembersPage from '@pages/platform/OrgMembersPage';
 import ProjectsPage from '@pages/platform/ProjectsPage';
@@ -35,8 +36,11 @@ import AgentStudioShell from '@pages/products/agent_studio/AgentStudioShell';
 import AgentStudioChatPage from '@pages/products/agent_studio/AgentStudioChatPage';
 import AgentStudioDashboardPage from '@pages/products/agent_studio/AgentStudioDashboardPage';
 import AgentStudioAgentsPage from '@pages/products/agent_studio/AgentStudioAgentsPage';
+import AgentStudioAgentsOverviewPage from '@pages/products/agent_studio/AgentStudioAgentsOverviewPage';
 import AgentStudioAgentDetailPage from '@pages/products/agent_studio/AgentStudioAgentDetailPage';
 import AgentStudioAgentEditPage from '@pages/products/agent_studio/AgentStudioAgentEditPage';
+import AgentStudioAgentBuilderNewPage from '@pages/products/agent_studio/AgentStudioAgentBuilderNewPage';
+import AgentStudioAgentBuilderPage from '@pages/products/agent_studio/AgentStudioAgentBuilderPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
@@ -50,6 +54,12 @@ import AgentStudioSettingsSecurityPage from '@pages/products/agent_studio/AgentS
 import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeysPage';
 import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKnowledgePage';
 import AgentStudioModelsPage from '@pages/products/agent_studio/AgentStudioModelsPage';
+import AgentStudioToolsPage from '@pages/products/agent_studio/AgentStudioToolsPage';
+import AgentStudioMemoryPage from '@pages/products/agent_studio/AgentStudioMemoryPage';
+import AgentStudioDatasetsPage from '@pages/products/agent_studio/AgentStudioDatasetsPage';
+import AgentStudioBlocksPage from '@pages/products/agent_studio/AgentStudioBlocksPage';
+import AgentStudioChannelsPage from '@pages/products/agent_studio/AgentStudioChannelsPage';
+import AgentStudioApprovalsPage from '@pages/products/agent_studio/AgentStudioApprovalsPage';
 import AgentStudioAnalyticsPage from '@pages/products/agent_studio/AgentStudioAnalyticsPage';
 import AgentStudioCompliancePage from '@pages/products/agent_studio/AgentStudioCompliancePage';
 import AgentStudioTemplatesPage from '@pages/products/agent_studio/AgentStudioTemplatesPage';
@@ -189,6 +199,19 @@ export const inviteRoute = createRoute({
   component: InvitePage,
 });
 
+// Connector OAuth landing (team_setup_ledger.md F-A8): the engine's public
+// callback 302s to /platform/org/:orgId/connectors?oauth= — top-level like
+// the invite page, since the provider redirects an anonymous browser here.
+// It adopts the callback org and hands off to the connectors surface.
+export const connectorsOAuthRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/platform/org/$orgId/connectors',
+  validateSearch: (search: Record<string, unknown>) => ({
+    oauth: typeof search.oauth === 'string' ? search.oauth : undefined,
+  }),
+  component: ConnectorsOAuthPage,
+});
+
 // The console area. Guarded by the ONBOARDING gate only: anonymous visitors
 // are PlatformShell's business (it renders the sign-in card), while an
 // authenticated account that still owes /platform/welcome is redirected there
@@ -324,6 +347,33 @@ export const agentStudioAgentEditRoute = createRoute({
   component: AgentStudioAgentEditPage,
 });
 
+// Builder entry (BUILD_PLAN.md §B): static segment wins over the
+// `/$agentId` dynamic sibling, so /new never resolves as an id.
+export const agentStudioAgentsNewRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/new',
+  component: AgentStudioAgentBuilderNewPage,
+});
+
+export const agentStudioAgentBuildRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId/build',
+  // C15 operate re-entry: ?slot=<spine-or-kind> resumes the builder on a
+  // slot (unknown values are ignored, never an error).
+  validateSearch: (search: Record<string, unknown>) => ({
+    slot: typeof search.slot === 'string' ? search.slot : undefined,
+  }),
+  component: AgentStudioAgentBuilderPage,
+});
+
+// Agents Overview (SIDEBAR_LEDGER.md P2): static child — static segments win
+// over the `/$agentId` dynamic sibling, so /overview never resolves as an id.
+export const agentStudioAgentsOverviewRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/overview',
+  component: AgentStudioAgentsOverviewPage,
+});
+
 export const agentStudioConversationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/conversations',
@@ -409,6 +459,50 @@ export const agentStudioModelsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models',
   component: AgentStudioModelsPage,
+});
+
+export const agentStudioToolsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/tools',
+  component: AgentStudioToolsPage,
+});
+
+// Libraries additions (SIDEBAR_LEDGER.md P3): additive leaf routes, no moves.
+export const agentStudioMemoryRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/memory',
+  component: AgentStudioMemoryPage,
+});
+
+export const agentStudioDatasetsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/datasets',
+  component: AgentStudioDatasetsPage,
+});
+
+export const agentStudioBlocksRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/blocks',
+  component: AgentStudioBlocksPage,
+});
+
+export const agentStudioChannelsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/channels',
+  // C14 publish exit: the success screen links here with ?returnTo=<detail
+  // URL> + ?assistantId=<id> so connect-then-return never dead-ends. Both
+  // optional — the library works standalone without them.
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+    assistantId: typeof search.assistantId === 'string' ? search.assistantId : undefined,
+  }),
+  component: AgentStudioChannelsPage,
+});
+
+export const agentStudioApprovalsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/approvals',
+  component: AgentStudioApprovalsPage,
 });
 
 export const agentStudioAnalyticsRoute = createRoute({
@@ -641,6 +735,7 @@ export const routeDefinitions = [
   authCallbackRoute,
   welcomeRoute,
   inviteRoute,
+  connectorsOAuthRoute,
   platformRoute.addChildren([
     platformIndexRoute,
     platformMembersRoute,
@@ -656,9 +751,20 @@ export const routeDefinitions = [
     agentStudioIndexRoute,
     agentStudioChatRoute,
     agentStudioDashboardRoute,
-    agentStudioAgentsRoute.addChildren([agentStudioAgentDetailRoute, agentStudioAgentEditRoute]),
+    agentStudioAgentsRoute.addChildren([
+      agentStudioAgentsOverviewRoute,
+      agentStudioAgentsNewRoute,
+      agentStudioAgentDetailRoute,
+      agentStudioAgentBuildRoute,
+      agentStudioAgentEditRoute,
+    ]),
     agentStudioKnowledgeRoute,
     agentStudioModelsRoute,
+    agentStudioToolsRoute,
+    agentStudioMemoryRoute,
+    agentStudioDatasetsRoute,
+    agentStudioChannelsRoute,
+    agentStudioApprovalsRoute,
     agentStudioConversationsRoute,
     agentStudioActivityRoute,
     agentStudioAnalyticsRoute,
@@ -669,6 +775,7 @@ export const routeDefinitions = [
     agentStudioUsageRoute,
     agentStudioEvaluationsRoute,
     agentStudioComplianceRoute,
+    agentStudioBlocksRoute,
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,

@@ -69,9 +69,24 @@ function relativeTime(iso: string | null): string | null {
   return formatDistanceToNow(at, { addSuffix: true });
 }
 
-/** A notification's own in-app link, if it is one we're willing to open. */
+/**
+ * A notification's in-app target. Explicit links win; kind-routed fallbacks
+ * cover server notifications that carry data but no link (approval +
+ * escalation fan-out name the queue, not a URL — the queues are stable
+ * routes, so routing by kind is exact, not guessing).
+ */
 function internalLink(item: NotificationItem): string | null {
-  return item.link !== null && item.link.startsWith('/') && !item.link.startsWith('//') ? item.link : null;
+  if (item.link !== null && item.link.startsWith('/') && !item.link.startsWith('//')) {
+    return item.link;
+  }
+  const kind = (item.category ?? '').toLowerCase();
+  if (kind.includes('approval')) {
+    return '/agent-studio/approvals';
+  }
+  if (kind.includes('escalation')) {
+    return '/agent-studio/conversations';
+  }
+  return null;
 }
 
 export function NotificationsPopover() {

@@ -133,11 +133,18 @@ export function AgentStudioChatView() {
 
   const onAttach = (file: File | null | undefined) => {
     if (!file) return;
-    void attachments.attach(file).then((sessionId) => {
-      if (sessionId === null) {
-        toast.error(`${file.name} could not be attached`);
-      }
-    });
+    void attachments
+      .attach({ file, purpose: 'MESSAGE_ATTACHMENT' })
+      .then((sessionId) => {
+        if (sessionId === null) {
+          toast.error(`${file.name} could not be attached — unsupported file type`);
+        }
+      })
+      .catch((error: unknown) => {
+        // Authorize/complete refusals (size window, allowlist, slug clash)
+        // throw so the engine's reason renders verbatim.
+        toast.error(error instanceof Error ? error.message : `${file.name} could not be attached`);
+      });
   };
 
   const typing = session.phase === 'streaming' || session.phase === 'sending' || session.phase === 'creating';

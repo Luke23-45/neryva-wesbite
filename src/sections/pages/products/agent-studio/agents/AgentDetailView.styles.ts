@@ -1,4 +1,17 @@
-import styled from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
+
+export const CurrentTag = styled.span`
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: ${({ theme }) => theme.app.status.success.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.success.border};
+  color: ${({ theme }) => theme.app.status.success.fg};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+`;
 
 export const BackLink = styled.a`
   display: inline-flex;
@@ -196,11 +209,24 @@ export const VersionList = styled.div`
   }
 `;
 
-export const VersionRow = styled.div`
+const highlightPulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+`;
+
+export const VersionRow = styled.div<{ $highlight?: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 22px;
+  border-radius: 10px;
+  ${({ $highlight, theme }) =>
+    $highlight &&
+    css`
+      outline: 1px solid ${theme.app.status.info.border};
+      background: ${theme.app.status.info.bg};
+      animation: ${highlightPulse} 1.6s ease-in-out 2;
+    `};
 `;
 
 export const VersionMain = styled.div`

@@ -130,7 +130,7 @@ export function AnalyticsView() {
                       <CellPrimary>{a.name}</CellPrimary>
                     </DataCell>
                     <DataCell $w="20%">
-                      {a.status ? <StatusPill tone={a.status === 'active' ? 'success' : 'neutral'}>{a.status}</StatusPill> : <span style={{ opacity: 0.4 }}>—</span>}
+                      <StatusPill tone={a.status === 'live' ? 'success' : a.status === 'disabled' ? 'warning' : 'neutral'}>{a.status}</StatusPill>
                     </DataCell>
                     <DataCell $w="20%">
                       {a.model ? <CellMono>{a.model}</CellMono> : <span style={{ opacity: 0.4 }}>—</span>}

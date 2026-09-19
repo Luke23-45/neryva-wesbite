@@ -19,7 +19,18 @@ describe('normalizeNotification', () => {
       link: '/platform/billing',
       createdAt: '2026-09-06T10:00:00Z',
       read: false,
+      data: null,
     });
+  });
+
+  it('carries the engine data payload for precise matching (drift)', () => {
+    const item = normalizeNotification({
+      id: 'n3',
+      title: 'Model drift on Returns Helper',
+      kind: 'assistant.model_drift',
+      data: { assistant_id: 'a1', drifted: [{ alias: 'acme/sonnet', reason: 'entry_changed' }] },
+    });
+    expect(item?.data).toEqual({ assistant_id: 'a1', drifted: [{ alias: 'acme/sonnet', reason: 'entry_changed' }] });
   });
 
   it('falls back through alternate field spellings', () => {
