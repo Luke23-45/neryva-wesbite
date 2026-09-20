@@ -198,12 +198,12 @@ export default function PlatformHomePage() {
                             <CardBrief>Ask your admin to enable {product.display_name}.</CardBrief>
                           )
                         ) : product.portal_path ? (
-                          <Link
-                            to={product.portal_path.startsWith('/agent-studio') ? '/agent-studio/dashboard' : product.portal_path.startsWith('/deployment') ? '/deployment/dashboard' : '/platform'}
-                            style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}
-                          >
-                            Open →
-                          </Link>
+                            <Link
+                              to={product.portal_path.startsWith('/agent-studio') ? '/agent-studio/dashboard' : '/platform'}
+                              style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}
+                            >
+                              Open →
+                            </Link>
                         ) : (
                           <CardBrief>Coming soon.</CardBrief>
                         )}

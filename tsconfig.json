@@ -32,5 +32,8 @@
       "@neryva_data/*": ["src/neryva_data/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Parked reference template (no approved architecture yet) — excluded
+  // from typecheck like legacy/scratch. See src/future/deployment/README.md.
+  "exclude": ["src/future"]
 }

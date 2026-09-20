@@ -68,31 +68,10 @@ import AgentStudioTeamsPage from '@pages/products/agent_studio/AgentStudioTeamsP
 import AgentStudioUsagePage from '@pages/products/agent_studio/AgentStudioUsagePage';
 import AgentStudioEvaluationsPage from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
 
-// Deployment app shell (auth-gated)
-import DeploymentShell from '@pages/products/deployment/DeploymentShell';
-import DeploymentDashboardPage from '@pages/products/deployment/DeploymentDashboardPage';
-import DeploymentPipelinesPage from '@pages/products/deployment/DeploymentPipelinesPage';
-import DeploymentPipelineDetailPage from '@pages/products/deployment/DeploymentPipelineDetailPage';
-import DeploymentDeploymentsPage from '@pages/products/deployment/DeploymentDeploymentsPage';
-import DeploymentDeployDetailPage from '@pages/products/deployment/DeploymentDeployDetailPage';
-import DeploymentInfrastructurePage from '@pages/products/deployment/DeploymentInfrastructurePage';
-import DeploymentLogsPage from '@pages/products/deployment/DeploymentLogsPage';
-import DeploymentSettingsIndexPage from '@pages/products/deployment/DeploymentSettingsIndexPage';
-import DeploymentSettingsGeneralPage from '@pages/products/deployment/DeploymentSettingsGeneralPage';
-import DeploymentSettingsEnvironmentsPage from '@pages/products/deployment/DeploymentSettingsEnvironmentsPage';
-import DeploymentSettingsNotificationsPage from '@pages/products/deployment/DeploymentSettingsNotificationsPage';
-import DeploymentSettingsAccessPage from '@pages/products/deployment/DeploymentSettingsAccessPage';
-import DeploymentAlertsPage from '@pages/products/deployment/DeploymentAlertsPage';
-import DeploymentCostPage from '@pages/products/deployment/DeploymentCostPage';
-import DeploymentSecretsPage from '@pages/products/deployment/DeploymentSecretsPage';
-import DeploymentCompliancePage from '@pages/products/deployment/DeploymentCompliancePage';
-import DeploymentWebhooksPage from '@pages/products/deployment/DeploymentWebhooksPage';
-import DeploymentNetworkPage from '@pages/products/deployment/DeploymentNetworkPage';
-import DeploymentScalingPage from '@pages/products/deployment/DeploymentScalingPage';
-import DeploymentExperimentsPage from '@pages/products/deployment/DeploymentExperimentsPage';
-import DeploymentTeamsPage from '@pages/products/deployment/DeploymentTeamsPage';
-import DeploymentUsagePage from '@pages/products/deployment/DeploymentUsagePage';
-import DeploymentReleasesPage from '@pages/products/deployment/DeploymentReleasesPage';
+// NOTE (parked): the /deployment app shell lives unrouted under
+// `src/future/deployment/` — reference template, no approved architecture
+// yet. Its ~25 routes were removed here; re-add them from the parked tree
+// when the product is rebuilt (see src/future/deployment/README.md).
 
 import { requireEngineSession, requireOnboardedSession } from '@lib/engine/session-gate';
 
@@ -547,169 +526,10 @@ export const agentStudioEvaluationsRoute = createRoute({
   component: AgentStudioEvaluationsPage,
 });
 
-// ─── Deployment (auth-gated app shell) ────────────────
-export const deploymentRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/deployment',
-  beforeLoad: async () => {
-    // Same two-step gate as /agent-studio: session, then first-run (F1-7).
-    await requireEngineSession();
-    await requireOnboardedSession();
-  },
-  component: DeploymentShell,
-});
-
-export const deploymentIndexRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/',
-  beforeLoad: () => { throw redirect({ to: '/deployment/dashboard' }); },
-  component: () => null,
-});
-
-export const deploymentDashboardRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/dashboard',
-  component: DeploymentDashboardPage,
-});
-
-export const deploymentPipelinesRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/pipelines',
-  component: DeploymentPipelinesPage,
-});
-
-export const deploymentPipelineDetailRoute = createRoute({
-  getParentRoute: () => deploymentPipelinesRoute,
-  path: '/$pipelineId',
-  component: DeploymentPipelineDetailPage,
-});
-
-export const deploymentDeploymentsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/deployments',
-  component: DeploymentDeploymentsPage,
-});
-
-export const deploymentDeployDetailRoute = createRoute({
-  getParentRoute: () => deploymentDeploymentsRoute,
-  path: '/$deployId',
-  component: DeploymentDeployDetailPage,
-});
-
-export const deploymentInfrastructureRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/infrastructure',
-  component: DeploymentInfrastructurePage,
-});
-
-export const deploymentLogsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/logs',
-  component: DeploymentLogsPage,
-});
-
-export const deploymentSettingsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/settings',
-  component: DeploymentSettingsIndexPage,
-});
-
-export const deploymentSettingsIndexRoute = createRoute({
-  getParentRoute: () => deploymentSettingsRoute,
-  path: '/',
-  beforeLoad: () => { throw redirect({ to: '/deployment/settings/general' }); },
-  component: () => null,
-});
-
-export const deploymentSettingsGeneralRoute = createRoute({
-  getParentRoute: () => deploymentSettingsRoute,
-  path: '/general',
-  component: DeploymentSettingsGeneralPage,
-});
-
-export const deploymentSettingsEnvironmentsRoute = createRoute({
-  getParentRoute: () => deploymentSettingsRoute,
-  path: '/environments',
-  component: DeploymentSettingsEnvironmentsPage,
-});
-
-export const deploymentSettingsNotificationsRoute = createRoute({
-  getParentRoute: () => deploymentSettingsRoute,
-  path: '/notifications',
-  component: DeploymentSettingsNotificationsPage,
-});
-
-export const deploymentSettingsAccessRoute = createRoute({
-  getParentRoute: () => deploymentSettingsRoute,
-  path: '/access',
-  component: DeploymentSettingsAccessPage,
-});
-
-export const deploymentAlertsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/alerts',
-  component: DeploymentAlertsPage,
-});
-
-export const deploymentCostRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/cost',
-  component: DeploymentCostPage,
-});
-
-export const deploymentSecretsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/secrets',
-  component: DeploymentSecretsPage,
-});
-
-export const deploymentComplianceRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/compliance',
-  component: DeploymentCompliancePage,
-});
-
-export const deploymentWebhooksRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/webhooks',
-  component: DeploymentWebhooksPage,
-});
-
-export const deploymentNetworkRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/network',
-  component: DeploymentNetworkPage,
-});
-
-export const deploymentScalingRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/scaling',
-  component: DeploymentScalingPage,
-});
-
-export const deploymentExperimentsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/experiments',
-  component: DeploymentExperimentsPage,
-});
-
-export const deploymentTeamsRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/teams',
-  component: DeploymentTeamsPage,
-});
-
-export const deploymentUsageRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/usage',
-  component: DeploymentUsagePage,
-});
-
-export const deploymentReleasesRoute = createRoute({
-  getParentRoute: () => deploymentRoute,
-  path: '/releases',
-  component: DeploymentReleasesPage,
-});
+// ─── Deployment (PARKED — see note at the imports above) ────────────────
+// The /deployment shell (dashboard, pipelines, deployments, settings, …)
+// lives unrouted under src/future/deployment/. Nothing below this line may
+// reference it until the product is rebuilt with an approved architecture.
 
 // ─── Route Tree ────────────────────────────────────────
 
@@ -784,32 +604,6 @@ export const routeDefinitions = [
       agentStudioSettingsBillingRoute,
       agentStudioSettingsSecurityRoute,
       agentStudioSettingsApiKeysRoute,
-    ]),
-  ]),
-  deploymentRoute.addChildren([
-    deploymentIndexRoute,
-    deploymentDashboardRoute,
-    deploymentPipelinesRoute.addChildren([deploymentPipelineDetailRoute]),
-    deploymentDeploymentsRoute.addChildren([deploymentDeployDetailRoute]),
-    deploymentInfrastructureRoute,
-    deploymentLogsRoute,
-    deploymentAlertsRoute,
-    deploymentCostRoute,
-    deploymentSecretsRoute,
-    deploymentComplianceRoute,
-    deploymentWebhooksRoute,
-    deploymentNetworkRoute,
-    deploymentScalingRoute,
-    deploymentExperimentsRoute,
-    deploymentTeamsRoute,
-    deploymentUsageRoute,
-    deploymentReleasesRoute,
-    deploymentSettingsRoute.addChildren([
-      deploymentSettingsIndexRoute,
-      deploymentSettingsGeneralRoute,
-      deploymentSettingsEnvironmentsRoute,
-      deploymentSettingsNotificationsRoute,
-      deploymentSettingsAccessRoute,
     ]),
   ]),
 ];
