@@ -18,4 +18,22 @@ const api = axios.create({
   withCredentials: true,
 });
 
+/**
+ * Derive a user-facing message from an unknown throw site.
+ *
+ * The public marketing APIs type their catches as `unknown` (never `any`):
+ * axios failures are narrowed with `axios.isAxiosError`, and anything else
+ * falls back to the caller-supplied message. `response.data` is untyped by
+ * axios, so the extracted `message` is validated as a string before use.
+ */
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const message: unknown = error.response?.data?.message;
+    if (typeof message === 'string' && message.length > 0) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
 export default api;

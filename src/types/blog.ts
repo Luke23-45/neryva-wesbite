@@ -47,7 +47,7 @@ export interface CreateBlogPostDTO {
   seoDescription?: string;
 }
 
-export interface UpdateBlogPostDTO extends Partial<CreateBlogPostDTO> {}
+export type UpdateBlogPostDTO = Partial<CreateBlogPostDTO>;
 
 export interface BlogCategory {
   category: string;

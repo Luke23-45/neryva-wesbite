@@ -2,46 +2,26 @@
  * Entitlement rendering (frontend-engine-integration-plan A4, access-model
  * "what not bought yet means in the UI"):
  *
- *  - `useEntitlement(product)` — the state plus the two derived flags the
- *    UI needs: reads blocked (none/expired → the engine answers 403) and
- *    writes blocked (past_due/suspended → the engine answers 402).
  *  - `EntitlementBanner` — the mode strip under the topbar: trial countdown,
  *    payment alert, suspension notice, or the start/renew CTA. CTA copy is
  *    role-aware (owner/billing get the action, everyone else gets "ask").
  *  - `EntitlementGate` — children render only while reads are alive; the
  *    blocked states render the honest brief + CTA instead.
  *
+ * `useEntitlement(product)` (the state + derived flags) lives in
+ * ./useEntitlement.ts so this file exports only components.
+ *
  * Actions themselves stay wired in their owning tasks (trial start is B-5);
  * here we link to the surface that owns the action — no fake buttons.
  */
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { AlertTriangle, ArrowRight, PauseCircle, Rocket, Sparkles } from 'lucide-react';
 import { engine } from '@lib/engine/client';
-import { useOrg, type EntitlementState } from '@/Context/OrgContext';
-
-export interface EntitlementInfo {
-  state: EntitlementState;
-  /** Engine answers 402 on writes (payment states) — render read-only. */
-  writeBlocked: boolean;
-  /** Engine answers 403 on reads (never entitled / expired) — gate the page. */
-  readBlocked: boolean;
-}
-
-export function useEntitlement(product: string): EntitlementInfo {
-  const { entitlementState } = useOrg();
-  const state = entitlementState(product);
-  return useMemo(
-    () => ({
-      state,
-      writeBlocked: state === 'past_due' || state === 'suspended',
-      readBlocked: state === 'none' || state === 'expired',
-    }),
-    [state],
-  );
-}
+import { useOrg } from '@/Context/OrgContext';
+import { useEntitlement } from './useEntitlement';
 
 const BannerWrap = styled.div<{ $tone: 'info' | 'warning' | 'error' | 'neutral' }>`
   display: flex;

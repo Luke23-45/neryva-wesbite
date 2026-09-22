@@ -15,9 +15,10 @@ export const useNewsletterMutation = () => {
           return subscribe(action.payload);
         case 'UNSUBSCRIBE':
           return unsubscribe(action.payload);
-        default:
+        default: {
           const a: never = action;
           throw new Error(`Invalid newsletter action: ${JSON.stringify(a)}`);
+        }
       }
     },
     onSuccess: (data, action) => {

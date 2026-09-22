@@ -1,4 +1,4 @@
-import api from '@/api/index';
+import api, { apiErrorMessage } from '@/api/index';
 import type { ApiResponse } from '@types';
 import type { CareerResponse } from '@types';
 
@@ -8,9 +8,9 @@ export const apply = async (formData: FormData): Promise<ApiResponse<CareerRespo
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     console.error('API Error: Failed to submit application.', error);
-    throw new Error(error.response?.data?.message || 'Could not submit application. Please try again.');
+    throw new Error(apiErrorMessage(error, 'Could not submit application. Please try again.'));
   }
 };
 

@@ -63,7 +63,7 @@ import {
   DeploymentPipelineTitle,
 } from './DeploymentPipeline.styles';
 
-import { DeploymentStepIcons } from '@assets/icons/products/PipelineStepIcons';
+import { DeploymentStepIcons } from '@assets/icons/products/PipelineStepIconMaps';
 
 const LUCIDE_STYLE = { width: 18, height: 18, strokeWidth: 1.5, 'aria-hidden': true } as const;
 

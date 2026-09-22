@@ -1,4 +1,3 @@
-/* eslint-disable no-import-assign */
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, ChevronDown, Check, Mail } from 'lucide-react';
@@ -13,7 +12,7 @@ import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { spring } from '@styles/motion';
 import { useMembers, useInvites } from '@hooks/engine/queries';
-import type { // eslint-disable-line no-import-assign
+import type {
   MemberRow, InviteRow } from '@hooks/engine/queries';
 import { useInviteMember, useResendInvite, useRevokeInvite, useChangeRole, useSuspendMember, useReactivateMember, useRemoveMember } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
@@ -64,7 +63,7 @@ export function SettingsTeam() {
     <>
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
         <Panel title="Members" subtitle="People with access to this workspace.">
-          {canManageMembers && <InviteRow />}
+          {canManageMembers && <InviteForm />}
           <QueryView query={members} skeleton={<Skeleton $h="260px" $r="12px" />} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members yet', description: 'Invite teammates to collaborate on agents and conversations.' }}>
             {(data) => <MembersTable members={data.members} canManage={canManageMembers} />}
           </QueryView>
@@ -80,7 +79,7 @@ export function SettingsTeam() {
   );
 }
 
-function InviteRow() {
+function InviteForm() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgRole>('developer');
   const invite = useInviteMember();
@@ -144,7 +143,7 @@ function MembersTable({ members, canManage }: { members: MemberRow[]; canManage:
         const role = m.role as OrgRole;
         const hue = ROLE_HUES[role] ?? 'azure';
         return (
-          <MemberRow             key={m.accountId}
+          <MemberTableRow      key={m.accountId}
             as={motion.div}
             layout
             initial={{ opacity: 0, y: 6 }}
@@ -174,7 +173,7 @@ function MembersTable({ members, canManage }: { members: MemberRow[]; canManage:
             <div style={{ width: '44px', display: 'flex', justifyContent: 'flex-end' }}>
               <MemberMore member={m} canManage={canManage} />
             </div>
-          </MemberRow>
+          </MemberTableRow>
         );
       })}
     </TableWrap>
@@ -579,7 +578,7 @@ const TableHeader = styled.div`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
-const MemberRow = styled(motion.div)`
+const MemberTableRow = styled(motion.div)`
   display: flex;
   align-items: center;
   padding: 12px 22px;

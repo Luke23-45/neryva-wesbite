@@ -153,7 +153,7 @@ export const AppliesFeatureIcon: React.FC<AppliesFeatureIconProps> = ({
         }
     };
 
-    const idFormatted = id.toLowerCase().replace(/[\s&,\.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const idFormatted = id.toLowerCase().replace(/[\s&,.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     return (
         <div

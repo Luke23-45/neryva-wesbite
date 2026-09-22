@@ -246,7 +246,7 @@ export const IndustryFeatureIcon: React.FC<IndustryFeatureIconProps> = ({
         }
     };
 
-    const formattedId = id.toLowerCase().replace(/[\s&,\.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const formattedId = id.toLowerCase().replace(/[\s&,.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     return (
         <div

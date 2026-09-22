@@ -33,7 +33,7 @@ function PixelBlocks({
    ════════════════════════════════════════════════════════════════════ */
 
 // 1. Business scope — Crosshair / target focusing a defined region.
-function BusinessScopeIcon() {
+export function BusinessScopeIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -52,7 +52,7 @@ function BusinessScopeIcon() {
 }
 
 // 2. Brand & voice — Speaker emitting sound-waves (tone of voice).
-function BrandVoiceIcon() {
+export function BrandVoiceIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -73,7 +73,7 @@ function BrandVoiceIcon() {
 }
 
 // 3. Knowledge integration — Open book / database with link.
-function KnowledgeIcon() {
+export function KnowledgeIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -97,7 +97,7 @@ function KnowledgeIcon() {
 }
 
 // 4. Behavior guardrails — Shield with internal checkmark.
-function GuardrailsIcon() {
+export function GuardrailsIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -118,7 +118,7 @@ function GuardrailsIcon() {
 }
 
 // 5. Workflow support — Interlocking gears (flow + support).
-function WorkflowIcon() {
+export function WorkflowIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -143,7 +143,7 @@ function WorkflowIcon() {
 }
 
 // 6. Operations & testing — Beaker + chart (refinement / measurement).
-function OperationsIcon() {
+export function OperationsIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -170,7 +170,7 @@ function OperationsIcon() {
    ════════════════════════════════════════════════════════════════════ */
 
 // 1. Architecture — Layered building blocks / blueprint grid.
-function ArchitectureIcon() {
+export function ArchitectureIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -194,7 +194,7 @@ function ArchitectureIcon() {
 }
 
 // 2. Provisioning — Key + lock (secure access).
-function ProvisioningIcon() {
+export function ProvisioningIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -217,7 +217,7 @@ function ProvisioningIcon() {
 }
 
 // 3. Serving — Cloud + signal (model exposed for use).
-function ServingIcon() {
+export function ServingIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -239,7 +239,7 @@ function ServingIcon() {
 }
 
 // 4. Performance optimization — Upward trending graph + lightning (speed).
-function PerformanceIcon() {
+export function PerformanceIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -263,7 +263,7 @@ function PerformanceIcon() {
 }
 
 // 5. Monitoring — Heartbeat / pulse over a baseline (observability).
-function MonitoringIcon() {
+export function MonitoringIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -288,7 +288,7 @@ function MonitoringIcon() {
 }
 
 // 6. Governance — Document / scroll with seal of approval.
-function GovernanceIcon() {
+export function GovernanceIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -308,7 +308,7 @@ function GovernanceIcon() {
 }
 
 // 7. Support — Headset / agent (managed handoff).
-function SupportIcon() {
+export function SupportIcon() {
   return (
     <PixelBlocks
       pixels={[
@@ -327,26 +327,3 @@ function SupportIcon() {
     />
   );
 }
-
-/* ════════════════════════════════════════════════════════════════════
-   PUBLIC REGISTRY — Keyed by the section `id` from each section JSON
-   ════════════════════════════════════════════════════════════════════ */
-
-export const EnterpriseStepIcons: Record<string, React.FC> = {
-  'business-scope': BusinessScopeIcon,
-  'brand-voice': BrandVoiceIcon,
-  'knowledge-integration': KnowledgeIcon,
-  'behavior-guardrails': GuardrailsIcon,
-  'workflow-support': WorkflowIcon,
-  'operations-testing': OperationsIcon,
-};
-
-export const DeploymentStepIcons: Record<string, React.FC> = {
-  architecture: ArchitectureIcon,
-  provisioning: ProvisioningIcon,
-  serving: ServingIcon,
-  performance: PerformanceIcon,
-  monitoring: MonitoringIcon,
-  governance: GovernanceIcon,
-  support: SupportIcon,
-};

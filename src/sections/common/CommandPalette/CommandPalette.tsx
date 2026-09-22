@@ -52,6 +52,26 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
+  // Reset the palette's transient state when it opens, and reset the
+  // highlighted result when the query changes. Both intentionally adjust
+  // state during render — the documented pattern for "reset when a prop
+  // changes" (react.dev/learn/you-might-not-need-an-effect): the reset
+  // commits in the same render, so stale query/results are never painted
+  // and no cascading effect render is needed.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setQuery('');
+      setActive(0);
+    }
+  }
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setActive(0);
+  }
+
   const filtered = useMemo(() => {
     if (!query.trim()) return items;
     const q = query.toLowerCase();
@@ -74,14 +94,13 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
 
   const flat = useMemo(() => filtered, [filtered]);
 
+  // Focus the input when the palette opens — genuine DOM synchronization,
+  // which is what effects are for.
   useEffect(() => {
     if (open) {
-      setQuery('');
-      setActive(0);
-      // Focus input on open
       setTimeout(() => inputRef.current?.focus(), 30);
     }
-  }, [open]);
+  }, [open ]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,11 +127,6 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, flat, active, navigate, onClose]);
-
-  // Reset active when filtered changes
-  useEffect(() => {
-    setActive(0);
-  }, [query]);
 
   return (
     <AnimatePresence>

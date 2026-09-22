@@ -53,7 +53,7 @@ import {
   PipelineTitle,
 } from './EnterprisePipeline.styles';
 
-import { EnterpriseStepIcons } from '@assets/icons/products/PipelineStepIcons';
+import { EnterpriseStepIcons } from '@assets/icons/products/PipelineStepIconMaps';
 
 // Strict typing for our data schema
 interface Feature {

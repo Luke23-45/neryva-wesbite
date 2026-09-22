@@ -109,7 +109,7 @@ export const MissionFeatureIcon: React.FC<MissionFeatureIconProps> = ({
         }
     };
 
-    const idFormatted = id.toLowerCase().replace(/[\s&,\.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    const idFormatted = id.toLowerCase().replace(/[\s&,.]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     return (
         <div style={{ position: 'relative', width: 48, height: 48, ...style }} aria-hidden="true">

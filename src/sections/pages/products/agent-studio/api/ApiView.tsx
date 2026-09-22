@@ -124,15 +124,19 @@ export function ApiView() {
   const paramValue = (p: CatalogParam) => paramValues[paramKey(p)] ?? '';
 
   const builtPath = useMemo(() => {
+    // Self-contained: reads paramValues directly (via the same key scheme as
+    // paramValue) so the dependency list stays honest — closing over the
+    // per-render paramValue helper would defeat the memo.
+    const valueOf = (p: CatalogParam) => paramValues[`${active.id}|${p.in}|${p.name}`] ?? '';
     let path = active.path;
     for (const p of active.params.filter((x) => x.in === 'path')) {
-      const value = paramValue(p).trim();
+      const value = valueOf(p).trim();
       path = path.replace(`{${p.name}}`, value ? encodeURIComponent(value) : `{${p.name}}`);
     }
     const query = active.params
       .filter((x) => x.in === 'query')
-      .filter((x) => paramValue(x).trim() !== '')
-      .map((x) => `${encodeURIComponent(x.name)}=${encodeURIComponent(paramValue(x).trim())}`);
+      .filter((x) => valueOf(x).trim() !== '')
+      .map((x) => `${encodeURIComponent(x.name)}=${encodeURIComponent(valueOf(x).trim())}`);
     return query.length > 0 ? `${path}?${query.join('&')}` : path;
   }, [active, paramValues]);
 

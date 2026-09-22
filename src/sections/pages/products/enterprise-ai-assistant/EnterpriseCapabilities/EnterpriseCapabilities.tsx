@@ -12,7 +12,7 @@ import {
   CellDesc,
 } from './EnterpriseCapabilities.styles';
 
-import { EnterpriseIcons } from '@/assets/icons/products/EnterpriseCapabilityIcons';
+import { EnterpriseIcons } from '@/assets/icons/products/EnterpriseCapabilityIconMap';
 
 const premiumEase = [0.16, 1, 0.3, 1] as const;
 

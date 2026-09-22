@@ -9,7 +9,8 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { EntitlementBanner, EntitlementGate, useEntitlement } from './Entitlement';
+import { EntitlementBanner, EntitlementGate } from './Entitlement';
+import { useEntitlement } from './useEntitlement';
 import { OrgContext, type OrgContextValue, type EntitlementState, type OrgRole } from '@/Context/OrgContext';
 
 const DAY_MS = 86_400_000;

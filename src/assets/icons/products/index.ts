@@ -1,3 +1,3 @@
-export { DeploymentStepIcons, EnterpriseStepIcons } from './PipelineStepIcons';
+export { DeploymentStepIcons, EnterpriseStepIcons } from './PipelineStepIconMaps';
 export { DeploymentUseCaseIcons, DeploymentCapabilityIcons } from './DeploymentIcons';
-export { EnterpriseIcons } from './EnterpriseCapabilityIcons';
+export { EnterpriseIcons } from './EnterpriseCapabilityIconMap';

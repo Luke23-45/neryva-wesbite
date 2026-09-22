@@ -6,6 +6,11 @@
  * orgId, role, projects (+ active project), and per-product entitlement
  * states with helpers for the access-model banner/read-only modes.
  */
+/* eslint-disable react-refresh/only-export-components -- Intentional: this is a
+   cohesive context module (context + provider + hook + supporting constants).
+   Splitting it apart would scatter the module across four files and churn
+   ~20 import sites for a dev-time fast-refresh nicety with zero runtime
+   benefit. */
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { engine, setActiveOrg } from '@lib/engine/client';
@@ -70,7 +75,10 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     staleTime: 30_000,
   });
 
-  const orgs = home.data?.orgs ?? [];
+  // Stabilize the org list identity: `home.data?.orgs ?? []` allocates a new
+  // array on every render while the query has no data, which would defeat the
+  // useMemo dependency checks that consume `orgs` below.
+  const orgs = useMemo(() => home.data?.orgs ?? [], [home.data?.orgs]);
   // The stored org is state (not a render-time localStorage read) so
   // cross-tab switches propagate and the active-org memo stays honest.
   const [stored, setStored] = useState<string | null>(() =>

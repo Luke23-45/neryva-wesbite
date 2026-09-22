@@ -190,7 +190,6 @@ export function ResearchPapers() {
                       // style-neutral Link instead of becoming one.
                       const row = (
                         <AnimatedPaperRow
-                          as="div"
                           $accent={programAccents[paper.program] || theme.colors.text.primary}
                           initial={{ opacity: 0, y: 20 }}
                           whileInView={{ opacity: 1, y: 0 }}
