@@ -380,6 +380,25 @@ export function useUpdateConversationStatus() {
   });
 }
 
+/** Rename a conversation (A3-05) — PATCH title; honest errors via toast, rejection propagates to the caller. */
+export function useRenameConversation() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { conversationId: string; title: string }) =>
+      engine(`/console/org/${orgId}/conversations/${input.conversationId}/title`, {
+        method: 'PATCH',
+        body: { title: input.title },
+        idempotent: true,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-conversation'] });
+    },
+    onError: (error) => toastEngineError(error, 'Could not rename the conversation'),
+  });
+}
+
 // ─── The session orchestrator ────────────────────────────────────────
 
 export type RunPhase = 'idle' | 'creating' | 'sending' | 'streaming' | 'accepted' | 'done' | 'error';

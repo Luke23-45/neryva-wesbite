@@ -376,3 +376,29 @@ describe('create-then-send contract (A2-61/A2-67)', () => {
     expect(result.current.activeRunId).toBe('run-new');
   });
 });
+
+describe('useRenameConversation (A3-05)', () => {
+  it('PATCHes the engine title route with { title } and invalidates chat queries', async () => {
+    engineMock.mockResolvedValue({});
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const wrapper = (function () {
+      return function Wrapper({ children }: { children: React.ReactNode }) {
+        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+      };
+    })();
+    const { useRenameConversation } = await import('./useChat');
+    const { result } = renderHook(() => useRenameConversation(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ conversationId: 'conv-9', title: 'Paris trivia' });
+    });
+    expect(engineMock).toHaveBeenCalledTimes(1);
+    const [url, options] = engineMock.mock.calls[0] as [string, { method?: string; body?: unknown }];
+    expect(url).toBe('/console/org/org-test/conversations/conv-9/title');
+    expect(options.method).toBe('PATCH');
+    expect(options.body).toEqual({ title: 'Paris trivia' });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'chat-conversation'] });
+    invalidateSpy.mockRestore();
+  });
+});

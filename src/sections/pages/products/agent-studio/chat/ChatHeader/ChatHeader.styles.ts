@@ -15,6 +15,13 @@ export const LeftCluster = styled.div`
   min-width: 0;
 `;
 
+export const RightCluster = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 export const Crumbs = styled.nav`
   display: flex;
   align-items: center;
@@ -40,66 +47,94 @@ export const CrumbDivider = styled.span`
   color: ${({ theme }) => theme.app.text.ghost};
 `;
 
-export const ModelButton = styled.button`
+/** Small square icon action (back, rename, delete). */
+export const IconButton = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px 6px 8px;
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  background: ${({ theme }) => theme.app.surface.tint};
-  border-radius: 10px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
-  font-family: ${({ theme }) => theme.typography.fonts.sans};
-  color: ${({ theme }) => theme.app.text.primary};
+  flex-shrink: 0;
   transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast},
     border-color ${({ theme }) => theme.transitions.fast};
 
   &:hover {
     background: ${({ theme }) => theme.app.surface.active};
-    border-color: ${({ theme }) => theme.app.border.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+    border-color: ${({ theme }) => theme.app.border.default};
   }
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 1px;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
 `;
 
-export const ModelBadge = styled.span<{ $hue: 'emerald' | 'azure' | 'lilac' | 'amethyst' }>`
+/** Inline rename field — replaces the title crumb while editing. */
+export const TitleInput = styled.input`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 10px;
-  font-weight: 600;
+  font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: ${({ theme }) => theme.app.text.inverse};
-  background: ${({ $hue }) =>
-    $hue === 'emerald'
-      ? '#05e3a4'
-      : $hue === 'azure'
-        ? '#93c5fd'
-        : $hue === 'lilac'
-          ? '#c084fc'
-          : '#d8b4fe'};
+  color: ${({ theme }) => theme.app.text.primary};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.focus};
+  border-radius: 6px;
+  padding: 3px 8px;
+  min-width: 12ch;
+  max-width: 40ch;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
 `;
 
-export const ModelName = styled.span`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 500;
-  letter-spacing: -0.005em;
+/** The bound agent's serving model — read from the agent's published model policy (never a stub). */
+export const ModelChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 10px;
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 28ch;
 `;
 
-export const ModelChevron = styled.svg<{ $open: boolean }>`
-  width: 13px;
-  height: 13px;
-  color: ${({ theme }) => theme.app.text.muted};
-  transform: rotate(${({ $open }) => ($open ? 180 : 0)}deg);
-  transition: transform ${({ theme }) => theme.transitions.fast};
-`;
-
-export const ModelOptionName = styled.span`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 500;
+/** Conversation lifecycle chip (archived). */
+export const StatusChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  color: ${({ theme }) => theme.app.status.warning.fg};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 `;

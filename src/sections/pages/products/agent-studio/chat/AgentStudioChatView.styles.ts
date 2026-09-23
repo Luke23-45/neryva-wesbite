@@ -156,3 +156,185 @@ export const BannerClose = styled.button`
     outline-offset: 1px;
   }
 `;
+
+/* ── A3-02: honest load-failure state (never a blank page, never a fake empty state) ── */
+
+export const NotFoundWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: auto 0;
+  padding: 8vh 16px;
+  gap: 10px;
+`;
+
+export const NotFoundTitle = styled.h2`
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 1.25rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin: 0;
+`;
+
+export const NotFoundBody = styled.p`
+  font-size: ${({ theme }) => theme.app.type.body};
+  line-height: 1.55;
+  color: ${({ theme }) => theme.app.text.muted};
+  margin: 0 0 8px;
+  max-width: 460px;
+`;
+
+export const NotFoundActions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+`;
+
+export const NotFoundButton = styled.button<{ $primary?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid
+    ${({ theme, $primary }) => ($primary ? 'transparent' : theme.app.border.strong)};
+  background: ${({ theme, $primary }) =>
+    $primary ? theme.app.text.primary : 'transparent'};
+  color: ${({ theme, $primary }) =>
+    $primary ? theme.app.text.inverse : theme.app.text.secondary};
+  transition: background ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast},
+    opacity ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    opacity: ${({ $primary }) => ($primary ? 0.88 : 1)};
+    background: ${({ theme, $primary }) =>
+      $primary ? theme.app.text.primary : theme.app.surface.active};
+    color: ${({ theme, $primary }) =>
+      $primary ? theme.app.text.inverse : theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+`;
+
+/* ── A3-01: agent picker gate — an unbound chat cannot start, so pick honestly ── */
+
+export const PickerWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+`;
+
+export const PickerTitle = styled.p`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin: 0;
+  text-align: center;
+`;
+
+export const PickerList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const PickerItem = styled.button<{ $disabled?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-family: inherit;
+  cursor: ${({ $disabled }) => ($disabled ? 'default' : 'pointer')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.55 : 1)};
+  transition: background ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast},
+    transform ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    background: ${({ theme, $disabled }) =>
+      $disabled ? theme.app.surface.tint : theme.app.surface.active};
+    border-color: ${({ theme, $disabled }) =>
+      $disabled ? theme.app.border.default : theme.app.border.hover};
+    transform: ${({ $disabled }) => ($disabled ? 'none' : 'translateY(-1px)')};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+export const PickerIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.app.surface.active};
+  color: ${({ theme }) => theme.app.text.link};
+  flex-shrink: 0;
+`;
+
+export const PickerName = styled.span`
+  display: block;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 550;
+  letter-spacing: -0.005em;
+`;
+
+export const PickerMeta = styled.span`
+  display: block;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 2px;
+`;
+
+export const PickerEmpty = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 12px;
+  text-align: center;
+  border: 1px dashed ${({ theme }) => theme.app.border.strong};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+  font-size: ${({ theme }) => theme.app.type.body};
+`;
+
+/* ── A3-03: thread loading skeleton ── */
+
+export const SkeletonWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 32px 4px;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+`;
