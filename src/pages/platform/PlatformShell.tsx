@@ -162,6 +162,27 @@ export default function PlatformShell() {
     );
   }
 
+  if (status === 'authenticated' && !orgId) {
+    // D1-01: org context still resolving (cold login lands before the
+    // ['org','home'] query resolves). Skeletons — never the outlet: the
+    // org-gated pages' useOrgRequired() throws "No active organization"
+    // during render, and the router's error boundary is sticky. The engine
+    // autocreates a personal org on first login, so a null orgId here is
+    // only ever mid-propagation, never a real empty state.
+    return (
+      <Shell>
+        <Sidebar />
+        <Main>
+          <TopBar />
+          <Content>
+            <Skeleton $h="32px" $w="220px" />
+            <Skeleton $h="220px" $r="12px" />
+          </Content>
+        </Main>
+      </Shell>
+    );
+  }
+
   if (status === 'anonymous') {
     return (
       <Shell>
