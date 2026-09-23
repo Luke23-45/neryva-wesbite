@@ -92,6 +92,20 @@ describe('parseRunEvent reason (C13 stop lines)', () => {
     expect(event.reason).toBe('budget_exceeded');
   });
 
+  it('carries the classified failure cause from the run.failed envelope (A2-68)', () => {
+    const event = parseRunEvent({
+      id: 'e-68',
+      event: 'run.failed',
+      data: JSON.stringify({ case: 'terminal', value: { code: 'TOOL_POLICY_DENIED', message: 'tool policy denied: create_ticket' } }),
+    });
+    expect(event.terminal).toBe(true);
+    expect(event.failed).toBe(true);
+    expect(event.reason).toBe('tool policy denied: create_ticket');
+    // The literal failure token stays in state so stop-line classifiers
+    // (describeTryStop) still see it; the human reason stays in reason.
+    expect(event.state).toBe('failed');
+  });
+
   it('parses the assistantChunk envelope into live text', () => {
     const event = parseRunEvent({
       id: 'e-19',

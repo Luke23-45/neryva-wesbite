@@ -171,10 +171,17 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
     failed: false,
   };
 
-  // Dotted terminal frames: event `run.completed` / `run.failed`,
-  // data {"message_id": "...", "terminal_reason": "..."}.
+  // Dotted terminal frames: event `run.completed` / `run.failed`.
+  // run.failed carries the failRun envelope {"case":"terminal","value":
+  // {"code":"…","message":"…"}} — the classified cause (e.g.
+  // TOOL_POLICY_DENIED / "tool policy denied: create_ticket") — while
+  // run.completed carries {"message_id": "…", "terminal_reason": "…"}.
   if (eventName.startsWith('run.')) {
-    const reason = str(payload.terminal_reason) ?? str(payload.terminalReason) ?? null;
+    // `value` is the decoded envelope `value` object above ({} when the
+    // payload is the dotted terminal_reason shape).
+    const terminalValue = str(payload.case) === 'terminal' ? value : {};
+    const reason =
+      str(terminalValue.message) ?? str(payload.terminal_reason) ?? str(payload.terminalReason) ?? null;
     const failed = eventName.includes('fail');
     // The wire carries no separate state field — the event name IS the
     // state. Keep the literal failure token in `state` so stop-line
@@ -415,7 +422,9 @@ export function useChatSession(conversationId: string | null, agentId: string | 
       } else if (event.kind === 'usage' && event.usage) {
         setNotices((prev) => [...prev, { id: message.id ?? String(Date.now()) + Math.random(), kind: 'usage', text: event.usage as string }]);
       } else if (event.terminal) {
-        finalize(event.state ?? 'completed', event.failed);
+        // A2-68: carry the classified terminal reason (e.g. "tool policy
+        // denied: create_ticket") so the failure notice names the cause.
+        finalize(event.state ?? 'completed', event.failed, event.reason);
       }
     },
   });
@@ -462,12 +471,15 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, conversationId]);
 
-  const finalize = (state: string, failed: boolean) => {
+  const finalize = (state: string, failed: boolean, reason: string | null = null) => {
     const runId = activeRunId;
     setActiveRunId(null);
     setPhase(failed ? 'error' : 'done');
     if (failed) {
-      setNotices((prev) => [...prev, { id: `err-${Date.now()}`, kind: 'error', text: `The run ended with state "${state}".` }]);
+      // A2-68: the terminal frame names the real cause (e.g. "tool policy
+      // denied: create_ticket") — render it, never just the state.
+      const text = reason ? `The run failed: ${reason}.` : `The run ended with state "${state}".`;
+      setNotices((prev) => [...prev, { id: `err-${Date.now()}`, kind: 'error', text }]);
     } else {
       // First-run ledger F3-1: a successful run in the org IS the activation
       // event (production or test-run — both complete here). Case-insensitive:

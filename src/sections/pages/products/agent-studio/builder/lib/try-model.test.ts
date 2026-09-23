@@ -44,8 +44,18 @@ describe('describeTryStop (separate lines, never merged)', () => {
     expect(stop.kind).toBe('wall-clock');
     expect(stop.headline).toMatch(/budget_exceeded_wall_clock/);
   });
-  it('renders other failures from the reported state', () => {
+  it('renders other failures with the reported reason first (A2-68)', () => {
     const stop = describeTryStop({ state: 'FAILED', reason: 'provider_timeout' });
+    expect(stop.kind).toBe('failed');
+    expect(stop.headline).toBe('The run failed: provider_timeout.');
+  });
+  it('names the classified cause on a tool-policy denial', () => {
+    const stop = describeTryStop({ state: 'failed', reason: 'tool policy denied: create_ticket' });
+    expect(stop.kind).toBe('failed');
+    expect(stop.headline).toBe('The run failed: tool policy denied: create_ticket.');
+  });
+  it('falls back to the state when no reason was reported', () => {
+    const stop = describeTryStop({ state: 'FAILED', reason: null });
     expect(stop.kind).toBe('failed');
     expect(stop.headline).toContain('FAILED');
   });

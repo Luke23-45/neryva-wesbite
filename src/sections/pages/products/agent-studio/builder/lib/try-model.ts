@@ -128,9 +128,13 @@ export function describeTryStop(input: { state: string | null; reason: string | 
     };
   }
   if (state.includes('fail')) {
+    // A2-68: when the terminal frame names the cause (e.g. "tool policy
+    // denied: create_ticket"), it leads — the bare state is not enough.
     return {
       kind: 'failed',
-      headline: `The run ended with state "${input.state ?? 'failed'}".`,
+      headline: input.reason
+        ? `The run failed: ${input.reason}.`
+        : `The run ended with state "${input.state ?? 'failed'}".`,
       detail: input.reason ? `Reported reason: ${input.reason}.` : 'No reason was reported — re-ask or check Status.',
     };
   }
