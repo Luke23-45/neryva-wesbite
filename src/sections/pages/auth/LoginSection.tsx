@@ -4,10 +4,11 @@
  *
  * Signup and signin are the same OP flow: first login auto-provisions the
  * account plus its personal org server-side. Identity-provider buttons
- * render exactly for the enabled set (`GET /login/providers`); with none
- * configured, a "Continue with email" button starts the same OIDC flow
- * without a connection hint so the OP renders its email-code interaction
- * page. Every button hands off to `beginLogin()` (PKCE + return-path stash).
+ * render exactly for the enabled set (`GET /login/providers`); a
+ * "Continue with email" button is ALWAYS rendered alongside them and starts
+ * the same OIDC flow without a connection hint so the OP renders its
+ * email-code interaction page. Every button hands off to `beginLogin()`
+ * (PKCE + return-path stash).
  * While the list loads a placeholder shows; when the engine is
  * unreachable an explicit error with a retry shows instead of an empty page.
  */
@@ -234,7 +235,13 @@ export default function LoginSection() {
                         </FormError>
                     )}
 
-                    {!providersPending && !providersFailed && configured.length === 0 && (
+                    {/* J1-01: email-code entry is ALWAYS offered alongside social
+                        providers, not only when none are configured. The OP's
+                        email-code flow is a first-class entry path (and the
+                        harness/seeded account's only UI path); hiding it the
+                        moment a social IdP is configured silently removes a
+                        login method. */}
+                    {!providersPending && !providersFailed && (
                         <>
                             <ProviderButton
                                 type="button"
