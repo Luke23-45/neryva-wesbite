@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
@@ -654,7 +655,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           onGuardrailsDirty={onGuardrailsDirty}
           onMemoryDirty={onMemoryDirty}
           onBudgetDirty={onBudgetDirty}
-          onCreated={(id) => navigate({ to: buildAgentBuildPath(id) })}
+          onCreated={(id) => {
+            // A2-02: creation consumed the Purpose form — it is not "unsaved
+            // changes". Clear it synchronously (flushSync) so the dirty
+            // guard's shouldBlockFn sees clean state before we navigate.
+            flushSync(() => {
+              setFormState({ dirty: false, valid: false });
+            });
+            navigate({ to: buildAgentBuildPath(id) });
+          }}
           onBindKind={handleBindKind}
         />
       </Main>

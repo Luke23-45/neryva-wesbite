@@ -1,13 +1,16 @@
 import styled from 'styled-components';
 import { Link } from '@tanstack/react-router';
 
-export const ShellRoot = styled.section<{ $collapsed?: boolean }>`
+export const ShellRoot = styled.section<{ $collapsed?: boolean; $builder?: boolean }>`
   position: relative;
   width: 100%;
   min-height: 100vh;
   background: ${({ theme }) => theme.app.bg.base};
   display: grid;
-  grid-template-columns: ${({ $collapsed }) => ($collapsed ? '76px 1fr' : '264px 1fr')};
+  /* A2-01: on builder routes the sidebar is hidden — the content must span
+     the full width, not sit in the 264px sidebar column. */
+  grid-template-columns: ${({ $collapsed, $builder }) =>
+    $builder ? '1fr' : $collapsed ? '76px 1fr' : '264px 1fr'};
   color: ${({ theme }) => theme.app.text.body};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
 

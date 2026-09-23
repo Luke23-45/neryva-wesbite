@@ -306,7 +306,7 @@ export function StudioShell({
   const slideKey = isBuilder ? 'builder' : showLevel1 ? 'level-1' : `level-2:${domain?.key ?? 'none'}`;
 
   return (
-    <ShellRoot $collapsed={collapsed}>
+    <ShellRoot $collapsed={collapsed} $builder={isBuilder}>
       {mobileOpen && <MobileOverlay onClick={closeMobile} aria-hidden="true" />}
 
       {!isBuilder && (
