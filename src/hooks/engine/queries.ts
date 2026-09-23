@@ -106,10 +106,15 @@ export interface ProjectRow {
 }
 
 export function useProjects(includeArchived = false) {
-  const orgId = useOrgRequired();
+  // Null-safe (vs useOrgRequired): PlatformShell renders its sign-in card
+  // for anonymous visitors and a skeleton while the session is unknown —
+  // both states have no orgId and must not crash. The query simply stays
+  // disabled until an org resolves.
+  const { orgId } = useOrg();
   return useQuery({
     queryKey: ['engine', 'projects', orgId, includeArchived],
     queryFn: () => engine<{ projects: ProjectRow[] }>(`/console/org/${orgId}/projects`, { query: { include_archived: includeArchived } }),
+    enabled: !!orgId,
   });
 }
 

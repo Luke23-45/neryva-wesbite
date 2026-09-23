@@ -10,7 +10,7 @@
  *    raw code/state back to the parent window (same-origin) and let the
  *    opener (`attemptSilentAuth`) run the exchange.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { handleAuthCallback, isSafeReturnPath } from '@lib/engine/auth';
 import { resolvePostLoginDestination, type PostLoginDestination } from '@lib/engine/post-login';
@@ -30,6 +30,13 @@ function isInIframe(): boolean {
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  // The code/state exchange is single-use: exactly one attempt may run per
+  // callback URL. React StrictMode double-invokes this effect in dev — without
+  // the shared promise, the first invocation consumes the PKCE state and the
+  // second throws "Login state mismatch" for every login. The surviving
+  // effect instance (the second) performs the navigation; genuine unmounts
+  // still cancel via `cancelled`.
+  const exchangeRef = useRef<{ search: string; promise: Promise<string> } | null>(null);
 
   useEffect(() => {
     // Silent-renew context: hand the result to the opener, no navigation.
@@ -47,7 +54,11 @@ export default function AuthCallbackPage() {
       return;
     }
     let cancelled = false;
-    handleAuthCallback(window.location.search)
+    const search = window.location.search;
+    if (!exchangeRef.current || exchangeRef.current.search !== search) {
+      exchangeRef.current = { search, promise: handleAuthCallback(search) };
+    }
+    exchangeRef.current.promise
       .then(async (target) => {
         if (cancelled) {
           return;

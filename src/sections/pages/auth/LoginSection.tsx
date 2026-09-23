@@ -1,14 +1,14 @@
 /**
- * The OAuth-only sign-in section (`/auth`) — same chrome as the original
- * login page (light console stage, brand motif, motion), with the
- * email/password/OTP form replaced by identity-provider buttons.
+ * The sign-in section (`/auth`) — same chrome as the original
+ * login page (light console stage, brand motif, motion).
  *
  * Signup and signin are the same OP flow: first login auto-provisions the
- * account plus its personal org server-side. Every button hands off to
- * `beginLogin()` (PKCE + return-path stash); the OP interaction page offers
- * the email code plus whichever social providers are enabled on this
- * deployment (`GET /login/providers`). Buttons render exactly for the
- * enabled set. While the list loads a placeholder shows; when the engine is
+ * account plus its personal org server-side. Identity-provider buttons
+ * render exactly for the enabled set (`GET /login/providers`); with none
+ * configured, a "Continue with email" button starts the same OIDC flow
+ * without a connection hint so the OP renders its email-code interaction
+ * page. Every button hands off to `beginLogin()` (PKCE + return-path stash).
+ * While the list loads a placeholder shows; when the engine is
  * unreachable an explicit error with a retry shows instead of an empty page.
  */
 import { useEffect, useState, type ComponentType } from 'react';
@@ -158,6 +158,19 @@ export default function LoginSection() {
         });
     };
 
+    // Email-code entry: with no social providers configured the page would
+    // otherwise strand the user ("options appear here automatically once
+    // connected"). beginLogin without a connection lands on the OP's generic
+    // interaction page, which offers the email one-time code natively.
+    const startEmail = () => {
+        setStarting('email');
+        setError(null);
+        beginLogin(returnTo).catch((err: Error) => {
+            setStarting(null);
+            setError(err.message);
+        });
+    };
+
     const configured = (providersData?.providers ?? []).filter((p) => PROVIDER_META[p.key]);
     const transitionConfig = { duration: 0.5, ease: ease.premium };
     const footerLinks = authData.footer.links.filter((l) => l.url && l.url !== '#');
@@ -222,9 +235,18 @@ export default function LoginSection() {
                     )}
 
                     {!providersPending && !providersFailed && configured.length === 0 && (
-                        <ProviderNote>
-                            Sign-in options appear here automatically once connected.
-                        </ProviderNote>
+                        <>
+                            <ProviderButton
+                                type="button"
+                                disabled={starting !== null || status === 'unknown'}
+                                onClick={startEmail}
+                            >
+                                {starting === 'email' ? 'Redirecting…' : 'Continue with email'}
+                            </ProviderButton>
+                            <ProviderNote>
+                                We&apos;ll email you a one-time code — no password to remember.
+                            </ProviderNote>
+                        </>
                     )}
 
                     {error && <FormError role="alert">{error}</FormError>}
