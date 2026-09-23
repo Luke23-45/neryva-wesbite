@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
@@ -110,9 +110,25 @@ export function AgentStudioChatView() {
 
   const [bannerVisible, setBannerVisible] = useState(true);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // A3-48 — the composer is a textarea now.
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  // A3-45 — ChatMessages pins this imperatively (near-bottom stick).
+  const scrollRegionRef = useRef<HTMLDivElement>(null);
 
   const session = useChatSession(conversationId, boundAgentId);
+  // Stable callbacks for the memoized message bubbles: always invoke the
+  // LATEST session, never a stale closure. Synced in an effect — refs must
+  // not be written during render.
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+  const handleRegenerate = useCallback(() => {
+    void sessionRef.current.regenerate();
+  }, []);
+  const handleEditMessage = useCallback((messageId: string, text: string) => {
+    return sessionRef.current.editMessage(messageId, text);
+  }, []);
   const transcript = useConversationMessages(conversationId);
   const conversation = useConversationStatus(conversationId);
   const assistants = useAssistants();
@@ -205,12 +221,10 @@ export function AgentStudioChatView() {
     attachments.reset();
   };
 
-  const regenerate = () => {
-    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-    if (lastUser) {
-      void session.send(lastUser.text);
-    }
-  };
+  // A3-41/A3-42 — regenerate goes through the real engine endpoint via
+  // the session (no duplicate user message); ChatMessages gates it on the
+  // thread phase, independent of the suggestion chips.
+  const regenerate = handleRegenerate;
 
   const handleRename = (title: string): Promise<void> => {
     if (!conversationId) return Promise.reject(new Error('No conversation open'));
@@ -269,7 +283,7 @@ export function AgentStudioChatView() {
         onDelete={() => setConfirmDeleteOpen(true)}
       />
       <ChatArea>
-        <ScrollRegion>
+        <ScrollRegion ref={scrollRegionRef}>
           {threadFailed ? (
             <NotFoundWrap>
               <NotFoundTitle>
@@ -432,6 +446,9 @@ export function AgentStudioChatView() {
               isTyping={typing && !session.live.assistantText}
               onRegenerate={regenerate}
               showRegenerate={session.phase === 'done' || session.phase === 'accepted'}
+              conversationId={conversationId}
+              onEditMessage={handleEditMessage}
+              scrollContainerRef={scrollRegionRef}
             />
           )}
         </ScrollRegion>

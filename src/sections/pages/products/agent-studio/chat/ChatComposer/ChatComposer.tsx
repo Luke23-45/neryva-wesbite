@@ -1,4 +1,4 @@
-import { forwardRef, useRef, useState, type KeyboardEvent } from 'react';
+import { forwardRef, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FileText, Square } from 'lucide-react';
@@ -21,6 +21,9 @@ const statusLabel: Record<AttachmentUpload['status'], string> = {
   quarantined: 'quarantined',
 };
 
+/** Auto-size cap — beyond this the composer scrolls internally. */
+const MAX_COMPOSER_HEIGHT = 160;
+
 type Props = {
   placeholder: string;
   hint: string;
@@ -33,23 +36,51 @@ type Props = {
   onAttach?: (file: File | null | undefined) => void;
 };
 
-export const ChatComposer = forwardRef<HTMLInputElement, Props>(
+/**
+ * A3-48 — the composer is an auto-sizing textarea: Enter sends,
+ * Shift+Enter inserts a newline (the old single-line input swallowed it).
+ * A3-49 — Escape stops a running turn.
+ */
+export const ChatComposer = forwardRef<HTMLTextAreaElement, Props>(
   ({ placeholder, hint, onSend, streaming = false, onStop, disabled = false, attachments = [], onAttach }, ref) => {
     const [value, setValue] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
+    const areaRef = useRef<HTMLTextAreaElement | null>(null);
     const canSend = value.trim().length > 0 && !disabled && !streaming;
+
+    const setAreaRef = (element: HTMLTextAreaElement | null) => {
+      areaRef.current = element;
+      if (typeof ref === 'function') {
+        ref(element);
+      } else if (ref) {
+        ref.current = element;
+      }
+    };
+
+    // Auto-size: grow with content up to the cap, then scroll internally.
+    useEffect(() => {
+      const element = areaRef.current;
+      if (!element) return;
+      element.style.height = 'auto';
+      element.style.height = `${Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
+    }, [value]);
 
     const submit = () => {
       const trimmed = value.trim();
       if (!trimmed || streaming || disabled) return;
       onSend?.(trimmed);
       setValue('');
+      // The send button steals focus on click — hand it back to the composer.
+      areaRef.current?.focus();
     };
 
-    const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         submit();
+      } else if (e.key === 'Escape' && streaming) {
+        e.preventDefault();
+        onStop?.();
       }
     };
 
@@ -93,13 +124,14 @@ export const ChatComposer = forwardRef<HTMLInputElement, Props>(
           />
 
           <Input
-            ref={ref}
+            ref={setAreaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={onKey}
             placeholder={placeholder}
             aria-label="Message"
             disabled={disabled}
+            rows={1}
           />
 
           {streaming ? (

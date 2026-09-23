@@ -284,10 +284,31 @@ export function useConversationMessages(conversationId: string | null, options?:
   const { orgId } = useOrg();
   return useQuery({
     queryKey: ['studio', 'chat-messages', orgId, conversationId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/messages`),
+    queryFn: async () => {
+      // A3-47 — the engine pages `/messages` (default 50, cap 100, oldest
+      // first) and exposes only `next_cursor`. A single page would silently
+      // drop a long thread's NEWEST messages, so walk the cursor until the
+      // thread is complete. Pages arrive oldest→newest; the merged list
+      // stays in that order.
+      const all: ChatMessage[] = [];
+      let after = 0;
+      for (;;) {
+        const page = await engine<unknown>(
+          `/console/org/${orgId}/conversations/${conversationId}/messages?after=${after}&limit=100`,
+        );
+        const record = typeof page === 'object' && page !== null ? (page as Record<string, unknown>) : {};
+        const rows = parseConversationMessages(page);
+        all.push(...rows);
+        const nextCursor = record.next_cursor;
+        if (typeof nextCursor !== 'number' || rows.length === 0) {
+          break;
+        }
+        after = nextCursor;
+      }
+      return all;
+    },
     enabled: (options?.enabled ?? true) && !!orgId && !!conversationId,
     staleTime: 15_000,
-    select: parseConversationMessages,
   });
 }
 
@@ -401,6 +422,24 @@ export function useRenameConversation() {
 
 // ─── The session orchestrator ────────────────────────────────────────
 
+/**
+ * A3-40 — thumbs up/down on an assistant message. The engine owns feedback
+ * persistence; this is a fire-and-forget record with an honest toast on
+ * failure. The optimistic UI state lives in the message list.
+ */
+export function useRecordFeedback() {
+  const { orgId } = useOrg();
+  return useMutation({
+    mutationFn: async (input: { conversationId: string; messageId: string; rating: 'up' | 'down' }) =>
+      engine(`/console/org/${orgId}/conversations/${input.conversationId}/messages/${input.messageId}/feedback`, {
+        method: 'POST',
+        body: { rating: input.rating },
+        idempotent: true,
+      }),
+    onError: (error) => toastEngineError(error, 'Could not record feedback'),
+  });
+}
+
 export type RunPhase = 'idle' | 'creating' | 'sending' | 'streaming' | 'accepted' | 'done' | 'error';
 
 export interface RunNotice {
@@ -426,6 +465,16 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   const [live, setLive] = useState<{ user: ChatMessage | null; assistantText: string }>({ user: null, assistantText: '' });
   const [notices, setNotices] = useState<RunNotice[]>([]);
 
+  // A3-43 — finalize runs from the SSE callback; read the run id through a
+  // ref so a terminal frame can never clear a NEWER run's state, and so the
+  // live overlay is dropped before the transcript refetch lands.
+  const activeRunIdRef = useRef<string | null>(null);
+  const conversationIdRef = useRef(conversationId);
+  const phaseRef = useRef(phase);
+  // A3-44 — set while send() creates a thread so the switch-reset below does
+  // not wipe the session that just created the conversation.
+  const justCreatedRef = useRef<string | null>(null);
+
   const stream = useEventStream({
     path: `/console/org/${orgId}/runs/${activeRunId ?? '_'}/events/stream`,
     enabled: !!orgId && !!activeRunId,
@@ -448,12 +497,45 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     },
   });
 
-  // A2-65 — reload reattach: on mount (or conversation switch), ask the
-  // engine for the conversation's runs and tail the active one instead of
-  // leaving a running run orphaned with no live stream.
-  const reattachedRef = useRef<string | null>(null);
+  // Keep the refs mirroring state (the switch-reset also writes
+  // activeRunIdRef directly when it needs the value within the same effect
+  // run). Readers are event/SSE callbacks, which always run post-commit.
   useEffect(() => {
-    if (!orgId || !conversationId || activeRunId !== null || phase !== 'idle') {
+    activeRunIdRef.current = activeRunId;
+    conversationIdRef.current = conversationId;
+    phaseRef.current = phase;
+  }, [activeRunId, conversationId, phase]);
+  // A3-44 — switch-reset + A2-65 reload reattach live here: the session
+  // is keyed to ONE conversation, so a prop switch detaches A's overlay,
+  // notices and stream before B reattaches to its own active run.
+  // A2-65 — reload reattach: on mount, ask the engine for the
+  // conversation's runs and tail the active one instead of leaving a
+  // running run orphaned with no live stream.
+  const reattachedRef = useRef<string | null>(null);
+  const prevConversationIdRef = useRef<string | null>(conversationId);
+  useEffect(() => {
+    const prev = prevConversationIdRef.current;
+    prevConversationIdRef.current = conversationId;
+    let didReset = false;
+    if (prev !== conversationId) {
+      // Switched threads. Exempt the thread send() just created — its
+      // replaceState navigation fires this effect with the new id, and
+      // resetting there would wipe the in-flight turn.
+      if (justCreatedRef.current !== conversationId) {
+        activeRunIdRef.current = null;
+        setActiveRunId(null);
+        setPhase('idle');
+        setLive({ user: null, assistantText: '' });
+        setNotices([]);
+        reattachedRef.current = null;
+        didReset = true;
+      } else {
+        justCreatedRef.current = null;
+      }
+    }
+    // didReset bypasses the phase guard: setPhase('idle') above has not
+    // flushed yet, but the session IS idle — B may reattach immediately.
+    if (!orgId || !conversationId || activeRunIdRef.current !== null || (!didReset && phaseRef.current !== 'idle')) {
       return;
     }
     if (reattachedRef.current === conversationId) {
@@ -477,6 +559,7 @@ export function useChatSession(conversationId: string | null, agentId: string | 
         // and skips, so reattach never happens).
         reattachedRef.current = conversationId;
         if (active) {
+          activeRunIdRef.current = active.id;
           setActiveRunId(active.id);
           setPhase('streaming');
         }
@@ -487,11 +570,13 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, conversationId]);
 
   const finalize = (state: string, failed: boolean, reason: string | null = null) => {
-    const runId = activeRunId;
+    // A3-43 — read the run id from the ref: the terminal frame must settle
+    // the run it belongs to, never a newer run that started since.
+    const runId = activeRunIdRef.current;
+    activeRunIdRef.current = null;
     setActiveRunId(null);
     setPhase(failed ? 'error' : 'done');
     if (failed) {
@@ -512,8 +597,14 @@ export function useChatSession(conversationId: string | null, agentId: string | 
         void queryClient.invalidateQueries({ queryKey: ['studio', 'onboarding'] });
       }
     }
-    void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-messages', orgId, conversationId] });
-    void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-runs', orgId, conversationId] });
+    // A3-43 — the transcript is the record: drop the live overlay FIRST so
+    // the stale streaming text can never render alongside the refetched
+    // authoritative rows, then refetch. A refetch (not invalidate) keeps
+    // this atomic from the UI's perspective — no flicker of missing rows.
+    setLive({ user: null, assistantText: '' });
+    const cid = conversationIdRef.current;
+    void queryClient.refetchQueries({ queryKey: ['studio', 'chat-messages', orgId, cid] });
+    void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-runs', orgId, cid] });
   };
 
   const send = async (text: string, attachmentIds?: string[]) => {
@@ -542,6 +633,9 @@ export function useChatSession(conversationId: string | null, agentId: string | 
         if (conversationId === null) {
           // Hand the new thread id to the URL so refresh/recent-chats bind.
           window.history.replaceState(null, '', `/agent-studio/chat?chat=${encodeURIComponent(id)}`);
+          // A3-44 — the replaceState above fires the switch-reset with the
+          // new id; exempt it so this in-flight turn survives.
+          justCreatedRef.current = id;
         }
       }
 
@@ -573,8 +667,91 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   };
 
   const stop = () => {
-    if (activeRunId) {
-      cancel.mutate(activeRunId);
+    if (activeRunIdRef.current) {
+      cancel.mutate(activeRunIdRef.current);
+    }
+  };
+
+  /**
+   * A3-41/A3-42 — regenerate the latest assistant reply through the real
+   * engine endpoint. No user message is appended: the engine re-runs the
+   * latest user turn in place (branch pointer, immutable rows). The new
+   * run's chunks stream into the live overlay; the superseded reply drops
+   * out when the transcript refetches on finalize.
+   */
+  const regenerate = async () => {
+    const id = conversationIdRef.current;
+    if (!id || phaseRef.current === 'streaming' || phaseRef.current === 'sending' || phaseRef.current === 'creating') {
+      return;
+    }
+    setPhase('sending');
+    setNotices([]);
+    setLive({ user: null, assistantText: '' });
+    try {
+      const result = await engine<{ run_id?: string; runId?: string }>(
+        `/console/org/${orgId}/conversations/${id}/regenerate`,
+        { method: 'POST', body: {}, idempotent: true },
+      );
+      const runId = str(result.run_id) ?? str(result.runId);
+      if (!runId) {
+        setPhase('error');
+        setNotices([{ id: `e-${Date.now()}`, kind: 'error', text: 'The regenerate request returned no run — try again.' }]);
+        return;
+      }
+      activeRunIdRef.current = runId;
+      setActiveRunId(runId);
+      setPhase('streaming');
+      // Same honest accepted-state backstop as send(): if the SSE tail
+      // produces nothing, say so instead of faking a reply.
+      window.setTimeout(() => {
+        setPhase((current) => (current === 'streaming' ? 'accepted' : current));
+      }, 15_000);
+    } catch (error) {
+      setPhase('error');
+      toastEngineError(error, 'Could not regenerate the response');
+    }
+  };
+
+  /**
+   * A3-40 — edit-and-resend on a user message. The engine replaces the
+   * message (branch: original gains `superseded_by`, the edit carries
+   * `branched_from`) and starts a new run over the edited text. The
+   * rejection propagates so the inline editor keeps the draft on failure.
+   */
+  const editMessage = async (messageId: string, text: string) => {
+    const id = conversationIdRef.current;
+    if (!id || phaseRef.current === 'streaming' || phaseRef.current === 'sending' || phaseRef.current === 'creating') {
+      return;
+    }
+    setPhase('sending');
+    setNotices([]);
+    try {
+      const result = await engine<{ run_id?: string; runId?: string }>(
+        `/console/org/${orgId}/conversations/${id}/edit`,
+        {
+          method: 'POST',
+          body: { message_id: messageId, content: { text } },
+          idempotent: true,
+        },
+      );
+      const runId = str(result.run_id) ?? str(result.runId);
+      if (!runId) {
+        // The edit landed but no run came back — refetch and settle.
+        setLive({ user: null, assistantText: '' });
+        await queryClient.refetchQueries({ queryKey: ['studio', 'chat-messages', orgId, id] });
+        setPhase('done');
+        return;
+      }
+      activeRunIdRef.current = runId;
+      setActiveRunId(runId);
+      setPhase('streaming');
+      window.setTimeout(() => {
+        setPhase((current) => (current === 'streaming' ? 'accepted' : current));
+      }, 15_000);
+    } catch (error) {
+      setPhase('error');
+      toastEngineError(error, 'Could not resend the edited message');
+      throw error;
     }
   };
 
@@ -588,7 +765,7 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   const isBusy = phase === 'creating' || phase === 'sending' || phase === 'streaming';
 
   return useMemo(
-    () => ({ live, notices, phase, isBusy, send, stop, reset, activeRunId, streamStatus: stream }),
+    () => ({ live, notices, phase, isBusy, send, stop, reset, regenerate, editMessage, activeRunId, streamStatus: stream }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [live, notices, phase, activeRunId, stream, conversationId, agentId, orgId],
   );

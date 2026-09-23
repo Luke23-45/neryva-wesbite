@@ -12,7 +12,7 @@ export const ComposerWrap = styled.div`
 export const FieldShell = styled.div`
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   padding: 10px 10px 10px 12px;
   background: ${({ theme }) => theme.app.surface.tint};
@@ -59,16 +59,21 @@ export const PlusButton = styled.button`
   }
 `;
 
-export const Input = styled.input`
+/** A3-48 — auto-sizing textarea (was a single-line input). */
+export const Input = styled.textarea`
   flex: 1;
   min-width: 0;
   border: 0;
   background: transparent;
   outline: none;
+  resize: none;
+  overflow-y: auto;
+  max-height: 160px;
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: ${({ theme }) => theme.app.type.title};
   font-weight: 400;
   letter-spacing: -0.005em;
+  line-height: 1.45;
   color: ${({ theme }) => theme.app.text.primary};
   padding: 4px 0;
 
