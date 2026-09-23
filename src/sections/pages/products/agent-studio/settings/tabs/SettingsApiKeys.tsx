@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, ShieldCheck, Check, RefreshCw, FolderInput } from 'lucide-react';
+import { Plus, Trash2, ShieldCheck, Check, RefreshCw, FolderInput, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -9,6 +9,8 @@ import { CopyButton } from '@components/common/ui/CopyButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
+import { EmptyState } from '@components/common/ui/EmptyState';
+import { ApiError } from '@lib/engine/client';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { spring, pageItem } from '@styles/motion';
@@ -86,6 +88,13 @@ export function SettingsApiKeys() {
   const canManage = atLeast('developer');
   const keys = useKeys();
   const revoke = useRevokeKey();
+
+  // J1-04 (twin of /platform/api-keys): a 404 on the keys read means the
+  // engine's keys module is disabled in this deployment — not a failure.
+  // The honest state is "unavailable", and key creation is withheld since
+  // issuing would 404 too.
+  const keysDisabled =
+    keys.isError && keys.error instanceof ApiError && keys.error.status === 404;
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('details');
@@ -178,7 +187,7 @@ export function SettingsApiKeys() {
         title="API keys"
         subtitle="Programmatic access to your workspace. Keep these secret."
         action={
-          canManage ? (
+          canManage && !keysDisabled ? (
             <PrimaryButton type="button" onClick={openCreate} whileTap={{ scale: 0.97 }} transition={spring.snap}>
               <Plus size={13} strokeWidth={2} />
               New key
@@ -186,6 +195,13 @@ export function SettingsApiKeys() {
           ) : undefined
         }
       >
+        {keysDisabled ? (
+          <EmptyState
+            icon={<KeyRound size={18} opacity={0.5} />}
+            title="API keys are not available in this deployment"
+            description="The engine's API keys module is disabled, so keys cannot be listed or issued. Enable the keys module on the engine to use API keys."
+          />
+        ) : (
         <QueryView query={keys} skeleton={<Skeleton $h="220px" $r="12px" />} isEmpty={(d) => d.keys.length === 0} empty={{ title: 'No API keys yet', description: canManage ? 'Create one to get started — the secret is shown exactly once.' : 'Ask an owner, admin, or developer to create one.' }}>
           {(data) => (
             <TableWrap>
@@ -246,6 +262,7 @@ export function SettingsApiKeys() {
             </TableWrap>
           )}
         </QueryView>
+        )}
       </Panel>
 
       <Modal

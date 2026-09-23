@@ -13,6 +13,7 @@ import { SessionGate } from '@components/platform/SessionGate';
 import { EntitlementBanner } from '@components/platform/Entitlement';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
 import { StepUpModal } from '@components/platform/StepUpModal';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { useSessionStore } from '@lib/engine/auth';
 import { useOrg } from '@/Context/OrgContext';
 import { useConversations } from '@hooks/studio/useStudioConversations';
@@ -44,7 +45,7 @@ function initialsOf(name: string | null, email: string | null, fallback: string)
 export default function AgentStudioShellPage() {
   const status = useSessionStore((s) => s.status);
   const account = useSessionStore((s) => s.account);
-  const { name: orgName } = useOrg();
+  const { orgId, name: orgName } = useOrg();
 
   // Recent chats (S-4): real conversations, newest first, sliced in the shell.
   // null keeps the sidebar quiet until the list resolves.
@@ -67,6 +68,47 @@ export default function AgentStudioShellPage() {
     name: orgName ?? data.workspace.name,
     plan: data.workspace.plan, // D-1: plan display rendering is deferred
   };
+
+  if (status === 'authenticated' && !orgId) {
+    // J1-05 (systemic D1-01): the ['org','home'] query has not resolved yet
+    // (cold load / deep link / refresh lands here before org context does).
+    // Studio pages read the active org during render — useOrgRequired()
+    // throws "No active organization", and the router's error boundary is
+    // sticky, so the crash was permanent until reload. Per-page guards would
+    // just move the hole; this one gate sits above the <Outlet/> and covers
+    // every /agent-studio/* route (chat, dashboard, agents, conversations,
+    // activity, integrations, webhooks, settings/*). Skeletons — never the
+    // outlet. The engine autocreates a personal org on first login, so a null
+    // orgId here is only ever mid-propagation, never a real empty state.
+    return (
+      <SessionGate>
+        <StudioShell
+          nav={navConfig}
+          user={user}
+          workspace={workspace}
+          searchPlaceholder={data.searchPlaceholder}
+          recentChats={null}
+          topbarOrg={<OrgSwitcher />}
+          banner={
+            <>
+              <StatusBanner />
+              <EntitlementBanner product="agent_studio" displayName="Agent Studio" />
+            </>
+          }
+        >
+          <div style={{ padding: 24, maxWidth: 1120 }}>
+            <Skeleton $h="28px" $w="260px" />
+            <div style={{ height: 16 }} />
+            <Skeleton $h="180px" $r="12px" />
+            <div style={{ height: 16 }} />
+            <Skeleton $h="14px" />
+            <Skeleton $h="14px" $w="70%" />
+          </div>
+        </StudioShell>
+        <StepUpModal />
+      </SessionGate>
+    );
+  }
 
   return (
     <SessionGate>

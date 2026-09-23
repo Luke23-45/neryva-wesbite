@@ -9,6 +9,8 @@ import { useKeys, type KeyRow } from '@hooks/engine/queries';
 import { useIssueKey, useRevokeKey } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
 import { requestStepUp } from '@lib/engine/stepup';
+import { ApiError } from '@lib/engine/client';
+import { EmptyState } from '@components/common/ui/EmptyState';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
@@ -64,6 +66,14 @@ export default function ApiKeysPage() {
   const [copied, setCopied] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<KeyRow | null>(null);
 
+  // J1-04: a 404 on the keys read means the engine's keys module is disabled
+  // in this deployment (MODULES__KEYS_ENABLED=false, the default) — not a
+  // failure. Issuing is impossible too, so the page shows an honest
+  // unavailable state and the Issue action is withheld (same pattern as J1-03
+  // for the channels module).
+  const keysDisabled =
+    keys.isError && keys.error instanceof ApiError && keys.error.status === 404;
+
   return (
     <ViewShell>
       <ViewHeader>
@@ -74,12 +84,19 @@ export default function ApiKeysPage() {
       <Panel
         title="Keys"
         flush
-        action={canManage ? (
+        action={canManage && !keysDisabled ? (
           <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setRole('operator'); setScopes('agent-studio:read'); setExpiresAt(''); setIssued(null); setOpen(true); }}>
             <KeyRound size={13} /> Issue key
           </ActionButton>
         ) : undefined}
       >
+        {keysDisabled ? (
+          <EmptyState
+            icon={<KeyRound size={18} opacity={0.5} />}
+            title="API keys are not available in this deployment"
+            description="The engine's API keys module is disabled, so keys cannot be listed or issued. Enable the keys module on the engine to use API keys."
+          />
+        ) : (
         <QueryView query={keys} isEmpty={(d) => d.keys.length === 0} empty={{ title: 'No API keys', description: canManage ? 'Issue the first key to call the engine from your services.' : 'Ask a developer or admin to issue keys.' }}>
           {(data) => (
             <DataTable>
@@ -119,6 +136,7 @@ export default function ApiKeysPage() {
             </DataTable>
           )}
         </QueryView>
+        )}
       </Panel>
 
       <Modal
