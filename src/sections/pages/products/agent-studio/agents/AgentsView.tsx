@@ -9,6 +9,8 @@ import { Segmented } from '@components/common/ui/Segmented';
 import { SearchField } from '@components/common/ui/SearchField';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
+import { EmptyState } from '@components/common/ui/EmptyState/EmptyState';
+import { Search as SearchIcon } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import {
   ViewShell,
@@ -130,7 +132,19 @@ export function AgentsView() {
             isEmpty={(d) => d.length === 0}
             empty={{ title: search ? 'No agents match' : 'No agents yet', description: search ? 'Try a different search term.' : 'Create your first agent — pick a template and make it yours.' }}
           >
-            {(items) => (items.length === 0 ? null : (
+            {(_items) => {
+              // QueryView already handled the truly-empty case (raw data empty).
+              // If the filtered list is empty here, the search matched nothing.
+              if (list.length === 0) {
+                return (
+                  <EmptyState
+                    icon={<SearchIcon size={18} opacity={0.5} />}
+                    title="No agents match"
+                    description="Try a different search term."
+                  />
+                );
+              }
+              return (
               <DataTable>
                 <DataHead>
                   <DataCell $w="44%">Agent</DataCell>
@@ -152,7 +166,8 @@ export function AgentsView() {
                   />
                 ))}
               </DataTable>
-            ))}
+              );
+            }}
           </QueryView>
         </Panel>
       </motion.div>
