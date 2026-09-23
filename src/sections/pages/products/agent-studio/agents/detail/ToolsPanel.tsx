@@ -81,7 +81,7 @@ const EmptyNote = styled.div`
  * Approval modes shown are the authorize-time verdicts (entry∨catalog).
  */
 export function ToolsPanel({ agentId }: { agentId: string }) {
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const catalog = useToolCatalog();
 
   const definition = form.data?.definition ?? null;

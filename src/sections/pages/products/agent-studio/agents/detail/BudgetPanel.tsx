@@ -61,7 +61,7 @@ const EmptyNote = styled.div`
  * Usage (linked, never duplicated).
  */
 export function BudgetPanel({ agentId }: { agentId: string }) {
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const costs = useModelCosts();
   const definition = form.data?.definition ?? null;
 

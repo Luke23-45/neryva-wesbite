@@ -53,7 +53,7 @@ const EmptyNote = styled.div`
  * verdicts — logging rows state "recorded, nothing refused" explicitly.
  */
 export function GuardrailsPanel({ agentId }: { agentId: string }) {
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const definition = form.data?.definition ?? null;
 
   return (

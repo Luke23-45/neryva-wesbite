@@ -3,7 +3,6 @@ import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import {
-  useAssistant,
   useAssistantDefinition,
   useAssistantVersions,
 } from '@hooks/studio/useAgentAuthoring';
@@ -118,8 +117,7 @@ const EmptyNote = styled.div`
  * counts are deliberately absent (no per-run model source exists — §12.4).
  */
 export function BrainPanel({ agentId }: { agentId: string }) {
-  const detail = useAssistant(agentId);
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const versions = useAssistantVersions(agentId);
   const models = useModelAvailability();
   const costs = useModelCosts();
@@ -134,11 +132,9 @@ export function BrainPanel({ agentId }: { agentId: string }) {
   const versionNumber = versions.data?.find((v) => v.id === (form.data?.versionId ?? ''))?.version ?? null;
   const versionLabel = !form.data
     ? null
-    : form.data.isDraft
-      ? `Open draft${detail.data?.activeVersionId ? ' · live version served' : ''}`
-      : versionNumber !== null
-        ? `Active v${versionNumber}`
-        : 'Active version';
+    : form.data.status === 'PUBLISHED'
+      ? `${versionNumber !== null ? `Active v${versionNumber}` : 'Active version'}${form.data.isDraft ? ' · draft has unpublished changes' : ''}`
+      : 'Open draft';
 
   const matched = matchPreset({
     temperature: definition?.model_params.temperature,

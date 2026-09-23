@@ -93,7 +93,7 @@ export function AgentDetailView() {
   const assistant = useAssistant(params.agentId);
   // Definitions live on versions (draft preferred, else active) — the
   // assistant GET carries identity only (see useAgentAuthoring header).
-  const form = useAssistantDefinition(params.agentId);
+  const form = useAssistantDefinition(params.agentId, { prefer: 'active' });
   const versions = useAssistantVersions(params.agentId);
   const deleteAssistant = useDeleteAssistant();
   const [deleteConfirm, setDeleteConfirm] = useState(false);

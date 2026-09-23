@@ -55,7 +55,7 @@ const EmptyNote = styled.div`
  * effect; PLAN §8.2).
  */
 export function MemoryPanel({ agentId }: { agentId: string }) {
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const policy = useOrgMemoryPolicy();
   const definition = form.data?.definition ?? null;
 

@@ -83,7 +83,7 @@ const EmptyNote = styled.div`
  * to exact versions at publish.
  */
 export function KnowledgePanel({ agentId }: { agentId: string }) {
-  const form = useAssistantDefinition(agentId);
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
   const documents = useDocuments();
   const health = useKnowledgeHealth(agentId);
 
