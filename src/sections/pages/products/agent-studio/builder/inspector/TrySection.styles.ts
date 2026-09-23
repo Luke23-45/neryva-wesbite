@@ -28,7 +28,7 @@ export const BubbleMeta = styled.div`
   margin-bottom: 2px;
 `;
 
-export const NoticePill = styled.span<{ $tone: 'tool' | 'usage' | 'status' | 'error' }>`
+export const NoticePill = styled.span<{ $tone: 'tool' | 'usage' | 'status' | 'error' | 'approval' }>`
   display: inline-flex;
   align-self: flex-start;
   max-width: 100%;

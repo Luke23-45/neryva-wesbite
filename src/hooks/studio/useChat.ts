@@ -117,7 +117,13 @@ export interface ParsedRunEvent {
   kind: 'chunk' | 'tool' | 'usage' | 'lifecycle' | 'other';
   text: string | null;
   tool: string | null;
+  /** A3-21 — the tool-call's arguments, when the wire carries them. */
+  toolArgs: unknown;
+  /** A3-21 — correlates a toolResult with its toolCall. */
+  toolCallId: string | null;
   usage: string | null;
+  /** A3-20 — the approval reference from an approval SSE frame. */
+  approvalId: string | null;
   state: string | null;
   /** Reported stop reason (`reason`/`terminal_reason`) — C13 stop lines. */
   reason: string | null;
@@ -164,7 +170,10 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
     kind: 'other',
     text: null,
     tool: null,
+    toolArgs: null,
+    toolCallId: null,
     usage: null,
+    approvalId: null,
     state: null,
     reason: null,
     terminal: false,
@@ -218,10 +227,27 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
       // Model-call bookkeeping — not user-visible text.
       return { ...base, kind: 'other', state: str(value.modelId) };
     case 'toolCall':
-      return { ...base, kind: 'tool', tool: str(value.toolName), state: str(value.toolCallId) };
+      return {
+        ...base,
+        kind: 'tool',
+        tool: str(value.toolName) ?? str(value.tool),
+        toolCallId: str(value.toolCallId) ?? str(value.tool_call_id),
+        // A3-21 — the wire may carry `arguments` (string or object) or
+        // `args`; keep whatever arrived so the UI can render it verbatim.
+        toolArgs: (value.arguments ?? value.args ?? null) as unknown,
+      };
     case 'toolResult': {
       const failed = str(value.status)?.toUpperCase() === 'FAILED';
-      return { ...base, kind: 'tool', failed, state: str(value.status) };
+      return {
+        ...base,
+        kind: 'tool',
+        failed,
+        state: str(value.status),
+        // A3-21 — the result carries no tool name, only the call id; the
+        // session correlates it with the earlier toolCall frame.
+        toolCallId: str(value.toolCallId) ?? str(value.tool_call_id),
+        tool: str(value.toolName) ?? str(value.tool),
+      };
     }
     case 'approval': {
       const approvalState = str(value.state);
@@ -230,6 +256,9 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
         kind: 'lifecycle',
         state: approvalState ? `approval:${approvalState.toLowerCase()}` : 'approval',
         text: approvalState ? `Approval ${approvalState}` : null,
+        // A3-20 — the approval reference; the card fetches the full record
+        // (summary, action type, expiry) from the approvals API.
+        approvalId: str(value.approvalId) ?? str(value.approval_id) ?? str(value.approvalRef),
       };
     }
     case 'lifecycle':
@@ -444,8 +473,33 @@ export type RunPhase = 'idle' | 'creating' | 'sending' | 'streaming' | 'accepted
 
 export interface RunNotice {
   id: string;
-  kind: 'tool' | 'usage' | 'status' | 'error';
+  kind: 'tool' | 'usage' | 'status' | 'error' | 'approval';
   text: string;
+  /** A3-21 — rich tool-call rendering: name, args, status, correlation id. */
+  toolCall?: { name: string | null; args: unknown; status: string | null; callId: string | null } | null;
+  /** A3-20 — inline approval card payload (fetched from the approvals API). */
+  approval?: ApprovalRequest | null;
+  /**
+   * A3-23 — the send failed and the session kept the text, so the notice
+   * can offer an honest retry instead of stranding the message.
+   */
+  retryable?: boolean;
+}
+
+/**
+ * A3-20 — the approval record the inline card renders. Fetched from
+ * `GET /console/org/:org/approvals?state=PENDING` and matched to the SSE
+ * frame by `approvalRef` (the wire's `approvalId`). The engine stores no
+ * tool arguments on the approval — the card shows what exists and never
+ * invents args.
+ */
+export interface ApprovalRequest {
+  id: string;
+  runId: string;
+  approvalRef: string;
+  summary: string;
+  actionType: string;
+  expiresAt: string | null;
 }
 
 /**
@@ -464,6 +518,10 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   const [phase, setPhase] = useState<RunPhase>('idle');
   const [live, setLive] = useState<{ user: ChatMessage | null; assistantText: string }>({ user: null, assistantText: '' });
   const [notices, setNotices] = useState<RunNotice[]>([]);
+  // A3-25 — stop() flips this the moment the user hits Stop; the terminal
+  // SSE frame clears it. The composer shows "Stopping…" instead of a dead
+  // Stop button while the cancel is in flight.
+  const [stopping, setStopping] = useState(false);
 
   // A3-43 — finalize runs from the SSE callback; read the run id through a
   // ref so a terminal frame can never clear a NEWER run's state, and so the
@@ -474,6 +532,24 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   // A3-44 — set while send() creates a thread so the switch-reset below does
   // not wipe the session that just created the conversation.
   const justCreatedRef = useRef<string | null>(null);
+  // A3-21 — toolCallId → {name, args}: the toolResult wire frame carries
+  // no tool name, only the call id, so the result is correlated with the
+  // earlier toolCall frame for rendering.
+  const toolCallsRef = useRef(new Map<string, { name: string | null; args: unknown }>());
+  // A3-20 — approval refs already surfaced, so a re-delivered frame does
+  // not duplicate the card.
+  const approvalsRef = useRef(new Set<string>());
+  // A3-21 — toolCallId → tool name, resolved from the approval record.
+  // The toolResult wire frame carries no tool name (only the call id), and
+  // the toolCall frame is never emitted by any producer (zero type-3 rows
+  // in run_events) — so for approval-gated tools the approval's summary
+  // (which IS the tool name) is the only honest source of the name.
+  // Keyed by the call-id FRAGMENT from the approval ref (the ref truncates
+  // the id to 15 hex chars); lookup is by prefix match.
+  const approvalNamesRef = useRef(new Map<string, string>());
+  // A3-23 — the text of the last failed send; retrySend re-posts it so the
+  // error notice can offer a real retry. Cleared on every new send.
+  const failedSendRef = useRef<string | null>(null);
 
   const stream = useEventStream({
     path: `/console/org/${orgId}/runs/${activeRunId ?? '_'}/events/stream`,
@@ -483,12 +559,102 @@ export function useChatSession(conversationId: string | null, agentId: string | 
       if (event.kind === 'chunk' && event.text) {
         setLive((prev) => ({ ...prev, assistantText: prev.assistantText + event.text }));
       } else if (event.kind === 'tool') {
+        // A3-21 — remember the call so the later result can name it; render
+        // the call itself with its arguments when the wire carries them.
+        // (In practice no producer emits the toolCall frame today; the
+        // branch below stays correct if one ever does.)
+        if (event.toolCallId && event.tool) {
+          toolCallsRef.current.set(event.toolCallId, { name: event.tool, args: event.toolArgs });
+        }
+        const known = event.toolCallId ? toolCallsRef.current.get(event.toolCallId) : undefined;
+        // A3-21 — the toolResult frame carries no name; resolve it through
+        // the approval record (gated tools) when the call frame didn't.
+        // The approval ref embeds a TRUNCATED call id
+        // (`aprv_<run>_<turn>_call_<15hex>` vs the full `call_<16hex>`), so
+        // match by prefix, not equality.
+        let approvedName;
+        if (event.toolCallId) {
+          for (const [frag, name] of approvalNamesRef.current) {
+            if (event.toolCallId.startsWith(frag)) { approvedName = name; break; }
+          }
+        }
+        const name = event.tool ?? known?.name ?? approvedName ?? null;
+        const args = event.toolArgs ?? known?.args ?? null;
+        const status = event.state ?? null;
+        const label = name ?? event.toolCallId ?? 'unknown tool';
+        // A3-22 — a failed result names the tool and the failure; never a
+        // bare "Tool call".
+        const text = event.failed
+          ? `Tool call · ${label} — failed${status ? ` (${status})` : ''}`
+          : status
+            ? `Tool call · ${label} — ${status.toLowerCase()}`
+            : `Tool call · ${label}`;
         setNotices((prev) => [
           ...prev,
-          { id: message.id ?? String(Date.now()) + Math.random(), kind: event.failed ? 'error' : 'tool', text: event.tool ? `Tool call · ${event.tool}` : 'Tool call' },
+          {
+            id: message.id ?? `tool-${Date.now()}-${Math.random()}`,
+            kind: event.failed ? 'error' : 'tool',
+            text,
+            toolCall: { name, args, status, callId: event.toolCallId },
+          },
         ]);
       } else if (event.kind === 'usage' && event.usage) {
         setNotices((prev) => [...prev, { id: message.id ?? String(Date.now()) + Math.random(), kind: 'usage', text: event.usage as string }]);
+      } else if (event.state?.startsWith('approval:')) {
+        // A3-20 — the approval frame is minimal (state + approvalId); the
+        // card needs the full record, so fetch it and surface inline.
+        const approvalState = event.state.slice('approval:'.length);
+        const approvalRef = event.approvalId;
+        if (approvalState === 'pending' && approvalRef && !approvalsRef.current.has(approvalRef)) {
+          approvalsRef.current.add(approvalRef);
+          const runId = activeRunIdRef.current;
+          void (async () => {
+            try {
+              const list = await engine<{ approvals?: Array<Record<string, unknown>> }>(
+                `/console/org/${orgId}/approvals?state=PENDING`,
+              );
+              const rows = Array.isArray(list.approvals) ? list.approvals : [];
+              const match =
+                rows.find((a) => str(a.approvalRef) === approvalRef) ??
+                rows.find((a) => str(a.id) === approvalRef) ??
+                (runId ? rows.find((a) => str(a.runId) === runId || str(a.run_id) === runId) : undefined);
+              if (!match) {
+                setNotices((prev) => [
+                  ...prev,
+                  { id: `appr-${approvalRef}`, kind: 'status', text: `An approval is waiting (${approvalRef}) — open Approvals to decide.` },
+                ]);
+                return;
+              }
+              const approval: ApprovalRequest = {
+                id: str(match.id) ?? approvalRef,
+                runId: str(match.runId) ?? str(match.run_id) ?? runId ?? '',
+                approvalRef: str(match.approvalRef) ?? approvalRef,
+                summary: str(match.summary) ?? 'tool call',
+                actionType: str(match.actionType) ?? str(match.action_type) ?? '',
+                expiresAt: str(match.expiresAt) ?? str(match.expires_at),
+              };
+              // A3-21 — the approval ref embeds the tool call id
+              // (`aprv_<runId>_<seq>_call_<hex>`); the summary IS the tool
+              // name, so later toolResult frames for this call can be named.
+              const callMatch = /call_[0-9a-f]+/i.exec(approval.approvalRef);
+              if (callMatch) {
+                approvalNamesRef.current.set(callMatch[0], approval.summary);
+              }
+              setNotices((prev) => [
+                ...prev,
+                { id: `appr-${approval.id}`, kind: 'approval', text: `Approval needed: ${approval.summary}`, approval },
+              ]);
+            } catch {
+              setNotices((prev) => [
+                ...prev,
+                { id: `appr-${approvalRef}`, kind: 'status', text: `An approval is waiting (${approvalRef}) — open Approvals to decide.` },
+              ]);
+            }
+          })();
+        } else if (approvalState === 'approved' || approvalState === 'denied' || approvalState === 'expired') {
+          // The card resolves itself once the decision lands.
+          setNotices((prev) => prev.filter((n) => n.kind !== 'approval'));
+        }
       } else if (event.terminal) {
         // A2-68: carry the classified terminal reason (e.g. "tool policy
         // denied: create_ticket") so the failure notice names the cause.
@@ -527,6 +693,10 @@ export function useChatSession(conversationId: string | null, agentId: string | 
         setPhase('idle');
         setLive({ user: null, assistantText: '' });
         setNotices([]);
+        setStopping(false);
+        toolCallsRef.current.clear();
+        approvalsRef.current.clear();
+        approvalNamesRef.current.clear();
         reattachedRef.current = null;
         didReset = true;
       } else {
@@ -579,6 +749,9 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     activeRunIdRef.current = null;
     setActiveRunId(null);
     setPhase(failed ? 'error' : 'done');
+    // A3-25 — the terminal frame is the cancel landing; drop the stopping
+    // indicator.
+    setStopping(false);
     if (failed) {
       // A2-68: the terminal frame names the real cause (e.g. "tool policy
       // denied: create_ticket") — render it, never just the state.
@@ -613,6 +786,8 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     }
     setLive({ user: { id: `live-${Date.now()}`, role: 'user', text, createdAt: null }, assistantText: '' });
     setNotices([]);
+    // A3-23 — a new send supersedes any failed one.
+    failedSendRef.current = null;
     let id = conversationId;
 
     try {
@@ -663,12 +838,32 @@ export function useChatSession(conversationId: string | null, agentId: string | 
       }
     } catch {
       setPhase('error');
+      // A3-23 — a failed send leaves an inline notice AND keeps the text
+      // for the retry path (the composer already cleared its input).
+      failedSendRef.current = text;
+      setNotices([{ id: `e-${Date.now()}`, kind: 'error', text: 'Could not send the message — check your connection and try again.', retryable: true }]);
     }
+  };
+
+  /**
+   * A3-23 — re-post the text of the last failed send. Gated on the same
+   * phase guard as send(); a successful send clears the stored text.
+   */
+  const retrySend = () => {
+    const text = failedSendRef.current;
+    if (!text || phase === 'streaming' || phase === 'sending' || phase === 'creating') {
+      return;
+    }
+    void send(text);
   };
 
   const stop = () => {
     if (activeRunIdRef.current) {
-      cancel.mutate(activeRunIdRef.current);
+      // A3-25 — enter the cancelling state immediately; the terminal frame
+      // (via finalize) settles it. If the cancel request itself fails,
+      // drop the state so the stop affordance never wedges on.
+      setStopping(true);
+      cancel.mutate(activeRunIdRef.current, { onError: () => setStopping(false) });
     }
   };
 
@@ -760,14 +955,18 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     setPhase('idle');
     setLive({ user: null, assistantText: '' });
     setNotices([]);
+    setStopping(false);
+    toolCallsRef.current.clear();
+    approvalsRef.current.clear();
+    approvalNamesRef.current.clear();
   };
 
   const isBusy = phase === 'creating' || phase === 'sending' || phase === 'streaming';
 
   return useMemo(
-    () => ({ live, notices, phase, isBusy, send, stop, reset, regenerate, editMessage, activeRunId, streamStatus: stream }),
+    () => ({ live, notices, phase, isBusy, stopping, send, stop, reset, regenerate, editMessage, retrySend, activeRunId, streamStatus: stream }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [live, notices, phase, activeRunId, stream, conversationId, agentId, orgId],
+    [live, notices, phase, stopping, activeRunId, stream, conversationId, agentId, orgId],
   );
 }
 

@@ -10,6 +10,7 @@ import {
   PlusButton,
   Input,
   SendButton,
+  StopSpinner,
   HintRow,
 } from './ChatComposer.styles';
 
@@ -31,6 +32,8 @@ type Props = {
   /** A run is in flight — send becomes stop. */
   streaming?: boolean;
   onStop?: () => void;
+  /** A3-25 — the cancel is in flight; the button shows Stopping… */
+  stopping?: boolean;
   disabled?: boolean;
   attachments?: AttachmentUpload[];
   onAttach?: (file: File | null | undefined) => void;
@@ -42,7 +45,7 @@ type Props = {
  * A3-49 — Escape stops a running turn.
  */
 export const ChatComposer = forwardRef<HTMLTextAreaElement, Props>(
-  ({ placeholder, hint, onSend, streaming = false, onStop, disabled = false, attachments = [], onAttach }, ref) => {
+  ({ placeholder, hint, onSend, streaming = false, onStop, stopping = false, disabled = false, attachments = [], onAttach }, ref) => {
     const [value, setValue] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
     const areaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -137,11 +140,13 @@ export const ChatComposer = forwardRef<HTMLTextAreaElement, Props>(
           {streaming ? (
             <SendButton
               type="button"
-              aria-label="Stop the run"
+              aria-label={stopping ? 'Stopping the run' : 'Stop the run'}
               $enabled
               onClick={() => onStop?.()}
+              disabled={stopping}
+              title={stopping ? 'Stopping…' : undefined}
             >
-              <Square size={12} strokeWidth={2} fill="currentColor" />
+              {stopping ? <StopSpinner aria-hidden="true" /> : <Square size={12} strokeWidth={2} fill="currentColor" />}
             </SendButton>
           ) : (
             <SendButton

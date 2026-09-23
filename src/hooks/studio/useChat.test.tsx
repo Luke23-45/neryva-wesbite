@@ -133,6 +133,41 @@ describe('parseRunEvent reason (C13 stop lines)', () => {
     expect(done.failed).toBe(false);
   });
 
+  it('A3-21 — toolCall args and toolCallId survive parsing for correlation', () => {
+    const call = parseRunEvent({
+      id: 'e-t3',
+      event: 'tool-call',
+      data: JSON.stringify({
+        case: 'toolCall',
+        value: { toolCallId: 'call_abc', toolName: 'create_ticket', arguments: { title: 'billing issue' } },
+      }),
+    });
+    expect(call.toolCallId).toBe('call_abc');
+    expect(call.toolArgs).toEqual({ title: 'billing issue' });
+    const result = parseRunEvent({
+      id: 'e-t4',
+      event: 'tool-result',
+      data: JSON.stringify({ case: 'toolResult', value: { toolCallId: 'call_abc', status: 'SUCCEEDED' } }),
+    });
+    // The result wire frame carries no tool name — only the call id for
+    // the session to correlate.
+    expect(result.toolCallId).toBe('call_abc');
+    expect(result.tool).toBeNull();
+  });
+
+  it('A3-20 — approval frames expose the approvalId for the inline card', () => {
+    const pending = parseRunEvent({
+      id: 'e-a1',
+      event: 'approval',
+      data: JSON.stringify({
+        case: 'approval',
+        value: { state: 'PENDING', approvalId: 'aprv_run1_2_call_xyz' },
+      }),
+    });
+    expect(pending.state).toBe('approval:pending');
+    expect(pending.approvalId).toBe('aprv_run1_2_call_xyz');
+  });
+
   it('parses the lifecycle envelope and dotted terminal frames', () => {
     const lc = parseRunEvent({
       id: 'e-lc',

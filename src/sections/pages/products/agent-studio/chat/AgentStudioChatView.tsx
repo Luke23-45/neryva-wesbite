@@ -15,6 +15,7 @@ import {
   useUpdateConversationStatus,
   type RunNotice,
 } from '@hooks/studio/useChat';
+import { useDecideApproval } from '@hooks/studio/useSetupApprovals';
 import { useAttachmentUpload } from '@hooks/studio/useAttachmentUpload';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
@@ -116,6 +117,25 @@ export function AgentStudioChatView() {
   const scrollRegionRef = useRef<HTMLDivElement>(null);
 
   const session = useChatSession(conversationId, boundAgentId);
+  const decideApproval = useDecideApproval();
+  // A3-20 — inline approval card decision. The SoD 403 ("approver must
+  // differ from author") is surfaced by the card, not swallowed.
+  const handleDecideApproval = useCallback(
+    async (approval: NonNullable<RunNotice['approval']>, decision: 'APPROVED' | 'DENIED') => {
+      try {
+        await decideApproval.mutateAsync({ runId: approval.runId, approvalId: approval.id, decision });
+      } catch (error) {
+        const message =
+          error instanceof ApiError && error.code === 'forbidden'
+            ? 'You authored this run — a different admin must approve it.'
+            : error instanceof Error
+              ? error.message
+              : 'Could not record the decision.';
+        throw new Error(message);
+      }
+    },
+    [decideApproval],
+  );
   // Stable callbacks for the memoized message bubbles: always invoke the
   // LATEST session, never a stale closure. Synced in an effect — refs must
   // not be written during render.
@@ -449,6 +469,9 @@ export function AgentStudioChatView() {
               conversationId={conversationId}
               onEditMessage={handleEditMessage}
               scrollContainerRef={scrollRegionRef}
+              onDecideApproval={handleDecideApproval}
+              isStreaming={session.phase === 'streaming'}
+              onRetrySend={session.retrySend}
             />
           )}
         </ScrollRegion>
@@ -464,6 +487,7 @@ export function AgentStudioChatView() {
           onSend={send}
           streaming={session.isBusy}
           onStop={session.stop}
+          stopping={session.stopping}
           disabled={needsAgent || session.phase === 'creating'}
           attachments={attachments.uploads}
           onAttach={onAttach}

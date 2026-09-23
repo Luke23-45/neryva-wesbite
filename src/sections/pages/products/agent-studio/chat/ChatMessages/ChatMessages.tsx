@@ -38,8 +38,21 @@ export type Message = {
 
 export type ChatNotice = {
   id: string;
-  kind: 'tool' | 'usage' | 'status' | 'error';
+  kind: 'tool' | 'usage' | 'status' | 'error' | 'approval';
   text: string;
+  /** A3-21 — rich tool-call payload for expanded rendering. */
+  toolCall?: { name: string | null; args: unknown; status: string | null; callId: string | null } | null;
+  /** A3-20 — inline approval card payload. */
+  approval?: {
+    id: string;
+    runId: string;
+    approvalRef: string;
+    summary: string;
+    actionType: string;
+    expiresAt: string | null;
+  } | null;
+  /** A3-23 — the session kept the failed text; the notice offers retry. */
+  retryable?: boolean;
 };
 
 type Suggestion = { icon: string; label: string };
@@ -58,6 +71,12 @@ type Props = {
   onEditMessage?: (messageId: string, text: string) => Promise<void>;
   /** A3-45 — the scrollable ancestor; ChatMessages pins it imperatively. */
   scrollContainerRef?: RefObject<HTMLElement | null>;
+  /** A3-20 — decides an inline approval card (approve/deny). */
+  onDecideApproval?: (approval: NonNullable<ChatNotice['approval']>, decision: 'APPROVED' | 'DENIED') => Promise<void>;
+  /** A3-24 — true while the last agent bubble is still streaming (cursor). */
+  isStreaming?: boolean;
+  /** A3-23 — re-posts the text of the last failed send. */
+  onRetrySend?: () => void;
 };
 
 const iconPaths: Record<string, string> = {
@@ -76,6 +95,7 @@ const noticeTone: Record<ChatNotice['kind'], string> = {
   usage: '#94a3b8',
   status: '#c084fc',
   error: '#f87171',
+  approval: '#fbbf24',
 };
 
 /** Live (streaming) rows are `live-…` — actions only apply to persisted rows. */
@@ -161,6 +181,7 @@ const MessageBubble = memo(function MessageBubble({
   onEditStart,
   onEditCancel,
   onEditSave,
+  streaming,
 }: {
   id: string;
   role: 'user' | 'agent';
@@ -172,6 +193,8 @@ const MessageBubble = memo(function MessageBubble({
   onEditStart: (messageId: string) => void;
   onEditCancel: () => void;
   onEditSave: (messageId: string, text: string) => Promise<void>;
+  /** A3-24 — the bubble is still receiving chunks; show a cursor. */
+  streaming?: boolean;
 }) {
   const [draft, setDraft] = useState(text);
   const [saving, setSaving] = useState(false);
@@ -232,6 +255,8 @@ const MessageBubble = memo(function MessageBubble({
       ) : (
         <BubbleText>
           <MarkdownText text={text} />
+          {/* A3-24 — blinking cursor while the reply is still streaming. */}
+          {streaming && <StreamCursor aria-hidden="true" />}
         </BubbleText>
       )}
       {persisted && !editing && (
@@ -276,6 +301,9 @@ export function ChatMessages({
   conversationId,
   onEditMessage,
   scrollContainerRef,
+  onDecideApproval,
+  isStreaming,
+  onRetrySend,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   // A3-45 — stick only while the user is near the bottom; our own sends
@@ -389,7 +417,7 @@ export function ChatMessages({
   return (
     <>
       <MessageList role="log" aria-live="polite" aria-label="Conversation">
-        {messages.map((m) => (
+        {messages.map((m, i) => (
           <MessageBubble
             key={m.id}
             id={m.id}
@@ -402,14 +430,29 @@ export function ChatMessages({
             onEditStart={setEditingId}
             onEditCancel={handleEditCancel}
             onEditSave={handleEditSave}
+            // A3-24 — the streaming cursor marks the live bubble while
+            // chunks are still arriving.
+            streaming={isStreaming && i === messages.length - 1 && m.role === 'agent' && m.id === 'live-assistant'}
           />
         ))}
-        {notices.map((n) => (
-          <NoticeRow key={n.id} role="status">
-            <NoticeDot $tone={noticeTone[n.kind]} aria-hidden="true" />
-            {n.text}
-          </NoticeRow>
-        ))}
+        {notices.map((n) =>
+          n.kind === 'approval' && n.approval ? (
+            <ApprovalCard key={n.id} approval={n.approval} onDecide={onDecideApproval} />
+          ) : n.kind === 'tool' && n.toolCall ? (
+            <ToolNoticeRow key={n.id} notice={n} />
+          ) : (
+            <NoticeRow key={n.id} role="status">
+              <NoticeDot $tone={noticeTone[n.kind]} aria-hidden="true" />
+              {n.text}
+              {/* A3-23 — the session kept the failed text; offer a retry. */}
+              {n.retryable && n.kind === 'error' && onRetrySend && (
+                <RetryButton type="button" onClick={() => onRetrySend()}>
+                  Retry
+                </RetryButton>
+              )}
+            </NoticeRow>
+          ),
+        )}
         {isTyping && (
           <TypingBubble
             as={motion.div}
@@ -494,6 +537,23 @@ const ActionButton = styled.button<{ $active?: boolean }>`
     color: ${({ theme }) => theme.app.text.primary};
   }
 
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+/** A3-23 — retry a failed send from the error notice. */
+const RetryButton = styled.button`
+  margin-left: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.primary};
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 1px;
@@ -597,4 +657,211 @@ const NoticeDot = styled.span<{ $tone: string }>`
   border-radius: 50%;
   background: ${({ $tone }) => $tone};
   flex-shrink: 0;
+`;
+
+/** A3-24 — blinking block cursor on the live streaming bubble. */
+const StreamCursor = styled.span`
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: ${({ theme }) => theme.app.text.primary};
+  animation: stream-blink 1s steps(2, start) infinite;
+  @keyframes stream-blink {
+    to {
+      visibility: hidden;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`;
+
+/** A3-21 — tool-call notice with expandable arguments. */
+function ToolNoticeRow({ notice }: { notice: ChatNotice }) {
+  const tc = notice.toolCall;
+  const argsText =
+    tc?.args == null
+      ? null
+      : typeof tc.args === 'string'
+        ? tc.args
+        : JSON.stringify(tc.args, null, 2);
+  return (
+    <NoticeRow role="status" style={{ borderRadius: 12, maxWidth: '100%' }}>
+      <NoticeDot $tone={noticeTone[notice.kind]} aria-hidden="true" />
+      <span style={{ minWidth: 0 }}>
+        {notice.text}
+        {argsText && (
+          <details style={{ marginTop: 4 }}>
+            <summary style={{ cursor: 'pointer', fontSize: '0.85em' }}>Arguments</summary>
+            <pre
+              style={{
+                margin: '4px 0 0',
+                padding: 8,
+                borderRadius: 8,
+                background: 'rgba(0,0,0,0.25)',
+                overflowX: 'auto',
+                fontSize: '0.85em',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {argsText}
+            </pre>
+          </details>
+        )}
+      </span>
+    </NoticeRow>
+  );
+}
+
+/**
+ * A3-20 — inline approval card. The engine stores no tool arguments on the
+ * approval record, so the card shows the action summary, the mutating/
+ * read-only classification, and the expiry countdown — never invented args.
+ */
+function ApprovalCard({
+  approval,
+  onDecide,
+}: {
+  approval: NonNullable<ChatNotice['approval']>;
+  onDecide?: (approval: NonNullable<ChatNotice['approval']>, decision: 'APPROVED' | 'DENIED') => Promise<void>;
+}) {
+  const [busy, setBusy] = useState<'APPROVED' | 'DENIED' | null>(null);
+  const [outcome, setOutcome] = useState<'approved' | 'denied' | 'error' | null>(null);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!approval.expiresAt || outcome) {
+      return;
+    }
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [approval.expiresAt, outcome]);
+
+  const decide = async (decision: 'APPROVED' | 'DENIED') => {
+    if (busy || outcome || !onDecide) {
+      return;
+    }
+    setBusy(decision);
+    setErrorText(null);
+    try {
+      await onDecide(approval, decision);
+      setOutcome(decision === 'APPROVED' ? 'approved' : 'denied');
+    } catch (error) {
+      // A3-20 — SoD: the engine 403s when the author tries to self-approve.
+      // Surface it inline so the user knows to ask a different admin.
+      const message = error instanceof Error ? error.message : 'Could not record the decision.';
+      setErrorText(message);
+      setOutcome('error');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const expiresMs = approval.expiresAt ? new Date(approval.expiresAt).getTime() - now : null;
+  const expiresLabel =
+    expiresMs == null ? null : expiresMs <= 0 ? 'expired' : `expires in ${Math.floor(expiresMs / 60000)}m ${Math.floor((expiresMs % 60000) / 1000)}s`;
+
+  return (
+    <ApprovalWrap role="group" aria-label={`Approval needed: ${approval.summary}`}>
+      <ApprovalHeader>
+        <NoticeDot $tone={noticeTone.approval} aria-hidden="true" />
+        <ApprovalTitle>Approval needed</ApprovalTitle>
+        {approval.actionType && <ApprovalBadge>{approval.actionType}</ApprovalBadge>}
+      </ApprovalHeader>
+      <ApprovalSummary>{approval.summary}</ApprovalSummary>
+      {expiresLabel && <ApprovalMeta>{expiresLabel}</ApprovalMeta>}
+      {outcome === 'approved' && <ApprovalMeta>Approved — the run is resuming.</ApprovalMeta>}
+      {outcome === 'denied' && <ApprovalMeta>The tool call was denied.</ApprovalMeta>}
+      {outcome === 'error' && errorText && <ApprovalError>{errorText}</ApprovalError>}
+      {!outcome && (
+        <ApprovalActions>
+          <ApprovalButton $primary disabled={busy !== null} onClick={() => void decide('APPROVED')}>
+            {busy === 'APPROVED' ? 'Approving…' : 'Approve'}
+          </ApprovalButton>
+          <ApprovalButton disabled={busy !== null} onClick={() => void decide('DENIED')}>
+            {busy === 'DENIED' ? 'Denying…' : 'Deny'}
+          </ApprovalButton>
+        </ApprovalActions>
+      )}
+    </ApprovalWrap>
+  );
+}
+
+const ApprovalWrap = styled.div`
+  align-self: center;
+  width: min(480px, 100%);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const ApprovalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const ApprovalTitle = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const ApprovalBadge = styled.span`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+`;
+
+const ApprovalSummary = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-family: ui-monospace, monospace;
+  word-break: break-word;
+`;
+
+const ApprovalMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const ApprovalError = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: #f87171;
+`;
+
+const ApprovalActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ApprovalButton = styled.button<{ $primary?: boolean }>`
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid ${({ theme }) => theme.app.border.hairline};
+  background: ${({ $primary, theme }) => ($primary ? theme.colors.accent.emerald : 'transparent')};
+  color: ${({ $primary, theme }) => ($primary ? '#fff' : theme.app.text.primary)};
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
 `;

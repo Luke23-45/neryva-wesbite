@@ -112,6 +112,25 @@ export const SendButton = styled.button<{ $enabled: boolean }>`
   }
 `;
 
+/** A3-25 — spinner shown on the Stop button while the cancel is in flight. */
+export const StopSpinner = styled.span`
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: stop-spin 0.7s linear infinite;
+  @keyframes stop-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.35);
+  }
+`;
+
 export const HintRow = styled.div`
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: ${({ theme }) => theme.app.type.micro};
