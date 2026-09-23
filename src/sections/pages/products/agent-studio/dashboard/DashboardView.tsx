@@ -74,6 +74,32 @@ const stateTone = (state: string): 'success' | 'azure' | 'warning' | 'error' | '
   state === 'active' ? 'success' : state === 'trial' ? 'azure' : state === 'past_due' ? 'warning' : state === 'suspended' ? 'error' : 'neutral';
 
 export function DashboardView() {
+  const { orgId } = useOrg();
+  if (!orgId) {
+    // Org context still resolving (e.g. cold login before ['org','home']
+    // lands) — skeletons, never the "No active organization" crash (D1-01).
+    // The per-panel QueryViews take over once the org resolves.
+    return (
+      <ViewShell>
+        <ViewHeader>
+          <ViewTitle>Dashboard</ViewTitle>
+          <ViewSubtitle>
+            Your agents, usage, and platform health — measured, not estimated.
+          </ViewSubtitle>
+        </ViewHeader>
+        <KpiGrid>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} $h="88px" $r="12px" />
+          ))}
+        </KpiGrid>
+        <Skeleton $h="260px" $r="12px" />
+      </ViewShell>
+    );
+  }
+  return <DashboardContent />;
+}
+
+function DashboardContent() {
   const [range, setRange] = useState<Range>('30d');
   const dates = rangeDates(range);
 
