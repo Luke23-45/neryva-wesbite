@@ -127,7 +127,23 @@ export interface ParsedRunEvent {
 
 const TERMINAL_STATES = ['completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired'];
 
-/** Run-event wire format follows the Neryva MCP taxonomy; parse defensively. */
+/** Run states that are done — anything else is still live and re-attachable. */
+const TERMINAL_RUN_STATES = new Set(TERMINAL_STATES);
+
+/**
+ * Parse one engine SSE run-event frame.
+ *
+ * Actual wire protocol (conversations.service.ts SSE serialization):
+ *  - the SSE `event:` line carries a semantic name (`delta`, `lifecycle`,
+ *    `tool-call`, `tool-result`, `usage`, `approval`, `terminal`,
+ *    `run.completed`, `run.failed`, `error`, …),
+ *  - the `data:` payload is the `{case, value}` run-event envelope
+ *    (event-mapper.ts), except the dotted terminal frames which are
+ *    `{"message_id": "...", "terminal_reason": "..."}`.
+ *
+ * There is no `type` / `event_type` / nested `event` discriminator on the
+ * wire — the parser keys off `message.event` + `payload.case`.
+ */
 export function parseRunEvent(message: SseMessage): ParsedRunEvent {
   let payload: Record<string, unknown> = {};
   try {
@@ -137,41 +153,122 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
     payload = { text: message.data };
   }
 
-  const eventType = str(payload.type) ?? str(payload.event_type) ?? str(payload.event) ?? message.event ?? '';
-  const body = typeof payload.payload === 'object' && payload.payload !== null ? (payload.payload as Record<string, unknown>) : payload;
-  const delta = typeof body.delta === 'object' && body.delta !== null ? (body.delta as Record<string, unknown>) : {};
+  const eventName = (message.event ?? '').toLowerCase();
+  const envelope = str(payload.case);
+  const value =
+    typeof payload.value === 'object' && payload.value !== null
+      ? (payload.value as Record<string, unknown>)
+      : {};
 
-  const text =
-    str(body.text) ??
-    str(body.delta) ??
-    str(delta.text) ??
-    textFromContent(body.content) ??
-    textFromContent(payload.content) ??
-    null;
-  const tool = str(body.tool) ?? str(body.tool_name) ?? str(body.tool_id);
-  const usage = typeof body.usage === 'object' && body.usage !== null
-    ? Object.entries(body.usage as Record<string, unknown>)
-        .filter(([, v]) => typeof v === 'number')
-        .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
-        .join(' · ') || null
-    : null;
-  const state = str(body.state) ?? str(body.status) ?? str(payload.state) ?? str(payload.status);
-  const reason = str(body.reason) ?? str(body.terminal_reason) ?? str(body.terminalReason) ?? str(payload.reason);
+  const base: ParsedRunEvent = {
+    kind: 'other',
+    text: null,
+    tool: null,
+    usage: null,
+    state: null,
+    reason: null,
+    terminal: false,
+    failed: false,
+  };
 
-  const lower = eventType.toLowerCase();
-  if (lower.includes('tool')) {
-    return { kind: 'tool', text, tool, usage, state, reason, terminal: false, failed: lower.includes('fail') };
+  // Dotted terminal frames: event `run.completed` / `run.failed`,
+  // data {"message_id": "...", "terminal_reason": "..."}.
+  if (eventName.startsWith('run.')) {
+    const reason = str(payload.terminal_reason) ?? str(payload.terminalReason) ?? null;
+    const failed = eventName.includes('fail');
+    // The wire carries no separate state field — the event name IS the
+    // state. Keep the literal failure token in `state` so stop-line
+    // classifiers (describeTryStop) still see it; the human reason stays
+    // in `reason`.
+    const reasonLower = (reason ?? '').toLowerCase();
+    const state = failed
+      ? (reasonLower.includes('fail') ? reason : 'failed')
+      : (reason ?? 'completed');
+    return {
+      ...base,
+      kind: 'lifecycle',
+      state,
+      reason,
+      terminal: true,
+      failed,
+    };
   }
-  if (lower.includes('usage') || usage !== null) {
-    return { kind: 'usage', text, tool, usage, state, reason, terminal: false, failed: false };
+  if (eventName === 'error') {
+    return {
+      ...base,
+      kind: 'lifecycle',
+      text: str(payload.message) ?? null,
+      state: 'error',
+      terminal: false,
+      failed: true,
+    };
   }
-  if (TERMINAL_STATES.some((t) => lower.includes(t) || state?.toLowerCase().includes(t))) {
-    return { kind: 'lifecycle', text, tool, usage, state: state ?? eventType, reason, terminal: true, failed: lower.includes('fail') || state?.toLowerCase().includes('fail') === true };
+
+  switch (envelope) {
+    case 'assistantChunk':
+      return { ...base, kind: 'chunk', text: str(value.text) };
+    case 'model':
+      // Model-call bookkeeping — not user-visible text.
+      return { ...base, kind: 'other', state: str(value.modelId) };
+    case 'toolCall':
+      return { ...base, kind: 'tool', tool: str(value.toolName), state: str(value.toolCallId) };
+    case 'toolResult': {
+      const failed = str(value.status)?.toUpperCase() === 'FAILED';
+      return { ...base, kind: 'tool', failed, state: str(value.status) };
+    }
+    case 'approval': {
+      const approvalState = str(value.state);
+      return {
+        ...base,
+        kind: 'lifecycle',
+        state: approvalState ? `approval:${approvalState.toLowerCase()}` : 'approval',
+        text: approvalState ? `Approval ${approvalState}` : null,
+      };
+    }
+    case 'lifecycle':
+      return { ...base, kind: 'lifecycle', state: str(value.toState) };
+    case 'terminal': {
+      const code = str(value.code);
+      const terminalMessage = str(value.message);
+      const failed = !(code?.toLowerCase().includes('complet') ?? false);
+      return { ...base, kind: 'lifecycle', state: code, reason: terminalMessage, text: terminalMessage, terminal: true, failed };
+    }
+    case 'usage': {
+      const usage = usageText(value);
+      return { ...base, kind: 'usage', usage };
+    }
+    case 'retrieval':
+    case 'memory':
+    case 'checkpoint':
+    case 'policy':
+    case 'media':
+    case 'thinking':
+      return { ...base, kind: 'lifecycle', state: envelope };
+    default:
+      break;
   }
-  if (text !== null && (lower.includes('chunk') || lower.includes('message') || lower.includes('assistant') || message.event === null)) {
-    return { kind: 'chunk', text, tool, usage, state, reason, terminal: false, failed: false };
+
+  // Envelope-less fallback keyed on the SSE event name alone.
+  if (eventName === 'delta') {
+    return { ...base, kind: 'other' };
   }
-  return { kind: 'lifecycle', text, tool, usage, state: state ?? (eventType || null), reason, terminal: false, failed: false };
+  if (eventName.includes('tool')) {
+    return { ...base, kind: 'tool', tool: str(value.toolName) ?? str(value.tool) };
+  }
+  if (eventName === 'usage') {
+    return { ...base, kind: 'usage', usage: usageText(value) };
+  }
+  if (TERMINAL_STATES.some((t) => eventName.includes(t))) {
+    return { ...base, kind: 'lifecycle', state: eventName, terminal: true, failed: eventName.includes('fail') };
+  }
+  return { ...base, kind: 'lifecycle', state: eventName || null };
+}
+
+function usageText(value: Record<string, unknown>): string | null {
+  const parts = Object.entries(value)
+    .filter(([, v]) => typeof v === 'number')
+    .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 // ─── Queries & mutations ─────────────────────────────────────────────

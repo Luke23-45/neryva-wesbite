@@ -62,11 +62,13 @@ function wrapper() {
 }
 
 function chunk(text: string): SseMessage {
-  return { id: 'e-chunk', event: 'message', data: JSON.stringify({ type: 'chunk', text }) };
+  // Real engine wire: event `delta` + {case:'assistantChunk', value:{text,isFinal}}
+  return { id: 'e-chunk', event: 'delta', data: JSON.stringify({ case: 'assistantChunk', value: { text, isFinal: false } }) };
 }
 
 function terminal(state: string, reason: string | null): SseMessage {
-  return { id: 'e-term', event: 'run.failed', data: JSON.stringify({ type: 'run.failed', state, ...(reason ? { reason } : {}) }) };
+  // Real engine wire: event `run.failed` + {message_id, terminal_reason}
+  return { id: 'e-term', event: 'run.failed', data: JSON.stringify({ message_id: 'm-1', terminal_reason: reason ?? state }) };
 }
 
 beforeEach(() => {
@@ -83,10 +85,50 @@ afterEach(() => {
 
 describe('parseRunEvent reason (C13 stop lines)', () => {
   it('carries terminal_reason through for the wall-clock stop', () => {
-    const event = parseRunEvent({ id: 'e', event: 'run.failed', data: JSON.stringify({ type: 'run.failed', state: 'FAILED', terminal_reason: 'budget_exceeded' }) });
+    const event = parseRunEvent({ id: 'e', event: 'run.failed', data: JSON.stringify({ message_id: 'm-9', terminal_reason: 'budget_exceeded' }) });
     expect(event.terminal).toBe(true);
     expect(event.failed).toBe(true);
     expect(event.reason).toBe('budget_exceeded');
+  });
+
+  it('parses the assistantChunk envelope into live text', () => {
+    const event = parseRunEvent({
+      id: 'e-19',
+      event: 'delta',
+      data: JSON.stringify({ case: 'assistantChunk', value: { text: 'The answer is paris.', isFinal: true } }),
+    });
+    expect(event.kind).toBe('chunk');
+    expect(event.text).toBe('The answer is paris.');
+  });
+
+  it('parses toolCall/toolResult envelopes into tool notices', () => {
+    const proposed = parseRunEvent({
+      id: 'e-t1',
+      event: 'tool-call',
+      data: JSON.stringify({ case: 'toolCall', value: { toolCallId: 'tc-1', toolName: 'search_tickets' } }),
+    });
+    expect(proposed.kind).toBe('tool');
+    expect(proposed.tool).toBe('search_tickets');
+    const done = parseRunEvent({
+      id: 'e-t2',
+      event: 'tool-result',
+      data: JSON.stringify({ case: 'toolResult', value: { toolCallId: 'tc-1', status: 'SUCCEEDED' } }),
+    });
+    expect(done.kind).toBe('tool');
+    expect(done.failed).toBe(false);
+  });
+
+  it('parses the lifecycle envelope and dotted terminal frames', () => {
+    const lc = parseRunEvent({
+      id: 'e-lc',
+      event: 'lifecycle',
+      data: JSON.stringify({ case: 'lifecycle', value: { toState: 'DISPATCHED', fromState: 'ACCEPTED' } }),
+    });
+    expect(lc.kind).toBe('lifecycle');
+    expect(lc.state).toBe('DISPATCHED');
+    const term = parseRunEvent({ id: 'e-t', event: 'run.completed', data: JSON.stringify({ message_id: 'm-2', terminal_reason: 'completed' }) });
+    expect(term.terminal).toBe(true);
+    expect(term.failed).toBe(false);
   });
 });
 
@@ -123,7 +165,7 @@ describe('useTrySession', () => {
     expect(result.current.turns[0].liveText).toBe('Refunds land soon.');
 
     await act(async () => {
-      capturedOnEvent?.({ id: 'e-done', event: 'run.completed', data: JSON.stringify({ type: 'run.completed', state: 'COMPLETED' }) });
+      capturedOnEvent?.({ id: 'e-done', event: 'run.completed', data: JSON.stringify({ message_id: 'm-done', terminal_reason: 'completed' }) });
     });
     expect(result.current.turns[0].status).toBe('done');
     // Settled from the transcript with the shared parser — not the live tail.
@@ -152,8 +194,8 @@ describe('useTrySession', () => {
       result.current.send('Where is my order?');
     });
     await act(async () => {
-      capturedOnEvent?.({ id: 'e-tool', event: 'tool.call', data: JSON.stringify({ type: 'tool.call', tool: 'lookup_order' }) });
-      capturedOnEvent?.({ id: 'e-use', event: 'usage', data: JSON.stringify({ type: 'usage', usage: { total_tokens: 1204 } }) });
+      capturedOnEvent?.({ id: 'e-tool', event: 'tool-call', data: JSON.stringify({ case: 'toolCall', value: { toolCallId: 'tc-9', toolName: 'lookup_order' } }) });
+      capturedOnEvent?.({ id: 'e-use', event: 'usage', data: JSON.stringify({ case: 'usage', value: { total_tokens: 1204 } }) });
     });
     const kinds = result.current.turns[0].notices.map((n) => n.kind);
     expect(kinds).toContain('tool');
@@ -170,7 +212,7 @@ describe('useTrySession', () => {
     });
     const key = result.current.turns[0].key;
     await act(async () => {
-      capturedOnEvent?.({ id: 'e-done', event: 'run.completed', data: JSON.stringify({ type: 'run.completed', state: 'COMPLETED' }) });
+      capturedOnEvent?.({ id: 'e-done', event: 'run.completed', data: JSON.stringify({ message_id: 'm-done', terminal_reason: 'completed' }) });
     });
     await act(async () => {
       result.current.reask(key);
