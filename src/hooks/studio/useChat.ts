@@ -232,9 +232,11 @@ export function useSendChatMessage(conversationId: string | null) {
     mutationFn: async (input: { text: string; attachmentIds?: string[] }) =>
       engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/messages`, {
         method: 'POST',
+        // Engine contract: AcceptMessageDto takes `content` + `attachments`,
+        // not the legacy `text` / `attachment_ids` shape.
         body: {
-          text: input.text,
-          ...(input.attachmentIds?.length ? { attachment_ids: input.attachmentIds } : {}),
+          content: { text: input.text },
+          ...(input.attachmentIds?.length ? { attachments: input.attachmentIds } : {}),
         },
       }),
     onError: (error) => toastEngineError(error, 'Could not send the message'),
