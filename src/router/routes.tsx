@@ -37,7 +37,9 @@ import StatusPage from '@pages/platform/StatusPage';
 import AgentStudioShell from '@pages/products/agent_studio/AgentStudioShell';
 import AgentStudioChatPage from '@pages/products/agent_studio/AgentStudioChatPage';
 import AgentStudioDashboardPage from '@pages/products/agent_studio/AgentStudioDashboardPage';
-import AgentStudioAgentsPage from '@pages/products/agent_studio/AgentStudioAgentsPage';
+import AgentStudioAgentsPage, {
+  AgentStudioAgentsLayout,
+} from '@pages/products/agent_studio/AgentStudioAgentsPage';
 import AgentStudioAgentsOverviewPage from '@pages/products/agent_studio/AgentStudioAgentsOverviewPage';
 import AgentStudioAgentDetailPage from '@pages/products/agent_studio/AgentStudioAgentDetailPage';
 import AgentStudioAgentEditPage from '@pages/products/agent_studio/AgentStudioAgentEditPage';
@@ -340,6 +342,14 @@ export const agentStudioDashboardRoute = createRoute({
 export const agentStudioAgentsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/agents',
+  component: AgentStudioAgentsLayout,
+});
+
+// Index: the agents list. Child routes (detail/edit/build/new/overview)
+// render through the layout's <Outlet/> (A2-20).
+export const agentStudioAgentsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/',
   component: AgentStudioAgentsPage,
 });
 
@@ -603,6 +613,7 @@ export const routeDefinitions = [
     agentStudioChatRoute,
     agentStudioDashboardRoute,
     agentStudioAgentsRoute.addChildren([
+      agentStudioAgentsIndexRoute,
       agentStudioAgentsOverviewRoute,
       agentStudioAgentsNewRoute,
       agentStudioAgentDetailRoute,
