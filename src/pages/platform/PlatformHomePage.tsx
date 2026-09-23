@@ -152,7 +152,12 @@ export default function PlatformHomePage() {
     // and the ['auth']-prefix invalidation on session death never matched the
     // old bare key, so the previous org's / account's cards lingered ≤5min).
     queryKey: ['engine', 'home', 'products', orgId, accountId],
-    queryFn: () => engine<{ products: HomeProduct[] }>('/console/home'),
+    // D1-05: bind X-Neryva-Org explicitly to the query key's orgId. The
+    // module-global active-org header is updated in an OrgContext effect
+    // (after render), so a keyed refetch on org switch could fire with the
+    // PREVIOUS org's header and cache the old org's response under the new
+    // org's key. The explicit init.orgId keeps header and key in lockstep.
+    queryFn: () => engine<{ products: HomeProduct[] }>('/console/home', { orgId }),
     enabled: status === 'authenticated' && !!orgId,
   });
 
