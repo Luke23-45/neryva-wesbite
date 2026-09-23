@@ -50,6 +50,7 @@ import {
   HealthItem,
   HealthLabel,
   HealthValue,
+  HealthMeta,
   OnboardList,
   OnboardRow,
   OnboardCheck,
@@ -209,7 +210,8 @@ function DashboardContent() {
             {(data) => (
               <KpiCardWrap>
                 <KpiCardLabel>Agents</KpiCardLabel>
-                <KpiCardValue>{data.length}</KpiCardValue>
+                {/* D1-10: a genuine empty list is "None yet", not a measured 0. */}
+                <KpiCardValue>{data.length === 0 ? 'None yet' : data.length}</KpiCardValue>
                 <KpiCardMeta><Link to="/agent-studio/agents">Manage →</Link></KpiCardMeta>
               </KpiCardWrap>
             )}
@@ -218,7 +220,8 @@ function DashboardContent() {
             {(data) => (
               <KpiCardWrap>
                 <KpiCardLabel>Conversations</KpiCardLabel>
-                <KpiCardValue>{data.length}</KpiCardValue>
+                {/* D1-10: "0 conversations" implies measurement; "None yet" is honest. */}
+                <KpiCardValue>{data.length === 0 ? 'None yet' : data.length}</KpiCardValue>
                 <KpiCardMeta><Link to="/agent-studio/conversations">Review →</Link></KpiCardMeta>
               </KpiCardWrap>
             )}
@@ -414,10 +417,21 @@ function DashboardContent() {
               {data.satellites.map((s) => (
                 <HealthItem key={s.key}>
                   <HealthLabel>{s.key}</HealthLabel>
-                  <HealthValue>{s.liveness}</HealthValue>
-                  <StatusPill tone={s.liveness === 'alive' ? 'success' : 'warning'} dot={false}>
-                    {s.status}
-                  </StatusPill>
+                  {/*
+                    D1-03: headline the STATUS, not the heartbeat. The old
+                    layout put `s.liveness` ("never") in the 18px headline and
+                    the actual status in a small pill — a new satellite read as
+                    "never" with no clear meaning. Liveness is supporting info,
+                    clearly labelled; a missing heartbeat says so in words.
+                  */}
+                  <HealthValue>{s.status}</HealthValue>
+                  <HealthMeta>
+                    {s.liveness === 'never'
+                      ? 'No heartbeat yet'
+                      : s.liveness === 'alive'
+                        ? 'Heartbeat: alive'
+                        : `Heartbeat: ${s.liveness}`}
+                  </HealthMeta>
                 </HealthItem>
               ))}
               {data.degradedComponents.map((cname) => (

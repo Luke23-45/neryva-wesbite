@@ -104,6 +104,12 @@ export const HealthValue = styled.div`
   font-variant-numeric: tabular-nums;
 `;
 
+// D1-03: supporting line under the headlined status — never the headline.
+export const HealthMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
 export const Bar = styled.div`
   padding-right: 8px;
 `;
