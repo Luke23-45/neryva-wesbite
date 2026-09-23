@@ -431,7 +431,6 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     if (reattachedRef.current === conversationId) {
       return;
     }
-    reattachedRef.current = conversationId;
     let cancelled = false;
     void (async () => {
       try {
@@ -444,6 +443,11 @@ export function useChatSession(conversationId: string | null, agentId: string | 
           const s = (r.status ?? '').toLowerCase();
           return s !== '' && !TERMINAL_RUN_STATES.has(s);
         });
+        // A2-65: mark attempted only after the fetch resolves. Setting the
+        // ref before the await breaks React StrictMode (dev double-invokes
+        // the effect: the first pass is cancelled, the remount sees the ref
+        // and skips, so reattach never happens).
+        reattachedRef.current = conversationId;
         if (active) {
           setActiveRunId(active.id);
           setPhase('streaming');

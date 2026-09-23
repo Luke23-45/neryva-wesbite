@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -291,6 +292,36 @@ describe('useChatSession reload reattach (A2-65)', () => {
     });
     expect(result.current.activeRunId).toBeNull();
     expect(result.current.phase).toBe('idle');
+  });
+
+  it('reattaches under React StrictMode double-effect (regression)', async () => {
+    // StrictMode mount runs the reattach effect twice (setup -> cleanup ->
+    // setup). The first pass is cancelled while its runs fetch is still
+    // pending; the second pass must still perform the lookup. If the
+    // "already attempted" ref were set before the fetch resolved, the second
+    // pass would see it and skip — leaving the live run orphaned.
+    let resolveRuns!: (v: unknown) => void;
+    const runsGate = new Promise((res) => { resolveRuns = res; });
+    engineMock.mockImplementation((url: string) => {
+      if (String(url).includes('/conversations/conv-9/runs')) return runsGate;
+      if (String(url).includes('/messages')) return Promise.resolve(TRANSCRIPT);
+      return Promise.resolve({});
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const StrictWrapper = ({ children }: { children: React.ReactNode }) => (
+      <StrictMode>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </StrictMode>
+    );
+    const { result } = renderHook(() => useChatSession('conv-9', null), { wrapper: StrictWrapper });
+    // Flush the StrictMode setup/cleanup/setup cycle while the fetch is pending.
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      resolveRuns({ runs: [{ id: 'run-live', state: 'RUNNING' }] });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.activeRunId).toBe('run-live');
+    expect(result.current.phase).toBe('streaming');
   });
 });
 
