@@ -108,7 +108,7 @@ export function useAddEvalCases() {
   });
 }
 
-export type EvalDecision = 'PASS' | 'WARN' | 'BLOCK';
+export type EvalDecision = 'PASS' | 'WARN' | 'BLOCK' | 'FAIL';
 export type EvalState = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface EvalRun {

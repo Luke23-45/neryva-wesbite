@@ -24,7 +24,7 @@ export function clampEvalAttempts(value: number): number {
   return Math.min(Math.max(EVAL_ATTEMPTS_MIN, Math.round(value)), EVAL_ATTEMPTS_MAX);
 }
 
-export type EvalDecision = 'PASS' | 'WARN' | 'BLOCK';
+export type EvalDecision = 'PASS' | 'WARN' | 'BLOCK' | 'FAIL';
 
 /** Copy constants — every string traces to a bind or a PLAN decision. */
 export const EVAL_COPY = {
@@ -54,6 +54,12 @@ export function describeDecision(decision: EvalDecision): { tone: 'success' | 'w
         tone: 'error',
         headline: 'BLOCKed — resolve and re-evaluate.',
         detail: 'BLOCKed content cannot publish or promote. Resolve the critical failures and re-evaluate.',
+      };
+    case 'FAIL':
+      return {
+        tone: 'error',
+        headline: 'FAIL — fix the failing cases.',
+        detail: 'Failed content cannot publish or promote. Fix the failing cases and re-evaluate.',
       };
     case 'WARN':
       return {
@@ -197,6 +203,8 @@ export function gradeEvaluation(input: {
   switch (input.latest.decision) {
     case 'BLOCK':
       return { subtitle: 'BLOCKed — resolve and re-evaluate', hint: 'BLOCKed content cannot publish or promote', status: 'attention' };
+    case 'FAIL':
+      return { subtitle: 'FAIL — fix the failing cases', hint: 'Failed content cannot publish or promote', status: 'attention' };
     case 'WARN':
       return { subtitle: 'WARN — check required checks', hint: 'Shippable unless the template declares required checks', status: 'attention' };
     case 'PASS':
@@ -266,10 +274,10 @@ export function selectVersionEvalState(runs: EvalRunLite[], version: VersionRowL
   const running = ordered.some((run) => run.state === 'pending' || run.state === 'running');
   const completed = ordered.filter((run) => run.state === 'completed');
   const formal = completed.filter(
-    (run): run is EvalRunLite & { decision: string } => !run.isShadow && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK'),
+    (run): run is EvalRunLite & { decision: string } => !run.isShadow && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK' || run.decision === 'FAIL'),
   );
   const shadowDecided = completed.filter(
-    (run): run is EvalRunLite & { decision: string } => run.isShadow && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK'),
+    (run): run is EvalRunLite & { decision: string } => run.isShadow && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK' || run.decision === 'FAIL'),
   );
   let latest: VersionEvalState['latest'] = null;
   const firstFormal = formal[0] ?? null;

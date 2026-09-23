@@ -158,7 +158,9 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
     }
     const result = new Set<string>();
     for (const [versionId, decision] of latest) {
-      if (decision === 'BLOCK') {
+      // A2-80: the engine also refuses FAIL promotions (rollouts.service.ts),
+      // so the UI must treat a failed latest verdict as rollout-blocking.
+      if (decision === 'BLOCK' || decision === 'FAIL') {
         result.add(versionId);
       }
     }

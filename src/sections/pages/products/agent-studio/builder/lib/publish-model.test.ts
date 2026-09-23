@@ -56,6 +56,13 @@ describe('classifyPublishRefusal', () => {
     ).toBe('required-checks');
   });
 
+  it('matches the FAIL refusal verbatim (A2-80)', () => {
+    expect(
+      classifyPublishRefusal(apiError(409, 'the latest evaluation of this content decided FAIL — fix the failing cases and re-evaluate before publishing')),
+    ).toBe('failed-content');
+  });
+});
+
   it('disambiguates the 400s by details key', () => {
     expect(classifyPublishRefusal(apiError(400, 'Request validation failed', { knowledge_pins: 'unresolved knowledge sources cannot publish: x' }))).toBe('degraded');
     expect(classifyPublishRefusal(apiError(400, 'Request validation failed', { tool_policy: 'tool pins rejected: t' }))).toBe('tools');
@@ -75,14 +82,13 @@ describe('classifyPublishRefusal', () => {
   });
 
   it('every kind has a fix with a label (no dead branches)', () => {
-    const kinds = ['no-op', 'blocked-content', 'required-checks', 'degraded', 'status', 'payload', 'models', 'tools', 'instructions', 'unknown'] as const;
+    const kinds = ['no-op', 'blocked-content', 'failed-content', 'required-checks', 'degraded', 'status', 'payload', 'models', 'tools', 'instructions', 'unknown'] as const;
     for (const kind of kinds) {
       const fix = refusalFix(kind);
       expect(fix.title.length).toBeGreaterThan(0);
       expect(fix.fixLabel.length).toBeGreaterThan(0);
     }
   });
-});
 
 describe('evaluateRequiredGate', () => {
   it('passes only on fresh PASS with declared checks', () => {
@@ -226,6 +232,21 @@ describe('derivePublishReadiness (single derivation)', () => {
     expect(derived.rows.find((r) => r.id === 'block')?.ok).toBe(false);
     expect(derived.rows.find((r) => r.id === 'required')?.ok).toBe(false);
     expect(derived.verdict).toBe('no-go');
+  });
+
+  it('fails FAIL on the block row with failing-case copy (A2-80)', () => {
+    const derived = derivePublishReadiness(
+      readinessInput({
+        evalRuns: [{ ...passRun(), decision: 'FAIL' }],
+      }),
+    );
+    const blockRow = derived.rows.find((r) => r.id === 'block');
+    expect(blockRow?.ok).toBe(false);
+    expect(blockRow?.detail).toMatch(/decided FAIL/);
+    expect(blockRow?.detail).toMatch(/failing cases/);
+    expect(derived.rows.find((r) => r.id === 'required')?.ok).toBe(false);
+    expect(derived.verdict).toBe('no-go');
+    expect(derived.publishable).toBe(false);
   });
 
   it('ignores shadow decisions for both gates', () => {

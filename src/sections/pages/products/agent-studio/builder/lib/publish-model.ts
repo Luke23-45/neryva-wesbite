@@ -30,6 +30,8 @@ export const REFUSAL_TEXT = {
   noOpJoint: 'assistant active version already carries this payload and resolved set',
   /** BLOCK gate (`release-gate.ts:34-35`). */
   blockedContent: 'the latest evaluation of this content decided BLOCK',
+  /** FAIL gate (`release-gate.ts` — A2-80). */
+  failedContent: 'the latest evaluation of this content decided FAIL',
   /** Required-checks gate (`release-gate.ts:60`). */
   requiredChecks: 'release policy requires a fresh PASS',
 } as const;
@@ -37,6 +39,7 @@ export const REFUSAL_TEXT = {
 export type PublishRefusalKind =
   | 'no-op'
   | 'blocked-content'
+  | 'failed-content'
   | 'required-checks'
   | 'degraded'
   | 'status'
@@ -67,6 +70,9 @@ export function classifyPublishRefusal(error: unknown): PublishRefusalKind {
   }
   if (message.startsWith(REFUSAL_TEXT.blockedContent)) {
     return 'blocked-content';
+  }
+  if (message.startsWith(REFUSAL_TEXT.failedContent)) {
+    return 'failed-content';
   }
   if (message.startsWith(REFUSAL_TEXT.requiredChecks)) {
     return 'required-checks';
@@ -129,6 +135,13 @@ export function refusalFix(kind: PublishRefusalKind): RefusalFix {
       return {
         title: 'BLOCKed content cannot publish',
         fixLabel: 'Evaluate this version',
+        fixRoute: PUBLISH_FIX_ROUTES.evaluations,
+        editTarget: 'evaluation',
+      };
+    case 'failed-content':
+      return {
+        title: 'Failed content cannot publish',
+        fixLabel: 'Fix the failing cases',
         fixRoute: PUBLISH_FIX_ROUTES.evaluations,
         editTarget: 'evaluation',
       };
@@ -449,7 +462,7 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
     ),
   );
   const latestFormal =
-    orderedRuns.find((run) => run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK') ?? null;
+    orderedRuns.find((run) => run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK' || run.decision === 'FAIL') ?? null;
   const decision = latestFormal?.decision ?? null;
   const decisionFinishedAt = latestFormal?.finishedAt ?? null;
   const evalRunning = (input.evalRuns ?? []).some(
@@ -537,23 +550,25 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
     });
   }
 
-  // — BLOCK gate (latest-wins, content-hash keyed; shadow never gates) —
+  // — BLOCK/FAIL gate (latest-wins, content-hash keyed; shadow never gates) —
   if (input.evalRuns === undefined) {
-    rows.push(blank('block', 'BLOCK gate (latest-wins, content-hash keyed)', refusalFix('blocked-content')));
+    rows.push(blank('block', 'BLOCK/FAIL gate (latest-wins, content-hash keyed)', refusalFix('blocked-content')));
   } else {
     rows.push({
       id: 'block',
-      title: 'BLOCK gate (latest-wins, content-hash keyed)',
+      title: 'BLOCK/FAIL gate (latest-wins, content-hash keyed)',
       detail:
         decision === 'BLOCK'
           ? 'The latest evaluation of this content decided BLOCK — resolve the critical failures and re-evaluate before publishing.'
-          : decision
-            ? `Latest decision: ${decision} — a later PASS clears any earlier verdict.`
-            : 'No completed evaluation for this content yet — nothing BLOCKs.',
+          : decision === 'FAIL'
+            ? 'The latest evaluation of this content decided FAIL — fix the failing cases and re-evaluate before publishing.'
+            : decision
+              ? `Latest decision: ${decision} — a later PASS clears any earlier verdict.`
+              : 'No completed evaluation for this content yet — nothing BLOCKs.',
       extra: null,
-      ok: decision !== 'BLOCK',
+      ok: decision !== 'BLOCK' && decision !== 'FAIL',
       ackable: false,
-      fix: refusalFix('blocked-content'),
+      fix: refusalFix(decision === 'FAIL' ? 'failed-content' : 'blocked-content'),
     });
   }
 

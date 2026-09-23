@@ -53,6 +53,7 @@ const decisionTone: Record<string, StatusTone> = {
   PASS: 'success',
   WARN: 'warning',
   BLOCK: 'error',
+  FAIL: 'error',
 };
 
 const stateTone: Record<string, StatusTone> = {
@@ -180,6 +181,7 @@ export function EvaluationsView() {
                   <option value="PASS">PASS</option>
                   <option value="WARN">WARN</option>
                   <option value="BLOCK">BLOCK</option>
+                  <option value="FAIL">FAIL</option>
                 </select>
               </label>
               <label style={{ fontSize: 12 }}>

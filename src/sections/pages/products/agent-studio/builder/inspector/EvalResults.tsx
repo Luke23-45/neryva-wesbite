@@ -40,6 +40,7 @@ const decisionTone: Record<string, StatusTone> = {
   PASS: 'success',
   WARN: 'warning',
   BLOCK: 'error',
+  FAIL: 'error',
 };
 
 const stateTone: Record<string, StatusTone> = {
@@ -73,13 +74,15 @@ export function EvalResults({
 }: EvalResultsProps) {
   const results = parseEvalResults(run.results);
   const executing = run.state === 'pending' || run.state === 'running';
-  const decided = (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK') && run.state === 'completed';
+  // A FAIL verdict is as terminal as PASS/WARN/BLOCK: the run decided,
+  // so it is neither pending nor "not-yet-evaluated".
+  const decided = (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK' || run.decision === 'FAIL') && run.state === 'completed';
   const freshness =
     decided && !run.isShadow
       ? evalFreshness({ versionStatus, versionUpdatedAt, runFinishedAt: run.finishedAt })
       : ('fresh' as const);
   const staleBanner =
-    freshness === 'stale' && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK')
+    freshness === 'stale' && (run.decision === 'PASS' || run.decision === 'WARN' || run.decision === 'BLOCK' || run.decision === 'FAIL')
       ? describeStaleBanner({ decision: run.decision as EvalDecision, finishedAt: run.finishedAt, updatedAt: versionUpdatedAt })
       : null;
 

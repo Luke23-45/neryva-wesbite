@@ -28,6 +28,7 @@ import { gradeGuardrails, parseGuardrailMode } from './guardrails-model';
 import { gradeMemory, parseMemoryScope } from './memory-model';
 import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
+import type { VersionEvalState } from './eval-model';
 import { gradeShip } from './publish-model';
 import { gradeResponse } from './try-model';
 import { firstBlocker, reasonFix, usableRefs, type CatalogRow } from './brain-model';
@@ -104,7 +105,7 @@ export interface ProjectorInput {
    * the publish ceremony, so no bottom-action input reads this.
    * Shape mirrors `selectVersionEvalState` (single derivation).
    */
-  evalState?: { running: boolean; latest: { decision: 'PASS' | 'WARN' | 'BLOCK'; stale: boolean; shadow: boolean } | null; hasShadowRuns: boolean; lastFailed: boolean; hasRuns: boolean } | undefined;
+  evalState?: VersionEvalState | undefined;
   /**
    * Ship readiness for the ship-spine grade (C14). Undefined = unknown
    * (pre-C14 `untouched` copy kept as the ghost); present = graded from

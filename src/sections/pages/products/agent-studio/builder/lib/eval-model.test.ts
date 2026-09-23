@@ -32,6 +32,13 @@ describe('describeDecision (severity by reversibility)', () => {
     expect(describeDecision('WARN').detail).toMatch(/required checks/);
     expect(describeDecision('PASS').detail).toMatch(/later PASS clears/);
   });
+  it('frames FAIL as an error verdict that cannot publish or promote (A2-80)', () => {
+    const fail = describeDecision('FAIL');
+    expect(fail.tone).toBe('error');
+    expect(fail.headline).toMatch(/FAIL/);
+    expect(fail.detail).toMatch(/cannot publish or promote/);
+    expect(fail.detail).toMatch(/failing cases/);
+  });
 });
 
 describe('evalFreshness (gate-honest timestamps, never hash guesses)', () => {
@@ -94,6 +101,12 @@ describe('gradeEvaluation (signal, never a gate)', () => {
       gradeEvaluation({ ...base, latest: { decision: 'BLOCK', stale: false, shadow: false } }).status,
     ).toBe('attention');
     expect(
+      gradeEvaluation({ ...base, latest: { decision: 'FAIL', stale: false, shadow: false } }).status,
+    ).toBe('attention');
+    expect(
+      gradeEvaluation({ ...base, latest: { decision: 'FAIL', stale: false, shadow: false } }).subtitle,
+    ).toMatch(/FAIL/);
+    expect(
       gradeEvaluation({ ...base, latest: { decision: 'PASS', stale: false, shadow: true } }).status,
     ).toBe('info');
   });
@@ -140,6 +153,10 @@ describe('selectVersionEvalState (single derivation)', () => {
     expect(shadowOnly?.latest).toMatchObject({ shadow: true });
     const failed = selectVersionEvalState([{ ...run({}), state: 'failed', decision: null, finishedAt: null }], draft);
     expect(failed).toMatchObject({ latest: null, lastFailed: true, hasRuns: false });
+  });
+  it('recognizes FAIL as a formal verdict (A2-80)', () => {
+    const state = selectVersionEvalState([run({ decision: 'FAIL' })], draft);
+    expect(state?.latest).toMatchObject({ decision: 'FAIL', shadow: false });
   });
 });
 
