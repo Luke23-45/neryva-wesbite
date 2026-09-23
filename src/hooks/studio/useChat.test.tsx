@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { parseRunEvent, useTrySession } from './useChat';
+import { parseRunEvent, useChatSession, useTrySession } from './useChat';
 import type { SseMessage } from '@lib/engine/sse';
 
 vi.mock('react-hot-toast', () => {
@@ -254,5 +254,42 @@ describe('useTrySession', () => {
     expect(result.current.turns[0].prompt).toBe('Where is my refund?');
     expect(result.current.turns[0].agentText).toBe('Refunds land in 5–10 days.');
     expect(result.current.turns[0].notices.some((n) => n.text.includes('restored from the server'))).toBe(true);
+  });
+});
+
+describe('useChatSession reload reattach (A2-65)', () => {
+  function routeRuns(runs: Array<{ id: string; state: string }>) {
+    engineMock.mockImplementation((url: string) => {
+      if (String(url).includes('/conversations/conv-9/runs')) {
+        return Promise.resolve({ runs });
+      }
+      if (String(url).includes('/messages')) {
+        return Promise.resolve(TRANSCRIPT);
+      }
+      return Promise.resolve({});
+    });
+  }
+
+  it('tails the active run after mount instead of leaving it orphaned', async () => {
+    routeRuns([
+      { id: 'run-old', state: 'COMPLETED' },
+      { id: 'run-live', state: 'RUNNING' },
+    ]);
+    const { result } = renderHook(() => useChatSession('conv-9', null), { wrapper: wrapper() });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.activeRunId).toBe('run-live');
+    expect(result.current.phase).toBe('streaming');
+  });
+
+  it('stays idle when every run is terminal', async () => {
+    routeRuns([{ id: 'run-old', state: 'COMPLETED' }]);
+    const { result } = renderHook(() => useChatSession('conv-9', null), { wrapper: wrapper() });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.activeRunId).toBeNull();
+    expect(result.current.phase).toBe('idle');
   });
 });

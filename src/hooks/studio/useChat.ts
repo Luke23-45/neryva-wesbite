@@ -418,6 +418,44 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     },
   });
 
+  // A2-65 — reload reattach: on mount (or conversation switch), ask the
+  // engine for the conversation's runs and tail the active one instead of
+  // leaving a running run orphaned with no live stream.
+  const reattachedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!orgId || !conversationId || activeRunId !== null || phase !== 'idle') {
+      return;
+    }
+    if (reattachedRef.current === conversationId) {
+      return;
+    }
+    reattachedRef.current = conversationId;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const raw = await engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/runs`);
+        if (cancelled) {
+          return;
+        }
+        const runs = parseRuns(raw);
+        const active = runs.find((r) => {
+          const s = (r.status ?? '').toLowerCase();
+          return s !== '' && !TERMINAL_RUN_STATES.has(s);
+        });
+        if (active) {
+          setActiveRunId(active.id);
+          setPhase('streaming');
+        }
+      } catch {
+        // Reattach is best-effort — a failed lookup leaves the session idle.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, conversationId]);
+
   const finalize = (state: string, failed: boolean) => {
     const runId = activeRunId;
     setActiveRunId(null);
