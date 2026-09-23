@@ -4,6 +4,7 @@ import { CheckCircle2, Circle } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { LinkAction } from '@components/common/ui/LinkAction';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
+import { ErrorState } from '@components/common/ui/AsyncStates';
 import { pageItem } from '@styles/motion';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
@@ -49,6 +50,35 @@ export function SetupChecklist() {
 
   if (loading) {
     return <Skeleton $h="180px" $r="12px" />;
+  }
+
+  // D1-08: a failed setup read is a panel-level error, never an undone step.
+  // Falling through to `?? []` rows on failure lied about the world's state
+  // ("Model catalog unpublished — publishing waits on staff-plane entries" on
+  // a transient 500). One honest error + retry-all instead.
+  const failed = [assistants, documents, models, channels, approvals].find((q) => q.isError);
+  if (failed) {
+    const retryAll = () => {
+      void assistants.refetch();
+      void documents.refetch();
+      void models.refetch();
+      void channels.refetch();
+      void approvals.refetch();
+    };
+    return (
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+        <Panel
+          title="Setup progress"
+          subtitle="From zero to serving customers — each step links its surface"
+          flush
+        >
+          <ErrorState
+            message={failed.error instanceof Error ? failed.error.message : 'Could not load setup state.'}
+            onRetry={retryAll}
+          />
+        </Panel>
+      </motion.div>
+    );
   }
 
   const hasAgents = (assistants.data ?? []).length > 0;

@@ -99,20 +99,61 @@ interface HomeProduct {
   stage: string;
   entitlement_state: string;
   portal_path: string | null;
-  cta: { label?: string; route?: string } | null;
+  /**
+   * Engine access-model CTA kind (`resolveCta` in manifest.schema.ts:
+   * manage | start_trial | ask_admin | resolve_billing | renew | coming_soon).
+   * The footer honors this verbatim — the console never re-derives purchase
+   * policy from entitlement_state (D1-04: that divergence offered "Start
+   * trial" on pre-GA products the engine marks coming_soon).
+   */
+  cta: string | null;
+}
+
+type ProductCtaKind = 'manage' | 'start_trial' | 'ask_admin' | 'resolve_billing' | 'renew' | 'coming_soon';
+const CTA_KINDS: ReadonlySet<string> = new Set([
+  'manage',
+  'start_trial',
+  'ask_admin',
+  'resolve_billing',
+  'renew',
+  'coming_soon',
+]);
+
+/**
+ * Footer CTA for a product card (D1-04). The engine already folds stage +
+ * entitlement state + role into `product.cta`, so the server kind wins.
+ * Unrecognized shapes fall back to the legacy entitlement_state policy —
+ * never worse than today, never a crash on drift.
+ */
+function footerCtaKind(product: HomeProduct, role: string | null): ProductCtaKind {
+  if (product.cta && CTA_KINDS.has(product.cta)) {
+    return product.cta as ProductCtaKind;
+  }
+  if (product.entitlement_state === 'none' || product.entitlement_state === 'expired') {
+    if (role === 'owner' || role === 'billing') {
+      return product.entitlement_state === 'expired' ? 'renew' : 'start_trial';
+    }
+    return 'ask_admin';
+  }
+  return product.portal_path ? 'manage' : 'coming_soon';
 }
 
 export default function PlatformHomePage() {
   const status = useSessionStore((s) => s.status);
+  const accountId = useSessionStore((s) => s.account?.id ?? null);
   const { orgId, name, role } = useOrg();
   const summary = useOrgSummary();
   const entitlements = useEntitlements();
   const startTrial = useStartTrial();
 
   const home = useQuery({
-    queryKey: ['engine', 'home', 'products'],
+    // D1-05: orgId + accountId in the key — the grid must re-resolve on org
+    // switch AND on account switch (the ['org']-prefix invalidation on switch
+    // and the ['auth']-prefix invalidation on session death never matched the
+    // old bare key, so the previous org's / account's cards lingered ≤5min).
+    queryKey: ['engine', 'home', 'products', orgId, accountId],
     queryFn: () => engine<{ products: HomeProduct[] }>('/console/home'),
-    enabled: status === 'authenticated',
+    enabled: status === 'authenticated' && !!orgId,
   });
 
   // One-shot join banner from the invite flow (read once per mount; the
@@ -189,24 +230,45 @@ export default function PlatformHomePage() {
                       </CardTitle>
                       <CardBrief>{daysLeft !== null && product.entitlement_state === 'trial' ? `${daysLeft} day(s) left in trial · ` : ''}{product.brief}</CardBrief>
                       <CardFooter>
-                        {product.entitlement_state === 'none' || product.entitlement_state === 'expired' ? (
-                          role === 'owner' || role === 'billing' ? (
-                            <ActionButton variant="primary" size="sm" onClick={() => startTrial.mutate({ product: product.key })}>
-                              <Rocket size={13} /> {product.entitlement_state === 'expired' ? 'Renew' : 'Start trial'}
-                            </ActionButton>
-                          ) : (
-                            <CardBrief>Ask your admin to enable {product.display_name}.</CardBrief>
-                          )
-                        ) : product.portal_path ? (
-                            <Link
-                              to={product.portal_path.startsWith('/agent-studio') ? '/agent-studio/dashboard' : '/platform'}
-                              style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}
-                            >
-                              Open →
-                            </Link>
-                        ) : (
-                          <CardBrief>Coming soon.</CardBrief>
-                        )}
+                        {(() => {
+                          const cta = footerCtaKind(product, role);
+                          switch (cta) {
+                            case 'coming_soon':
+                              return <CardBrief>Coming soon.</CardBrief>;
+                            case 'ask_admin':
+                              return <CardBrief>Ask your admin to enable {product.display_name}.</CardBrief>;
+                            case 'start_trial':
+                            case 'renew':
+                              return (
+                                <ActionButton variant="primary" size="sm" onClick={() => startTrial.mutate({ product: product.key })}>
+                                  <Rocket size={13} /> {cta === 'renew' ? 'Renew' : 'Start trial'}
+                                </ActionButton>
+                              );
+                            case 'resolve_billing':
+                              return (
+                                <Link to="/platform/billing" style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}>
+                                  Resolve billing →
+                                </Link>
+                              );
+                            case 'manage':
+                            default:
+                              // D1-06: honor the server-provided portal_path. The
+                              // /agent-studio → /agent-studio/dashboard mapping is the
+                              // console's studio-home convention (documented, not
+                              // silent); every other product uses its manifest path
+                              // verbatim instead of collapsing to /platform.
+                              return product.portal_path ? (
+                                <Link
+                                  to={product.portal_path === '/agent-studio' ? '/agent-studio/dashboard' : product.portal_path}
+                                  style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}
+                                >
+                                  Open →
+                                </Link>
+                              ) : (
+                                <CardBrief>Coming soon.</CardBrief>
+                              );
+                          }
+                        })()}
                       </CardFooter>
                     </ProductCard>
                   );

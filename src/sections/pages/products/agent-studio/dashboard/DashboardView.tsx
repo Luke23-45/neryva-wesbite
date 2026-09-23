@@ -9,7 +9,7 @@ import { ProgressBar } from '@components/common/ui/ProgressBar';
 import { Segmented } from '@components/common/ui/Segmented';
 import { LinkAction } from '@components/common/ui/LinkAction';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
-import { QueryView } from '@components/common/ui/AsyncStates';
+import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import {
   ViewShell,
@@ -119,7 +119,6 @@ function DashboardContent() {
   const onboardingLeft = onboardingItems.filter((item) => !item.done);
   const activation = onboarding.data?.activation;
   const showOnboarding = onboardingItems.length > 0 && onboardingLeft.length > 0;
-  const chart = parseSeries(series.data);
 
   const activationLabel = (() => {
     if (!activation) {
@@ -147,7 +146,29 @@ function DashboardContent() {
         </ViewSubtitle>
       </ViewHeader>
 
-      {showOnboarding && (
+      {/*
+        D1-09: the server checklist used to render nothing while pending or on
+        error — a first-run user on a failing backend never learned it exists.
+        Skeleton while loading, honest error + retry on failure.
+      */}
+      {onboarding.isPending ? (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+          <Skeleton $h="180px" $r="12px" />
+        </motion.div>
+      ) : onboarding.isError ? (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+          <Panel
+            title="Get set up"
+            subtitle="Finish these to put your agents to work"
+            flush
+          >
+            <ErrorState
+              message={onboarding.error instanceof Error ? onboarding.error.message : 'Could not load the setup checklist.'}
+              onRetry={() => void onboarding.refetch()}
+            />
+          </Panel>
+        </motion.div>
+      ) : showOnboarding ? (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
           <Panel
             title="Get set up"
@@ -176,7 +197,7 @@ function DashboardContent() {
             </OnboardList>
           </Panel>
         </motion.div>
-      )}
+      ) : null}
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SetupChecklist />
@@ -260,20 +281,41 @@ function DashboardContent() {
             }
           >
             <ChartWrap>
-              {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
-                <StudioAreaChart
-                  data={chart.points}
-                  series={chart.valueKeys.map((key, i) => ({
-                    dataKey: key,
-                    name: key.replace(/_/g, ' '),
-                    color: ['#8b8ff8', '#05e3a4', '#f5b942'][i % 3],
-                    gradientId: `dash-grad-${key}`,
-                  }))}
-                  height={260}
-                />
-              ) : (
-                <ChartEmpty>Usage fills in as your agents run — see the Usage page for the full explorer.</ChartEmpty>
-              )}
+              {/*
+                D1-07: the chart is a QueryView like every sibling panel —
+                skeleton while loading, error + retry on failure, and the
+                "no usage" copy ONLY when the backend genuinely returns an
+                empty series. Rendering ChartEmpty on `series.data === undefined`
+                made a 500 indistinguishable from "no usage yet".
+              */}
+              <QueryView
+                query={series}
+                skeleton={<Skeleton $h="260px" $r="12px" />}
+                isEmpty={(d) => {
+                  const c = parseSeries(d);
+                  return c.valueKeys.length === 0 || c.points.length === 0;
+                }}
+                empty={{
+                  title: 'No usage yet',
+                  description: 'Usage fills in as your agents run — see the Usage page for the full explorer.',
+                }}
+              >
+                {(data) => {
+                  const c = parseSeries(data);
+                  return (
+                    <StudioAreaChart
+                      data={c.points}
+                      series={c.valueKeys.map((key, i) => ({
+                        dataKey: key,
+                        name: key.replace(/_/g, ' '),
+                        color: ['#8b8ff8', '#05e3a4', '#f5b942'][i % 3],
+                        gradientId: `dash-grad-${key}`,
+                      }))}
+                      height={260}
+                    />
+                  );
+                }}
+              </QueryView>
             </ChartWrap>
           </Panel>
         </motion.div>
@@ -427,11 +469,4 @@ const KpiCardMeta = styled.div`
     text-decoration: none;
     &:hover { color: ${({ theme }) => theme.app.text.secondary}; }
   }
-`;
-
-const ChartEmpty = styled.div`
-  padding: 44px 16px;
-  text-align: center;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.faint};
 `;
