@@ -191,7 +191,7 @@ export function AgentsOverviewView() {
                       {a.status === 'new' ? 'Draft' : a.status === 'live' ? 'Live' : 'Disabled'}
                     </StatusPill>
                   </DataCell>
-                  <DataCell>{a.updatedAt ?? '—'}</DataCell>
+                  <DataCell>{a.updatedAt ? a.updatedAt.slice(0, 16).replace('T', ' ') : '—'}</DataCell>
                   <DataCell>
                     <Link to="/agent-studio/agents/$agentId" params={{ agentId: a.id }}>
                       Open
