@@ -541,9 +541,11 @@ export async function logout(): Promise<void> {
   const accessToken = useSessionStore.getState().accessToken;
   if (accessToken) {
     try {
+      // No content-type: Fastify 400s on `content-type: application/json`
+      // with an empty body, which silently broke server-side revocation.
       await fetch(`${authBase}/me/sessions/revoke-all`, {
         method: 'POST',
-        headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+        headers: { authorization: `Bearer ${accessToken}` },
         credentials: 'include',
       });
     } catch {
