@@ -15,6 +15,8 @@ import EnterpriseAiAssistantPage from '@pages/products/enterprise_ai_assistant/E
 import AiEfficiencyDeploymentPage from '@pages/products/ai_efficiency_deployment/AiEfficiencyDeploymentPage';
 import SolutionsPage from '@pages/solutions/SolutionsPage';
 import AuthPage from '@pages/auth/AuthPage';
+import ResetPasswordPage from '@pages/auth/ResetPasswordPage';
+import VerifyEmailPage from '@pages/auth/VerifyEmailPage';
 
 // Platform console (engine-backed) — /platform/**
 import PlatformShell from '@pages/platform/PlatformShell';
@@ -267,6 +269,33 @@ export const authRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth',
   component: AuthPage,
+});
+
+// Password reset (P1-06): top-level AND public-shell — anonymous visitors
+// follow emailed links here, so guarded shells (and their sign-in cards)
+// must never wrap it. Without ?token= it renders the reset-request form
+// (the /auth "Forgot password?" entry point targets this); with
+// ?token=<action-token> it renders the set-new-password form. The token
+// travels in the POST body only — validateSearch just makes it readable.
+export const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: ResetPasswordPage,
+});
+
+// Email verification (P1-06, same bug class): the engine emails
+// /verify-email?token=<action-token> — anonymous, top-level, same rules as
+// the reset route above.
+export const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/verify-email',
+  validateSearch: (search: Record<string, unknown>) => ({
+    token: typeof search.token === 'string' ? search.token : undefined,
+  }),
+  component: VerifyEmailPage,
 });
 
 // ─── Agent Studio (auth-gated app shell) ────────────────
@@ -547,6 +576,8 @@ export const routeDefinitions = [
   solutionsRoute,
   secretRoute,
   authRoute,
+  resetPasswordRoute,
+  verifyEmailRoute,
   // The OP callback + the /platform console are declared on the root route
   // and live at the top level of the tree — the callback must never sit
   // under a guarded shell, and /platform renders its own sign-in state.

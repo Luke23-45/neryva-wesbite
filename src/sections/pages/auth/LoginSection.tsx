@@ -12,7 +12,7 @@
  * unreachable an explicit error with a retry shows instead of an empty page.
  */
 import { useEffect, useState, type ComponentType } from 'react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import authData from '@neryva_data/auth/sections/auth.json';
 import { beginLogin, isSafeReturnPath, useSessionStore } from '@lib/engine/auth';
@@ -255,6 +255,12 @@ export default function LoginSection() {
                         {mode === 'signup'
                             ? 'Already have an account? Sign in'
                             : "Don't have an account? Create one"}
+                    </ToggleMode>
+
+                    {/* P1-06: the entry point to the password-reset request form.
+                        Emails sent by the engine link back to /reset-password. */}
+                    <ToggleMode as={Link} to="/reset-password" style={{ marginTop: 12, textDecoration: 'none' }}>
+                        Forgot password?
                     </ToggleMode>
 
                     <ProviderNote>
