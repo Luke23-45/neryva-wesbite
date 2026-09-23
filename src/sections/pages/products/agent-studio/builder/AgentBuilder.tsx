@@ -6,7 +6,8 @@ import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
-import { useAssistant, useAssistantDefinition, useAssistantVersions, useKnowledgeHealth, usePublishReadiness } from '@hooks/studio/useAgentAuthoring';
+import { useAssistant, useAssistantDefinition, useAssistantVersions, useKnowledgeHealth, usePublishReadiness, DRAFT_WRITE_MUTATION_KEY } from '@hooks/studio/useAgentAuthoring';
+import { useIsMutating } from '@tanstack/react-query';
 import { useModelAvailability } from '@hooks/studio/useSetupModels';
 import { useEvalRuns } from '@hooks/studio/useSetupEval';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
@@ -246,6 +247,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const { dialog: guardDialog } = useDirtyGuard(
     (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty,
   );
+
+  // A2-23: honest save readout — a draft write in flight must never display as "Saved".
+  const draftWritesInFlight = useIsMutating({ mutationKey: [...DRAFT_WRITE_MUTATION_KEY] });
 
   const modelLabel = useCallback(
     (ref: string) => models.data?.find((m) => m.ref === ref)?.displayName ?? ref,
@@ -590,6 +594,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }
 
   const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
+  const saving = draftWritesInFlight > 0;
+  const anySectionDirty =
+    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty;
+  const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
 
   return (
     <Shell>
@@ -599,7 +607,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         agentName={agentName}
         hasDraft={hasDraft}
         hasLive={hasLive}
-        syncing={mode === 'new' ? false : syncing}
+        saveState={saveState}
         editPath={mode === 'build' && agentId ? buildAgentEditPath(agentId) : null}
       />
       {mode === 'build' && agentId && form.data?.versionId && (

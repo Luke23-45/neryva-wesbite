@@ -11,7 +11,8 @@ import {
   useUpdateDraftVersion,
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
-import { AUTOSAVE_MS, buildDraftPayload } from '../lib/draft-save';
+import { buildDraftPayload } from '../lib/draft-save';
+import { useDraftAutosave } from '../lib/use-draft-autosave';
 import {
   BRAND_LIMIT,
   countBrandChars,
@@ -168,13 +169,13 @@ export function BrandSection({
     });
   }, [canAuthor, definition, text, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  useEffect(() => {
-    if (!canAuthor || !dirty || blocked || conflict || adoptingActive || pending || !definition) return;
-    const timer = window.setTimeout(() => {
-      doSave();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(timer);
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, text, doSave]);
+  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
+  // sections persists pending edits instead of silently dropping them.
+  useDraftAutosave(
+    { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
+    doSave,
+    [text],
+  );
 
   const applySample = useCallback((sampleText: string, source: string) => {
     if (isBrandEmpty(sourceText) && isBrandEmpty(text)) {

@@ -25,7 +25,8 @@ import {
   parseInstructions,
   type InstructionBlock,
 } from '../lib/instructions-model';
-import { AUTOSAVE_MS, buildDraftPayload } from '../lib/draft-save';
+import { buildDraftPayload } from '../lib/draft-save';
+import { useDraftAutosave } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
 import { SamplesSection } from './SamplesSection';
 import {
@@ -321,16 +322,13 @@ export function InstructionsSection({
     });
   }, [canAuthor, definition, composed, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  // Debounced autosave: dirty + shippable + no write in flight + no conflict
-  // + not mid-adopt. Same-hash saves are server idempotent; a 412 STOPS the
-  // loop (Room parity).
-  useEffect(() => {
-    if (!canAuthor || !dirty || blocked || conflict || adoptingActive || pending || !definition) return;
-    const timer = window.setTimeout(() => {
-      doSave();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(timer);
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, composed, doSave]);
+  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
+  // sections persists pending edits instead of silently dropping them.
+  useDraftAutosave(
+    { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
+    doSave,
+    [composed],
+  );
 
   const focusBlock = useCallback((id: string) => {
     setTab('compose');

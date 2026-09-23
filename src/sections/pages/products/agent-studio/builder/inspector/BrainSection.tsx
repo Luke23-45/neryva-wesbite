@@ -23,7 +23,8 @@ import {
   useProviderCredentials,
 } from '@hooks/studio/useSetupProviders';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
-import { AUTOSAVE_MS, buildDraftPayload } from '../lib/draft-save';
+import { buildDraftPayload } from '../lib/draft-save';
+import { useDraftAutosave } from '../lib/use-draft-autosave';
 import {
   ENGINE_RANGES,
   firstBlocker,
@@ -281,13 +282,13 @@ export function BrainSection({
     });
   }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  useEffect(() => {
-    if (!canAuthor || !dirty || blocked || conflict || adoptingActive || pending || !definition) return;
-    const timer = window.setTimeout(() => {
-      doSave();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(timer);
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, current, doSave]);
+  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
+  // sections persists pending edits instead of silently dropping them.
+  useDraftAutosave(
+    { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
+    doSave,
+    [current],
+  );
 
   const onFixRequest = useCallback(
     (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {

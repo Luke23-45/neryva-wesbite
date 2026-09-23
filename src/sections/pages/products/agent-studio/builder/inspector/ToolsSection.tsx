@@ -20,7 +20,8 @@ import {
 } from '@hooks/studio/useSetupTools';
 import type { ConsumerApproval, ConsumerTool, ToolAccess, ToolExecutionMode } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
-import { AUTOSAVE_MS, buildDraftPayload } from '../lib/draft-save';
+import { buildDraftPayload } from '../lib/draft-save';
+import { useDraftAutosave } from '../lib/use-draft-autosave';
 import {
   approvalMode,
   canBind,
@@ -197,13 +198,13 @@ export function ToolsSection({
     });
   }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  useEffect(() => {
-    if (!canAuthor || !dirty || blocked || conflict || adoptingActive || pending || !definition) return;
-    const timer = window.setTimeout(() => {
-      doSave();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(timer);
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, current, doSave]);
+  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
+  // sections persists pending edits instead of silently dropping them.
+  useDraftAutosave(
+    { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
+    doSave,
+    [current],
+  );
 
   const patchEntry = useCallback((name: string, patch: Partial<ConsumerTool>) => {
     setEntries((prev) => prev.map((e) => (e.name === name ? { ...e, ...patch } : e)));

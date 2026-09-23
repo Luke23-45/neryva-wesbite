@@ -14,7 +14,8 @@ import {
 import { useModelCosts } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
-import { AUTOSAVE_MS, buildDraftPayload } from '../lib/draft-save';
+import { buildDraftPayload } from '../lib/draft-save';
+import { useDraftAutosave } from '../lib/use-draft-autosave';
 import {
   BUDGET_BOUNDS,
   CAP_LABELS,
@@ -170,13 +171,13 @@ export function BudgetSection({
     });
   }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  useEffect(() => {
-    if (!canAuthor || !dirty || blocked || conflict || adoptingActive || pending || !definition) return;
-    const timer = window.setTimeout(() => {
-      doSave();
-    }, AUTOSAVE_MS);
-    return () => window.clearTimeout(timer);
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, current, doSave]);
+  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
+  // sections persists pending edits instead of silently dropping them.
+  useDraftAutosave(
+    { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
+    doSave,
+    [current],
+  );
 
   const patch = useCallback((part: Partial<BudgetState>) => {
     setBudget((prev) => ({ ...prev, ...part }));

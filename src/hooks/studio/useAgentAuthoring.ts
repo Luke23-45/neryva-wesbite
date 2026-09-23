@@ -185,7 +185,7 @@ export function useAssistantVersions(assistantId: string | null) {
 }
 
 /** The editable definition: the DRAFT version when one exists, else the active version, else blank. */
-export function useAssistantDefinition(assistantId: string | null) {
+export function useAssistantDefinition(assistantId: string | null, opts?: { prefer?: 'draft' | 'active' }) {
   const versions = useAssistantVersions(assistantId);
   const detail = useAssistant(assistantId);
   return {
@@ -197,13 +197,16 @@ export function useAssistantDefinition(assistantId: string | null) {
             const rows = versions.data;
             const draft = rows.find((v) => v.status === 'DRAFT') ?? null;
             const active = detail.data?.activeVersionId ? rows.find((v) => v.id === detail.data?.activeVersionId) ?? null : null;
-            const source = draft ?? active;
+            // The detail view (read-only) must show what SERVES, not the draft.
+            // The builder (editable) keeps the draft-preferred default.
+            const source = opts?.prefer === 'active' ? (active ?? draft) : (draft ?? active);
             return {
               definition: source?.definition ?? defaultConsumer(),
               versionId: source?.id ?? null,
               hash: source?.hash ?? null,
               status: source?.status ?? null,
               isDraft: draft !== null,
+              isLive: active !== null,
             };
           })(),
   };
@@ -534,11 +537,16 @@ export function useCreateAssistant() {
   });
 }
 
+/** Mutation key shared by both draft-write mutations — the builder top bar
+ * derives its honest "Saving…" readout from it (A2-23). */
+export const DRAFT_WRITE_MUTATION_KEY = ['studio', 'assistants', 'draft-write'] as const;
+
 /** Saves the edited definition as a new immutable draft version (full payload at top level — R-1). */
 export function useSaveDraftVersion(assistantId: string | null) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
+    mutationKey: [...DRAFT_WRITE_MUTATION_KEY],
     mutationFn: async (definition: AgentDefinition) =>
       engine(`/console/org/${orgId}/assistants/${assistantId}/versions`, {
         method: 'POST',
@@ -559,6 +567,7 @@ export function useUpdateDraftVersion(assistantId: string | null, versionId: str
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
+    mutationKey: [...DRAFT_WRITE_MUTATION_KEY],
     mutationFn: async (input: { definition: AgentDefinition; expectedHash: string }) =>
       engine(`/console/org/${orgId}/assistants/${assistantId}/versions/${versionId}/draft`, {
         method: 'PUT',
