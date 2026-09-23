@@ -100,7 +100,11 @@ export function useOnboarding(options?: { enabled?: boolean }) {
   const { orgId } = useOrg();
   return useQuery({
     queryKey: ['studio', 'onboarding', orgId],
-    queryFn: () => engine<unknown>('/console/onboarding'),
+    // Pass orgId explicitly: this query fires on the same commit that mounts
+    // DashboardView, which is *before* OrgProvider's setActiveOrg effect runs
+    // on the parent — the ambient header would be missing and the engine 400s
+    // (D1-02). The explicit init.orgId wins over the ambient one in engine().
+    queryFn: () => engine<unknown>('/console/onboarding', { orgId }),
     enabled: (options?.enabled ?? true) && !!orgId,
     staleTime: 60_000,
     select: (raw): OnboardingState => ({ items: parseOnboarding(raw), activation: parseActivation(raw) }),
