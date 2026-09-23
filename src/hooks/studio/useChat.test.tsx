@@ -293,3 +293,41 @@ describe('useChatSession reload reattach (A2-65)', () => {
     expect(result.current.phase).toBe('idle');
   });
 });
+
+describe('create-then-send contract (A2-61/A2-67)', () => {
+  function routeCreateThenSend() {
+    engineMock.mockImplementation((url: string, options?: { method?: string; body?: unknown }) => {
+      const u = String(url);
+      if (u.endsWith('/conversations') && options?.method === 'POST') {
+        return Promise.resolve({ conversation: { id: 'conv-new' } });
+      }
+      if (u.includes('/conversations/conv-new/messages') && options?.method === 'POST') {
+        return Promise.resolve({ run: { run_id: 'run-new', state: 'ACCEPTED' } });
+      }
+      if (u.includes('/messages')) {
+        return Promise.resolve(TRANSCRIPT);
+      }
+      return Promise.resolve({});
+    });
+  }
+
+  it('creates with assistant_id, reads conversation.id, and posts to the NEW thread', async () => {
+    routeCreateThenSend();
+    const { result } = renderHook(() => useChatSession(null, 'agent-1'), { wrapper: wrapper() });
+    await act(async () => {
+      await result.current.send('Hello new thread');
+    });
+    const calls = engineMock.mock.calls.map((c) => ({ url: String(c[0]), method: (c[1] as { method?: string } | undefined)?.method, body: (c[1] as { body?: unknown } | undefined)?.body }));
+    const createCall = calls.find((c) => c.url.endsWith('/conversations') && c.method === 'POST');
+    expect(createCall).toBeDefined();
+    // A2-67: engine CreateConversationDto takes `assistant_id`, never `agent_id`.
+    expect(createCall!.body).toEqual({ assistant_id: 'agent-1' });
+    // A2-61: engine AcceptMessageDto takes `content` + `attachments`.
+    const sendCall = calls.find((c) => c.url.includes('/conversations/conv-new/messages') && c.method === 'POST');
+    expect(sendCall).toBeDefined();
+    expect(sendCall!.body).toEqual({ content: { text: 'Hello new thread' } });
+    // The send must never target the stale null conversation id.
+    expect(calls.some((c) => c.url.includes('/conversations/null/messages'))).toBe(false);
+    expect(result.current.activeRunId).toBe('run-new');
+  });
+});

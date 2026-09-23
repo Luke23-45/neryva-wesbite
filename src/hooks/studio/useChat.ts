@@ -310,11 +310,13 @@ export function useCreateConversation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { agentId?: string | null; title?: string }) =>
-      engine<unknown>(`/console/org/${orgId}/conversations`, {
+      engine<{ conversation?: { id?: string } }>(`/console/org/${orgId}/conversations`, {
         method: 'POST',
+        // Engine contract: CreateConversationDto requires `assistant_id`
+        // (assistant == agent in studio vocabulary); the created id lives
+        // at `conversation.id` in the response.
         body: {
-          ...(input.agentId ? { agent_id: input.agentId } : {}),
-          ...(input.title ? { title: input.title } : {}),
+          ...(input.agentId ? { assistant_id: input.agentId } : {}),
         },
         idempotent: true,
       }),
@@ -323,11 +325,11 @@ export function useCreateConversation() {
   });
 }
 
-export function useSendChatMessage(conversationId: string | null) {
+export function useSendChatMessage() {
   const { orgId } = useOrg();
   return useMutation({
-    mutationFn: async (input: { text: string; attachmentIds?: string[] }) =>
-      engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/messages`, {
+    mutationFn: async (input: { conversationId: string; text: string; attachmentIds?: string[] }) =>
+      engine<unknown>(`/console/org/${orgId}/conversations/${input.conversationId}/messages`, {
         method: 'POST',
         // Engine contract: AcceptMessageDto takes `content` + `attachments`,
         // not the legacy `text` / `attachment_ids` shape.
@@ -390,7 +392,7 @@ export function useChatSession(conversationId: string | null, agentId: string | 
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   const create = useCreateConversation();
-  const sendMessage = useSendChatMessage(conversationId);
+  const sendMessage = useSendChatMessage();
   const cancel = useCancelRun();
 
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -491,8 +493,12 @@ export function useChatSession(conversationId: string | null, agentId: string | 
       if (!id) {
         setPhase('creating');
         const created = await create.mutateAsync({ agentId });
-        const record = typeof created === 'object' && created !== null ? (created as Record<string, unknown>) : {};
-        id = str(record.id) ?? str(record.conversation_id);
+        // Engine contract: the created id lives at `conversation.id`.
+        const createdRecord = typeof created === 'object' && created !== null ? (created as Record<string, unknown>) : {};
+        const nested = typeof createdRecord.conversation === 'object' && createdRecord.conversation !== null
+          ? (createdRecord.conversation as Record<string, unknown>)
+          : {};
+        id = str(nested.id);
         if (!id) {
           setPhase('error');
           setNotices([{ id: `e-${Date.now()}`, kind: 'error', text: 'The conversation was created but no id came back — try again.' }]);
@@ -505,7 +511,10 @@ export function useChatSession(conversationId: string | null, agentId: string | 
       }
 
       setPhase('sending');
-      const response = await sendMessage.mutateAsync({ text, attachmentIds });
+      // The conversation id is resolved above — pass it per-call so a
+      // just-created thread (conversationId prop was null) hits the new
+      // thread's endpoint, not /conversations/null/messages.
+      const response = await sendMessage.mutateAsync({ conversationId: id, text, attachmentIds });
       const record = typeof response === 'object' && response !== null ? (response as Record<string, unknown>) : {};
       const runRecord = typeof record.run === 'object' && record.run !== null ? (record.run as Record<string, unknown>) : record;
       const runId = str(runRecord.run_id) ?? str(runRecord.runId) ?? str(runRecord.id);
