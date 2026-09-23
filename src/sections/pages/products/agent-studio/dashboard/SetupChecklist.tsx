@@ -11,6 +11,7 @@ import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useModelAvailability } from '@hooks/studio/useSetupModels';
 import { useChannels } from '@hooks/studio/useSetupChannels';
 import { useApprovals } from '@hooks/studio/useSetupApprovals';
+import { ApiError } from '@lib/engine/client';
 import {
   OnboardList,
   OnboardRow,
@@ -56,7 +57,14 @@ export function SetupChecklist() {
   // Falling through to `?? []` rows on failure lied about the world's state
   // ("Model catalog unpublished — publishing waits on staff-plane entries" on
   // a transient 500). One honest error + retry-all instead.
-  const failed = [assistants, documents, models, channels, approvals].find((q) => q.isError);
+  // J1-03: a 404 on the channels read means the channels module is disabled
+  // in this deployment (engine default) — not a failure. The step is hidden
+  // instead of failing the panel; retrying a disabled module is pointless.
+  const channelsDisabled =
+    channels.isError && channels.error instanceof ApiError && channels.error.status === 404;
+  const failed = [assistants, documents, models, approvals, ...(channelsDisabled ? [] : [channels])].find(
+    (q) => q.isError,
+  );
   if (failed) {
     const retryAll = () => {
       void assistants.refetch();
@@ -119,12 +127,18 @@ export function SetupChecklist() {
       done: hasPublished,
       href: '/agent-studio/agents',
     },
-    {
-      id: 'channels',
-      label: hasChannels ? 'Serving on channels' : 'Connect a channel so customers can reach it',
-      done: hasChannels,
-      href: '/agent-studio/channels',
-    },
+    // J1-03: hidden when the channels module is disabled (404) — the step
+    // cannot be completed, so showing it as "not done" would be dishonest.
+    ...(!channelsDisabled
+      ? [
+          {
+            id: 'channels',
+            label: hasChannels ? 'Serving on channels' : 'Connect a channel so customers can reach it',
+            done: hasChannels,
+            href: '/agent-studio/channels',
+          } as ChecklistRow,
+        ]
+      : []),
   ];
 
   const left = rows.filter((row) => !row.done);
