@@ -266,7 +266,7 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied }: { canW
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <Panel
           title="Provider credentials (BYOK)"
-          subtitle="Fingerprint-only list. Create/rotate demand a fresh MFA proof; revoke stays proof-free so incident response never waits."
+          subtitle="Fingerprint-only list. Create/rotate demand a fresh MFA proof; revoke stays proof-free so incident response never waits. There is no connection test — a mistyped or revoked key is discovered at run time when an agent tries to call the model."
           action={
             <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => setCredOpen(true)}>
               <KeyRound size={13} strokeWidth={1.8} />
