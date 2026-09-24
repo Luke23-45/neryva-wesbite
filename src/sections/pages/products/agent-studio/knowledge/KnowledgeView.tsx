@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Upload, Pencil, Search, Database, Plug } from 'lucide-react';
+import { Plus, Upload, Pencil, Search, Database, Plug, Eye, Trash2, X } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -32,8 +32,12 @@ import {
 import {
   useDocuments,
   useRenameDocumentSlug,
+  useDeleteDocument,
+  useDocumentPreview,
   useKnowledgeSearch,
 } from '@hooks/studio/useSetupKnowledge';
+import { formatValidationDetails } from '@lib/engine/errors';
+import { ApiError } from '@lib/engine/client';
 import { checkSourceSlug } from '@lib/engine/setup-caps';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -146,21 +150,48 @@ const PageNote = styled.div`
   line-height: 1.55;
 `;
 
+/** A4-06 — the documents list endpoint caps at 200 (engine max); the table
+ *  loads the full window and says so instead of silently truncating at 50. */
+const DOCUMENTS_CAP = 200;
+
+const TERMINAL_UPLOAD = new Set<AttachmentStatus>(['ready', 'failed', 'quarantined']);
+
+/** A4-04 — validation refusals carry the actionable reason in `details`
+ *  (e.g. byte_length: exceeds KNOWLEDGE_MAX_UPLOAD_BYTES (1024)); the
+ *  toast must name it, not just "Request validation failed". */
+function uploadErrorCopy(name: string, error: unknown): string {
+  const base = error instanceof Error ? error.message : 'upload failed';
+  const details = error instanceof ApiError ? formatValidationDetails(error.details) : null;
+  return details ? `${name}: ${base} — ${details}` : `${name}: ${base}`;
+}
+
 export function KnowledgeView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
   const writeDenied = setupDeniedCopy(role, 'setup:author');
-  const documents = useDocuments();
-  const { uploads, attach, attachText } = useAttachmentUpload();
+  // A4-06: load the full 200-document window the engine serves (default 50
+  // silently hid older documents); the cap is disclosed under the table.
+  const documents = useDocuments(DOCUMENTS_CAP);
+  const { uploads, attach, attachText, dismiss } = useAttachmentUpload();
   const rename = useRenameDocumentSlug();
+  const remove = useDeleteDocument();
 
   const [filter, setFilter] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<{ id: string; slug: string } | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{ id: string; slug: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; slug: string } | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const search = useKnowledgeSearch(searchQuery, 5, { enabled: searchQuery.trim().length > 0 });
+
+  const finishedUploads = uploads.filter((u) => TERMINAL_UPLOAD.has(u.status));
+  const clearFinished = () => {
+    for (const u of finishedUploads) {
+      dismiss(u.sessionId);
+    }
+  };
 
   const rows = useMemo(() => {
     const list = documents.data ?? [];
@@ -202,25 +233,48 @@ export function KnowledgeView() {
 
       {uploads.length > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-          <Panel title="Uploads" subtitle="Presigned sessions tracked through ingestion to READY.">
+          <Panel
+            title="Uploads"
+            subtitle="Presigned sessions tracked through ingestion to READY."
+            action={
+              finishedUploads.length > 0 ? (
+                <ActionButton variant="ghost" size="sm" onClick={clearFinished} aria-label="Clear finished uploads">
+                  <X size={13} strokeWidth={1.8} />
+                  Clear finished
+                </ActionButton>
+              ) : undefined
+            }
+          >
             <DataTable>
               <DataHead>
-                <DataCell $w="44%">File</DataCell>
+                <DataCell $w="40%">File</DataCell>
                 <DataCell $w="20%">Pin address</DataCell>
-                <DataCell $w="18%">Status</DataCell>
+                <DataCell $w="16%">Status</DataCell>
                 <DataCell $w="18%">Detail</DataCell>
+                <DataCell $w="6%" $align="right">
+                  <span className="sr-only">Dismiss</span>
+                </DataCell>
               </DataHead>
               {uploads.map((u) => (
                 <DataRow key={u.sessionId} $interactive={false}>
-                  <DataCell $w="44%">
+                  <DataCell $w="40%">
                     <div>{u.filename}</div>
                     <Muted>{(u.size / 1024).toFixed(1)} KB</Muted>
                   </DataCell>
                   <DataCell $w="20%">{u.sourceSlug ? <Mono>{u.sourceSlug}</Mono> : <Muted>derived at ingestion</Muted>}</DataCell>
-                  <DataCell $w="18%">
+                  <DataCell $w="16%">
                     <StatusPill tone={uploadTone[u.status]}>{u.status}</StatusPill>
                   </DataCell>
                   <DataCell $w="18%">{u.lastError ? <span title={u.lastError}>Failed — hover for reason</span> : <Muted>—</Muted>}</DataCell>
+                  <DataCell $w="6%" $align="right">
+                    {TERMINAL_UPLOAD.has(u.status) ? (
+                      <IconBtn type="button" aria-label={`Dismiss ${u.filename}`} title="Dismiss" onClick={() => dismiss(u.sessionId)}>
+                        <X size={13} strokeWidth={1.7} />
+                      </IconBtn>
+                    ) : (
+                      <Muted>—</Muted>
+                    )}
+                  </DataCell>
                 </DataRow>
               ))}
             </DataTable>
@@ -258,19 +312,19 @@ export function KnowledgeView() {
                 ) : (
                   <DataTable>
                     <DataHead>
-                      <DataCell $w="26%">Pin address</DataCell>
-                      <DataCell $w="26%">Title</DataCell>
+                      <DataCell $w="24%">Pin address</DataCell>
+                      <DataCell $w="24%">Title</DataCell>
                       <DataCell $w="12%">State</DataCell>
                       <DataCell $w="8%">Ver</DataCell>
                       <DataCell $w="16%">Updated</DataCell>
-                      <DataCell $w="12%" $align="right">Actions</DataCell>
+                      <DataCell $w="16%" $align="right">Actions</DataCell>
                     </DataHead>
                     {rows.map((doc, i) => (
                       <DataRow key={doc.id} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 3} $interactive={false}>
-                        <DataCell $w="26%">
+                        <DataCell $w="24%">
                           <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
                         </DataCell>
-                        <DataCell $w="26%">{doc.title ?? <Muted>—</Muted>}</DataCell>
+                        <DataCell $w="24%">{doc.title ?? <Muted>—</Muted>}</DataCell>
                         <DataCell $w="12%">
                           <span title={docHint[doc.state] ?? doc.state}>
                             <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
@@ -278,8 +332,16 @@ export function KnowledgeView() {
                         </DataCell>
                         <DataCell $w="8%">{doc.latestVersion ?? <Muted>—</Muted>}</DataCell>
                         <DataCell $w="16%">{doc.updatedAt ? doc.updatedAt.slice(0, 16).replace('T', ' ') : <Muted>—</Muted>}</DataCell>
-                        <DataCell $w="12%" $align="right">
+                        <DataCell $w="16%" $align="right">
                           <RowActions>
+                            <IconBtn
+                              type="button"
+                              aria-label={`Preview ${doc.sourceSlug}`}
+                              title="Preview the stored text agents retrieve"
+                              onClick={() => setPreviewTarget({ id: doc.id, slug: doc.sourceSlug })}
+                            >
+                              <Eye size={13} strokeWidth={1.7} />
+                            </IconBtn>
                             <CopyButton value={doc.sourceSlug} label="Copy pin address" />
                             <IconBtn
                               type="button"
@@ -290,6 +352,17 @@ export function KnowledgeView() {
                             >
                               <Pencil size={13} strokeWidth={1.7} />
                             </IconBtn>
+                            {doc.state !== 'retired' && (
+                              <IconBtn
+                                type="button"
+                                aria-label={`Retire ${doc.sourceSlug}`}
+                                title={canWrite ? 'Retire document (tombstone — leaves retrieval, mapping kept)' : writeDenied}
+                                disabled={!canWrite || remove.isPending}
+                                onClick={() => setDeleteTarget({ id: doc.id, slug: doc.sourceSlug })}
+                              >
+                                <Trash2 size={13} strokeWidth={1.7} />
+                              </IconBtn>
+                            )}
                           </RowActions>
                         </DataCell>
                       </DataRow>
@@ -299,6 +372,11 @@ export function KnowledgeView() {
               }
             </QueryView>
           </Panel>
+          {(documents.data?.length ?? 0) >= DOCUMENTS_CAP && (
+            <PageNote>
+              Showing the {DOCUMENTS_CAP} newest documents — the list is capped and not paginated; older documents are not listed.
+            </PageNote>
+          )}
           <PageNote>
             {unsettled
               ? 'A source is still ingesting or failed — pin health and embedding coverage are per-agent: open the agent’s Knowledge section for the verdict. '
@@ -373,6 +451,20 @@ export function KnowledgeView() {
       </motion.div>
 
       <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onAttach={attach} onAttachText={attachText} canWrite={canWrite} writeDenied={writeDenied} />
+      <PreviewModal target={previewTarget} onClose={() => setPreviewTarget(null)} />
+      <DeleteModal
+        target={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        pending={remove.isPending}
+        onConfirm={(id) => {
+          remove.mutate(id, {
+            onSuccess: () => {
+              toast.success('Document retired — it leaves retrieval immediately; the mapping stays as a tombstone.');
+              setDeleteTarget(null);
+            },
+          });
+        }}
+      />
       <RenameModal
         target={renameTarget}
         onClose={() => setRenameTarget(null)}
@@ -474,7 +566,7 @@ function UploadModal({
             authorized += 1;
           }
         } catch (error) {
-          toast.error(error instanceof Error ? `${row.file.name}: ${error.message}` : `${row.file.name}: upload failed`);
+          toast.error(uploadErrorCopy(row.file.name, error));
         }
       }
       if (unsupported > 0) {
@@ -521,7 +613,7 @@ function UploadModal({
         setBusy(false);
         onClose();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Paste upload failed.');
+        toast.error(uploadErrorCopy('Paste', error));
         setBusy(false);
       }
     })();
@@ -645,6 +737,105 @@ function UploadModal({
           </p>
         </>
       )}
+    </Modal>
+  );
+}
+
+/** A4-01 — the stored text agents retrieve, inspectable. Latest-version
+ *  chunks in sequence order; the server caps the window and says when the
+ *  tail is cut (truncated). */
+function PreviewModal({ target, onClose }: { target: { id: string; slug: string } | null; onClose: () => void }) {
+  const preview = useDocumentPreview(target?.id ?? null, { enabled: target !== null });
+
+  return (
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      title="Document preview"
+      width={720}
+      footer={
+        <ActionButton variant="secondary" onClick={onClose}>
+          Close
+        </ActionButton>
+      }
+    >
+      <QueryView
+        query={preview}
+        isEmpty={(p) => p === null}
+        empty={{ title: 'Preview unavailable', description: 'The stored text could not be read.' }}
+      >
+        {(doc) => (
+          <div>
+            <HitMeta>
+              <Mono>{doc.title ?? doc.sourceSlug}</Mono>
+              <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
+              <Muted>
+                version {doc.latestVersion ?? '—'} · {doc.totalChunks} chunk{doc.totalChunks === 1 ? '' : 's'}
+              </Muted>
+            </HitMeta>
+            {doc.chunks.length === 0 ? (
+              <Muted>No stored text yet — chunks appear once ingestion reaches READY.</Muted>
+            ) : (
+              <>
+                {doc.truncated && (
+                  <p style={{ fontSize: 12, opacity: 0.65 }}>
+                    Showing the first {doc.chunks.length} of {doc.totalChunks} chunks — the stored text continues.
+                  </p>
+                )}
+                {doc.chunks.map((chunk) => (
+                  <HitCard key={chunk.sequence}>
+                    <HitMeta>
+                      <Muted>
+                        chunk #{chunk.sequence}
+                        {chunk.byteStart !== null && chunk.byteEnd !== null ? ` · bytes ${chunk.byteStart}–${chunk.byteEnd}` : ''}
+                      </Muted>
+                    </HitMeta>
+                    <HitText>{chunk.text}</HitText>
+                  </HitCard>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+      </QueryView>
+    </Modal>
+  );
+}
+
+/** A4-05 — removal is a tombstone, and the modal says so: the document
+ *  leaves retrieval immediately; the mapping is kept (retired pill). */
+function DeleteModal({
+  target,
+  onClose,
+  onConfirm,
+  pending,
+}: {
+  target: { id: string; slug: string } | null;
+  onClose: () => void;
+  onConfirm: (id: string) => void;
+  pending: boolean;
+}) {
+  return (
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      title="Retire document"
+      width={520}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={onClose}>
+            Cancel
+          </ActionButton>
+          <ActionButton variant="danger" disabled={target === null || pending} onClick={() => target && onConfirm(target.id)}>
+            Retire
+          </ActionButton>
+        </>
+      }
+    >
+      <p style={{ fontSize: 13, opacity: 0.75 }}>
+        Retire <Mono>{target?.slug}</Mono>? It leaves retrieval immediately — no agent can pull its chunks again. The
+        mapping stays as a tombstone so history and existing pins stay answerable; this cannot be undone from the console.
+      </p>
     </Modal>
   );
 }

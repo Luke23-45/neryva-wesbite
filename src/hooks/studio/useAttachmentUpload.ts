@@ -16,8 +16,10 @@
  * Purpose defaults to SOURCE_DOCUMENT (knowledge uploads).
  */
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { engine, ApiError } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
+import { KNOWLEDGE_KEY } from './useSetupKnowledge';
 
 export const KNOWLEDGE_MEDIA_TYPES = [
   'text/plain',
@@ -133,10 +135,24 @@ export function encodePasteFile(text: string, slug: string, mediaType: PasteUplo
 
 export function useAttachmentUpload() {
   const { orgId } = useOrg();
+  const queryClient = useQueryClient();
   const [uploads, setUploads] = useState<AttachmentUpload[]>([]);
 
   const update = (sessionId: string, patch: Partial<AttachmentUpload>) => {
     setUploads((list) => list.map((u) => (u.sessionId === sessionId ? { ...u, ...patch, touchedAt: Date.now() } : u)));
+  };
+
+  /**
+   * A4-02 — ingestion may have created or updated a document row (or failed
+   * one), so a terminal tracker state invalidates the documents list: the
+   * library reflects the outcome without a manual reload. Terminal for
+   * *every* upload purpose — the refetch is a no-op when the list query
+   * isn't mounted (e.g. chat attachments), never a lie.
+   */
+  const invalidateDocuments = () => {
+    if (orgId) {
+      void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'documents'] });
+    }
   };
 
   /**
@@ -200,7 +216,17 @@ export function useAttachmentUpload() {
       return sessionId;
     }
 
-    await engine(`/console/org/${orgId}/uploads/${sessionId}/complete`, { method: 'POST', idempotent: true });
+    // A4-08 — a failed completion handshake must terminal the tracker row:
+    // without this the row sticks on 'uploading' forever (no poll starts).
+    try {
+      await engine(`/console/org/${orgId}/uploads/${sessionId}/complete`, { method: 'POST', idempotent: true });
+    } catch (error) {
+      update(sessionId, {
+        status: 'failed',
+        lastError: error instanceof Error ? error.message : 'The upload could not be completed — retry the upload.',
+      });
+      throw error;
+    }
     update(sessionId, { status: 'processing' });
 
     // Poll ingestion until terminal. 5xx keeps polling (worker still
@@ -213,11 +239,13 @@ export function useAttachmentUpload() {
         const state = (str(inner.state) ?? '').toUpperCase();
         if (state === 'READY') {
           update(sessionId, { status: 'ready' });
+          invalidateDocuments();
         } else if (TERMINAL_FAILED.has(state)) {
           update(sessionId, {
             status: state === 'QUARANTINED' ? 'quarantined' : 'failed',
             lastError: str(inner.last_error) ?? 'Ingestion failed.',
           });
+          invalidateDocuments();
         } else {
           window.setTimeout(() => void poll(), 2000);
         }
@@ -234,6 +262,11 @@ export function useAttachmentUpload() {
   };
 
   const reset = () => setUploads([]);
+
+  /** A4-07 — dismiss a single tracker row (terminal rows accumulate otherwise). */
+  const dismiss = (sessionId: string) => {
+    setUploads((list) => list.filter((u) => u.sessionId !== sessionId));
+  };
 
   /**
    * Paste-tab entry (C05): encode then ride `attach` — same sha256 binding,
@@ -253,5 +286,5 @@ export function useAttachmentUpload() {
       ...(input.title ? { title: input.title } : {}),
     });
 
-  return { uploads, attach, attachText, reset };
+  return { uploads, attach, attachText, reset, dismiss };
 }
