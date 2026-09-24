@@ -8,6 +8,7 @@
  * `parseSeries`) — the wire contract gets pinned against the live engine
  * at integration without the UI crashing on surprises.
  */
+import { useState } from 'react';
 import styled from 'styled-components';
 import { Download } from 'lucide-react';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
@@ -173,12 +174,18 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
     setProductParam(next === 'all' ? '' : next);
   };
 
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const exportCsv = () => {
     if (!orgId) return;
+    setExportError(null);
     void engineDownload(`/console/billing/org/${orgId}/usage/export`, {
       ...(scopedProduct ? { product: scopedProduct } : {}),
       ...dates,
-    }).catch(() => undefined);
+    }).catch((err: unknown) => {
+      // Surface export failures instead of swallowing them — P6-AC-24.
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    });
   };
 
   return (
@@ -199,6 +206,11 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
           <Download size={13} strokeWidth={1.8} />
           Export NDJSON
         </ActionButton>
+        {exportError && (
+          <span role="alert" style={{ color: '#f87171', fontSize: 12, marginLeft: 8 }}>
+            Export failed: {exportError}
+          </span>
+        )}
       </Toolbar>
 
       <QueryView query={overview} skeleton={<Skeleton $h="120px" $r="12px" />}>

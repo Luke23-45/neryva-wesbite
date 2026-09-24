@@ -51,7 +51,22 @@ export default function AuditPage() {
     before,
   });
 
+  const [exportError, setExportError] = useState<string | null>(null);
+
   const resetPages = () => setCursors([null]);
+
+  const handleExport = () => {
+    setExportError(null);
+    void engineDownload(`/console/org/${orgId}/audit/export`, {
+      ...(action ? { action } : {}),
+      ...(from ? { from: new Date(from).toISOString() } : {}),
+    }).catch((err: unknown) => {
+      // Surface export failures (e.g. 403 for roles without export
+      // permission) instead of swallowing them — P6-AC-24.
+      const message = err instanceof Error ? err.message : 'Export failed';
+      setExportError(message);
+    });
+  };
 
   // Resource type has no server-side filter — apply it to the loaded page.
   const events = (audit.data?.events ?? []).filter((e) =>
@@ -93,9 +108,14 @@ export default function AuditPage() {
               />
             </ToolbarGroup>
             {/* The engine export is NDJSON-only (no format param); label it honestly. */}
-            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
+            <ActionButton variant="ghost" size="sm" onClick={handleExport}>
               <Download size={12} /> Export NDJSON
             </ActionButton>
+            {exportError && (
+              <span role="alert" style={{ color: '#f87171', fontSize: 12, marginLeft: 8 }}>
+                Export failed: {exportError}
+              </span>
+            )}
           </Toolbar>
         }
       >

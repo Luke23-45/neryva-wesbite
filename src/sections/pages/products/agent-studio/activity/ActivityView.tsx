@@ -115,6 +115,7 @@ export function ActivityView() {
   // chips and dates survived, which was the inconsistency the browser proved.
   const [query, setQuery] = useUrlState('q');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const actionFilter = params.action ?? 'all';
   const facets = useAuditFacets();
@@ -166,7 +167,11 @@ export function ActivityView() {
   }, [rows]);
 
   const exportTrail = () => {
-    void engineDownload(`/console/org/${orgId}/audit/export`).catch(() => undefined);
+    setExportError(null);
+    void engineDownload(`/console/org/${orgId}/audit/export`).catch((err: unknown) => {
+      // Surface export failures instead of swallowing them — P6-AC-24.
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    });
   };
 
   return (
@@ -181,10 +186,17 @@ export function ActivityView() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
           action={
-            <ActionButton variant="secondary" size="sm" onClick={exportTrail}>
-              <Download size={13} strokeWidth={1.8} />
-              Export NDJSON
-            </ActionButton>
+            <>
+              <ActionButton variant="secondary" size="sm" onClick={exportTrail}>
+                <Download size={13} strokeWidth={1.8} />
+                Export NDJSON
+              </ActionButton>
+              {exportError && (
+                <span role="alert" style={{ color: '#f87171', fontSize: 12, marginLeft: 8 }}>
+                  Export failed: {exportError}
+                </span>
+              )}
+            </>
           }
         >
           <FilterBar>
