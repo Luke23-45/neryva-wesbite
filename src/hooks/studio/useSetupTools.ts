@@ -46,6 +46,13 @@ export interface ToolCatalogEntry {
   inputSchema: Record<string, unknown> | null;
   outputSchema: Record<string, unknown> | null;
   rateLimitPerRun: number | null;
+  /**
+   * A4-60 — annotations + perimeter round-trip on edit. The edit modal does
+   * not render these; without round-tripping them the PUT upsert resets
+   * annotations to effect-class defaults, output_schema to null, and wipes
+   * the egress allowlist. Objects only, else null.
+   */
+  annotations: Record<string, unknown> | null;
 }
 
 function strList(value: unknown): string[] | null {
@@ -82,6 +89,7 @@ export function parseToolCatalog(raw: unknown): ToolCatalogEntry[] {
       const egressRaw = item.allowedEgressDomains ?? item.allowed_egress_domains;
       const inputSchemaRaw = item.inputSchema ?? item.input_schema;
       const outputSchemaRaw = item.outputSchema ?? item.output_schema;
+      const annotationsRaw = item.annotations;
       const rateRaw = item.rateLimitPerRun ?? item.rate_limit_per_run;
       const asObject = (value: unknown): Record<string, unknown> | null =>
         typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
@@ -100,16 +108,21 @@ export function parseToolCatalog(raw: unknown): ToolCatalogEntry[] {
         inputSchema: asObject(inputSchemaRaw),
         outputSchema: asObject(outputSchemaRaw),
         rateLimitPerRun: typeof rateRaw === 'number' && Number.isFinite(rateRaw) ? rateRaw : null,
+        annotations: asObject(annotationsRaw),
       };
     })
     .filter((t): t is ToolCatalogEntry => t !== null);
 }
 
-export function useToolCatalog(options?: { enabled?: boolean }) {
+export function useToolCatalog(options?: { enabled?: boolean; includeDisabled?: boolean }) {
   const { orgId } = useOrg();
+  const includeDisabled = options?.includeDisabled === true;
   return useQuery({
-    queryKey: [...TOOLS_KEY, orgId, 'list'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/tools`),
+    queryKey: [...TOOLS_KEY, orgId, 'list', includeDisabled ? 'with-disabled' : 'enabled-only'],
+    queryFn: () =>
+      engine<unknown>(
+        `/console/org/${orgId}/tools${includeDisabled ? '?include_disabled=true' : ''}`,
+      ),
     enabled: (options?.enabled ?? true) && !!orgId,
     staleTime: 30_000,
     select: parseToolCatalog,
@@ -179,6 +192,24 @@ export interface UpsertToolInput {
   version?: string;
   description?: string;
   outputSchema?: Record<string, unknown>;
+  /**
+   * A4-60 — fields the edit modal does not render but must round-trip so an
+   * edit changes only what the user edited. The engine treats PUT as a
+   * full-row upsert (absent perimeter → defaults, absent annotations →
+   * effect-class defaults, absent output_schema → null).
+   */
+  executionEnvironment?: string;
+  allowedEgressDomains?: string[] | null;
+  annotations?: Record<string, unknown>;
+  rateLimitPerRun?: number;
+  /**
+   * A4-69 — endpoint binding for custom tools. Without a URL the row lands
+   * as external_gateway with no endpoint (uninvokable); the create modal
+   * exposes this so a custom tool can actually be called.
+   */
+  httpBindingUrl?: string;
+  /** A4-69 — plaintext credential, sealed (enc:v1:) server-side, never returned. Create-only; edits never resend it. */
+  credential?: string;
 }
 
 /** PUT tools/:name — path name authoritative (lowercased server-side); effect/approval/input_schema required. */
@@ -196,6 +227,19 @@ export function useUpsertTool() {
           ...(input.version ? { version: input.version } : {}),
           ...(input.description ? { description: input.description } : {}),
           ...(input.outputSchema ? { output_schema: input.outputSchema } : {}),
+          ...(input.executionEnvironment ? { execution_environment: input.executionEnvironment } : {}),
+          ...(input.allowedEgressDomains && input.allowedEgressDomains.length > 0
+            ? { allowed_egress_domains: input.allowedEgressDomains }
+            : {}),
+          ...(input.annotations ? { annotations: input.annotations } : {}),
+          ...(typeof input.rateLimitPerRun === 'number' && Number.isFinite(input.rateLimitPerRun)
+            ? { rate_limit_per_run: input.rateLimitPerRun }
+            : {}),
+          // A4-69 — custom-tool endpoint binding + credential (create path).
+          // Omitted on edit: the engine preserves the existing binding and
+          // sealed credential when absent.
+          ...(input.httpBindingUrl ? { http_binding: { url: input.httpBindingUrl } } : {}),
+          ...(input.credential ? { credential: input.credential } : {}),
         },
         idempotent: true,
       }),

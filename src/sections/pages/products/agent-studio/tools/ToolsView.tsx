@@ -80,7 +80,10 @@ export function ToolsView() {
   const writeDenied = setupDeniedCopy(role, 'setup:author');
   const canGovern = canSetup(role, 'setup:govern');
   const governDenied = setupDeniedCopy(role, 'setup:govern');
-  const catalog = useToolCatalog();
+  // A4-64 — disabled rows must stay reachable (re-enable path). The engine
+  // serves `?include_disabled=true` (b43838e; live after an engine restart).
+  const [showDisabled, setShowDisabled] = useState(false);
+  const catalog = useToolCatalog({ includeDisabled: showDisabled });
   const setEnabled = useSetToolEnabled();
 
   const [upsertOpen, setUpsertOpen] = useState(false);
@@ -130,6 +133,10 @@ export function ToolsView() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionGap>
           <Panel title="Catalog" subtitle="Effect class is orthogonal to approval. Disabling breaks version pins referencing the row.">
+            <Note style={{ marginTop: 0 }}>
+              Lists the newest 200 rows — the name filter searches the loaded rows. There is no tool-scoped dry run:
+              a misconfigured binding (bad URL, wrong schema) surfaces only when an agent run tries to call it.
+            </Note>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <div style={{ flex: '2 1 180px' }}>
                 <TextInput aria-label="Filter tools" placeholder="Filter by name…" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
@@ -151,6 +158,15 @@ export function ToolsView() {
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>
+              </label>
+              <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
+                <Switch
+                  checked={showDisabled}
+                  onChange={setShowDisabled}
+                  label="Show disabled tools"
+                  id="show-disabled-tools"
+                />
+                Show disabled
               </label>
             </div>
             <QueryView
@@ -272,10 +288,12 @@ export function ToolsView() {
         open={upsertOpen}
         onClose={() => { setUpsertOpen(false); setEditTarget(null); }}
         initial={(catalog.data ?? []).find((t) => t.name === editTarget) ?? null}
+        existingNames={(catalog.data ?? []).map((t) => t.name)}
       />
       <FromTemplateModal
         open={fromTemplateOpen}
         onClose={() => setFromTemplateOpen(false)}
+        existingNames={(catalog.data ?? []).map((t) => t.name)}
       />
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <SectionGap>
@@ -313,7 +331,29 @@ function CopyPinButton({ hash }: { hash: string | null }) {
   );
 }
 
-function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () => void; initial?: { name: string; version: string | null; description: string | null; effectClass: string | null; approvalRequirement: string | null; inputSchema: Record<string, unknown> | null } | null }) {
+function UpsertModal({
+  open,
+  onClose,
+  initial,
+  existingNames,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initial?: {
+    name: string;
+    version: string | null;
+    description: string | null;
+    effectClass: string | null;
+    approvalRequirement: string | null;
+    inputSchema: Record<string, unknown> | null;
+    /** A4-60 — fields the modal does not render; round-tripped on save. */
+    outputSchema?: Record<string, unknown> | null;
+    executionEnvironment?: string | null;
+    allowedEgressDomains?: string[] | null;
+    annotations?: Record<string, unknown> | null;
+  } | null;
+  existingNames: string[];
+}) {
   const upsert = useUpsertTool();
   const editing = initial !== null && initial !== undefined;
   const [name, setName] = useState(initial?.name ?? '');
@@ -324,9 +364,18 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
   const [inputSchema, setInputSchema] = useState(
     initial?.inputSchema ? JSON.stringify(initial.inputSchema, null, 2) : '{\n  "type": "object",\n  "properties": {},\n  "additionalProperties": false\n}',
   );
+  // A4-69 — custom tools need an endpoint to be invocable. Without a URL the
+  // row is registered schema-only (external_gateway, no endpoint, no egress).
+  const [endpointUrl, setEndpointUrl] = useState('');
+  const [credential, setCredential] = useState('');
+  const urlTrimmed = endpointUrl.trim();
+  const urlProblem = !editing && urlTrimmed !== '' && !/^https:\/\//.test(urlTrimmed) ? 'Must be an https URL.' : null;
 
   const normalized = name.trim().toLowerCase();
   const nameProblem = !normalized ? 'Name is required.' : !TOOL_NAME_PATTERN.test(normalized) ? 'Must match ^[a-z][a-z0-9_]{1,63}$ (letter first, 2–64 chars).' : null;
+  // A4-66 — the engine PUT is an upsert: a colliding name replaces the row
+  // in place (schema, version, hash) with no conflict error. Say so.
+  const collides = !editing && !nameProblem && existingNames.includes(normalized);
   let schemaProblem: string | null = null;
   let schemaParsed: Record<string, unknown> | null = null;
   try {
@@ -340,7 +389,7 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
     schemaProblem = 'Must be valid JSON.';
   }
 
-  const valid = !nameProblem && !schemaProblem;
+  const valid = !nameProblem && !schemaProblem && !urlProblem;
 
   return (
     <Modal
@@ -365,8 +414,22 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
                   effectClass,
                   approvalRequirement: approval,
                   inputSchema: schemaParsed,
-                  ...(version.trim() ? { version: version.trim() } : {}),
+                  // A4-60 — clearing Version while editing keeps the current
+                  // version; omitting it would let the server reset to 1.0.0.
+                  version: version.trim() ? version.trim() : (editing ? (initial?.version ?? undefined) : undefined),
                   ...(description.trim() ? { description: description.trim() } : {}),
+                  // A4-60 — fields the modal does not render round-trip
+                  // unchanged so an edit only changes what was edited.
+                  ...(editing && initial?.outputSchema ? { outputSchema: initial.outputSchema } : {}),
+                  ...(editing && initial?.executionEnvironment ? { executionEnvironment: initial.executionEnvironment } : {}),
+                  ...(editing && initial?.allowedEgressDomains ? { allowedEgressDomains: initial.allowedEgressDomains } : {}),
+                  ...(editing && initial?.annotations ? { annotations: initial.annotations } : {}),
+                  // A4-69 — create-only: endpoint binding + credential so a
+                  // custom tool can actually be invoked. Edits omit both; the
+                  // engine preserves the existing binding and sealed
+                  // credential when absent.
+                  ...(!editing && urlTrimmed ? { httpBindingUrl: urlTrimmed } : {}),
+                  ...(!editing && credential.trim() ? { credential: credential.trim() } : {}),
                 },
                 { onSuccess: () => onClose() },
               );
@@ -381,6 +444,14 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
       {editing && (
         <p style={{ fontSize: 12, opacity: 0.7 }}>
           Saving updates the row in place, re-enables it, and re-hashes — pinned versions drift until re-pinned.
+          Only the fields shown here change; the perimeter (execution environment, egress allowlist), endpoint
+          binding, annotations, and output schema are preserved as-is.
+        </p>
+      )}
+      {collides && (
+        <p style={{ fontSize: 12, color: '#fbbf24', marginBottom: 8 }} role="alert">
+          A tool named “{normalized}” already exists — saving replaces its schema, version, and hash in place
+          (re-enables it too). Pinned versions on the old schema drift until re-pinned.
         </p>
       )}
       <TextInput label="Name (path-authoritative, lowercased)" value={name} onChange={(e) => setName(e.target.value)} placeholder="lookup_ticket" autoFocus={!editing} disabled={editing} error={nameProblem ?? undefined} />
@@ -390,6 +461,39 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
       <div style={{ marginTop: 12 }}>
         <TextInput label="Description (optional, ≤2048)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this tool does" />
       </div>
+      {!editing && (
+        <>
+          <div style={{ marginTop: 12 }}>
+            <TextInput
+              label="Endpoint URL (optional — https)"
+              value={endpointUrl}
+              onChange={(e) => setEndpointUrl(e.target.value)}
+              placeholder="https://…"
+              error={urlTrimmed ? (urlProblem ?? undefined) : undefined}
+            />
+            <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+              Without an endpoint the tool registers schema-only (external_gateway, no egress) and can never be
+              invoked — versions can pin it, but no run can call it. With an endpoint it binds like a template tool.
+            </p>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <TextInput
+              label="Credential (optional — sealed per-tool, never returned)"
+              type="password"
+              value={credential}
+              onChange={(e) => setCredential(e.target.value)}
+              placeholder="…"
+              autoComplete="off"
+            />
+          </div>
+        </>
+      )}
+      {editing && (
+        <p style={{ fontSize: 12, opacity: 0.7, marginTop: 12 }}>
+          The endpoint binding and credential are preserved as-is — this form cannot change them. To rotate the
+          credential or re-point the endpoint, re-instantiate from a template (or re-register with the same name).
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
         <label style={{ flex: 1, fontSize: 13 }}>
           Effect class
@@ -416,7 +520,7 @@ function UpsertModal({ open, onClose, initial }: { open: boolean; onClose: () =>
   );
 }
 
-function FromTemplateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function FromTemplateModal({ open, onClose, existingNames }: { open: boolean; onClose: () => void; existingNames: string[] }) {
   const templates = useToolTemplates();
   const instantiate = useToolFromTemplate();
   const [templateId, setTemplateId] = useState('');
@@ -428,6 +532,9 @@ function FromTemplateModal({ open, onClose }: { open: boolean; onClose: () => vo
   const rateTrimmed = rateLimit.trim();
   const rateProblem = rateTrimmed === '' ? null : !Number.isFinite(Number(rateTrimmed)) || Number(rateTrimmed) < 1 ? 'Must be a number ≥ 1.' : null;
   const valid = templateId !== '' && !urlProblem && !rateProblem;
+  // A4-66 — instantiation upserts by template name: warn before overwriting.
+  const templateName = (templates.data ?? []).find((t) => t.id === templateId)?.name ?? null;
+  const collides = templateName !== null && existingNames.includes(templateName);
 
   return (
     <Modal
@@ -477,6 +584,12 @@ function FromTemplateModal({ open, onClose }: { open: boolean; onClose: () => vo
             ))}
           </select>
         </label>
+      )}
+      {collides && (
+        <p style={{ fontSize: 12, color: '#fbbf24', marginTop: 12 }} role="alert">
+          A tool named “{templateName}” already exists — instantiating replaces its schema, binding, and hash in
+          place (re-enables it too). Pinned versions on the old schema drift until re-pinned.
+        </p>
       )}
       <div style={{ marginTop: 12 }}>
         <TextInput label="Endpoint URL (https)" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" error={url.trim() ? (urlProblem ?? undefined) : undefined} />

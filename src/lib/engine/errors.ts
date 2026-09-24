@@ -152,7 +152,10 @@ export function describeEngineError(error: unknown): EngineErrorView {
         kind: 'input',
         tone: 'error',
         title: 'Invalid input',
-        message: error.message,
+        // A4-65 — name the offending field/bound (the engine returns it in details).
+        message: formatValidationDetails(error.details)
+          ? `${error.message} — ${formatValidationDetails(error.details)}`
+          : error.message,
         retryable: false,
       };
     case 'conflict':
@@ -197,7 +200,23 @@ export function describeEngineError(error: unknown): EngineErrorView {
  * Mutation-side error surface (react-hot-toast). Preserved copy: the server
  * message is usually the best toast; the two special cases below get
  * dedicated words because their raw messages are machinery, not guidance.
+ *
+ * A4-65 — validation failures carry field-level reasons in `details`
+ * (e.g. input_schema: serialized schema exceeds 16 KiB); the old code
+ * dropped them and toasted only "Request validation failed". The details
+ * are user-actionable, so they ride along on validation toasts.
  */
+export function formatValidationDetails(details: unknown): string | null {
+  if (typeof details !== 'object' || details === null || Array.isArray(details)) {
+    return null;
+  }
+  const parts: string[] = [];
+  for (const [field, reason] of Object.entries(details)) {
+    parts.push(typeof reason === 'string' ? `${field}: ${reason}` : `${field}: ${JSON.stringify(reason)}`);
+  }
+  return parts.length > 0 ? parts.join('; ') : null;
+}
+
 export function toastEngineError(error: unknown, fallback = 'Something went wrong — try again.'): void {
   if (error instanceof ApiError) {
     if (error.code === 'rate_limited' && error.retryAfterSeconds) {
@@ -206,6 +225,11 @@ export function toastEngineError(error: unknown, fallback = 'Something went wron
     }
     if (error.code === 'idempotency_conflict') {
       toast.error('This action was already submitted with different input');
+      return;
+    }
+    if (error.code === 'validation_failed') {
+      const details = formatValidationDetails(error.details);
+      toast.error(details ? `${error.message} — ${details}` : error.message);
       return;
     }
     toast.error(error.message);
