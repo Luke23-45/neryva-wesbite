@@ -35,6 +35,27 @@ export function splitCaseLines(value: string): string[] {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Builds a draft prefilled from a listed engine case (A4-41 edit flow). */
+export function draftFromCase(c: {
+  input: Record<string, unknown>;
+  expected: Record<string, unknown>;
+  rubric: Record<string, unknown> | null;
+}): CaseDraft {
+  const lines = (v: unknown): string =>
+    Array.isArray(v) ? v.map((x) => String(x)).join('\n') : '';
+  const rubric = c.rubric ?? {};
+  const minScore = typeof rubric.min_score === 'number' ? String(rubric.min_score) : '';
+  return {
+    text: typeof c.input.text === 'string' ? c.input.text : '',
+    contains: lines(c.expected.contains),
+    notContains: lines(c.expected.not_contains),
+    stateAssertions: lines(c.expected.state_assertions),
+    documentIds: lines(c.expected.document_ids),
+    rubricInstructions: typeof rubric.instructions === 'string' ? rubric.instructions : '',
+    minScore,
+  };
+}
+
 /** Builds one HTTP-vocabulary case body, or the reason it cannot be built. */
 export function buildCase(draft: CaseDraft): { body?: Record<string, unknown>; problem?: string } {
   const text = draft.text.trim();

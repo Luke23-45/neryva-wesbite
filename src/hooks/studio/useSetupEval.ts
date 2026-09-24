@@ -309,6 +309,179 @@ export function useRejectCandidate() {
 }
 
 /**
+ * A4-43 — dataset cases are now listable. One case row:
+ * {id, sequence, input, expected, rubric, createdAt}.
+ */
+export interface EvalCase {
+  id: string;
+  sequence: number;
+  input: Record<string, unknown>;
+  expected: Record<string, unknown>;
+  rubric: Record<string, unknown> | null;
+  createdAt: string | null;
+}
+
+export interface EvalCaseList {
+  cases: EvalCase[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+export function parseEvalCaseList(raw: unknown): EvalCaseList {
+  const record = asRecord(raw);
+  const list = Array.isArray(record.cases) ? record.cases : [];
+  const cases: EvalCase[] = [];
+  for (const entry of list) {
+    const item = asRecord(entry);
+    const id = str(item.id);
+    if (!id) continue;
+    cases.push({
+      id,
+      sequence: typeof item.sequence === 'number' ? item.sequence : 0,
+      input: asRecord(item.input),
+      expected: asRecord(item.expected),
+      rubric: item.rubric === null || item.rubric === undefined ? null : asRecord(item.rubric),
+      createdAt: str(item.createdAt) ?? str(item.created_at),
+    });
+  }
+  return {
+    cases,
+    total: typeof record.total === 'number' ? record.total : cases.length,
+    limit: typeof record.limit === 'number' ? record.limit : cases.length,
+    offset: typeof record.offset === 'number' ? record.offset : 0,
+  };
+}
+
+export function useEvalCases(datasetId: string | null, options?: { limit?: number; offset?: number; enabled?: boolean }) {
+  const { orgId } = useOrg();
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
+  return useQuery({
+    queryKey: [...EVAL_KEY, orgId, 'cases', datasetId, limit, offset],
+    queryFn: () =>
+      engine<unknown>(`/console/org/${orgId}/eval/datasets/${datasetId}/cases`, {
+        query: { limit: String(limit), offset: String(offset) },
+      }),
+    enabled: (options?.enabled ?? true) && !!orgId && !!datasetId,
+    staleTime: 15_000,
+    select: parseEvalCaseList,
+  });
+}
+
+/** A4-41 — full-body case replace through the strict engine case schema. */
+export function useUpdateEvalCase() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { datasetId: string; caseId: string; body: Record<string, unknown> }) =>
+      engine(`/console/org/${orgId}/eval/datasets/${input.datasetId}/cases/${input.caseId}`, {
+        method: 'PATCH',
+        body: input.body,
+        idempotent: true,
+      }),
+    onSuccess: (_data, input) =>
+      void queryClient.invalidateQueries({ queryKey: [...EVAL_KEY, orgId, 'cases', input.datasetId] }),
+    onError: (error) => toastEngineError(error, 'Could not update the case'),
+  });
+}
+
+/** A4-41 — delete one case (run-execution rows cascade; run records keep their snapshot). */
+export function useDeleteEvalCase() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { datasetId: string; caseId: string }) =>
+      engine(`/console/org/${orgId}/eval/datasets/${input.datasetId}/cases/${input.caseId}`, {
+        method: 'DELETE',
+        idempotent: true,
+      }),
+    onSuccess: (_data, input) =>
+      void queryClient.invalidateQueries({ queryKey: [...EVAL_KEY, orgId, 'cases', input.datasetId] }),
+    onError: (error) => toastEngineError(error, 'Could not delete the case'),
+  });
+}
+
+/**
+ * A4-42 — delete a dataset. The engine refuses 409 while eval runs
+ * reference it (runs are append-only publish evidence); the error toast
+ * carries that reason.
+ */
+export function useDeleteEvalDataset() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { datasetId: string }) =>
+      engine(`/console/org/${orgId}/eval/datasets/${input.datasetId}`, { method: 'DELETE', idempotent: true }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...EVAL_KEY, orgId, 'datasets'] }),
+    onError: (error) => toastEngineError(error, 'Could not delete the dataset'),
+  });
+}
+
+export interface EvalExport {
+  format: string;
+  filename: string;
+  content: string;
+}
+
+/**
+ * A4-44 — export a dataset's cases; the caller saves `content` as a file.
+ * JSON is canonical (re-importable); CSV matches the one-per-line builder.
+ */
+export function useExportEvalDataset() {
+  const { orgId } = useOrg();
+  return useMutation({
+    mutationFn: async (input: { datasetId: string; format: 'json' | 'csv' }) =>
+      engine<EvalExport>(`/console/org/${orgId}/eval/datasets/${input.datasetId}/export`, {
+        query: { format: input.format },
+      }),
+    onError: (error) => toastEngineError(error, 'Could not export the dataset'),
+  });
+}
+
+/** Triggers a real file download from exported text content. */
+export function downloadExportedFile(exp: EvalExport): void {
+  const mime = exp.format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json;charset=utf-8';
+  const blob = new Blob([exp.content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = exp.filename || `dataset-export.${exp.format}`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/**
+ * A4-44 — import cases. JSON takes the export shape ({cases:[...]}) or a
+ * bare array; CSV takes the export header. Per-row typed 422s on violations.
+ */
+export function useImportEvalCases() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { datasetId: string; format: 'json' | 'csv'; payload: unknown }) =>
+      engine<{ added?: number }>(`/console/org/${orgId}/eval/datasets/${input.datasetId}/import`, {
+        method: 'POST',
+        body:
+          input.format === 'csv'
+            ? { format: 'csv', csv: input.payload }
+            : { format: 'json', cases: input.payload },
+        idempotent: true,
+      }),
+    onSuccess: (_data, input) => {
+      void queryClient.invalidateQueries({ queryKey: [...EVAL_KEY, orgId, 'cases', input.datasetId] });
+    },
+    onError: (error) => toastEngineError(error, 'Could not import the cases'),
+  });
+}
+
+/**
  * Retrieval recall@k over a dataset (live-verified shape):
  * {k, scored_cases, mean_recall, cases: [{case_id, recall, retrieved_document_ids}]}.
  * recall is null per case when the case declares no expected document_ids.
