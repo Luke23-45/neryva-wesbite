@@ -109,11 +109,14 @@ export function parseChannels(raw: unknown): ChannelAccount[] {
   return list
     .map((entry): ChannelAccount | null => {
       if (typeof entry !== 'object' || entry === null) {
+        // P5-C7: never drop rows silently — a malformed engine response must be visible.
+        console.warn('[channels] parseChannels dropped a non-object row', entry);
         return null;
       }
       const item = entry as Record<string, unknown>;
       const id = str(item.id);
       if (!id) {
+        console.warn('[channels] parseChannels dropped a row without id', item);
         return null;
       }
       return {
