@@ -136,6 +136,7 @@ export function ToolsView() {
             <Note style={{ marginTop: 0 }}>
               Lists the newest 200 rows — the name filter searches the loaded rows. There is no tool-scoped dry run:
               a misconfigured binding (bad URL, wrong schema) surfaces only when an agent run tries to call it.
+              Tools can’t be deleted — disabling a tool is the only removal path.
             </Note>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <div style={{ flex: '2 1 180px' }}>
