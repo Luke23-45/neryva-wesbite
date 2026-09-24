@@ -119,6 +119,30 @@ const EmptyChart = styled.div`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
+const LegendRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 10px;
+`;
+
+const LegendItem = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  text-transform: capitalize;
+`;
+
+const LegendSwatch = styled.span<{ $color: string }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: ${({ $color }) => $color};
+  flex: none;
+`;
+
 export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: string }) {
   const { orgId } = useOrg();
   // URL-synced filters (F-9) — shareable views, back/forward friendly.
@@ -135,6 +159,15 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
   const series = useUsageSeries(product === 'all' ? 'agent_studio' : product, dates);
   const kpis = parseOverviewKpis(overview.data);
   const chart = parseSeries(series.data);
+  // One source of truth for the chart's series — the legend below renders
+  // from the same definitions so a near-zero line (e.g. cost on an
+  // events-scale axis) is still identifiable (P6-US-26).
+  const seriesDefs = chart.valueKeys.map((key, i) => ({
+    dataKey: key,
+    name: key.replace(/_/g, ' '),
+    color: SERIES_COLORS[i % SERIES_COLORS.length],
+    gradientId: `usage-grad-${key}`,
+  }));
 
   const setProduct = (next: string) => {
     setProductParam(next === 'all' ? '' : next);
@@ -184,20 +217,25 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
       <ChartWrap>
         {product === 'all' && (
           <p style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 8px' }}>
-            Chart shows Agent Studio only — the series endpoint is per-product. KPIs above aggregate all products.
+            Chart shows Agent Studio only — the series endpoint is per-product. KPIs above are per-product slices, not cross-product totals.
           </p>
         )}
         {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
-          <StudioAreaChart
-            data={chart.points}
-            series={chart.valueKeys.map((key, i) => ({
-              dataKey: key,
-              name: key.replace(/_/g, ' '),
-              color: SERIES_COLORS[i % SERIES_COLORS.length],
-              gradientId: `usage-grad-${key}`,
-            }))}
-            height={260}
-          />
+          <>
+            <LegendRow aria-label="Chart series">
+              {seriesDefs.map((s) => (
+                <LegendItem key={s.dataKey}>
+                  <LegendSwatch $color={s.color} />
+                  {s.name}
+                </LegendItem>
+              ))}
+            </LegendRow>
+            <StudioAreaChart
+              data={chart.points}
+              series={seriesDefs}
+              height={260}
+            />
+          </>
         ) : series.isPending ? (
           <Skeleton $h="220px" $r="10px" />
         ) : (

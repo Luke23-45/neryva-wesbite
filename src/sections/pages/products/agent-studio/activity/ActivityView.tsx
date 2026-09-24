@@ -11,6 +11,7 @@ import { pageItem } from '@styles/motion';
 import { engineDownload } from '@lib/engine/client';
 import { useAudit, useAuditFacets, useOrgRequired, type AuditEventRow } from '@hooks/engine/queries';
 import { useUrlSearchParams, useUrlState } from '@lib/useUrlState';
+import { useNavigate } from '@tanstack/react-router';
 import {
   FilterBar,
   FilterChip,
@@ -103,15 +104,43 @@ function timeLabel(iso: string): string {
 export function ActivityView() {
   const orgId = useOrgRequired();
   const params = useUrlSearchParams();
+  const navigate = useNavigate();
   const [, setActionParam] = useUrlState('action', { default: 'all' });
-  const [query, setQuery] = useState('');
+  // Date-range picker (P6-AC-22): YYYY-MM-DD values synced to the URL so the
+  // range is shareable and restored on reload, like every other filter here.
+  const [fromParam, setFromParam] = useUrlState('from');
+  const [toParam, setToParam] = useUrlState('to');
+  // Search is URL-synced like every other filter (P6-AC-26) — shareable and
+  // restored on reload. Local useState lost the query on every reload while
+  // chips and dates survived, which was the inconsistency the browser proved.
+  const [query, setQuery] = useUrlState('q');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const actionFilter = params.action ?? 'all';
   const facets = useAuditFacets();
   // The engine filters server-side by action prefix — pass the selected chip
   // through instead of fetching everything and filtering client-side.
-  const audit = useAudit({ limit: PAGE_SIZE, ...(actionFilter !== 'all' ? { action: actionFilter } : {}) });
+  // `from` is the start of the chosen day; `to` is the END of the chosen day
+  // so a range ending today includes today's events.
+  const audit = useAudit({
+    limit: PAGE_SIZE,
+    ...(actionFilter !== 'all' ? { action: actionFilter } : {}),
+    ...(fromParam ? { from: `${fromParam}T00:00:00.000Z` } : {}),
+    ...(toParam ? { to: `${toParam}T23:59:59.999Z` } : {}),
+  });
+  const rangeActive = fromParam !== '' || toParam !== '';
+  // Atomic clear: two sequential useUrlState setters each rebuild the URL
+  // from the same stale snapshot, so the second overwrote the first (only
+  // `to` was cleared). One navigate removes both keys at once.
+  const clearRange = () => {
+    const updated: Record<string, string> = {};
+    for (const [k, v] of Object.entries(params)) {
+      if (typeof v === 'string' && v !== '' && k !== 'from' && k !== 'to') {
+        updated[k] = v;
+      }
+    }
+    void navigate({ search: (() => updated) as never, replace: true });
+  };
 
   const facetActions = (facets.data?.actions ?? []).slice(0, 6);
 
@@ -185,6 +214,60 @@ export function ActivityView() {
               ariaLabel="Search events"
               width={180}
             />
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.75 }}>
+              From
+              <input
+                type="date"
+                value={fromParam}
+                max={toParam || undefined}
+                onChange={(e) => setFromParam(e.target.value)}
+                aria-label="From date"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'inherit',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8,
+                  padding: '6px 10px',
+                  fontSize: 12,
+                }}
+              />
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, opacity: 0.75 }}>
+              To
+              <input
+                type="date"
+                value={toParam}
+                min={fromParam || undefined}
+                onChange={(e) => setToParam(e.target.value)}
+                aria-label="To date"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'inherit',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8,
+                  padding: '6px 10px',
+                  fontSize: 12,
+                }}
+              />
+            </label>
+            {rangeActive && (
+              <button
+                type="button"
+                onClick={clearRange}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  opacity: 0.75,
+                  color: 'inherit',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 2,
+                }}
+              >
+                Clear dates
+              </button>
+            )}
           </FilterBar>
 
           <QueryView
@@ -263,7 +346,9 @@ export function ActivityView() {
                 ))}
                 {data.events.length >= PAGE_SIZE && (
                   <div style={{ padding: '12px 22px', fontSize: 12, opacity: 0.55 }}>
-                    Showing the {PAGE_SIZE} most recent events — use the export for the full trail.
+                    {rangeActive
+                      ? `Showing the ${PAGE_SIZE} most recent events in the selected range — use the export for the full trail.`
+                      : `Showing the ${PAGE_SIZE} most recent events — use the export for the full trail.`}
                   </div>
                 )}
               </>

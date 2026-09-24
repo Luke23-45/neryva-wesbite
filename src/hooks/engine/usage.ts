@@ -77,13 +77,34 @@ function humanize(segment: string): string {
   return segment.replace(/_/g, ' ').trim();
 }
 
-/** Numeric/string leaves of the overview payload → human-labeled KPI rows. */
+/**
+ * Subtrees whose numeric leaves duplicate parent-level aggregates — the
+ * per-project breakdown re-emits the same events/tokens/cost the product
+ * rollup already reports. Descending into them produced two identical sets
+ * of KPI cards (P6-US-24). Breakdowns belong in tables, not KPI cards.
+ */
+const KPI_SKIP_SUBTREES = new Set(['projects']);
+
+function formatKpiValue(key: string, value: number): string {
+  // cost_usd arrives as a numeric string ("0.300000") — render it as money
+  // so the "Tokens, cost, and quota" heading is honest (P6-US-25).
+  if (/cost/i.test(key)) {
+    return `$${value.toFixed(2)}`;
+  }
+  return value.toLocaleString();
+}
+
+/** Numeric/numeric-string leaves of the overview payload → human-labeled KPI rows. */
 export function parseOverviewKpis(raw: unknown, max = 8): UsageKpi[] {
   if (typeof raw !== 'object' || raw === null) {
     return [];
   }
   const out: UsageKpi[] = [];
-  const walk = (node: Record<string, unknown>, prefix: string) => {
+  const pushKpi = (prefix: string, labelPrefix: string, key: string, value: number) => {
+    const label = `${labelPrefix}${humanize(key)}`;
+    out.push({ key: `${prefix}${key}`, label, value: formatKpiValue(key, value) });
+  };
+  const walk = (node: Record<string, unknown>, prefix: string, labelPrefix: string) => {
     if (out.length >= max) {
       return;
     }
@@ -91,23 +112,42 @@ export function parseOverviewKpis(raw: unknown, max = 8): UsageKpi[] {
       if (out.length >= max) {
         return;
       }
+      if (KPI_SKIP_SUBTREES.has(key)) {
+        continue;
+      }
       if (value !== null && typeof value === 'object') {
         if (Array.isArray(value)) {
+          // Per-product slices: when the overview spans several products,
+          // label each product's KPIs so "Events" doesn't repeat unlabeled.
+          // The overview endpoint is per-product by contract (the rollup is
+          // the only cross-product totals endpoint), so the labels must say
+          // which product a KPI belongs to.
+          const items = value.filter((item) => item !== null && typeof item === 'object');
           value.forEach((item, i) => {
             if (item !== null && typeof item === 'object') {
-              walk(item as Record<string, unknown>, `${prefix}${key}[${i}].`);
+              const itemRec = item as Record<string, unknown>;
+              const productName =
+                key === 'products' && items.length > 1 && typeof itemRec.product === 'string'
+                  ? `${humanize(itemRec.product)} · `
+                  : '';
+              walk(itemRec, `${prefix}${key}[${i}].`, `${labelPrefix}${productName}`);
             }
           });
         } else {
-          walk(value as Record<string, unknown>, `${prefix}${key}.`);
+          walk(value as Record<string, unknown>, `${prefix}${key}.`, labelPrefix);
         }
       } else if (typeof value === 'number' && Number.isFinite(value)) {
-        const label = humanize(key);
-        out.push({ key: `${prefix}${key}`, label, value: value.toLocaleString() });
+        pushKpi(prefix, labelPrefix, key, value);
+      } else if (typeof value === 'string' && value.trim() !== '') {
+        // Numeric strings (notably cost_usd) are real KPI values too.
+        const n = Number(value);
+        if (Number.isFinite(n)) {
+          pushKpi(prefix, labelPrefix, key, n);
+        }
       }
     }
   };
-  walk(raw as Record<string, unknown>, '');
+  walk(raw as Record<string, unknown>, '', '');
   return out;
 }
 
