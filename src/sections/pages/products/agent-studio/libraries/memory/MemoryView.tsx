@@ -27,6 +27,7 @@ import {
   useMemories,
   useOrgMemoryPolicy,
   usePurgeMemories,
+  useUpdateMemory,
   type MemoryItem,
 } from '@hooks/studio/useSetupKnowledge';
 import {
@@ -142,6 +143,8 @@ export function MemoryView() {
   const [detail, setDetail] = useState<MemoryItem | null>(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
+  // A4-20: edit mode carries the row being corrected; null = create mode.
+  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
 
   const visible = useMemo(() => filterMemories(memories.data ?? [], query), [memories.data, query]);
 
@@ -190,12 +193,24 @@ export function MemoryView() {
           )
         )}
       </div>
+      {/* A4-23: assistant-scoped rows are stored and listable but never served
+          to runs — the run-time memory scope (user, organization, conversation,
+          none) has no assistant branch. Stated here, not implied. */}
+      {scope === 'assistant' && (
+        <p style={{ fontSize: 12, opacity: 0.75, margin: '0 0 12px' }}>
+          Assistant-scoped rows are stored and listable, but no run ever reads them — the run-time
+          memory scope is user, organization, conversation, or none.
+        </p>
+      )}
 
       <FilterBar>
         <TextInput label="Search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search content…" />
         <ActionButton
           variant="secondary"
-          onClick={() => setComposerOpen(true)}
+          onClick={() => {
+            setEditing(null);
+            setComposerOpen(true);
+          }}
           disabled={!canWrite}
           title={canWrite ? 'Save a memory (audited)' : 'Saving memories needs owner, admin, or developer.'}
         >
@@ -234,6 +249,7 @@ export function MemoryView() {
                 <DataCell $w="14%">Created</DataCell>
                 <DataCell $w="44px" />
                 <DataCell $w="44px" />
+                <DataCell $w="44px" />
               </DataHead>
               {visible.map((m) => {
                 const deleting = deletingId === m.id;
@@ -252,6 +268,20 @@ export function MemoryView() {
                     <DataCell>
                       <ActionButton variant="ghost" size="sm" onClick={() => setDetail(m)}>
                         Detail
+                      </ActionButton>
+                    </DataCell>
+                    <DataCell>
+                      <ActionButton
+                        variant="ghost"
+                        size="sm"
+                        disabled={!canWrite}
+                        title={canWrite ? 'Edit this memory\u2019s content (audited)' : 'Editing memories needs owner, admin, or developer.'}
+                        onClick={() => {
+                          setEditing({ id: m.id, content: m.content ?? '' });
+                          setComposerOpen(true);
+                        }}
+                      >
+                        Edit
                       </ActionButton>
                     </DataCell>
                     <DataCell>
@@ -283,12 +313,21 @@ export function MemoryView() {
       <FootNote>
         Scrub defaults, retention windows, and org-wide purge live with lifecycle in{' '}
         <Link to="/agent-studio/compliance">Compliance</Link>. Conversation-scoped memories surface
-        on their conversation, not here. Memory proposals are approved where they surface — no
-        proposals queue endpoint exists yet, so none is faked here.
+        on their conversation, not here. Memory proposals have no approval surface in this build —
+        the footer states it instead of faking a queue. The list shows the newest 100 entries per
+        scope — older entries are not listed, and search filters only what is loaded.
       </FootNote>
 
       <MemoryDetailModal item={detail} onClose={() => setDetail(null)} />
-      <MemoryComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} />
+      <MemoryComposerModal
+        key={editing ? `edit-${editing.id}` : 'new'}
+        open={composerOpen}
+        editing={editing}
+        onClose={() => {
+          setEditing(null);
+          setComposerOpen(false);
+        }}
+      />
       <MemoryPurgeModal open={purgeOpen} onClose={() => setPurgeOpen(false)} />
 
       <ConfirmDialog
@@ -369,15 +408,53 @@ function MemoryDetailModal({ item, onClose }: { item: MemoryItem | null; onClose
  * same POST memories contract, now with an organization/user scope picker
  * (the engine coerces anything else to organization, so nothing else is
  * offered) and an 8192-char cap with counter (the engine silent-truncates).
+ *
+ * A4-20: edit mode (editing != null) PATCHes the row's content only — scope,
+ * TTL and provenance are not editable and the picker is hidden with the
+ * reason stated, not silently dropped.
  */
-function MemoryComposerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function MemoryComposerModal({
+  open,
+  onClose,
+  editing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  editing: { id: string; content: string } | null;
+}) {
   const createMemory = useCreateMemory();
-  const [content, setContent] = useState('');
+  const updateMemory = useUpdateMemory();
+  const [content, setContent] = useState(editing?.content ?? '');
   const [scopeType, setScopeType] = useState<'organization' | 'user'>('organization');
 
   const trimmed = content.trim();
   const overCap = content.length > MEMORY_CONTENT_MAX;
   const valid = trimmed !== '' && !overCap;
+  const saving = createMemory.isPending || updateMemory.isPending;
+
+  const save = () => {
+    if (editing) {
+      updateMemory.mutate(
+        { memoryId: editing.id, content: trimmed.slice(0, MEMORY_CONTENT_MAX) },
+        {
+          onSuccess: () => {
+            setContent('');
+            onClose();
+          },
+        },
+      );
+    } else {
+      createMemory.mutate(
+        { content: trimmed.slice(0, MEMORY_CONTENT_MAX), scopeType },
+        {
+          onSuccess: () => {
+            setContent('');
+            onClose();
+          },
+        },
+      );
+    }
+  };
 
   return (
     <Modal
@@ -386,7 +463,7 @@ function MemoryComposerModal({ open, onClose }: { open: boolean; onClose: () => 
         setContent('');
         onClose();
       }}
-      title="New memory"
+      title={editing ? 'Edit memory' : 'New memory'}
       width={560}
       footer={
         <>
@@ -399,22 +476,8 @@ function MemoryComposerModal({ open, onClose }: { open: boolean; onClose: () => 
           >
             Cancel
           </ActionButton>
-          <ActionButton
-            size="sm"
-            disabled={!valid || createMemory.isPending}
-            onClick={() =>
-              createMemory.mutate(
-                { content: trimmed.slice(0, MEMORY_CONTENT_MAX), scopeType },
-                {
-                  onSuccess: () => {
-                    setContent('');
-                    onClose();
-                  },
-                },
-              )
-            }
-          >
-            Save memory
+          <ActionButton size="sm" disabled={!valid || saving} onClick={save}>
+            {editing ? 'Save changes' : 'Save memory'}
           </ActionButton>
         </>
       }
@@ -430,24 +493,33 @@ function MemoryComposerModal({ open, onClose }: { open: boolean; onClose: () => 
       <p style={{ fontSize: 12, opacity: 0.75 }}>
         {content.length.toLocaleString()} / {MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the cap.
       </p>
-      <div style={{ marginTop: 8 }}>
-        <Segmented
-          options={[
-            { value: 'organization' as const, label: 'Organization' },
-            { value: 'user' as const, label: 'User' },
-          ]}
-          value={scopeType}
-          onChange={setScopeType}
-          size="sm"
-          ariaLabel="New memory scope"
-        />
-      </div>
-      <p style={{ fontSize: 12, opacity: 0.75 }}>
-        {scopeType === 'user'
-          ? 'User memories resolve per account at run time — visible only to that account.'
-          : 'Organization memories are retrievable by every run in the org.'}{' '}
-        Writes are scrubbed then embedded, TTL-defaulted, and audited.
-      </p>
+      {editing ? (
+        <p style={{ fontSize: 12, opacity: 0.75 }}>
+          Scope and TTL are not editable — this only corrects the content. The entry is re-scrubbed,
+          re-embedded, and the change is audited.
+        </p>
+      ) : (
+        <>
+          <div style={{ marginTop: 8 }}>
+            <Segmented
+              options={[
+                { value: 'organization' as const, label: 'Organization' },
+                { value: 'user' as const, label: 'User' },
+              ]}
+              value={scopeType}
+              onChange={setScopeType}
+              size="sm"
+              ariaLabel="New memory scope"
+            />
+          </div>
+          <p style={{ fontSize: 12, opacity: 0.75 }}>
+            {scopeType === 'user'
+              ? 'User memories resolve per account at run time — visible only to that account.'
+              : 'Organization memories are retrievable by every run in the org.'}{' '}
+            Writes are scrubbed then embedded, TTL-defaulted, and audited.
+          </p>
+        </>
+      )}
     </Modal>
   );
 }
@@ -460,7 +532,7 @@ function MemoryComposerModal({ open, onClose }: { open: boolean; onClose: () => 
 function MemoryPurgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const purge = usePurgeMemories();
   const [substring, setSubstring] = useState('');
-  const [result, setResult] = useState<number | null>(null);
+  const [result, setResult] = useState<{ purged: number; truncated: boolean } | null>(null);
 
   const problem = validatePurgeSubstring(substring);
   const length = substring.trim().length;
@@ -492,7 +564,7 @@ function MemoryPurgeModal({ open, onClose }: { open: boolean; onClose: () => voi
             disabled={problem !== null || purge.isPending}
             onClick={() =>
               purge.mutate(substring.trim(), {
-                onSuccess: (data) => setResult(data.purged),
+                onSuccess: (data) => setResult({ purged: data.purged, truncated: data.truncated === true }),
               })
             }
           >
@@ -522,7 +594,10 @@ function MemoryPurgeModal({ open, onClose }: { open: boolean; onClose: () => voi
       </p>
       {result !== null && (
         <p style={{ fontSize: 13 }}>
-          Purged {result} {result === 1 ? 'memory' : 'memories'} — nothing matched stays retrievable.
+          Purged {result.purged} {result.purged === 1 ? 'memory' : 'memories'}
+          {result.truncated
+            ? ' — the run hit the 1000-match cap, so more may match. Re-run the purge to continue.'
+            : ' — nothing matched stays retrievable.'}
         </p>
       )}
     </Modal>

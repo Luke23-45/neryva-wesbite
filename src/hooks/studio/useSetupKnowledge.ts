@@ -6,6 +6,10 @@
  * - GET documents?limit= → {documents: [{id, source_slug, title, state,
  *   updated_at, latest_version}]} (newest-first, default 50 / max 200);
  * - POST documents/:id/source-slug {source_slug} → {ok:true} (409 collision);
+ * - GET documents/:id/preview?chunks= → {document, total_chunks, truncated,
+ *   chunks: [{sequence, text, source_range}]} (latest version, windowed);
+ * - DELETE documents/:id → {retired: true} (tombstone; state='retired',
+ *   unreachable by retrieval, mapping kept);
  * - GET documents/search?query&limit= → {hits: [{chunkId, documentId,
  *   documentVersionId, sequence, text, sourceRange, score, title?}]}
  *   (query ≤512, limit 1..20 default 5 — unconstrained console search);
@@ -31,7 +35,7 @@ import {
   type OrgMemoryPolicy,
 } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
 
-const KNOWLEDGE_KEY = ['studio', 'setup', 'knowledge'] as const;
+export const KNOWLEDGE_KEY = ['studio', 'setup', 'knowledge'] as const;
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -100,6 +104,118 @@ export function useRenameDocumentSlug() {
       }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'documents'] }),
     onError: (error) => toastEngineError(error, 'Could not rename the pin address'),
+  });
+}
+
+/**
+ * A4-05 — document removal is a tombstone (engine sets state='retired';
+ * retired docs are unreachable by retrieval, the mapping is kept). No
+ * silent disappearance: the row flips to the retired pill, never vanishes.
+ */
+export function useDeleteDocument() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (documentId: string) =>
+      engine(`/console/org/${orgId}/documents/${documentId}`, {
+        method: 'DELETE',
+        idempotent: true,
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'documents'] }),
+    onError: (error) => toastEngineError(error, 'Could not retire the document'),
+  });
+}
+
+export interface DocumentPreviewChunk {
+  sequence: number;
+  text: string;
+  byteStart: number | null;
+  byteEnd: number | null;
+}
+
+export interface DocumentPreview {
+  id: string;
+  sourceSlug: string;
+  title: string | null;
+  state: DocumentState;
+  latestVersion: number | null;
+  totalChunks: number;
+  truncated: boolean;
+  chunks: DocumentPreviewChunk[];
+}
+
+export function parseDocumentPreview(raw: unknown): DocumentPreview | null {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const doc = typeof record.document === 'object' && record.document !== null ? (record.document as Record<string, unknown>) : null;
+  if (!doc || typeof doc.id !== 'string') {
+    return null;
+  }
+  const num = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+  const rangeOf = (value: unknown): { byteStart: number | null; byteEnd: number | null } => {
+    let range: Record<string, unknown> | null = null;
+    if (typeof value === 'object' && value !== null) {
+      range = value as Record<string, unknown>;
+    } else if (typeof value === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(value);
+        range = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null;
+      } catch {
+        range = null;
+      }
+    }
+    return {
+      byteStart: num(range?.byteStart) ?? num(range?.byte_start),
+      byteEnd: num(range?.byteEnd) ?? num(range?.byte_end),
+    };
+  };
+  const chunks = Array.isArray(record.chunks) ? record.chunks : [];
+  return {
+    id: doc.id,
+    sourceSlug: str(doc.source_slug) ?? '',
+    title: str(doc.title),
+    state: str(doc.state) ?? 'processing',
+    latestVersion:
+      typeof doc.latest_version === 'number'
+        ? doc.latest_version
+        : typeof doc.latest_version === 'string' && doc.latest_version.trim() !== ''
+          ? Number(doc.latest_version)
+          : null,
+    totalChunks: num(record.total_chunks) ?? chunks.length,
+    truncated: record.truncated === true,
+    chunks: chunks
+      .map((entry): DocumentPreviewChunk | null => {
+        if (typeof entry !== 'object' || entry === null) {
+          return null;
+        }
+        const item = entry as Record<string, unknown>;
+        if (typeof item.text !== 'string') {
+          return null;
+        }
+        const range = rangeOf(item.source_range);
+        return {
+          sequence: num(item.sequence) ?? 0,
+          text: item.text,
+          byteStart: range.byteStart,
+          byteEnd: range.byteEnd,
+        };
+      })
+      .filter((c): c is DocumentPreviewChunk => c !== null),
+  };
+}
+
+/**
+ * A4-01 — document preview: latest-version chunks in sequence order
+ * (capped server-side; `truncated` says when the tail is cut). The preview
+ * is the stored text agents retrieve — what the user pinned, verifiable.
+ */
+export function useDocumentPreview(documentId: string | null, options?: { enabled?: boolean }) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...KNOWLEDGE_KEY, orgId, 'documents', documentId, 'preview'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/documents/${documentId}/preview`),
+    enabled: (options?.enabled ?? true) && !!orgId && !!documentId,
+    staleTime: 30_000,
+    select: parseDocumentPreview,
   });
 }
 
@@ -239,13 +355,16 @@ export function parseMemories(raw: unknown): MemoryItem[] {
     .filter((m): m is MemoryItem => m !== null);
 }
 
-export function useMemories(scopeType?: string, scopeId?: string) {
+/** A4-27: the library is not paginated — the engine clamps list to 1..100
+ * (default 50). The UI requests the max and discloses the cap instead of
+ * silently truncating; search only filters the loaded page. */
+export function useMemories(scopeType?: string, scopeId?: string, limit = 100) {
   const { orgId } = useOrg();
   return useQuery({
-    queryKey: [...KNOWLEDGE_KEY, orgId, 'memories', scopeType ?? null, scopeId ?? null],
+    queryKey: [...KNOWLEDGE_KEY, orgId, 'memories', scopeType ?? null, scopeId ?? null, limit],
     queryFn: () =>
       engine<unknown>(`/console/org/${orgId}/memories`, {
-        query: { scope_type: scopeType, scope_id: scopeId },
+        query: { scope_type: scopeType, scope_id: scopeId, limit },
       }),
     enabled: !!orgId,
     staleTime: 15_000,
@@ -269,6 +388,24 @@ export function useCreateMemory() {
       }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'memories'] }),
     onError: (error) => toastEngineError(error, 'Could not save the memory'),
+  });
+}
+
+/** A4-20 — in-place content edit (PATCH …/memories/:id). Scope/TTL/provenance
+ * are not editable; the server re-runs scrub-then-embed and re-stamps the
+ * embedding model. Live after an engine restart. */
+export function useUpdateMemory() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { memoryId: string; content: string }) =>
+      engine(`/console/org/${orgId}/memories/${input.memoryId}`, {
+        method: 'PATCH',
+        body: { content: input.content },
+        idempotent: true,
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'memories'] }),
+    onError: (error) => toastEngineError(error, 'Could not update the memory'),
   });
 }
 
@@ -303,10 +440,11 @@ export function useDeleteMemory() {
 }
 
 /**
- * DSR purge (C08): POST memories/purge {substring 3..128} → {purged: count}.
+ * DSR purge (C08): POST memories/purge {substring 3..128} → {purged: count, truncated: cap-hit}.
  * Owner/admin only; tombstones (retrieval stops, history stays answerable);
  * the audit keeps a hash of the query, never the query (`memory.service.ts`
  * purgeByContent). Client pre-validates bounds; the server remains authority.
+ * A4-25: the engine caps a run at 1000 — the truncated flag keeps the UI honest.
  */
 export function usePurgeMemories() {
   const { orgId } = useOrg();
@@ -315,7 +453,7 @@ export function usePurgeMemories() {
     mutationFn: async (substring: string) => {
       const problem = validatePurgeSubstring(substring);
       if (problem) throw new Error(problem);
-      return engine<{ purged: number }>(`/console/org/${orgId}/memories/purge`, {
+      return engine<{ purged: number; truncated: boolean }>(`/console/org/${orgId}/memories/purge`, {
         method: 'POST',
         body: { substring: substring.trim() },
         idempotent: true,

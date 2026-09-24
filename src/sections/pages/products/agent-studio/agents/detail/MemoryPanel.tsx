@@ -99,8 +99,12 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
             </MemoryItem>
           </MemoryList>
           <Whisper>
-            Thread memories live on their conversation — the <Link to="/agent-studio/memory">Memory library</Link> holds
-            the durable scopes.
+            Thread memories live on their conversation — the{' '}
+            {/* A4-23: the assistant tab is reachable via ?scope=assistant&scope_id=<agentId>. */}
+            <Link to="/agent-studio/memory" search={{ scope: 'assistant', scope_id: agentId }}>
+              Memory library
+            </Link>{' '}
+            holds the durable scopes.
           </Whisper>
         </>
       )}

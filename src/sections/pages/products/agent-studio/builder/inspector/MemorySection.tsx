@@ -94,7 +94,6 @@ export function MemorySection({
   const { role } = useOrg();
   const denied = setupDeniedCopy(role, 'setup:author');
   const orgPolicy = useOrgMemoryPolicy();
-  const assistantMemories = useMemories('assistant', assistantId);
   const orgMemories = useMemories('organization');
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
@@ -235,9 +234,14 @@ export function MemorySection({
     );
   }
 
-  const previewRows = [...(assistantMemories.data ?? []).slice(0, 2), ...(orgMemories.data ?? []).slice(0, 2)];
-  const previewPending = assistantMemories.isPending || orgMemories.isPending;
-  const previewError = assistantMemories.isError || orgMemories.isError;
+  // A4-23: assistant-scoped rows are NOT served to runs (the run-time memory
+  // scope is user, organization, conversation, none) — showing them under
+  // "IN SCOPE" would imply they reach the model. Org rows are the only
+  // library rows the run-time scope can select; user/conversation rows
+  // resolve per run and are deliberately not previewed here.
+  const previewRows = (orgMemories.data ?? []).slice(0, 4);
+  const previewPending = orgMemories.isPending;
+  const previewError = orgMemories.isError;
 
   return (
     <Wrap
@@ -297,7 +301,7 @@ export function MemorySection({
         ) : previewError ? (
           <Whisper $tone="amber">In-scope preview is unavailable — the policy above still saves.</Whisper>
         ) : previewRows.length === 0 ? (
-          <ToolMeta>No assistant or org memories yet — an empty memory is a clean slate.</ToolMeta>
+          <ToolMeta>No org memories yet — an empty memory is a clean slate.</ToolMeta>
         ) : (
           <PreviewList>
             {previewRows.map((row) => (
