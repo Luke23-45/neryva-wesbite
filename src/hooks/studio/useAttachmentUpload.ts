@@ -46,6 +46,12 @@ export interface AttachmentUpload {
   lastError: string | null;
   /** Reserved pin address (engine `session.source_slug`, may be derived). */
   sourceSlug: string | null;
+  /**
+   * A4-11 — when set, this tracker row is a version upload targeting the
+   * document pinned at this slug. The tracker labels it so the user can
+   * tell version ingestions apart from fresh-document ingestions.
+   */
+  versionOfSlug: string | null;
   /** Last local observation (ms epoch) — stall detection reads this, never the server clock. */
   touchedAt: number;
 }
@@ -64,6 +70,14 @@ export interface AttachInput {
   sourceSlug?: string;
   /** Display title (defaults to the slug, else auto). */
   title?: string;
+  /**
+   * A4-11 — re-ingestion target: append a new version to this document
+   * instead of minting one. The engine ignores sourceSlug/title intents on
+   * version uploads (the pin address is immutable); callers should not send
+   * them. `versionOfSlug` labels the tracker row for this upload.
+   */
+  targetDocumentId?: string;
+  versionOfSlug?: string | null;
   mediaType?: KnowledgeMediaType;
 }
 
@@ -176,8 +190,14 @@ export function useAttachmentUpload() {
         media_type: mediaType,
         byte_length: file.size,
         sha256,
-        ...(input.sourceSlug ? { source_slug: input.sourceSlug } : {}),
-        ...(input.title ? { title: input.title } : {}),
+        // A4-11: version uploads carry the target only — no slug/title
+        // intents (the engine 422s a slug alongside a target).
+        ...(input.targetDocumentId
+          ? { target_document_id: input.targetDocumentId }
+          : {
+              ...(input.sourceSlug ? { source_slug: input.sourceSlug } : {}),
+              ...(input.title ? { title: input.title } : {}),
+            }),
       },
       idempotent: true,
     });
@@ -199,6 +219,7 @@ export function useAttachmentUpload() {
         status: 'uploading',
         lastError: null,
         sourceSlug: str(session.source_slug),
+        versionOfSlug: input.versionOfSlug ?? null,
         touchedAt: Date.now(),
       },
     ]);

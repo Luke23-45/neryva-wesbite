@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Upload, Pencil, Search, Database, Plug, Eye, Trash2, X } from 'lucide-react';
+import { Plus, Upload, Pencil, Search, Database, Plug, Eye, Trash2, X, History } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -192,6 +192,8 @@ export function KnowledgeView() {
   const [renameTarget, setRenameTarget] = useState<{ id: string; slug: string } | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{ id: string; slug: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; slug: string } | null>(null);
+  // A4-11 — version upload target: the document a new version is appended to.
+  const [versionTarget, setVersionTarget] = useState<{ id: string; slug: string; latestVersion: number | null } | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -272,7 +274,17 @@ export function KnowledgeView() {
                     <div>{u.filename}</div>
                     <Muted>{(u.size / 1024).toFixed(1)} KB</Muted>
                   </DataCell>
-                  <DataCell $w="20%">{u.sourceSlug ? <Mono>{u.sourceSlug}</Mono> : <Muted>derived at ingestion</Muted>}</DataCell>
+                  <DataCell $w="20%">
+                    {u.versionOfSlug ? (
+                      <span>
+                        <Mono>{u.versionOfSlug}</Mono> <Muted>· new version</Muted>
+                      </span>
+                    ) : u.sourceSlug ? (
+                      <Mono>{u.sourceSlug}</Mono>
+                    ) : (
+                      <Muted>derived at ingestion</Muted>
+                    )}
+                  </DataCell>
                   <DataCell $w="16%">
                     <StatusPill tone={uploadTone[u.status]}>{u.status}</StatusPill>
                   </DataCell>
@@ -365,6 +377,21 @@ export function KnowledgeView() {
                             >
                               <Pencil size={13} strokeWidth={1.7} />
                             </IconBtn>
+                            {doc.state !== 'retired' && (
+                              <IconBtn
+                                type="button"
+                                aria-label={`Upload new version of ${doc.sourceSlug}`}
+                                title={
+                                  canWrite
+                                    ? 'Upload a new version — the pin address stays the same; agents resolve the latest version at next publish'
+                                    : writeDenied
+                                }
+                                disabled={!canWrite}
+                                onClick={() => setVersionTarget({ id: doc.id, slug: doc.sourceSlug, latestVersion: doc.latestVersion ?? null })}
+                              >
+                                <History size={13} strokeWidth={1.7} />
+                              </IconBtn>
+                            )}
                             {doc.state !== 'retired' && (
                               <IconBtn
                                 type="button"
@@ -464,6 +491,13 @@ export function KnowledgeView() {
       </motion.div>
 
       <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onAttach={attach} onAttachText={attachText} canWrite={canWrite} writeDenied={writeDenied} />
+      <VersionUploadModal
+        target={versionTarget}
+        onClose={() => setVersionTarget(null)}
+        onAttach={attach}
+        canWrite={canWrite}
+        writeDenied={writeDenied}
+      />
       <PreviewModal target={previewTarget} onClose={() => setPreviewTarget(null)} />
       <DeleteModal
         target={deleteTarget}
@@ -753,6 +787,132 @@ function UploadModal({
           <p style={{ fontSize: 12, opacity: 0.65, marginTop: 8 }}>
             Pasted bytes ride the same verified session flow as files — pin the slug from an agent once READY.
           </p>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * A4-11 — upload a new version of an existing manual document. Single file
+ * picker only: no slug field (the pin address is immutable on versions) and
+ * no title field (the document keeps its title). The tracker row labels the
+ * target ("new version of <slug>"); on authorize refusal the modal stays
+ * open with the selection intact (A4-09).
+ */
+function VersionUploadModal({
+  target,
+  onClose,
+  onAttach,
+  canWrite,
+  writeDenied,
+}: {
+  target: { id: string; slug: string; latestVersion: number | null } | null;
+  onClose: () => void;
+  onAttach: (input: { file: File; targetDocumentId: string; versionOfSlug: string | null }) => Promise<string | null>;
+  canWrite: boolean;
+  writeDenied: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Reset per target so reopening the modal never shows a stale file
+  // (render-time adjustment, not an effect — react-hooks/set-state-in-effect).
+  const [lastTargetId, setLastTargetId] = useState<string | null>(null);
+  if ((target?.id ?? null) !== lastTargetId) {
+    setLastTargetId(target?.id ?? null);
+    setFile(null);
+    setBusy(false);
+  }
+
+  const submit = () => {
+    if (!target || !file || busy) {
+      return;
+    }
+    setBusy(true);
+    void (async () => {
+      try {
+        const sessionId = await onAttach({ file, targetDocumentId: target.id, versionOfSlug: target.slug });
+        if (sessionId === null) {
+          toast.error(`'${file.name}' is not a supported type (${KNOWLEDGE_MEDIA_TYPES.join(', ')})`);
+          setBusy(false);
+        } else {
+          toast.success('New version authorized — tracking ingestion to READY');
+          setFile(null);
+          setBusy(false);
+          onClose();
+        }
+      } catch (error) {
+        // A4-09 — authorize refusal: keep the selection and the modal open
+        // so the user can address the refusal and retry without reselecting.
+        toast.error(uploadErrorCopy(file.name, error));
+        setBusy(false);
+      }
+    })();
+  };
+
+  return (
+    <Modal
+      open={target !== null}
+      onClose={onClose}
+      title={
+        target ? (
+          <>
+            Upload new version — <Mono>{target.slug}</Mono>
+          </>
+        ) : (
+          'Upload new version'
+        )
+      }
+      width={560}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={onClose}>
+            Cancel
+          </ActionButton>
+          <ActionButton
+            disabled={!canWrite || !file || busy}
+            title={canWrite ? 'Authorize a version-upload session for this file' : writeDenied}
+            onClick={submit}
+          >
+            <Upload size={13} strokeWidth={1.8} />
+            Upload new version
+          </ActionButton>
+        </>
+      }
+    >
+      {target && (
+        <>
+          <p style={{ fontSize: 13, margin: '0 0 4px' }}>
+            Current version: <strong>{target.latestVersion ?? '—'}</strong>
+            {target.latestVersion === null && ' — this upload becomes version 1'}
+          </p>
+          <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 12px' }}>
+            The pin address does not change. The new version becomes the served version once ingestion reaches READY; the
+            previous version stays in history.
+          </p>
+          <input
+            ref={fileRef}
+            type="file"
+            style={{ display: 'none' }}
+            accept={KNOWLEDGE_MEDIA_TYPES.join(',')}
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              e.target.value = '';
+            }}
+          />
+          <ActionButton variant="secondary" onClick={() => fileRef.current?.click()}>
+            Choose file (pdf, markdown, text, csv, json, image)
+          </ActionButton>
+          {file && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 12 }}>
+              <strong style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</strong>
+              <Muted>{(file.size / 1024).toFixed(1)} KB</Muted>
+              <ActionButton variant="ghost" size="sm" onClick={() => setFile(null)}>
+                Remove
+              </ActionButton>
+            </div>
+          )}
         </>
       )}
     </Modal>
