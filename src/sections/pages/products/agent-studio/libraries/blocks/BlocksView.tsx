@@ -84,9 +84,17 @@ function shortDate(iso: string | null): string {
   if (!iso) return '—';
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return '—';
-  // Full timestamp (C15) — expiry precision and Set-at ordering are
-  // load-bearing for a kill-switch ledger; month/day dropped them.
-  return parsed.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  // Full timestamp — the year and the zone are load-bearing here: expiry
+  // precision and set-at ordering in a kill-switch ledger must survive a
+  // glance, and the earlier month/day/hour/minute rendering dropped both.
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
 }
 
 /**
@@ -175,8 +183,8 @@ export function BlocksView() {
         query={blocks}
         isEmpty={(d) => d.length === 0}
         empty={{
-          title: 'No blocks affect your organization',
-          description: 'That is good news — nothing is refused anywhere. Blocks appear here with reason and expiry.',
+          title: 'No org blocks affect your organization',
+          description: 'Nothing listed here is refusing a target. Platform template blocks set by Neryva staff are not shown on this page.',
         }}
       >
         {(list) => {
@@ -189,6 +197,12 @@ export function BlocksView() {
             );
           }
           return (
+          <>
+            {list.length >= 200 && (
+              <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 8px' }}>
+                The server returns at most 200 rows — this list may be truncated. Narrow the search to find a specific block.
+              </p>
+            )}
           <DataTable>
             <DataHead>
               <DataCell $w="10%">Target</DataCell>
@@ -233,6 +247,7 @@ export function BlocksView() {
               );
             })}
           </DataTable>
+          </>
           );
         }}
       </QueryView>
@@ -279,6 +294,11 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
   // Modal-open clock for the futurity check (stable per mount; the check
   // re-runs on every keystroke against this fixed "now").
   const [nowMs] = useState(() => Date.now());
+  // datetime-local is timezone-naive: the min hint must be local wall-clock,
+  // not the UTC slice, or non-UTC operators see a wrong earliest time.
+  const [minExpiry] = useState(() =>
+    new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16),
+  );
 
   const nameProblem =
     targetName.trim().length >= 1 && targetName.trim().length <= 128
@@ -301,6 +321,20 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
   const valid = !nameProblem && !reasonProblem && !expiryProblem;
   const permanent = expiryText === '';
 
+  // The modal stays mounted while hidden — reset every submit/close so a
+  // previous session's values never leak into a fresh one.
+  const reset = () => {
+    setTargetType('assistant');
+    setTargetName('');
+    setReason('');
+    setExpiresAt('');
+    setPermanentArmed(false);
+  };
+  const close = () => {
+    reset();
+    onClose();
+  };
+
   const submit = () => {
     setBlock.mutate(
       {
@@ -311,8 +345,7 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
       },
       {
         onSuccess: () => {
-          setPermanentArmed(false);
-          onClose();
+          close();
         },
       },
     );
@@ -321,15 +354,12 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <Modal
       open={open}
-      onClose={() => {
-        setPermanentArmed(false);
-        onClose();
-      }}
+      onClose={close}
       title="Set control block"
       width={560}
       footer={
         <>
-          <ActionButton variant="secondary" onClick={onClose}>
+          <ActionButton variant="secondary" onClick={close}>
             Cancel
           </ActionButton>
           {permanentArmed ? (
@@ -361,7 +391,7 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
       }
     >
       <p style={{ fontSize: 13, opacity: 0.8 }}>
-        Governance kill switch — refuses acceptance, assignment, tool calls, context, credentials,
+        Governance kill switch — refuses acceptance, assignment, tool calls, credentials,
         and installs. Expiry needs no worker; terminal runs never strand. There is no edit:
         to change a block, clear it and set it again.
       </p>
@@ -386,7 +416,7 @@ function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => voi
             type="datetime-local"
             aria-label="Block expiry"
             value={expiresAt}
-            min={new Date().toISOString().slice(0, 16)}
+            min={minExpiry}
             onChange={(e) => {
               setExpiresAt(e.target.value);
               setPermanentArmed(false);

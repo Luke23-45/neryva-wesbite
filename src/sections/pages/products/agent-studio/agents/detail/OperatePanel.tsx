@@ -27,6 +27,8 @@ import {
   useClearControlBlock,
   useMemberNameMap,
   BLOCK_TARGETS,
+  isBlockActive,
+  type ControlBlock,
 } from '@hooks/studio/useSetupOperate';
 import { describePausedRollout, OPERATE_COPY } from '@/sections/pages/products/agent-studio/builder/lib/operate-model';
 import { checkRolloutVariants } from '@lib/engine/setup-caps';
@@ -90,6 +92,20 @@ const EmergencyStrip = styled.div`
   margin-bottom: 12px;
 `;
 
+/** Full timestamp with year + zone — a kill-switch ledger must not silently drop either. */
+function formatBlockInstant(iso: string): string {
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+}
+
 export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: { agentId: string; versions: AgentVersion[]; disabledAt: string | null; disabledReason: string | null }) {
   const { role } = useOrg();
   const canOperate = canSetup(role, 'setup:govern');
@@ -142,6 +158,7 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
     });
   };
   const [blockOpen, setBlockOpen] = useState(false);
+  const [clearTarget, setClearTarget] = useState<ControlBlock | null>(null);
   const [disableOpen, setDisableOpen] = useState(false);
   const [disableReason, setDisableReason] = useState('');
 
@@ -413,19 +430,23 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
           <QueryView
             query={blocks}
             isEmpty={(d) => d.length === 0}
-            empty={{ title: 'No blocks set', description: 'Blocks refuse acceptance, assignment, tool calls, context, credentials, and installs.' }}
+            empty={{ title: 'No blocks set', description: 'Blocks refuse acceptance, assignment, tool calls, credentials, and installs.' }}
           >
             {(rows) => (
               <>
                 {rows.map((block) => (
                   <div key={block.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--neryva-border, #222)' }}>
-                    <StatusPill tone={'error' as StatusTone} dot={false}>
+                    <StatusPill tone={isBlockActive(block) ? ('error' as StatusTone) : 'neutral'} dot={false}>
                       {block.targetType}:{block.targetName}
                     </StatusPill>
                     <span style={{ flex: 1 }}>{block.reason}</span>
                     {block.createdBy && <Muted>by {members.nameOf(block.createdBy)}</Muted>}
-                    {block.expiresAt && <Muted>expires {block.expiresAt.slice(0, 16).replace('T', ' ')}</Muted>}
-                    <ActionButton variant="ghost" size="sm" disabled={clearBlock.isPending} onClick={() => clearBlock.mutate(block.id)}>
+                    {block.expiresAt ? (
+                      <Muted>{isBlockActive(block) ? 'expires' : 'expired'} {formatBlockInstant(block.expiresAt)}</Muted>
+                    ) : (
+                      <Muted>no expiry</Muted>
+                    )}
+                    <ActionButton variant="ghost" size="sm" disabled={clearBlock.isPending} onClick={() => setClearTarget(block)}>
                       Clear
                     </ActionButton>
                   </div>
@@ -470,6 +491,21 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
         onCancel={() => setResumeConfirm(false)}
       />
       <ConfirmDialog
+        open={clearTarget !== null}
+        title="Clear this block?"
+        message={
+          clearTarget
+            ? `Clearing the block on ${clearTarget.targetType}:${clearTarget.targetName} makes it assignable and servable again. The clear is audited.`
+            : ''
+        }
+        confirmLabel="Clear block"
+        onConfirm={() => {
+          if (clearTarget) clearBlock.mutate(clearTarget.id);
+          setClearTarget(null);
+        }}
+        onCancel={() => setClearTarget(null)}
+      />
+      <ConfirmDialog
         open={releaseConfirm}
         title="Move the release pointer?"
         message={`Point ${releaseEnv || 'production'} × ${releaseChannel || 'default'} at the selected version. BLOCKed versions refuse with a typed conflict.`}
@@ -507,7 +543,9 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
           });
         }}
       />
-      <BlockModal open={blockOpen} onClose={() => setBlockOpen(false)} agentId={agentId} />
+      {/* Keyed by open state: the modal remounts on every open, so a previous
+          session's form values can never leak into a fresh one. */}
+      <BlockModal key={blockOpen ? 'open' : 'closed'} open={blockOpen} onClose={() => setBlockOpen(false)} agentId={agentId} />
       <Muted>
         {OPERATE_COPY.stickyConversation} Every operate write lands in <Link to="/platform/audit">Audit →</Link>
       </Muted>
@@ -563,11 +601,16 @@ function BlockModal({ open, onClose, agentId }: { open: boolean; onClose: () => 
   const [targetName, setTargetName] = useState(agentId);
   const [reason, setReason] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [permanentArmed, setPermanentArmed] = useState(false);
   // Clock captured once per mount (render must stay pure — no Date.now() inline).
   const [nowMs] = useState(() => Date.now());
   const [minExpiry] = useState(() =>
     new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16),
   );
+
+  // The parent remounts this modal on every open (keyed by open state), so
+  // form state is always fresh — a previous session's values can never leak
+  // into a new one.
 
   const nameProblem = targetName.trim().length >= 1 && targetName.trim().length <= 128 ? null : 'Target names are 1–128 chars.';
   const reasonProblem = reason.trim().length >= 1 && reason.trim().length <= 512 ? null : 'Operator justification is mandatory (1–512 chars).';
@@ -579,6 +622,7 @@ function BlockModal({ open, onClose, agentId }: { open: boolean; onClose: () => 
           if (!Number.isFinite(parsed)) return 'Expiry must be a real timestamp.';
           return parsed > nowMs ? null : 'Expiry must be in the future.';
         })();
+  const permanent = expiresAt.trim() === '';
   const valid = !nameProblem && !reasonProblem && !expiryProblem;
 
   return (
@@ -592,28 +636,55 @@ function BlockModal({ open, onClose, agentId }: { open: boolean; onClose: () => 
           <ActionButton variant="secondary" onClick={onClose}>
             Cancel
           </ActionButton>
-          <ActionButton
-            disabled={!valid || setBlock.isPending}
-            onClick={() => {
-              setBlock.mutate(
-                {
-                  targetType,
-                  targetName: targetName.trim(),
-                  reason: reason.trim(),
-                  ...(expiresAt.trim() ? { expiresAt: new Date(expiresAt).toISOString() } : {}),
-                },
-                { onSuccess: () => onClose() },
-              );
-            }}
-          >
-            <ShieldAlert size={13} strokeWidth={1.8} />
-            Set block
-          </ActionButton>
+          {permanentArmed ? (
+            <ActionButton
+              variant="danger"
+              disabled={!valid || setBlock.isPending}
+              onClick={() => {
+                setBlock.mutate(
+                  {
+                    targetType,
+                    targetName: targetName.trim(),
+                    reason: reason.trim(),
+                  },
+                  { onSuccess: () => onClose() },
+                );
+              }}
+            >
+              <ShieldAlert size={13} strokeWidth={1.8} />
+              Yes — block with no expiry
+            </ActionButton>
+          ) : (
+            <ActionButton
+              variant="danger"
+              disabled={!valid || setBlock.isPending}
+              onClick={() => {
+                // Permanent blocks never lift — require the same two-step
+                // arming the Libraries page uses before committing.
+                if (permanent) {
+                  setPermanentArmed(true);
+                  return;
+                }
+                setBlock.mutate(
+                  {
+                    targetType,
+                    targetName: targetName.trim(),
+                    reason: reason.trim(),
+                    expiresAt: new Date(expiresAt).toISOString(),
+                  },
+                  { onSuccess: () => onClose() },
+                );
+              }}
+            >
+              <ShieldAlert size={13} strokeWidth={1.8} />
+              Set block
+            </ActionButton>
+          )}
         </>
       }
     >
       <p style={{ fontSize: 13, opacity: 0.8 }}>
-        Governance kill switch — refuses acceptance, assignment, tool calls, context, credentials, and installs. Expiry needs no
+        Governance kill switch — refuses acceptance, assignment, tool calls, credentials, and installs. Expiry needs no
         worker; terminal runs never strand.
       </p>
       <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
@@ -636,7 +707,10 @@ function BlockModal({ open, onClose, agentId }: { open: boolean; onClose: () => 
           type="datetime-local"
           value={expiresAt}
           min={minExpiry}
-          onChange={(e) => setExpiresAt(e.target.value)}
+          onChange={(e) => {
+            setExpiresAt(e.target.value);
+            setPermanentArmed(false);
+          }}
           style={{ display: 'block', width: '100%', marginTop: 4 }}
         />
       </label>

@@ -25,6 +25,7 @@ const VERSIONS: AgentVersion[] = [
 
 const setRolloutMutate = vi.fn();
 const setBlockMutate = vi.fn();
+const clearBlockMutate = vi.fn();
 
 const state = {
   rollout: {
@@ -51,6 +52,10 @@ const state = {
     createdAt: null,
     updatedAt: null,
   },
+  blocks: [
+    { id: 'b1', targetType: 'tool', targetName: 'refunds', reason: 'holiday freeze', expiresAt: null, createdBy: 'u1', createdAt: '2026-09-01T00:00:00Z' },
+    { id: 'b2', targetType: 'tool', targetName: 'chargebacks', reason: 'old freeze', expiresAt: '2020-01-01T00:00:00Z', createdBy: 'u1', createdAt: '2019-12-01T00:00:00Z' },
+  ],
 };
 
 function query<T>(data: T) {
@@ -66,11 +71,9 @@ vi.mock('@hooks/studio/useSetupOperate', async (importOriginal) => {
     usePauseRollout: () => ({ mutate: vi.fn(), isPending: false }),
     useMoveRelease: () => ({ mutate: vi.fn(), isPending: false }),
     useReleasePointer: () => query(state.pointer),
-    useControlBlocks: () => query([
-      { id: 'b1', targetType: 'tool', targetName: 'refunds', reason: 'holiday freeze', expiresAt: null, createdBy: 'u1', createdAt: '2026-09-01T00:00:00Z' },
-    ]),
+    useControlBlocks: () => query(state.blocks),
     useSetControlBlock: () => ({ mutate: setBlockMutate, isPending: false }),
-    useClearControlBlock: () => ({ mutate: vi.fn(), isPending: false }),
+    useClearControlBlock: () => ({ mutate: clearBlockMutate, isPending: false }),
     useMemberNameMap: () => ({ nameOf: (id: string) => (id === 'u1' ? 'Amara' : null) }),
   };
 });
@@ -115,6 +118,7 @@ async function shell() {
 beforeEach(() => {
   setRolloutMutate.mockReset();
   setBlockMutate.mockReset();
+  clearBlockMutate.mockReset();
 });
 
 describe('OperatePanel (C15)', () => {
@@ -156,5 +160,47 @@ describe('OperatePanel (C15)', () => {
     // datetime-local ships local wall time; the panel normalizes to UTC ISO.
     expect((sent.expiresAt as string).endsWith('Z')).toBe(true);
     expect(Date.parse(sent.expiresAt as string)).toBeGreaterThan(Date.now());
+  });
+
+  it('arms permanent blocks in two steps before committing', async () => {
+    await shell();
+    fireEvent.click(screen.getByText('Set block'));
+    fireEvent.change(screen.getByPlaceholderText('Why this block exists'), { target: { value: 'incident containment' } });
+    // No expiry entered: first click arms, second commits without expiresAt.
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Set block'));
+    expect(within(screen.getByRole('dialog')).getByText('Yes — block with no expiry')).toBeTruthy();
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Yes — block with no expiry'));
+    const sent = setBlockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(sent.reason).toBe('incident containment');
+    expect('expiresAt' in sent).toBe(false);
+  });
+
+  it('asks before clearing a block and clears only the confirmed row', async () => {
+    await shell();
+    const row = screen.getByText(/refunds/).closest('div') as HTMLElement;
+    fireEvent.click(within(row).getByRole('button', { name: 'Clear' }));
+    expect(screen.getByText('Clear this block?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear block' }));
+    expect(clearBlockMutate).toHaveBeenCalledTimes(1);
+    expect(clearBlockMutate.mock.calls[0]?.[0]).toBe('b1');
+  });
+
+  it('resets the block modal between sessions', async () => {
+    await shell();
+    const openModal = () => fireEvent.click(screen.getAllByText('Set block')[0]);
+    openModal();
+    fireEvent.change(screen.getByPlaceholderText('Why this block exists'), { target: { value: 'stale reason' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Cancel'));
+    openModal();
+    const reason = screen.getByPlaceholderText('Why this block exists') as HTMLInputElement;
+    expect(reason.value).toBe('');
+  });
+
+  it('renders expired blocks in a neutral tone with an expired label and full timestamp', async () => {
+    await shell();
+    const row = screen.getByText(/chargebacks/).closest('div') as HTMLElement;
+    // Expired rows must not wear the error-red pill reserved for active blocks.
+    expect(within(row).getByText(/expired/)).toBeTruthy();
+    expect(screen.getByText('no expiry')).toBeTruthy(); // b1 is permanent
   });
 });

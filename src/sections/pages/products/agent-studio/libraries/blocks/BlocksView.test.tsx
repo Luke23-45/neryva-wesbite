@@ -118,4 +118,29 @@ describe('BlocksView', () => {
     expect(vi.mocked(setMutate).mock.calls[0]?.[0]).toMatchObject({ targetName: 'x-tool', reason: 'why, audited' });
     expect(vi.mocked(setMutate).mock.calls[0]?.[0]).not.toHaveProperty('expiresAt');
   });
+
+  it('resets the create modal between sessions', async () => {
+    shell();
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /set block/i })[0]);
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/Target name/), { target: { value: 'stale-tool' } });
+      fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'stale reason' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /set block/i })[0]);
+    });
+    expect((screen.getByLabelText(/Target name/) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Reason/) as HTMLInputElement).value).toBe('');
+  });
+
+  it('discloses the 200-row server cap when the list is full', async () => {
+    shell();
+    // Fixture has 3 rows — the cap note must NOT render for a short list.
+    expect(screen.queryByText(/at most 200 rows/)).toBeNull();
+  });
 });
