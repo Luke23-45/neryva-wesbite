@@ -82,7 +82,7 @@ const EmptyNote = styled.div`
  */
 export function ToolsPanel({ agentId }: { agentId: string }) {
   const form = useAssistantDefinition(agentId, { prefer: 'active' });
-  const catalog = useToolCatalog();
+  const catalog = useToolCatalog({ includeDisabled: true });
 
   const definition = form.data?.definition ?? null;
   const entries = definition?.tools ?? [];

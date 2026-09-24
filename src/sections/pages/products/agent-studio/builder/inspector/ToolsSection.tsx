@@ -99,7 +99,9 @@ export function ToolsSection({
   const { role } = useOrg();
   const denied = setupDeniedCopy(role, 'setup:author');
 
-  const catalog = useToolCatalog();
+  // A4-67 — pin state must see disabled rows (a disabled bound tool is
+  // "disabled", not "missing"). The bind picker below stays enabled-only.
+  const catalog = useToolCatalog({ includeDisabled: true });
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
@@ -128,8 +130,11 @@ export function ToolsSection({
   }, [dirty, onDirtyChange]);
 
   const rows = useMemo(() => {
-    const byName = new Map((catalog.data ?? []).map((row) => [row.name, row]));
-    return { byName, list: catalog.data ?? [] };
+    const all = catalog.data ?? [];
+    const byName = new Map(all.map((row) => [row.name, row]));
+    // A4-67 — the bind picker offers enabled rows only; pin state (byName)
+    // still resolves disabled rows so bound entries show "disabled".
+    return { byName, list: all.filter((row) => row.enabled !== false) };
   }, [catalog.data]);
 
   const buildNext = useCallback((): AgentDefinition | null => {
