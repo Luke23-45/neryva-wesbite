@@ -58,6 +58,9 @@ export function parseApprovals(raw: unknown): ApprovalItem[] {
       const item = entry as Record<string, unknown>;
       const id = str(item.id);
       if (!id) {
+        // P5-A6: never drop silently — an id-less row means schema drift or a
+        // partial select, and the operator must know work is parked.
+        console.warn('[approvals] dropped approval row without id', entry);
         return null;
       }
       return {

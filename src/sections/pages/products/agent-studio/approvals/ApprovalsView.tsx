@@ -200,7 +200,7 @@ export function ApprovalsView() {
                         {item.actionType ? <Mono>{item.actionType}</Mono> : <Muted>—</Muted>}
                       </DataCell>
                       <DataCell $w="14%">
-                        {item.expiresAt ? item.expiresAt.slice(0, 16).replace('T', ' ') : <Muted>no window</Muted>}
+                        {item.expiresAt ? formatUtc(item.expiresAt) : <Muted>no window</Muted>}
                       </DataCell>
                       <DataCell $w="10%">
                         {item.runId ? <Mono>{item.runId.slice(0, 8)}</Mono> : <Muted>—</Muted>}
@@ -208,7 +208,7 @@ export function ApprovalsView() {
                       <DataCell $w="12%">
                         {item.decidedAt ? (
                           <span>
-                            {item.decidedAt.slice(0, 16).replace('T', ' ')}
+                            {formatUtc(item.decidedAt)}
                             {item.decisionActorId && (
                               <> by {members.nameOf(item.decisionActorId) ?? item.decisionActorId.slice(0, 8)}</>
                             )}
@@ -305,6 +305,15 @@ export function ApprovalsView() {
   );
 }
 
+/**
+ * P5-A5: engine timestamps are UTC ISO strings. The bare wall-clock slice
+ * reads as local time; the zone label is load-bearing for expiry windows.
+ */
+function formatUtc(iso: string | null): string {
+  if (!iso) return '—';
+  return `${iso.slice(0, 16).replace('T', ' ')} UTC`;
+}
+
 function ApprovalDrawer({
   item,
   actorName,
@@ -340,7 +349,7 @@ function ApprovalDrawer({
           <div>
             <dt style={{ opacity: 0.6 }}>Decided</dt>
             <dd style={{ margin: 0 }}>
-              {item.decidedAt.slice(0, 16).replace('T', ' ')}
+              {formatUtc(item.decidedAt)}
               {actorName ? ` by ${actorName}` : ''} · reasons live in <Link to="/platform/audit">Audit →</Link>
             </dd>
           </div>
@@ -466,7 +475,7 @@ function ExtendModal({ item, onClose }: { item: ApprovalItem; onClose: () => voi
       }
     >
       <p style={{ fontSize: 13, opacity: 0.8 }}>
-        Currently expires: {item.expiresAt ? item.expiresAt.slice(0, 16).replace('T', ' ') : 'no window'}. Enter a future ISO timestamp.
+        Currently expires: {item.expiresAt ? formatUtc(item.expiresAt) : 'no window'}. Enter a future ISO timestamp.
       </p>
       <div style={{ marginTop: 12 }}>
         <TextInput label="New expiry (ISO)" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} placeholder="2026-12-31T00:00:00Z" error={expiresAt.trim() && !parseable ? 'Must be a parseable timestamp.' : undefined} />

@@ -75,7 +75,7 @@ describe('ApprovalsView (C15)', () => {
     await shell();
     fireEvent.click(screen.getByText('Approved'));
     expect(screen.getByText(/Amara/)).toBeTruthy();
-    expect(screen.getByText(/2026-09-17 11:58/)).toBeTruthy();
+    expect(screen.getByText(/2026-09-17 11:58 UTC/)).toBeTruthy();
   });
 
   it('requires a reason to deny, and stores it', async () => {
