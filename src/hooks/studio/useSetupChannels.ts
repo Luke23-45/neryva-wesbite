@@ -35,6 +35,18 @@ import { engine, ENGINE_BASE } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
 
+/**
+ * Detects if a channels API error is due to the module being disabled (404).
+ * The channels module returns 404 when MODULES__CHANNELS_ENABLED is false.
+ * UI components should show a friendly "module not enabled" message instead
+ * of a generic error when this is true (P5-C1, P5-C3, P5-C4).
+ */
+export function isChannelsModuleDisabled(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { status?: number; statusCode?: number; code?: string };
+  return err.status === 404 || err.statusCode === 404 || err.code === 'MODULE_DISABLED';
+}
+
 const CHANNELS_KEY = ['studio', 'setup', 'channels'] as const;
 
 export const CHANNEL_PLATFORMS = ['whatsapp', 'messenger', 'telegram', 'web', 'instagram', 'x', 'email'] as const;
