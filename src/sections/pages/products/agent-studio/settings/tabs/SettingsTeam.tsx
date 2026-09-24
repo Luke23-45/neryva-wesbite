@@ -555,7 +555,7 @@ const InviteWrap = styled.div`
 
 const InviteError = styled.div`
   color: ${({ theme }) => theme.app.status.error.fg};
-  font-size: ${({ theme }) => theme.app.type.small};
+  font-size: ${({ theme }) => theme.app.type.caption};
   margin: -8px 0 16px;
 `;
 

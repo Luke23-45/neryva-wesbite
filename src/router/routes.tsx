@@ -47,7 +47,7 @@ import AgentStudioAgentBuilderNewPage from '@pages/products/agent_studio/AgentSt
 import AgentStudioAgentBuilderPage from '@pages/products/agent_studio/AgentStudioAgentBuilderPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
-import AgentStudioIntegrationsPage from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
+import AgentStudioIntegrationsPage, { AgentStudioIntegrationsLayout } from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
 import AgentStudioWebhooksPage from '@pages/products/agent_studio/AgentStudioWebhooksPage';
 import AgentStudioSettingsIndexPage from '@pages/products/agent_studio/AgentStudioSettingsIndexPage';
 import AgentStudioSettingsProfilePage from '@pages/products/agent_studio/AgentStudioSettingsProfilePage';
@@ -407,6 +407,12 @@ export const agentStudioActivityRoute = createRoute({
 export const agentStudioIntegrationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/integrations',
+  component: AgentStudioIntegrationsLayout,
+});
+
+export const agentStudioIntegrationsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioIntegrationsRoute,
+  path: '/',
   component: AgentStudioIntegrationsPage,
 });
 
@@ -630,7 +636,7 @@ export const routeDefinitions = [
     agentStudioConversationsRoute,
     agentStudioActivityRoute,
     agentStudioAnalyticsRoute,
-    agentStudioIntegrationsRoute.addChildren([agentStudioWebhooksRoute]),
+    agentStudioIntegrationsRoute.addChildren([agentStudioIntegrationsIndexRoute, agentStudioWebhooksRoute]),
     agentStudioTemplatesRoute,
     agentStudioApiRoute,
     agentStudioTeamsRoute,
