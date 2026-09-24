@@ -17,6 +17,7 @@ import type {
 import { useInviteMember, useResendInvite, useRevokeInvite, useChangeRole, useSuspendMember, useReactivateMember, useRemoveMember } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
 import type { OrgRole } from '@/Context/OrgContext';
+import { ApiError } from '@lib/engine/client';
 
 /**
  * Settings → Team (ledger T-5)
@@ -82,6 +83,7 @@ export function SettingsTeam() {
 function InviteForm() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgRole>('developer');
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const invite = useInviteMember();
 
   const send = () => {
@@ -89,13 +91,23 @@ function InviteForm() {
       toast.error('Enter a valid email');
       return;
     }
+    setInviteError(null);
     invite.mutate(
       { email: email.trim(), role },
-      { onSuccess: () => { toast.success(`Invite sent to ${email.trim()}`); setEmail(''); } },
+      {
+        onSuccess: () => { toast.success(`Invite sent to ${email.trim()}`); setEmail(''); },
+        // useInviteMember is silentError (OrgMembersPage renders inline copy instead
+        // of a toast) — this form must surface failures inline too, otherwise a
+        // failed invite dies with no feedback at all (P5-T1).
+        onError: (error) => {
+          setInviteError(error instanceof ApiError ? error.message : 'Could not send the invitation — try again.');
+        },
+      },
     );
   };
 
   return (
+    <>
     <InviteWrap>
       <div style={{ flex: 1 }}>
         <TextInput
@@ -124,6 +136,8 @@ function InviteForm() {
         Send invite
       </InviteBtn>
     </InviteWrap>
+    {inviteError && <InviteError role="alert">{inviteError}</InviteError>}
+    </>
   );
 }
 
@@ -509,6 +523,12 @@ const InviteWrap = styled.div`
     flex-direction: column;
     align-items: stretch;
   }
+`;
+
+const InviteError = styled.div`
+  color: ${({ theme }) => theme.app.status.error.fg};
+  font-size: ${({ theme }) => theme.app.type.small};
+  margin: -8px 0 16px;
 `;
 
 const RoleSelect = styled.select`
