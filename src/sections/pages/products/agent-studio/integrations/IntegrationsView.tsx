@@ -362,7 +362,7 @@ export function IntegrationsView() {
         <SectionGap>
           <Panel
             title="Webhooks"
-            subtitle="Send every agent event to your own HTTP endpoint."
+            subtitle="Deliver signed agent events to your own HTTP endpoints."
             action={
               <Link to="/agent-studio/integrations/webhooks">
                 <ActionButton variant="secondary" size="sm">

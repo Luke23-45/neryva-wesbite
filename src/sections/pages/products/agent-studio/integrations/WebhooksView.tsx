@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, RefreshCw, Send, Pencil } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, Send, Pencil, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
+import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
@@ -11,6 +12,7 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
+import { EmptyState } from '@components/common/ui/EmptyState';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import {
   DataTable,
@@ -21,8 +23,10 @@ import {
   CellMeta,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
+import { ApiError } from '@lib/engine/client';
+import { toastEngineError } from '@lib/engine/errors';
 import {
-  useWebhookEventCatalog,
+  useWebhookEvents,
   useWebhooks,
   useWebhookDeliveries,
   useCreateWebhook,
@@ -31,7 +35,8 @@ import {
   useRotateWebhookSecret,
   useTestWebhook,
   secretFromRotateResponse,
-  type WebhookRow,
+  type WebhookSummary,
+  type WebhookEventCatalogEntry,
 } from '@hooks/studio/useWebhooks';
 
 import {
@@ -44,29 +49,34 @@ import {
 } from './WebhooksView.styles';
 
 /**
- * Webhooks (ledger I-1) — the engine's webhook plane, fully wired: create,
- * edit, delete, rotate (reveal-once), test delivery, and the delivery log.
- * The events grid is ⛔ E-5 (no subscribable-event catalog endpoint yet) —
- * a toggle grid that cannot persist would be a stub, so it is not shipped.
+ * Webhooks — the engine's webhook plane, fully wired: create (with real
+ * subscription selection and reveal-once secret), edit (URL, events,
+ * description, status), delete, rotate (reveal-once), targeted test
+ * delivery, and the delivery log. The event grid is the subscribable
+ * catalog; lifecycle events ride `*`-subscribed webhooks (see catalog
+ * subtitle). Manual redelivery remains ⛔ E-5 (no endpoint yet).
  */
 
 export function WebhooksView() {
   const webhooks = useWebhooks();
-  const create = useCreateWebhook();
-  const update = useUpdateWebhook();
   const remove = useDeleteWebhook();
   const rotate = useRotateWebhookSecret();
   const test = useTestWebhook();
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createUrl, setCreateUrl] = useState('');
-  const [editTarget, setEditTarget] = useState<WebhookRow | null>(null);
-  const [editUrl, setEditUrl] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<WebhookRow | null>(null);
+  const [editTarget, setEditTarget] = useState<WebhookSummary | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<WebhookSummary | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
 
-  const startRotate = (webhook: WebhookRow) => {
+  // J1-04 twin: a 404 on the webhooks read means the engine's webhooks
+  // module is disabled in this deployment — not a failure. The honest
+  // state is "unavailable", and webhook creation is withheld since issuing
+  // would 404 too.
+  const webhooksDisabled =
+    webhooks.isError && webhooks.error instanceof ApiError && webhooks.error.status === 404;
+
+  const startRotate = (webhook: WebhookSummary) => {
     rotate.mutate(webhook.id, {
       onSuccess: (raw) => {
         const secret = secretFromRotateResponse(raw);
@@ -76,6 +86,7 @@ export function WebhooksView() {
           toast.success('Signing secret rotated');
         }
       },
+      onError: (err) => toastEngineError(err, 'Could not rotate the signing secret.'),
     });
   };
 
@@ -91,93 +102,102 @@ export function WebhooksView() {
           title="Endpoints"
           subtitle="Each webhook delivers HMAC-signed POST requests to its destination."
           action={
-            <ActionButton size="sm" onClick={() => { setCreateUrl(''); setCreateOpen(true); }}>
-              <Plus size={14} strokeWidth={2} />
-              New webhook
-            </ActionButton>
+            !webhooksDisabled ? (
+              <ActionButton size="sm" onClick={() => setCreateOpen(true)}>
+                <Plus size={14} strokeWidth={2} />
+                New webhook
+              </ActionButton>
+            ) : undefined
           }
           flush
         >
-          <QueryView
-            query={webhooks}
-            skeleton={<Skeleton $h="200px" $r="12px" />}
-            isEmpty={(d) => d.length === 0}
-            empty={{ title: 'No webhooks yet', description: 'Add your HTTPS endpoint — every subscribed agent event arrives there, signed.' }}
-          >
-            {(rows) => (
-              <div style={{ padding: '16px 22px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {rows.map((webhook) => (
-                  <EndpointCard key={webhook.id} $selected={selectedId === webhook.id} onClick={() => setSelectedId(webhook.id === selectedId ? null : webhook.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(webhook.id === selectedId ? null : webhook.id); } }}>
-                    <EndpointBody style={{ minWidth: 0 }}>
-                      <EndpointLabel>{webhook.status ? `Webhook · ${webhook.status}` : 'Webhook'}</EndpointLabel>
-                      <EndpointUrl>{webhook.url}</EndpointUrl>
-                      <EndpointMeta>
-                        {webhook.secretHint && <code>{webhook.secretHint}</code>}
-                        {webhook.createdAt && <EndpointMetaNote>· added {webhook.createdAt.slice(0, 10)}</EndpointMetaNote>}
-                        {webhook.events.length > 0 && <EndpointMetaNote>· {webhook.events.length} event{webhook.events.length === 1 ? '' : 's'}</EndpointMetaNote>}
-                      </EndpointMeta>
-                    </EndpointBody>
-                    <CardActions onClick={(e) => e.stopPropagation()}>
-                      <CopyButton value={webhook.url} label="Copy URL" />
-                      <IconAction title="Test delivery" aria-label={`Test ${webhook.url}`} disabled={test.isPending} onClick={() => test.mutate(webhook.id, { onSuccess: () => toast.success('Test delivery sent — check the delivery log') })}>
-                        <Send size={13} strokeWidth={1.7} />
-                      </IconAction>
-                      <IconAction title="Rotate secret" aria-label={`Rotate secret for ${webhook.url}`} disabled={rotate.isPending} onClick={() => startRotate(webhook)}>
-                        <RefreshCw size={13} strokeWidth={1.7} />
-                      </IconAction>
-                      <IconAction title="Edit endpoint" aria-label={`Edit ${webhook.url}`} onClick={() => { setEditTarget(webhook); setEditUrl(webhook.url); }}>
-                        <Pencil size={13} strokeWidth={1.7} />
-                      </IconAction>
-                      <IconAction title="Delete webhook" aria-label={`Delete ${webhook.url}`} onClick={() => setDeleteTarget(webhook)}>
-                        <Trash2 size={13} strokeWidth={1.7} />
-                      </IconAction>
-                    </CardActions>
-                  </EndpointCard>
-                ))}
-              </div>
-            )}
-          </QueryView>
+          {webhooksDisabled ? (
+            <EmptyState
+              icon={<KeyRound size={18} opacity={0.5} />}
+              title="Webhooks are not available in this deployment"
+              description="The engine's webhooks module is disabled, so endpoints cannot be listed or created. Enable the webhooks module on the engine to use webhooks."
+            />
+          ) : (
+            <QueryView
+              query={webhooks}
+              skeleton={<Skeleton $h="200px" $r="12px" />}
+              isEmpty={(d) => d.length === 0}
+              empty={{ title: 'No webhooks yet', description: 'Add your HTTPS endpoint — every subscribed agent event arrives there, signed.' }}
+            >
+              {(rows) => (
+                <div style={{ padding: '16px 22px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {rows.map((webhook) => (
+                    <EndpointCard key={webhook.id} $selected={selectedId === webhook.id} onClick={() => setSelectedId(webhook.id === selectedId ? null : webhook.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(webhook.id === selectedId ? null : webhook.id); } }}>
+                      <EndpointBody style={{ minWidth: 0 }}>
+                        <EndpointLabel>
+                          <StatusPill tone={webhook.status === 'active' ? 'success' : webhook.status === 'disabled' ? 'neutral' : 'info'}>
+                            {webhook.status ?? 'unknown'}
+                          </StatusPill>
+                        </EndpointLabel>
+                        <EndpointUrl>{webhook.url}</EndpointUrl>
+                        {webhook.description && <EndpointMetaNote>{webhook.description}</EndpointMetaNote>}
+                        <EndpointMeta>
+                          {webhook.secretHint && <code title="Last characters of the signing secret">{webhook.secretHint}</code>}
+                          {webhook.events.length > 0 && (
+                            <EndpointMetaNote>
+                              · {webhook.events.includes('*') ? 'all events' : webhook.events.slice(0, 3).join(', ') + (webhook.events.length > 3 ? ` +${webhook.events.length - 3} more` : '')}
+                            </EndpointMetaNote>
+                          )}
+                          {webhook.createdAt && <EndpointMetaNote>· added {webhook.createdAt.slice(0, 10)}</EndpointMetaNote>}
+                        </EndpointMeta>
+                      </EndpointBody>
+                      <CardActions onClick={(e) => e.stopPropagation()}>
+                        <CopyButton value={webhook.url} label="Copy URL" />
+                        <IconAction
+                          title="Send test delivery"
+                          aria-label={`Test ${webhook.url}`}
+                          disabled={test.isPending}
+                          onClick={() => test.mutate(webhook.id, {
+                            onSuccess: () => {
+                              toast.success('Test event sent — it appears in the delivery log below');
+                              setSelectedId(webhook.id);
+                            },
+                            onError: (err) => toastEngineError(err, 'Could not send the test delivery.'),
+                          })}
+                        >
+                          <Send size={13} strokeWidth={1.7} />
+                        </IconAction>
+                        <IconAction title="Rotate secret" aria-label={`Rotate secret for ${webhook.url}`} disabled={rotate.isPending} onClick={() => startRotate(webhook)}>
+                          <RefreshCw size={13} strokeWidth={1.7} />
+                        </IconAction>
+                        <IconAction title="Edit webhook" aria-label={`Edit ${webhook.url}`} onClick={() => setEditTarget(webhook)}>
+                          <Pencil size={13} strokeWidth={1.7} />
+                        </IconAction>
+                        <IconAction title="Delete webhook" aria-label={`Delete ${webhook.url}`} onClick={() => setDeleteTarget(webhook)}>
+                          <Trash2 size={13} strokeWidth={1.7} />
+                        </IconAction>
+                      </CardActions>
+                    </EndpointCard>
+                  ))}
+                </div>
+              )}
+            </QueryView>
+          )}
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
-        <EventCatalog />
-      </motion.div>
+      {!webhooksDisabled && (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
+          <EventCatalog />
+        </motion.div>
+      )}
 
-      {selectedId && (
+      {selectedId && !webhooksDisabled && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
-          <Panel title="Delivery log" subtitle="Most recent delivery attempts for the selected webhook." flush>
+          <Panel title="Delivery log" subtitle="Delivery attempts for the selected webhook, newest first." flush>
             <Deliveries webhookId={selectedId} />
           </Panel>
         </motion.div>
       )}
 
-      <CreateModal open={createOpen} url={createUrl} onUrl={setCreateUrl} onClose={() => setCreateOpen(false)} create={create} />
+      <CreateModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(id) => setSelectedId(id)} />
 
-      <Modal
-        open={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        title="Edit webhook destination"
-        width={480}
-        footer={
-          <>
-            <ActionButton variant="secondary" onClick={() => setEditTarget(null)}>Cancel</ActionButton>
-            <ActionButton
-              disabled={!editUrl.startsWith('https://') || update.isPending}
-              onClick={() => editTarget && update.mutate(
-                { webhookId: editTarget.id, url: editUrl.trim() },
-                { onSuccess: () => { toast.success('Webhook updated'); setEditTarget(null); } },
-              )}
-            >
-              Save
-            </ActionButton>
-          </>
-        }
-      >
-        <Stack>
-          <TextInput label="Destination URL (HTTPS)" value={editUrl} onChange={(e) => setEditUrl(e.target.value)} placeholder="https://hooks.example.com/neryva" autoFocus />
-        </Stack>
-      </Modal>
+      <EditModal target={editTarget} onClose={() => setEditTarget(null)} />
 
       <Modal
         open={!!rotatedSecret}
@@ -208,7 +228,13 @@ export function WebhooksView() {
         confirmLabel="Delete webhook"
         onConfirm={() => {
           if (deleteTarget) {
-            remove.mutate(deleteTarget.id, { onSuccess: () => toast.success('Webhook deleted') });
+            remove.mutate(deleteTarget.id, {
+              onSuccess: () => {
+                toast.success('Webhook deleted');
+                if (selectedId === deleteTarget.id) setSelectedId(null);
+              },
+              onError: (err) => toastEngineError(err, 'Could not delete the webhook.'),
+            });
           }
           setDeleteTarget(null);
         }}
@@ -219,22 +245,22 @@ export function WebhooksView() {
 }
 
 function EventCatalog() {
-  const catalog = useWebhookEventCatalog();
+  const catalog = useWebhookEvents();
   return (
     <Panel
-      title='Subscribable events'
-      subtitle='The event vocabulary the engine can deliver to your webhooks.'
+      title="Subscribable events"
+      subtitle="Event types you can subscribe webhooks to explicitly. Webhooks subscribed to all events (*) also receive delivery-lifecycle events."
     >
       <QueryView
         query={catalog}
-        skeleton={<Skeleton $h='60px' $r='12px' />}
-        isEmpty={(d) => d.events.length === 0}
+        skeleton={<Skeleton $h="60px" $r="12px" />}
+        isEmpty={(d) => d.length === 0}
         empty={{ title: 'No event types', description: "The engine's event catalog is empty." }}
       >
-        {(data) => (
+        {(events) => (
           <EventGrid>
-            {data.events.map((e) => (
-              <EventChip key={e.type}>
+            {events.map((e) => (
+              <EventChip key={e.type} title={e.description}>
                 <EventName>{e.type}</EventName>
               </EventChip>
             ))}
@@ -246,102 +272,333 @@ function EventCatalog() {
 }
 
 function Deliveries({ webhookId }: { webhookId: string }) {
-  const deliveries = useWebhookDeliveries(webhookId);
+  const [limit, setLimit] = useState(50);
+  const deliveries = useWebhookDeliveries(webhookId, limit);
   return (
-    <QueryView
-      query={deliveries}
-      skeleton={<Skeleton $h="160px" $r="12px" />}
-      isEmpty={(d) => d.length === 0}
-      empty={{ title: 'No deliveries yet', description: 'Send a test delivery — attempts land here with their response codes.' }}
-    >
-      {(rows) => (
-        <DataTable>
-          <DataHead>
-            <DataCell $w="20%">When</DataCell>
-            <DataCell $w="34%">Event</DataCell>
-            <DataCell $w="16%">Status</DataCell>
-            <DataCell $w="14%">Response</DataCell>
-            <DataCell $w="16%" $align="right">ID</DataCell>
-          </DataHead>
-          {rows.map((d) => (
-            <DataRow key={d.id} $interactive={false}>
-              <DataCell $w="20%">
-                <CellMeta>{d.createdAt?.replace('T', ' ').slice(0, 19) ?? '—'}</CellMeta>
-              </DataCell>
-              <DataCell $w="34%">
-                <CellMono>{d.event ?? '—'}</CellMono>
-              </DataCell>
-              <DataCell $w="16%">
-                <StatusPill
-                  tone={d.status === 'success' || (d.responseCode !== null && d.responseCode < 400) ? 'success' : 'error'}
-                >
-                  {d.status ?? 'unknown'}
-                </StatusPill>
-              </DataCell>
-              <DataCell $w="14%">
-                <CellMono>{d.responseCode ?? '—'}</CellMono>
-              </DataCell>
-              <DataCell $w="16%" $align="right">
-                <CellMeta>{d.id.slice(0, 10)}</CellMeta>
-              </DataCell>
-            </DataRow>
-          ))}
-        </DataTable>
-      )}
-    </QueryView>
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 22px 0' }}>
+        <ActionButton size="sm" variant="secondary" onClick={() => deliveries.refetch()} disabled={deliveries.isFetching}>
+          <RefreshCw size={13} strokeWidth={2} />
+          Refresh
+        </ActionButton>
+      </div>
+      <QueryView
+        query={deliveries}
+        skeleton={<Skeleton $h="160px" $r="12px" />}
+        isEmpty={(d) => d.length === 0}
+        empty={{ title: 'No deliveries yet', description: 'Send a test delivery — attempts land here with their response codes.' }}
+      >
+        {(rows) => (
+          <>
+            <DataTable>
+              <DataHead>
+                <DataCell $w="18%">When</DataCell>
+                <DataCell $w="26%">Event</DataCell>
+                <DataCell $w="14%">Status</DataCell>
+                <DataCell $w="12%">Response</DataCell>
+                <DataCell $w="20%">Error</DataCell>
+                <DataCell $w="10%" $align="right">ID</DataCell>
+              </DataHead>
+              {rows.map((d) => (
+                <DataRow key={d.id} $interactive={false} title={d.lastError ?? undefined}>
+                  <DataCell $w="18%">
+                    <CellMeta>{d.createdAt?.replace('T', ' ').slice(0, 19) ?? '—'}</CellMeta>
+                  </DataCell>
+                  <DataCell $w="26%">
+                    <CellMono>{d.eventType ?? '—'}</CellMono>
+                  </DataCell>
+                  <DataCell $w="14%">
+                    <StatusPill tone={deliveryTone(d.status)}>
+                      {d.status ?? 'unknown'}
+                    </StatusPill>
+                  </DataCell>
+                  <DataCell $w="12%">
+                    <CellMono>{d.responseStatus ?? '—'}</CellMono>
+                  </DataCell>
+                  <DataCell $w="20%">
+                    <CellMeta>{d.lastError ? truncate(d.lastError, 60) : '—'}</CellMeta>
+                  </DataCell>
+                  <DataCell $w="10%" $align="right">
+                    <CellMeta>{d.id.slice(0, 8)}</CellMeta>
+                  </DataCell>
+                </DataRow>
+              ))}
+            </DataTable>
+            {rows.length >= limit && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 16px' }}>
+                <ActionButton size="sm" variant="secondary" onClick={() => setLimit((l) => l + 50)} disabled={deliveries.isFetching}>
+                  Show more
+                </ActionButton>
+              </div>
+            )}
+          </>
+        )}
+      </QueryView>
+    </>
   );
 }
 
-function CreateModal({
-  open,
-  url,
-  onUrl,
-  onClose,
-  create,
+function deliveryTone(status: string | null): 'success' | 'warning' | 'error' | 'neutral' {
+  switch (status) {
+    case 'delivered': return 'success';
+    case 'pending': return 'warning';
+    case 'failed': return 'warning';
+    case 'dead': return 'error';
+    default: return 'neutral';
+  }
+}
+
+function truncate(value: string, max: number): string {
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+/** Multi-select event picker shared by the create and edit modals. */
+function EventSelector({
+  catalog,
+  selected,
+  onChange,
 }: {
-  open: boolean;
-  url: string;
-  onUrl: (next: string) => void;
-  onClose: () => void;
-  create: ReturnType<typeof useCreateWebhook>;
+  catalog: WebhookEventCatalogEntry[];
+  selected: string[];
+  onChange: (next: string[]) => void;
 }) {
+  const allSelected = selected.includes('*');
+  const toggle = (type: string) => {
+    if (type === '*') {
+      onChange(allSelected ? [] : ['*']);
+      return;
+    }
+    const without = selected.filter((t) => t !== '*' && t !== type);
+    onChange(selected.includes(type) ? without : [...without, type]);
+  };
+  return (
+    <div>
+      <FieldLabel>Subscribed events</FieldLabel>
+      <EventGrid style={{ padding: 0 }}>
+        <ToggleChip $active={allSelected} onClick={() => toggle('*')} title="Receive every event type, including delivery-lifecycle events">
+          All events (*)
+        </ToggleChip>
+        {catalog.map((e) => (
+          <ToggleChip
+            key={e.type}
+            $active={!allSelected && selected.includes(e.type)}
+            onClick={() => toggle(e.type)}
+            title={e.description}
+          >
+            {e.type}
+          </ToggleChip>
+        ))}
+      </EventGrid>
+      <HintText>
+        {allSelected
+          ? 'This webhook receives every event type, including delivery-lifecycle events.'
+          : selected.length === 0
+            ? 'Select at least one event type — a webhook with no subscriptions never fires.'
+            : `${selected.length} event type${selected.length === 1 ? '' : 's'} selected.`}
+      </HintText>
+    </div>
+  );
+}
+
+function isValidUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+  const create = useCreateWebhook();
+  const catalog = useWebhookEvents();
+  const [step, setStep] = useState<'form' | 'done'>('form');
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [events, setEvents] = useState<string[]>(['*']);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState('');
+
+  const reset = () => {
+    setStep('form');
+    setUrl('');
+    setDescription('');
+    setEvents(['*']);
+    setSecret(null);
+    setCreatedId('');
+    create.reset();
+  };
+
+  const close = () => {
+    reset();
+    onClose();
+  };
+
+  const valid = isValidUrl(url) && events.length > 0;
+
+  const submit = () => {
+    create.mutate(
+      { url: url.trim(), events, description: description.trim() || undefined },
+      {
+        onSuccess: (result) => {
+          setCreatedId(result.id);
+          setSecret(result.secret);
+          setStep('done');
+        },
+        onError: (err) => toastEngineError(err, 'Could not create the webhook.'),
+      },
+    );
+  };
+
   return (
     <Modal
       open={open}
+      onClose={close}
+      title={step === 'form' ? 'New webhook' : 'Webhook created'}
+      width={520}
+      footer={
+        step === 'form' ? (
+          <>
+            <ActionButton variant="secondary" onClick={close}>Cancel</ActionButton>
+            <ActionButton disabled={!valid || create.isPending} onClick={submit}>
+              Create webhook
+            </ActionButton>
+          </>
+        ) : (
+          <ActionButton
+            onClick={() => { onCreated(createdId); close(); }}
+          >
+            I&apos;ve saved the secret — done
+          </ActionButton>
+        )
+      }
+    >
+      {step === 'form' ? (
+        <Stack>
+          <TextInput
+            label="Destination URL"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://hooks.example.com/neryva"
+            hint="The engine validates the host server-side and blocks private/internal targets. HTTPS is required in production; HTTP is accepted in local dev only."
+            autoFocus
+          />
+          <TextInput
+            label="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. Order events for the fulfillment service"
+          />
+          <EventSelector catalog={catalog.data ?? []} selected={events} onChange={setEvents} />
+        </Stack>
+      ) : (
+        <Stack>
+          <RotateNote>
+            Your webhook is ready. Copy the signing secret now — it is shown
+            exactly once and can never be retrieved again. Use it to verify
+            the <code>HMAC-SHA256</code> signature on every delivery.
+          </RotateNote>
+          {secret ? (
+            <SecretBox>
+              <code>{secret}</code>
+              <CopyButton value={secret} label="Copy secret" />
+            </SecretBox>
+          ) : (
+            <RotateNote>
+              The engine did not return a secret for this webhook. Rotate the
+              secret from the endpoint list to issue one.
+            </RotateNote>
+          )}
+        </Stack>
+      )}
+    </Modal>
+  );
+}
+
+function EditModal({ target, onClose }: { target: WebhookSummary | null; onClose: () => void }) {
+  const update = useUpdateWebhook();
+  const catalog = useWebhookEvents();
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [events, setEvents] = useState<string[]>([]);
+  const [status, setStatus] = useState<'active' | 'disabled'>('active');
+
+  useEffect(() => {
+    if (target) {
+      setUrl(target.url);
+      setDescription(target.description ?? '');
+      setEvents(target.events.length > 0 ? target.events : ['*']);
+      setStatus(target.status === 'disabled' ? 'disabled' : 'active');
+      update.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id]);
+
+  const valid = isValidUrl(url) && events.length > 0;
+
+  return (
+    <Modal
+      open={!!target}
       onClose={onClose}
-      title="New webhook"
-      width={480}
+      title="Edit webhook"
+      width={520}
       footer={
         <>
           <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
           <ActionButton
-            disabled={!url.startsWith('https://') || create.isPending}
-            onClick={() => create.mutate(
-              { url: url.trim() },
-              { onSuccess: () => { toast.success('Webhook created — events are on their way'); onClose(); } },
+            disabled={!valid || update.isPending}
+            onClick={() => target && update.mutate(
+              {
+                webhookId: target.id,
+                url: url.trim(),
+                events,
+                description: description.trim() ? description.trim() : null,
+                status,
+              },
+              {
+                onSuccess: () => { toast.success('Webhook updated'); onClose(); },
+                onError: (err) => toastEngineError(err, 'Could not update the webhook.'),
+              },
             )}
           >
-            Create
+            Save changes
           </ActionButton>
         </>
       }
     >
       <Stack>
         <TextInput
-          label="Destination URL (HTTPS)"
+          label="Destination URL"
           value={url}
-          onChange={(e) => onUrl(e.target.value)}
+          onChange={(e) => setUrl(e.target.value)}
           placeholder="https://hooks.example.com/neryva"
-          hint="The engine rejects non-HTTPS destinations and validates the host server-side."
           autoFocus
         />
+        <TextInput
+          label="Description (optional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="e.g. Order events for the fulfillment service"
+        />
+        <EventSelector catalog={catalog.data ?? []} selected={events} onChange={setEvents} />
+        <div>
+          <FieldLabel>Status</FieldLabel>
+          <StatusToggle>
+            <ToggleChip $active={status === 'active'} onClick={() => setStatus('active')}>Active</ToggleChip>
+            <ToggleChip $active={status === 'disabled'} onClick={() => setStatus('disabled')}>Disabled</ToggleChip>
+          </StatusToggle>
+          <HintText>
+            {status === 'active'
+              ? 'The webhook receives deliveries.'
+              : 'Disabled webhooks keep their history but receive nothing.'}
+          </HintText>
+        </div>
       </Stack>
     </Modal>
   );
 }
 
 // ─── local styled additions ──────────────────────────────────────────
-import styled from 'styled-components';
 
 const Stack = styled.div`
   display: flex;
@@ -353,6 +610,10 @@ const RotateNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
   line-height: 1.55;
+
+  code {
+    font-family: ${({ theme }) => theme.typography.fonts.mono};
+  }
 `;
 
 const SecretBox = styled.div`
@@ -431,4 +692,49 @@ const EventName = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
   color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+const ToggleChip = styled.button<{ $active?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.app.status.lilac.bg : 'transparent')};
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.app.status.lilac.border : theme.app.border.default)};
+  color: ${({ $active, theme }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
+  transition: background ${({ theme }) => theme.transitions.fast},
+    border-color ${({ theme }) => theme.transitions.fast},
+    color ${({ theme }) => theme.transitions.fast};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.strong};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
+const FieldLabel = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.secondary};
+  margin-bottom: 8px;
+`;
+
+const HintText = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  margin-top: 8px;
+  line-height: 1.5;
+`;
+
+const StatusToggle = styled.div`
+  display: flex;
+  gap: 8px;
 `;

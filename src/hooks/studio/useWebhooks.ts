@@ -5,196 +5,244 @@
  * Manual redelivery remains ⛔ E-5 (no endpoint yet).
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { engine } from '@lib/engine/client';
-import { toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
+import { engine } from '@lib/engine/client';
 
-export interface WebhookRow {
+export interface WebhookSummary {
   id: string;
   url: string;
   events: string[];
   status: string | null;
+  description: string | null;
   secretHint: string | null;
   createdAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface DeliveryRow {
   id: string;
-  event: string | null;
+  eventType: string | null;
   status: string | null;
-  responseCode: number | null;
+  attempts: number;
+  responseStatus: number | null;
+  lastError: string | null;
+  deliveredAt: string | null;
   createdAt: string | null;
+}
+
+export interface WebhookEventCatalogEntry {
+  type: string;
+  description: string;
 }
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
-export function parseWebhooks(raw: unknown): WebhookRow[] {
-  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = Array.isArray(raw) ? raw : [record.webhooks, record.items].find(Array.isArray) ?? [];
-  if (!Array.isArray(list)) {
-    return [];
-  }
-  return list
-    .map((entry) => {
-      if (typeof entry !== 'object' || entry === null) {
-        return null;
-      }
-      const item = entry as Record<string, unknown>;
-      const id = str(item.id) ?? str(item.webhook_id);
-      if (!id) {
-        return null;
-      }
-      return {
-        id,
-        url: str(item.url) ?? str(item.endpoint) ?? '—',
-        events: Array.isArray(item.events) ? item.events.filter((e): e is string => typeof e === 'string') : [],
-        status: str(item.status) ?? str(item.state),
-        secretHint: str(item.secret_hint) ?? str(item.secret_last4),
-        createdAt: str(item.created_at),
-      } satisfies WebhookRow;
-    })
-    .filter((w): w is WebhookRow => w !== null);
+function num(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
 }
 
-export function parseDeliveries(raw: unknown): DeliveryRow[] {
-  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = Array.isArray(raw) ? raw : [record.deliveries, record.items].find(Array.isArray) ?? [];
-  if (!Array.isArray(list)) {
-    return [];
-  }
-  return list
-    .map((entry) => {
-      if (typeof entry !== 'object' || entry === null) {
-        return null;
-      }
-      const item = entry as Record<string, unknown>;
-      const id = str(item.id) ?? str(item.delivery_id);
-      if (!id) {
-        return null;
-      }
-      return {
-        id,
-        event: str(item.event) ?? str(item.event_type),
-        status: str(item.status) ?? str(item.state),
-        responseCode: typeof item.response_code === 'number' ? item.response_code : typeof item.status_code === 'number' ? item.status_code : null,
-        createdAt: str(item.created_at) ?? str(item.delivered_at),
-      } satisfies DeliveryRow;
-    })
-    .filter((d): d is DeliveryRow => d !== null);
+/** Read a field in either the engine's camelCase shape or the legacy snake_case alias. */
+function field(item: Record<string, unknown>, camel: string, snake: string): unknown {
+  return item[camel] !== undefined ? item[camel] : item[snake];
 }
 
-const WEBHOOKS_KEY = ['studio', 'webhooks'] as const;
-
-export function useWebhooks(options?: { enabled?: boolean }) {
-  const { orgId } = useOrg();
-  return useQuery({
-    queryKey: [...WEBHOOKS_KEY, orgId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/webhooks`),
-    enabled: (options?.enabled ?? true) && !!orgId,
-    staleTime: 30_000,
-    select: parseWebhooks,
+/** Parse one webhook from the engine's camelCase row, tolerating the legacy snake_case aliases. */
+export function parseWebhooks(items: unknown): WebhookSummary[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((raw) => {
+    const item = raw as Record<string, unknown>;
+    const eventsRaw = item.events as unknown[] | undefined;
+    return {
+      id: String(item.id ?? ''),
+      url: String(item.url ?? ''),
+      events: Array.isArray(eventsRaw) ? eventsRaw.map(String) : [],
+      status: typeof item.status === 'string' ? item.status : null,
+      description: str(item.description),
+      secretHint: str(field(item, 'secretHint', 'secret_hint')) ?? str(field(item, 'secretLast4', 'secret_last4')),
+      createdAt: str(field(item, 'createdAt', 'created_at')),
+      updatedAt: str(field(item, 'updatedAt', 'updated_at')),
+    };
   });
 }
 
-export function useWebhookDeliveries(webhookId: string | null) {
-  const { orgId } = useOrg();
-  return useQuery({
-    queryKey: [...WEBHOOKS_KEY, orgId, 'deliveries', webhookId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/webhooks/${webhookId}/deliveries`),
-    enabled: !!orgId && !!webhookId,
-    staleTime: 30_000,
-    select: parseDeliveries,
+/** Parse delivery rows — the engine returns camelCase fields. */
+export function parseDeliveries(items: unknown): DeliveryRow[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((raw) => {
+    const item = raw as Record<string, unknown>;
+    return {
+      id: String(item.id ?? ''),
+      eventType: str(field(item, 'eventType', 'event')) ?? str(field(item, 'event_type', 'event')),
+      status: typeof item.status === 'string' ? item.status : null,
+      attempts: num(item.attempts) ?? 0,
+      responseStatus: num(field(item, 'responseStatus', 'response_code')) ?? num(field(item, 'statusCode', 'status_code')),
+      lastError: str(field(item, 'lastError', 'last_error')),
+      deliveredAt: str(field(item, 'deliveredAt', 'delivered_at')),
+      createdAt: str(field(item, 'createdAt', 'created_at')),
+    };
   });
 }
 
-function useInvalidateWebhooks() {
-  const queryClient = useQueryClient();
-  return () => void queryClient.invalidateQueries({ queryKey: [...WEBHOOKS_KEY] });
+export function useWebhooks() {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ['webhooks', orgId],
+    queryFn: async () => {
+      const res = await engine<{ webhooks: unknown }>(`/console/org/${orgId}/webhooks`);
+      return parseWebhooks(res.webhooks);
+    },
+    enabled: Boolean(orgId),
+    staleTime: 15_000,
+  });
+}
+
+export function useWebhookEvents() {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ['webhooks', orgId, 'events'],
+    queryFn: async () => {
+      const res = await engine<{ events: unknown }>(`/console/org/${orgId}/webhooks/events`);
+      const list = Array.isArray(res.events) ? res.events : [];
+      return list.map((raw) => {
+        const e = raw as Record<string, unknown>;
+        return { type: String(e.type ?? ''), description: String(e.description ?? '') };
+      }) as WebhookEventCatalogEntry[];
+    },
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+  });
+}
+
+export function useWebhookDeliveries(webhookId: string | null, limit = 50) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ['webhooks', orgId, 'deliveries', webhookId, limit],
+    queryFn: async () => {
+      const res = await engine<{ deliveries: unknown }>(`/console/org/${orgId}/webhooks/${webhookId}/deliveries`, {
+        query: { limit: String(limit) },
+      });
+      return parseDeliveries(res.deliveries);
+    },
+    enabled: Boolean(orgId && webhookId),
+    staleTime: 10_000,
+  });
+}
+
+export interface CreateWebhookInput {
+  url: string;
+  events: string[];
+  description?: string;
+}
+
+export interface CreateWebhookResult {
+  id: string;
+  secret: string | null;
+}
+
+/** Shown-once secret: the engine returns `{ webhook: { id, ... }, secret }` — read the RAW response so the secret is never dropped. */
+export function secretFromCreateResponse(raw: unknown): CreateWebhookResult {
+  const item = (raw as Record<string, unknown> | null) ?? {};
+  const webhook = item.webhook as Record<string, unknown> | undefined;
+  const id = (typeof item.id === 'string' && item.id) || (webhook && typeof webhook.id === 'string' ? webhook.id : '') || '';
+  return {
+    id,
+    secret: typeof item.secret === 'string' && item.secret.length > 0 ? item.secret : null,
+  };
 }
 
 export function useCreateWebhook() {
   const { orgId } = useOrg();
-  const invalidate = useInvalidateWebhooks();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { url: string; events?: string[] }) =>
-      engine(`/console/org/${orgId}/webhooks`, {
+    mutationFn: async (input: CreateWebhookInput): Promise<CreateWebhookResult> => {
+      // The engine's create endpoint is @Idempotent(): without a key a
+      // retried click mints a second webhook AND a second shown-once secret.
+      const raw = await engine<unknown>(`/console/org/${orgId}/webhooks`, {
         method: 'POST',
-        body: { url: input.url, ...(input.events?.length ? { events: input.events } : {}) },
-      }),
-    onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not create the webhook'),
+        idempotent: true,
+        body: { url: input.url, events: input.events, description: input.description },
+      });
+      return secretFromCreateResponse(raw);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks', orgId] }),
   });
+}
+
+export interface UpdateWebhookInput {
+  webhookId: string;
+  url?: string;
+  events?: string[];
+  description?: string | null;
+  status?: 'active' | 'disabled';
 }
 
 export function useUpdateWebhook() {
   const { orgId } = useOrg();
-  const invalidate = useInvalidateWebhooks();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { webhookId: string; url?: string; events?: string[] }) => {
-      const body: Record<string, unknown> = {};
-      if (input.url !== undefined) body.url = input.url;
-      if (input.events !== undefined) body.events = input.events;
-      return engine(`/console/org/${orgId}/webhooks/${input.webhookId}`, { method: 'POST', body });
-    },
-    onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not update the webhook'),
+    mutationFn: (input: UpdateWebhookInput) =>
+      // POST, not PATCH: the engine's update route is `POST :webhookId` by
+      // convention (P5I-WH-20).
+      engine<unknown>(`/console/org/${orgId}/webhooks/${input.webhookId}`, {
+        method: 'POST',
+        body: {
+          ...(input.url !== undefined ? { url: input.url } : {}),
+          ...(input.events !== undefined ? { events: input.events } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+        },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks', orgId] }),
   });
 }
 
 export function useDeleteWebhook() {
   const { orgId } = useOrg();
-  const invalidate = useInvalidateWebhooks();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (webhookId: string) =>
-      engine(`/console/org/${orgId}/webhooks/${webhookId}`, { method: 'DELETE' }),
-    onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not delete the webhook'),
+    mutationFn: (webhookId: string) =>
+      engine<unknown>(`/console/org/${orgId}/webhooks/${webhookId}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks', orgId] }),
+  });
+}
+
+/** Fire a targeted test event. The backend always creates a delivery row for
+ *  a targeted test (the subscription check is bypassed — the point of "test"
+ *  is to verify the destination, not the filter), so a truthy deliveryId
+ *  means a real delivery was queued and it appears in the log below. */
+export function useTestWebhook() {
+  const { orgId } = useOrg();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (webhookId: string): Promise<string> => {
+      const res = await engine<{ deliveryId?: string }>(`/console/org/${orgId}/webhooks/${webhookId}/test`, {
+        method: 'POST',
+      });
+      if (!res.deliveryId) {
+        throw new Error('the engine did not queue a test delivery — try again');
+      }
+      return res.deliveryId;
+    },
+    onSuccess: (_id, webhookId) =>
+      qc.invalidateQueries({ queryKey: ['webhooks', orgId, 'deliveries', webhookId] }),
   });
 }
 
 export function useRotateWebhookSecret() {
   const { orgId } = useOrg();
-  const invalidate = useInvalidateWebhooks();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (webhookId: string) =>
+    mutationFn: (webhookId: string) =>
       engine<unknown>(`/console/org/${orgId}/webhooks/${webhookId}/rotate-secret`, { method: 'POST' }),
-    onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not rotate the secret'),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks', orgId] }),
   });
 }
 
-export function useTestWebhook() {
-  const { orgId } = useOrg();
-  return useMutation({
-    mutationFn: async (webhookId: string) =>
-      engine<unknown>(`/console/org/${orgId}/webhooks/${webhookId}/test`, { method: 'POST' }),
-    onError: (error) => toastEngineError(error, 'Test delivery failed'),
-  });
-}
-
-/** Extract the rotated secret from a rotate response, wherever it hides. */
+/** Shown-once secret: the engine returns it as `secret` (never persisted). */
 export function secretFromRotateResponse(raw: unknown): string | null {
-  if (typeof raw !== 'object' || raw === null) {
-    return null;
-  }
-  const record = raw as Record<string, unknown>;
-  return str(record.secret) ?? str(record.signing_secret) ?? str(record.secret_new) ?? null;
-}
-
-// ─── Event catalog (E-5) ─────────────────────────────────────────────
-
-export interface WebhookEventType {
-  type: string;
-}
-
-export function useWebhookEventCatalog(options?: { enabled?: boolean }) {
-  const { orgId } = useOrg();
-  return useQuery({
-    queryKey: [...WEBHOOKS_KEY, orgId, 'event-catalog'],
-    queryFn: () => engine<{ events: WebhookEventType[] }>(`/console/org/${orgId}/webhooks/events`),
-    enabled: (options?.enabled ?? true) && !!orgId,
-    staleTime: 5 * 60_000,
-  });
+  const item = raw as Record<string, unknown> | null;
+  if (!item) return null;
+  return typeof item.secret === 'string' && item.secret.length > 0 ? item.secret : null;
 }
