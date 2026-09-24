@@ -217,8 +217,9 @@ export function ApiView() {
         <ViewHeader>
           <ViewTitle>API explorer</ViewTitle>
           <ViewSubtitle>
-            Static endpoint catalog — {visibleEndpoints.length} endpoints. Build a request,
-            copy the curl, or fire GETs live.
+            Static endpoint catalog — {visibleEndpoints.length} endpoints. Build a request
+            or copy the curl. Live try-it targets the local runtime and may 404
+            for endpoints not implemented there.
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>

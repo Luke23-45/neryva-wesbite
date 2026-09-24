@@ -132,7 +132,7 @@ export function BlocksView() {
           <ViewSubtitle>{governDenied}</ViewSubtitle>
         </ViewHeader>
         <p style={{ fontSize: 13, opacity: 0.8 }}>
-          Control blocks are governance kill switches — they refuse installs, publishes, releases,
+          Control blocks are governance kill switches — they refuse installs, releases,
           tool calls, and run acceptance. Ask an owner or admin to review them.
         </p>
       </ViewShell>
@@ -144,7 +144,7 @@ export function BlocksView() {
       <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewTitle>Blocks</ViewTitle>
         <ViewSubtitle>
-          Kill switches with expiry — refused at check time across installs, publishes, releases,
+          Kill switches with expiry — refused at check time across installs, releases,
           and runs. Expiry needs no worker.
         </ViewSubtitle>
       </ViewHeader>

@@ -91,15 +91,10 @@ import { useConversations } from '@hooks/studio/useStudioConversations';
 
 import {
 
-  FrameworkGrid,
 
-  FrameworkCard,
 
-  FrameworkTop,
 
-  FrameworkName,
 
-  FrameworkRenewal,
 
   ResidencyList,
 
@@ -147,27 +142,9 @@ import {
 
 
 
-const FRAMEWORK_TONE: Record<string, 'emerald' | 'azure' | 'neutral'> = {
-
-  compliant: 'emerald',
-
-  in_progress: 'azure',
-
-  not_started: 'neutral',
-
-};
 
 
 
-const ATTESTATIONS = [
-
-  { name: 'SOC 2 Type II', status: 'compliant', renewal: 'Attested annually', controls: 'Security, availability, confidentiality' },
-
-  { name: 'GDPR', status: 'compliant', renewal: 'Ongoing obligation', controls: 'Data subject rights, lawful basis, DPIA' },
-
-  { name: 'ISO 27001', status: 'in_progress', renewal: 'Stage 2 audit scheduled', controls: 'ISMS, risk management, operations security' },
-
-];
 
 
 
@@ -206,7 +183,7 @@ export function ComplianceView() {
 
           <ViewSubtitle>
 
-            Attestations, data residency, DSR exports, and the governance config plane.
+            Data residency, DSR exports, and the governance config plane.
 
           </ViewSubtitle>
 
@@ -215,42 +192,6 @@ export function ComplianceView() {
       </ViewHeaderRow>
 
 
-
-      {/* ─── Attestations ─── */}
-
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-
-        <SectionTitle>Attestations</SectionTitle>
-
-        <FrameworkGrid>
-
-          {ATTESTATIONS.map((f) => (
-
-            <FrameworkCard key={f.name}>
-
-              <FrameworkTop>
-
-                <FrameworkName>{f.name}</FrameworkName>
-
-                <StatusPill tone={FRAMEWORK_TONE[f.status] ?? 'neutral'} dot={false}>
-
-                  {f.status.replace('_', ' ')}
-
-                </StatusPill>
-
-              </FrameworkTop>
-
-              <FrameworkRenewal>{f.renewal}</FrameworkRenewal>
-
-              <FrameworkRenewal>{f.controls}</FrameworkRenewal>
-
-            </FrameworkCard>
-
-          ))}
-
-        </FrameworkGrid>
-
-      </motion.div>
 
 
 
@@ -299,8 +240,8 @@ export function ComplianceView() {
             <ResidencyNoteText>
 
               Region is set at the organization level — change it in Settings → Workspace. Runtime data
-
-              residency is enforced by the satellite deployment in the same region.
+              residency depends on your deployment topology; confirm with your
+              infrastructure team that runtimes are pinned to the required region.
 
             </ResidencyNoteText>
 
