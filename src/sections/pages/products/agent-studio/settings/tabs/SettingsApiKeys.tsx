@@ -599,7 +599,7 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
               </div>
               <BindingHint aria-hidden="true"><FolderInput size={13} strokeWidth={1.8} /></BindingHint>
             </BindingRow>
-            <BindingNote>Bound keys only act within their project — the engine enforces it on every call.</BindingNote>
+            <BindingNote>Binding records which project a key belongs to for attribution. It is not an access boundary — the engine does not restrict a bound key's calls to its project.</BindingNote>
           </BindingBox>
 
           <BindingBox>

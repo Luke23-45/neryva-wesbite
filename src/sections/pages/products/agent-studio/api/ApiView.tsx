@@ -101,7 +101,14 @@ interface SendResult {
 }
 
 export function ApiView() {
-  const [activeId, setActiveId] = useState(catalog.endpoints[0]?.id ?? '');
+  // P5-E7: the static catalog ships a "Harness (Internal Only)" tag whose
+  // endpoints are test-harness internals — they are not customer API and must
+  // not be listed (or try-able) in the customer console.
+  const visibleEndpoints = useMemo(
+    () => catalog.endpoints.filter((e) => e.tag !== 'Harness (Internal Only)'),
+    [],
+  );
+  const [activeId, setActiveId] = useState(visibleEndpoints[0]?.id ?? '');
   const [tab, setTab] = useState<Tab>('request');
   const [apiKey, setApiKey] = useState('');
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
@@ -111,15 +118,15 @@ export function ApiView() {
 
   const grouped = useMemo(() => {
     const out: Record<string, CatalogEndpoint[]> = {};
-    for (const e of catalog.endpoints) {
+    for (const e of visibleEndpoints) {
       if (!out[e.tag]) out[e.tag] = [];
       out[e.tag].push(e);
     }
     return out;
-  }, []);
+  }, [visibleEndpoints]);
 
   const active: CatalogEndpoint | undefined =
-    catalog.endpoints.find((e) => e.id === activeId) ?? catalog.endpoints[0];
+    visibleEndpoints.find((e) => e.id === activeId) ?? visibleEndpoints[0];
 
   const paramKey = (p: CatalogParam) => `${active?.id ?? ''}|${p.in}|${p.name}`;
   const paramValue = (p: CatalogParam) => paramValues[paramKey(p)] ?? '';
@@ -210,7 +217,7 @@ export function ApiView() {
         <ViewHeader>
           <ViewTitle>API explorer</ViewTitle>
           <ViewSubtitle>
-            Static endpoint catalog — {catalog.endpointCount} endpoints. Build a request,
+            Static endpoint catalog — {visibleEndpoints.length} endpoints. Build a request,
             copy the curl, or fire GETs live.
           </ViewSubtitle>
         </ViewHeader>
@@ -288,7 +295,11 @@ export function ApiView() {
                   spellCheck={false}
                   aria-label="Request body JSON"
                 />
-                {active.body.fields.length > 0 && (
+                {active.body.fields.length === 0 ? (
+                  <BodySchemaNote>
+                    No body schema captured for this endpoint — the `{}` prefill is a placeholder, not a valid example. Check the endpoint description for the expected shape.
+                  </BodySchemaNote>
+                ) : (
                   <ParamsList>
                     {active.body.fields.map((f) => (
                       <ParamRow key={f.name}>
@@ -404,8 +415,7 @@ const ParamValueInput = styled.input`
   }
 `;
 
-const BodyEditor = styled.textarea`
-  width: 100%;
+const BodyEditor = styled.textarea`  width: 100%;
   background: rgba(0, 0, 0, 0.30);
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   border-radius: 10px;
@@ -420,6 +430,13 @@ const BodyEditor = styled.textarea`
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 1px;
   }
+`;
+
+const BodySchemaNote = styled.div`
+  margin-top: 8px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 const TryKeyWrap = styled.div`
