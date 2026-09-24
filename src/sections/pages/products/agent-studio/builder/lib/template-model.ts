@@ -8,7 +8,10 @@
  *   failures are 400 (validation), 403 (platform block), 409 (org block,
  *   name collision); DRAFT v0 verbatim, instructions nullable, active
  *   pointer untouched, description auto-set and immutable after.
- * - compat 4 codes, advisory-only, COMPATIBLE/INCOMPATIBLE.
+ * - compat 4 codes, COMPATIBLE/INCOMPATIBLE — tool-pin rows BLOCK install
+ *   (engine TPL-2.2 gate: 400 `tool_policy: template tool pins unresolved:
+ *   <name>: no ENABLED tool_catalog row at this org`); model/knowledge
+ *   rows are advisory.
  * - `installed` bool + `update_available` none|minor|major per org.
  * - NO update/migrate endpoint (adoption = re-install-as-new + diff);
  *   NO description route; NO provisioning progress read.
@@ -30,7 +33,8 @@ export function validateTemplateName(raw: string): { ok: true; name: string } | 
 /** Copy constants — every string traces to a bind or a PLAN decision. */
 export const TEMPLATE_COPY = {
   neverLive: 'Install copies into a draft — never live. The active pointer is untouched.',
-  advisory: 'Compatibility is advisory, never an install block — resolve each row in the checklist.',
+  advisory:
+    'Compatibility is checked at install — unresolved tool pins block it. Resolve each row in the checklist first; other rows are advisory.',
   updateMinor: 'Improvements available.',
   updateMajor: 'New major version available.',
   reinstallConfirm: 'Re-install creates ANOTHER assistant — same slug, new draft. Nothing merges.',
@@ -71,6 +75,25 @@ function firstString(record: Record<string, unknown>, keys: string[]): string | 
 }
 
 /**
+ * Pull tool names out of the engine's TPL-2.2 detail string:
+ * "template tool pins unresolved: <name>: no ENABLED tool_catalog row at
+ * this org[; <name>: schema_hash drift — ...]". Each problem is
+ * "<tool name>: <reason>"; the name is the segment before the first colon.
+ * Returns [] when nothing parseable is present (caller falls back to
+ * 'required').
+ */
+function extractUnresolvedToolNames(toolPolicy: string | null): string[] {
+  if (!toolPolicy) {
+    return [];
+  }
+  const afterPrefix = toolPolicy.split(/tool pins unresolved:/i)[1] ?? toolPolicy;
+  return afterPrefix
+    .split(';')
+    .map((segment) => segment.split(':')[0]?.trim() ?? '')
+    .filter((name) => name.length > 0 && name.length <= 128);
+}
+
+/**
  * Install-time outcome resolver (SPEC I2–I5 + I8-shape errors). Matches
  * status + message/detail keys — copy names fixes, never codes.
  * Min-engine-schema (I6) is a client pre-check, not an error path.
@@ -97,14 +120,24 @@ export function describeInstallOutcome(error: unknown): InstallOutcome {
         retryable: false,
       };
     }
-    // Tool pins fail with the tool named in the details (unknown/disabled)
-    // — match the key, not message wording (engine copy varies).
+    // Tool pins fail with 400 + details.tool_policy =
+    // "template tool pins unresolved: <name>: no ENABLED tool_catalog row
+    // at this org[; ...]" (engine TPL-2.2 gate). Match the key and the
+    // engine's wording — older shapes used details.tool / 'unknown' /
+    // 'disabled' and are still honored below.
     if (error.status === 400) {
+      const toolPolicy =
+        typeof details.tool_policy === 'string' && details.tool_policy.trim() !== ''
+          ? details.tool_policy
+          : null;
+      const pinsUnresolved = toolPolicy !== null && toolPolicy.toLowerCase().includes('tool pins unresolved');
       const tool = firstString(details, ['tool', 'tool_name']);
-      if (tool || message.includes('unknown') || message.includes('disabled')) {
+      if (tool || pinsUnresolved || message.includes('unknown') || message.includes('disabled')) {
+        const names = tool ? [tool] : extractUnresolvedToolNames(toolPolicy);
+        const label = names.length > 0 ? names.join(', ') : 'required';
         return {
           kind: 'tool-unresolvable',
-          headline: `Tool “${tool ?? 'required'}” cannot resolve here.`,
+          headline: `Tool “${label}” cannot resolve here.`,
           detail: 'Ask an admin to enable it in the catalog, or pick another template. Nothing was created.',
           retryable: true,
         };

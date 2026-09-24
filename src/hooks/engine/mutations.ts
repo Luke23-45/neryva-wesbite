@@ -19,7 +19,7 @@ function useEngineMutation<TInput, TOutput>(
   buildCall: (orgId: string, input: TInput) => { path: string; init?: Parameters<typeof engine>[1] },
   invalidates: string[],
   successMessage?: string,
-  opts?: { act?: string; silentError?: boolean },
+  opts?: { act?: string; silentError?: boolean; extraInvalidates?: readonly (readonly string[])[] },
 ) {
   const orgId = useOrgRequired();
   const queryClient = useQueryClient();
@@ -42,6 +42,11 @@ function useEngineMutation<TInput, TOutput>(
       }
       for (const key of invalidates) {
         void queryClient.invalidateQueries({ queryKey: ['engine', key] });
+      }
+      // Raw key prefixes outside the ['engine', …] domain (e.g. OrgContext's
+      // ['org', 'home'], which feeds entitlementState → useCan gating).
+      for (const key of opts?.extraInvalidates ?? []) {
+        void queryClient.invalidateQueries({ queryKey: [...key] });
       }
     },
     // Team-loop T1-4: invite-create renders exact inline copy (with a
@@ -341,7 +346,13 @@ export function useStartTrial() {
     (orgId, input) => ({ path: `/console/org/${orgId}/entitlements/${input.product}/trial`, init: { method: 'POST', body: { ...(input.days ? { days: input.days } : {}) }, idempotent: true } }),
     ['entitlements', 'home'],
     'Trial started',
-    { act: 'Start trial' },
+    {
+      act: 'Start trial',
+      // OrgContext's entitlementState (which gates the Studio shell's
+      // "New chat" button and dashboard banner) reads ['org', 'home'],
+      // not ['engine', …] — without this the UI stays stale until reload.
+      extraInvalidates: [['org', 'home']],
+    },
   );
 }
 

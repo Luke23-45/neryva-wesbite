@@ -118,7 +118,7 @@ const STATIC_NAV_ITEMS: CommandItem[] = [
   { id: 'approvals', title: 'Approvals', subtitle: 'Human review queue for tool calls', to: '/agent-studio/approvals', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'conversations', title: 'Conversations', subtitle: 'Browse all transcripts', to: '/agent-studio/conversations', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
   { id: 'activity', title: 'Activity', subtitle: 'Live event stream', to: '/agent-studio/activity', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
-  { id: 'analytics', title: 'Analytics', subtitle: 'Performance and channel breakdown', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
+  { id: 'analytics', title: 'Analytics', subtitle: 'Usage and agent activity', to: '/agent-studio/analytics', section: 'Navigate', icon: <BarChart3 size={14} strokeWidth={1.7} /> },
   { id: 'integrations', title: 'Integrations', subtitle: 'Connected services and webhooks', to: '/agent-studio/integrations', section: 'Navigate', icon: <Plug size={14} strokeWidth={1.7} /> },
   { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
   { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
@@ -480,8 +480,8 @@ export function StudioShell({
                 as="button"
                 type="button"
                 disabled
-                title="Your role can’t start chats in this workspace — ask an owner, admin, or developer."
-                aria-label="New chat (unavailable for your role)"
+                title="Chat isn’t available in this workspace right now — check your product entitlement or ask an owner for help."
+                aria-label="New chat (unavailable)"
                 style={{ cursor: 'not-allowed', opacity: 0.4 }}
               >
                 <Plus size={15} strokeWidth={1.8} />

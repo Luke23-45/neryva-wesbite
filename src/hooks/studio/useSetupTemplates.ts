@@ -6,7 +6,9 @@
  * - GET assistant-templates → {templates: TemplateListEntry[]} where each
  *   entry is {template (registry row), available (COMPATIBLE?), compatibility
  *   {status, reasons: [{code, detail}]}, installed, update_available
- *   major|minor|none}. Compatibility is advisory surfacing, never hiding.
+ *   major|minor|none}. Compatibility surfaces truth, never hiding —
+ *   `required_tool_missing` rows block install at the engine TPL-2.2 gate;
+ *   the other reason codes are advisory.
  * - GET assistant-templates/:slug?version= → single registry row
  *   {slug, version, status, family, definition (pure 8-key engine payload),
  *   bindings, eval_ref, release_policy, hash, min_engine_schema}.
@@ -218,7 +220,8 @@ export function useAssistantTemplate(slug: string | null, version?: string) {
 /**
  * Fix per compatibility reason code (ledger F-B1 — each row links its fix).
  * Tool pins additionally resolve inside the install checklist (live catalog
- * state) — install is never blocked by advisory compatibility.
+ * state); unresolved pins block install at the engine TPL-2.2 gate, so the
+ * checklist link is the path to unblocking.
  */
 export function reasonFix(code: string): { label: string; to: string } | null {
   switch (code) {

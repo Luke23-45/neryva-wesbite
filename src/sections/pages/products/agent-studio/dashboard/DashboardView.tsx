@@ -353,7 +353,7 @@ function DashboardContent() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
         <Panel
           title="Your agents"
-          subtitle="Definitions and publish state — telemetry lands with per-agent rollups (A-9)."
+          subtitle="Definitions and publish state."
           flush
           action={<LinkAction to="/agent-studio/agents">All agents</LinkAction>}
         >

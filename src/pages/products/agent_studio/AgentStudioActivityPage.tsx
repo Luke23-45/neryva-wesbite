@@ -6,7 +6,7 @@ export default function AgentStudioActivityPage() {
     <>
       <PageHead
         title="Activity"
-        description="Every event across your agents — escalations, deploys, integrations, and more."
+        description="The organization's hash-chained audit trail — logins, publishes, key operations, and privileged actions."
         canonicalPath="/agent-studio/activity"
       />
       <ActivityView />

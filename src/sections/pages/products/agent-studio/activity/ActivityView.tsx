@@ -34,6 +34,52 @@ import {
 
 const PAGE_SIZE = 50;
 
+/** Full identifier shown in an expanded row, with a copy button. */
+function FullId({ id, label }: { id: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — selection still works */
+    }
+  };
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+      <span style={{ opacity: 0.55 }}>{label}:</span>
+      <code
+        style={{
+          fontFamily: 'monospace',
+          fontSize: '0.9em',
+          wordBreak: 'break-all',
+          userSelect: 'all',
+        }}
+      >
+        {id}
+      </code>
+      <button
+        type="button"
+        onClick={(ev) => { ev.stopPropagation(); void copy(); }}
+        aria-label={copied ? 'Copied' : `Copy ${label.toLowerCase()} ID`}
+        title={copied ? 'Copied' : `Copy ${label.toLowerCase()} ID`}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 4,
+          fontSize: 11,
+          opacity: copied ? 1 : 0.55,
+          color: 'inherit',
+        }}
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </span>
+  );
+}
+
 function toneFor(action: string): 'success' | 'warning' | 'error' | 'info' {
   const a = action.toLowerCase();
   if (a.includes('fail') || a.includes('error') || a.includes('delete') || a.includes('revoke')) return 'error';
@@ -181,16 +227,29 @@ export function ActivityView() {
                             <RowTitle>{e.action}</RowTitle>
                             <RowDetail>
                               {e.resource_type}
-                              {e.resource_id ? ` · ${e.resource_id.slice(0, 14)}` : ''}
+                              {e.resource_id ? (
+                                <span title={e.resource_id} style={{ fontFamily: 'monospace', fontSize: '0.9em' }}>
+                                  {' · '}{e.resource_id}
+                                </span>
+                              ) : ''}
                             </RowDetail>
                             <RowMeta>
                               <span>{e.actor_type}</span>
+                              {e.actor_id ? (
+                                isOpen ? (
+                                  <FullId id={e.actor_id} label="Actor" />
+                                ) : (
+                                  <span title={e.actor_id} style={{ fontFamily: 'monospace', fontSize: '0.9em', opacity: 0.7 }}>
+                                    {e.actor_id.length > 24 ? `${e.actor_id.slice(0, 24)}…` : e.actor_id}
+                                  </span>
+                                )
+                              ) : null}
                               {isOpen && (
                                 <span aria-hidden="true">·</span>
                               )}
                               {isOpen && (
-                                <code style={{ fontSize: 'inherit' }}>
-                                  {JSON.stringify(e.details ?? {}).slice(0, 220) || '{}'}
+                                <code style={{ fontSize: 'inherit', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
+                                  {JSON.stringify(e.details ?? {}, null, 2) || '{}'}
                                 </code>
                               )}
                               {!isOpen && <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />}

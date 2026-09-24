@@ -6,7 +6,7 @@ export default function AgentStudioAnalyticsPage() {
     <>
       <PageHead
         title="Analytics"
-        description="Deep dive into agent performance, conversation channels, and regional usage."
+        description="Metered usage, token consumption, and agent activity."
         canonicalPath="/agent-studio/analytics"
       />
       <AnalyticsView />

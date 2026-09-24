@@ -124,7 +124,7 @@ export function InstallWizard({ entry, onClose, canInstall, installDenied, onIns
           {!entry.compatible && (
             <p style={{ fontSize: 13 }}>
               <AlertTriangle size={13} style={{ verticalAlign: -2 }} /> Incompatible at this org ({entry.reasons.map((r) => r.code).join(', ')}) —
-              install anyway and resolve each row in the checklist. Compatibility is advisory, never an install block.
+              unresolved tool pins block install; other rows are advisory. Resolve each row in the checklist, then install.
             </p>
           )}
           {block !== null && (

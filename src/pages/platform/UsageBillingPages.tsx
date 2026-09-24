@@ -3,7 +3,7 @@
  * (ledger B-1..B-4).
  *
  * Usage: the shared UsageExplorer (overview KPIs, daily series, product +
- * range filters, CSV export) plus the cross-product rollup strip.
+ * range filters, NDJSON export).
  *
  * Billing: entitlement-state summary with real quota meters and per-project
  * slices (B-2), invoices with issue/checkout/void transitions and line
@@ -137,7 +137,7 @@ function QuotaPanel() {
                         {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
                       </MeterValue>
                     </MeterRow>
-                    <ProgressBar value={pct} tone={pct > 85 ? 'amber' : 'azure'} />
+                    <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
                   </div>
                 );
               })}
@@ -567,7 +567,7 @@ function BudgetsPanel() {
                       </BudgetMeta>
                       {budget.limitUsd !== null && budget.spentUsd !== null && (
                         <div style={{ marginTop: 8 }}>
-                          <ProgressBar value={pct} tone={pct > 85 ? 'amber' : 'azure'} />
+                          <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
                         </div>
                       )}
                     </BudgetInfo>

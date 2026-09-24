@@ -206,7 +206,7 @@ export function EntitlementBanner({ product, displayName }: { product: string; d
           </>
         ) : null}
         {canDecide
-          ? 'Enable it for this organization from the console — setup takes about a minute.'
+          ? `Enable ${label} for this organization from the console — setup takes about a minute.`
           : `${label} isn’t enabled for this organization yet. Ask an owner or billing manager to enable it.`}
       </BannerText>
       {canDecide ? productsLink : null}
@@ -278,7 +278,7 @@ export function EntitlementGate({
       </GateTitle>
       <GateBody>
         {canDecide
-          ? 'Enable it for this organization from the console — the trial starts immediately and everything in here works from the first minute.'
+          ? `Enable ${label} for this organization from the console — the trial starts immediately and everything in here works from the first minute.`
           : `${label} isn’t enabled for this organization yet. Ask an owner or billing manager to enable it.`}
       </GateBody>
       {canDecide ? (

@@ -46,6 +46,27 @@ describe('describeInstallOutcome (I2–I5, fixes never codes)', () => {
     expect(outcome.headline).toContain('pdf-extract');
     expect(describeInstallOutcome(new ApiError(400, 'validation_failed', 'unknown tool foo')).kind).toBe('tool-unresolvable');
   });
+  it('routes the real engine TPL-2.2 pin refusal to tool-unresolvable with the tool named', () => {
+    const outcome = describeInstallOutcome(
+      new ApiError(400, 'validation_failed', 'Request validation failed', {
+        tool_policy: 'template tool pins unresolved: create_meeting: no ENABLED tool_catalog row at this org',
+      }),
+    );
+    expect(outcome).toMatchObject({ kind: 'tool-unresolvable', retryable: true });
+    expect(outcome.headline).toContain('create_meeting');
+    expect(outcome.detail).toMatch(/catalog/);
+  });
+  it('names every unresolved pin when the engine lists several', () => {
+    const outcome = describeInstallOutcome(
+      new ApiError(400, 'validation_failed', 'Request validation failed', {
+        tool_policy:
+          'template tool pins unresolved: create_meeting: no ENABLED tool_catalog row at this org; search_tickets: no ENABLED tool_catalog row at this org',
+      }),
+    );
+    expect(outcome).toMatchObject({ kind: 'tool-unresolvable', retryable: true });
+    expect(outcome.headline).toContain('create_meeting');
+    expect(outcome.headline).toContain('search_tickets');
+  });
   it('treats other 400s as registry bugs with no user fix', () => {
     const outcome = describeInstallOutcome(new ApiError(400, 'validation_failed', 'registry definition invalid'));
     expect(outcome).toMatchObject({ kind: 'registry-bug', retryable: false });

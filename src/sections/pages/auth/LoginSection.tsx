@@ -198,6 +198,11 @@ export default function LoginSection() {
                     <AuthSub>{subtitle}</AuthSub>
 
                     <ProviderList>
+                        {/* Login buttons never gate on session hydration: beginLogin()
+                            hands off to the OP and needs no session state. Gating on
+                            status === 'unknown' stranded fresh users on a dead page
+                            whenever hydration was slow — the authenticated-redirect
+                            effect below already routes signed-in users away. */}
                         {configured.map((p) => {
                             const meta = PROVIDER_META[p.key];
                             const busy = starting !== null;
@@ -205,7 +210,7 @@ export default function LoginSection() {
                                 <ProviderButton
                                     key={p.key}
                                     type="button"
-                                    disabled={busy || status === 'unknown'}
+                                    disabled={busy}
                                     onClick={() => start(p.key)}
                                 >
                                     <meta.Icon />
@@ -245,7 +250,7 @@ export default function LoginSection() {
                         <>
                             <ProviderButton
                                 type="button"
-                                disabled={starting !== null || status === 'unknown'}
+                                disabled={starting !== null}
                                 onClick={startEmail}
                             >
                                 {starting === 'email' ? 'Redirecting…' : 'Continue with email'}

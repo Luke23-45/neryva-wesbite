@@ -164,7 +164,7 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
         <Spacer />
         <ActionButton variant="secondary" size="sm" onClick={exportCsv}>
           <Download size={13} strokeWidth={1.8} />
-          Export CSV
+          Export NDJSON
         </ActionButton>
       </Toolbar>
 
@@ -182,6 +182,11 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
       </QueryView>
 
       <ChartWrap>
+        {product === 'all' && (
+          <p style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 8px' }}>
+            Chart shows Agent Studio only — the series endpoint is per-product. KPIs above aggregate all products.
+          </p>
+        )}
         {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
           <StudioAreaChart
             data={chart.points}

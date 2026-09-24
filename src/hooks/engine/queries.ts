@@ -239,6 +239,7 @@ export function useAudit(filters: { actor?: string; action?: string; from?: stri
   return useQuery({
     queryKey: ['engine', 'audit', orgId, filters],
     queryFn: () => engine<{ events: AuditEventRow[]; nextCursor: string | null }>(`/console/org/${orgId}/audit`, { query: { ...filters } }),
+    refetchInterval: 30_000,
   });
 }
 
@@ -252,24 +253,8 @@ export function useAuditFacets() {
 }
 
 // ── Usage / billing ─────────────────────────────────────────────────────────
-
-export function useUsageOverview() {
-  const orgId = useOrgRequired();
-  return useQuery({
-    queryKey: ['engine', 'usage-overview', orgId],
-    queryFn: () => engine<Record<string, unknown>>(`/console/usage/${orgId}/overview`),
-    staleTime: 60_000,
-  });
-}
-
-export function useUsageRollup() {
-  const orgId = useOrgRequired();
-  return useQuery({
-    queryKey: ['engine', 'usage-rollup', orgId],
-    queryFn: () => engine<Record<string, unknown>>(`/console/usage/${orgId}/rollup`),
-    staleTime: 60_000,
-  });
-}
+// NOTE: useUsageOverview/useUsageRollup live in usage.ts (product, range) args.
+// The arg-less duplicates were removed 2026-09-25 (P6-AN-18) — single source of truth.
 
 export function useLedgers() {
   const orgId = useOrgRequired();
@@ -341,17 +326,27 @@ export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
     return [];
   }
   const record = raw as Record<string, unknown>;
-  const scope =
-    (typeof record.products === 'object' && record.products !== null && (record.products as Record<string, unknown>)[product]) ??
-    (typeof record.quotas === 'object' && record.quotas !== null ? (record.quotas as Record<string, unknown>)[product] : undefined) ??
-    record[product] ??
-    record;
+  // Engine shape: {products:[{product, entitlement_state, quota:{used_usd,limit_usd,used_events,limit_events}}]}
+  let scope: unknown;
+  if (Array.isArray(record.products)) {
+    const match = (record.products as Array<Record<string, unknown>>).find(
+      (p) => p.product === product
+    );
+    scope = match?.quota ?? match;
+  } else {
+    scope =
+      (typeof record.products === 'object' && record.products !== null && (record.products as Record<string, unknown>)[product]) ??
+      (typeof record.quotas === 'object' && record.quotas !== null ? (record.quotas as Record<string, unknown>)[product] : undefined) ??
+      record[product] ??
+      record;
+  }
   if (typeof scope !== 'object' || scope === null) {
     return [];
   }
   const meters: QuotaMeter[] = [];
   for (const [key, value] of Object.entries(scope as Record<string, unknown>)) {
     if (typeof value !== 'object' || value === null) {
+      // Flat quota keys: used_usd/limit_usd, used_events/limit_events
       continue;
     }
     const bucket = value as Record<string, unknown>;
@@ -365,6 +360,23 @@ export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
       used,
       limit: typeof limit === 'number' ? limit : null,
     });
+  }
+  // Handle flat quota shape: {used_usd, limit_usd, used_events, limit_events}
+  const flat = scope as Record<string, unknown>;
+  const pairs: Array<[string, string]> = [
+    ['used_usd', 'limit_usd'],
+    ['used_events', 'limit_events'],
+  ];
+  for (const [usedKey, limitKey] of pairs) {
+    const used = flat[usedKey];
+    if (typeof used === 'number') {
+      const limit = flat[limitKey];
+      meters.push({
+        label: meterLabelFromKey(usedKey.replace(/^used_/, '')),
+        used,
+        limit: typeof limit === 'number' ? limit : null,
+      });
+    }
   }
   return meters;
 }

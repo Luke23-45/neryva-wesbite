@@ -31,7 +31,7 @@ export function UsageView() {
         <UsageExplorer defaultProduct="agent_studio" />
       </motion.div>
 
-      {meters.length > 0 && (
+      {meters.length > 0 ? (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
           <SectionTitle>Quotas & limits</SectionTitle>
           <Panel>
@@ -56,6 +56,13 @@ export function UsageView() {
                 </MeterList>
               )}
             </QueryView>
+          </Panel>
+        </motion.div>
+      ) : (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
+          <SectionTitle>Quotas & limits</SectionTitle>
+          <Panel>
+            <p>No quota snapshot yet — limits appear once this organization carries an active plan.</p>
           </Panel>
         </motion.div>
       )}

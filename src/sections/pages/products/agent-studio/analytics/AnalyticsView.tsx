@@ -16,16 +16,17 @@ import {
   CellMono,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
-import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { parseOverviewKpis, parseSeries, rangeDates, useUsageOverview, useUsageSeries } from '@hooks/engine/usage';
+import { useUrlState } from '@lib/useUrlState';
 
 import { ChartWrap } from './AnalyticsView.styles';
 
 /**
  * Analytics (ledger G-3) — real metering KPIs and series from the engine's
  * usage endpoints, with the agent roster from the assistants API. Quality
- * metrics (resolution, CSAT, channels, regions) are ⛔ E-7 — the fabricated
+ * metrics (resolution, CSAT, channels, regions) are not yet available — the fabricated
  * donut, regional cards, and invented deltas are gone; the page ships only
  * what the backend can prove.
  */
@@ -40,7 +41,8 @@ const rangeOptions: { value: Range; label: string }[] = [
 const SERIES_COLORS = ['#8b8ff8', '#05e3a4', '#f5b942'];
 
 export function AnalyticsView() {
-  const [range, setRange] = useState<Range>('30d');
+  const [rangeParam, setRange] = useUrlState('range', { default: '30d' });
+  const range: Range = rangeParam === '7d' || rangeParam === '90d' ? rangeParam : '30d';
   const dates = rangeDates(range);
 
   const overview = useUsageOverview('agent_studio', dates);
@@ -55,8 +57,8 @@ export function AnalyticsView() {
       <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewTitle>Analytics</ViewTitle>
         <ViewSubtitle>
-          Metered usage for Agent Studio. Quality metrics (resolution, CSAT, channels) land with the engine's
-          analytics rollups (A-9/E-7).
+          Metered usage for Agent Studio. Quality metrics (resolution, CSAT, channels) will be available
+          in a future update.
         </ViewSubtitle>
       </ViewHeader>
 
@@ -136,9 +138,9 @@ export function AnalyticsView() {
                       {a.model ? <CellMono>{a.model}</CellMono> : <span style={{ opacity: 0.4 }}>—</span>}
                     </DataCell>
                     <DataCell $w="16%">
-                      <a href={`/agent-studio/agents/${a.id}`} style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}>
+                      <Link to="/agent-studio/agents/$agentId" params={{ agentId: a.id }} style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}>
                         Open →
-                      </a>
+                      </Link>
                     </DataCell>
                   </DataRow>
                 ))}

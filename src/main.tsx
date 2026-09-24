@@ -44,6 +44,11 @@ const toastStyle: React.CSSProperties = {
   WebkitBackdropFilter: 'blur(14px)',
   minWidth: '220px',
   maxWidth: '420px',
+  // Long technical strings (validation details, tool names) must wrap
+  // instead of overflowing or clipping mid-word.
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+  whiteSpace: 'pre-wrap',
 };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

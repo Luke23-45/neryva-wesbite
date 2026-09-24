@@ -34,6 +34,17 @@ const REFRESH_KEY = 'neryva.refresh_token';
 const RETURN_KEY = 'neryva.post_login_return';
 const PKCE_KEY = 'neryva.pkce_verifier';
 const STATE_KEY = 'neryva.oauth_state';
+/**
+ * The silent (prompt=none iframe) flow keeps its own PKCE/state keys, fully
+ * isolated from the interactive login's keys above. The two flows race on
+ * slow networks: the iframe's late postMessage/timeout used to blindly wipe
+ * the shared keys and destroy an in-flight interactive login ("Login state
+ * mismatch" on every callback). Separate keys make that interleaving
+ * impossible — each flow only ever reads, validates, and cleans up its own
+ * material.
+ */
+const SILENT_PKCE_KEY = 'neryva.silent_pkce_verifier';
+const SILENT_STATE_KEY = 'neryva.silent_oauth_state';
 const ID_TOKEN_KEY = 'neryva.id_token';
 /** localStorage broadcast signal (timestamp) — never a credential. */
 const SESSION_CLEARED_KEY = 'neryva.session_cleared';
@@ -93,6 +104,8 @@ function clearAuthMaterial(): void {
   sessionStorage.removeItem(ID_TOKEN_KEY);
   sessionStorage.removeItem(PKCE_KEY);
   sessionStorage.removeItem(STATE_KEY);
+  sessionStorage.removeItem(SILENT_PKCE_KEY);
+  sessionStorage.removeItem(SILENT_STATE_KEY);
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -397,15 +410,26 @@ export async function beginLogin(returnTo?: string, params?: AuthorizeParams): P
   window.location.assign(`${authBase}/auth?${query.toString()}`);
 }
 
-/** Shared code/state → token exchange for both top-level and silent callbacks. */
-async function exchangeCode(code: string, state: string, opts?: { consumeReturn?: boolean }): Promise<string> {
-  const expectedState = sessionStorage.getItem(STATE_KEY);
-  sessionStorage.removeItem(STATE_KEY);
+/**
+ * Shared code/state → token exchange for both top-level and silent callbacks.
+ * Each flow passes its own storage keys (interactive vs silent) so a late
+ * background exchange can never consume or invalidate the other flow's
+ * state — that cross-flow wipe was the "Login state mismatch" bug.
+ */
+async function exchangeCode(
+  code: string,
+  state: string,
+  opts?: { consumeReturn?: boolean; stateKey?: string; pkceKey?: string },
+): Promise<string> {
+  const stateKey = opts?.stateKey ?? STATE_KEY;
+  const pkceKey = opts?.pkceKey ?? PKCE_KEY;
+  const expectedState = sessionStorage.getItem(stateKey);
+  sessionStorage.removeItem(stateKey);
   if (!state || state !== expectedState) {
     throw new Error('Login state mismatch — please try signing in again.');
   }
-  const verifier = sessionStorage.getItem(PKCE_KEY);
-  sessionStorage.removeItem(PKCE_KEY);
+  const verifier = sessionStorage.getItem(pkceKey);
+  sessionStorage.removeItem(pkceKey);
   if (!verifier) {
     throw new Error('Login session lost — please try signing in again.');
   }
@@ -470,10 +494,10 @@ export async function attemptSilentAuth(): Promise<boolean> {
     return false;
   }
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
-  sessionStorage.setItem(PKCE_KEY, verifier);
+  sessionStorage.setItem(SILENT_PKCE_KEY, verifier);
   const challenge = base64url(await sha256(verifier));
   const state = base64url(crypto.getRandomValues(new Uint8Array(16)));
-  sessionStorage.setItem(STATE_KEY, state);
+  sessionStorage.setItem(SILENT_STATE_KEY, state);
   const redirectUri = `${window.location.origin}${CALLBACK_PATH}`;
   const query = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -496,8 +520,11 @@ export async function attemptSilentAuth(): Promise<boolean> {
       window.removeEventListener('message', onMessage);
       iframe.remove();
       if (!ok) {
-        sessionStorage.removeItem(PKCE_KEY);
-        sessionStorage.removeItem(STATE_KEY);
+        // Clean up only this flow's keys. The interactive login's keys live
+        // under different names now, so a late silent failure can no longer
+        // wipe an in-flight "Continue with email" attempt.
+        sessionStorage.removeItem(SILENT_PKCE_KEY);
+        sessionStorage.removeItem(SILENT_STATE_KEY);
       }
       resolve(ok);
     };
@@ -517,7 +544,11 @@ export async function attemptSilentAuth(): Promise<boolean> {
         done(false);
         return;
       }
-      exchangeCode(data.code, data.state ?? '', { consumeReturn: false })
+      exchangeCode(data.code, data.state ?? '', {
+        consumeReturn: false,
+        stateKey: SILENT_STATE_KEY,
+        pkceKey: SILENT_PKCE_KEY,
+      })
         .then(() => done(true))
         .catch(() => done(false));
     };

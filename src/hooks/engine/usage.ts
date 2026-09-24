@@ -91,8 +91,16 @@ export function parseOverviewKpis(raw: unknown, max = 8): UsageKpi[] {
       if (out.length >= max) {
         return;
       }
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        walk(value as Record<string, unknown>, `${prefix}${key}.`);
+      if (value !== null && typeof value === 'object') {
+        if (Array.isArray(value)) {
+          value.forEach((item, i) => {
+            if (item !== null && typeof item === 'object') {
+              walk(item as Record<string, unknown>, `${prefix}${key}[${i}].`);
+            }
+          });
+        } else {
+          walk(value as Record<string, unknown>, `${prefix}${key}.`);
+        }
       } else if (typeof value === 'number' && Number.isFinite(value)) {
         const label = humanize(key);
         out.push({ key: `${prefix}${key}`, label, value: value.toLocaleString() });
@@ -125,8 +133,10 @@ export function parseSeries(raw: unknown): UsageSeries {
 
   const first = list[0] as Record<string, unknown>;
   const dateKey = Object.keys(first).find((k) => typeof first[k] === 'string' && isDateKey(k)) ?? null;
+  const isNumericLike = (v: unknown): boolean =>
+    typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)));
   const valueKeys = Object.keys(first)
-    .filter((k) => k !== dateKey && typeof first[k] === 'number')
+    .filter((k) => k !== dateKey && isNumericLike(first[k]))
     .slice(0, 3);
 
   const points = list
@@ -137,8 +147,11 @@ export function parseSeries(raw: unknown): UsageSeries {
       const item = entry as Record<string, unknown>;
       const point: Record<string, string | number> = {};
       for (const key of valueKeys) {
-        if (typeof item[key] === 'number') {
-          point[key] = item[key] as number;
+        const v = item[key];
+        if (typeof v === 'number') {
+          point[key] = v;
+        } else if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) {
+          point[key] = Number(v);
         }
       }
       if (dateKey && typeof item[dateKey] === 'string') {

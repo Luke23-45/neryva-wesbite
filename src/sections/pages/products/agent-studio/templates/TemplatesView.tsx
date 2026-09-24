@@ -24,7 +24,7 @@ export function TemplatesView() {
         <ViewHeader>
           <ViewTitle>Templates</ViewTitle>
           <ViewSubtitle>
-            Registry blueprints with compatibility truth — install copies into a draft, never live. Compatibility is advisory, never hiding.
+            Registry blueprints with compatibility truth — install copies into a draft, never live. Unresolved tool pins block install; the checklist shows the fix.
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>
