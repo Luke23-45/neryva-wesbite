@@ -1,7 +1,12 @@
 /**
  * /platform/audit — ONE consolidated viewer over the engine audit chain:
- * actor/action/resource filters, time window, pagination, and CSV/JSON
+ * actor/action filters, time window, cursor pagination, and CSV/JSON
  * export (SIEM-ready) — replacing the three static per-product viewers.
+ *
+ * The engine's audit query is cursor-paginated ({ events, nextCursor }) with
+ * server-side { actor, action, from, to } filters only — there is no
+ * offset/total, and no resource_type filter server-side, so the resource
+ * dropdown filters the loaded page client-side.
  */
 import { useState } from 'react';
 import { Download, FileJson, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -34,10 +39,26 @@ export default function AuditPage() {
   const [action, setAction] = useState('');
   const [resourceType, setResourceType] = useState('');
   const [from, setFrom] = useState('');
-  const [offset, setOffset] = useState(0);
+  // Cursor stack for back-navigation: cursors[i] is the `before` cursor for page i.
+  const [cursors, setCursors] = useState<(string | null)[]>([null]);
 
+  const before = cursors[cursors.length - 1] ?? undefined;
   const facets = useAuditFacets();
-  const audit = useAudit({ action: action || undefined, resource_type: resourceType || undefined, from: from ? new Date(from).toISOString() : undefined, limit: PAGE_SIZE, offset });
+  const audit = useAudit({
+    action: action || undefined,
+    from: from ? new Date(from).toISOString() : undefined,
+    limit: PAGE_SIZE,
+    before,
+  });
+
+  const resetPages = () => setCursors([null]);
+
+  // Resource type has no server-side filter — apply it to the loaded page.
+  const events = (audit.data?.events ?? []).filter((e) =>
+    resourceType === '' || e.resource_type === resourceType,
+  );
+
+  const nextCursor = audit.data?.nextCursor ?? null;
 
   return (
     <ViewShell>
@@ -52,13 +73,13 @@ export default function AuditPage() {
         action={
           <Toolbar>
             <ToolbarGroup>
-              <FilterSelect value={action} onChange={(e) => { setAction(e.target.value); setOffset(0); }}>
+              <FilterSelect value={action} onChange={(e) => { setAction(e.target.value); resetPages(); }}>
                 <option value="">All actions</option>
                 {facets.data?.actions.map((a) => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </FilterSelect>
-              <FilterSelect value={resourceType} onChange={(e) => { setResourceType(e.target.value); setOffset(0); }}>
+              <FilterSelect value={resourceType} onChange={(e) => { setResourceType(e.target.value); resetPages(); }} title="Filters the loaded page">
                 <option value="">All resources</option>
                 {facets.data?.resourceTypes.map((r) => (
                   <option key={r} value={r}>{r}</option>
@@ -67,21 +88,21 @@ export default function AuditPage() {
               <input
                 type="date"
                 value={from}
-                onChange={(e) => { setFrom(e.target.value); setOffset(0); }}
+                onChange={(e) => { setFrom(e.target.value); resetPages(); }}
                 style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}
               />
             </ToolbarGroup>
-            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'csv', ...(action ? { action } : {}), ...(resourceType ? { resource_type: resourceType } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
+            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'csv', ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
               <Download size={12} /> CSV
             </ActionButton>
-            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'json', ...(action ? { action } : {}), ...(resourceType ? { resource_type: resourceType } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
+            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'json', ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
               <FileJson size={12} /> JSON
             </ActionButton>
           </Toolbar>
         }
       >
         <QueryView query={audit} skeleton={<div style={{ padding: 20 }}>{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} $h="16px" />)}</div>}>
-          {(data) => (
+          {() => (
             <>
               <DataTable>
                 <thead>
@@ -93,7 +114,7 @@ export default function AuditPage() {
                   </DataHead>
                 </thead>
                 <tbody>
-                  {data.events.map((event: AuditEventRow) => (
+                  {events.map((event: AuditEventRow) => (
                     <DataRow key={event.id}>
                       <DataCell><CellMeta>{new Date(event.created_at).toLocaleString()}</CellMeta></DataCell>
                       <DataCell>
@@ -108,12 +129,25 @@ export default function AuditPage() {
                 </tbody>
               </DataTable>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', fontSize: 12, opacity: 0.7 }}>
-                <span>{offset + 1}–{offset + data.events.length} of {data.total}</span>
+                <span>
+                  {events.length} event{events.length === 1 ? '' : 's'} on this page
+                  {resourceType !== '' ? ' (resource filter applies to this page)' : ''}
+                </span>
                 <span style={{ display: 'flex', gap: 6 }}>
-                  <ActionButton variant="ghost" size="sm" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+                  <ActionButton
+                    variant="ghost"
+                    size="sm"
+                    disabled={cursors.length <= 1}
+                    onClick={() => setCursors((c) => c.slice(0, -1))}
+                  >
                     <ChevronLeft size={13} />
                   </ActionButton>
-                  <ActionButton variant="ghost" size="sm" disabled={offset + PAGE_SIZE >= data.total} onClick={() => setOffset(offset + PAGE_SIZE)}>
+                  <ActionButton
+                    variant="ghost"
+                    size="sm"
+                    disabled={!nextCursor}
+                    onClick={() => nextCursor && setCursors((c) => [...c, nextCursor])}
+                  >
                     <ChevronRight size={13} />
                   </ActionButton>
                 </span>

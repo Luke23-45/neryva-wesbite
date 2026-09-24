@@ -1,37 +1,59 @@
 /**
  * Config lifecycle (ledger G-7) — the engine's config-publish plane:
- * draft → validate → publish (with canary %) → rollback. Org-scoped;
- * keys under ['studio', 'config', orgId].
+ * draft → validate → publish → rollback. Org-scoped; keys under
+ * ['studio', 'config', orgId, scope].
  *
- * The config document's schema is per-deployment (the satellite defines
- * what fields it expects) — the editor presents it as JSON so the plane
- * works for any payload the engine validates, without the console
- * hard-coding a schema it doesn't own.
+ * The engine's contract (config-publish.controller.ts):
+ * - Every call carries `scope` ∈ CONFIG_SCOPES; reads 400 without it.
+ * - Draft:    PUT /config/draft {scope, payload, notes?} → {draft}
+ * - Validate: POST /config/draft/validate {scope, payload} → {ok, issues[]}
+ * - Publish:  POST /config/publish {scope, from_draft|payload, notes?} → {config} (step-up MFA)
+ * - Rollback: POST /config/rollback {scope, to_version, notes?} → {config} (step-up MFA)
+ * - History:  GET /config/history?scope= → {versions[], total}
+ * - Delivery: GET /config/delivery?scope= → {config, targets[]} (404 when nothing published)
+ *
+ * There is no canary concept in the config-publish plane — the engine ships
+ * every publish to all satellites at once. The console does not invent one.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
+import { runWithStepUp } from '@lib/engine/stepup';
 import { toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
+
+/** The engine's real config scopes (config-publish.schema.ts CONFIG_SCOPES). */
+export const CONFIG_SCOPES = [
+  'policy_set',
+  'guardrail_profile',
+  'quota_profile',
+  'model_catalog',
+  'knowledge_config',
+] as const;
+export type ConfigScope = (typeof CONFIG_SCOPES)[number];
 
 export interface ConfigVersion {
   version: number;
   publishedAt: string | null;
   publishedBy: string | null;
-  canaryPercent: number | null;
   status: string | null;
 }
 
 export interface ConfigDraft {
-  content: Record<string, unknown> | null;
-  validated: boolean | null;
-  validationErrors: string[] | null;
+  payload: Record<string, unknown> | null;
+  validationStatus: string | null;
+  validationIssues: string[] | null;
 }
 
-export interface ConfigDelivery {
+export interface ConfigDeliveryTarget {
   satellite: string;
   status: string | null;
   ackedAt: string | null;
   version: number | null;
+}
+
+export interface ValidationIssue {
+  path: string;
+  message: string;
 }
 
 function str(value: unknown): string | null {
@@ -40,8 +62,7 @@ function str(value: unknown): string | null {
 
 export function parseConfigVersions(raw: unknown): ConfigVersion[] {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = Array.isArray(raw) ? raw : [record.versions, record.history].find(Array.isArray) ?? [];
-  if (!Array.isArray(list)) return [];
+  const list = Array.isArray(raw) ? raw : Array.isArray(record.versions) ? record.versions : [];
   return list
     .map((entry) => {
       if (typeof entry !== 'object' || entry === null) return null;
@@ -50,10 +71,9 @@ export function parseConfigVersions(raw: unknown): ConfigVersion[] {
       if (version === null) return null;
       return {
         version,
-        publishedAt: str(item.published_at) ?? str(item.created_at),
-        publishedBy: str(item.published_by) ?? str(item.author),
-        canaryPercent: typeof item.canary_percent === 'number' ? item.canary_percent : null,
-        status: str(item.status) ?? str(item.state),
+        publishedAt: str(item.publishedAt),
+        publishedBy: str(item.publishedBy),
+        status: str(item.status),
       } satisfies ConfigVersion;
     })
     .filter((v): v is ConfigVersion => v !== null);
@@ -61,83 +81,82 @@ export function parseConfigVersions(raw: unknown): ConfigVersion[] {
 
 export function parseDraft(raw: unknown): ConfigDraft {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const content = typeof record.content === 'object' && record.content !== null
-    ? (record.content as Record<string, unknown>)
-    : typeof record.draft === 'object' && record.draft !== null
-      ? (record.draft as Record<string, unknown>)
-      : null;
-  const errors = Array.isArray(record.validation_errors)
-    ? record.validation_errors.filter((e): e is string => typeof e === 'string')
+  const draft = typeof record.draft === 'object' && record.draft !== null ? (record.draft as Record<string, unknown>) : null;
+  const issues = draft && Array.isArray(draft.validationIssues)
+    ? draft.validationIssues
+        .map((e) => (typeof e === 'string' ? e : typeof e === 'object' && e !== null ? `${str((e as Record<string, unknown>).path) ?? 'payload'}: ${str((e as Record<string, unknown>).message) ?? 'invalid'}` : null))
+        .filter((e): e is string => e !== null)
     : null;
   return {
-    content,
-    validated: typeof record.validated === 'boolean' ? record.validated : null,
-    validationErrors: errors,
+    payload: draft && typeof draft.payload === 'object' && draft.payload !== null ? (draft.payload as Record<string, unknown>) : null,
+    validationStatus: draft ? str(draft.validationStatus) : null,
+    validationIssues: issues,
   };
 }
 
-export function parseDelivery(raw: unknown): ConfigDelivery[] {
+export function parseDelivery(raw: unknown): ConfigDeliveryTarget[] {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = Array.isArray(raw) ? raw : [record.deliveries, record.satellites].find(Array.isArray) ?? [];
-  if (!Array.isArray(list)) return [];
+  const list = Array.isArray(record.targets) ? record.targets : [];
   return list
     .map((entry) => {
       if (typeof entry !== 'object' || entry === null) return null;
       const item = entry as Record<string, unknown>;
-      const satellite = str(item.satellite) ?? str(item.key) ?? str(item.name);
+      const satellite = str(item.satelliteKey) ?? str(item.satellite);
       if (!satellite) return null;
       return {
         satellite,
-        status: str(item.status) ?? str(item.state),
-        ackedAt: str(item.acked_at) ?? str(item.acknowledged_at),
+        status: str(item.satelliteStatus) ?? str(item.status),
+        ackedAt: str(item.ackedAt),
         version: typeof item.version === 'number' ? item.version : null,
-      } satisfies ConfigDelivery;
+      } satisfies ConfigDeliveryTarget;
     })
-    .filter((d): d is ConfigDelivery => d !== null);
+    .filter((d): d is ConfigDeliveryTarget => d !== null);
 }
 
-const CONFIG_KEY = (orgId: string | null) => ['studio', 'config', orgId] as const;
+const CONFIG_KEY = (orgId: string | null, scope: string | null) => ['studio', 'config', orgId, scope] as const;
 
-export function useConfigDraft() {
+export function useConfigDraft(scope: ConfigScope | null) {
   const { orgId } = useOrg();
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId), 'draft'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/draft`),
-    enabled: !!orgId,
+    queryKey: [...CONFIG_KEY(orgId, scope), 'draft'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/draft`, { query: { scope: scope ?? '' } }),
+    enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseDraft,
   });
 }
 
-export function useConfigHistory() {
+export function useConfigHistory(scope: ConfigScope | null) {
   const { orgId } = useOrg();
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId), 'history'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/history`),
-    enabled: !!orgId,
+    queryKey: [...CONFIG_KEY(orgId, scope), 'history'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/history`, { query: { scope: scope ?? '' } }),
+    enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseConfigVersions,
   });
 }
 
-export function useConfigDelivery() {
+export function useConfigDelivery(scope: ConfigScope | null) {
   const { orgId } = useOrg();
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId), 'delivery'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/delivery`),
-    enabled: !!orgId,
+    queryKey: [...CONFIG_KEY(orgId, scope), 'delivery'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/delivery`, { query: { scope: scope ?? '' } }),
+    enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseDelivery,
+    // 404 = nothing published yet for this scope — an honest empty state, not an error.
+    retry: (count, error) => (error instanceof Error && 'status' in error && (error as { status?: number }).status === 404 ? false : count < 2),
   });
 }
 
 export function useValidateConfigDraft() {
   const { orgId } = useOrg();
   return useMutation({
-    mutationFn: async (content: Record<string, unknown>) =>
-      engine<{ valid?: boolean; errors?: string[] }>(`/console/org/${orgId}/config/draft/validate`, {
+    mutationFn: async (input: { scope: ConfigScope; payload: Record<string, unknown> }) =>
+      engine<{ ok?: boolean; issues?: ValidationIssue[] }>(`/console/org/${orgId}/config/draft/validate`, {
         method: 'POST',
-        body: content,
+        body: { scope: input.scope, payload: input.payload },
       }),
     onError: (error) => toastEngineError(error, 'Validation request failed'),
   });
@@ -147,9 +166,12 @@ export function useSaveConfigDraft() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (content: Record<string, unknown>) =>
-      engine(`/console/org/${orgId}/config/draft`, { method: 'PUT', body: content }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId), 'draft'] }),
+    mutationFn: async (input: { scope: ConfigScope; payload: Record<string, unknown>; notes?: string }) =>
+      engine(`/console/org/${orgId}/config/draft`, {
+        method: 'PUT',
+        body: { scope: input.scope, payload: input.payload, ...(input.notes ? { notes: input.notes } : {}) },
+      }),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope), 'draft'] }),
     onError: (error) => toastEngineError(error, 'Could not save the draft'),
   });
 }
@@ -158,8 +180,9 @@ export function useDeleteConfigDraft() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => engine(`/console/org/${orgId}/config/draft`, { method: 'DELETE' }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId), 'draft'] }),
+    mutationFn: async (input: { scope: ConfigScope }) =>
+      engine(`/console/org/${orgId}/config/draft`, { method: 'DELETE', query: { scope: input.scope } }),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope), 'draft'] }),
     onError: (error) => toastEngineError(error, 'Could not discard the draft'),
   });
 }
@@ -168,15 +191,18 @@ export function usePublishConfig() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { canaryPercent?: number }) =>
-      engine(`/console/org/${orgId}/config/publish`, {
-        method: 'POST',
-        body: { ...(input.canaryPercent !== undefined ? { canary_percent: input.canaryPercent } : {}) },
-        idempotent: true,
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId)] });
-      void queryClient.invalidateQueries({ queryKey: ['studio', 'config-delivery'] });
+    // Publish is a live-effect act: the engine requires a step-up MFA proof.
+    mutationFn: async (input: { scope: ConfigScope; notes?: string }) =>
+      runWithStepUp('Publish config', (proof) =>
+        engine(`/console/org/${orgId}/config/publish`, {
+          method: 'POST',
+          body: { scope: input.scope, from_draft: true, ...(input.notes ? { notes: input.notes } : {}) },
+          mfaProof: proof,
+          idempotent: true,
+        }),
+      ),
+    onSuccess: (_data, input) => {
+      void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope)] });
     },
     onError: (error) => toastEngineError(error, 'Could not publish the config'),
   });
@@ -186,12 +212,16 @@ export function useRollbackConfig() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input?: { toVersion?: number }) =>
-      engine(`/console/org/${orgId}/config/rollback`, {
-        method: 'POST',
-        body: input?.toVersion !== undefined ? { to_version: input.toVersion } : {},
-      }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId)] }),
+    // Rollback is a live-effect act: the engine requires a step-up MFA proof.
+    mutationFn: async (input: { scope: ConfigScope; toVersion: number; notes?: string }) =>
+      runWithStepUp('Roll back config', (proof) =>
+        engine(`/console/org/${orgId}/config/rollback`, {
+          method: 'POST',
+          body: { scope: input.scope, to_version: input.toVersion, ...(input.notes ? { notes: input.notes } : {}) },
+          mfaProof: proof,
+        }),
+      ),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope)] }),
     onError: (error) => toastEngineError(error, 'Could not roll back the config'),
   });
 }

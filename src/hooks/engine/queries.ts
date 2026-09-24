@@ -227,11 +227,18 @@ export interface AuditEventRow {
   created_at: string;
 }
 
-export function useAudit(filters: { actor_id?: string; action?: string; resource_type?: string; from?: string; to?: string; limit?: number; offset?: number }) {
+/**
+ * Audit trail — the engine's cursor-paginated contract
+ * (console-platform.controller.ts → ConsoleAuditQueryService):
+ * filters { actor, action, from, to, before, limit } → { events, nextCursor }.
+ * There is no offset/total/resource_type filter server-side; callers that
+ * need deeper traversal page with `before: <nextCursor>`.
+ */
+export function useAudit(filters: { actor?: string; action?: string; from?: string; to?: string; limit?: number; before?: string }) {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'audit', orgId, filters],
-    queryFn: () => engine<{ events: AuditEventRow[]; total: number }>(`/console/org/${orgId}/audit`, { query: { ...filters } }),
+    queryFn: () => engine<{ events: AuditEventRow[]; nextCursor: string | null }>(`/console/org/${orgId}/audit`, { query: { ...filters } }),
   });
 }
 

@@ -75,9 +75,17 @@ import {
 
   useRollbackConfig,
 
+  useDeleteConfigDraft,
+
+  CONFIG_SCOPES,
+
   type ConfigVersion,
 
+  type ConfigScope,
+
 } from '@hooks/studio/useConfigLifecycle';
+
+import { useConversations } from '@hooks/studio/useStudioConversations';
 
 
 
@@ -178,6 +186,7 @@ export function ComplianceView() {
   const downloadExport = useDownloadExport();
 
   const [exportConfirm, setExportConfirm] = useState(false);
+  const [exportSelection, setExportSelection] = useState<string[]>([]);
 
 
 
@@ -345,7 +354,7 @@ export function ComplianceView() {
 
             isEmpty={(d) => d.length === 0}
 
-            empty={{ title: 'No exports yet', description: 'Request a data export to receive a downloadable archive of your organization\'s data.' }}
+            empty={{ title: 'No exports yet', description: 'Request a data export to download an archive of the conversations you select.' }}
 
           >
 
@@ -357,7 +366,7 @@ export function ComplianceView() {
 
                   <DataCell $w="28%">Export</DataCell>
 
-                  <DataCell $w="18%">Type</DataCell>
+                  <DataCell $w="18%">Scope</DataCell>
 
                   <DataCell $w="20%">Requested</DataCell>
 
@@ -379,21 +388,21 @@ export function ComplianceView() {
 
                     <DataCell $w="18%">
 
-                      <CellMeta>{e.resourceType ?? 'org'}</CellMeta>
+                      <CellMeta>{e.conversationCount !== null ? `${e.conversationCount} conversation${e.conversationCount === 1 ? '' : 's'}` : '—'}</CellMeta>
 
                     </DataCell>
 
                     <DataCell $w="20%">
 
-                      <CellMeta>{e.requestedAt?.slice(0, 10) ?? '—'}</CellMeta>
+                      <CellMeta>{e.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
 
                     </DataCell>
 
                     <DataCell $w="16%">
 
-                      <StatusPill tone={e.status === 'completed' ? 'success' : e.status === 'failed' ? 'error' : 'warning'} dot={false}>
+                      <StatusPill tone={e.state === 'ready' ? 'success' : e.state === 'expired' ? 'error' : 'warning'} dot={false}>
 
-                        {e.status ?? 'pending'}
+                        {e.state ?? 'pending'}
 
                       </StatusPill>
 
@@ -401,7 +410,7 @@ export function ComplianceView() {
 
                     <DataCell $w="18%">
 
-                      {e.status === 'completed' && (
+                      {e.state === 'ready' && (e.downloadCount ?? 0) < 1 && (
 
                         <ActionButton
 
@@ -443,75 +452,81 @@ export function ComplianceView() {
 
       {/* ─── Legal holds ─── */}
 
-      {(legalHolds.data?.length ?? 0) > 0 && (
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
 
-        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
+        <SectionTitle>Legal holds</SectionTitle>
 
-          <SectionTitle>Legal holds</SectionTitle>
+        <Panel flush>
 
-          <Panel flush>
+          <QueryView
 
-            <QueryView query={legalHolds} skeleton={<Skeleton $h="80px" $r="12px" />}>
+            query={legalHolds}
 
-              {(rows) => (
+            skeleton={<Skeleton $h="80px" $r="12px" />}
 
-                <DataTable>
+            isEmpty={(d) => d.length === 0}
 
-                  <DataHead>
+            empty={{ title: 'No legal holds', description: 'Active legal holds block purges for their scope. Place one from the API when litigation requires it.' }}
 
-                    <DataCell $w="30%">Hold</DataCell>
+          >
 
-                    <DataCell $w="20%">Resource</DataCell>
+            {(rows) => (
 
-                    <DataCell $w="20%">Since</DataCell>
+              <DataTable>
 
-                    <DataCell $w="30%">Reason</DataCell>
+                <DataHead>
 
-                  </DataHead>
+                  <DataCell $w="24%">Hold</DataCell>
 
-                  {rows.map((h) => (
+                  <DataCell $w="18%">Scope</DataCell>
 
-                    <DataRow key={h.id} $interactive={false}>
+                  <DataCell $w="16%">Since</DataCell>
 
-                      <DataCell $w="30%">
+                  <DataCell $w="42%">Reason</DataCell>
 
-                        <CellMono>{h.id.slice(0, 14)}</CellMono>
+                </DataHead>
 
-                      </DataCell>
+                {rows.map((h) => (
 
-                      <DataCell $w="20%">
+                  <DataRow key={h.id} $interactive={false}>
 
-                        <CellMeta>{h.resourceType ?? '—'}</CellMeta>
+                    <DataCell $w="24%">
 
-                      </DataCell>
+                      <CellMono>{h.id.slice(0, 14)}</CellMono>
 
-                      <DataCell $w="20%">
+                    </DataCell>
 
-                        <CellMeta>{h.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
+                    <DataCell $w="18%">
 
-                      </DataCell>
+                      <CellMeta>{h.scopeType ?? '—'}</CellMeta>
 
-                      <DataCell $w="30%">
+                    </DataCell>
 
-                        <CellMeta>{h.reason ?? '—'}</CellMeta>
+                    <DataCell $w="16%">
 
-                      </DataCell>
+                      <CellMeta>{h.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
 
-                    </DataRow>
+                    </DataCell>
 
-                  ))}
+                    <DataCell $w="42%">
 
-                </DataTable>
+                      <CellMeta>{h.reason ?? '—'}</CellMeta>
 
-              )}
+                    </DataCell>
 
-            </QueryView>
+                  </DataRow>
 
-          </Panel>
+                ))}
 
-        </motion.div>
+              </DataTable>
 
-      )}
+            )}
+
+          </QueryView>
+
+        </Panel>
+
+      </motion.div>
 
 
 
@@ -543,7 +558,7 @@ export function ComplianceView() {
 
                   <span style={{ fontSize: 13, opacity: 0.65 }}>
 
-                    {data.total} events in the hash-chained trail
+                    Latest events from the hash-chained trail
 
                   </span>
 
@@ -589,26 +604,21 @@ export function ComplianceView() {
 
 
 
-      <ConfirmDialog
-
+      <ExportDialog
         open={exportConfirm}
-
-        title="Request a data export?"
-
-        message="The engine compiles your organization's data into a downloadable archive. This may take a few minutes for large datasets."
-
-        confirmLabel="Request export"
-
-        onConfirm={() => {
-
-          requestExport.mutate(undefined, { onSuccess: () => toast.success('Export requested — it will appear here when ready') });
-
-          setExportConfirm(false);
-
+        selection={exportSelection}
+        onSelectionChange={setExportSelection}
+        pending={requestExport.isPending}
+        onClose={() => setExportConfirm(false)}
+        onConfirm={(ids) => {
+          requestExport.mutate({ conversationIds: ids }, {
+            onSuccess: () => {
+              toast.success(ids.length === 0 ? 'Empty export requested' : `Export requested — ${ids.length} conversation${ids.length === 1 ? '' : 's'}`);
+              setExportConfirm(false);
+              setExportSelection([]);
+            },
+          });
         }}
-
-        onCancel={() => setExportConfirm(false)}
-
       />
 
     </ViewShell>
@@ -617,469 +627,354 @@ export function ComplianceView() {
 
 }
 
+/** DSR export dialog: pick up to 20 conversations — the engine builds the
+ * manifest from exactly these IDs, so an unscoped request can never silently
+ * produce an empty archive. */
+const MAX_EXPORT_CONVERSATIONS = 20;
+
+function ExportDialog({ open, selection, onSelectionChange, pending, onClose, onConfirm }: {
+  open: boolean;
+  selection: string[];
+  onSelectionChange: (ids: string[]) => void;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (ids: string[]) => void;
+}) {
+  const conversations = useConversations({ enabled: open });
+  const rows = conversations.data ?? [];
+
+  const toggle = (id: string) => {
+    if (selection.includes(id)) {
+      onSelectionChange(selection.filter((s) => s !== id));
+    } else if (selection.length < MAX_EXPORT_CONVERSATIONS) {
+      onSelectionChange([...selection, id]);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Request a data export"
+      width={560}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
+          <ActionButton
+            disabled={pending || rows.length === 0}
+            onClick={() => onConfirm(selection)}
+          >
+            {selection.length === 0 ? 'Request empty export' : `Request export (${selection.length})`}
+          </ActionButton>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          Select up to {MAX_EXPORT_CONVERSATIONS} conversations to include. The export compiles
+          transcripts and run records into a downloadable archive, ready immediately.
+          Downloads are one-time.
+        </p>
+        {conversations.isLoading ? (
+          <Skeleton $h="120px" $r="12px" />
+        ) : rows.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 13, opacity: 0.6 }}>No conversations in this organization yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflowY: 'auto' }}>
+            {rows.map((c) => {
+              const checked = selection.includes(c.id);
+              return (
+                <label
+                  key={c.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: checked ? 'rgba(139,143,248,0.10)' : 'transparent' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggle(c.id)}
+                    disabled={!checked && selection.length >= MAX_EXPORT_CONVERSATIONS}
+                    aria-label={`Include ${c.title}`}
+                  />
+                  <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
+                  <span style={{ fontSize: 11, opacity: 0.5 }}>{c.updatedAt?.slice(0, 10) ?? ''}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 
 
 // ─── Config lifecycle (G-7) ──────────────────────────────────────────
 
 
 
+// ─── Config lifecycle (G-7) ──────────────────────────────────────────
+
+/**
+ * Config lifecycle editor, wired to the engine's real config-publish contract:
+ * every read and write carries a scope (policy_set, guardrail_profile,
+ * quota_profile, model_catalog, knowledge_config). Publish and rollback are
+ * live-effect acts and go through step-up MFA; the engine has no canary
+ * concept, so the console does not offer one.
+ */
 function ConfigLifecycleSection() {
-
-  const draft = useConfigDraft();
-
-  const history = useConfigHistory();
-
-  const delivery = useConfigDelivery();
-
+  const [scope, setScope] = useState<ConfigScope>('policy_set');
+  const draft = useConfigDraft(scope);
+  const history = useConfigHistory(scope);
+  const delivery = useConfigDelivery(scope);
   const validate = useValidateConfigDraft();
-
   const saveDraft = useSaveConfigDraft();
-
+  const deleteDraft = useDeleteConfigDraft();
   const publish = usePublishConfig();
-
   const rollback = useRollbackConfig();
 
-
-
   const [json, setJson] = useState<Record<string, unknown> | null>(null);
-
-  const [canary, setCanary] = useState(0);
-
   const [publishConfirm, setPublishConfirm] = useState(false);
+  const [rollbackVersion, setRollbackVersion] = useState<number | null>(null);
 
-  const [rollbackConfirm, setRollbackConfirm] = useState(false);
-
-
-
-  const effective = json ?? draft.data?.content ?? null;
-
+  // Switching scope resets the local editor to that scope's draft.
+  const effective = json ?? draft.data?.payload ?? null;
   const jsonText = effective ? JSON.stringify(effective, null, 2) : '{}';
 
-
+  const selectScope = (next: ConfigScope) => {
+    setScope(next);
+    setJson(null);
+    setRollbackVersion(null);
+  };
 
   const setFromText = (text: string) => {
-
     try {
-
       setJson(JSON.parse(text) as Record<string, unknown>);
-
     } catch {
-
       /* invalid JSON — the textarea keeps the text; validation catches it */
-
     }
-
   };
-
-
 
   const validateAndSave = async () => {
-
     if (!effective) return;
-
     try {
-
-      const result = await validate.mutateAsync(effective);
-
-      if (result.valid === false) {
-
-        toast.error(`Validation failed: ${(result.errors ?? ['unknown']).join('; ')}`);
-
+      const result = await validate.mutateAsync({ scope, payload: effective });
+      if (result.ok === false) {
+        const issues = (result.issues ?? []).map((i) => `${i.path}: ${i.message}`);
+        toast.error(`Validation failed: ${(issues.length > 0 ? issues : ['unknown']).join('; ')}`);
         return;
-
       }
-
-      await saveDraft.mutateAsync(effective);
-
+      await saveDraft.mutateAsync({ scope, payload: effective });
+      setJson(null);
       toast.success('Draft validated and saved');
-
     } catch {
-
       /* the hook surfaced the error */
-
     }
-
   };
 
-
+  const versions = history.data ?? [];
+  const rollbackTarget = rollbackVersion ?? (versions.length > 0 ? versions[0].version : null);
 
   return (
-
     <>
-
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6}>
-
         <SectionTitle>Configuration lifecycle</SectionTitle>
-
         <Panel
-
           title="Config draft"
-
-          subtitle="Edit, validate, and publish org config. The satellite validates against its own schema."
-
+          subtitle="Edit, validate, and publish org config. The engine validates each scope against its own schema."
           action={
-
             <ActionCluster>
-
+              <ScopeSelect value={scope} onChange={(e) => selectScope(e.target.value as ConfigScope)} aria-label="Config scope">
+                {CONFIG_SCOPES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </ScopeSelect>
               <ActionButton
-
                 variant="secondary"
-
                 size="sm"
-
                 disabled={!effective || validate.isPending}
-
                 onClick={() => void validateAndSave()}
-
               >
-
                 Validate & save
-
               </ActionButton>
-
               <ActionButton
-
+                variant="secondary"
                 size="sm"
-
-                disabled={!effective || !draft.data?.content || publish.isPending}
-
-                onClick={() => setPublishConfirm(true)}
-
+                disabled={deleteDraft.isPending || !draft.data?.payload}
+                onClick={() => deleteDraft.mutate({ scope }, { onSuccess: () => { setJson(null); toast.success('Draft discarded'); } })}
               >
-
-                Publish
-
+                Discard
               </ActionButton>
-
+              <ActionButton
+                size="sm"
+                disabled={!draft.data?.payload || publish.isPending}
+                onClick={() => setPublishConfirm(true)}
+              >
+                Publish
+              </ActionButton>
             </ActionCluster>
-
           }
-
         >
-
-          <QueryView query={draft} skeleton={<Skeleton $h="180px" $r="12px" />} isEmpty={(d) => d.content === null} empty={{ title: 'No draft', description: 'The config draft loads from the engine — edit it as JSON and validate before publishing.' }}>
-
+          <QueryView query={draft} skeleton={<Skeleton $h="180px" $r="12px" />} isEmpty={(d) => d.payload === null} empty={{ title: 'No draft', description: `No ${scope} draft yet — edit the JSON below and save it as a draft.` }}>
             {() => (
-
               <ConfigStack>
-
                 <ConfigTextarea
-
                   value={jsonText}
-
                   onChange={(e) => setFromText(e.target.value)}
-
                   rows={Math.min(14, Math.max(6, jsonText.split('\n').length))}
-
                   spellCheck={false}
-
                   aria-label="Config draft JSON"
-
                 />
-
-                {draft.data?.validationErrors && draft.data.validationErrors.length > 0 && (
-
+                {draft.data?.validationIssues && draft.data.validationIssues.length > 0 && (
                   <ValidationErrors>
-
-                    {draft.data.validationErrors.map((err, i) => (
-
+                    {draft.data.validationIssues.map((err, i) => (
                       <ValidationError key={i}>{err}</ValidationError>
-
                     ))}
-
                   </ValidationErrors>
-
                 )}
-
               </ConfigStack>
-
             )}
-
           </QueryView>
-
         </Panel>
-
       </motion.div>
-
-
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={7}>
-
         <TwoColGrid>
-
           <Panel title="Version history" flush>
-
             <QueryView
-
               query={history}
-
               skeleton={<Skeleton $h="120px" $r="12px" />}
-
               isEmpty={(d) => d.length === 0}
-
-              empty={{ title: 'No published versions', description: 'Publish the draft to create version 1.' }}
-
+              empty={{ title: 'No published versions', description: `Publish the ${scope} draft to create version 1.` }}
             >
-
               {(rows) => (
-
                 <DataTable>
-
                   <DataHead>
-
-                    <DataCell $w="20%">Version</DataCell>
-
-                    <DataCell $w="24%">Published</DataCell>
-
-                    <DataCell $w="20%">Canary</DataCell>
-
-                    <DataCell $w="18%">Status</DataCell>
-
-                    <DataCell $w="18%" />
-
+                    <DataCell $w="24%">Version</DataCell>
+                    <DataCell $w="30%">Published</DataCell>
+                    <DataCell $w="24%">By</DataCell>
+                    <DataCell $w="22%" />
                   </DataHead>
-
                   {rows.slice(0, 6).map((v: ConfigVersion) => (
-
                     <DataRow key={v.version} $interactive={false}>
-
-                      <DataCell $w="20%">
-
-                        <CellMono>v{v.version}</CellMono>
-
-                      </DataCell>
-
                       <DataCell $w="24%">
-
+                        <CellMono>v{v.version}</CellMono>
+                      </DataCell>
+                      <DataCell $w="30%">
                         <CellMeta>{v.publishedAt?.slice(0, 10) ?? '—'}</CellMeta>
-
                       </DataCell>
-
-                      <DataCell $w="20%">
-
-                        <CellMeta>{v.canaryPercent !== null ? `${v.canaryPercent}%` : 'full'}</CellMeta>
-
+                      <DataCell $w="24%">
+                        <CellMeta>{v.publishedBy?.slice(0, 8) ?? '—'}</CellMeta>
                       </DataCell>
-
-                      <DataCell $w="18%">
-
-                        {v.status && <StatusPill tone={v.status === 'published' ? 'success' : 'neutral'} dot={false}>{v.status}</StatusPill>}
-
-                      </DataCell>
-
-                      <DataCell $w="18%">
-
+                      <DataCell $w="22%">
                         <ActionButton
-
                           variant="secondary"
-
                           size="sm"
-
                           disabled={rollback.isPending}
-
-                          onClick={() => setRollbackConfirm(true)}
-
+                          onClick={() => setRollbackVersion(v.version)}
                         >
-
                           <Undo2 size={12} strokeWidth={1.8} />
-
                           Rollback
-
                         </ActionButton>
-
                       </DataCell>
-
                     </DataRow>
-
                   ))}
-
                 </DataTable>
-
               )}
-
             </QueryView>
-
           </Panel>
-
-
 
           <Panel title="Delivery" flush>
-
             <QueryView
-
               query={delivery}
-
               skeleton={<Skeleton $h="120px" $r="12px" />}
-
               isEmpty={(d) => d.length === 0}
-
-              empty={{ title: 'No deliveries', description: 'Satellite delivery status appears here after publish.' }}
-
+              empty={{ title: 'No deliveries', description: 'Satellite delivery status appears here after the first publish.' }}
             >
-
               {(rows) => (
-
                 <DataTable>
-
                   <DataHead>
-
                     <DataCell $w="40%">Satellite</DataCell>
-
                     <DataCell $w="30%">Status</DataCell>
-
-                    <DataCell $w="30%">Version</DataCell>
-
+                    <DataCell $w="30%">Acked</DataCell>
                   </DataHead>
-
                   {rows.map((d) => (
-
                     <DataRow key={d.satellite} $interactive={false}>
-
                       <DataCell $w="40%">
-
                         <CellPrimary>{d.satellite}</CellPrimary>
-
                       </DataCell>
-
                       <DataCell $w="30%">
-
-                        <StatusPill tone={d.status === 'acked' || d.status === 'delivered' ? 'success' : 'warning'} dot={false}>
-
+                        <StatusPill tone={d.status === 'acked' ? 'success' : 'warning'} dot={false}>
                           {d.status ?? 'pending'}
-
                         </StatusPill>
-
                       </DataCell>
-
                       <DataCell $w="30%">
-
-                        <CellMeta>{d.version !== null ? `v${d.version}` : '—'}</CellMeta>
-
+                        <CellMeta>{d.ackedAt?.slice(0, 10) ?? '—'}</CellMeta>
                       </DataCell>
-
                     </DataRow>
-
                   ))}
-
                 </DataTable>
-
               )}
-
             </QueryView>
-
           </Panel>
-
         </TwoColGrid>
-
       </motion.div>
 
-
-
       <Modal
-
         open={publishConfirm}
-
         onClose={() => setPublishConfirm(false)}
-
         title="Publish this config?"
-
         width={480}
-
         footer={
-
           <>
-
             <ActionButton variant="secondary" onClick={() => setPublishConfirm(false)}>Cancel</ActionButton>
-
             <ActionButton
-
               disabled={publish.isPending}
-
               onClick={() => {
-
                 publish.mutate(
-
-                  { canaryPercent: canary > 0 ? canary : undefined },
-
-                  { onSuccess: () => { toast.success(`Config published${canary > 0 ? ` at ${canary}% canary` : ''}`); setPublishConfirm(false); } },
-
+                  { scope },
+                  { onSuccess: () => { toast.success('Config published'); setPublishConfirm(false); } },
                 );
-
               }}
-
             >
-
-              {canary > 0 ? `Publish at ${canary}%` : 'Publish'}
-
+              Publish
             </ActionButton>
-
           </>
-
         }
-
       >
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-
-            {canary > 0
-
-              ? `The config rolls out to ${canary}% of traffic first. If canary checks fail, the engine auto-rolls back.`
-
-              : 'The config publishes to all satellites at 100%. Consider a canary percentage for safer rollout.'}
-
-          </p>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-
-            {[0, 10, 25, 50, 100].map((step) => (
-
-              <button key={step} type="button" onClick={() => setCanary(step)}
-
-                style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${canary === step ? 'rgba(139, 143, 248, 0.6)' : 'rgba(255,255,255,0.10)'}`, background: canary === step ? 'rgba(139, 143, 248, 0.12)' : 'transparent', color: canary === step ? '#a5a8f5' : 'inherit', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
-
-                {step === 0 ? 'Full' : `${step}% canary`}
-
-              </button>
-
-            ))}
-
-          </div>
-
-        </div>
-
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          Publishes the saved <CellMono>{scope}</CellMono> draft as a new immutable version and
+          fans it out to all satellites. This is a privileged act — you will be asked for MFA.
+        </p>
       </Modal>
 
-
-
       <ConfirmDialog
-
-        open={rollbackConfirm}
-
-        title="Roll back the config?"
-
-        message="The engine creates a new version with the previous version's content — history is never rewritten."
-
+        open={rollbackVersion !== null}
+        title={`Roll back ${scope} to v${rollbackTarget}?`}
+        message="The engine creates a new version with that version's content — history is never rewritten. This is a privileged act — you will be asked for MFA."
         confirmLabel="Roll back"
-
         onConfirm={() => {
-
-          rollback.mutate({}, { onSuccess: () => toast.success('Config rolled back') });
-
-          setRollbackConfirm(false);
-
+          if (rollbackTarget === null) return;
+          rollback.mutate({ scope, toVersion: rollbackTarget }, {
+            onSuccess: () => { toast.success(`Config rolled back to v${rollbackTarget}`); setRollbackVersion(null); },
+          });
         }}
-
-        onCancel={() => setRollbackConfirm(false)}
-
+        onCancel={() => setRollbackVersion(null)}
       />
-
     </>
-
   );
-
 }
+
+const ScopeSelect = styled.select`
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.30);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+`;
 
 
 

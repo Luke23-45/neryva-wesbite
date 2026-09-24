@@ -63,7 +63,9 @@ export function ActivityView() {
 
   const actionFilter = params.action ?? 'all';
   const facets = useAuditFacets();
-  const audit = useAudit({ limit: PAGE_SIZE });
+  // The engine filters server-side by action prefix — pass the selected chip
+  // through instead of fetching everything and filtering client-side.
+  const audit = useAudit({ limit: PAGE_SIZE, ...(actionFilter !== 'all' ? { action: actionFilter } : {}) });
 
   const facetActions = (facets.data?.actions ?? []).slice(0, 6);
 
