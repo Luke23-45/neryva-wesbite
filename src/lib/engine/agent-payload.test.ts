@@ -133,6 +133,14 @@ describe('toEnginePayload', () => {
     expect(wire.tool_policy.tools.map((t) => t.execution_mode)).toEqual(['live', 'live', 'shadow']);
   });
 
+  it("passes assistant scope through unmapped and round-trips it (A4-23)", () => {
+    const def = consumer();
+    def.context_policy.memory_scope = 'assistant';
+    const wire = toEnginePayload(def);
+    expect(wire.context_policy.memory_scope).toBe('assistant');
+    expect(fromEnginePayload(wire).context_policy.memory_scope).toBe('assistant');
+  });
+
   it('omits blank instructions and blank guardrails (zod min(1) fails on empty strings)', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['a/b'];

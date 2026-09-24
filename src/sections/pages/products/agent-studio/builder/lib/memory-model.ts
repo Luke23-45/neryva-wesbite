@@ -2,9 +2,14 @@
  * C08 memory model — pure scope/history/policy grading (C08 PLAN §4).
  *
  * Engine truth mirrored here (cited, never re-derived per view):
- * - scope enum user|organization|conversation|none, default user
+ * - scope enum user|organization|conversation|assistant|none, default user
  *   (`engine/src/modules/assistants/validation.ts:63-66`; Studio contract
  *   `v1.schema.json:104-109`);
+ * - runtime scope semantics FL-1.5
+ *   (`engine/src/modules/conversations/mcp-authority.service.ts:2036-2144`);
+ *   A4-23: 'assistant' serves the run's own assistant-scoped rows
+ *   (scope_type='assistant', scope_id=assistant id) — fail-closed to zero
+ *   rows when the assistant is unresolvable.
  * - runtime scope semantics FL-1.5
  *   (`engine/src/modules/conversations/mcp-authority.service.ts:2036-2144`);
  * - served-history clamp min(pinned,20) (:2066-2067);
@@ -12,17 +17,17 @@
  * - org policy fail-open (`engine/src/modules/knowledge/memory.service.ts:60-133`).
  */
 
-export type MemoryScope = 'user' | 'conversation' | 'organization' | 'none';
+export type MemoryScope = 'user' | 'conversation' | 'organization' | 'assistant' | 'none';
 
 /** Engine enum order — `user` first because it is the default (never omitted). */
-export const MEMORY_SCOPE_ORDER: readonly MemoryScope[] = ['user', 'conversation', 'organization', 'none'];
+export const MEMORY_SCOPE_ORDER: readonly MemoryScope[] = ['user', 'conversation', 'organization', 'assistant', 'none'];
 
 /** Parse wire/unknown scope → engine enum; garbage resolves the default (C06 precedent). */
 export function parseMemoryScope(raw: unknown): MemoryScope {
-  return raw === 'conversation' || raw === 'organization' || raw === 'none' ? raw : 'user';
+  return raw === 'conversation' || raw === 'organization' || raw === 'assistant' || raw === 'none' ? raw : 'user';
 }
 
-export type ConsumerScope = 'user' | 'none' | 'conversation' | 'org';
+export type ConsumerScope = 'user' | 'none' | 'conversation' | 'org' | 'assistant';
 
 /** Console displays `org`; the wire carries `organization` (agent-payload mapping). */
 export function toConsumerScope(scope: MemoryScope): ConsumerScope {
@@ -41,6 +46,7 @@ export const SCOPE_CONSEQUENCES: Record<MemoryScope, string> = {
   user: 'Only this person\u2019s own memories — never visible across accounts. The engine default.',
   conversation: 'This thread only — nothing carries to the next chat.',
   organization: 'Org-wide memories — every run of this agent sees them.',
+  assistant: 'This agent\u2019s own memories — rows scoped to this assistant reach its runs. A deleted agent serves zero rows, never another scope.',
   none: 'No memories surface — the agent runs on the thread alone.',
 };
 

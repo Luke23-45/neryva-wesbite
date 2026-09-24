@@ -331,6 +331,16 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied }: { canW
               </DataTable>
             )}
           </QueryView>
+          {/* A4-81: honest disclosure — there is no credential connection
+              test. The engine never dials providers (the model gateway in
+              Agent Studio owns all provider HTTP, and the credential row
+              stores no endpoint), so a mistyped/revoked key surfaces at
+              run time. Stating it beats a fake "Test" button. */}
+          <Note style={{ marginTop: 12 }}>
+            No connection test is available for these credentials yet — a mistyped or revoked key is discovered
+            when a run calls the model. If a run fails on provider authentication, check the key at your
+            provider, then rotate the credential here.
+          </Note>
         </Panel>
       </motion.div>
 

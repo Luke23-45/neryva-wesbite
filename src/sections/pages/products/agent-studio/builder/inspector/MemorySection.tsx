@@ -95,6 +95,7 @@ export function MemorySection({
   const denied = setupDeniedCopy(role, 'setup:author');
   const orgPolicy = useOrgMemoryPolicy();
   const orgMemories = useMemories('organization');
+  const assistantMemories = useMemories('assistant', assistantId);
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
@@ -234,14 +235,20 @@ export function MemorySection({
     );
   }
 
-  // A4-23: assistant-scoped rows are NOT served to runs (the run-time memory
-  // scope is user, organization, conversation, none) — showing them under
-  // "IN SCOPE" would imply they reach the model. Org rows are the only
-  // library rows the run-time scope can select; user/conversation rows
-  // resolve per run and are deliberately not previewed here.
-  const previewRows = (orgMemories.data ?? []).slice(0, 4);
-  const previewPending = orgMemories.isPending;
-  const previewError = orgMemories.isError;
+  // A4-23: the preview shows exactly the library rows the pinned run-time
+  // scope can serve. 'assistant' serves this agent's own assistant-scoped
+  // rows (FL-1.5 assistant branch — fail-closed to zero when unresolvable);
+  // 'organization' serves org rows. Every other policy serves no library
+  // rows here: user rows resolve per account at run time, conversation rows
+  // live on the thread. Showing anything else under "IN SCOPE" would be
+  // the old lie (assistant rows previewed as served while no run read them).
+  const inAssistantPolicy = engineScope === 'assistant';
+  const inOrgPolicy = engineScope === 'organization';
+  const previewSource = inAssistantPolicy ? assistantMemories : orgMemories;
+  const previewActive = inAssistantPolicy || inOrgPolicy;
+  const previewRows = previewActive ? (previewSource.data ?? []).slice(0, 4) : [];
+  const previewPending = previewActive && previewSource.isPending;
+  const previewError = previewActive && previewSource.isError;
 
   return (
     <Wrap
@@ -300,8 +307,18 @@ export function MemorySection({
           <ToolMeta>Checking in-scope memories…</ToolMeta>
         ) : previewError ? (
           <Whisper $tone="amber">In-scope preview is unavailable — the policy above still saves.</Whisper>
+        ) : !previewActive ? (
+          <ToolMeta>
+            {engineScope === 'none'
+              ? 'No memories surface under this policy — the agent runs on the thread alone.'
+              : 'No library rows surface under this policy — they resolve at run time (per account, or on the thread).'}
+          </ToolMeta>
         ) : previewRows.length === 0 ? (
-          <ToolMeta>No org memories yet — an empty memory is a clean slate.</ToolMeta>
+          <ToolMeta>
+            {inAssistantPolicy
+              ? 'No assistant memories yet — add rows in the Memory library (Assistant scope) and this agent\u2019s runs will serve them.'
+              : 'No org memories yet — an empty memory is a clean slate.'}
+          </ToolMeta>
         ) : (
           <PreviewList>
             {previewRows.map((row) => (
@@ -317,7 +334,14 @@ export function MemorySection({
         <ToolMeta>{USER_PREVIEW_COPY}</ToolMeta>
         <ToolMeta>
           Thread memories live on the chat.{' '}
-          <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/memory' })}>
+          <TextButton
+            type="button"
+            onClick={() =>
+              inAssistantPolicy
+                ? navigate({ to: '/agent-studio/memory', search: { scope: 'assistant', scope_id: assistantId } })
+                : navigate({ to: '/agent-studio/memory' })
+            }
+          >
             Open the Memory library →
           </TextButton>
         </ToolMeta>

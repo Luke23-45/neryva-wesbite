@@ -10,7 +10,9 @@
  *   collapses: never→optional, on_effect→optional (effect class lives on the
  *   catalog row and escalates at authorize time), always→required.
  * - memory_scope org→organization on the wire (engine `user` tolerated on
- *   read, never offered in the picker — see ConsumerMemoryScope).
+ *   read, never offered in the picker — see ConsumerMemoryScope);
+ *   A4-23: `assistant` rides the wire unmapped and serves the run's own
+ *   assistant-scoped rows (engine FL-1.5 branch).
  * - instructions/model_params/budget_policy/brand ride version writes at top
  *   level (R-1 + G4: the DTOs admit them); BLANK instructions / guardrail
  *   policies are OMITTED (zod min(1) fails on ''); blank brand is omitted
@@ -24,7 +26,7 @@
 
 export type ConsumerApproval = 'never' | 'on_effect' | 'always';
 export type EngineApproval = 'required' | 'optional';
-export type ConsumerMemoryScope = 'none' | 'conversation' | 'org' | 'user';
+export type ConsumerMemoryScope = 'none' | 'conversation' | 'org' | 'user' | 'assistant';
 export type ToolAccess = 'read' | 'write';
 
 export type ToolExecutionMode = 'live' | 'shadow';
@@ -172,7 +174,7 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     throw new Error('model_policy.allowed_models: pick at least one allowed model');
   }
   const memoryScope = def.context_policy.memory_scope === 'org' ? 'organization' : def.context_policy.memory_scope;
-  if (!['none', 'conversation', 'organization', 'user'].includes(memoryScope)) {
+  if (!['none', 'conversation', 'organization', 'user', 'assistant'].includes(memoryScope)) {
     throw new Error(`context_policy.memory_scope: unknown scope "${def.context_policy.memory_scope}"`);
   }
   const tools = def.tools.map((tool, index) => {
@@ -324,13 +326,13 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     ? context.knowledge_sources.filter((s): s is string => typeof s === 'string')
     : base.context_policy.knowledge_sources;
 
-  // All 4 engine scopes round-trip (C08: `user` is the default and is offered,
+  // All 5 engine scopes round-trip (C08: `user` is the default and is offered,
   // never omitted). Unknown strings resolve the engine default, never a guess.
   const scopeRaw = str(context.memory_scope) ?? 'user';
   const memoryScope: ConsumerMemoryScope =
     scopeRaw === 'organization' || scopeRaw === 'org'
       ? 'org'
-      : scopeRaw === 'none' || scopeRaw === 'conversation' || scopeRaw === 'user'
+      : scopeRaw === 'none' || scopeRaw === 'conversation' || scopeRaw === 'user' || scopeRaw === 'assistant'
         ? scopeRaw
         : 'user';
 

@@ -17,8 +17,10 @@ import { SaveRow } from './shared';
  * Settings → Workspace (ledger T-2)
  *
  * - Every field saves through PATCH /console/org/:orgId/settings — name,
- *   region, support email, default project, retention, branding (color)
- *   and preferences (default model).
+ *   region, support email, default project, retention, branding (color).
+ *   (A4-80: the "Default model" preference was removed — the engine accepted
+ *   the key but nothing consumed it, so the field was write-only theater.
+ *   It returns if a real consumer lands; until then the UI says so plainly.)
  * - Brand color seeds from the org's saved branding; the logo is
  *   localStorage-backed until server-side asset storage lands (⛔ E-14),
  *   but it now rehydrates on mount (the old write-without-read bug).
@@ -57,15 +59,12 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
   const update = useUpdateOrgSettings();
 
   const branding = data.settings.branding ?? {};
-  const preferences = data.settings.preferences ?? {};
   const brandingColor = typeof branding.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(branding.color) ? branding.color : null;
-  const seededModel = typeof preferences.default_model === 'string' ? preferences.default_model : 'reasoner';
 
   const [name, setName] = useState(data.org.name);
   const [region, setRegion] = useState(data.org.region ?? '');
   const [supportEmail, setSupportEmail] = useState(data.settings.supportEmail ?? '');
   const [defaultProjectId, setDefaultProjectId] = useState(data.settings.defaultProjectId ?? '');
-  const [defaultModel, setDefaultModel] = useState(seededModel);
   const [retention, setRetention] = useState(String(data.org.retentionDays ?? 30));
 
   // Logo: rehydrated on mount (the old code wrote but never read back).
@@ -130,6 +129,10 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
       toast.error('Retention must be between 1 and 3650 days');
       return;
     }
+    // A4-80: the "Default model" preference is no longer sent — the engine
+    // persisted the key but nothing consumed it, so the field was write-only
+    // theater (200 + "saved" toast, value inert). Removed until a real
+    // consumer exists; the UI says so plainly below.
     update.mutate(
       {
         name: name.trim(),
@@ -138,7 +141,6 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
         default_project_id: defaultProjectId || undefined,
         retention_days: Math.round(retentionDays),
         branding: { color },
-        preferences: { default_model: defaultModel },
       },
       { onSuccess: () => toast.success('Workspace settings saved') },
     );
@@ -315,10 +317,11 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
           </SelectField>
           <TextInput
             label="Default model"
-            value={defaultModel}
-            onChange={(e) => setDefaultModel(e.target.value)}
-            hint="reasoner | instant | researcher"
-            disabled={!canManage}
+            value=""
+            onChange={() => {}}
+            hint="Not configurable yet — each agent uses its own configured provider and model (see the agent's Configuration)."
+            placeholder="Not configurable yet"
+            disabled
           />
           <TextInput
             label="Conversation retention (days)"

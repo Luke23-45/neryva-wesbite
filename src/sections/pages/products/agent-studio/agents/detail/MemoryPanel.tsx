@@ -112,7 +112,7 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
   );
 }
 
-function scopeLabel(scope: 'user' | 'conversation' | 'organization' | 'none'): string {
+function scopeLabel(scope: 'user' | 'conversation' | 'organization' | 'assistant' | 'none'): string {
   return scope.charAt(0).toUpperCase() + scope.slice(1);
 }
 

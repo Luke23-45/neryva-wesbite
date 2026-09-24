@@ -193,13 +193,15 @@ export function MemoryView() {
           )
         )}
       </div>
-      {/* A4-23: assistant-scoped rows are stored and listable but never served
-          to runs — the run-time memory scope (user, organization, conversation,
-          none) has no assistant branch. Stated here, not implied. */}
+      {/* A4-23: assistant-scoped rows ARE served — to runs of the agent they
+          are scoped to, when that agent's memory scope policy is 'Assistant'
+          (engine FL-1.5 assistant branch; fail-closed to zero rows when the
+          agent is unresolvable). Any other policy never reads them. */}
       {scope === 'assistant' && (
         <p style={{ fontSize: 12, opacity: 0.75, margin: '0 0 12px' }}>
-          Assistant-scoped rows are stored and listable, but no run ever reads them — the run-time
-          memory scope is user, organization, conversation, or none.
+          Assistant-scoped rows reach the runs of the agent they belong to — but only when that
+          agent&apos;s memory scope is set to Assistant (see the agent&apos;s Memory settings). Other
+          policies never read them.
         </p>
       )}
 
