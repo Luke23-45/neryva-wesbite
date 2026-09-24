@@ -76,6 +76,17 @@ const Muted = styled.span`
   opacity: 0.55;
 `;
 
+/** A4-10 — the terminal failure reason is visible text (truncated), not a
+ *  hover-only tooltip: touch and keyboard users get the actionable reason
+ *  too; the full text stays on hover. */
+const FailureReason = styled.span`
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
 const RowActions = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -265,7 +276,9 @@ export function KnowledgeView() {
                   <DataCell $w="16%">
                     <StatusPill tone={uploadTone[u.status]}>{u.status}</StatusPill>
                   </DataCell>
-                  <DataCell $w="18%">{u.lastError ? <span title={u.lastError}>Failed — hover for reason</span> : <Muted>—</Muted>}</DataCell>
+                  <DataCell $w="18%">
+                    {u.lastError ? <FailureReason title={u.lastError}>{u.lastError}</FailureReason> : <Muted>—</Muted>}
+                  </DataCell>
                   <DataCell $w="6%" $align="right">
                     {TERMINAL_UPLOAD.has(u.status) ? (
                       <IconBtn type="button" aria-label={`Dismiss ${u.filename}`} title="Dismiss" onClick={() => dismiss(u.sessionId)}>
@@ -574,10 +587,15 @@ function UploadModal({
       }
       if (authorized > 0) {
         toast.success(`${authorized} upload${authorized === 1 ? '' : 's'} authorized — tracking ingestion to READY`);
+        setRows([]);
+        setBusy(false);
+        onClose();
+      } else {
+        // A4-09 — nothing was authorized: keep the selection and the modal
+        // open so the user can address the refusal (e.g. shrink the file)
+        // and retry without reselecting everything.
+        setBusy(false);
       }
-      setRows([]);
-      setBusy(false);
-      onClose();
     })();
   };
 
