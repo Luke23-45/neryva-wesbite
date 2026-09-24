@@ -7,20 +7,27 @@
  *
  *   node scripts/generate-api-catalog.mjs
  *
- * The contract lives one workspace up; a missing file exits with a clear
- * error instead of silently regenerating an empty catalog.
+ * The contract lives at neryva-product/agent-studio/contracts/openapi/ (NEW-11
+ * fixed two path errors: workspace root is ~/workspace/neryva/, not
+ * ~/workspace/products/, and the runtime dir is agent-studio, not
+ * neryva_agent_studio). A missing file exits with a clear error instead of
+ * silently regenerating an empty catalog. Until the explorer-target product
+ * decision lands, the contract does not exist, so regeneration is blocked.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const contractPath = resolve(here, '../../../products/neryva_agent_studio/contracts/openapi/openapi.v1.json');
+// NEW-11: two path errors fixed — the workspace root here is ~/workspace/neryva/
+// (not ~/workspace/products/) and the runtime dir is agent-studio (hyphen),
+// not neryva_agent_studio.
+const contractPath = resolve(here, '../../neryva-product/agent-studio/contracts/openapi/openapi.v1.json');
 const outPath = resolve(here, '../src/neryva_data/products/agent_studio/api-catalog.json');
 
 if (!existsSync(contractPath)) {
   console.error(`OpenAPI contract not found at ${contractPath}`);
-  console.error('Clone products/neryva_agent_studio next to console/ and retry.');
+  console.error('Provide neryva-product/agent-studio/contracts/openapi/openapi.v1.json and retry.');
   process.exit(1);
 }
 
@@ -90,7 +97,7 @@ for (const [path, ops] of Object.entries(contract.paths ?? {})) {
 endpoints.sort((a, b) => (a.tag === b.tag ? a.path.localeCompare(b.path) : a.tag.localeCompare(b.tag)));
 
 const catalog = {
-  generatedFrom: 'products/neryva_agent_studio/contracts/openapi/openapi.v1.json',
+  generatedFrom: 'neryva-product/agent-studio/contracts/openapi/openapi.v1.json',
   openapi: contract.openapi,
   title: contract.info?.title ?? 'Neryva Agent Studio',
   version: contract.info?.version ?? 'v1',

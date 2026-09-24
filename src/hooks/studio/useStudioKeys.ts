@@ -9,6 +9,12 @@ import { toastEngineError } from '@lib/engine/errors';
 import { runWithStepUp } from '@lib/engine/stepup';
 import { useOrg } from '@/Context/OrgContext';
 
+export interface KeyDetailEvent {
+  action: string | null;
+  actorId: string | null;
+  createdAt: string | null;
+}
+
 export interface KeyDetail {
   id: string;
   name: string | null;
@@ -17,10 +23,14 @@ export interface KeyDetail {
   scopes: string[];
   revoked: boolean | null;
   expiresAt: string | null;
+  /** Days until expiry as computed by the engine (null when the key never expires). */
+  daysToExpiry: number | null;
   createdAt: string | null;
   lastUsedAt: string | null;
   usageCount: number | null;
   projectId: string | null;
+  /** ≤50 most recent `key.*` audit rows for this key (engine K-3). */
+  events: KeyDetailEvent[];
 }
 
 function str(value: unknown): string | null {
@@ -37,7 +47,15 @@ export function parseKeyDetail(raw: unknown): KeyDetail | null {
   if (!id) {
     return null;
   }
-  const binding = typeof nested.binding === 'object' && nested.binding !== null ? (nested.binding as Record<string, unknown>) : nested;
+  // The engine returns `project_binding: { project_id } | null` (keys.service
+  // detail, K-3). `binding` is kept only as a legacy fallback — reading it
+  // first was NEW-1 (drawer always showed "Not bound").
+  const projectBinding =
+    typeof nested.project_binding === 'object' && nested.project_binding !== null
+      ? (nested.project_binding as Record<string, unknown>)
+      : null;
+  const legacyBinding = typeof nested.binding === 'object' && nested.binding !== null ? (nested.binding as Record<string, unknown>) : null;
+  const rawEvents = Array.isArray(nested.events) ? nested.events : [];
   return {
     id,
     name: str(nested.name),
@@ -46,10 +64,16 @@ export function parseKeyDetail(raw: unknown): KeyDetail | null {
     scopes: Array.isArray(nested.scopes) ? nested.scopes.filter((s): s is string => typeof s === 'string') : [],
     revoked: typeof nested.revoked === 'boolean' ? nested.revoked : null,
     expiresAt: str(nested.expires_at) ?? str(nested.expiresAt),
+    daysToExpiry:
+      typeof nested.days_to_expiry === 'number' ? nested.days_to_expiry : typeof nested.daysToExpiry === 'number' ? nested.daysToExpiry : null,
     createdAt: str(nested.created_at) ?? str(nested.createdAt),
     lastUsedAt: str(nested.last_used_at) ?? str(nested.lastUsedAt),
     usageCount: typeof nested.usage_count === 'number' ? nested.usage_count : typeof nested.usageCount === 'number' ? nested.usageCount : null,
-    projectId: str(binding.project_id) ?? str(binding.projectId) ?? str(nested.project_id),
+    projectId:
+      str(projectBinding?.project_id) ?? str(projectBinding?.projectId) ?? str(legacyBinding?.project_id) ?? str(legacyBinding?.projectId) ?? str(nested.project_id),
+    events: rawEvents
+      .filter((e): e is Record<string, unknown> => typeof e === 'object' && e !== null)
+      .map((e) => ({ action: str(e.action), actorId: str(e.actor_id) ?? str(e.actorId), createdAt: str(e.created_at) ?? str(e.createdAt) })),
   };
 }
 
@@ -87,12 +111,20 @@ export function useUpdateKey() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { keyId: string; name?: string; scopes?: string[] }) => {
-      const body: Record<string, unknown> = {};
-      if (input.name !== undefined) body.name = input.name;
-      if (input.scopes !== undefined) body.scopes = input.scopes;
-      return engine(`/console/org/${orgId}/keys/${input.keyId}`, { method: 'PATCH', body });
-    },
+    // NEW-5: the engine requires @RequireStepUp() on PATCH /keys/:keyId —
+    // a raw mutation meant every rename failed with step_up_required.
+    // runWithStepUp acquires the MFA proof on demand, exactly like rotate.
+    mutationFn: async (input: { keyId: string; name?: string; scopes?: string[] }) =>
+      runWithStepUp('Rename API key', (proof) => {
+        const body: Record<string, unknown> = {};
+        if (input.name !== undefined) body.name = input.name;
+        if (input.scopes !== undefined) body.scopes = input.scopes;
+        return engine(`/console/org/${orgId}/keys/${input.keyId}`, {
+          method: 'PATCH',
+          body,
+          ...(proof ? { mfaProof: proof } : {}),
+        });
+      }),
     onSuccess: () => // Shares the engine list cache so issue/revoke/rotate stay in step
       // with the /platform key surfaces.
       void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] }),

@@ -118,22 +118,23 @@ export function ApiView() {
     return out;
   }, []);
 
-  const active = catalog.endpoints.find((e) => e.id === activeId) ?? catalog.endpoints[0];
+  const active: CatalogEndpoint | undefined =
+    catalog.endpoints.find((e) => e.id === activeId) ?? catalog.endpoints[0];
 
-  const paramKey = (p: CatalogParam) => `${active.id}|${p.in}|${p.name}`;
+  const paramKey = (p: CatalogParam) => `${active?.id ?? ''}|${p.in}|${p.name}`;
   const paramValue = (p: CatalogParam) => paramValues[paramKey(p)] ?? '';
 
   const builtPath = useMemo(() => {
     // Self-contained: reads paramValues directly (via the same key scheme as
     // paramValue) so the dependency list stays honest — closing over the
     // per-render paramValue helper would defeat the memo.
-    const valueOf = (p: CatalogParam) => paramValues[`${active.id}|${p.in}|${p.name}`] ?? '';
-    let path = active.path;
-    for (const p of active.params.filter((x) => x.in === 'path')) {
+    const valueOf = (p: CatalogParam) => paramValues[`${active?.id ?? ''}|${p.in}|${p.name}`] ?? '';
+    let path = active?.path ?? '';
+    for (const p of (active?.params ?? []).filter((x) => x.in === 'path')) {
       const value = valueOf(p).trim();
       path = path.replace(`{${p.name}}`, value ? encodeURIComponent(value) : `{${p.name}}`);
     }
-    const query = active.params
+    const query = (active?.params ?? [])
       .filter((x) => x.in === 'query')
       .filter((x) => valueOf(x).trim() !== '')
       .map((x) => `${encodeURIComponent(x.name)}=${encodeURIComponent(valueOf(x).trim())}`);
@@ -141,15 +142,15 @@ export function ApiView() {
   }, [active, paramValues]);
 
   const bodyTextFor = useMemo(() => {
-    if (!active.body) return undefined;
+    if (!active?.body) return undefined;
     return bodyText[active.id] ?? JSON.stringify(Object.fromEntries(active.body.fields.map((f) => [f.name, defaultForType(f.type)])), null, 2);
   }, [active, bodyText]);
 
-  const setBody = (next: string) => setBodyText((m) => ({ ...m, [active.id]: next }));
+  const setBody = (next: string) => setBodyText((m) => ({ ...m, [active?.id ?? '']: next }));
 
   const curl = useMemo(() => {
-    const lines = [`curl -X ${active.method.toUpperCase()} "https://api.neryva.ai${builtPath}" \\`, `  -H "Authorization: Bearer nv_live_..."`];
-    if (active.body) {
+    const lines = [`curl -X ${(active?.method ?? 'get').toUpperCase()} "https://api.neryva.ai${builtPath}" \\`, `  -H "Authorization: Bearer nrv_live_..."`];
+    if (active?.body) {
       lines.push(`  -H "Content-Type: application/json" \\`);
       lines.push(`  -d '${bodyTextFor ?? '{}'}'`);
     }
@@ -157,6 +158,7 @@ export function ApiView() {
   }, [active, builtPath, bodyTextFor]);
 
   const send = async () => {
+    if (!active) return;
     if (active.method !== 'get') {
       toast.error('Try-it is GET-only in this explorer — mutating calls use the curl');
       return;
@@ -188,13 +190,27 @@ export function ApiView() {
   const code = tab === 'request' ? curl : result ? `HTTP ${result.status} ${result.statusText} · ${result.ms}ms\n\n${result.body}` : 'Send the request to see the live response here.';
   const responseReady = tab === 'response' && result !== null;
 
+  // NEW-7: an empty catalog used to crash on `active.path` (active undefined).
+  if (!active) {
+    return (
+      <ViewShell>
+        <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
+          <ViewHeader>
+            <ViewTitle>API explorer</ViewTitle>
+            <ViewSubtitle>No endpoints in the API catalog.</ViewSubtitle>
+          </ViewHeader>
+        </ViewHeaderRow>
+      </ViewShell>
+    );
+  }
+
   return (
     <ViewShell>
       <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewHeader>
           <ViewTitle>API explorer</ViewTitle>
           <ViewSubtitle>
-            Generated from the runtime's OpenAPI contract — {catalog.endpointCount} endpoints. Build a request,
+            Static endpoint catalog — {catalog.endpointCount} endpoints. Build a request,
             copy the curl, or fire GETs live.
           </ViewSubtitle>
         </ViewHeader>
@@ -321,7 +337,7 @@ export function ApiView() {
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Paste an org API key (nv_live_…) — stays in this tab"
+                  placeholder="Paste an org API key (nrv_live_…) — stays in this tab"
                   aria-label="API key for live requests"
                   autoComplete="off"
                 />
@@ -359,10 +375,12 @@ function defaultForType(type: string): string {
 }
 
 function pretty(text: string): string {
+  const TRUNCATE_AT = 50_000;
+  const limit = (s: string) => (s.length > TRUNCATE_AT ? `${s.slice(0, TRUNCATE_AT)}\n… [truncated at ${TRUNCATE_AT.toLocaleString()} chars]` : s);
   try {
-    return JSON.stringify(JSON.parse(text), null, 2).slice(0, 50_000);
+    return limit(JSON.stringify(JSON.parse(text), null, 2));
   } catch {
-    return text.slice(0, 50_000);
+    return limit(text);
   }
 }
 

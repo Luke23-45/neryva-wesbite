@@ -507,12 +507,16 @@ export function SettingsApiKeys() {
 function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
   const detail = useKeyDetail(keyId);
   const projects = useProjects();
+  const keys = useKeys();
   const update = useUpdateKey();
   const bind = useBindKey();
   const unbind = useUnbindKey();
   const [rename, setRename] = useState<string | null>(null);
 
   const info = detail.data;
+  // createdAt fallback: the detail endpoint only recently started returning
+  // it (keys.service K-3); the list row has always carried it.
+  const listCreatedAt = keys.data?.keys.find((k) => k.id === keyId)?.createdAt ?? null;
 
   return (
     <Modal
@@ -559,9 +563,12 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
             <DetailLabel>Scopes</DetailLabel>
             <DetailValue>{info.scopes.length > 0 ? info.scopes.join(', ') : '—'}</DetailValue>
             <DetailLabel>Created</DetailLabel>
-            <DetailValue>{info.createdAt?.slice(0, 10) ?? '—'}</DetailValue>
+            <DetailValue>{info.createdAt?.slice(0, 10) ?? listCreatedAt?.slice(0, 10) ?? '—'}</DetailValue>
             <DetailLabel>Expires</DetailLabel>
-            <DetailValue>{info.expiresAt ? info.expiresAt.slice(0, 10) : 'no expiry'}</DetailValue>
+            <DetailValue>
+              {info.expiresAt ? info.expiresAt.slice(0, 10) : 'no expiry'}
+              {info.daysToExpiry !== null && info.daysToExpiry >= 0 ? ` (${info.daysToExpiry}d left)` : ''}
+            </DetailValue>
             <DetailLabel>Last used</DetailLabel>
             <DetailValue>{info.lastUsedAt ? info.lastUsedAt.slice(0, 10) : 'never'}</DetailValue>
             <DetailLabel>Requests</DetailLabel>
@@ -593,6 +600,22 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
               <BindingHint aria-hidden="true"><FolderInput size={13} strokeWidth={1.8} /></BindingHint>
             </BindingRow>
             <BindingNote>Bound keys only act within their project — the engine enforces it on every call.</BindingNote>
+          </BindingBox>
+
+          <BindingBox>
+            <DetailLabel>Recent activity</DetailLabel>
+            {info.events.length === 0 ? (
+              <BindingNote>No recorded key events yet.</BindingNote>
+            ) : (
+              <ActivityList>
+                {info.events.slice(0, 5).map((e, i) => (
+                  <ActivityRow key={`${e.action}-${e.createdAt}-${i}`}>
+                    <ActivityAction>{e.action ?? '—'}</ActivityAction>
+                    <ActivityDate>{e.createdAt?.slice(0, 10) ?? '—'}</ActivityDate>
+                  </ActivityRow>
+                ))}
+              </ActivityList>
+            )}
           </BindingBox>
         </DetailStack>
       )}
@@ -1177,6 +1200,31 @@ const BindingNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.micro};
   color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.5;
+`;
+
+const ActivityList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ActivityRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+`;
+
+const ActivityAction = styled.span`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-family: ui-monospace, monospace;
+`;
+
+const ActivityDate = styled.span`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  white-space: nowrap;
 `;
 
 const CreatedTitle = styled.div`

@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "products/neryva_agent_studio/contracts/openapi/openapi.v1.json",
+  "generatedFrom": "neryva-product/agent-studio/contracts/openapi/openapi.v1.json",
   "openapi": "3.1.0",
   "title": "Neryva Agent Studio",
   "version": "v1",
