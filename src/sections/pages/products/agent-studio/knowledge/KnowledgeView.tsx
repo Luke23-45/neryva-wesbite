@@ -764,7 +764,11 @@ function PreviewModal({ target, onClose }: { target: { id: string; slug: string 
         isEmpty={(p) => p === null}
         empty={{ title: 'Preview unavailable', description: 'The stored text could not be read.' }}
       >
-        {(doc) => (
+        {(doc) => {
+          // Type guard only: isEmpty already renders the empty state for
+          // null, so children never receives it at runtime.
+          if (!doc) return null;
+          return (
           <div>
             <HitMeta>
               <Mono>{doc.title ?? doc.sourceSlug}</Mono>
@@ -796,7 +800,8 @@ function PreviewModal({ target, onClose }: { target: { id: string; slug: string 
               </>
             )}
           </div>
-        )}
+          );
+        }}
       </QueryView>
     </Modal>
   );
