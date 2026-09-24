@@ -74,6 +74,12 @@ const EmptyNote = styled.div`
   line-height: 1.6;
 `;
 
+/** Per-entry remediation for pins that refuse publish (mirrors the builder). */
+const PinFix = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  margin-top: 4px;
+`;
+
 /**
  * Dedicated Tools section on the agent detail page (C06 PLAN.md §3).
  * READ-ONLY by contract — entries, modes, and pins live in the builder Tools
@@ -137,6 +143,9 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
                   <span>
                     {`${builtin ? 'in_process' : (row?.effectClass ?? 'effect unknown')} · approval ${verdict.mode}${verdict.source === 'catalog' ? ' (row escalates)' : ''} · ${entry.access}${entry.execution_mode === 'shadow' ? ' · simulated, executes nothing' : ''}`}
                   </span>
+                  {pin.kind === 'disabled' && (
+                    <PinFix>The catalog row is disabled — publish refuses. Enable it in the Tools library or unbind it in the builder.</PinFix>
+                  )}
                 </EntryRow>
               );
             })}
