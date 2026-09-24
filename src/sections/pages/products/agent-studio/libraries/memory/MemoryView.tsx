@@ -320,7 +320,7 @@ export function MemoryView() {
 
       <MemoryDetailModal item={detail} onClose={() => setDetail(null)} />
       <MemoryComposerModal
-        key={editing ? `edit-${editing.id}` : 'new'}
+        key={`${composerOpen ? 'open' : 'closed'}-${editing ? `edit-${editing.id}` : 'new'}`}
         open={composerOpen}
         editing={editing}
         onClose={() => {
