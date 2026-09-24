@@ -4,7 +4,7 @@ import { Panel } from '@components/common/ui/Panel';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
-import { QueryView } from '@components/common/ui/AsyncStates';
+import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, KpiGrid, SectionTitle } from '@components/common/ui/ViewLayout';
 import {
@@ -21,7 +21,7 @@ import { useAssistants } from '@hooks/studio/useAssistants';
 import { parseOverviewKpis, parseSeries, rangeDates, useUsageOverview, useUsageSeries } from '@hooks/engine/usage';
 import { useUrlState } from '@lib/useUrlState';
 
-import { ChartWrap } from './AnalyticsView.styles';
+import { ChartWrap, LegendRow, LegendItem, LegendSwatch } from './AnalyticsView.styles';
 
 /**
  * Analytics (ledger G-3) — real metering KPIs and series from the engine's
@@ -51,6 +51,15 @@ export function AnalyticsView() {
 
   const kpis = parseOverviewKpis(overview.data, 4);
   const chart = parseSeries(series.data);
+  // One source of truth for the chart's series — the legend renders from the
+  // same definitions so a near-zero line (e.g. cost on an events-scale axis)
+  // is still identifiable (P6-AN-28; mirrors UsageExplorer P6-US-26).
+  const seriesDefs = chart.valueKeys.map((key, i) => ({
+    dataKey: key,
+    name: key.replace(/_/g, ' '),
+    color: SERIES_COLORS[i % SERIES_COLORS.length],
+    gradientId: `analytics-grad-${key}`,
+  }));
 
   return (
     <ViewShell>
@@ -92,15 +101,28 @@ export function AnalyticsView() {
         >
           <ChartWrap>
             {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
-              <StudioAreaChart
-                data={chart.points}
-                series={chart.valueKeys.map((key, i) => ({
-                  dataKey: key,
-                  name: key.replace(/_/g, ' '),
-                  color: SERIES_COLORS[i % SERIES_COLORS.length],
-                  gradientId: `analytics-grad-${key}`,
-                }))}
-                height={280}
+              <>
+                <LegendRow aria-label="Chart series">
+                  {seriesDefs.map((s) => (
+                    <LegendItem key={s.dataKey}>
+                      <LegendSwatch $color={s.color} />
+                      {s.name}
+                    </LegendItem>
+                  ))}
+                </LegendRow>
+                <StudioAreaChart
+                  data={chart.points}
+                  series={seriesDefs}
+                  height={280}
+                />
+              </>
+            ) : series.isPending ? (
+              <Skeleton $h="280px" $r="12px" />
+            ) : series.isError ? (
+              <ErrorState
+                title="Couldn’t load the usage chart"
+                message={(series.error as Error).message}
+                onRetry={() => void series.refetch()}
               />
             ) : (
               <ChartEmpty>No series in this window yet — the chart fills as events flow through the engine.</ChartEmpty>

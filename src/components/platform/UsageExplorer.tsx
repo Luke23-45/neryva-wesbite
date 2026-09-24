@@ -13,7 +13,7 @@ import { Download } from 'lucide-react';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { Segmented } from '@components/common/ui/Segmented';
-import { QueryView } from '@components/common/ui/AsyncStates';
+import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { engineDownload } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
@@ -238,6 +238,12 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
           </>
         ) : series.isPending ? (
           <Skeleton $h="220px" $r="10px" />
+        ) : series.isError ? (
+          <ErrorState
+            title="Couldn’t load the usage chart"
+            message={(series.error as Error).message}
+            onRetry={() => void series.refetch()}
+          />
         ) : (
           <EmptyChart>No usage recorded in this period yet — charts fill as metered events flow through the engine.</EmptyChart>
         )}
