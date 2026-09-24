@@ -235,13 +235,17 @@ function ledgerRows(raw: unknown): LedgerRowView[] {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       continue;
     }
-    const detail = Object.entries(value as Record<string, unknown>)
-      .filter(([, v]) => typeof v === 'number' || typeof v === 'string')
+    const v = value as Record<string, unknown>;
+    const detail = Object.entries(v)
+      .filter(([k, val]) => k !== 'product' && (typeof val === 'number' || typeof val === 'string'))
       .slice(0, 5)
-      .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'number' && k.includes('usd') ? formatUsd(v) : String(v)}`)
+      .map(([k, val]) => `${k.replace(/_/g, ' ')}: ${typeof val === 'number' && k.includes('usd') ? formatUsd(val) : String(val)}`)
       .join(' · ');
     if (detail) {
-      rows.push({ key, product: key.replace(/_/g, ' '), detail });
+      // The engine returns ledgers as an array of per-product objects
+      // ({product, ...}); the array index is not a product name.
+      const productLabel = typeof v.product === 'string' && v.product ? v.product.replace(/_/g, ' ') : key.replace(/_/g, ' ');
+      rows.push({ key, product: productLabel, detail });
     }
   }
   return rows;

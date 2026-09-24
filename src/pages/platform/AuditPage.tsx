@@ -1,6 +1,6 @@
 /**
  * /platform/audit — ONE consolidated viewer over the engine audit chain:
- * actor/action filters, time window, cursor pagination, and CSV/JSON
+ * actor/action filters, time window, cursor pagination, and NDJSON
  * export (SIEM-ready) — replacing the three static per-product viewers.
  *
  * The engine's audit query is cursor-paginated ({ events, nextCursor }) with
@@ -9,7 +9,7 @@
  * dropdown filters the loaded page client-side.
  */
 import { useState } from 'react';
-import { Download, FileJson, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { engineDownload } from '@lib/engine/client';
 import { useAudit, useAuditFacets, type AuditEventRow } from '@hooks/engine/queries';
 import { useOrgRequired } from '@hooks/engine/queries';
@@ -92,11 +92,9 @@ export default function AuditPage() {
                 style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}
               />
             </ToolbarGroup>
-            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'csv', ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
-              <Download size={12} /> CSV
-            </ActionButton>
-            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { format: 'json', ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
-              <FileJson size={12} /> JSON
+            {/* The engine export is NDJSON-only (no format param); label it honestly. */}
+            <ActionButton variant="ghost" size="sm" onClick={() => void engineDownload(`/console/org/${orgId}/audit/export`, { ...(action ? { action } : {}), ...(from ? { from: new Date(from).toISOString() } : {}) })}>
+              <Download size={12} /> Export NDJSON
             </ActionButton>
           </Toolbar>
         }
