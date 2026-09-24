@@ -165,7 +165,8 @@ export function TeamsView() {
           Members
         </SectionTitle>
         <Panel flush>
-          <QueryView query={members} skeleton={<Skeleton $h="240px" $r="12px" />} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members yet', description: 'Invite teammates to collaborate.' }}>
+          {/* P5-T4: every org has an owner — the roster is never empty. */}
+          <QueryView query={members} skeleton={<Skeleton $h="240px" $r="12px" />}>
             {(data) => (
               <DataTable>
                 <DataHead>
@@ -224,7 +225,7 @@ export function TeamsView() {
         </Panel>
       </motion.div>
 
-      {(invites.data?.invites.filter((i) => i.status === 'pending').length ?? 0) > 0 && (
+      {(invites.data?.invites.filter((i) => i.status === 'pending' || i.status === 'expired').length ?? 0) > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
           <SectionTitle>
             <Mail size={14} strokeWidth={1.7} />
@@ -260,15 +261,16 @@ function shortDate(iso: string): string {
 
 // ─── Pending invites (readable by every role; actions owner/admin only) ────
 function PendingInvitesCard() {
-  const { canManageMembers } = useOrg();
   const invites = useInvites();
   const resend = useResendInvite();
   const revoke = useRevokeInvite();
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null);
+  const [resendTarget, setResendTarget] = useState<{ id: string; email: string } | null>(null);
   // Rotation-only re-access (team-loop §1B): Copy is never re-offered on a
   // stored row — a manual resend rotates and shows the new link once here.
   const [rotated, setRotated] = useState<{ email: string; accept_url: string } | null>(null);
-  const pending = (invites.data?.invites ?? []).filter((i) => i.status === 'pending');
+  // P5-T5: expired invites stay actionable — resend revives them server-side.
+  const pending = (invites.data?.invites ?? []).filter((i) => i.status === 'pending' || i.status === 'expired');
 
   return (
     <>
@@ -292,60 +294,71 @@ function PendingInvitesCard() {
         {pending.map((p) => (
           <PendingRow key={p.id}>
             <div>
-              <PendingEmail>{p.email}</PendingEmail>
+              <PendingEmail>{p.email}{p.status === 'expired' && ' · expired'}</PendingEmail>
               <PendingMeta>
                 {p.role} · expires {shortDate(p.expiresAt)}
               </PendingMeta>
             </div>
             <PendingActions>
-              {canManageMembers ? (
-                <>
-                  <ActionButton
-                    size="sm"
-                    disabled={resend.isPending}
-                    title="Rotate the token and re-email the fresh link"
-                    onClick={() => resend.mutate({ inviteId: p.id, delivery: 'email' }, { onSuccess: () => toast.success(`Invite re-sent to ${p.email}`) })}
-                  >
-                    Resend
-                  </ActionButton>
-                  <ActionButton
-                    variant="secondary"
-                    size="sm"
-                    disabled={resend.isPending}
-                    title="Rotate the token and show the new link once"
-                    onClick={() =>
-                      resend.mutate(
-                        { inviteId: p.id, delivery: 'manual' },
-                        {
-                          onSuccess: (result) => {
-                            if (result.accept_url) {
-                              setRotated({ email: p.email, accept_url: result.accept_url });
-                            } else {
-                              toast.success(`Invite re-sent to ${p.email}`);
-                            }
-                          },
-                        },
-                      )
-                    }
-                  >
-                    Link
-                  </ActionButton>
-                  <ActionButton
-                    variant="secondary"
-                    size="sm"
-                    disabled={revoke.isPending}
-                    onClick={() => setRevokeTarget({ id: p.id, email: p.email })}
-                  >
-                    Revoke
-                  </ActionButton>
-                </>
-              ) : (
-                <PendingMeta>Awaiting owner/admin action</PendingMeta>
-              )}
+              {/* P5-T2: this card only renders when the invite list loads, which
+                  is owner/admin-only server-side — the non-manager fallback was
+                  unreachable. Actions render unconditionally here. */}
+              <ActionButton
+                size="sm"
+                disabled={resend.isPending}
+                title="Rotate the token and re-email the fresh link"
+                onClick={() => setResendTarget({ id: p.id, email: p.email })}
+              >
+                Resend
+              </ActionButton>
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                disabled={resend.isPending}
+                title="Rotate the token and show the new link once"
+                onClick={() =>
+                  resend.mutate(
+                    { inviteId: p.id, delivery: 'manual' },
+                    {
+                      onSuccess: (result) => {
+                        if (result.accept_url) {
+                          setRotated({ email: p.email, accept_url: result.accept_url });
+                        } else {
+                          toast.success(`Invite re-sent to ${p.email}`);
+                        }
+                      },
+                    },
+                  )
+                }
+              >
+                Link
+              </ActionButton>
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                disabled={revoke.isPending}
+                onClick={() => setRevokeTarget({ id: p.id, email: p.email })}
+              >
+                Revoke
+              </ActionButton>
             </PendingActions>
           </PendingRow>
         ))}
       </PendingCard>
+
+      <ConfirmDialog
+        open={!!resendTarget}
+        title="Resend this invite?"
+        message={resendTarget ? `A fresh link goes to ${resendTarget.email}. The previous link stops working immediately.` : ''}
+        confirmLabel="Resend invite"
+        onConfirm={() => {
+          if (resendTarget) {
+            resend.mutate({ inviteId: resendTarget.id, delivery: 'email' }, { onSuccess: () => toast.success(`Invite re-sent to ${resendTarget.email}`) });
+          }
+          setResendTarget(null);
+        }}
+        onCancel={() => setResendTarget(null)}
+      />
 
       <ConfirmDialog
         open={!!revokeTarget}

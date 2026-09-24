@@ -31,7 +31,14 @@ import { ApiError } from '@lib/engine/client';
  * spring menus, layout-animated rows.
  */
 
-const ROLES: OrgRole[] = ['owner', 'admin', 'billing', 'developer', 'reader'];
+/**
+ * Roles the acting member may grant — mirrors OrgMembersPage: owner is never
+ * assignable (only via ownership transfer); admins cannot grant admin.
+ * (P5-T3 — the pickers must not offer impossible transitions.)
+ */
+const ASSIGNABLE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
+const assignableRoles = (actorRole: OrgRole | null): OrgRole[] =>
+  actorRole === 'owner' ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r !== 'admin');
 
 const ROLE_LABELS_CAP: Record<OrgRole, string> = {
   owner: 'Owner',
@@ -56,7 +63,7 @@ const fadeUp = {
 };
 
 export function SettingsTeam() {
-  const { canManageMembers } = useOrg();
+  const { canManageMembers, role: actorRole } = useOrg();
   const members = useMembers();
   const invites = useInvites();
 
@@ -64,9 +71,12 @@ export function SettingsTeam() {
     <>
       <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
         <Panel title="Members" subtitle="People with access to this workspace.">
-          {canManageMembers && <InviteForm />}
-          <QueryView query={members} skeleton={<Skeleton $h="260px" $r="12px" />} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members yet', description: 'Invite teammates to collaborate on agents and conversations.' }}>
-            {(data) => <MembersTable members={data.members} canManage={canManageMembers} />}
+          {canManageMembers && <InviteForm actorRole={actorRole} />}
+          {/* P5-T4: every org has an owner, so the member roster can never be
+              empty via this query — the old "No members yet" empty state was
+              unreachable copy. The table renders the roster as-is. */}
+          <QueryView query={members} skeleton={<Skeleton $h="260px" $r="12px" />}>
+            {(data) => <MembersTable members={data.members} canManage={canManageMembers} actorRole={actorRole} />}
           </QueryView>
         </Panel>
       </motion.div>
@@ -80,7 +90,7 @@ export function SettingsTeam() {
   );
 }
 
-function InviteForm() {
+function InviteForm({ actorRole }: { actorRole: OrgRole | null }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgRole>('developer');
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -121,7 +131,7 @@ function InviteForm() {
         />
       </div>
       <RoleSelect aria-label="Invite role" value={role} onChange={(e) => setRole(e.target.value as OrgRole)}>
-        {ROLES.filter((r) => r !== 'owner').map((r) => (
+        {assignableRoles(actorRole).map((r) => (
           <option key={r} value={r}>{ROLE_LABELS_CAP[r]}</option>
         ))}
       </RoleSelect>
@@ -141,7 +151,7 @@ function InviteForm() {
   );
 }
 
-function MembersTable({ members, canManage }: { members: MemberRow[]; canManage: boolean }) {
+function MembersTable({ members, canManage, actorRole }: { members: MemberRow[]; canManage: boolean; actorRole: OrgRole | null }) {
   return (
     <TableWrap>
       <TableHeader>
@@ -173,7 +183,7 @@ function MembersTable({ members, canManage }: { members: MemberRow[]; canManage:
             </MemberCell>
             <div style={{ width: '24%' }}>
               {canManage && role !== 'owner' ? (
-                <RoleMenu current={role} accountId={m.accountId} name={displayName} />
+                <RoleMenu current={role} accountId={m.accountId} name={displayName} actorRole={actorRole} />
               ) : (
                 <RoleStatic><RoleDot $hue={hue} aria-hidden="true" />{ROLE_LABELS_CAP[role] ?? role}</RoleStatic>
               )}
@@ -203,7 +213,7 @@ function relativeDay(iso: string): string {
 }
 
 // ─── RoleMenu — popover picker wired to the engine ───────────────────
-function RoleMenu({ current, accountId, name }: { current: OrgRole; accountId: string; name: string }) {
+function RoleMenu({ current, accountId, name, actorRole }: { current: OrgRole; accountId: string; name: string; actorRole: OrgRole | null }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const changeRole = useChangeRole();
@@ -246,7 +256,7 @@ function RoleMenu({ current, accountId, name }: { current: OrgRole; accountId: s
             transition={spring.gentle}
             role="menu"
           >
-            {ROLES.map((r) => (
+            {assignableRoles(actorRole).map((r) => (
               <MenuItem
                 key={r}
                 type="button"
@@ -417,23 +427,26 @@ function MemberMore({ member, canManage }: { member: MemberRow; canManage: boole
 
 // ─── Pending invites ─────────────────────────────────────────────────
 function PendingInvites({ invites }: { invites: InviteRow[] }) {
-  const pending = invites.filter((i) => i.status === 'pending');
+  // P5-T5: expired invites stay actionable — resend revives them server-side,
+  // so hiding them strands the invite. Show them labeled as expired.
+  const actionable = invites.filter((i) => i.status === 'pending' || i.status === 'expired');
   const resend = useResendInvite();
   const revoke = useRevokeInvite();
   const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
+  const [resendTarget, setResendTarget] = useState<InviteRow | null>(null);
 
-  if (pending.length === 0) {
+  if (actionable.length === 0) {
     return null;
   }
 
   return (
-    <Panel title="Pending invites" subtitle={`${pending.length} awaiting acceptance.`} flush>
+    <Panel title="Pending invites" subtitle={`${actionable.length} awaiting acceptance.`} flush>
       <InviteList>
-        {pending.map((invite) => (
+        {actionable.map((invite) => (
           <InviteItemRow key={invite.id}>
             <InviteIcon aria-hidden="true"><Mail size={14} strokeWidth={1.7} /></InviteIcon>
             <InviteInfo>
-              <InviteEmail>{invite.email}</InviteEmail>
+              <InviteEmail>{invite.email}{invite.status === 'expired' && ' · expired'}</InviteEmail>
               <InviteMeta>
                 {ROLE_LABELS_CAP[invite.role as OrgRole] ?? invite.role} · expires {relativeDay(invite.expiresAt)}
               </InviteMeta>
@@ -442,7 +455,8 @@ function PendingInvites({ invites }: { invites: InviteRow[] }) {
               <MenuTextButton
                 type="button"
                 disabled={resend.isPending}
-                onClick={() => resend.mutate({ inviteId: invite.id }, { onSuccess: () => toast.success('Invite re-sent') })}
+                title="Rotates the token — the previous link stops working"
+                onClick={() => setResendTarget(invite)}
               >
                 Resend
               </MenuTextButton>
@@ -458,6 +472,20 @@ function PendingInvites({ invites }: { invites: InviteRow[] }) {
           </InviteItemRow>
         ))}
       </InviteList>
+
+      <ConfirmDialog
+        open={!!resendTarget}
+        title="Resend this invite?"
+        message={resendTarget ? `A fresh link goes to ${resendTarget.email}. The previous link stops working immediately.` : ''}
+        confirmLabel="Resend invite"
+        onConfirm={() => {
+          if (resendTarget) {
+            resend.mutate({ inviteId: resendTarget.id }, { onSuccess: () => toast.success('Invite re-sent') });
+          }
+          setResendTarget(null);
+        }}
+        onCancel={() => setResendTarget(null)}
+      />
 
       <ConfirmDialog
         open={!!revokeTarget}
