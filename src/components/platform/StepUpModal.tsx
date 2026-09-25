@@ -5,6 +5,7 @@
  */
 import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton/ActionButton';
@@ -69,6 +70,13 @@ export function StepUpModal() {
           error={error ?? undefined}
           autoFocus
         />
+        <p style={{ margin: 0, fontSize: 12, opacity: 0.65 }}>
+          No authenticator yet?{' '}
+          <Link to="/agent-studio/settings/security" style={{ textDecoration: 'underline' }}>
+            Set one up in Settings → Security
+          </Link>
+          , then return here.
+        </p>
       </div>
     </Modal>
   );
