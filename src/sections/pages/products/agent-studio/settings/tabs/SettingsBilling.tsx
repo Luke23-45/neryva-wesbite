@@ -17,7 +17,6 @@ import {
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
 import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type EntitlementRow } from '@hooks/engine/queries';
-import { UpgradeModal } from '../../UpgradeModal/UpgradeModal';
 
 /**
  * Settings → Billing — the live summary (ledger D-3: summary + deep-link;
@@ -27,6 +26,9 @@ import { UpgradeModal } from '../../UpgradeModal/UpgradeModal';
  * entitlement state, period, quota meters, and invoices are real; how
  * plans display is a deferred decision owned by the upgrade surfaces.
  * PDF downloads are ⛔ E-13 — no fake download buttons.
+ * BUG-2: the fabricated UpgradeModal plan picker (invented tiers/prices,
+ * dead "Continue" CTA) was removed — purchase UI is out of scope per user
+ * direction (Google-tied purchase; no Stripe in the console).
  */
 
 function stateTone(state: string): 'success' | 'azure' | 'warning' | 'error' | 'neutral' {
@@ -51,7 +53,6 @@ export function SettingsBilling() {
         <Panel
           title="Agent Studio"
           subtitle={periodSubtitle(row, daysLeft)}
-          action={<UpgradeModal />}
         >
           <PlanCard>
             <PlanName>Entitlement</PlanName>
@@ -62,13 +63,25 @@ export function SettingsBilling() {
                 </StatusPill>
               ) : entitlements.isPending ? (
                 <Skeleton $h="22px" $w="92px" $r="999px" />
+              ) : entitlements.isError ? (
+                // BUG-4: a fetch failure is not "not enabled" — say so plainly.
+                <StatusPill tone="error" dot={false}>couldn’t load</StatusPill>
               ) : (
                 <StatusPill tone="neutral" dot={false}>not enabled</StatusPill>
               )}
             </PlanStatus>
           </PlanCard>
 
-          {meters.length > 0 && (
+          {/* BUG-4: honest quota states — loading skeleton, error note, and an
+              explicit empty state (the platform surface's "No quota snapshot"
+              copy) instead of silently omitting the section. */}
+          {limits.isPending ? (
+            <Skeleton $h="96px" $r="12px" />
+          ) : limits.isError ? (
+            <QuotaNote>Quota couldn’t be loaded — try refreshing.</QuotaNote>
+          ) : meters.length === 0 ? (
+            <QuotaNote>No quota snapshot — limits appear once this organization carries an active plan.</QuotaNote>
+          ) : (
             <UsageStack>
               {meters.map((meter) => {
                 const pct = meter.limit !== null && meter.limit > 0 ? (meter.used / meter.limit) * 100 : 0;
@@ -78,10 +91,11 @@ export function SettingsBilling() {
                       <span>{meter.label}</span>
                       <UsageValue>
                         {meter.used.toLocaleString()}
-                        {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ''}
+                        {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
                       </UsageValue>
                     </UsageRow>
-                    <ProgressBar value={pct} tone={pct > 85 ? 'amber' : 'azure'} />
+                    {/* BUG-5: threshold unified with the platform surface (80). */}
+                    <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
                   </div>
                 );
               })}
@@ -208,6 +222,13 @@ const UsageRow = styled.div`
 const UsageValue = styled.span`
   font-variant-numeric: tabular-nums;
   color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const QuotaNote = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.5;
+  padding: 10px 0 2px;
 `;
 
 const InvoiceLink = styled(Link)`

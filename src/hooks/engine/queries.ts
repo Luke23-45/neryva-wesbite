@@ -89,11 +89,14 @@ export interface InviteRow {
   attempts: number;
 }
 
-export function useInvites() {
+export function useInvites(options?: { enabled?: boolean }) {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'invites', orgId],
     queryFn: () => engine<{ invites: InviteRow[] }>(`/console/org/${orgId}/invites`),
+    // B1: the invite list is owner/admin-only server-side — don't fire a
+    // guaranteed-403 query for other roles.
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -326,13 +329,21 @@ export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
     return [];
   }
   const record = raw as Record<string, unknown>;
-  // Engine shape: {products:[{product, entitlement_state, quota:{used_usd,limit_usd,used_events,limit_events}}]}
+  // BUG-1: the engine's real shape is
+  // {products:[{product, entitlement_state, quota:{allowed,reason,
+  //   product:{limit_usd,used_usd,limit_events,used_events}, project:{...}|null}}]}
+  // (quota.service.ts). The old code expected a flat quota:{used_usd,…} and
+  // could never parse the real wire shape — meters never rendered.
   let scope: unknown;
   if (Array.isArray(record.products)) {
     const match = (record.products as Array<Record<string, unknown>>).find(
       (p) => p.product === product
     );
-    scope = match?.quota ?? match;
+    const quota = (match?.quota ?? match) as Record<string, unknown> | undefined;
+    // QuotaDecision nests the numbers under quota.product / quota.project.
+    scope = quota && typeof quota === 'object' && typeof quota.product === 'object' && quota.product !== null
+      ? quota.product
+      : (quota ?? match);
   } else {
     scope =
       (typeof record.products === 'object' && record.products !== null && (record.products as Record<string, unknown>)[product]) ??

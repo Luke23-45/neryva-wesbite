@@ -65,7 +65,9 @@ const fadeUp = {
 export function SettingsTeam() {
   const { canManageMembers, role: actorRole } = useOrg();
   const members = useMembers();
-  const invites = useInvites();
+  // B1: the invite list is owner/admin-only server-side — don't fire a
+  // guaranteed-403 query for other roles.
+  const invites = useInvites({ enabled: canManageMembers });
 
   return (
     <>

@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { Avatar } from '@components/common/ui/Avatar';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
@@ -61,9 +60,11 @@ function ProfileForm({ info }: { info: AccountInfo }) {
   const confirmEmailChange = useConfirmEmailChange();
 
   const [name, setName] = useState(info.name ?? '');
-  const [tz, setTz] = useState(info.timezone ?? 'UTC');
-  const [loc, setLoc] = useState(info.locale ?? 'en');
-  const [bio, setBio] = useState('');
+  // P7-PF-08: timezone/locale/bio have no engine storage (the accounts table
+  // and PATCH /auth/me accept only display_name). The controls are rendered
+  // disabled with honest copy rather than silently discarding input.
+  const [tz] = useState(info.timezone ?? 'UTC');
+  const [loc] = useState(info.locale ?? 'en');
 
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -129,9 +130,12 @@ function ProfileForm({ info }: { info: AccountInfo }) {
     }
   };
 
+  // P7-PF-07: the engine's PATCH /auth/me accepts only `display_name` —
+  // sending `name` 400s every save. Timezone/locale/bio are not sent
+  // (P7-PF-08: no engine storage; the controls are honestly disabled).
   const save = () => {
     update.mutate(
-      { name: name.trim() || undefined, timezone: tz, locale: loc, bio: bio.trim() || undefined },
+      { display_name: name.trim() || undefined },
       { onSuccess: () => toast.success('Profile saved') },
     );
   };
@@ -184,24 +188,24 @@ function ProfileForm({ info }: { info: AccountInfo }) {
 
           <FieldGrid>
             <TextInput label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
+            {/* P7-PF-08: honestly disabled — the engine stores only display_name. */}
             <SelectField label="Timezone">
-              <ProfileSelect value={tz} onChange={(e) => setTz(e.target.value)} aria-label="Timezone">
+              <ProfileSelect value={tz} aria-label="Timezone" disabled title="Timezone preferences are not configurable yet">
                 {timezoneOptions().map((zone) => (
                   <option key={zone} value={zone}>{zone}</option>
                 ))}
               </ProfileSelect>
+              <TheaterNote>Not configurable yet — shown for reference only.</TheaterNote>
             </SelectField>
             <SelectField label="Locale">
-              <ProfileSelect value={loc} onChange={(e) => setLoc(e.target.value)} aria-label="Locale">
+              <ProfileSelect value={loc} aria-label="Locale" disabled title="Locale preferences are not configurable yet">
                 {LOCALES.map((code) => (
                   <option key={code} value={code}>{code}</option>
                 ))}
               </ProfileSelect>
+              <TheaterNote>Not configurable yet — shown for reference only.</TheaterNote>
             </SelectField>
           </FieldGrid>
-          <BioRow>
-            <TextArea label="Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-          </BioRow>
           <SaveRow onSave={save} />
         </Panel>
       </motion.div>
@@ -443,10 +447,6 @@ const FieldGrid = styled.div`
   }
 `;
 
-const BioRow = styled.div`
-  margin-top: 14px;
-`;
-
 function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <SelectFieldBox>
@@ -468,6 +468,12 @@ const SelectLabel = styled.div`
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
+const TheaterNote = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
+  line-height: 1.4;
+`;
+
 const ProfileSelect = styled.select`
   background: ${({ theme }) => theme.app.surface.tint};
   color: ${({ theme }) => theme.app.text.primary};
@@ -477,6 +483,11 @@ const ProfileSelect = styled.select`
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};
   cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};

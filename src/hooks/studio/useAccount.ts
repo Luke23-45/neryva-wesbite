@@ -59,11 +59,13 @@ export function useAccount(options?: { enabled?: boolean }) {
   });
 }
 
+/**
+ * The engine's PATCH /auth/me accepts only `display_name` (P7-PF-07: sending
+ * `name` 400s every save). Timezone/locale/bio have no engine storage —
+ * the controls are honestly disabled (P7-PF-08, same class as A4-80).
+ */
 export interface AccountPatch {
-  name?: string;
-  timezone?: string;
-  locale?: string;
-  bio?: string;
+  display_name?: string;
 }
 
 export function useUpdateAccount() {
@@ -72,9 +74,9 @@ export function useUpdateAccount() {
     mutationFn: async (patch: AccountPatch) => engine<unknown>('/auth/me', { method: 'PATCH', body: patch }),
     onSuccess: (_data, patch) => {
       // Keep the shell chrome in step with the server without a re-login.
-      if (patch.name) {
+      if (patch.display_name) {
         useSessionStore.setState((state) =>
-          state.account ? { account: { ...state.account, name: patch.name ?? null } } : state,
+          state.account ? { account: { ...state.account, name: patch.display_name ?? null } } : state,
         );
       }
       void queryClient.invalidateQueries({ queryKey: [...ACCOUNT_KEY] });

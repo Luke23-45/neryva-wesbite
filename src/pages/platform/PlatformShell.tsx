@@ -118,13 +118,20 @@ const Brand = styled.div`
 
 const NAV = [
   { to: '/platform', label: 'Home', icon: LayoutDashboard },
+  // B2: genuinely admin-only surfaces are hidden from non-manager roles (the
+  // server stays authoritative for deep links — this is sidebar honesty, not
+  // security).
+  // B2 (corrected): member inventory is readable by every role server-side
+  // (GET :orgId/members allows owner/admin/billing/developer/reader) — the
+  // nav must not hide it. Privileged mutations stay gated inside
+  // OrgMembersPage; the invites section is owner/admin-only.
   { to: '/platform/organization/members', label: 'Members', icon: Users },
   { to: '/platform/projects', label: 'Projects', icon: FolderKanban },
   { to: '/platform/api-keys', label: 'API Keys', icon: KeyRound },
   { to: '/platform/usage', label: 'Usage', icon: BarChart3 },
   { to: '/platform/billing', label: 'Billing', icon: Receipt },
   { to: '/platform/audit', label: 'Audit', icon: ScrollText },
-  { to: '/platform/settings', label: 'Settings', icon: Settings },
+  { to: '/platform/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { to: '/platform/status', label: 'Status', icon: Activity },
 ];
 
@@ -133,7 +140,7 @@ export default function PlatformShell() {
   const status = useSessionStore((s) => s.status);
   const account = useSessionStore((s) => s.account);
   const hydrate = useSessionStore((s) => s.hydrate);
-  const { orgs, orgId, role, name } = useOrg();
+  const { orgs, orgId, role, name, canManageMembers } = useOrg();
   const projects = useProjects();
 
   useEffect(() => {
@@ -212,7 +219,7 @@ export default function PlatformShell() {
     <Shell>
       <Sidebar>
         <Brand>neryva · platform</Brand>
-        {NAV.map((item) => (
+        {NAV.filter((item) => !item.adminOnly || canManageMembers).map((item) => (
           <NavItem
             key={item.to}
             to={item.to}

@@ -10,8 +10,10 @@
  *    Copy + Compose email + Done; secret leaves memory on Done, never in
  *    localStorage/toast/telemetry).
  *  - `admin` role option is owner-only (server 403 is the backstop, the UI
- *    hides it first); invites list is readable by every role (actions gated);
- *    suspend refuses self/owner targets; remove follows the §4 matrix.
+ *    hides it first); the pending-invite list is owner/admin-only (B1: the
+ *    engine 403s other roles, so the section is manager-gated and the query
+ *    is disabled for other roles); suspend refuses self/owner targets;
+ *    remove follows the §4 matrix.
  */
 import { useState } from 'react';
 import styled from 'styled-components';
@@ -208,7 +210,9 @@ export default function OrgMembersPage() {
   const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null);
 
   const members = useMembers({ q: search || undefined, limit: 100 });
-  const invites = useInvites();
+  // B1: the invites endpoint is owner/admin-only — the section below is
+  // gated on canManageMembers, so don't fire a guaranteed-403 query.
+  const invites = useInvites({ enabled: canManageMembers });
 
   const invite = useInviteMember();
   const resend = useResendInvite();
@@ -431,23 +435,28 @@ export default function OrgMembersPage() {
         </QueryView>
       </Panel>
 
-      <SectionTitle>Pending invitations</SectionTitle>
-      <Panel flush>
-        <QueryView query={invites} isEmpty={(d) => d.invites.length === 0} empty={{ title: 'No invitations', description: 'Invite teammates from the button above.' }}>
-          {(data) => (
-            <DataTable>
-              <thead>
-                <DataHead>
-                  <DataCell as="th">Email</DataCell>
-                  <DataCell as="th">Role</DataCell>
-                  <DataCell as="th">State</DataCell>
-                  <DataCell as="th">Expires</DataCell>
-                  <DataCell as="th" />
-                </DataHead>
-              </thead>
-              <tbody>
-                {data.invites.map((inviteRow: InviteRow) => (
-                  <DataRow key={inviteRow.id}>
+      {/* B1: the pending-invite list is owner/admin-only (the engine 403s
+          other roles), so the whole section is manager-gated — non-managers
+          see the member inventory only, never a 403 error panel. */}
+      {canManageMembers && (
+        <>
+          <SectionTitle>Pending invitations</SectionTitle>
+          <Panel flush>
+            <QueryView query={invites} isEmpty={(d) => d.invites.length === 0} empty={{ title: 'No invitations', description: 'Invite teammates from the button above.' }}>
+              {(data) => (
+                <DataTable>
+                  <thead>
+                    <DataHead>
+                      <DataCell as="th">Email</DataCell>
+                      <DataCell as="th">Role</DataCell>
+                      <DataCell as="th">State</DataCell>
+                      <DataCell as="th">Expires</DataCell>
+                      <DataCell as="th" />
+                    </DataHead>
+                  </thead>
+                  <tbody>
+                    {data.invites.map((inviteRow: InviteRow) => (
+                      <DataRow key={inviteRow.id}>
                     <DataCell><CellPrimary>{inviteRow.email}</CellPrimary></DataCell>
                     <DataCell>{ROLE_LABELS[inviteRow.role as OrgRole] ?? inviteRow.role}</DataCell>
                     <DataCell>
@@ -457,15 +466,12 @@ export default function OrgMembersPage() {
                     </DataCell>
                     <DataCell><RelativeTime>{new Date(inviteRow.expiresAt).toLocaleDateString()}</RelativeTime></DataCell>
                     <DataCell>
-                      {inviteRow.status === 'pending' && canManageMembers && (
+                      {inviteRow.status === 'pending' && (
                         <>
                           <ActionButton variant="ghost" size="sm" onClick={() => { setResendDelivery('email'); setResendTarget(inviteRow); }}><Send size={12} /> Resend</ActionButton>
                           <ActionButton variant="ghost" size="sm" onClick={() => extend.mutate({ inviteId: inviteRow.id, days: 7 })}><Clock size={12} /> +7d</ActionButton>
                           <ActionButton variant="ghost" size="sm" onClick={() => revoke.mutate({ inviteId: inviteRow.id })}><Ban size={12} /> Revoke</ActionButton>
                         </>
-                      )}
-                      {inviteRow.status === 'pending' && !canManageMembers && (
-                        <RelativeTime>Awaiting owner/admin action</RelativeTime>
                       )}
                     </DataCell>
                   </DataRow>
@@ -474,7 +480,9 @@ export default function OrgMembersPage() {
             </DataTable>
           )}
         </QueryView>
-      </Panel>
+          </Panel>
+        </>
+      )}
 
       <Modal
         open={inviteOpen}

@@ -17,7 +17,9 @@ import { SaveRow } from './shared';
  * Settings → Workspace (ledger T-2)
  *
  * - Every field saves through PATCH /console/org/:orgId/settings — name,
- *   region, support email, default project, retention, branding (color).
+ *   region, support email, default project, retention, branding
+ *   (brand_color — P7-WS-05: the engine keeps only `brand_color`, so the UI
+ *   sends and reads that key; sending `color` 200s but is silently dropped).
  *   (A4-80: the "Default model" preference was removed — the engine accepted
  *   the key but nothing consumed it, so the field was write-only theater.
  *   It returns if a real consumer lands; until then the UI says so plainly.)
@@ -59,7 +61,9 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
   const update = useUpdateOrgSettings();
 
   const branding = data.settings.branding ?? {};
-  const brandingColor = typeof branding.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(branding.color) ? branding.color : null;
+  // P7-WS-05: the engine's BrandingDto keeps only `brand_color` — reading
+  // `color` never rehydrates (the picker fell back to the default forever).
+  const brandingColor = typeof branding.brand_color === 'string' && /^#[0-9a-fA-F]{6}$/.test(branding.brand_color) ? branding.brand_color : null;
 
   const [name, setName] = useState(data.org.name);
   const [region, setRegion] = useState(data.org.region ?? '');
@@ -140,7 +144,7 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
         support_email: supportEmail.trim() || undefined,
         default_project_id: defaultProjectId || undefined,
         retention_days: Math.round(retentionDays),
-        branding: { color },
+        branding: { brand_color: color },
       },
       { onSuccess: () => toast.success('Workspace settings saved') },
     );

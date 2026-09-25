@@ -6,7 +6,7 @@
  * range filters, NDJSON export).
  *
  * Billing: entitlement-state summary with real quota meters and per-project
- * slices (B-2), invoices with issue/checkout/void transitions and line
+ * slices (B-2), invoices with issue/void transitions and line
  * drill-down (B-3), and the credits / budgets / adjustments plane (B-4).
  * View = owner/admin/billing; money acts = owner/billing. PDF receipts are
  * ⛔ E-13; Stripe subscriptions are ⛔ E-2 — nothing is faked for either.
@@ -45,7 +45,6 @@ import {
   useInvoicesParsed,
   useInvoiceLines,
   useIssueInvoice,
-  useCheckoutInvoice,
   useVoidInvoice,
   useCredits,
   useGrantCredit,
@@ -256,7 +255,6 @@ function ledgerRows(raw: unknown): LedgerRowView[] {
 function InvoicesPanel({ canManage }: { canManage: boolean }) {
   const invoices = useInvoicesParsed();
   const issue = useIssueInvoice();
-  const checkout = useCheckoutInvoice();
   const voidInvoice = useVoidInvoice();
   const [linesTarget, setLinesTarget] = useState<InvoiceRow | null>(null);
   const [voidTarget, setVoidTarget] = useState<InvoiceRow | null>(null);
@@ -319,15 +317,9 @@ function InvoicesPanel({ canManage }: { canManage: boolean }) {
                             Issue
                           </ActionButton>
                         )}
-                        {invoice.status === 'issued' || invoice.status === 'open' ? (
-                          <ActionButton
-                            size="sm"
-                            disabled={checkout.isPending}
-                            onClick={() => checkout.mutate(invoice.id, { onError: () => toast.error('Checkout is unavailable on this deployment — Stripe may be disabled') })}
-                          >
-                            Pay now
-                          </ActionButton>
-                        ) : null}
+                        {/* BUG-3: the "Pay now" Stripe checkout CTA was removed —
+                            purchase UI is out of scope per user direction
+                            (Google-tied purchase; no Stripe in the console). */}
                         {invoice.status !== 'paid' && invoice.status !== 'void' && (
                           <ActionButton variant="secondary" size="sm" onClick={() => setVoidTarget(invoice)}>
                             Void
