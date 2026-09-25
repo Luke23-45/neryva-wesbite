@@ -196,7 +196,7 @@ export function AgentDetailView() {
                       Clone
                     </ActionButton>
                   </Tooltip>
-                  <Tooltip label='Delete this agent (rejected if conversations exist)'>
+                  <Tooltip label='Delete this agent (rejected while active conversations exist)'>
                     <ActionButton
                       variant='danger'
                       size='sm'
@@ -376,7 +376,7 @@ export function AgentDetailView() {
       <ConfirmDialog
         open={deleteConfirm}
         title='Delete this agent?'
-        message='This removes the agent and all its versions. Agents with conversations cannot be deleted — archive those first.'
+        message='This removes the agent, all its versions, and its archived conversations. Active conversations must be archived first.'
         destructive
         confirmLabel='Delete'
         onConfirm={() => {
