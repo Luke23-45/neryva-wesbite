@@ -289,7 +289,7 @@ function EventCatalog() {
   return (
     <Panel
       title="Subscribable events"
-      subtitle="Event types you can subscribe webhooks to explicitly. Webhooks subscribed to all events (*) also receive delivery-lifecycle events."
+      subtitle="Event types you can subscribe webhooks to explicitly. 'All events (*)' receives every event type."
     >
       <QueryView
         query={catalog}
@@ -415,7 +415,7 @@ function EventSelector({
     <div>
       <FieldLabel>Subscribed events</FieldLabel>
       <EventGrid style={{ padding: 0 }}>
-        <ToggleChip $active={allSelected} onClick={() => toggle('*')} title="Receive every event type, including delivery-lifecycle events">
+        <ToggleChip $active={allSelected} onClick={() => toggle('*')} title="Receive every event type">
           All events (*)
         </ToggleChip>
         {catalog.map((e) => (
@@ -431,7 +431,7 @@ function EventSelector({
       </EventGrid>
       <HintText>
         {allSelected
-          ? 'This webhook receives every event type, including delivery-lifecycle events.'
+          ? 'This webhook receives every event type.'
           : selected.length === 0
             ? 'Select at least one event type — a webhook with no subscriptions never fires.'
             : `${selected.length} event type${selected.length === 1 ? '' : 's'} selected.`}
