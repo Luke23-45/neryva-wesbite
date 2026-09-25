@@ -27,6 +27,7 @@ import {
   type ApprovalState,
 } from '@hooks/studio/useSetupApprovals';
 import { useMemberNameMap } from '@hooks/studio/useSetupOperate';
+import { useUrlState } from '@lib/useUrlState';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import {
@@ -96,7 +97,15 @@ export function ApprovalsView() {
   const decideDenied = setupDeniedCopy(role, 'setup:govern');
   const canRead = canSetup(role, 'setup:author');
   const readDenied = setupDeniedCopy(role, 'setup:author');
-  const [filter, setFilter] = useState<ApprovalState | 'ALL'>('PENDING');
+  const [filterParam, setFilterParam] = useUrlState('state', { default: 'PENDING' });
+  // Filter state lives in `?state=` (F-9 convention): shareable, back/forward
+  // safe. Unknown values fall back to PENDING; 'ALL' is a client-side
+  // vocabulary (server accepts only the four concrete states).
+  const filter: ApprovalState | 'ALL' = (
+    ['PENDING', 'ALL', 'APPROVED', 'DENIED', 'EXPIRED'] as const
+  ).includes(filterParam as ApprovalState | 'ALL')
+    ? (filterParam as ApprovalState | 'ALL')
+    : 'PENDING';
   const [search, setSearch] = useState('');
   // Poll while the queue shows pending work (15s); quiet history otherwise.
   const approvals = useApprovals(filter === 'ALL' ? undefined : filter, {
@@ -135,7 +144,7 @@ export function ApprovalsView() {
               key={option.value}
               variant={filter === option.value ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => setFilter(option.value)}
+              onClick={() => setFilterParam(option.value)}
               aria-pressed={filter === option.value}
             >
               {option.label}

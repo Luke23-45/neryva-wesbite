@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -44,7 +44,7 @@ vi.mock('@hooks/studio/useSetupOperate', async (importOriginal) => {
   };
 });
 
-async function shell() {
+async function shell(initialEntry = '/') {
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -59,11 +59,12 @@ async function shell() {
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
@@ -115,5 +116,27 @@ describe('ApprovalsView (C15)', () => {
     fireEvent.change(screen.getByLabelText('Search loaded approval rows'), { target: { value: 'crm.delete' } });
     expect(screen.getByText('Orphaned approval')).toBeTruthy();
     expect(screen.queryByText('Refund $1,240.00')).toBeNull();
+  });
+
+  it('writes the filter to ?state= so filtered views are shareable', async () => {
+    const router = await shell();
+    fireEvent.click(screen.getByText('Expired'));
+    expect((router.state.location.search as Record<string, unknown>).state).toBe('EXPIRED');
+    await act(async () => {});
+    expect(screen.getByText('Expired', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('omits ?state= for the default Pending filter (clean addresses)', async () => {
+    const router = await shell('/?state=EXPIRED');
+    fireEvent.click(screen.getByText('Pending'));
+    expect((router.state.location.search as Record<string, unknown>).state).toBeUndefined();
+  });
+
+  it('reads the initial filter from ?state=, unknown values fall back to Pending', async () => {
+    await shell('/?state=DENIED');
+    expect(screen.getByText('Denied', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+    cleanup();
+    await shell('/?state=BOGUS');
+    expect(screen.getByText('Pending', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
   });
 });
