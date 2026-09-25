@@ -84,8 +84,13 @@ const DEFAULT_SCOPES: Record<ScopeKey, boolean> = {
 };
 
 export function SettingsApiKeys() {
-  const { atLeast } = useOrg();
-  const canManage = atLeast('developer');
+  const { role: orgRole } = useOrg();
+  // P5-E20: the engine's key WRITE roles are exactly owner/admin/developer
+  // (keys.controller.ts @Roles — billing may list keys but cannot
+  // issue/update/rotate/revoke). `atLeast('developer')` also admits billing
+  // (ROLE_RANK ties billing and developer at 2), which showed billing users
+  // management UI that the engine rejects with 403. Match the engine here.
+  const canManage = orgRole === 'owner' || orgRole === 'admin' || orgRole === 'developer';
   const keys = useKeys();
   const revoke = useRevokeKey();
 
@@ -476,7 +481,7 @@ export function SettingsApiKeys() {
       </Modal>
 
       {/* ─── Key detail drawer: binding, counters ─── */}
-      {detailId && <KeyDrawer keyId={detailId} onClose={() => setDetailId(null)} />}
+      {detailId && <KeyDrawer keyId={detailId} onClose={() => setDetailId(null)} canManage={canManage} />}
 
       <ConfirmDialog
         open={!!revokeTarget}
@@ -504,7 +509,7 @@ export function SettingsApiKeys() {
 }
 
 // ─── Key detail drawer ───────────────────────────────────────────────
-function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
+function KeyDrawer({ keyId, onClose, canManage }: { keyId: string; onClose: () => void; canManage: boolean }) {
   const detail = useKeyDetail(keyId);
   const projects = useProjects();
   const keys = useKeys();
@@ -537,7 +542,12 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
           <DetailGrid>
             <DetailLabel>Name</DetailLabel>
             <DetailValue>
-              {rename === null ? (
+              {/* P5-E20: rename is an engine write (owner/admin/developer) —
+                  read-only roles see the name as plain text, not an affordance
+                  that would 403. */}
+              {!canManage ? (
+                info.name ?? '—'
+              ) : rename === null ? (
                 <NameButton type="button" onClick={() => setRename(info.name ?? '')} title="Rename">{info.name ?? '—'}</NameButton>
               ) : (
                 <RenameRow>
@@ -579,6 +589,16 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
             <DetailLabel>Project binding</DetailLabel>
             <BindingRow>
               <div style={{ flex: 1 }}>
+                {/* P5-E20: bind/unbind are engine writes (owner/admin/developer)
+                    — read-only roles see the binding as text, not a control
+                    that would 403. */}
+                {!canManage ? (
+                  <DetailValue>
+                    {info.projectId
+                      ? (projects.data?.projects ?? []).find((p) => p.id === info.projectId)?.name ?? 'Bound project'
+                      : 'Not bound — works across projects'}
+                  </DetailValue>
+                ) : (
                 <RolePicker
                   value={info.projectId ?? ''}
                   onChange={(e) => {
@@ -596,6 +616,7 @@ function KeyDrawer({ keyId, onClose }: { keyId: string; onClose: () => void }) {
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </RolePicker>
+                )}
               </div>
               <BindingHint aria-hidden="true"><FolderInput size={13} strokeWidth={1.8} /></BindingHint>
             </BindingRow>

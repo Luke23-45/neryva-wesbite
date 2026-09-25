@@ -100,9 +100,16 @@ export function useRotateKey() {
           ...(proof ? { mfaProof: proof } : {}),
         }),
       ),
-    onSuccess: () => // Shares the engine list cache so issue/revoke/rotate stay in step
+    onSuccess: () => {
+      // Shares the engine list cache so issue/revoke/rotate stay in step
       // with the /platform key surfaces.
-      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] }),
+      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] });
+      // P5-E21: the key drawer reads useKeyDetail (['studio','keys',…,'detail'],
+      // staleTime 30s) which the ['engine','keys'] invalidation does not touch —
+      // without this the open drawer showed the old name/binding/usage for up
+      // to 30s after the mutation it just performed.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'keys'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not rotate the key'),
   });
 }
@@ -125,9 +132,16 @@ export function useUpdateKey() {
           ...(proof ? { mfaProof: proof } : {}),
         });
       }),
-    onSuccess: () => // Shares the engine list cache so issue/revoke/rotate stay in step
+    onSuccess: () => {
+      // Shares the engine list cache so issue/revoke/rotate stay in step
       // with the /platform key surfaces.
-      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] }),
+      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] });
+      // P5-E21: the key drawer reads useKeyDetail (['studio','keys',…,'detail'],
+      // staleTime 30s) which the ['engine','keys'] invalidation does not touch —
+      // without this the open drawer showed the old name/binding/usage for up
+      // to 30s after the mutation it just performed.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'keys'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not update the key'),
   });
 }
@@ -137,9 +151,16 @@ export function useBindKey() {
   return useMutation({
     mutationFn: async (input: { keyId: string; projectId: string }) =>
       engine(`/console/studio-furniture/keys/${input.keyId}/bind`, { method: 'POST', body: { project_id: input.projectId } }),
-    onSuccess: () => // Shares the engine list cache so issue/revoke/rotate stay in step
+    onSuccess: () => {
+      // Shares the engine list cache so issue/revoke/rotate stay in step
       // with the /platform key surfaces.
-      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] }),
+      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] });
+      // P5-E21: the key drawer reads useKeyDetail (['studio','keys',…,'detail'],
+      // staleTime 30s) which the ['engine','keys'] invalidation does not touch —
+      // without this the open drawer showed the old name/binding/usage for up
+      // to 30s after the mutation it just performed.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'keys'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not bind the key to the project'),
   });
 }
@@ -149,9 +170,16 @@ export function useUnbindKey() {
   return useMutation({
     mutationFn: async (input: { keyId: string }) =>
       engine(`/console/studio-furniture/keys/${input.keyId}/unbind`, { method: 'POST' }),
-    onSuccess: () => // Shares the engine list cache so issue/revoke/rotate stay in step
+    onSuccess: () => {
+      // Shares the engine list cache so issue/revoke/rotate stay in step
       // with the /platform key surfaces.
-      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] }),
+      void queryClient.invalidateQueries({ queryKey: ['engine', 'keys'] });
+      // P5-E21: the key drawer reads useKeyDetail (['studio','keys',…,'detail'],
+      // staleTime 30s) which the ['engine','keys'] invalidation does not touch —
+      // without this the open drawer showed the old name/binding/usage for up
+      // to 30s after the mutation it just performed.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'keys'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not unbind the key'),
   });
 }

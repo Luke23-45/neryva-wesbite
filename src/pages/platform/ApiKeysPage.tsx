@@ -51,8 +51,10 @@ const ScopesInput = styled.textarea`
 const ORG_KEY_ROLES = ['operator', 'auditor'] as const;
 
 export default function ApiKeysPage() {
-  const { atLeast } = useOrg();
-  const canManage = atLeast('developer');
+  const { role: orgRole } = useOrg();
+  // P5-E20: see SettingsApiKeys — engine key write roles exclude billing;
+  // `atLeast('developer')` wrongly admits billing (ROLE_RANK tie at 2).
+  const canManage = orgRole === 'owner' || orgRole === 'admin' || orgRole === 'developer';
   const keys = useKeys();
   const issue = useIssueKey();
   const revoke = useRevokeKey();
