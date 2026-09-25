@@ -201,8 +201,16 @@ export function describeBlockExpiry(expiresAt: string | null): string {
   if (expiresAt === null || expiresAt === undefined) return 'no expiry';
   const parsed = new Date(expiresAt).getTime();
   if (Number.isNaN(parsed)) return 'no expiry';
-  const days = Math.max(0, Math.ceil((parsed - Date.now()) / 86_400_000));
-  if (days <= 0) return 'expired';
+  const diffMs = parsed - Date.now();
+  if (diffMs <= 0) return 'expired';
+  // Sub-day buckets: Math.ceil on whole days rounded a 90-second expiry up
+  // to "expires tomorrow" (browser-found P5-BL anomaly). Hours/minutes keep
+  // the pill honest for short-lived blocks.
+  const minutes = Math.ceil(diffMs / 60_000);
+  if (minutes < 60) return `expires in ${minutes} min`;
+  const hours = Math.ceil(diffMs / 3_600_000);
+  if (hours < 24) return `expires in ${hours} h`;
+  const days = Math.ceil(diffMs / 86_400_000);
   if (days === 1) return 'expires tomorrow';
   return `expires in ${days} days`;
 }

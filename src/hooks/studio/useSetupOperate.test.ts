@@ -66,6 +66,13 @@ describe('describeBlockExpiry', () => {
     expect(describeBlockExpiry(new Date(Date.now() - 1000).toISOString())).toBe('expired');
     expect(describeBlockExpiry(new Date(Date.now() + 3 * 86_400_000).toISOString())).toBe('expires in 3 days');
   });
+  it('never says "expires tomorrow" for sub-day expiries', () => {
+    expect(describeBlockExpiry(new Date(Date.now() + 90_000).toISOString())).toBe('expires in 2 min');
+    expect(describeBlockExpiry(new Date(Date.now() + 30 * 60_000).toISOString())).toBe('expires in 30 min');
+    expect(describeBlockExpiry(new Date(Date.now() + 5 * 3_600_000).toISOString())).toBe('expires in 5 h');
+    expect(describeBlockExpiry(new Date(Date.now() + 23 * 3_600_000).toISOString())).toBe('expires in 23 h');
+    expect(describeBlockExpiry(new Date(Date.now() + 24 * 3_600_000).toISOString())).toBe('expires tomorrow');
+  });
 });
 
 describe('filterBlocks', () => {
