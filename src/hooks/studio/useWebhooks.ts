@@ -134,6 +134,14 @@ export interface CreateWebhookInput {
   url: string;
   events: string[];
   description?: string;
+  /**
+   * Client-generated idempotency key, stable for one create-intent (the modal
+   * mints it when it opens). A fresh key per mutation call would not dedup a
+   * double-click; a per-intent key means the engine replays the stored
+   * response instead of minting a second webhook. Omit to fall back to a
+   * per-call generated key.
+   */
+  idempotencyKey?: string;
 }
 
 export interface CreateWebhookResult {
@@ -159,9 +167,13 @@ export function useCreateWebhook() {
     mutationFn: async (input: CreateWebhookInput): Promise<CreateWebhookResult> => {
       // The engine's create endpoint is @Idempotent(): without a key a
       // retried click mints a second webhook AND a second shown-once secret.
+      // The key must be stable per create-intent (the modal supplies it) —
+      // a fresh key per call would not dedup anything. Engine replays the
+      // stored response verbatim on a matching key+body.
       const raw = await engine<unknown>(`/console/org/${orgId}/webhooks`, {
         method: 'POST',
-        idempotent: true,
+        idempotent: !input.idempotencyKey,
+        ...(input.idempotencyKey ? { headers: { 'idempotency-key': input.idempotencyKey } } : {}),
         body: { url: input.url, events: input.events, description: input.description },
       });
       return secretFromCreateResponse(raw);

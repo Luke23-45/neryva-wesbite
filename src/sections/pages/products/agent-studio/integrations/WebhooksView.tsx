@@ -122,7 +122,7 @@ export function WebhooksView() {
               query={webhooks}
               skeleton={<Skeleton $h="200px" $r="12px" />}
               isEmpty={(d) => d.length === 0}
-              empty={{ title: 'No webhooks yet', description: 'Add your HTTPS endpoint — every subscribed agent event arrives there, signed.' }}
+              empty={{ title: 'No webhooks yet', description: 'Add your endpoint — every subscribed agent event arrives there, signed.' }}
             >
               {(rows) => (
                 <div style={{ padding: '16px 22px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -187,8 +187,48 @@ export function WebhooksView() {
         </motion.div>
       )}
 
-      {selectedId && !webhooksDisabled && (
+      {!webhooksDisabled && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
+          <Panel
+            title="Verifying deliveries"
+            subtitle="Prove a delivery came from this engine before acting on it."
+          >
+            <VerifyBody>
+              <RotateNote>
+                Every delivery is an <code>HTTPS POST</code> with a JSON body shaped{' '}
+                <code>{'{ "type", "created_at", "data" }'}</code>. The engine signs the raw
+                request body with your webhook's signing secret:
+              </RotateNote>
+              <VerifyCode>signature = HMAC_SHA256(secret, timestamp + &quot;.&quot; + raw_body)</VerifyCode>
+              <RotateNote>Request headers on every delivery:</RotateNote>
+              <VerifyList>
+                <li>
+                  <code>x-neryva-signature</code> — <code>sha256=&lt;hex&gt;</code>, the signature above
+                </li>
+                <li>
+                  <code>x-neryva-timestamp</code> — unix seconds when the signature was computed
+                </li>
+                <li>
+                  <code>x-neryva-event</code> — the event type (also in the body's <code>type</code>)
+                </li>
+                <li>
+                  <code>user-agent</code> — <code>neryva-webhooks/1.0</code>
+                </li>
+              </VerifyList>
+              <RotateNote>
+                To verify: recompute the signature over the exact bytes you received and compare
+                it with the header using a constant-time comparison. Reject deliveries whose
+                timestamp is older than a few minutes. Each secret is shown exactly once — store
+                it securely. Attempts time out after 10 seconds; non-2xx responses are retried
+                with backoff (1m, 5m, 30m, 2h, 6h — up to 5 attempts).
+              </RotateNote>
+            </VerifyBody>
+          </Panel>
+        </motion.div>
+      )}
+
+      {selectedId && !webhooksDisabled && (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
           <Panel title="Delivery log" subtitle="Delivery attempts for the selected webhook, newest first." flush>
             <Deliveries webhookId={selectedId} />
           </Panel>
@@ -418,6 +458,12 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
   const [events, setEvents] = useState<string[]>(['*']);
   const [secret, setSecret] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState('');
+  // One idempotency key per create-intent (minted when the modal state
+  // initializes, renewed on close). Double-submits of the same form replay
+  // the stored response instead of minting a second webhook. A failed
+  // submit keeps the key: the engine never caches failures, so a retry is
+  // safe and a lost response replays instead of duplicating.
+  const [idemKey, setIdemKey] = useState<string>(() => crypto.randomUUID());
 
   const reset = () => {
     setStep('form');
@@ -426,6 +472,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
     setEvents(['*']);
     setSecret(null);
     setCreatedId('');
+    setIdemKey(crypto.randomUUID());
     create.reset();
   };
 
@@ -438,7 +485,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
 
   const submit = () => {
     create.mutate(
-      { url: url.trim(), events, description: description.trim() || undefined },
+      { url: url.trim(), events, description: description.trim() || undefined, idempotencyKey: idemKey },
       {
         onSuccess: (result) => {
           setCreatedId(result.id);
@@ -732,6 +779,40 @@ const HintText = styled.div`
   color: ${({ theme }) => theme.app.text.muted};
   margin-top: 8px;
   line-height: 1.5;
+`;
+
+const VerifyBody = styled.div`
+  padding: 16px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const VerifyCode = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.primary};
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+`;
+
+const VerifyList = styled.ul`
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.55;
+
+  code {
+    font-family: ${({ theme }) => theme.typography.fonts.mono};
+  }
 `;
 
 const StatusToggle = styled.div`
