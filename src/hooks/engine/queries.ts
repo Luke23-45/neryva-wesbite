@@ -158,6 +158,23 @@ export function useGroups() {
   });
 }
 
+export interface GroupMemberRow {
+  accountId: string;
+  email: string;
+  displayName: string | null;
+  role: string;
+  addedAt: string;
+}
+
+export function useGroupMembers(groupId: string | null) {
+  const orgId = useOrgRequired();
+  return useQuery({
+    queryKey: ['engine', 'group-members', orgId, groupId],
+    queryFn: () => engine<{ members: GroupMemberRow[] }>(`/console/org/${orgId}/groups/${groupId}/members`),
+    enabled: !!orgId && !!groupId,
+  });
+}
+
 export interface ServiceAccountRow {
   id: string;
   name: string;

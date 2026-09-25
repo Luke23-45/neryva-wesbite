@@ -258,7 +258,7 @@ export function useDeleteGroup() {
 export function useAddGroupMember() {
   return useEngineMutation<{ groupId: string; accountId: string }, unknown>(
     (orgId, input) => ({ path: `/console/org/${orgId}/groups/${input.groupId}/members`, init: { method: 'POST', body: { account_id: input.accountId }, idempotent: true } }),
-    ['groups', 'members'],
+    ['groups', 'group-members', 'members'],
     'Member added to group',
   );
 }
@@ -266,7 +266,7 @@ export function useAddGroupMember() {
 export function useRemoveGroupMember() {
   return useEngineMutation<{ groupId: string; accountId: string }, unknown>(
     (orgId, input) => ({ path: `/console/org/${orgId}/groups/${input.groupId}/members/${input.accountId}`, init: { method: 'DELETE' } }),
-    ['groups', 'members'],
+    ['groups', 'group-members', 'members'],
     'Member removed from group',
   );
 }

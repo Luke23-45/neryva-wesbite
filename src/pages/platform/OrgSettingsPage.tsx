@@ -10,9 +10,9 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import { Save, Plus, Trash2, Bot, RefreshCw, AlertTriangle, Crown } from 'lucide-react';
-import { useOrgProfile, useGroups, useServiceAccounts, useDeletionStatus, useMembers } from '@hooks/engine/queries';
+import { useOrgProfile, useGroups, useGroupMembers, useServiceAccounts, useDeletionStatus, useMembers, type GroupMemberRow } from '@hooks/engine/queries';
 import {
-  useUpdateOrgSettings, useCreateGroup, useDeleteGroup, useAddGroupMember,
+  useUpdateOrgSettings, useCreateGroup, useDeleteGroup, useAddGroupMember, useRemoveGroupMember,
   useCreateServiceAccount, useRotateServiceAccountToken, useDisableServiceAccount, useEnableServiceAccount,
   useTransferOwnership, useRequestOrgDeletion, useCancelOrgDeletion,
 } from '@hooks/engine/mutations';
@@ -152,12 +152,15 @@ function GroupsTab({ canManage }: { canManage: boolean }) {
   const create = useCreateGroup();
   const remove = useDeleteGroup();
   const addMember = useAddGroupMember();
+  const removeMember = useRemoveGroupMember();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [addTo, setAddTo] = useState<string | null>(null);
   const [memberId, setMemberId] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ groupId: string; accountId: string; label: string } | null>(null);
 
   return (
     <>
@@ -187,7 +190,15 @@ function GroupsTab({ canManage }: { canManage: boolean }) {
                       <CellPrimary>{group.name}</CellPrimary>
                       {group.description && <CellMeta>{group.description}</CellMeta>}
                     </DataCell>
-                    <DataCell>{group.memberCount}</DataCell>
+                    <DataCell>
+                      {group.memberCount > 0 ? (
+                        <ActionButton variant="ghost" size="sm" onClick={() => setExpandedGroup(expandedGroup === group.id ? null : group.id)}>
+                          {expandedGroup === group.id ? 'Hide' : 'View'} {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
+                        </ActionButton>
+                      ) : (
+                        group.memberCount
+                      )}
+                    </DataCell>
                     <DataCell>
                       {canManage && (
                         <>
@@ -203,6 +214,11 @@ function GroupsTab({ canManage }: { canManage: boolean }) {
           )}
         </QueryView>
       </Panel>
+      {expandedGroup && (
+        <Panel>
+          <GroupMemberList groupId={expandedGroup} canManage={canManage} onClose={() => setExpandedGroup(null)} onRemove={(m) => setRemoveTarget({ groupId: expandedGroup, accountId: m.accountId, label: m.displayName ?? m.email })} />
+        </Panel>
+      )}
 
       <Modal
         open={createOpen}
@@ -256,6 +272,54 @@ function GroupsTab({ canManage }: { canManage: boolean }) {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <ConfirmDialog
+        open={removeTarget !== null}
+        title={`Remove ${removeTarget?.label ?? 'member'} from this group?`}
+        message="The member keeps their org role; only the group assignment is removed."
+        confirmLabel="Remove member"
+        destructive
+        onConfirm={() => {
+          if (removeTarget) {
+            removeMember.mutate({ groupId: removeTarget.groupId, accountId: removeTarget.accountId });
+          }
+          setRemoveTarget(null);
+        }}
+        onCancel={() => setRemoveTarget(null)}
+      />
+    </>
+  );
+}
+
+function GroupMemberList({ groupId, canManage, onClose, onRemove }: { groupId: string; canManage: boolean; onClose: () => void; onRemove: (m: GroupMemberRow) => void }) {
+  const members = useGroupMembers(groupId);
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <SectionTitle style={{ margin: 0 }}>Group members</SectionTitle>
+        <ActionButton variant="ghost" size="sm" onClick={onClose}>Close</ActionButton>
+      </div>
+      <QueryView query={members} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members', description: 'This group has no members yet.' }}>
+        {(data) => (
+          <DataTable>
+            <tbody>
+              {data.members.map((m) => (
+                <DataRow key={m.accountId}>
+                  <DataCell>
+                    <CellPrimary>{m.displayName ?? m.email}</CellPrimary>
+                    <CellMeta>{m.email} · {m.role}</CellMeta>
+                  </DataCell>
+                  <DataCell>
+                    {canManage && (
+                      <ActionButton variant="ghost" size="sm" onClick={() => onRemove(m)}>Remove</ActionButton>
+                    )}
+                  </DataCell>
+                </DataRow>
+              ))}
+            </tbody>
+          </DataTable>
+        )}
+      </QueryView>
     </>
   );
 }
