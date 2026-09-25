@@ -103,7 +103,10 @@ export function TeamsView() {
   const { canManageMembers, role } = useOrg();
   const summary = useOrgSummary();
   const members = useMembers();
-  const invites = useInvites();
+  // The invites list is owner/admin-only server-side — don't fire a
+  // guaranteed-403 query for other roles (same gate as SettingsTeam and
+  // OrgMembersPage; P5-T2 follow-through).
+  const invites = useInvites({ enabled: canManageMembers });
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const seat = summary.data?.seats.find((s) => s.product === 'agent_studio') ?? summary.data?.seats[0];
@@ -225,7 +228,11 @@ export function TeamsView() {
         </Panel>
       </motion.div>
 
-      {(invites.data?.invites.filter((i) => i.status === 'pending' || i.status === 'expired').length ?? 0) > 0 && (
+      {/* The section is manager-gated: the invites list is owner/admin-only
+          server-side, so for other roles the query stays disabled and this
+          section never renders (P5-T2 follow-through). */}
+      {canManageMembers &&
+        (invites.data?.invites.filter((i) => i.status === 'pending' || i.status === 'expired').length ?? 0) > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={14}>
           <SectionTitle>
             <Mail size={14} strokeWidth={1.7} />
@@ -259,9 +266,11 @@ function shortDate(iso: string): string {
   return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
 }
 
-// ─── Pending invites (readable by every role; actions owner/admin only) ────
+// ─── Pending invites (owner/admin only, server-side; the query stays ──────
+// disabled for other roles so no guaranteed-403 fires — P5-T2 follow-through)
 function PendingInvitesCard() {
-  const invites = useInvites();
+  const { canManageMembers } = useOrg();
+  const invites = useInvites({ enabled: canManageMembers });
   const resend = useResendInvite();
   const revoke = useRevokeInvite();
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string } | null>(null);
