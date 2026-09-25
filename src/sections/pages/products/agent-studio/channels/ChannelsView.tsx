@@ -55,6 +55,14 @@ const statusTone: Record<string, StatusTone> = {
   suspended: 'warning',
 };
 
+/** Human-readable health tooltip — never leak raw JSON into title/aria. */
+function healthTitle(health: Record<string, unknown>): string {
+  const ok = health.ok === true ? 'ok' : health.ok === false ? 'failing' : 'unknown';
+  const message = typeof health.message === 'string' && health.message ? `: ${health.message}` : '';
+  const at = typeof health.last_verified === 'string' && health.last_verified ? ` (last verified ${health.last_verified})` : '';
+  return `Health ${ok}${message}${at}`;
+}
+
 const Mono = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 12px;
@@ -228,7 +236,7 @@ export function ChannelsView() {
                       </DataCell>
                       <DataCell $w="12%">
                         {account.health && Object.keys(account.health).length > 0 ? (
-                          <span title={JSON.stringify(account.health)}>checked ✓</span>
+                          <span title={healthTitle(account.health)}>checked ✓</span>
                         ) : (
                           <Muted>—</Muted>
                         )}
@@ -362,6 +370,12 @@ export function ChannelsView() {
               <p style={{ fontSize: 13, margin: '0 0 6px' }}>Callback URL (paste into the platform dashboard):</p>
               <Mono>{setupResult.result.webhookUrl}</Mono>{' '}
               <CopyButton value={setupResult.result.webhookUrl} label="Copy callback URL" />
+              {/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])([:/]|$)/i.test(setupResult.result.webhookUrl) ? (
+                <p style={{ fontSize: 12, color: '#b45309', margin: '6px 0 0' }}>
+                  This URL points at localhost — the platform cannot reach it. Set ENGINE_BASE_URL to this
+                  deployment's public engine URL and re-run webhook setup.
+                </p>
+              ) : null}
             </div>
           ) : (
             <p style={{ fontSize: 13 }}><Muted>No callback URL returned.</Muted></p>
@@ -545,7 +559,9 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
   const assistants = useAssistants();
   const currentBinding = typeof account.config.default_assistant_id === 'string' ? account.config.default_assistant_id : '';
   const [displayName, setDisplayName] = useState(account.displayName);
-  const [status, setStatus] = useState(account.status === 'suspended' ? 'suspended' : 'active');
+  // Preserve the account's actual status — never coerce pending→active as a
+  // side effect of editing an unrelated field (P5I-CH-C3).
+  const [status, setStatus] = useState(account.status ?? 'active');
   const [assistantId, setAssistantId] = useState(currentBinding);
   const [origins, setOrigins] = useState(Array.isArray(account.config.allowed_domains) ? (account.config.allowed_domains as string[]).join(', ') : '');
   const [greeting, setGreeting] = useState(typeof account.config.greeting === 'string' ? account.config.greeting : '');
@@ -596,6 +612,7 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
           <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
             <option value="active">active</option>
             <option value="suspended">suspended</option>
+            {status === 'pending' ? <option value="pending" disabled>pending (verify to activate)</option> : null}
           </select>
         </label>
         <label style={{ fontSize: 13, flex: 2 }}>
