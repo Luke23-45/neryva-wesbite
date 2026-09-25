@@ -8,7 +8,7 @@ import {
 } from '@hooks/studio/useAgentAuthoring';
 import { useMemberNameMap, useRollout } from '@hooks/studio/useSetupOperate';
 import { useEvalRuns } from '@hooks/studio/useSetupEval';
-import { useChannels } from '@hooks/studio/useSetupChannels';
+import { useChannels, isChannelsModuleDisabled } from '@hooks/studio/useSetupChannels';
 import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useOrg } from '@/Context/OrgContext';
 import { selectVersionEvalState } from '../../builder/lib/eval-model';
@@ -185,6 +185,11 @@ export function OperateHeader({
   const boundChannels = (channels.data ?? []).filter(
     (c) => typeof c.config.default_assistant_id === 'string' && c.config.default_assistant_id === agentId,
   );
+  // P5-C3: a 404 on the channels read means the channels module is disabled
+  // in this deployment — the truth is "unknown", not "none". Render an
+  // honest disabled-plane note instead of "No channel serves this agent yet."
+  // (J1-03 pattern, same as the dashboard setup checklist).
+  const channelsDisabled = channels.isError && isChannelsModuleDisabled(channels.error);
 
   const activeDefinition = active?.definition ?? null;
   const pinnedProviders = activeDefinition ? [...new Set(activeDefinition.model_policy.allowed_models.map((ref) => ref.split('/')[0] ?? ref))] : [];
@@ -302,8 +307,10 @@ export function OperateHeader({
       )}
 
       <Card style={{ marginBottom: 12 }}>
-        <CardLabel>SERVING CHANNELS · {boundChannels.length} BOUND</CardLabel>
-        {boundChannels.length === 0 ? (
+        <CardLabel>SERVING CHANNELS{channelsDisabled ? '' : ` · ${boundChannels.length} BOUND`}</CardLabel>
+        {channelsDisabled ? (
+          <Muted>Channel plane is not enabled in this deployment — serving state is unknown.</Muted>
+        ) : boundChannels.length === 0 ? (
           <Muted>No channel serves this agent yet.</Muted>
         ) : (
           boundChannels.map((c) => (

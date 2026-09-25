@@ -22,6 +22,7 @@ import {
 import { pageItem } from '@styles/motion';
 import {
   useChannels,
+  isChannelsModuleDisabled,
   useCreateChannel,
   useUpdateChannel,
   useDeactivateChannel,
@@ -128,6 +129,11 @@ export function ChannelsView() {
   const canVerify = canSetup(role, 'setup:author');
   const verifyDenied = setupDeniedCopy(role, 'setup:author');
   const channels = useChannels();
+  // P5-C4: a 404 on the channels read means the channels module is disabled
+  // in this deployment (engine default) — not a failure. Show an honest
+  // "not enabled" panel instead of the generic error + pointless retry
+  // (J1-03 pattern, same as the dashboard setup checklist).
+  const channelsDisabled = channels.isError && isChannelsModuleDisabled(channels.error);
   const assistants = useAssistants();
   const verify = useVerifyChannel();
   const webhookSetup = useWebhookSetup();
@@ -180,6 +186,15 @@ export function ChannelsView() {
           subtitle="Credentials seal on arrival and never render. Deactivating destroys credentials — it is not a pause."
           flush
         >
+          {channelsDisabled ? (
+            <p style={{ padding: '20px 24px', fontSize: 13, lineHeight: 1.5 }}>
+              <Muted>
+                Channels are not enabled in this deployment — the channel plane (WhatsApp, Messenger, Telegram,
+                website widget) is switched off, so no accounts can be listed or connected here. Ask your platform
+                operator to enable it.
+              </Muted>
+            </p>
+          ) : (
           <QueryView
             query={channels}
             isEmpty={(d) => d.length === 0}
@@ -280,6 +295,7 @@ export function ChannelsView() {
               </DataTable>
             )}
           </QueryView>
+          )}
         </Panel>
       </motion.div>
 

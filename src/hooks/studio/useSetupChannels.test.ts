@@ -42,6 +42,18 @@ describe('parseChannels', () => {
     expect(parseChannel({ channel: null })).toBeNull();
     expect(parseChannels({ channels: [{ platform: 'web' }] })).toEqual([]);
   });
+
+  it('warns (never silently) when dropping malformed rows — P5-C7', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(parseChannels({ channels: [{ platform: 'web' }, null, 42] })).toEqual([]);
+      expect(warn).toHaveBeenCalledTimes(3);
+      expect(warn.mock.calls[0][0]).toContain('without id');
+      expect(warn.mock.calls[1][0]).toContain('non-object row');
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('widgetSnippet', () => {
