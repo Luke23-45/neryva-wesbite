@@ -137,16 +137,28 @@ export function useConfigHistory(scope: ConfigScope | null) {
   });
 }
 
+/** P5-C16: fetch delivery targets; a 404 (nothing published yet for this
+ * scope) maps to the empty shape so the UI shows "No deliveries" instead of
+ * an error. Extracted for unit testing. */
+export async function fetchConfigDelivery(orgId: string, scope: string): Promise<unknown> {
+  try {
+    return await engine<unknown>(`/console/org/${orgId}/config/delivery`, { query: { scope } });
+  } catch (error) {
+    if (error instanceof Error && 'status' in error && (error as { status?: number }).status === 404) {
+      return { targets: [] };
+    }
+    throw error;
+  }
+}
+
 export function useConfigDelivery(scope: ConfigScope | null) {
   const { orgId } = useOrg();
   return useQuery({
     queryKey: [...CONFIG_KEY(orgId, scope), 'delivery'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/delivery`, { query: { scope: scope ?? '' } }),
+    queryFn: () => fetchConfigDelivery(orgId ?? '', scope ?? ''),
     enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseDelivery,
-    // 404 = nothing published yet for this scope — an honest empty state, not an error.
-    retry: (count, error) => (error instanceof Error && 'status' in error && (error as { status?: number }).status === 404 ? false : count < 2),
   });
 }
 

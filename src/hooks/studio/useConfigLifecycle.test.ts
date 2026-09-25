@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest';
-import { parseDraft, parseConfigVersions, parseDelivery } from './useConfigLifecycle';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { parseDraft, parseConfigVersions, parseDelivery, fetchConfigDelivery } from './useConfigLifecycle';
+import { engine } from '@lib/engine/client';
+
+vi.mock('@lib/engine/client', () => ({ engine: vi.fn() }));
+vi.mock('@/Context/OrgContext', () => ({ useOrg: () => ({ orgId: 'org-1' }) }));
+
+const mockEngine = vi.mocked(engine);
+
+beforeEach(() => {
+  mockEngine.mockReset();
+});
 
 describe('parseDraft', () => {
   it('parses a camelCase draft row', () => {
@@ -39,6 +49,22 @@ describe('parseConfigVersions', () => {
   it('survives garbage', () => {
     expect(parseConfigVersions(null)).toEqual([]);
     expect(parseConfigVersions({ versions: [{ nope: true }] })).toEqual([]);
+  });
+});
+
+describe('fetchConfigDelivery', () => {
+  it('maps a 404 (nothing published) to the empty targets shape', async () => {
+    const err = Object.assign(new Error('config version not found'), { status: 404 });
+    mockEngine.mockRejectedValueOnce(err);
+    const raw = await fetchConfigDelivery('org-1', 'policy_set');
+    expect(raw).toEqual({ targets: [] });
+    expect(parseDelivery(raw)).toEqual([]);
+  });
+
+  it('rethrows non-404 errors', async () => {
+    const err = Object.assign(new Error('boom'), { status: 500 });
+    mockEngine.mockRejectedValueOnce(err);
+    await expect(fetchConfigDelivery('org-1', 'policy_set')).rejects.toThrow('boom');
   });
 });
 

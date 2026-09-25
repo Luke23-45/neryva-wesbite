@@ -417,13 +417,15 @@ export function ComplianceView() {
 
                 <DataHead>
 
-                  <DataCell $w="24%">Hold</DataCell>
+                  <DataCell $w="20%">Hold</DataCell>
 
-                  <DataCell $w="18%">Scope</DataCell>
+                  <DataCell $w="14%">Scope</DataCell>
 
-                  <DataCell $w="16%">Since</DataCell>
+                  <DataCell $w="14%">Since</DataCell>
 
-                  <DataCell $w="42%">Reason</DataCell>
+                  <DataCell $w="12%">Status</DataCell>
+
+                  <DataCell $w="40%">Reason</DataCell>
 
                 </DataHead>
 
@@ -431,25 +433,37 @@ export function ComplianceView() {
 
                   <DataRow key={h.id} $interactive={false}>
 
-                    <DataCell $w="24%">
+                    <DataCell $w="20%">
 
                       <CellMono>{h.id.slice(0, 14)}</CellMono>
 
                     </DataCell>
 
-                    <DataCell $w="18%">
+                    <DataCell $w="14%">
 
                       <CellMeta>{h.scopeType ?? '—'}</CellMeta>
 
                     </DataCell>
 
-                    <DataCell $w="16%">
+                    <DataCell $w="14%">
 
                       <CellMeta>{h.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
 
                     </DataCell>
 
-                    <DataCell $w="42%">
+                    {/* P5-C17: the engine lists released holds too — show the status so a released hold is never mistaken for an active one. */}
+
+                    <DataCell $w="12%">
+
+                      <StatusPill tone={h.status === 'released' ? 'neutral' : 'warning'} dot={false}>
+
+                        {h.status ?? 'active'}
+
+                      </StatusPill>
+
+                    </DataCell>
+
+                    <DataCell $w="40%">
 
                       <CellMeta>{h.reason ?? '—'}</CellMeta>
 
@@ -675,38 +689,56 @@ function ConfigLifecycleSection() {
   const rollback = useRollbackConfig();
 
   const [json, setJson] = useState<Record<string, unknown> | null>(null);
+  // P5-C18: the textarea is a controlled input — its raw text must live in
+  // state. The previous version parsed every keystroke and silently dropped
+  // invalid intermediate states, so typing was impossible (the value kept
+  // reverting to '{}').
+  const [rawText, setRawText] = useState<string | null>(null);
+  const [textError, setTextError] = useState<string | null>(null);
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [rollbackVersion, setRollbackVersion] = useState<number | null>(null);
 
   // Switching scope resets the local editor to that scope's draft.
   const effective = json ?? draft.data?.payload ?? null;
-  const jsonText = effective ? JSON.stringify(effective, null, 2) : '{}';
+  const jsonText = rawText ?? (effective ? JSON.stringify(effective, null, 2) : '{}');
+
+  const resetEditor = () => {
+    setJson(null);
+    setRawText(null);
+    setTextError(null);
+  };
 
   const selectScope = (next: ConfigScope) => {
     setScope(next);
-    setJson(null);
+    resetEditor();
     setRollbackVersion(null);
   };
 
   const setFromText = (text: string) => {
+    setRawText(text);
     try {
       setJson(JSON.parse(text) as Record<string, unknown>);
+      setTextError(null);
     } catch {
-      /* invalid JSON — the textarea keeps the text; validation catches it */
+      setTextError('Invalid JSON — fix the syntax before validating.');
     }
   };
 
   const validateAndSave = async () => {
-    if (!effective) return;
+    if (textError) {
+      toast.error(textError);
+      return;
+    }
+    if (!json) return;
     try {
-      const result = await validate.mutateAsync({ scope, payload: effective });
+      const result = await validate.mutateAsync({ scope, payload: json });
       if (result.ok === false) {
         const issues = (result.issues ?? []).map((i) => `${i.path}: ${i.message}`);
         toast.error(`Validation failed: ${(issues.length > 0 ? issues : ['unknown']).join('; ')}`);
         return;
       }
-      await saveDraft.mutateAsync({ scope, payload: effective });
-      setJson(null);
+      await saveDraft.mutateAsync({ scope, payload: json });
+      resetEditor();
       toast.success('Draft validated and saved');
     } catch {
       /* the hook surfaced the error */
@@ -733,7 +765,7 @@ function ConfigLifecycleSection() {
               <ActionButton
                 variant="secondary"
                 size="sm"
-                disabled={!effective || validate.isPending}
+                disabled={!!textError || !json || validate.isPending}
                 onClick={() => void validateAndSave()}
               >
                 Validate & save
@@ -742,7 +774,7 @@ function ConfigLifecycleSection() {
                 variant="secondary"
                 size="sm"
                 disabled={deleteDraft.isPending || !draft.data?.payload}
-                onClick={() => deleteDraft.mutate({ scope }, { onSuccess: () => { setJson(null); toast.success('Draft discarded'); } })}
+                onClick={() => deleteDraft.mutate({ scope }, { onSuccess: () => { resetEditor(); toast.success('Draft discarded'); } })}
               >
                 Discard
               </ActionButton>
@@ -756,9 +788,16 @@ function ConfigLifecycleSection() {
             </ActionCluster>
           }
         >
-          <QueryView query={draft} skeleton={<Skeleton $h="180px" $r="12px" />} isEmpty={(d) => d.payload === null} empty={{ title: 'No draft', description: `No ${scope} draft yet — edit the JSON below and save it as a draft.` }}>
+          <QueryView query={draft} skeleton={<Skeleton $h="180px" $r="12px" />}>
             {() => (
               <ConfigStack>
+                {/* P5-C15: the editor must render even when no draft exists —
+                    gating it behind the empty state made the first draft
+                    impossible to create ("edit the JSON below" with no JSON
+                    below). The empty note is now a caption above the editor. */}
+                {!draft.data?.payload && (
+                  <DraftNote>No {scope} draft yet — edit the JSON below and save it as a draft.</DraftNote>
+                )}
                 <ConfigTextarea
                   value={jsonText}
                   onChange={(e) => setFromText(e.target.value)}
@@ -766,9 +805,10 @@ function ConfigLifecycleSection() {
                   spellCheck={false}
                   aria-label="Config draft JSON"
                 />
-                {draft.data?.validationIssues && draft.data.validationIssues.length > 0 && (
+                {(textError || (draft.data?.validationIssues && draft.data.validationIssues.length > 0)) && (
                   <ValidationErrors>
-                    {draft.data.validationIssues.map((err, i) => (
+                    {textError && <ValidationError>{textError}</ValidationError>}
+                    {draft.data?.validationIssues?.map((err, i) => (
                       <ValidationError key={i}>{err}</ValidationError>
                     ))}
                   </ValidationErrors>
@@ -1002,6 +1042,20 @@ const ValidationError = styled.div`
   border-radius: 6px;
 
   background: ${({ theme }) => theme.app.status.error.bg};
+
+`;
+
+
+
+/* P5-C15: caption shown above the always-visible editor when no draft exists. */
+
+const DraftNote = styled.p`
+
+  font-size: ${({ theme }) => theme.app.type.caption};
+
+  color: ${({ theme }) => theme.app.text.muted};
+
+  margin: 0;
 
 `;
 
