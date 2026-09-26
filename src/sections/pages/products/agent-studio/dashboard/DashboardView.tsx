@@ -74,6 +74,38 @@ const rangeOptions: { value: Range; label: string }[] = [
 const stateTone = (state: string): 'success' | 'azure' | 'warning' | 'error' | 'neutral' =>
   state === 'active' ? 'success' : state === 'trial' ? 'azure' : state === 'past_due' ? 'warning' : state === 'suspended' ? 'error' : 'neutral';
 
+/**
+ * Format a satellite status for display. The backend may return internal
+ * values like "placeholder" that should never be shown literally to users.
+ * Known statuses are mapped to human-readable labels; unknown values fall
+ * back to a neutral "pending" rather than leaking implementation details.
+ */
+const formatSatelliteStatus = (status: string): string => {
+  const normalized = status.toLowerCase().trim();
+  switch (normalized) {
+    case 'operational':
+    case 'active':
+    case 'healthy':
+      return normalized;
+    case 'degraded':
+    case 'degraded_performance':
+      return 'degraded';
+    case 'down':
+    case 'outage':
+    case 'error':
+      return 'down';
+    case 'placeholder':
+    case 'unknown':
+    case 'pending':
+    case '':
+      return 'pending';
+    default:
+      // For unrecognized statuses, show a sanitized version rather than
+      // the raw string — never leak internal identifiers.
+      return normalized.replace(/_/g, ' ');
+  }
+};
+
 export function DashboardView() {
   const { orgId } = useOrg();
   if (!orgId) {
@@ -424,7 +456,7 @@ function DashboardContent() {
                     "never" with no clear meaning. Liveness is supporting info,
                     clearly labelled; a missing heartbeat says so in words.
                   */}
-                  <HealthValue>{s.status}</HealthValue>
+                  <HealthValue>{formatSatelliteStatus(s.status)}</HealthValue>
                   <HealthMeta>
                     {s.liveness === 'never'
                       ? 'No heartbeat yet'

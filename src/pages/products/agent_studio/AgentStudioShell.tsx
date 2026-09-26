@@ -55,6 +55,7 @@ export default function AgentStudioShellPage() {
         id: c.id,
         title: c.title,
         to: `/agent-studio/conversations?chat=${encodeURIComponent(c.id)}`,
+        updatedAt: c.updatedAt,
       }))
     : null;
 

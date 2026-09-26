@@ -259,9 +259,11 @@ export const RecentLabel = styled.div`
 `;
 
 export const RecentItemLink = styled(Link)`
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   padding: 7px 10px;
-  border-radius: 7px;
+  border-radius: ${({ theme }) => theme.radii.sm};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
   text-decoration: none;
@@ -280,6 +282,18 @@ export const RecentItemLink = styled(Link)`
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: -2px;
   }
+`;
+
+export const RecentItemTitle = styled.span`
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const RecentItemDate = styled.span`
+  flex-shrink: 0;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 export const SidebarFooter = styled.div.attrs({ className: 'collapse-hide' })`
@@ -358,8 +372,8 @@ export const ShellBody = styled.div`
   flex-direction: column;
   min-width: 0;
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(124, 92, 255, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 90% 10%, rgba(37, 99, 235, 0.08), transparent 60%),
+    radial-gradient(1200px 600px at 50% -10%, rgba(124, 92, 255, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(37, 99, 235, 0.05), transparent 60%),
     linear-gradient(
       180deg,
       ${({ theme }) => theme.app.bg.base} 0%,

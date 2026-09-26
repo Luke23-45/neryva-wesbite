@@ -111,10 +111,10 @@ export const lift = {
  *   <motion.div variants={pageItem} initial="hidden" animate="visible" custom={0}>
  */
 export const pageItem: Variants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 12 },
   visible: (i: number = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: ease.premium, delay: 0.05 + i * 0.06 },
+    transition: { duration: 0.45, ease: ease.premium, delay: 0.03 + i * 0.04 },
   }),
 };

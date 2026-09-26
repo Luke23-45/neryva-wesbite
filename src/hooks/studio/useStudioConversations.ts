@@ -46,10 +46,10 @@ export function parseConversations(raw: unknown): ConversationSummary[] {
       return {
         id,
         title: str(item.title) ?? str(item.name) ?? str(item.summary) ?? 'Untitled conversation',
-        updatedAt: str(item.updated_at) ?? str(item.last_message_at) ?? str(item.created_at),
+        updatedAt: str(item.updated_at) ?? str(item.updatedAt) ?? str(item.last_message_at) ?? str(item.lastMessageAt) ?? str(item.created_at) ?? str(item.createdAt),
         status: str(item.status) ?? str(item.state),
-        agentId: str(item.agent_id) ?? str(item.assistant_id) ?? (agent ? str(agent.id) : null),
-        agentName: (agent ? str(agent.name) : null) ?? str(item.agent_name),
+        agentId: str(item.agent_id) ?? str(item.agentId) ?? str(item.assistant_id) ?? str(item.assistantId) ?? (agent ? str(agent.id) : null),
+        agentName: (agent ? str(agent.name) : null) ?? str(item.agent_name) ?? str(item.agentName),
       } satisfies ConversationSummary;
     })
     .filter((c): c is ConversationSummary => c !== null);

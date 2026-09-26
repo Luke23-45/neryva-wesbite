@@ -17,6 +17,8 @@ import {
   RecentSection,
   RecentLabel,
   RecentItemLink,
+  RecentItemTitle,
+  RecentItemDate,
   RecentEmpty,
   SidebarFooter,
   UserCard,
@@ -83,7 +85,37 @@ import { SidebarSection } from './SidebarSection';
 import { useNavBadges } from './useNavBadges';
 import { useSidebarPrefs } from './useSidebarPrefs';
 
-export type RecentChat = { id: string; title: string; to: string };
+export type RecentChat = { id: string; title: string; to: string; updatedAt: string | null };
+
+/**
+ * Check if a chat title is a generic placeholder (e.g., "Untitled conversation").
+ * Generic titles get a relative date suffix to disambiguate them in the sidebar.
+ */
+const isGenericTitle = (title: string): boolean => {
+  const normalized = title.toLowerCase().trim();
+  return normalized === 'untitled conversation' || normalized === 'untitled' || normalized === '';
+};
+
+/**
+ * Format an ISO date as a relative time (e.g., "2d ago", "Yesterday").
+ * Apple-style: concise, human-readable, no unnecessary precision.
+ */
+const formatRelativeDate = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Just now';
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return weeks === 1 ? '1w ago' : `${weeks}w ago`;
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
 type Props = {
   /** v2 domain config (SIDEBAR_LEDGER.md §2 — single source of truth). */
@@ -413,7 +445,10 @@ export function StudioShell({
                   {q && !hasResults && <RecentLabel>No matches for “{query}”</RecentLabel>}
                   {filteredRecents.map((c) => (
                     <RecentItemLink key={c.id} to={c.to} onClick={closeMobile}>
-                      {c.title}
+                      <RecentItemTitle>{c.title}</RecentItemTitle>
+                      {isGenericTitle(c.title) && c.updatedAt && (
+                        <RecentItemDate>{formatRelativeDate(c.updatedAt)}</RecentItemDate>
+                      )}
                     </RecentItemLink>
                   ))}
                   {recentChats.length === 0 && !q && (
