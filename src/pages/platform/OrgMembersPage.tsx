@@ -350,7 +350,7 @@ export default function OrgMembersPage() {
           </Toolbar>
         }
       >
-        <QueryView query={members} skeleton={<div style={{ padding: 20 }}><Skeleton $h="16px" /><Skeleton $h="16px" /><Skeleton $h="16px" /></div>} isEmpty={(d) => d.members.length === 0} empty={{ title: 'No members match', description: 'Try a different search.' }}>
+        <QueryView query={members} skeleton={<div style={{ padding: 20 }}><Skeleton $h="16px" /><Skeleton $h="16px" /><Skeleton $h="16px" /></div>}>
           {(data) => (
             <DataTable>
               <thead>
@@ -364,7 +364,14 @@ export default function OrgMembersPage() {
                 </DataHead>
               </thead>
               <tbody>
-                {data.members.map((member) => {
+                {data.members.length === 0 ? (
+                  <DataRow>
+                    <DataCell style={{ textAlign: 'center', padding: '32px 16px', color: 'rgba(229,231,235,0.55)' }}>
+                      No members match — try a different search.
+                    </DataCell>
+                  </DataRow>
+                ) : (
+                data.members.map((member) => {
                   const isSelf = myId !== null && member.accountId === myId;
                   const isOwnerTarget = member.role === 'owner';
                   const isAdminTarget = member.role === 'admin';
@@ -428,7 +435,7 @@ export default function OrgMembersPage() {
                       </DataCell>
                     </DataRow>
                   );
-                })}
+                }))}
               </tbody>
             </DataTable>
           )}
