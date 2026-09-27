@@ -226,7 +226,7 @@ export const NavItemIcon = styled.span<{ $active: boolean }>`
   height: 22px;
   border-radius: 6px;
   color: ${({ theme, $active }) => ($active ? theme.app.text.inverse : theme.app.text.muted)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.gradients.primary : 'transparent')};
+  background: ${({ $active, theme }) => ($active ? theme.colors.semantic.info : 'transparent')};
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
   flex-shrink: 0;
