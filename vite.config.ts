@@ -30,6 +30,10 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    // ngrok tunnels (leading dot = domain + all subdomains).
+    // The public domain comes from NGROK_URL in .env; the wildcard covers
+    // any current/future reserved domain without code changes.
+    allowedHosts: ['.ngrok-free.dev', '.ngrok.io'],
     proxy: {
       '/api/v1': {
         target: 'http://localhost:4000',

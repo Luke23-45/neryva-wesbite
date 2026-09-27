@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:tunnel": "node scripts/dev.mjs --tunnel",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
