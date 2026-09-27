@@ -58,6 +58,10 @@ import {
   type InvoiceRow,
 } from '@hooks/engine/billing';
 import { useCan } from '@lib/engine/capabilities';
+import { CreditWalletPanel } from '@components/platform/credits/CreditWalletPanel';
+import { BuyCreditsPanel } from '@components/platform/credits/BuyCreditsPanel';
+import { CreditHistoryPanel } from '@components/platform/credits/CreditHistoryPanel';
+import { CapSettingsPanel } from '@components/platform/credits/CapSettingsPanel';
 
 // ─── Usage page ──────────────────────────────────────────────────────
 
@@ -95,6 +99,10 @@ export function BillingPage() {
         />
       ) : (
         <>
+          <CreditWalletPanel />
+          {canManage && <BuyCreditsPanel />}
+          {canManage && <CapSettingsPanel />}
+          <CreditHistoryPanel />
           <QuotaPanel />
           <LedgersPanel />
           <InvoicesPanel canManage={canManage} />

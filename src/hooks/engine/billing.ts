@@ -367,3 +367,19 @@ export function useCreateAdjustment() {
     onError: (error) => toastEngineError(error, 'Could not create the adjustment'),
   });
 }
+
+/**
+ * Whether the org has an active enterprise commitment (BYOK gating).
+ * Used to hide/disable "Bring Your Own API Key" for non-enterprise orgs.
+ * The backend enforces BYOK=enterprise-only at POST regardless.
+ */
+export function useEnterpriseStatus(options?: { enabled?: boolean }) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...BILLING_PREFIX, 'enterprise-status', orgId],
+    queryFn: () => engine<{ enterprise: boolean }>(`/console/billing/${orgId}/enterprise/status`),
+    enabled: (options?.enabled ?? true) && !!orgId,
+    staleTime: 60_000,
+    select: (data) => data.enterprise === true,
+  });
+}

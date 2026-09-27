@@ -20,6 +20,11 @@ vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
 
+// BYOK is enterprise-only: tests run as enterprise so the connect flow is visible.
+vi.mock('@hooks/engine/billing', () => ({
+  useEnterpriseStatus: () => ({ data: true }),
+}));
+
 vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupProviders')>();
   return {

@@ -24,6 +24,7 @@ import { useProjects } from '@hooks/engine/queries';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { StepUpModal } from '@components/platform/StepUpModal';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
+import { CreditBalanceChip } from '@components/platform/credits/CreditBalanceChip';
 import { SignInOptions } from '@components/platform/SignInOptions';
 
 const Shell = styled.div`
@@ -246,6 +247,7 @@ export default function PlatformShell() {
             ) : null}
           </TopGroup>
           <TopGroup>
+            <CreditBalanceChip />
             <AccountChip>
               {name ?? account?.email ?? 'Account'}
               {role && <> · {ROLE_LABELS[role as OrgRole] ?? role}</>}

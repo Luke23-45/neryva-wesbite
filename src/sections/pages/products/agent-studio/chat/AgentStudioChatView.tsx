@@ -25,6 +25,7 @@ import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { ChatMessages, type Message } from './ChatMessages';
 import { ChatComposer } from './ChatComposer';
 import { ChatHeader } from './ChatHeader';
+import { RunCostEstimate } from '@components/platform/credits/RunCostEstimate';
 
 import {
   ViewRoot,
@@ -476,6 +477,7 @@ export function AgentStudioChatView() {
           )}
         </ScrollRegion>
 
+        <RunCostEstimate />
         <ChatComposer
           ref={inputRef}
           placeholder={needsAgent ? 'Choose an agent above to start chatting' : data.composer.placeholder}

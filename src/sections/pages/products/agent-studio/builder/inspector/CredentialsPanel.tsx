@@ -11,6 +11,7 @@ import {
   useRevokeProviderCredential,
   type ProviderCredential,
 } from '@hooks/studio/useSetupProviders';
+import { useEnterpriseStatus } from '@hooks/engine/billing';
 import {
   CheckRow,
   Counter,
@@ -61,6 +62,11 @@ export interface CredentialsPanelProps {
  */
 export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highlightProvider, revokeOpenId, connectOpen, onConnectOpenChange, onRevokeOpenChange }: CredentialsPanelProps) {
   const credentials = useProviderCredentials({ enabled: canRead });
+  // BYOK is enterprise-only at launch (user decision 2026-09-28). Non-enterprise
+  // orgs use Neryva-managed platform credentials; the backend 403s BYOK creation
+  // for them regardless of what the UI shows.
+  const enterprise = useEnterpriseStatus({ enabled: canRead });
+  const isEnterprise = enterprise.data === true;
 
   if (!canRead) {
     return (
@@ -91,7 +97,14 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
         />
       ))}
       {canGovern ? (
-        connectOpen ? (
+        !isEnterprise ? (
+          <DeniedNote>
+            Bring Your Own API Key is an Enterprise feature. Your organization uses
+            Neryva-managed platform credentials — select any provider and model below
+            and Neryva handles billing. Contact sales to enable BYOK with an enterprise
+            commitment.
+          </DeniedNote>
+        ) : connectOpen ? (
           <ConnectForm
             key={highlightProvider ?? 'none'}
             presetProvider={highlightProvider}
