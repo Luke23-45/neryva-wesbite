@@ -27,7 +27,7 @@ describe('parseMemoryScope', () => {
     expect(parseMemoryScope('user')).toBe('user');
     expect(parseMemoryScope('none')).toBe('none');
     expect(parseMemoryScope(undefined)).toBe('user');
-    expect(parseMemoryScope('org')).toBe('user');
+    expect(parseMemoryScope('org')).toBe('organization');
   });
 });
 

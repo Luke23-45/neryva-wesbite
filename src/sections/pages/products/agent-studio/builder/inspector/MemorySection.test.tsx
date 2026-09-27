@@ -150,7 +150,7 @@ describe('MemorySection', () => {
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
           <MemorySection
             assistantId="agent-main"
-            definition={definitionWith({ memory_scope: 'organization', history_limit: 30 })}
+            definition={definitionWith({ memory_scope: 'org', history_limit: 30 })}
             versionId="v1"
             versionHash="h1"
             isDraft

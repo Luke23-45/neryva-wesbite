@@ -530,7 +530,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       kind: null,
       title: SPINE_META.ship.label,
       subtitle: shipGrade?.subtitle ?? null,
-      hint: locked ? 'Create the agent first' : (shipGrade?.hint ?? 'Publish gates land in C14'),
+      hint: locked ? 'Create the agent first' : (shipGrade?.hint ?? 'Publish gates are checked in the Ship section'),
       status: locked ? 'locked' : (shipGrade?.status ?? 'untouched'),
       lock: false,
       portColor: null,
@@ -641,7 +641,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
             hint = grade.hint;
             status = grade.status;
           } else {
-            hint = 'Datasets land in C10';
+            hint = 'Datasets attach in the Evaluator section';
           }
           break;
         }

@@ -500,7 +500,7 @@ describe('evaluation satellite (C10 — signal, never a gate)', () => {
   it('keeps the ghost while eval state is unknown', () => {
     const data = evalNode(base());
     expect(data?.status).toBe('untouched');
-    expect(data?.hint).toBe('Datasets land in C10');
+    expect(data?.hint).toBe('Datasets attach in the Evaluator section');
     expect(evalEdgeLit(base())).toBe(false);
   });
 

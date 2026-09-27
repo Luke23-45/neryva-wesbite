@@ -22,8 +22,10 @@ export type MemoryScope = 'user' | 'conversation' | 'organization' | 'assistant'
 /** Engine enum order — `user` first because it is the default (never omitted). */
 export const MEMORY_SCOPE_ORDER: readonly MemoryScope[] = ['user', 'conversation', 'organization', 'assistant', 'none'];
 
-/** Parse wire/unknown scope → engine enum; garbage resolves the default (C06 precedent). */
+/** Parse wire/unknown scope → engine enum; garbage resolves the default (C06 precedent).
+ * Accepts the consumer 'org' spelling too — AgentDefinition carries consumer scope. */
 export function parseMemoryScope(raw: unknown): MemoryScope {
+  if (raw === 'org') return 'organization';
   return raw === 'conversation' || raw === 'organization' || raw === 'assistant' || raw === 'none' ? raw : 'user';
 }
 
