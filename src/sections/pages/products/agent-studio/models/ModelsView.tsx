@@ -136,7 +136,7 @@ export function ModelsView() {
         <ViewHeader>
           <ViewTitle>Models</ViewTitle>
           <ViewSubtitle>
-            Live catalog availability — usable rows are pickable in the editor; the rest name their reason. Drafts advise, publish enforces.
+            Live catalog availability — usable rows are pickable in the editor; the rest state their reason. Drafts advise, publish enforces.
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>
@@ -152,7 +152,7 @@ export function ModelsView() {
 
       {tab === 'catalog' ? (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
-          <Panel title="Model catalog" subtitle="Published allowlist ∩ org enablements ∩ credentials ∩ residency. Prices are list ($/1k tokens); unpriced never implies free.">
+          <Panel title="Model catalog" subtitle="Published allowlist · org enablements · credentials · residency. Prices are list ($/1k tokens); unpriced never implies free.">
             <QueryView
               query={models}
               isEmpty={(d) => d.length === 0}

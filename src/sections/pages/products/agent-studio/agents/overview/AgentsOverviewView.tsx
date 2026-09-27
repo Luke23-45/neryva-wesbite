@@ -182,8 +182,8 @@ export function AgentsOverviewView() {
               </DataHead>
               {recents.map((a) => (
                 <DataRow key={a.id}>
-                  <DataCell>{a.name}</DataCell>
-                  <DataCell>
+                  <DataCell $w="44%">{a.name}</DataCell>
+                  <DataCell $w="18%">
                     <StatusPill
                       tone={a.status === 'live' ? 'success' : a.status === 'disabled' ? 'error' : 'info'}
                       dot={false}
@@ -191,8 +191,8 @@ export function AgentsOverviewView() {
                       {a.status === 'new' ? 'Draft' : a.status === 'live' ? 'Live' : 'Disabled'}
                     </StatusPill>
                   </DataCell>
-                  <DataCell>{a.updatedAt ? a.updatedAt.slice(0, 16).replace('T', ' ') : '—'}</DataCell>
-                  <DataCell>
+                  <DataCell $w="24%">{a.updatedAt ? a.updatedAt.slice(0, 16).replace('T', ' ') : '—'}</DataCell>
+                  <DataCell $w="44px">
                     <Link to="/agent-studio/agents/$agentId" params={{ agentId: a.id }}>
                       Open
                     </Link>

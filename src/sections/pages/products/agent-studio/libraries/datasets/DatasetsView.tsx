@@ -52,14 +52,14 @@ export function DatasetsView() {
             </DataHead>
             {list.map((d) => (
               <DataRow key={d.id}>
-                <DataCell>
+                <DataCell $w="28%">
                   <StatusPill tone="info" dot={false}>
                     {d.name}
                   </StatusPill>
                 </DataCell>
-                <DataCell>{describeDatasetOrigin(d.name)}</DataCell>
-                <DataCell>{d.description ?? '—'}</DataCell>
-                <DataCell>{d.createdAt ?? '—'}</DataCell>
+                <DataCell $w="26%">{describeDatasetOrigin(d.name)}</DataCell>
+                <DataCell $w="32%">{d.description ?? '—'}</DataCell>
+                <DataCell $w="14%">{d.createdAt ?? '—'}</DataCell>
               </DataRow>
             ))}
           </DataTable>

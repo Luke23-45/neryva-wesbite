@@ -219,18 +219,18 @@ export function BlocksView() {
               const clearing = clearingId === b.id;
               return (
                 <DataRow key={b.id}>
-                  <DataCell>{b.targetType}</DataCell>
-                  <DataCell>{b.targetName}</DataCell>
-                  <DataCell>{b.reason || '—'}</DataCell>
-                  <DataCell>
+                  <DataCell $w="10%">{b.targetType}</DataCell>
+                  <DataCell $w="16%">{b.targetName}</DataCell>
+                  <DataCell $w="22%">{b.reason || '—'}</DataCell>
+                  <DataCell $w="14%">
                     <StatusPill tone={pill.tone} dot={false}>
                       {pill.label}
                     </StatusPill>
                   </DataCell>
-                  <DataCell>{describeBlockExpiry(b.expiresAt)}</DataCell>
-                  <DataCell>{b.createdBy ? (members.nameOf(b.createdBy) ?? b.createdBy.slice(0, 8)) : '—'}</DataCell>
-                  <DataCell>{shortDate(b.createdAt)}</DataCell>
-                  <DataCell>
+                  <DataCell $w="12%">{describeBlockExpiry(b.expiresAt)}</DataCell>
+                  <DataCell $w="12%">{b.createdBy ? (members.nameOf(b.createdBy) ?? b.createdBy.slice(0, 8)) : '—'}</DataCell>
+                  <DataCell $w="9%">{shortDate(b.createdAt)}</DataCell>
+                  <DataCell $w="44px">
                     <ActionButton
                       variant="secondary"
                       size="sm"

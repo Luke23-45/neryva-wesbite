@@ -15,7 +15,7 @@ const Select = styled.select`
   border-radius: 8px;
   padding: 7px 10px;
   font-size: 13px;
-  max-width: 240px;
+  max-width: 320px;
   cursor: pointer;
 
   &:focus-visible {

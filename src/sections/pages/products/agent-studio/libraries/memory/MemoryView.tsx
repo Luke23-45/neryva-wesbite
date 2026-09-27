@@ -257,22 +257,22 @@ export function MemoryView() {
                 const deleting = deletingId === m.id;
                 return (
                   <DataRow key={m.id}>
-                    <DataCell>{(m.content ?? '—').slice(0, 140)}</DataCell>
-                    <DataCell>
+                    <DataCell $w="40%">{(m.content ?? '—').slice(0, 140)}</DataCell>
+                    <DataCell $w="14%">
                       <StatusPill tone={m.visibility === 'organization' ? 'info' : 'warning'} dot={false}>
                         {m.visibility ?? 'organization'}
                       </StatusPill>
                     </DataCell>
-                    <DataCell title={m.expiresAt ?? undefined}>
+                    <DataCell $w="16%" title={m.expiresAt ?? undefined}>
                       {m.expiresAt ? relativeTime(m.expiresAt) : 'no TTL'}
                     </DataCell>
-                    <DataCell title={m.createdAt ?? undefined}>{relativeTime(m.createdAt)}</DataCell>
-                    <DataCell>
+                    <DataCell $w="14%" title={m.createdAt ?? undefined}>{relativeTime(m.createdAt)}</DataCell>
+                    <DataCell $w="44px">
                       <ActionButton variant="ghost" size="sm" onClick={() => setDetail(m)}>
                         Detail
                       </ActionButton>
                     </DataCell>
-                    <DataCell>
+                    <DataCell $w="44px">
                       <ActionButton
                         variant="ghost"
                         size="sm"
@@ -286,7 +286,7 @@ export function MemoryView() {
                         Edit
                       </ActionButton>
                     </DataCell>
-                    <DataCell>
+                    <DataCell $w="44px">
                       <ActionButton
                         variant="secondary"
                         size="sm"
@@ -314,7 +314,7 @@ export function MemoryView() {
 
       <FootNote>
         Scrub defaults, retention windows, and org-wide purge live with lifecycle in{' '}
-        <Link to="/agent-studio/compliance">Compliance</Link>. Conversation-scoped memories surface
+        <Link to="/agent-studio/compliance">Compliance</Link>.{' '}Conversation-scoped memories surface
         on their conversation, not here. Memory proposals have no approval surface in this build —
         the footer states it instead of faking a queue. The list shows the newest 100 entries per
         scope — older entries are not listed, and search filters only what is loaded.

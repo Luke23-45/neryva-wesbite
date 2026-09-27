@@ -167,7 +167,6 @@ export function ToolsView() {
                   label="Show disabled tools"
                   id="show-disabled-tools"
                 />
-                Show disabled
               </label>
             </div>
             <QueryView
@@ -300,7 +299,7 @@ export function ToolsView() {
         <SectionGap>
           <Panel title="Pin discipline" subtitle="How versions stay reproducible.">
             <Note>
-              Version tool entries carry <Mono>schema_hash</Mono> pins. Publish refuses entries referencing a missing or disabled
+              Version tool entries carry{' '}<Mono>schema_hash</Mono>{' '}pins. Publish refuses entries referencing a missing or disabled
               row, and stale hashes refuse with a re-pin flow — refresh the pin from the hash shown here. Effectful-without-approval
               rows (MUTATING/DESTRUCTIVE with approval NONE) are legal but linted in the editor; approval REQUIRED on the catalog row
               escalates at authorize time regardless of the version entry.
