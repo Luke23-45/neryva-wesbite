@@ -30,7 +30,6 @@ export const Field = styled.div<{ $hasError: boolean }>`
     background ${({ theme }) => theme.transitions.fast};
 
   &:focus-within {
-    border-color: rgba(147, 197, 253, 0.55);
     background: rgba(255, 255, 255, 0.06);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
   }

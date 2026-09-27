@@ -41,7 +41,6 @@ export const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: ${({ theme }) => theme.app.border.focus};
   }
 `;
 

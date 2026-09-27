@@ -13,7 +13,6 @@ export const Field = styled.label<{ $width?: number }>`
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:focus-within {
-    border-color: ${({ theme }) => theme.app.border.focus};
     color: ${({ theme }) => theme.app.text.secondary};
   }
 `;
