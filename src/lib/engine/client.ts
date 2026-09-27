@@ -342,6 +342,11 @@ export async function engineDownload(path: string, query?: EngineRequestInit['qu
   const disposition = response.headers.get('content-disposition') ?? '';
   const match = disposition.match(/filename="([^"]+)"/);
   const blob = await response.blob();
+  // P8-I01/I02/F01/F02: an empty payload is a server-side failure, not a
+  // successful export — surface it instead of downloading a 0-byte file.
+  if (blob.size === 0) {
+    throw new Error('Export returned no data');
+  }
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -349,5 +354,7 @@ export async function engineDownload(path: string, query?: EngineRequestInit['qu
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-  URL.revokeObjectURL(url);
+  // P8 export feedback: revoking synchronously can abort the download in some
+  // browsers — defer it well past the click.
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000);
 }

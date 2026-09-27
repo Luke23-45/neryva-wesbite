@@ -215,7 +215,7 @@ export function ModelsView() {
           <SectionGap>
             <Panel title="Residency" subtitle="Org pin: default (permissive) or eu (strict, fail-closed).">
               <Note>
-                Publish refuses models the org residency does not serve (<Mono>residency &apos;&lt;r&gt;&apos; not served by catalog models</Mono>).
+                Publish refuses models the org residency does not serve (<Mono>residency not served by catalog models</Mono>).
                 The pin itself is govern-plane configuration — this surface shows per-model residency tags so makers pick servable
                 models; the refusal (when it triggers) renders verbatim with the uncovered models named.
               </Note>

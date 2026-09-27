@@ -206,7 +206,7 @@ export function EntitlementBanner({ product, displayName }: { product: string; d
           </>
         ) : null}
         {canDecide
-          ? `Enable ${label} for this organization from the console — setup takes about a minute.`
+          ? `Start your ${label} trial — it takes about a minute.`
           : `${label} isn’t enabled for this organization yet. Ask an owner or billing manager to enable it.`}
       </BannerText>
       {canDecide ? productsLink : null}

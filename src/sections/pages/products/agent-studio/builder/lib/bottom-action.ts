@@ -49,11 +49,14 @@ export function deriveBottomAction(input: BottomActionInput): BottomAction {
     };
   }
 
-  // Rule 2 — no draft: nothing exists to configure against yet.
+  // Rule 2 — no draft: nothing exists to configure against yet. The Engine
+  // Room owns the no-draft state ("No open draft — saving creates one"), so
+  // the primary action takes the user there instead of selecting a satellite
+  // whose inspector is a placeholder (P8-A05).
   if (!input.hasDraft) {
     return {
       primaryLabel: 'Start configuring',
-      primary: { action: 'select', target: 'brain' },
+      primary: { action: 'engine-room' },
       whisper: 'No versions yet — the first save in the Engine Room starts a draft.',
       ...skip,
     };

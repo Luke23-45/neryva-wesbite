@@ -219,7 +219,7 @@ export function IntegrationsView() {
             <QueryView
               query={connectors}
               isEmpty={(d) => d.length === 0}
-              empty={{ title: 'No connectors linked', description: 'Link a provider above — synced content lands in Documents with ext- slugs.' }}
+              empty={{ title: 'No connectors linked', description: 'Link a provider above — synced content lands in Documents with external slugs.' }}
             >
               {(rows) => (
                 <DataTable>
@@ -318,7 +318,7 @@ export function IntegrationsView() {
               <QueryView
                 query={apps}
                 isEmpty={(d) => d.length === 0}
-                empty={{ title: 'No OAuth apps', description: 'Register the Google app before linking Drive — the dance 409s without it (oauth_app_missing).' }}
+                empty={{ title: 'No OAuth apps', description: 'Register the Google app before linking Drive — linking fails without it (missing OAuth app registration).' }}
               >
                 {(rows) => (
                   <DataTable>

@@ -10,6 +10,7 @@
  */
 import { useState } from 'react';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { engineDownload } from '@lib/engine/client';
 import { useAudit, useAuditFacets, type AuditEventRow } from '@hooks/engine/queries';
 import { useOrgRequired } from '@hooks/engine/queries';
@@ -57,15 +58,18 @@ export default function AuditPage() {
 
   const handleExport = () => {
     setExportError(null);
+    // P8-F02: success was silent — confirm the download started.
     void engineDownload(`/console/org/${orgId}/audit/export`, {
       ...(action ? { action } : {}),
       ...(from ? { from: new Date(from).toISOString() } : {}),
-    }).catch((err: unknown) => {
-      // Surface export failures (e.g. 403 for roles without export
-      // permission) instead of swallowing them — P6-AC-24.
-      const message = err instanceof Error ? err.message : 'Export failed';
-      setExportError(message);
-    });
+    })
+      .then(() => toast.success('Export started — check your downloads'))
+      .catch((err: unknown) => {
+        // Surface export failures (e.g. 403 for roles without export
+        // permission) instead of swallowing them — P6-AC-24.
+        const message = err instanceof Error ? err.message : 'Export failed';
+        setExportError(message);
+      });
   };
 
   // Resource type has no server-side filter — apply it to the loaded page.

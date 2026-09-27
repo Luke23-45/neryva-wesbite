@@ -117,6 +117,9 @@ function GeneralTab({ canEdit }: { canEdit: boolean }) {
                 label="Retention (days)"
                 name="org-retention"
                 type="number"
+                min={1}
+                max={3650}
+                step={1}
                 value={value.retentionDays?.toString() ?? ''}
                 onChange={(e) => setForm({ ...value, retentionDays: e.target.value ? Number.parseInt(e.target.value, 10) : undefined })}
                 disabled={!canEdit}

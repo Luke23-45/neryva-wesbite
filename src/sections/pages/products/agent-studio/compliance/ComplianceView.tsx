@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { useNavigate } from '@tanstack/react-router';
+
 import toast from 'react-hot-toast';
 
 import styled from 'styled-components';
@@ -149,6 +151,8 @@ import {
 
 
 export function ComplianceView() {
+
+  const navigate = useNavigate();
 
   const profile = useOrgProfile();
 
@@ -517,7 +521,7 @@ export function ComplianceView() {
 
                   </span>
 
-                  <ActionButton variant="secondary" size="sm" onClick={() => { window.location.hash = ''; window.location.assign('/agent-studio/activity'); }}>
+                  <ActionButton variant="secondary" size="sm" onClick={() => navigate({ to: '/agent-studio/activity' })}>
 
                     <LinkIcon size={12} strokeWidth={1.8} />
 

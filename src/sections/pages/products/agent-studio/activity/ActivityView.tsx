@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -168,10 +169,13 @@ export function ActivityView() {
 
   const exportTrail = () => {
     setExportError(null);
-    void engineDownload(`/console/org/${orgId}/audit/export`).catch((err: unknown) => {
-      // Surface export failures instead of swallowing them — P6-AC-24.
-      setExportError(err instanceof Error ? err.message : 'Export failed');
-    });
+    // P8-I02: success was silent — confirm the download started.
+    void engineDownload(`/console/org/${orgId}/audit/export`)
+      .then(() => toast.success('Export started — check your downloads'))
+      .catch((err: unknown) => {
+        // Surface export failures instead of swallowing them — P6-AC-24.
+        setExportError(err instanceof Error ? err.message : 'Export failed');
+      });
   };
 
   return (

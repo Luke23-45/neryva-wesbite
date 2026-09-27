@@ -172,7 +172,7 @@ export function ApprovalsView() {
               query={approvals}
               isEmpty={(d) => d.length === 0}
               empty={{
-                title: filter === 'PENDING' ? 'Queue clear' : `No ${filter.toLowerCase()} approvals`,
+                title: filter === 'PENDING' ? 'Queue clear' : filter === 'ALL' ? 'No approvals' : `No ${filter.toLowerCase()} approvals`,
                 description: filter === 'PENDING' ? 'Nothing is parked for review. Approval-gated tool calls appear here.' : 'Try a different filter.',
               }}
             >

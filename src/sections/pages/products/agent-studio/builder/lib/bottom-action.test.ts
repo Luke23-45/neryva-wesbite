@@ -23,9 +23,9 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
     expect(action.showSkip).toBe(false);
   });
 
-  it('rule 2: no draft selects brain', () => {
+  it('rule 2: no draft opens the Engine Room (P8-A05)', () => {
     const action = deriveBottomAction(base({ hasDraft: false, brainReady: false }));
-    expect(action.primary).toEqual({ action: 'select', target: 'brain' });
+    expect(action.primary).toEqual({ action: 'engine-room' });
     expect(action.primaryLabel).toBe('Start configuring');
     expect(action.whisper).toContain('No versions yet');
   });
@@ -81,7 +81,7 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
     expect(withSkip.showSkip).toBe(true);
     expect(withSkip.skipTarget).toBe('sat:memory');
     // …and still owns the primary (rule 2 wins the bar, skip stays secondary).
-    expect(withSkip.primary).toEqual({ action: 'select', target: 'brain' });
+    expect(withSkip.primary).toEqual({ action: 'engine-room' });
     expect(deriveBottomAction(base()).showSkip).toBe(false);
   });
 });

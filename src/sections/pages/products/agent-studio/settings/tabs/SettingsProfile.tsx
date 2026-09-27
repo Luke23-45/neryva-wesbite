@@ -140,6 +140,9 @@ function ProfileForm({ info }: { info: AccountInfo }) {
     );
   };
 
+  // P8-S01: the only persisted field is display_name — gate Save on it.
+  const dirty = name !== (info.name ?? '');
+
   return (
     <>
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
@@ -206,7 +209,7 @@ function ProfileForm({ info }: { info: AccountInfo }) {
               <TheaterNote>Not configurable yet — shown for reference only.</TheaterNote>
             </SelectField>
           </FieldGrid>
-          <SaveRow onSave={save} />
+          <SaveRow onSave={save} disabled={!dirty || update.isPending} />
         </Panel>
       </motion.div>
 

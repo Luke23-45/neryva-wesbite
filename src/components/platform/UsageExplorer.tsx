@@ -10,6 +10,7 @@
  */
 import { useState } from 'react';
 import styled from 'styled-components';
+import toast from 'react-hot-toast';
 import { Download } from 'lucide-react';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -179,13 +180,16 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
   const exportCsv = () => {
     if (!orgId) return;
     setExportError(null);
+    // P8-I01/P8-F01: success was silent — confirm the download started.
     void engineDownload(`/console/billing/org/${orgId}/usage/export`, {
       ...(scopedProduct ? { product: scopedProduct } : {}),
       ...dates,
-    }).catch((err: unknown) => {
-      // Surface export failures instead of swallowing them — P6-AC-24.
-      setExportError(err instanceof Error ? err.message : 'Export failed');
-    });
+    })
+      .then(() => toast.success('Export started — check your downloads'))
+      .catch((err: unknown) => {
+        // Surface export failures instead of swallowing them — P6-AC-24.
+        setExportError(err instanceof Error ? err.message : 'Export failed');
+      });
   };
 
   return (

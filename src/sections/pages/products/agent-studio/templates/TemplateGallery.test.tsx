@@ -103,7 +103,7 @@ beforeEach(() => {
 describe('TemplateGallery (shared origin truth)', () => {
   it('shows BOM counts from the entry, never a grid', async () => {
     await shell();
-    expect(screen.getByText(/1 tools · 1 knowledge · 2 models · seeded evals/)).toBeTruthy();
+    expect(screen.getByText(/1 tool · 1 knowledge · 2 models · seeded evals/)).toBeTruthy();
   });
 
   it('searches tools, knowledge, and evaluators — not just slug and family', async () => {

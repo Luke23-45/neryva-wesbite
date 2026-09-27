@@ -145,7 +145,7 @@ export function EvaluationsView() {
       </ViewHeaderRow>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel title="Datasets" subtitle="Template installs seed template:<slug>@<version> datasets automatically. Open a dataset's cases to list, edit, delete, import, or export them.">
+        <Panel title="Datasets" subtitle="Template installs seed datasets automatically. Open a dataset's cases to list, edit, delete, import, or export them.">
           <QueryView
             query={datasets}
             isEmpty={(d) => d.length === 0}

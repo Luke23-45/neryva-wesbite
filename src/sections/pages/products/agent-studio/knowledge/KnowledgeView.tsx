@@ -480,7 +480,7 @@ export function KnowledgeView() {
         <SectionGap>
           <Panel
             title="Long-term memories"
-            subtitle="Memories moved to their own surface in C08 — one surface remembers."
+            subtitle="Memories moved to their own surface — one surface remembers."
           >
             <Muted>
               Browse, search, and manage memories in the <Link to="/agent-studio/memory">Memory library</Link> —

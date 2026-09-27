@@ -31,6 +31,7 @@ import {
     FormError,
     VerifyIcon,
     VerifyTextRow,
+    HelpLink,
 } from './SignInSection.styles';
 import { confirmEmailVerification, PublicAuthError } from '@lib/engine/public-auth';
 
@@ -123,7 +124,11 @@ export default function VerifyEmailSection() {
                         <VerifyTextRow>
                             The verification link is invalid, has already been used, or
                             expired (links last 30 minutes). Request a new verification
-                            email from your account security settings and try again.
+                            email from your{' '}
+                            <HelpLink type="button" style={{ fontSize: 'inherit' }} onClick={() => navigate({ to: '/agent-studio/settings/security' })}>
+                                account security settings
+                            </HelpLink>{' '}
+                            and try again.
                         </VerifyTextRow>
                         <BackAction type="button" onClick={backToSignIn}>
                             ← Back to sign in

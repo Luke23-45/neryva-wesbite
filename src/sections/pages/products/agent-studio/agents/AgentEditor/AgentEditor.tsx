@@ -126,6 +126,18 @@ export function AgentEditor() {
   const { dialog: dirtyGuardDialog } = useDirtyGuard(dirty && conflict === null);
 
   const issues = useMemo(() => (effective ? checkDefinitionCaps(effective) : []), [effective]);
+  // P8-A04: toEnginePayload throws on invalid definitions (e.g. no allowed
+  // model). Never let it throw during render — that escalates to the router's
+  // CatchBoundary, whose "Hide Error" cannot restore the editor. Surface the
+  // validation message inline instead.
+  const wireJson = useMemo(() => {
+    if (!effective) return null;
+    try {
+      return { ok: true as const, text: JSON.stringify(toEnginePayload(effective), null, 2) };
+    } catch (err) {
+      return { ok: false as const, text: err instanceof Error ? err.message : 'Could not build wire JSON' };
+    }
+  }, [effective]);
   const issuesBySection = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const issue of issues) {
@@ -609,9 +621,15 @@ export function AgentEditor() {
                   {showJson && (
                     <SectionGap>
                       <Panel title="Wire JSON" subtitle="Exactly what saves send — the engine payload, consumer-only fields stripped.">
-                        <JsonBox>
-                          <code>{JSON.stringify(toEnginePayload(effective), null, 2)}</code>
-                        </JsonBox>
+                        {wireJson?.ok ? (
+                          <JsonBox>
+                            <code>{wireJson.text}</code>
+                          </JsonBox>
+                        ) : (
+                          <EmptyNote>
+                            Wire JSON unavailable: {wireJson?.text ?? 'no draft loaded'}. Resolve the issues above, then retry.
+                          </EmptyNote>
+                        )}
                       </Panel>
                     </SectionGap>
                   )}

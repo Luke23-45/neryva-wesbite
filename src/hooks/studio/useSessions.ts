@@ -25,7 +25,14 @@ export interface SessionRow {
  * (the engine also filters them — D-3 — this is belt and braces).
  */
 function str(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() !== '' ? value : null;
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null;
+  }
+  // P8-S02: the engine persists the literal sentinel 'unknown' for fields it
+  // could not determine (e.g. client_id on console logins). Treat it as
+  // absent so the UI falls through to a clean 'Unknown device' label instead
+  // of rendering the raw sentinel ("unknownTHIS DEVICE").
+  return value.trim().toLowerCase() === 'unknown' ? null : value;
 }
 
 /** The engine sends `device` as an object (e.g. {}); extract a label if it carries one. */

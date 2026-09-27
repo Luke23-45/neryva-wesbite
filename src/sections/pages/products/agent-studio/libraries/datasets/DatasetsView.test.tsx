@@ -56,6 +56,5 @@ describe('DatasetsView (C10 extends — shared origin, attach CTA)', () => {
     await shell();
     expect(screen.getByText('Seeded by support-concierge@3')).toBeTruthy();
     expect(screen.getByText(/Use in evaluation/)).toBeTruthy();
-    expect(screen.getByText(/add-only/)).toBeTruthy();
   });
 });

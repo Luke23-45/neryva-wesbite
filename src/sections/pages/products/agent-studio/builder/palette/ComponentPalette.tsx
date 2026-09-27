@@ -139,7 +139,7 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
         icon: <Cpu size={13} strokeWidth={1.8} />,
         kind: null,
         disabled: true,
-        disabledReason: 'Models attach through the Brain slot — the picker lands in C04.',
+        disabledReason: 'Models attach through the Brain slot — pick them in the Brain section.',
         draggable: false,
       },
       {

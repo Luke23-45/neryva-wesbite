@@ -212,7 +212,9 @@ export function describeTemplateCounts(template: {
 }
 
 export function formatTemplateCounts(counts: TemplateCounts): string {
-  return `${counts.tools} tools · ${counts.knowledge} knowledge · ${counts.models} models · ${counts.evaluators > 0 ? 'seeded evals' : 'no seeded evals'}`;
+  const toolLabel = counts.tools === 1 ? 'tool' : 'tools';
+  const modelLabel = counts.models === 1 ? 'model' : 'models';
+  return `${counts.tools} ${toolLabel} · ${counts.knowledge} knowledge · ${counts.models} ${modelLabel} · ${counts.evaluators > 0 ? 'seeded evals' : 'no seeded evals'}`;
 }
 
 export type TemplateDrift = 'up-to-date' | 'minor' | 'major' | 'unknown';

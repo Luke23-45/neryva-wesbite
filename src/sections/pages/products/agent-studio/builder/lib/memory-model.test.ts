@@ -22,8 +22,8 @@ import {
 } from './memory-model';
 
 describe('parseMemoryScope', () => {
-  it('keeps the 4-option enum and resolves garbage to the engine default', () => {
-    expect(MEMORY_SCOPE_ORDER).toEqual(['user', 'conversation', 'organization', 'none']);
+  it('keeps the 5-option enum and resolves garbage to the engine default', () => {
+    expect(MEMORY_SCOPE_ORDER).toEqual(['user', 'conversation', 'organization', 'assistant', 'none']);
     expect(parseMemoryScope('user')).toBe('user');
     expect(parseMemoryScope('none')).toBe('none');
     expect(parseMemoryScope(undefined)).toBe('user');

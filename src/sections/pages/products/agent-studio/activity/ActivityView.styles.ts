@@ -6,6 +6,9 @@ export const FilterBar = styled.div`
   gap: 6px;
   align-items: center;
   margin-bottom: 14px;
+  /* P8-I03: programmatic scroll-into-view must never park these controls
+     beneath the sticky topbar, where clicks get intercepted. */
+  scroll-margin-top: 76px;
 `;
 
 export const FilterChip = styled.button<{ $active: boolean }>`

@@ -86,10 +86,10 @@ afterEach(() => {
 });
 
 describe('MemorySection', () => {
-  it('renders the 4-option scope control with User default, history, and org defaults', () => {
+  it('renders the 5-option scope control with User default, history, and org defaults', () => {
     shell();
     const group = screen.getByRole('group', { name: 'Memory scope' });
-    expect(group.querySelectorAll('button')).toHaveLength(4);
+    expect(group.querySelectorAll('button')).toHaveLength(5);
     expect(screen.getByText(/never visible across accounts/)).toBeTruthy();
     expect(screen.getByText(/stored, not served/)).toBeTruthy();
     expect(screen.getByText(/rolling summary/)).toBeTruthy();
@@ -100,9 +100,9 @@ describe('MemorySection', () => {
     shell();
     const group = screen.getByRole('group', { name: 'Memory scope' });
     await act(async () => {
-      fireEvent.click(group.querySelectorAll('button')[3] as HTMLElement);
+      fireEvent.click(group.querySelectorAll('button')[4] as HTMLElement);
     });
-    expect(screen.getByText(/No memories surface/)).toBeTruthy();
+    expect(screen.getAllByText(/No memories surface/).length).toBeGreaterThan(0);
     await act(async () => {
       vi.advanceTimersByTime(8000);
     });
@@ -124,8 +124,42 @@ describe('MemorySection', () => {
   });
 
   it('previews assistant and org rows read-only, never user rows', () => {
-    shell();
+    // A4-23: preview shows only when the policy scope can actually serve
+    // library rows — 'assistant' scope previews assistant rows.
+    const { unmount } = render(
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemorySection
+            assistantId="agent-main"
+            definition={definitionWith({ memory_scope: 'assistant', history_limit: 30 })}
+            versionId="v1"
+            versionHash="h1"
+            isDraft
+            canAuthor
+            onDirtyChange={() => undefined}
+          />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
     expect(screen.getByText(/Assistant fact one/)).toBeTruthy();
+    expect(screen.queryByText(/Org ships Fridays/)).toBeNull();
+    unmount();
+    // 'organization' scope previews org rows.
+    render(
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemorySection
+            assistantId="agent-main"
+            definition={definitionWith({ memory_scope: 'organization', history_limit: 30 })}
+            versionId="v1"
+            versionHash="h1"
+            isDraft
+            canAuthor
+            onDirtyChange={() => undefined}
+          />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
     expect(screen.getByText(/Org ships Fridays/)).toBeTruthy();
     expect(screen.getByText(/no preview here/)).toBeTruthy();
   });
