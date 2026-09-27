@@ -13,6 +13,27 @@ import { engineDownload } from '@lib/engine/client';
 import { useAudit, useAuditFacets, useOrgRequired, type AuditEventRow } from '@hooks/engine/queries';
 import { useUrlSearchParams, useUrlState } from '@lib/useUrlState';
 import { useNavigate } from '@tanstack/react-router';
+
+/** Render event details as pretty JSON. The engine may hand `details` back as
+ *  an already-serialized JSON string — stringifying that again would render
+ *  visible backslashes, so parse strings first (falling back to raw text). */
+export function formatDetails(details: unknown): string {
+  if (details === null || details === undefined) return '{}';
+  if (typeof details === 'string') {
+    const trimmed = details.trim();
+    if (!trimmed) return '{}';
+    try {
+      return JSON.stringify(JSON.parse(trimmed), null, 2);
+    } catch {
+      return details;
+    }
+  }
+  try {
+    return JSON.stringify(details, null, 2) || '{}';
+  } catch {
+    return '{}';
+  }
+}
 import {
   FilterBar,
   FilterChip,
@@ -348,7 +369,7 @@ export function ActivityView() {
                               )}
                               {isOpen && (
                                 <code style={{ fontSize: 'inherit', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
-                                  {JSON.stringify(e.details ?? {}, null, 2) || '{}'}
+                                  {formatDetails(e.details)}
                                 </code>
                               )}
                               {!isOpen && <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />}
