@@ -51,7 +51,6 @@ import {
   RowLabel,
   RowMain,
   RowSide,
-  RowStatus,
   SearchInput,
   SearchWrap,
   StatusDot,
@@ -124,16 +123,6 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   evaluation: <FlaskConical size={13} strokeWidth={1.8} />,
   ship: <Rocket size={13} strokeWidth={1.8} />,
   try: <Play size={13} strokeWidth={1.8} />,
-};
-
-const STATUS_DOT_COLOR: Record<SlotStatus, string> = {
-  ready: '#3DD68C',
-  attention: '#F5A524',
-  error: '#F87171',
-  info: '#58A6FF',
-  untouched: '#3A4453',
-  locked: '#3A4453',
-  skipped: '#6B7280',
 };
 
 interface RoadmapRow {
@@ -311,10 +300,6 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
                 <RowMain>
                   <RowLabel>{node.label}</RowLabel>
                 </RowMain>
-                <RowSide>
-                  {node.statusText && <RowStatus>{node.statusText}</RowStatus>}
-                  <StatusDot $color={STATUS_DOT_COLOR[node.status]} aria-label={`status: ${node.status}`} />
-                </RowSide>
               </Row>
             ))}
           </div>
