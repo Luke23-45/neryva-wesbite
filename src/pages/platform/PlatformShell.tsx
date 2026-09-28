@@ -25,6 +25,7 @@ import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { StepUpModal } from '@components/platform/StepUpModal';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
 import { CreditBalanceChip } from '@components/platform/credits/CreditBalanceChip';
+import { UpgradeModal } from '@/sections/pages/products/agent-studio/UpgradeModal';
 import { SignInOptions } from '@components/platform/SignInOptions';
 
 const Shell = styled.div`
@@ -248,6 +249,9 @@ export default function PlatformShell() {
           </TopGroup>
           <TopGroup>
             <CreditBalanceChip />
+            {/* Pricing sheet — parked only in src/future/deployment before;
+                now reachable app-wide next to the credit balance. */}
+            <UpgradeModal />
             <AccountChip>
               {name ?? account?.email ?? 'Account'}
               {role && <> · {ROLE_LABELS[role as OrgRole] ?? role}</>}

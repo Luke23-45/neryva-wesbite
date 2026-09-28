@@ -17,14 +17,20 @@ import {
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
 import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type EntitlementRow } from '@hooks/engine/queries';
+import { useEnterpriseStatus } from '@hooks/engine/billing';
+import { useCreditWallet } from '@hooks/engine/credits';
+import { UpgradeModal } from '../../UpgradeModal';
+import { deriveSubscriptionKind, SUBSCRIPTION_COPY, type SubscriptionKind } from './subscriptionKind';
 
 /**
  * Settings → Billing — the live summary (ledger D-3: summary + deep-link;
  * the full ledger plane lives at /platform/billing).
  *
- * D-1 boundary: plan names and prices are NOT rendered here — the
- * entitlement state, period, quota meters, and invoices are real; how
- * plans display is a deferred decision owned by the upgrade surfaces.
+ * D-1 update (2026-09-28, explicit user direction): the CURRENT subscription
+ * is shown here, derived from real entitlement data (enterprise commitment
+ * boolean, the engine's single 'payg' plan identifier, else the free monthly
+ * grant). The pricing sheet (UpgradeModal) owns how plans and prices display;
+ * this section never invents tiers or prices.
  * PDF downloads are ⛔ E-13 — no fake download buttons.
  * BUG-2: the fabricated UpgradeModal plan picker (invented tiers/prices,
  * dead "Continue" CTA) was removed — purchase UI is out of scope per user
@@ -50,10 +56,60 @@ export function SettingsBilling() {
   const row: EntitlementRow | undefined = entitlements.data?.entitlements.find((e) => e.product === 'agent_studio');
   const limits = useOrgLimits();
   const meters = parseQuotaMeters(limits.data, 'agent_studio');
+  const enterprise = useEnterpriseStatus();
+  const wallet = useCreditWallet();
+
+  const subLoading = entitlements.isPending || enterprise.isPending;
+  const subError = entitlements.isError || enterprise.isError;
+  const kind: SubscriptionKind | null = subLoading || subError
+    ? null
+    : deriveSubscriptionKind({ enterprise: enterprise.data === true, plan: row?.plan ?? null });
+  const copy = kind ? SUBSCRIPTION_COPY[kind] : null;
 
   return (
     <>
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
+      {/* Subscriptions — the deep-link target for locked models in the
+          builder (id="subscriptions"). Current state only, from real
+          entitlement data; the UpgradeModal action owns pricing display. */}
+      <motion.div id="subscriptions" initial="hidden" animate="visible" variants={pageItem} custom={0}>
+        <Panel
+          title="Subscriptions"
+          subtitle="Your current plan, from your live entitlement."
+          action={<UpgradeModal />}
+        >
+          <PlanCard>
+            <PlanName>{copy ? copy.name : 'Subscription'}</PlanName>
+            <PlanStatus>
+              {subLoading ? (
+                <Skeleton $h="22px" $w="92px" $r="999px" />
+              ) : subError || !copy ? (
+                <StatusPill tone="error" dot={false}>couldn’t load</StatusPill>
+              ) : (
+                <StatusPill tone={kind === 'free' ? 'neutral' : 'success'} dot={false}>
+                  {copy.name}
+                </StatusPill>
+              )}
+            </PlanStatus>
+          </PlanCard>
+
+          {copy && <SubscriptionNote>{copy.blurb}</SubscriptionNote>}
+
+          {/* BUG-4 posture: the balance is real wallet data — loading
+              skeleton, plain error note, never a guessed number. */}
+          {wallet.isPending ? (
+            <Skeleton $h="20px" $w="220px" $r="6px" />
+          ) : wallet.isError || !wallet.data ? (
+            <QuotaNote>Credit balance couldn’t be loaded — try refreshing.</QuotaNote>
+          ) : (
+            <UsageRow>
+              <span>Available credit balance</span>
+              <UsageValue>{wallet.data.available.toLocaleString()} credits</UsageValue>
+            </UsageRow>
+          )}
+        </Panel>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
           title="Agent Studio"
           subtitle={periodSubtitle(row)}
@@ -108,7 +164,7 @@ export function SettingsBilling() {
         </Panel>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <Panel
           title="Invoices"
           subtitle="Billing periods close into invoices here."
@@ -203,6 +259,13 @@ const PlanName = styled.div`
 
 const PlanStatus = styled.div`
   margin-left: auto;
+`;
+
+const SubscriptionNote = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.5;
+  margin: -8px 0 14px;
 `;
 
 const UsageStack = styled.div`

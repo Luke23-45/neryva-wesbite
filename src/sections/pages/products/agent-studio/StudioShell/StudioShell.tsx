@@ -68,6 +68,7 @@ import {
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
+import { UpgradeModal } from '../UpgradeModal';
 import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
 import { useCan } from '@lib/engine/capabilities';
 import { useAssistants } from '@hooks/studio/useAssistants';
@@ -536,6 +537,10 @@ export function StudioShell({
               </IconAction>
             )}
             <NotificationsPopover />
+            {/* Pricing sheet trigger — visible app-wide across Studio; the
+                builder's Model node deep-links locked models to
+                /agent-studio/settings/billing, and this is the upgrade path. */}
+            <UpgradeModal />
             <AccountMenu user={user} workspace={workspace} onOpenShortcuts={() => setPaletteOpen(true)} />
           </TopbarRight>
         </Topbar>
