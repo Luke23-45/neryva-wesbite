@@ -40,6 +40,15 @@ export const OrderLabel = styled.div`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
+/** Catalog group header (USABLE / LOCKED) — same micro-label treatment. */
+export const GroupLabel = styled.div`
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: ${({ theme }) => theme.app.text.muted};
+  margin: 10px 0 4px;
+`;
+
 export const OrderChip = styled.div`
   display: flex;
   align-items: center;

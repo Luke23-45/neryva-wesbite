@@ -5,6 +5,7 @@ import {
   FUNCTIONAL_NODE_IDS,
   brainSubtitle,
   knowledgeSlot,
+  modelSubtitle,
   projectBuilderGraph,
   toolsSlot,
   type ProjectorInput,
@@ -45,7 +46,7 @@ function edgeOf(input: ProjectorInput, id: string) {
 }
 
 describe('projector fixed topology (v10)', () => {
-  it('emits exactly the 16 lane nodes, no more', () => {
+  it('emits exactly the 18 lane nodes, no more', () => {
     const graph = projectBuilderGraph(base());
     expect(graph.nodes).toHaveLength(NODE_COUNT);
     expect(graph.nodes.map((n) => n.id).sort()).toEqual([...LANE_NODE_IDS].sort());
@@ -301,8 +302,10 @@ describe('projector edges', () => {
     const catalog = [{ ref: 'a/good', usable: true, reasons: [] as string[] }];
     const lit = litIds(base({ definition: def, models: catalog }));
     expect(lit).toContain('e:purpose:context');
-    expect(lit).toContain('e:instructions:brain');
-    // …while an allowed-but-unusable model lights purpose but dims brain's legs.
+    expect(lit).toContain('e:instructions:model');
+    expect(lit).toContain('e:model:brain');
+    // …while an allowed-but-unusable model lights purpose but dims the
+    // model's outbound leg.
     const unusable = defaultConsumer();
     unusable.model_policy.allowed_models = ['b/bad'];
     unusable.instructions = '## Role\nR.\n';
@@ -310,24 +313,36 @@ describe('projector edges', () => {
     const dimLit = litIds(base({ definition: unusable, models: badCatalog }));
     expect(dimLit).toContain('e:purpose:context');
     // The Context node is real now (engine defaults = genuinely ready), so
-    // its leg lights; the unusable model dims the brain's outbound leg.
+    // its leg lights; the unusable model dims the model→brain leg. The
+    // brain→response leg stays lit — the brain's reasoning profile is
+    // optional-but-ready, and the dim model leg carries the model signal.
     expect(dimLit).toContain('e:context:brain');
-    expect(dimLit).not.toContain('e:brain:response');
+    expect(dimLit).not.toContain('e:model:brain');
+    expect(dimLit).toContain('e:brain:response');
   });
 
-  it('draws instructions→brain lit when instructions exist', () => {
+  it('draws instructions→model lit when instructions exist', () => {
     const def = defaultConsumer();
     def.instructions = '## Role\nConcierge.\n';
-    expect(litIds(base({ definition: def }))).toContain('e:instructions:brain');
-    expect(litIds(base())).not.toContain('e:instructions:brain');
+    expect(litIds(base({ definition: def }))).toContain('e:instructions:model');
+    expect(litIds(base())).not.toContain('e:instructions:model');
   });
 
-  it('targets samples→instructions when gradable, samples→brain when not', () => {
+  it('draws model→brain lit only when a usable model is selected', () => {
+    const def = defaultConsumer();
+    def.model_policy.allowed_models = ['a/good'];
+    const catalog = [{ ref: 'a/good', usable: true, reasons: [] as string[] }];
+    expect(litIds(base({ definition: def, models: catalog }))).toContain('e:model:brain');
+    const badCatalog = [{ ref: 'a/good', usable: false, reasons: ['subscription_required'] as string[] }];
+    expect(litIds(base({ definition: def, models: badCatalog }))).not.toContain('e:model:brain');
+  });
+
+  it('targets samples→instructions when gradable, samples→model when not', () => {
     expect(edgeOf(base({ samplesSummary: { count: 2 } }), 'e:samples:instructions')?.target).toBe('instructions');
-    expect(edgeOf(base({ samplesSummary: { count: 2 } }), 'e:samples:brain')).toBeUndefined();
-    expect(edgeOf(base({ samplesSummary: undefined }), 'e:samples:brain')?.target).toBe('brain');
+    expect(edgeOf(base({ samplesSummary: { count: 2 } }), 'e:samples:model')).toBeUndefined();
+    expect(edgeOf(base({ samplesSummary: undefined }), 'e:samples:model')?.target).toBe('model');
     expect(litIds(base({ samplesSummary: { count: 2 } }))).toContain('e:samples:instructions');
-    expect(litIds(base({ samplesSummary: undefined }))).not.toContain('e:samples:brain');
+    expect(litIds(base({ samplesSummary: undefined }))).not.toContain('e:samples:model');
   });
 
   it('draws credentials→tools, lit when keys are configured', () => {
@@ -348,14 +363,14 @@ describe('projector edges', () => {
     ).toContain('e:try:response');
   });
 
-  it('labels budget→brain "spend cap", lit only when a cap is set', () => {
-    const unlabeled = edgeOf(base(), 'e:budget:brain');
+  it('labels budget→model "spend cap", lit only when a cap is set', () => {
+    const unlabeled = edgeOf(base(), 'e:budget:model');
     expect(unlabeled?.data?.label).toBe('spend cap');
     expect(unlabeled?.data?.variant).toBe('verdict'); // dashed semantic edge (v10 mockup)
     expect(unlabeled?.data?.lit).toBe(false);
     const capped = defaultConsumer();
     capped.budget = { max_cost_cents: 500 };
-    expect(litIds(base({ definition: capped }))).toContain('e:budget:brain');
+    expect(litIds(base({ definition: capped }))).toContain('e:budget:model');
   });
 
   it('labels brand→response "voice & tone", lit only when a voice is set', () => {
@@ -372,22 +387,25 @@ describe('projector edges', () => {
   it('types kind legs honestly (inhibit guardrails, verdict evaluation)', () => {
     const graph = projectBuilderGraph(base());
     const variants = new Map(graph.edges.map((e) => [e.id, e.data?.variant]));
-    expect(variants.get('e:guardrails:brain')).toBe('inhibit');
-    expect(variants.get('e:evaluation:brain')).toBe('verdict');
+    expect(variants.get('e:guardrails:model')).toBe('inhibit');
+    expect(variants.get('e:evaluation:model')).toBe('verdict');
     expect(variants.get('e:knowledge:context')).toBe('flow');
     expect(variants.get('e:brand:context')).toBe('flow');
-    expect(variants.get('e:tools:brain')).toBe('flow');
+    expect(variants.get('e:tools:model')).toBe('flow');
   });
 });
 
 describe('projector health set', () => {
-  it('defines the 14 functional ids (everything except context/response/role)', () => {
+  it('defines the 14 functional ids (everything except context/response/role/brain)', () => {
     expect(FUNCTIONAL_NODE_IDS).toHaveLength(14);
     expect(FUNCTIONAL_NODE_IDS).not.toContain('context');
     expect(FUNCTIONAL_NODE_IDS).not.toContain('response');
     expect(FUNCTIONAL_NODE_IDS).not.toContain('role');
+    // Brain carries no readiness score — its reasoning profile is optional.
+    expect(FUNCTIONAL_NODE_IDS).not.toContain('brain');
+    expect(FUNCTIONAL_NODE_IDS).toContain('model');
     expect([...FUNCTIONAL_NODE_IDS].sort()).toEqual(
-      LANE_NODE_IDS.filter((id) => id !== 'context' && id !== 'response' && id !== 'role').sort(),
+      LANE_NODE_IDS.filter((id) => id !== 'context' && id !== 'response' && id !== 'role' && id !== 'brain').sort(),
     );
   });
 
@@ -407,46 +425,66 @@ describe('projector ship spine (C14)', () => {
   });
 });
 
-describe('projector brain usability (C04)', () => {
+describe('projector model usability (C04)', () => {
   const catalog = [
     { ref: 'a/good', usable: true, reasons: [] as string[] },
     { ref: 'b/bad', usable: false, reasons: ['provider_credential_missing'] },
+    { ref: 'c/gated', usable: false, reasons: ['subscription_required'] },
   ];
 
   it('grades an allowed-but-unusable set as attention with the fix', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['b/bad'];
     const input = base({ definition: def, models: catalog });
-    expect(statusOf(input, 'brain')).toBe('attention');
-    expect(subtitleOf(input, 'brain')).toBe('No usable model — Connect a credential');
-    expect(nodeOf(input, 'brain')?.hint).toBe('unusable: provider_credential_missing');
+    expect(statusOf(input, 'model')).toBe('attention');
+    expect(subtitleOf(input, 'model')).toBe('No usable model — Connect a credential');
+    expect(nodeOf(input, 'model')?.hint).toBe('unusable: provider_credential_missing');
+  });
+
+  it('grades a subscription-locked set as attention with the subscription fix', () => {
+    const def = defaultConsumer();
+    def.model_policy.allowed_models = ['c/gated'];
+    const input = base({ definition: def, models: catalog });
+    expect(statusOf(input, 'model')).toBe('attention');
+    expect(subtitleOf(input, 'model')).toBe('No usable model — View subscription options');
+    expect(nodeOf(input, 'model')?.hint).toBe('unusable: subscription_required');
   });
 
   it('names unknown models instead of guessing', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['x/gone'];
     const input = base({ definition: def, models: catalog });
-    expect(statusOf(input, 'brain')).toBe('attention');
-    expect(subtitleOf(input, 'brain')).toBe('Unknown model — publish refuses');
+    expect(statusOf(input, 'model')).toBe('attention');
+    expect(subtitleOf(input, 'model')).toBe('Unknown model — publish refuses');
   });
 
   it('stays neutral while the catalog loads (never a false green)', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['a/good'];
     const input = base({ definition: def, models: undefined });
-    expect(statusOf(input, 'brain')).toBe('info');
-    expect(subtitleOf(input, 'brain')).toBe('Checking catalog…');
+    expect(statusOf(input, 'model')).toBe('info');
+    expect(subtitleOf(input, 'model')).toBe('Checking catalog…');
   });
 
   it('stays ready with usable models', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['a/good'];
     const input = base({ definition: def, models: catalog });
-    expect(statusOf(input, 'brain')).toBe('ready');
+    expect(statusOf(input, 'model')).toBe('ready');
   });
 
   it('grades no model as untouched', () => {
-    expect(statusOf(base(), 'brain')).toBe('untouched');
+    expect(statusOf(base(), 'model')).toBe('untouched');
+  });
+
+  it('treats the brain as ready whenever a draft exists (profiles optional)', () => {
+    expect(statusOf(base(), 'brain')).toBe('ready');
+    const def = defaultConsumer();
+    def.model_policy.allowed_models = ['b/bad'];
+    const input = base({ definition: def, models: catalog });
+    // The model node carries the attention; the brain's reasoning profile is optional.
+    expect(statusOf(input, 'brain')).toBe('ready');
+    expect(statusOf(input, 'model')).toBe('attention');
   });
 });
 
@@ -537,7 +575,7 @@ describe('projector memory grading (C08)', () => {
 
 describe('projector evaluation node (C10 — signal, never a gate)', () => {
   function evalEdgeLit(input: ProjectorInput): boolean {
-    return edgeOf(input, 'e:evaluation:brain')?.data?.lit === true;
+    return edgeOf(input, 'e:evaluation:model')?.data?.lit === true;
   }
 
   it('keeps the ghost while eval state is unknown', () => {
@@ -573,12 +611,22 @@ describe('projector evaluation node (C10 — signal, never a gate)', () => {
 });
 
 describe('projector subtitles', () => {
-  it('derives brain copy from the definition', () => {
+  it('derives model copy from the definition', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['a/b', 'c/d'];
     def.model_policy.fallback_enabled = true;
-    expect(brainSubtitle(def, (r) => `M(${r})`)).toBe('M(a/b) +1 · fallback on');
-    expect(brainSubtitle(null, (r) => r)).toBe(null);
+    expect(modelSubtitle(def, (r) => `M(${r})`)).toBe('M(a/b) +1 · fallback on');
+    expect(modelSubtitle(null, (r) => r)).toBe(null);
+  });
+
+  it('derives brain copy from the reasoning profile, not the model list', () => {
+    const def = defaultConsumer();
+    def.model_policy.allowed_models = ['a/b', 'c/d'];
+    def.model_params = { temperature: 0.7, top_p: 1, max_output_tokens: 16000, reasoning_effort: 'high' };
+    expect(brainSubtitle(def)).toBe('Scholar');
+    const plain = defaultConsumer();
+    expect(brainSubtitle(plain)).toBe(null);
+    expect(brainSubtitle(null)).toBe(null);
   });
 });
 

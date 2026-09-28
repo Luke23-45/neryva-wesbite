@@ -4,7 +4,7 @@
  * owns selection, node positions, and the palette filter. Everything persists per agent to localStorage as a
  * non-authoritative cache: a reset degrades cosmetics, never data.
  *
- * v10: the canvas is a FIXED 16-node topology (lane-model.ts) — the
+ * v10: the canvas is a FIXED 18-node topology (lane-model.ts) — the
  * satellite working set, binding, deletion, and skip toggling are gone.
  */
 import { create } from 'zustand';

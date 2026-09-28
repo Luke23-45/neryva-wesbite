@@ -78,15 +78,17 @@ export type ModelReason =
   | 'provider_credential_missing'
   | 'provider_not_enabled'
   | 'residency_incompatible'
-  | 'credential_compromised';
+  | 'credential_compromised'
+  | 'subscription_required';
 
-export type ReasonAction = 'connect' | 'enable' | 'profile' | 'incident';
+export type ReasonAction = 'connect' | 'enable' | 'profile' | 'incident' | 'billing';
 
 const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction }> = {
   provider_credential_missing: { label: 'Connect a credential', action: 'connect' },
   provider_not_enabled: { label: 'Ask an admin to enable', action: 'enable' },
   residency_incompatible: { label: 'Switch profile', action: 'profile' },
   credential_compromised: { label: 'Rotate the key', action: 'incident' },
+  subscription_required: { label: 'View subscription options', action: 'billing' },
 };
 
 /** SPEC inline fixes — unknown reasons degrade to a truthful label, never a guess. */
@@ -101,6 +103,7 @@ const REASON_LABEL: Record<ModelReason, string> = {
   provider_not_enabled: 'provider not enabled',
   residency_incompatible: 'residency incompatible',
   credential_compromised: 'credential_compromised (derived)',
+  subscription_required: 'subscription required',
 };
 
 /**
@@ -180,4 +183,16 @@ export function validateOutputSchema(text: string): SchemaCheck {
     return { ok: false, message: 'Must be a JSON object schema, not an array or primitive.' };
   }
   return { ok: true };
+}
+
+/**
+ * Subscription-gate copy for a locked model row — the engine names the tier
+ * that unlocks the model (requiredProductLabel); an absent label degrades to
+ * a truthful generic, never an invented tier name.
+ */
+export function subscriptionGateCopy(model: {
+  readonly requiredProductLabel?: string | null;
+}): string {
+  const label = model.requiredProductLabel?.trim() || 'a subscription';
+  return `Requires ${label} — you don't have that.`;
 }

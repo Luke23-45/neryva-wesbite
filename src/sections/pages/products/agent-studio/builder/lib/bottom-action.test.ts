@@ -6,7 +6,7 @@ function base(overrides: Partial<BottomActionInput> = {}): BottomActionInput {
     mode: 'build',
     purposeValid: true,
     hasDraft: true,
-    brainReady: true,
+    modelReady: true,
     instructionsEmpty: false,
     knowledgeAttention: null,
     selectedSkippableUntouched: false,
@@ -24,7 +24,7 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
   });
 
   it('rule 2: no draft opens the Engine Room (P8-A05)', () => {
-    const action = deriveBottomAction(base({ hasDraft: false, brainReady: false }));
+    const action = deriveBottomAction(base({ hasDraft: false, modelReady: false }));
     expect(action.primary).toEqual({ action: 'engine-room' });
     expect(action.primaryLabel).toBe('Start configuring');
     expect(action.whisper).toContain('No versions yet');
@@ -36,8 +36,8 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
   });
 
   it('rule 4: brain not ready selects brain with the shipping reason', () => {
-    const action = deriveBottomAction(base({ brainReady: false }));
-    expect(action.primary).toEqual({ action: 'select', target: 'brain' });
+    const action = deriveBottomAction(base({ modelReady: false }));
+    expect(action.primary).toEqual({ action: 'select', target: 'model' });
     expect(action.primaryLabel).toBe('Choose a model');
     expect(action.whisper).toContain('usable model');
   });
@@ -50,8 +50,8 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
   });
 
   it('rule order holds: brain beats instructions (top-down, first match owns)', () => {
-    const action = deriveBottomAction(base({ brainReady: false, instructionsEmpty: true }));
-    expect(action.primary).toEqual({ action: 'select', target: 'brain' });
+    const action = deriveBottomAction(base({ modelReady: false, instructionsEmpty: true }));
+    expect(action.primary).toEqual({ action: 'select', target: 'model' });
   });
   it('rule 4c (C05): knowledge attention selects knowledge with the verdict', () => {
     const action = deriveBottomAction(base({ knowledgeAttention: 'Unresolved pin ghost-slug — publish refuses' }));
@@ -76,7 +76,7 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
 
   it('offers Skip only for a selected skippable untouched slot', () => {
     const withSkip = deriveBottomAction(
-      base({ hasDraft: false, brainReady: false, selectedSkippableUntouched: true, selectedSlot: 'sat:memory' }),
+      base({ hasDraft: false, modelReady: false, selectedSkippableUntouched: true, selectedSlot: 'sat:memory' }),
     );
     expect(withSkip.showSkip).toBe(true);
     expect(withSkip.skipTarget).toBe('sat:memory');

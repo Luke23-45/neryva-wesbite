@@ -119,7 +119,7 @@ describe('TrySection (builder response spine)', () => {
     expect(screen.getByTitle(/No DRAFT or PUBLISHED version/)).toBeTruthy();
   });
 
-  it('shows the instructions advisory with a Purpose jump, and model blocks with a Brain fix', async () => {
+  it('shows the instructions advisory with a Purpose jump', async () => {
     const onEditJump = vi.fn();
     await shell({ definition: definitionWith(''), onEditJump });
     fireEvent.click(screen.getByText(/Edit in Purpose/));
@@ -131,7 +131,7 @@ describe('TrySection (builder response spine)', () => {
     def.model_policy.allowed_models = ['a/bad'];
     await shell({ definition: def });
     expect(screen.getByText(/No usable model/)).toBeTruthy();
-    fireEvent.click(screen.getByText(/Fix in Brain/));
+    fireEvent.click(screen.getByText(/Fix in Model/));
   });
 
   it('renders viewers read-only with the role truth, never the dock', async () => {

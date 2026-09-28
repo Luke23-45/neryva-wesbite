@@ -105,11 +105,11 @@ export function TryConsole({
 
   const fixLink = (kind: 'no-model' | 'instructions-advisory') =>
     editMode.kind === 'jump' ? (
-      <TextButton onClick={() => editMode.onEditJump(kind === 'no-model' ? 'brain' : 'purpose')}>
-        {kind === 'no-model' ? 'Fix in Brain ›' : 'Edit in Purpose ›'}
+      <TextButton onClick={() => editMode.onEditJump(kind === 'no-model' ? 'model' : 'purpose')}>
+        {kind === 'no-model' ? 'Fix in Model ›' : 'Edit in Purpose ›'}
       </TextButton>
     ) : (
-      <Link to={editMode.builderHref}>{kind === 'no-model' ? 'Fix in Brain ›' : 'Edit in Purpose ›'}</Link>
+      <Link to={editMode.builderHref}>{kind === 'no-model' ? 'Fix in Model ›' : 'Edit in Purpose ›'}</Link>
     );
 
   return (

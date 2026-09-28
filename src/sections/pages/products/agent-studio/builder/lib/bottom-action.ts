@@ -10,7 +10,8 @@ export interface BottomActionInput {
   /** New-mode Purpose form validity (trimmed name 2–128). */
   purposeValid: boolean;
   hasDraft: boolean;
-  brainReady: boolean;
+  /** At least one usable model is picked (C04 — publish refuses otherwise). */
+  modelReady: boolean;
   /** Draft exists but its instructions are blank (C02 — publish refuses). */
   instructionsEmpty: boolean;
   /** Knowledge satellite verdict subtitle when graded attention (C05) — a hint, never a block. */
@@ -73,11 +74,11 @@ export function deriveBottomAction(input: BottomActionInput): BottomAction {
     };
   }
 
-  // Rule 4 — brain not ready: shipping needs at least one usable model.
-  if (!input.brainReady) {
+  // Rule 4 — model not ready: shipping needs at least one usable model.
+  if (!input.modelReady) {
     return {
       primaryLabel: 'Choose a model',
-      primary: { action: 'select', target: 'brain' },
+      primary: { action: 'select', target: 'model' },
       whisper: 'Shipping needs at least one usable model.',
       ...skip,
     };

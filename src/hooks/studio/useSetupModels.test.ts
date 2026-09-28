@@ -1,5 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { parseModelCosts, costLabel, cachedCostLabel } from './useSetupModels';
+import { parseModelAvailability, parseModelCosts, costLabel, cachedCostLabel } from './useSetupModels';
+
+describe('parseModelAvailability', () => {
+  it('reads subscription gating fields (snake_case and camelCase)', () => {
+    const rows = parseModelAvailability({
+      models: [
+        { provider: 'a', model_id: 'm1', usable: false, reasons: ['subscription_required'], required_product: 'payg', required_product_label: 'Pay-as-you-go' },
+        { provider: 'a', modelId: 'm2', usable: false, reasons: ['subscription_required'], requiredProduct: 'enterprise', requiredProductLabel: 'Enterprise' },
+      ],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ ref: 'a/m1', requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' });
+    expect(rows[1]).toMatchObject({ ref: 'a/m2', requiredProduct: 'enterprise', requiredProductLabel: 'Enterprise' });
+  });
+
+  it('nulls missing or invalid subscription fields without crashing', () => {
+    const rows = parseModelAvailability({
+      models: [
+        { provider: 'a', model_id: 'm1', usable: true, reasons: [] },
+        { provider: 'a', model_id: 'm2', usable: false, reasons: ['subscription_required'], required_product: 'platinum', required_product_label: 42 },
+      ],
+    });
+    expect(rows).toHaveLength(2);
+    // Missing fields → null, never invented.
+    expect(rows[0]).toMatchObject({ requiredProduct: null, requiredProductLabel: null });
+    // Unknown product + non-string label → null, never passed through.
+    expect(rows[1]).toMatchObject({ requiredProduct: null, requiredProductLabel: null });
+  });
+
+  it('drops rows without provider/model', () => {
+    expect(parseModelAvailability({ models: [{ provider: 'x' }] })).toEqual([]);
+    expect(parseModelAvailability(null)).toEqual([]);
+  });
+});
 
 describe('parseModelCosts', () => {
   it('reads list-price points (snake_case and camelCase)', () => {

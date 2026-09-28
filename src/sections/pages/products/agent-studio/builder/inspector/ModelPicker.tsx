@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { costLabel, type ModelAvailability, type ModelCost } from '@hooks/studio/useSetupModels';
-import { ENGINE_RANGES, humanizeReason, moveModel, reasonFix } from '../lib/brain-model';
+import { ENGINE_RANGES, humanizeReason, moveModel, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
 import {
   CapNote,
   CatalogList,
   CatalogRow,
   EmptyNote,
   FixButton,
+  GroupLabel,
   MiniButton,
   OrderChip,
   OrderIndex,
@@ -51,6 +53,65 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
       (m) => m.displayName.toLowerCase().includes(q) || m.ref.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q),
     );
   }, [catalog, query]);
+
+  // Usable first, locked after — both stay visible (never hidden), locked
+  // rows carry the why inline. Allowed-but-decayed rows stay in the usable
+  // group only while the catalog still deems them usable.
+  const usableVisible = useMemo(() => visible.filter((m) => m.usable), [visible]);
+  const lockedVisible = useMemo(() => visible.filter((m) => !m.usable), [visible]);
+
+  const renderRow = (model: ModelAvailability) => {
+    const on = allowed.includes(model.ref);
+    const disabled = !canAuthor || (!model.usable && !on) || (!on && capped);
+    const cost = costFor(model.ref);
+    const costText = cost
+      ? `${costLabel(cost, 'in')} in / ${costLabel(cost, 'out')} out`
+      : 'unpriced';
+    const reason = model.usable ? null : model.reasons[0] ?? 'unknown';
+    const fix = reason ? reasonFix(reason) : null;
+    const gated = reason === 'subscription_required';
+    return (
+      <CatalogRow key={model.ref} $disabled={disabled} title={model.ref}>
+        <input
+          type="checkbox"
+          checked={on}
+          disabled={disabled}
+          onChange={(event) => toggle(model.ref, event.target.checked)}
+          aria-label={`${model.displayName}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
+        />
+        <RowMain>
+          <RowName>
+            {model.displayName}
+          </RowName>
+          <RowMeta>
+            {model.ref} · {costText}
+          </RowMeta>
+          {!model.usable && (
+            <ReasonText $tone={reason === 'credential_compromised' ? 'red' : 'amber'}>
+              {gated ? (
+                <>
+                  {subscriptionGateCopy(model)}{' '}
+                  <Link to="/agent-studio/settings/billing">View subscription options →</Link>
+                </>
+              ) : (
+                <>
+                  unusable: {humanizeReason(reason ?? 'unknown')}
+                  {fix && fix.action && fix.action !== 'billing' && canAuthor && (
+                    <>
+                      {' · '}
+                      <FixButton type="button" onClick={() => onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)}>
+                        {fix.label}
+                      </FixButton>
+                    </>
+                  )}
+                </>
+              )}
+            </ReasonText>
+          )}
+        </RowMain>
+      </CatalogRow>
+    );
+  };
 
   const toggle = (ref: string, on: boolean) => {
     if (on) {
@@ -114,48 +175,18 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
       )}
 
       <CatalogList>
-        {visible.map((model) => {
-          const on = allowed.includes(model.ref);
-          const disabled = !canAuthor || (!model.usable && !on) || (!on && capped);
-          const cost = costFor(model.ref);
-          const costText = cost
-            ? `${costLabel(cost, 'in')} in / ${costLabel(cost, 'out')} out`
-            : 'unpriced';
-          const reason = model.usable ? null : model.reasons[0] ?? 'unknown';
-          const fix = reason ? reasonFix(reason) : null;
-          return (
-            <CatalogRow key={model.ref} $disabled={disabled} title={model.ref}>
-              <input
-                type="checkbox"
-                checked={on}
-                disabled={disabled}
-                onChange={(event) => toggle(model.ref, event.target.checked)}
-                aria-label={`${model.displayName}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
-              />
-              <RowMain>
-                <RowName>
-                  {model.displayName}
-                </RowName>
-                <RowMeta>
-                  {model.ref} · {costText}
-                </RowMeta>
-                {!model.usable && (
-                  <ReasonText $tone={reason === 'credential_compromised' ? 'red' : 'amber'}>
-                    unusable: {humanizeReason(reason ?? 'unknown')}
-                    {fix && fix.action && canAuthor && (
-                      <>
-                        {' · '}
-                        <FixButton type="button" onClick={() => onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)}>
-                          {fix.label}
-                        </FixButton>
-                      </>
-                    )}
-                  </ReasonText>
-                )}
-              </RowMain>
-            </CatalogRow>
-          );
-        })}
+        {usableVisible.length > 0 && (
+          <>
+            <GroupLabel>USABLE · {usableVisible.length}</GroupLabel>
+            {usableVisible.map((model) => renderRow(model))}
+          </>
+        )}
+        {lockedVisible.length > 0 && (
+          <>
+            <GroupLabel>LOCKED · {lockedVisible.length}</GroupLabel>
+            {lockedVisible.map((model) => renderRow(model))}
+          </>
+        )}
       </CatalogList>
 
       {capped && canAuthor && (

@@ -4,6 +4,7 @@ import {
   Brain,
   Component,
   Contact,
+  Cpu,
   FlaskConical,
   History,
   KeyRound,
@@ -70,7 +71,7 @@ export interface PaletteHealth {
 }
 
 export interface ComponentPaletteProps {
-  /** 17 nodes in lane order (projector-wired). */
+  /** 18 nodes in lane order (projector-wired). */
   nodes: PaletteNodeEntry[];
   selectedId: string | null;
   /** Port-click filter (node/kind id or null). */
@@ -109,6 +110,7 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   memory: <MemoryStick size={13} strokeWidth={1.8} />,
   credentials: <KeyRound size={13} strokeWidth={1.8} />,
   brain: <Brain size={13} strokeWidth={1.8} />,
+  model: <Cpu size={13} strokeWidth={1.8} />,
   context: <History size={13} strokeWidth={1.8} />,
   samples: <Layers size={13} strokeWidth={1.8} />,
   guardrails: <ShieldCheck size={13} strokeWidth={1.8} />,
@@ -123,7 +125,7 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
 
 function nodeIcon(id: string): React.ReactNode {
   // Interim projector ids carry a `sat:` prefix (e.g. `sat:knowledge`);
-  // strip it so the kind glyph resolves until the coordinator's 16-node mapping lands.
+  // strip it so the kind glyph resolves.
   const key = id.startsWith('sat:') ? id.slice(4) : id;
   return NODE_ICONS[key] ?? <Component size={13} strokeWidth={1.8} />;
 }

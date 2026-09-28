@@ -29,6 +29,9 @@ vi.mock('./InstructionsSection', () => ({
 vi.mock('./BrainSection', () => ({
   BrainSection: () => <div data-testid="section-brain" />,
 }));
+vi.mock('./ModelSection', () => ({
+  ModelSection: () => <div data-testid="section-model" />,
+}));
 vi.mock('./KnowledgeSection', () => ({
   KnowledgeSection: () => <div data-testid="section-knowledge" />,
 }));
@@ -164,6 +167,7 @@ describe('BuilderInspector node mapping', () => {
     ['purpose', 'section-purpose'],
     ['instructions', 'section-instructions'],
     ['brain', 'section-brain'],
+    ['model', 'section-model'],
     ['knowledge', 'section-knowledge'],
     ['tools', 'section-tools'],
     ['memory', 'section-memory'],
@@ -225,7 +229,7 @@ describe('BuilderInspector node mapping', () => {
 describe('Purpose extras (blueprint, next steps, CTA)', () => {
   const nodes: PurposeNodeDatum[] = [
     { id: 'purpose', label: 'Purpose', status: 'ready' },
-    { id: 'brain', label: 'Brain', status: 'untouched' },
+    { id: 'model', label: 'Model', status: 'untouched' },
     { id: 'tools', label: 'Tools', status: 'attention' },
     { id: 'memory', label: 'Memory', status: 'error' },
     { id: 'knowledge', label: 'Knowledge', status: 'untouched' },
@@ -233,14 +237,14 @@ describe('Purpose extras (blueprint, next steps, CTA)', () => {
     { id: 'response', label: 'Response', status: 'attention' },
   ];
 
-  it('orders next steps attention/error first, then untouched, excluding context/response, max 3', async () => {
+  it('orders next steps attention/error first, then untouched, excluding context/response/brain, max 3', async () => {
     await shell({ selected: node('purpose'), nodes });
     const region = screen.getByLabelText('Next steps');
     const rows = within(region).getAllByRole('button');
     expect(rows.map((r) => r.textContent)).toEqual([
       expect.stringContaining('Fix Tools'),
       expect.stringContaining('Fix Memory'),
-      expect.stringContaining('Set up Brain'),
+      expect.stringContaining('Set up Model'),
     ]);
     expect(within(region).queryByText(/Context|Response/)).toBeNull();
   });

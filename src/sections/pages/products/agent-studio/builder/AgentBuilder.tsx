@@ -118,6 +118,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const [composerDirty, setComposerDirty] = useState(false);
   const [brandDirty, setBrandDirty] = useState(false);
   const [brainDirty, setBrainDirty] = useState(false);
+  const [modelDirty, setModelDirty] = useState(false);
   const [knowledgeDirty, setKnowledgeDirty] = useState(false);
   const purposeRef = useRef<PurposeHandle | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -138,6 +139,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
 
   const onBrainDirty = useCallback((dirty: boolean) => {
     setBrainDirty(dirty);
+  }, []);
+
+  const onModelDirty = useCallback((dirty: boolean) => {
+    setModelDirty(dirty);
   }, []);
 
   const onKnowledgeDirty = useCallback((dirty: boolean) => {
@@ -194,7 +199,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setLastTry(event);
   }, []);
 
-  // Trace Edit jumps land on builder slots (C13): fixed 17-node ids —
+  // Trace Edit jumps land on builder slots (C13): fixed 18-node ids —
   // every TraceEditTarget IS a node id, so jumps select directly.
   const onEditJump = useCallback(
     (target: TraceEditTarget) => {
@@ -217,10 +222,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setBrandDirty(dirty);
   }, []);
 
-  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + knowledge + tools + guardrails + memory + context + response + budget.
+  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + budget.
   // (Selection, drags, and skips are UI state — rebuilding them is free.)
   const { dialog: guardDialog } = useDirtyGuard(
-    (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
+    (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
   );
 
   // A2-23: honest save readout — a draft write in flight must never display as "Saved".
@@ -285,7 +290,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const selectedNode = projected.nodes.find((n) => n.id === selectedId) ?? null;
 
   // Default selection = next-best-action (BUILD_PLAN.md §3): purpose at
-  // origin, brain while model-less, knowledge once the scaffold stands.
+  // origin, model while model-less, knowledge once the scaffold stands.
   // C15 ?slot= re-entry wins over all of it, once per scope. Once per
   // scope — an explicit deselect (Esc) must stick, never reselect.
   const scopeKey = mode === 'new' ? 'new' : (agentId ?? 'none');
@@ -299,7 +304,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     }
     if (form.data === undefined) return;
     if (initialSlot) {
-      // All 16 ids exist (resolveInitialSlot) — unknown values fall
+      // All 18 ids exist (resolveInitialSlot) — unknown values fall
       // through to default selection, never an error.
       const resolved = resolveInitialSlot(initialSlot);
       if (resolved) {
@@ -309,9 +314,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       }
     }
     defaultedFor.current = scopeKey;
-    const brainReady = !!definition && definition.model_policy.allowed_models.length > 0;
-    if (!brainReady) {
-      select('brain');
+    const modelReady = !!definition && definition.model_policy.allowed_models.length > 0;
+    if (!modelReady) {
+      select('model');
       return;
     }
     select('knowledge');
@@ -368,8 +373,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       purposeValid: mode === 'new' ? formState.valid : true,
       hasDraft,
       // Usability, not presence (C04): a loading catalog is not-ready-yet
-      // (neutral copy downstream), an all-unusable set selects brain.
-      brainReady: usableRefs(definition?.model_policy.allowed_models ?? [], models.data).length > 0,
+      // (neutral copy downstream), an all-unusable set selects the model node.
+      modelReady: usableRefs(definition?.model_policy.allowed_models ?? [], models.data).length > 0,
       instructionsEmpty:
         mode === 'build' && hasDraft && (definition?.instructions.trim() ?? '') === '',
       knowledgeAttention: grade !== null && grade.status === 'attention' ? grade.subtitle : null,
@@ -389,7 +394,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         return;
       }
       if (primary.action === 'select') {
-        // Fixed 16-node ids — bottom-action targets select directly.
+        // Fixed 18-node ids — bottom-action targets select directly.
         select(primary.target);
         return;
       }
@@ -417,7 +422,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
   const saving = draftWritesInFlight > 0;
   const anySectionDirty =
-    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || budgetDirty;
+    composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || budgetDirty;
   const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
 
   // Manual save signal (topbar Save button / Ctrl+S / ⌘S). Sections watch
@@ -575,10 +580,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
       if (event.key === 'Escape') {
         // Never strand unsaved input: Escape must not unmount the Purpose
-        // form (new mode), the composer, the voice, brain, knowledge, tools,
+        // form (new mode), the composer, the voice, brain, model, knowledge, tools,
         // guardrails, memory, context, response, role, or budget while any is dirty.
         // Dirty surfaces blur instead (their own Esc handlers); selection stays.
-        if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
+        if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
         select(null);
         setPaletteFilter(null);
         return;
@@ -616,7 +621,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, contextDirty, responseDirty, roleDirty, budgetDirty, canAuthor, requestSave]);
+  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, modelDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, contextDirty, responseDirty, roleDirty, budgetDirty, canAuthor, requestSave]);
 
   const inspectorContext: InspectorContext = useMemo(
     () => ({
@@ -759,6 +764,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         onComposerDirty={onComposerDirty}
         onBrandDirty={onBrandDirty}
         onBrainDirty={onBrainDirty}
+        onModelDirty={onModelDirty}
         onKnowledgeDirty={onKnowledgeDirty}
         onToolsDirty={onToolsDirty}
         onGuardrailsDirty={onGuardrailsDirty}

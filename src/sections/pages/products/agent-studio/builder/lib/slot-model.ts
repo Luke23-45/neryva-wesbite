@@ -5,7 +5,7 @@
  * localStorage per agent; cosmetic resets acceptable, data loss impossible —
  * the draft is the only contract truth).
  *
- * v10: the canvas is a FIXED 16-node topology (lane-model.ts) — the
+ * v10: the canvas is a FIXED 18-node topology (lane-model.ts) — the
  * satellite working set and skip flags are gone. Closed vocabularies that
  * remain: SlotKind (the seven kind nodes), SpineId, SlotStatus.
  */
@@ -119,6 +119,7 @@ export const BUILDER_STEP_ANCHORS: Record<string, string> = {
   instructions: 'instructions',
   context: 'context',
   brain: 'model',
+  model: 'model',
   knowledge: 'knowledge',
   tools: 'tools',
   guardrails: 'guardrails',
@@ -127,6 +128,7 @@ export const BUILDER_STEP_ANCHORS: Record<string, string> = {
   samples: 'samples',
   budget: 'budget',
   response: 'try',
+  role: 'role',
   brand: 'brand',
   try: 'try',
   evaluation: 'evaluation',
@@ -139,7 +141,7 @@ export function buildAgentBuildPath(agentId: string): string {
 
 /**
  * C15 re-entry (?slot=): resolve a requested slot to a selectable node id.
- * The v10 canvas is a fixed 16-node topology (lane-model) — every id in
+ * The v10 canvas is a fixed 18-node topology (lane-model) — every id in
  * LANE_NODE_IDS resolves; unknown values are null, never an error.
  */
 export function resolveInitialSlot(slot: string | null | undefined): string | null {

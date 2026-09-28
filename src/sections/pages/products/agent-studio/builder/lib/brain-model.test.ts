@@ -7,6 +7,7 @@ import {
   MODEL_PRESETS,
   moveModel,
   reasonFix,
+  subscriptionGateCopy,
   usableRefs,
   validateOutputSchema,
 } from './brain-model';
@@ -40,6 +41,8 @@ describe('brain model (C04 binds)', () => {
     expect(reasonFix('provider_not_enabled')).toEqual({ label: 'Ask an admin to enable', action: 'enable' });
     expect(reasonFix('residency_incompatible')).toEqual({ label: 'Switch profile', action: 'profile' });
     expect(reasonFix('credential_compromised')).toEqual({ label: 'Rotate the key', action: 'incident' });
+    expect(reasonFix('subscription_required')).toEqual({ label: 'View subscription options', action: 'billing' });
+    expect(humanizeReason('subscription_required')).toBe('subscription required');
     expect(humanizeReason('credential_compromised')).toBe('credential_compromised (derived)');
     expect(humanizeReason('residency_incompatible')).toBe('residency incompatible');
     // Unknown reasons degrade truthfully — never a guessed fix.
@@ -83,5 +86,22 @@ describe('brain model (C04 binds)', () => {
       message: 'Must be a JSON object schema, not an array or primitive.',
     });
     expect(validateOutputSchema('x'.repeat(16385)).ok).toBe(false);
+  });
+});
+
+describe('subscriptionGateCopy', () => {
+  it('uses the engine label when present', () => {
+    expect(subscriptionGateCopy({ requiredProductLabel: 'Pay-as-you-go' })).toBe(
+      "Requires Pay-as-you-go — you don't have that.",
+    );
+  });
+
+  it('degrades to a truthful generic when the label is missing', () => {
+    expect(subscriptionGateCopy({ requiredProductLabel: null })).toBe(
+      "Requires a subscription — you don't have that.",
+    );
+    expect(subscriptionGateCopy({})).toBe(
+      "Requires a subscription — you don't have that.",
+    );
   });
 });

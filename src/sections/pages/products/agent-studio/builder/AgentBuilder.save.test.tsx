@@ -127,7 +127,7 @@ function shell() {
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <BuilderTopbarSlotsProvider>
-          <AgentBuilder mode="build" agentId="agent-1" initialSlot="brain" />
+          <AgentBuilder mode="build" agentId="agent-1" initialSlot="model" />
         </BuilderTopbarSlotsProvider>
       </QueryClientProvider>
     </ThemeProvider>,
@@ -150,7 +150,7 @@ describe('AgentBuilder manual save', () => {
     await act(async () => {
       shell();
     });
-    // Brain is mounted via initialSlot — flip Fallback to make it dirty.
+    // Model is mounted via initialSlot — flip Fallback to make it dirty.
     fireEvent.click(await screen.findByLabelText('Fallback'));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled());
     saveMutate.mockClear();

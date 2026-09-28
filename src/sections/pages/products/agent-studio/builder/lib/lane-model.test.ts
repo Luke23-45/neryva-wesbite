@@ -19,6 +19,7 @@ const EXPECTED_COLORS: Record<LaneNodeId, string> = {
   tools: '#A78BFA',
   memory: '#FF9F0A',
   credentials: '#E879F9',
+  model: '#A3E635',
   brain: '#818CF8',
   context: '#6B7280',
   samples: '#FACC15',
@@ -40,8 +41,9 @@ const EXPECTED_POSITIONS: Record<LaneNodeId, { x: number; y: number }> = {
   memory: { x: 560, y: 550 },
   credentials: { x: 560, y: 720 },
   samples: { x: 820, y: 210 },
-  brain: { x: 820, y: 380 },
-  context: { x: 820, y: 550 },
+  model: { x: 820, y: 380 },
+  brain: { x: 820, y: 550 },
+  context: { x: 820, y: 720 },
   brand: { x: 1080, y: 210 },
   guardrails: { x: 1080, y: 380 },
   budget: { x: 1080, y: 550 },
@@ -52,11 +54,11 @@ const EXPECTED_POSITIONS: Record<LaneNodeId, { x: number; y: number }> = {
 };
 
 describe('lane model (v10 fixed topology)', () => {
-  it('defines exactly 17 nodes and NODE_COUNT matches', () => {
-    expect(LANE_NODE_IDS).toHaveLength(17);
-    expect(new Set(LANE_NODE_IDS).size).toBe(17);
-    expect(NODE_COUNT).toBe(17);
-    expect(Object.keys(LANE_NODES)).toHaveLength(17);
+  it('defines exactly 18 nodes and NODE_COUNT matches', () => {
+    expect(LANE_NODE_IDS).toHaveLength(18);
+    expect(new Set(LANE_NODE_IDS).size).toBe(18);
+    expect(NODE_COUNT).toBe(18);
+    expect(Object.keys(LANE_NODES)).toHaveLength(18);
   });
 
   it('labels the five lanes', () => {
@@ -91,7 +93,7 @@ describe('lane model (v10 fixed topology)', () => {
     const lanes: Record<LaneId, LaneNodeId[]> = {
       identity: ['purpose', 'instructions', 'role'],
       capabilities: ['knowledge', 'tools', 'memory', 'credentials'],
-      cognition: ['samples', 'brain', 'context'],
+      cognition: ['samples', 'model', 'brain', 'context'],
       control: ['brand', 'guardrails', 'budget'],
       delivery: ['try', 'response', 'evaluation', 'ship'],
     };

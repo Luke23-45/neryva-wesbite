@@ -17,10 +17,6 @@ vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock('@/Context/OrgContext', () => ({
-  useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
-}));
-
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
   return {
@@ -39,34 +35,6 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
       isFetching: false,
       isError: false,
     }),
-  };
-});
-
-vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
-  return {
-    ...actual,
-    useModelAvailability: () => ({
-      data: [
-        { provider: 'a', modelId: 'b', ref: 'a/b', displayName: 'A B', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [] },
-        { provider: 'c', modelId: 'd', ref: 'c/d', displayName: 'C D', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [] },
-      ],
-      isPending: false,
-      isFetching: false,
-      isError: false,
-    }),
-    useModelCosts: () => ({ data: [], isPending: false, isFetching: false, isError: false }),
-  };
-});
-
-vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@hooks/studio/useSetupProviders')>();
-  return {
-    ...actual,
-    useProviderCredentials: () => ({ data: [], isPending: false, isError: false }),
-    useCreateProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
-    useRotateProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
-    useRevokeProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
   };
 });
 
@@ -110,25 +78,20 @@ function withFakeTimers() {
   vi.useFakeTimers();
 }
 
-describe('BrainSection policy', () => {
-  it('resolves the primary with usability and writes fallback flips', async () => {
-    withFakeTimers();
+describe('BrainSection profiles', () => {
+  it('lists the reasoning profiles with inspectable param maps', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(screen.getByLabelText('Fallback'));
-    await act(async () => {
-      vi.advanceTimersByTime(9000);
-    });
-    expect(updateMutate).toHaveBeenCalledTimes(1);
-    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition; expectedHash: string };
-    expect(input.expectedHash).toBe('h1');
-    expect(input.definition.model_policy.fallback_enabled).toBe(true);
-    expect(input.definition.model_policy.allowed_models).toEqual(['a/b']);
+    expect(screen.getByText('Clerk')).toBeTruthy();
+    expect(screen.getByText('Scholar')).toBeTruthy();
+    expect(screen.getByText('Creator')).toBeTruthy();
+    // Model picking, fallback, and raw params live in the Model node now.
+    expect(screen.queryByText(/allowed models/i)).toBeNull();
+    expect(screen.queryByLabelText('Fallback')).toBeNull();
   });
 
-  it('applies presets as param patches (inspectable map, autosaved)', async () => {
+  it('applies a preset as a model_params patch (autosaved)', async () => {
     withFakeTimers();
     await act(async () => {
       shell();
@@ -144,50 +107,34 @@ describe('BrainSection policy', () => {
     expect(input.definition.model_params.max_output_tokens).toBe(16000);
   });
 
-  it('holds save on out-of-range params with named messages', async () => {
+  it('preserves output_schema when a preset lands (params wholesale)', async () => {
     withFakeTimers();
     await act(async () => {
       shell({
-        definition: { ...DEFINITION, model_params: { temperature: 9 } },
+        definition: { ...DEFINITION, model_params: { output_schema: '{"type":"object"}' } },
       });
     });
-    // Sliders cannot leave range by construction — out-of-range arrives from
-    // stored data, and the section holds with the range named (never clamps).
-    expect(screen.getByText(/Temperature must be 0–2/)).toBeTruthy();
-    await act(async () => {
-      vi.advanceTimersByTime(9000);
-    });
-    expect(updateMutate).not.toHaveBeenCalled();
-  });
-
-  it('holds save on invalid schemas with the failure named', async () => {
-    withFakeTimers();
-    await act(async () => {
-      shell();
-    });
-    fireEvent.click(screen.getByText(/Advanced/));
-    fireEvent.change(screen.getByLabelText(/Output schema/), { target: { value: '{nope' } });
-    expect(screen.getByText(/Not valid JSON/)).toBeTruthy();
-    await act(async () => {
-      vi.advanceTimersByTime(9000);
-    });
-    expect(updateMutate).not.toHaveBeenCalled();
-  });
-
-  it('reorders the fallback chain through the picker', async () => {
-    withFakeTimers();
-    await act(async () => {
-      shell({ definition: { ...DEFINITION, model_policy: { allowed_models: ['a/b', 'c/d'], fallback_enabled: true } } });
-    });
-    fireEvent.click(screen.getByLabelText('Move a/b down'));
+    fireEvent.click(screen.getByText('Scholar'));
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
     const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
-    expect(input.definition.model_policy.allowed_models).toEqual(['c/d', 'a/b']);
+    expect(input.definition.model_params.output_schema).toBe('{"type":"object"}');
   });
 
-  it('renders the 412 dialog with the policy diff and saves over fresh', async () => {
+  it('marks the preset that matches the current params', async () => {
+    await act(async () => {
+      shell({
+        definition: {
+          ...DEFINITION,
+          model_params: { temperature: 0.7, top_p: 1, max_output_tokens: 16000, reasoning_effort: 'high' },
+        },
+      });
+    });
+    expect(screen.getByText('Matches current')).toBeTruthy();
+  });
+
+  it('renders the 412 dialog and saves over fresh', async () => {
     withFakeTimers();
     updateMutate.mockImplementationOnce((_input: unknown, opts?: { onError?: (e: unknown) => void }) => {
       opts?.onError?.(new ApiError(412, 'precondition_failed', 'stale', { expected: 'h1', current: 'h2' }));
@@ -195,7 +142,7 @@ describe('BrainSection policy', () => {
     await act(async () => {
       shell();
     });
-    fireEvent.click(screen.getByLabelText('Fallback'));
+    fireEvent.click(screen.getByText('Scholar'));
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -204,19 +151,15 @@ describe('BrainSection policy', () => {
     expect(updateMutate).toHaveBeenCalledTimes(2);
     const retry = updateMutate.mock.calls[1][0] as { expectedHash: string; definition: AgentDefinition };
     expect(retry.expectedHash).toBe('h2');
-    expect(retry.definition.model_policy.fallback_enabled).toBe(true);
+    expect(retry.definition.model_params.temperature).toBe(0.7);
   });
 
-  it('renders read-only for viewers (policy visible, controls dead)', async () => {
+  it('renders read-only for viewers (profiles visible, controls dead)', async () => {
     await act(async () => {
       shell({ canAuthor: false });
     });
-    expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByLabelText('Fallback')).toBeNull();
-    // Profiles stay visible (readable policy) but dead.
     const scholar = screen.getByText('Scholar').closest('button');
     expect(scholar?.disabled).toBe(true);
-    expect(screen.getByText(/Off|On — next allowed/)).toBeTruthy();
   });
 });
 

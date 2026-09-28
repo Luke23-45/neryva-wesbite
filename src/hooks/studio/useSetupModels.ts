@@ -6,12 +6,16 @@
  *
  * Rows carry `usable` + machine-readable `reasons[]`
  * (provider_credential_missing | provider_not_enabled |
- * residency_incompatible) — the UI renders unusable rows DISABLED with the
- * reasons inline, never hidden. All roles may read.
+ * residency_incompatible | subscription_required) — the UI renders unusable
+ * rows DISABLED with the reasons inline, never hidden. `subscription_required`
+ * rows additionally carry `required_product` + `required_product_label` so the
+ * UI can name the tier that unlocks the model. All roles may read.
  */
 import { useQuery } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
+
+export type RequiredProduct = 'free' | 'payg' | 'enterprise';
 
 export interface ModelAvailability {
   provider: string;
@@ -25,6 +29,14 @@ export interface ModelAvailability {
   residency: string | null;
   usable: boolean;
   reasons: string[];
+  /**
+   * Subscription gate (staff-managed catalog field). Absent = the engine did
+   * not send it (older engine or unset entry) — the UI treats the model as
+   * ungated rather than guessing a tier.
+   */
+  requiredProduct: RequiredProduct | null;
+  /** Human label for requiredProduct, from the engine — never invented here. */
+  requiredProductLabel: string | null;
 }
 
 function str(value: unknown): string | null {
@@ -46,6 +58,11 @@ export function parseModelAvailability(raw: unknown): ModelAvailability[] {
         return null;
       }
       const reasons = Array.isArray(item.reasons) ? item.reasons.filter((r): r is string => typeof r === 'string') : [];
+      const requiredProductRaw = str(item.required_product) ?? str(item.requiredProduct);
+      const requiredProduct: RequiredProduct | null =
+        requiredProductRaw === 'free' || requiredProductRaw === 'payg' || requiredProductRaw === 'enterprise'
+          ? requiredProductRaw
+          : null;
       return {
         provider,
         modelId,
@@ -57,6 +74,8 @@ export function parseModelAvailability(raw: unknown): ModelAvailability[] {
         residency: str(item.residency),
         usable: item.usable === true,
         reasons,
+        requiredProduct,
+        requiredProductLabel: str(item.required_product_label) ?? str(item.requiredProductLabel),
       } satisfies ModelAvailability;
     })
     .filter((m): m is ModelAvailability => m !== null);

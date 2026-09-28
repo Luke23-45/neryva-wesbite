@@ -1,7 +1,7 @@
 /**
  * Agent Builder v10 lane topology (LEDGER.md §8.1 — lanes YES).
  *
- * 17 FIXED nodes in 5 dashed lanes. This model owns lane labels, order,
+ * 18 FIXED nodes in 5 dashed lanes. This model owns lane labels, order,
  * per-node colors, and canonical positions only — grading lives in
  * projector.ts. Visual restyle: node cards are 200×100, lanes are dashed
  * hulls; nothing here is derived from data (no invented states possible).
@@ -32,6 +32,7 @@ export type LaneNodeId =
   | 'tools'
   | 'memory'
   | 'credentials'
+  | 'model'
   | 'brain'
   | 'context'
   | 'samples'
@@ -82,8 +83,9 @@ export const LANE_NODES: Record<LaneNodeId, LaneNodeSpec> = {
   tools: spec('tools', 'capabilities', 'Tools', '#A78BFA', 'Capabilities this agent may call', 560, 380),
   memory: spec('memory', 'capabilities', 'Memory', '#FF9F0A', 'What this agent remembers', 560, 550),
   credentials: spec('credentials', 'capabilities', 'Credentials', '#E879F9', 'Provider API keys', 560, 720),
-  brain: spec('brain', 'cognition', 'Brain', '#818CF8', 'Model policy', 820, 380),
-  context: spec('context', 'cognition', 'Context', '#6B7280', 'History · scope · summary', 820, 550),
+  model: spec('model', 'cognition', 'Model', '#A3E635', 'Provider · model · params', 820, 380),
+  brain: spec('brain', 'cognition', 'Brain', '#818CF8', 'Reasoning profiles', 820, 550),
+  context: spec('context', 'cognition', 'Context', '#6B7280', 'History · scope · summary', 820, 720),
   samples: spec('samples', 'cognition', 'Samples', '#FACC15', 'Examples that steer replies', 820, 210),
   guardrails: spec('guardrails', 'control', 'Guardrails', '#FF9F0A', 'What this agent may never do', 1080, 380),
   brand: spec('brand', 'control', 'Brand', '#d8b4fe', 'How every reply sounds', 1080, 210),
@@ -103,6 +105,7 @@ export const LANE_NODE_IDS: readonly LaneNodeId[] = [
   'tools',
   'memory',
   'credentials',
+  'model',
   'brain',
   'context',
   'samples',
@@ -120,7 +123,7 @@ export function laneOf(id: LaneNodeId): LaneId {
 }
 
 /** Fixed node count — the projector must emit exactly this many. */
-export const NODE_COUNT = 17;
+export const NODE_COUNT = 18;
 
 /** Dashed lane hulls (mockup: 240 wide, top at y=168, 668 tall). */
 export const LANE_HULLS: Record<LaneId, { x: number; y: number; w: number; h: number }> = {

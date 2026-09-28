@@ -9,6 +9,7 @@ import { PurposeInspector, type PurposeFormState, type PurposeHandle } from './P
 import { InstructionsSection } from './InstructionsSection';
 import { BrandSection } from './BrandSection';
 import { BrainSection } from './BrainSection';
+import { ModelSection } from './ModelSection';
 import { KnowledgeSection } from './KnowledgeSection';
 import { ToolsSection } from './ToolsSection';
 import { GuardrailsSection } from './GuardrailsSection';
@@ -99,6 +100,7 @@ interface BuilderInspectorProps {
   onComposerDirty?: (dirty: boolean) => void;
   onBrandDirty?: (dirty: boolean) => void;
   onBrainDirty?: (dirty: boolean) => void;
+  onModelDirty?: (dirty: boolean) => void;
   onKnowledgeDirty?: (dirty: boolean) => void;
   onToolsDirty?: (dirty: boolean) => void;
   onGuardrailsDirty?: (dirty: boolean) => void;
@@ -127,9 +129,9 @@ interface BuilderInspectorProps {
 
 /**
  * Credentials node mount (v10 §8.7): the panel's own home with the same
- * wiring BrainSection gives its embedded instance — pinned providers from
+ * wiring ModelSection gives its embedded instance — pinned providers from
  * the saved draft's allowed models, role-derived read/govern gates, and
- * local dialog state. BrainSection keeps its embedded instance (its model
+ * local dialog state. ModelSection keeps its embedded instance (its model
  * fix actions open the inline forms there) — both read the same cache.
  */
 function CredentialsNode({ context }: { context: InspectorContext }) {
@@ -159,13 +161,13 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
  * "Node ID · {slotKey} · {lane}" meta line. No overflow menu: no section
  * exposes header actions, and C5 forbids rendering dead ones.
  *
- * Node → section mapping (§6, all 16 functional sections keep working with
+ * Node → section mapping (§6, all 17 functional sections keep working with
  * zero behavior change inside the sections — only re-homed):
  * purpose → PurposeInspector (+ build-mode extras); instructions →
- * InstructionsSection; brain/knowledge/tools/memory/guardrails/brand/budget/
- * context/response → their sections; credentials → CredentialsPanel; samples
- * → SamplesSection; evaluation → EvaluationSection; ship → ShipSection; try →
- * TrySection.
+ * InstructionsSection; model → ModelSection; brain/knowledge/tools/memory/
+ * guardrails/brand/budget/context/response → their sections; credentials →
+ * CredentialsPanel; samples → SamplesSection; evaluation → EvaluationSection;
+ * ship → ShipSection; try → TrySection.
  */
 export function BuilderInspector({
   selected,
@@ -177,6 +179,7 @@ export function BuilderInspector({
   onComposerDirty,
   onBrandDirty,
   onBrainDirty,
+  onModelDirty,
   onKnowledgeDirty,
   onToolsDirty,
   onGuardrailsDirty,
@@ -277,6 +280,20 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onComposerDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'model':
+        body = (
+          <ModelSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onModelDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
         );

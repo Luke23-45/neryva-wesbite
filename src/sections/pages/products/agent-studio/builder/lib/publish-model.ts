@@ -100,7 +100,7 @@ export function classifyPublishRefusal(error: unknown): PublishRefusalKind {
 }
 
 /** Where a failing row sends the maker (in-builder jump, deep link, or both). */
-export type PublishEditTarget = 'purpose' | 'brain' | 'knowledge' | 'tools' | 'evaluation';
+export type PublishEditTarget = 'purpose' | 'model' | 'knowledge' | 'tools' | 'evaluation';
 
 export interface RefusalFix {
   title: string;
@@ -178,7 +178,7 @@ export function refusalFix(kind: PublishRefusalKind): RefusalFix {
         title: 'Model refs are unknown or unserved',
         fixLabel: 'Pick published models',
         fixRoute: PUBLISH_FIX_ROUTES.models,
-        editTarget: 'brain',
+        editTarget: 'model',
       };
     case 'tools':
       return {
@@ -311,7 +311,7 @@ export interface ShipGrade {
 
 /**
  * Ship-spine grade (PLAN §6 — usability signal; the ceremony lives in the
- * section/panel). Attention is the publish-refuses color (purpose/brain/
+ * section/panel). Attention is the publish-refuses color (purpose/model/
  * knowledge precedent); loading is neutral, never red.
  */
 export function gradeShip(input: {

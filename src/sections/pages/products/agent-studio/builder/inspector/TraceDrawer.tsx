@@ -13,7 +13,7 @@ import { PreviewItem, PreviewList, PreviewMeta } from './MemorySection.styles';
 import { TextButton } from './ToolsSection.styles';
 import { Chip, ChipRow, Note, StopBlock, StopDetail, StopHeadline } from './TraceDrawer.styles';
 
-export type TraceEditTarget = 'purpose' | 'brain' | 'knowledge' | 'tools' | 'guardrails' | 'budget';
+export type TraceEditTarget = 'purpose' | 'brain' | 'model' | 'knowledge' | 'tools' | 'guardrails' | 'budget';
 
 export interface TraceTurnView {
   prompt: string;

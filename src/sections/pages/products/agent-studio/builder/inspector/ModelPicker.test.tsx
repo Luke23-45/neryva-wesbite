@@ -1,15 +1,27 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import type { ModelAvailability, ModelCost } from '@hooks/studio/useSetupModels';
 import { ModelPicker } from './ModelPicker';
 
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return {
+    ...actual,
+    // Locked-row subscription links stand in as plain anchors — routing is
+    // out of scope for catalog tests; the href is what we assert.
+    Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to ?? '#'}>{children}</a>,
+  };
+});
+
 const CATALOG: ModelAvailability[] = [
-  { provider: 'anthropic', modelId: 'claude-sonnet-4-5', ref: 'anthropic/claude-sonnet-4-5', displayName: 'Claude Sonnet 4.5', contextWindowTokens: 200000, maxOutputTokens: 64000, capabilities: {}, residency: 'us', usable: true, reasons: [] },
-  { provider: 'openai', modelId: 'gpt-5-eu', ref: 'openai/gpt-5-eu', displayName: 'GPT-5 EU', contextWindowTokens: 128000, maxOutputTokens: 32000, capabilities: {}, residency: 'eu', usable: false, reasons: ['residency_incompatible'] },
-  { provider: 'deepseek', modelId: 'chat', ref: 'deepseek/chat', displayName: 'DeepSeek Chat', contextWindowTokens: 64000, maxOutputTokens: 8000, capabilities: {}, residency: 'us', usable: false, reasons: ['provider_credential_missing'] },
+  { provider: 'anthropic', modelId: 'claude-sonnet-4-5', ref: 'anthropic/claude-sonnet-4-5', displayName: 'Claude Sonnet 4.5', contextWindowTokens: 200000, maxOutputTokens: 64000, capabilities: {}, residency: 'us', usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
+  { provider: 'openai', modelId: 'gpt-5-eu', ref: 'openai/gpt-5-eu', displayName: 'GPT-5 EU', contextWindowTokens: 128000, maxOutputTokens: 32000, capabilities: {}, residency: 'eu', usable: false, reasons: ['residency_incompatible'], requiredProduct: null, requiredProductLabel: null },
+  { provider: 'deepseek', modelId: 'chat', ref: 'deepseek/chat', displayName: 'DeepSeek Chat', contextWindowTokens: 64000, maxOutputTokens: 8000, capabilities: {}, residency: 'us', usable: false, reasons: ['provider_credential_missing'], requiredProduct: null, requiredProductLabel: null },
+  { provider: 'anthropic', modelId: 'claude-opus-4-5', ref: 'anthropic/claude-opus-4-5', displayName: 'Claude Opus 4.5', contextWindowTokens: 200000, maxOutputTokens: 128000, capabilities: {}, residency: 'us', usable: false, reasons: ['subscription_required'], requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' },
 ];
 
 const COSTS: ModelCost[] = [
@@ -92,5 +104,49 @@ describe('ModelPicker catalog', () => {
     expect(boxes.length).toBeGreaterThan(0);
     for (const box of boxes) expect(box.disabled).toBe(true);
     expect(screen.getByText('Claude Sonnet 4.5')).toBeTruthy();
+  });
+
+  it('groups the catalog into usable and locked, never hiding locked rows', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText(/USABLE · 1/)).toBeTruthy();
+    expect(screen.getByText(/LOCKED · 3/)).toBeTruthy();
+    // Locked rows stay visible with the why inline.
+    expect(screen.getByText('Claude Opus 4.5')).toBeTruthy();
+    expect(screen.getByText(/residency incompatible/)).toBeTruthy();
+  });
+
+  it('explains a subscription lock with the product label and a billing link', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText(/Requires Pay-as-you-go — you don't have that/)).toBeTruthy();
+    const link = screen.getByRole('link', { name: /view subscription options/i }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/agent-studio/settings/billing');
+  });
+
+  it('degrades honestly when the subscription label is missing', async () => {
+    const unlabeled: ModelAvailability = {
+      provider: 'x', modelId: 'y', ref: 'x/y', displayName: 'Mystery Model',
+      contextWindowTokens: 1000, maxOutputTokens: 100, capabilities: {}, residency: 'us',
+      usable: false, reasons: ['subscription_required'], requiredProduct: null, requiredProductLabel: null,
+    };
+    await act(async () => {
+      shell({ catalog: [unlabeled] });
+    });
+    // No tier invented — plain "a subscription".
+    expect(screen.getByText(/Requires a subscription — you don't have that/)).toBeTruthy();
+  });
+
+  it('keeps a locked selected model removable (never a trap)', async () => {
+    let onChange!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onChange } = shell({ allowed: ['anthropic/claude-opus-4-5'] }));
+    });
+    const box = screen.getByLabelText(/Claude Opus 4.5 — unusable/) as HTMLInputElement;
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 });

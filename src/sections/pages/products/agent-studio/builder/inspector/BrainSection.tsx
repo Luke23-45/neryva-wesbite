@@ -1,74 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
-import { Switch } from '@components/common/ui/Switch';
-import { Segmented } from '@components/common/ui/Segmented';
 import { ApiError } from '@lib/engine/client';
-import { useCanSetup } from '@lib/engine/capabilities';
-import { useOrg } from '@/Context/OrgContext';
-import {
-  costLabel,
-  useModelAvailability,
-  useModelCosts,
-} from '@hooks/studio/useSetupModels';
 import {
   useSaveDraftVersion,
   useUpdateDraftVersion,
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
-import {
-  useProviderCredentials,
-} from '@hooks/studio/useSetupProviders';
-import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave } from '../lib/use-draft-autosave';
 import {
-  ENGINE_RANGES,
-  firstBlocker,
-  humanizeReason,
   matchPreset,
   MODEL_PRESETS,
-  reasonFix,
-  usableRefs,
-  validateOutputSchema,
   type ReasoningEffort,
 } from '../lib/brain-model';
 import { ConflictDialog } from './ConflictDialog';
-import { ModelPicker } from './ModelPicker';
-import { CredentialsPanel } from './CredentialsPanel';
-import { StatusDot } from '../canvas/nodes/SlotNode.styles';
 import {
   EmptyState,
   SectionLabel,
-  Whisper,
   Wrap,
 } from './InstructionsSection.styles';
 import {
-  AdvancedToggle,
-  FixRow,
-  ParamGrid,
   ProfileCard,
   ProfileGrid,
   ProfileMap,
   ProfileMatch,
   ProfileName,
-  RangeEnds,
-  RangeInput,
-  ResolvedCard,
-  ResolvedMeta,
-  ResolvedTitle,
-  SliderHead,
-  SliderRow,
-  SliderValue,
-  StaticLabel,
-  StaticRow,
-  SwitchRow,
-  SwitchSub,
-  SwitchText,
-  SwitchTitle,
 } from './BrainSection.styles';
 
 export interface BrainSectionProps {
@@ -112,9 +69,17 @@ function readParams(definition: AgentDefinition): ParamDraft {
 }
 
 /**
- * C04 mount — model policy, params, profiles, credentials; the proven save
- * state machine (debounce, PUT/POST, 409 adopt, 412 dialog, dirty flag).
- * Read-mostly for viewers; governed mutates for credentials.
+ * Brain node — reasoning profiles only (v10.1). The model picker, fallback
+ * chain, and raw params moved to the Model node; the Brain keeps the named
+ * reasoning presets (Clerk/Scholar/Creator) that shape how the selected
+ * model thinks. Presets write the same `model_params` the Model node's
+ * sliders edit — a single inspector section mounts at a time and the
+ * unmount flush persists pending edits, so the two never clobber each
+ * other. output_schema is preserved verbatim on every preset apply (the
+ * payload builder replaces model_params wholesale).
+ *
+ * The proven save state machine (debounce, PUT/POST, 409 adopt, 412 dialog,
+ * dirty flag) is shared with the other policy sections.
  */
 export function BrainSection({
   assistantId,
@@ -127,52 +92,28 @@ export function BrainSection({
   saveSignal = 0,
 }: BrainSectionProps) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { role } = useOrg();
-  const canSetup = useCanSetup();
-  const canGovern = canSetup('setup:govern');
-  const canReadCredentials = role === 'owner' || role === 'admin' || role === 'developer';
-
-  const models = useModelAvailability();
-  const costs = useModelCosts();
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
-  const [allowed, setAllowed] = useState<string[]>(() => definition?.model_policy.allowed_models ?? []);
-  const [fallback, setFallback] = useState(() => definition?.model_policy.fallback_enabled ?? false);
   const [params, setParams] = useState<ParamDraft>(() => (definition ? readParams(definition) : {}));
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
-  const [connectProvider, setConnectProvider] = useState<string | null>(null);
-  const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
   const sendHashRef = useRef('');
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
-  const credentials = useProviderCredentials();
 
   const source = useMemo(
-    () => ({
-      allowed: definition?.model_policy.allowed_models ?? [],
-      fallback: definition?.model_policy.fallback_enabled ?? false,
-      params: definition ? readParams(definition) : {},
-    }),
+    () => (definition ? readParams(definition) : {}),
     [definition],
   );
-  const current = useMemo(
-    () => JSON.stringify({ allowed, fallback, params }),
-    [allowed, fallback, params],
-  );
-  const dirty = current !== JSON.stringify(source);
+  const current = useMemo(() => JSON.stringify({ params }), [params]);
+  const dirty = current !== JSON.stringify({ params: source });
 
   // Adopt server slices whenever clean (save echo, 409-adopt, reload-theirs).
   if (docKey !== sourceKey && !dirty) {
     setDocKey(sourceKey);
-    setAllowed(source.allowed);
-    setFallback(source.fallback);
-    setParams(source.params);
+    setParams(source);
   } else if (docKey !== sourceKey) {
     setDocKey(sourceKey);
   }
@@ -181,13 +122,6 @@ export function BrainSection({
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
 
-  const catalog = models.data;
-  const usable = useMemo(() => usableRefs(allowed, catalog), [allowed, catalog]);
-  const blocker = useMemo(
-    () => (allowed.length > 0 && usable.length === 0 && catalog !== undefined ? firstBlocker(allowed, catalog) : null),
-    [allowed, usable, catalog],
-  );
-  const primary = allowed[0] ?? null;
   const matchedPreset = matchPreset({
     temperature: params.temperature,
     top_p: params.top_p,
@@ -195,27 +129,9 @@ export function BrainSection({
     reasoning_effort: params.reasoning_effort,
   });
 
-  // Local param gates (caps doesn't cover temperature/top_p/schema — PLAN §12.3).
-  // NaN counts as invalid everywhere (typed garbage must hold, never ship).
-  const paramIssues = useMemo(() => {
-    const messages: string[] = [];
-    if (params.temperature !== undefined && (!Number.isFinite(params.temperature) || params.temperature < 0 || params.temperature > 2)) {
-      messages.push('Temperature must be 0–2.');
-    }
-    if (params.top_p !== undefined && (!Number.isFinite(params.top_p) || params.top_p <= 0 || params.top_p > 1)) {
-      messages.push('Top-p must be above 0 and at most 1.');
-    }
-    if (params.output_schema !== undefined) {
-      const check = validateOutputSchema(params.output_schema);
-      if (!check.ok) messages.push(check.message);
-    }
-    return messages;
-  }, [params]);
-
   const buildNext = useCallback((): AgentDefinition | null => {
     if (!definition) return null;
     return buildDraftPayload(definition, {
-      model_policy: { allowed_models: allowed, fallback_enabled: fallback },
       model_params: {
         ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
         ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
@@ -224,26 +140,16 @@ export function BrainSection({
         ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
       },
     });
-  }, [definition, allowed, fallback, params]);
+  }, [definition, params]);
 
-  const capsIssues = useMemo(() => {
-    const next = buildNext();
-    if (!next) return [];
-    return checkDefinitionCaps(next).filter(
-      (issue) => issue.path.startsWith('model_policy') || issue.path.startsWith('model_params') || issue.path === 'secrets',
-    );
-  }, [buildNext]);
-
-  const heldMessages = useMemo(() => [...paramIssues, ...capsIssues.map((i) => i.message)], [paramIssues, capsIssues]);
-  const blocked = heldMessages.length > 0;
+  // Presets land inside engine ranges (asserted by brain-model.test.ts), so
+  // nothing here can hold the autosave — presets apply and save cleanly.
+  const blocked = false;
   const pending = saveDraft.isPending || updateDraft.isPending;
   // Convergence is measured in POLICY shape (what the dialog hands back), not
   // local shape — comparing across shapes would park autosave forever.
   const sourcePolicyJson = useMemo(
-    () =>
-      definition
-        ? JSON.stringify({ model_policy: definition.model_policy, model_params: definition.model_params })
-        : null,
+    () => (definition ? JSON.stringify({ model_params: definition.model_params }) : null),
     [definition],
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
@@ -266,7 +172,7 @@ export function BrainSection({
               setConflict({
                 expectedHash: versionHash,
                 currentHash: typeof details.current === 'string' ? details.current : null,
-                attempted: JSON.stringify({ model_policy: next.model_policy, model_params: next.model_params }),
+                attempted: JSON.stringify({ model_params: next.model_params }),
                 attemptedDef: next,
               });
             }
@@ -300,37 +206,21 @@ export function BrainSection({
     if (saveSignal > 0) doSave();
   }, [saveSignal, doSave]);
 
-  const onFixRequest = useCallback(
-    (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {
-      if (action === 'connect') {
-        setConnectProvider(ref.split('/')[0] ?? ref);
-        setRevokeCredentialId(null);
-        setConnectOpen(true);
-        document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
-        return;
-      }
-      if (action === 'incident') {
-        // Revoke form opens against the provider's live credential (matched by
-        // provider below); absent credential → connect first, stated plainly.
-        const provider = ref.split('/')[0] ?? ref;
-        const match = (credentials.data ?? []).find((c) => c.provider === provider && c.revokedAt === null);
-        if (match) {
-          setRevokeCredentialId(match.id);
-          setConnectOpen(false);
-        } else {
-          setConnectProvider(provider);
-          setRevokeCredentialId(null);
-          setConnectOpen(true);
-          toast('No live credential for that provider — connect one first.');
-        }
-        document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
-        return;
-      }
-      // Enablement + residency pins live in the Models library (govern plane) —
-      // the builder links out instead of duplicating (dirty-guarded globally).
-      navigate({ to: '/agent-studio/models' });
+  const applyPreset = useCallback(
+    (presetId: 'clerk' | 'scholar' | 'creator') => {
+      const preset = MODEL_PRESETS.find((p) => p.id === presetId);
+      if (!preset) return;
+      // Preset overwrites the four reasoning params; output_schema (edited in
+      // the Model node) rides along untouched from local state.
+      setParams((prev) => ({
+        ...prev,
+        temperature: preset.params.temperature,
+        top_p: preset.params.top_p,
+        max_output_tokens: preset.params.max_output_tokens,
+        reasoning_effort: preset.params.reasoning_effort,
+      }));
     },
-    [credentials.data, navigate],
+    [],
   );
 
   if (!definition) {
@@ -341,9 +231,6 @@ export function BrainSection({
     );
   }
 
-  const pinnedProviders = [...new Set(allowed.map((ref) => ref.split('/')[0] ?? ref))];
-  const primaryCost = primary ? costs.data?.find((c) => c.ref === primary) : undefined;
-
   return (
     <Wrap
       onKeyDown={(event) => {
@@ -353,69 +240,7 @@ export function BrainSection({
       }}
     >
       <div>
-        <SectionLabel>RESOLVED · FIRST SERVES</SectionLabel>
-        <ResolvedCard $tone={blocker ? 'attention' : 'ok'} style={{ marginTop: 6 }}>
-          {primary ? (
-            <>
-              <ResolvedTitle>
-                <StatusDot $status={usable.includes(primary) ? 'ready' : 'attention'} aria-hidden="true" />
-                {catalog?.find((m) => m.ref === primary)?.displayName ?? primary}
-              </ResolvedTitle>
-              <ResolvedMeta>
-                {primary} · {primaryCost ? `${costLabel(primaryCost, 'in')} in / ${costLabel(primaryCost, 'out')} out` : 'unpriced'}
-                {fallback && allowed.length > 1 ? ` · fallback next → ${allowed[1]}` : ''}
-              </ResolvedMeta>
-              {blocker && (
-                <FixRow>
-                  <ResolvedMeta>
-                    {blocker.reason === null ? 'Unknown model — publish refuses.' : `unusable: ${humanizeReason(blocker.reason)} — ${reasonFix(blocker.reason).label}.`}
-                  </ResolvedMeta>
-                </FixRow>
-              )}
-            </>
-          ) : (
-            <ResolvedMeta>No model picked yet — choose below. Saving without one is refused.</ResolvedMeta>
-          )}
-        </ResolvedCard>
-      </div>
-
-      {canAuthor ? (
-        <SwitchRow>
-          <SwitchText>
-            <SwitchTitle>Fallback</SwitchTitle>
-            <SwitchSub>When the preferred model is unavailable, serve with the next allowed model — in listed order.</SwitchSub>
-          </SwitchText>
-          <Switch checked={fallback} onChange={setFallback} label="Fallback" id="brain-fallback-switch" />
-        </SwitchRow>
-      ) : (
-        <StaticRow>
-          <StaticLabel>Fallback</StaticLabel>
-          <span>{fallback ? 'On — next allowed model, in order' : 'Off'}</span>
-        </StaticRow>
-      )}
-      <div style={{ fontSize: 11, opacity: 0.6 }}>
-        Fallback serves availability, not difficulty — a weaker model never silently substitutes quality.
-      </div>
-
-      <div>
-        <SectionLabel>
-          MODEL POLICY · {allowed.length} / {ENGINE_RANGES.allowedModelsMax}
-        </SectionLabel>
-        <div style={{ marginTop: 6 }}>
-          <ModelPicker
-            allowed={allowed}
-            catalog={catalog}
-            catalogError={models.isError}
-            costs={costs.data}
-            canAuthor={canAuthor}
-            onChange={setAllowed}
-            onFixRequest={onFixRequest}
-          />
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>PROFILES · INSPECT BEFORE APPLY</SectionLabel>
+        <SectionLabel>REASONING PROFILES · INSPECT BEFORE APPLY</SectionLabel>
         <ProfileGrid style={{ marginTop: 6 }}>
           {MODEL_PRESETS.map((preset) => {
             const matched = matchedPreset?.id === preset.id;
@@ -426,18 +251,7 @@ export function BrainSection({
                 $active={matched}
                 disabled={!canAuthor}
                 title={`${preset.blurb} temp ${preset.params.temperature} · top_p ${preset.params.top_p} · ${preset.params.max_output_tokens} tokens · reasoning ${preset.params.reasoning_effort}`}
-                onClick={
-                  canAuthor
-                    ? () =>
-                        setParams((prev) => ({
-                          ...prev,
-                          temperature: preset.params.temperature,
-                          top_p: preset.params.top_p,
-                          max_output_tokens: preset.params.max_output_tokens,
-                          reasoning_effort: preset.params.reasoning_effort,
-                        }))
-                    : undefined
-                }
+                onClick={canAuthor ? () => applyPreset(preset.id) : undefined}
               >
                 <ProfileName>{preset.label}</ProfileName>
                 <ProfileMap>
@@ -450,139 +264,9 @@ export function BrainSection({
         </ProfileGrid>
       </div>
 
-      <div>
-        <SectionLabel>PARAMETERS</SectionLabel>
-        <ParamGrid style={{ marginTop: 6 }}>
-          <SliderRow>
-            <SliderHead>
-              <span>Temperature</span>
-              <SliderValue>{params.temperature ?? 'default'}</SliderValue>
-            </SliderHead>
-            {canAuthor ? (
-              <>
-                <RangeInput
-                  type="range"
-                  min={ENGINE_RANGES.temperature.min}
-                  max={ENGINE_RANGES.temperature.max}
-                  step={ENGINE_RANGES.temperature.step}
-                  value={params.temperature ?? 1}
-                  aria-label="Temperature"
-                  onChange={(event) => setParams((prev) => ({ ...prev, temperature: Number(event.target.value) }))}
-                />
-                <RangeEnds>
-                  <span>{ENGINE_RANGES.temperature.min}</span>
-                  <span>{ENGINE_RANGES.temperature.max}</span>
-                </RangeEnds>
-              </>
-            ) : null}
-          </SliderRow>
-          <AdvancedToggle type="button" onClick={() => setAdvancedOpen((o) => !o)} aria-expanded={advancedOpen}>
-            Advanced {advancedOpen ? '▾' : '▸'} · top-p, max output, reasoning, schema
-          </AdvancedToggle>
-          {advancedOpen && (
-            <>
-              <SliderRow>
-                <SliderHead>
-                  <span>Top-p</span>
-                  <SliderValue>{params.top_p ?? 'default'}</SliderValue>
-                </SliderHead>
-                {canAuthor && (
-                  <TextInput
-                    aria-label="Top-p (above 0, at most 1)"
-                    inputMode="decimal"
-                    value={params.top_p ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      setParams((prev) => (raw === '' ? { ...prev, top_p: undefined } : { ...prev, top_p: Number(raw) }));
-                    }}
-                    placeholder="e.g. 0.95"
-                  />
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <span>Max output tokens</span>
-                  <SliderValue>{params.max_output_tokens?.toLocaleString() ?? 'default'}</SliderValue>
-                </SliderHead>
-                {canAuthor && (
-                  <TextInput
-                    aria-label="Max output tokens (1–200000)"
-                    inputMode="numeric"
-                    value={params.max_output_tokens ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      setParams((prev) =>
-                        raw === '' ? { ...prev, max_output_tokens: undefined } : { ...prev, max_output_tokens: Number(raw) },
-                      );
-                    }}
-                    placeholder="e.g. 4096"
-                  />
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <span>Reasoning effort</span>
-                </SliderHead>
-                {canAuthor ? (
-                  <Segmented
-                    options={[
-                      { value: 'minimal', label: 'Minimal' },
-                      { value: 'low', label: 'Low' },
-                      { value: 'medium', label: 'Medium' },
-                      { value: 'high', label: 'High' },
-                    ]}
-                    value={params.reasoning_effort ?? 'medium'}
-                    onChange={(value) => setParams((prev) => ({ ...prev, reasoning_effort: value as ReasoningEffort }))}
-                    size="sm"
-                    ariaLabel="Reasoning effort"
-                  />
-                ) : (
-                  <SliderValue>{params.reasoning_effort ?? 'default'}</SliderValue>
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <span>Output schema (JSON object)</span>
-                </SliderHead>
-                {canAuthor && (
-                  <TextArea
-                    aria-label="Output schema as a JSON object"
-                    value={params.output_schema ?? ''}
-                    onChange={(event) =>
-                      setParams((prev) =>
-                        event.target.value === '' ? { ...prev, output_schema: undefined } : { ...prev, output_schema: event.target.value },
-                      )
-                    }
-                    rows={4}
-                    placeholder='{"type": "object", …}'
-                  />
-                )}
-              </SliderRow>
-            </>
-          )}
-        </ParamGrid>
-      </div>
-
-      {heldMessages.map((message) => (
-        <Whisper key={message} $tone="red" role="alert">
-          {message} Autosave held — fix it and saving resumes on its own.
-        </Whisper>
-      ))}
-
-      <div data-credentials-panel>
-        <SectionLabel>CREDENTIALS · FINGERPRINTS ONLY</SectionLabel>
-        <div style={{ marginTop: 6 }}>
-          <CredentialsPanel
-            pinnedProviders={pinnedProviders}
-            canGovern={canGovern}
-            canRead={canReadCredentials}
-            highlightProvider={connectProvider}
-            revokeOpenId={revokeCredentialId}
-            connectOpen={connectOpen}
-            onConnectOpenChange={setConnectOpen}
-            onRevokeOpenChange={setRevokeCredentialId}
-          />
-        </div>
+      <div style={{ fontSize: 11, opacity: 0.6 }}>
+        Profiles set the Model node's temperature, top-p, max output, and reasoning effort in one tap.
+        Fine-tune the raw values there.
       </div>
 
       {conflict && (
@@ -592,20 +276,14 @@ export function BrainSection({
           expectedHash={conflict.expectedHash}
           currentHash={conflict.currentHash}
           pending={pending}
-          selectTheirs={(live) => JSON.stringify({ model_policy: live.model_policy, model_params: live.model_params })}
+          selectTheirs={(live) => JSON.stringify({ model_params: live.model_params })}
           onReloadTheirs={(theirs) => {
             // Adopt theirs into local state + park autosave until props converge
             // (adopting gate) — never save-over blindly after asking for theirs.
             try {
               const parsed = JSON.parse(theirs) as {
-                model_policy?: { allowed_models?: unknown; fallback_enabled?: unknown };
                 model_params?: Record<string, unknown>;
               };
-              const mp = parsed.model_policy;
-              if (mp && Array.isArray(mp.allowed_models)) {
-                setAllowed(mp.allowed_models.filter((r): r is string => typeof r === 'string'));
-              }
-              if (mp && typeof mp.fallback_enabled === 'boolean') setFallback(mp.fallback_enabled);
               const mps = parsed.model_params;
               if (mps && typeof mps === 'object') {
                 setParams({

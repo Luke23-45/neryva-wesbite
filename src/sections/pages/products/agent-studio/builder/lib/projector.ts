@@ -4,7 +4,7 @@
  * makes "no invented states" executable (tests assert ghosts where data is
  * absent). React Flow renders the output; it never derives anything itself.
  *
- * v10: fixed 16-node lane topology (lane-model.ts) — no satellite working
+ * v10: fixed 18-node lane topology (lane-model.ts) — no satellite working
  * set, no empty cards, no column math. Every node has a permanent id; drag
  * positions persist per agent and override the canonical lane coordinates.
  * Statuses a pass hasn't earned yet are never claimed: evaluation with runs
@@ -30,7 +30,7 @@ import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
 import type { VersionEvalState } from './eval-model';
 import { gradeShip } from './publish-model';
-import { firstBlocker, reasonFix, usableRefs, type CatalogRow } from './brain-model';
+import { firstBlocker, matchPreset, reasonFix, usableRefs, type CatalogRow } from './brain-model';
 
 export interface BuilderNodeData extends Record<string, unknown> {
   slotKey: string;
@@ -146,7 +146,7 @@ export interface HealthPin {
 
 // ─── Status derivation (per-slot truth tables) ─────────────────────────────
 
-export function brainSubtitle(
+export function modelSubtitle(
   definition: ConsumerDefinition | null,
   modelLabel: (ref: string) => string,
 ): string | null {
@@ -157,6 +157,22 @@ export function brainSubtitle(
   const rest = allowed.length > 1 ? ` +${allowed.length - 1}` : '';
   const fallback = definition.model_policy.fallback_enabled ? ' · fallback on' : '';
   return `${first}${rest}${fallback}`;
+}
+
+/**
+ * Brain node subtitle — payload truth for the slimmed Brain (reasoning
+ * profiles only). The matched preset name renders; unset params render
+ * nothing (defaults are valid, never a guess).
+ */
+export function brainSubtitle(definition: ConsumerDefinition | null): string | null {
+  if (!definition) return null;
+  const matched = matchPreset({
+    temperature: definition.model_params.temperature,
+    top_p: definition.model_params.top_p,
+    max_output_tokens: definition.model_params.max_output_tokens,
+    reasoning_effort: definition.model_params.reasoning_effort,
+  });
+  return matched ? matched.label : null;
 }
 
 export function contextSubtitle(definition: ConsumerDefinition | null): string | null {
@@ -385,7 +401,7 @@ export function toolsSlot(
 
 // ─── Projection ────────────────────────────────────────────────────────────
 
-// ─── Projection (v10: fixed 16-node lane topology) ──────────────────────────
+// ─── Projection (v10: fixed 18-node lane topology) ──────────────────────────
 
 export interface ProjectedGraph {
   nodes: BuilderNode[];
@@ -393,13 +409,14 @@ export interface ProjectedGraph {
 }
 
 /**
- * The 14 functional ids — everything except context/response/role. Health
- * and next-step math read exactly this set (the three own real sections but
+ * The 14 functional ids — everything except context/response/role/brain. Health
+ * and next-step math read exactly this set (the four own real sections but
  * stay out of readiness math — their defaults are valid without explicit
- * configuration, pending their ship-flow integration).
+ * configuration, pending their ship-flow integration). The Model node owns
+ * the model-usability grade the Brain node used to carry.
  */
 export const FUNCTIONAL_NODE_IDS: readonly LaneNodeId[] = LANE_NODE_IDS.filter(
-  (id): id is LaneNodeId => id !== 'context' && id !== 'response' && id !== 'role',
+  (id): id is LaneNodeId => id !== 'context' && id !== 'response' && id !== 'role' && id !== 'brain',
 );
 
 export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
@@ -599,10 +616,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     // Brand rides the context leg (voice feeds assembly); like guardrails
     // defaults it flows whenever a draft exists to carry it. The evaluation
     // verdict leg lights on a fresh PASS only (C10 signal, never a gate).
-    // Budget has no generic leg — its only brain relation is the labeled
-    // 'spend cap' edge below (a second e:budget:brain would duplicate the id).
+    // Budget has no generic leg — its only model relation is the labeled
+    // 'spend cap' edge below (a second e:budget:model would duplicate the id).
     if (kind === 'budget') continue;
-    const legTarget = kind === 'knowledge' || kind === 'memory' || kind === 'brand' ? 'context' : 'brain';
+    const legTarget = kind === 'knowledge' || kind === 'memory' || kind === 'brand' ? 'context' : 'model';
     const evalFreshPass =
       kind === 'evaluation' &&
       input.evalState?.latest !== null &&
@@ -636,17 +653,64 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     });
   }
 
-  // — Cognition lane (brain, context, samples) —
-  // Brain readiness is usability, not presence (C04): an allowed set with zero
+  // — Cognition lane (model, brain, context, samples) —
+  // Model readiness is usability, not presence (C04): an allowed set with zero
   // usable models is attention-graded — publish refuses it. A still-loading
   // catalog claims nothing (info, neutral) — never a false green.
   const allowedModels = definition?.model_policy.allowed_models ?? [];
   const usableModels = usableRefs(allowedModels, input.models);
-  const brainReady = usableModels.length > 0;
-  const brainBlocker = allowedModels.length > 0 && usableModels.length === 0 && input.models !== undefined
+  const modelReady = usableModels.length > 0;
+  const modelBlocker = allowedModels.length > 0 && usableModels.length === 0 && input.models !== undefined
     ? firstBlocker(allowedModels, input.models)
     : null;
-  const brainChecking = allowedModels.length > 0 && usableModels.length === 0 && input.models === undefined;
+  const modelChecking = allowedModels.length > 0 && usableModels.length === 0 && input.models === undefined;
+  push(
+    'model',
+    {
+      slotKey: 'model',
+      nodeType: 'spine',
+      kind: null,
+      title: LANE_NODES.model.label,
+      subtitle: locked
+        ? null
+        : allowedModels.length === 0
+          ? null
+          : modelChecking
+            ? 'Checking catalog…'
+            : modelBlocker
+              ? (modelBlocker.reason === null
+                ? 'Unknown model — publish refuses'
+                : `No usable model — ${reasonFix(modelBlocker.reason).label}`)
+              : modelSubtitle(definition, input.modelLabel),
+      hint: locked
+        ? 'Create the agent first'
+        : allowedModels.length === 0
+          ? 'No model yet — pick one below'
+          : modelChecking
+            ? 'Catalog still loading'
+            : modelBlocker
+              ? (modelBlocker.reason === null ? 'Not in the catalog' : `unusable: ${modelBlocker.reason}`)
+              : null,
+      status: locked
+        ? 'locked'
+        : modelReady
+          ? 'ready'
+          : modelChecking
+            ? 'info'
+            : modelBlocker
+              ? 'attention'
+              : 'untouched',
+      lock: false,
+      color: LANE_NODES.model.color,
+      portColor: LANE_NODES.model.color,
+    },
+    LANE_NODES.model,
+  );
+
+  // Brain is a real section (the Brain node owns the reasoning profiles —
+  // Clerk/Scholar/Creator presets that shape how the model thinks). Profiles
+  // are optional: unset params are valid defaults, so the node grades ready
+  // whenever a draft exists, like role.
   push(
     'brain',
     {
@@ -654,35 +718,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'spine',
       kind: null,
       title: SPINE_META.brain.label,
-      subtitle: locked
-        ? null
-        : allowedModels.length === 0
-          ? null
-          : brainChecking
-            ? 'Checking catalog…'
-            : brainBlocker
-              ? (brainBlocker.reason === null
-                ? 'Unknown model — publish refuses'
-                : `No usable model — ${reasonFix(brainBlocker.reason).label}`)
-              : brainSubtitle(definition, input.modelLabel),
-      hint: locked
-        ? 'Create the agent first'
-        : allowedModels.length === 0
-          ? 'No model yet — pick one below'
-          : brainChecking
-            ? 'Catalog still loading'
-            : brainBlocker
-              ? (brainBlocker.reason === null ? 'Not in the catalog' : `unusable: ${brainBlocker.reason}`)
-              : null,
-      status: locked
-        ? 'locked'
-        : brainReady
-          ? 'ready'
-          : brainChecking
-            ? 'info'
-            : brainBlocker
-              ? 'attention'
-              : 'untouched',
+      subtitle: locked ? null : brainSubtitle(definition),
+      hint: locked ? 'Create the agent first' : null,
+      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
       lock: false,
       color: LANE_NODES.brain.color,
       portColor: LANE_NODES.brain.color,
@@ -876,19 +914,29 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     });
   }
 
-  // instructions→brain: instructions assemble into the prompt the brain runs.
+  // instructions→model: instructions assemble into the prompt the model runs.
   edges.push({
-    id: 'e:instructions:brain',
+    id: 'e:instructions:model',
     source: 'instructions',
-    target: 'brain',
+    target: 'model',
     type: 'data',
     data: { variant: 'flow', lit: !locked && !!definition && !instructionsEmpty },
   });
 
+  // model→brain: the selected model powers the brain's reasoning profiles.
+  // Lit when a usable model is picked — the brain has something to run on.
+  edges.push({
+    id: 'e:model:brain',
+    source: 'model',
+    target: 'brain',
+    type: 'data',
+    data: { variant: 'flow', lit: !locked && modelReady },
+  });
+
   // samples→instructions: samples steer the composer. When samples are
-  // ungradable the target degrades to brain — the edge stays dim either
+  // ungradable the target degrades to model — the edge stays dim either
   // way (no invented steering claimed).
-  const samplesTarget: LaneNodeId = samples ? 'instructions' : 'brain';
+  const samplesTarget: LaneNodeId = samples ? 'instructions' : 'model';
   edges.push({
     id: `e:samples:${samplesTarget}`,
     source: 'samples',
@@ -915,13 +963,13 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     data: { variant: 'flow', lit: !locked && !!tryState?.lastTryAt },
   });
 
-  // budget→brain 'spend cap' (dashed): caps constrain the brain's spend.
+  // budget→model 'spend cap' (dashed): caps constrain the model's spend.
   // Lit only when a spend cap is actually set — gradeBudget's return says
   // "Capped" exactly then (caps only, never $0-fakes).
   edges.push({
-    id: 'e:budget:brain',
+    id: 'e:budget:model',
     source: 'budget',
-    target: 'brain',
+    target: 'model',
     type: 'data',
     data: {
       variant: 'verdict',
