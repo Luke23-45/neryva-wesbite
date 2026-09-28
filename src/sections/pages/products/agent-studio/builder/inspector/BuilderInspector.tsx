@@ -5,7 +5,6 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
 import { canSetup } from '@lib/engine/capabilities';
 import type { BuilderNode } from '../lib/projector';
-import { glyphFor } from '../lib/node-chrome';
 import { PurposeInspector, type PurposeFormState, type PurposeHandle } from './PurposeInspector';
 import { InstructionsSection } from './InstructionsSection';
 import { BrandSection } from './BrandSection';
@@ -28,7 +27,6 @@ import {
   Body,
   CollapseButton,
   EmptySelect,
-  HeadIconTile,
   HeadRow,
   HeadText,
   HeadTitle,
@@ -450,9 +448,6 @@ export function BuilderInspector({
     <Panel aria-label={`${data.title} inspector`} ref={asideRef} style={width != null ? { width } : undefined}>
       <InspectorHead>
         <HeadRow>
-          <HeadIconTile $color={data.color} aria-hidden="true">
-            {glyphFor(slotKey)}
-          </HeadIconTile>
           <HeadText>
             <HeadTitle>{data.title}</HeadTitle>
           </HeadText>
