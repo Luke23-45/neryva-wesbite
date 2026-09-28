@@ -15,6 +15,12 @@ export const Rail = styled.aside`
   background: #0d1117;
   border-right: 1px solid #1e2530;
   overflow-y: auto;
+  /* Hidden scrollbar (Figma-style): scrolling still works via wheel /
+     touch / keyboard, the bar itself is never painted. */
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 export const HeaderRow = styled.div`
