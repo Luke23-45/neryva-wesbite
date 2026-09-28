@@ -21,7 +21,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Helmet } from 'react-helmet-async';
-import { isSafeReturnPath, useSessionStore } from '@lib/engine/auth';
+import { isSafeReturnPath, DEFAULT_POST_LOGIN_PATH, useSessionStore } from '@lib/engine/auth';
 import { emailLocalPart, needsOnboarding } from '@lib/engine/first-run';
 import { useAccount } from '@hooks/auth/useAccount';
 import { useOrgContexts } from '@hooks/auth/useFirstRun';
@@ -38,7 +38,7 @@ export default function WelcomePage() {
 
     const requested = typeof search.return === 'string' ? search.return : undefined;
     // A self-referential return target would loop this route: normalize it away.
-    const returnTo = isSafeReturnPath(requested) && requested !== WELCOME_PATH ? requested : '/platform';
+    const returnTo = isSafeReturnPath(requested) && requested !== WELCOME_PATH ? requested : DEFAULT_POST_LOGIN_PATH;
 
     useEffect(() => {
         if (status === 'unknown') {

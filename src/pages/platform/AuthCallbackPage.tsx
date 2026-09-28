@@ -12,7 +12,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { handleAuthCallback, isSafeReturnPath } from '@lib/engine/auth';
+import { handleAuthCallback, isSafeReturnPath, DEFAULT_POST_LOGIN_PATH } from '@lib/engine/auth';
 import { resolvePostLoginDestination, type PostLoginDestination } from '@lib/engine/post-login';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ErrorState } from '@components/common/ui/AsyncStates';
@@ -66,7 +66,7 @@ export default function AuthCallbackPage() {
         // Invite stash → invite page; fresh first login → welcome; else the
         // validated return target. Router failure falls back to the target.
         const dest: PostLoginDestination = await resolvePostLoginDestination(target).catch(
-          (): PostLoginDestination => ({ to: isSafeReturnPath(target) ? target : '/platform' }),
+          (): PostLoginDestination => ({ to: isSafeReturnPath(target) ? target : DEFAULT_POST_LOGIN_PATH }),
         );
         if (cancelled) {
           return;
@@ -88,7 +88,7 @@ export default function AuthCallbackPage() {
           // empty-return keeps the type honest.
           await navigate({ to: '/platform/welcome', search: { return: undefined }, replace: true });
         } else {
-          await navigate({ to: isSafeReturnPath(dest.to) ? dest.to : '/platform', replace: true });
+          await navigate({ to: isSafeReturnPath(dest.to) ? dest.to : DEFAULT_POST_LOGIN_PATH, replace: true });
         }
       })
       .catch((err: Error) => {

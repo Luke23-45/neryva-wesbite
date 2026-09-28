@@ -64,6 +64,12 @@ async function sha256(input: string): Promise<Uint8Array> {
   return new Uint8Array(digest);
 }
 
+/**
+ * Default post-login landing: a fresh sign-in with no stashed return target
+ * lands on the Agent Studio dashboard, not the platform home.
+ */
+export const DEFAULT_POST_LOGIN_PATH = '/agent-studio/dashboard';
+
 /** In-app return targets only — never a protocol, host, or protocol-relative URL. */
 export function isSafeReturnPath(target: string | null | undefined): target is string {
   if (!target || !target.startsWith('/') || target.startsWith('//')) {
@@ -385,7 +391,7 @@ interface AuthorizeParams {
 export async function beginLogin(returnTo?: string, params?: AuthorizeParams): Promise<void> {
   const fallback = window.location.pathname + window.location.search;
   const target = returnTo ?? fallback;
-  sessionStorage.setItem(RETURN_KEY, isSafeReturnPath(target) ? target : '/platform');
+  sessionStorage.setItem(RETURN_KEY, isSafeReturnPath(target) ? target : DEFAULT_POST_LOGIN_PATH);
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
   sessionStorage.setItem(PKCE_KEY, verifier);
   const challenge = base64url(await sha256(verifier));
@@ -456,11 +462,11 @@ async function exchangeCode(
   if (opts?.consumeReturn === false) {
     // Silent-renew context: the return path belongs to a pending interactive
     // login (if any) and must survive this background exchange.
-    return '/platform';
+    return DEFAULT_POST_LOGIN_PATH;
   }
-  const target = sessionStorage.getItem(RETURN_KEY) ?? '/platform';
+  const target = sessionStorage.getItem(RETURN_KEY) ?? DEFAULT_POST_LOGIN_PATH;
   sessionStorage.removeItem(RETURN_KEY);
-  return isSafeReturnPath(target) ? target : '/platform';
+  return isSafeReturnPath(target) ? target : DEFAULT_POST_LOGIN_PATH;
 }
 
 /** Callback exchange: ?code&state → tokens → session. Returns the post-login return path. */

@@ -20,7 +20,7 @@
  * Lookup failure at step 3 falls through to step 4: a broken contexts/account
  * read must never strand a fresh login (advance-anyway).
  */
-import { isSafeReturnPath } from './auth';
+import { isSafeReturnPath, DEFAULT_POST_LOGIN_PATH } from './auth';
 import { needsOnboarding } from './first-run';
 import { readInviteStash } from './invite-stash';
 import { queryClient } from '../queryClient';
@@ -62,7 +62,7 @@ function inviteDestinationFromPath(path: string): PostLoginDestination | null {
 }
 
 export async function resolvePostLoginDestination(fallback: string): Promise<PostLoginDestination> {
-  const safeFallback = isSafeReturnPath(fallback) ? fallback : '/platform';
+  const safeFallback = isSafeReturnPath(fallback) ? fallback : DEFAULT_POST_LOGIN_PATH;
 
   const stash = readInviteStash();
   if (stash) {
@@ -100,7 +100,7 @@ export async function resolvePostLoginDestination(fallback: string): Promise<Pos
       // wall clock it replaced stranded exactly the users whose first login
       // died mid-flow (network failure, dropped interaction, fixed CORS bug).
       if (needsOnboarding(meRes.account.onboarding)) {
-        return safeFallback === '/platform'
+        return safeFallback === DEFAULT_POST_LOGIN_PATH
           ? { to: WELCOME_PATH }
           : { to: WELCOME_PATH, search: { return: safeFallback } };
       }
