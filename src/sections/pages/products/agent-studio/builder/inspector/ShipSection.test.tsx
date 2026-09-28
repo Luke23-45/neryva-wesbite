@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -88,6 +89,40 @@ beforeEach(() => {
   publishMutate.mockReset();
 });
 
+/** Signal-driven shell: publishSignal is local state inside the route component, so bumps re-render ShipSection. */
+async function shellWithSignal() {
+  let setSignal!: (n: number) => void;
+  const rootRoute = createRootRoute();
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: function SignalRoute() {
+      const [signal, _setSignal] = useState(0);
+      setSignal = _setSignal;
+      return (
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <ShipSection assistantId="agent-1" versionId="v7" role="owner" onEditJump={() => undefined} publishSignal={signal} />
+          </QueryClientProvider>
+        </ThemeProvider>
+      );
+    },
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([indexRoute]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  await act(async () => {
+    render(<RouterProvider router={router} />);
+  });
+  const bump = async (signal: number) => {
+    await act(async () => {
+      setSignal(signal);
+    });
+  };
+  return { bump };
+}
+
 describe('ShipSection', () => {
   it('renders the Go verdict with all six gate rows', async () => {
     await shell();
@@ -164,5 +199,40 @@ describe('ShipSection', () => {
     expect(screen.getByText(/Connect a channel/)).toBeTruthy();
     expect(screen.getByText('Watch in operate')).toBeTruthy();
     expect(screen.getByText('Back to agents')).toBeTruthy();
+  });
+
+  it('publishSignal opens the existing confirm flow exactly once per increment, mutation only after confirm', async () => {
+    const { bump } = await shellWithSignal();
+    // Idle signal: no confirm, no mutation.
+    expect(screen.queryByText('Publish', { selector: 'button' })).toBeNull();
+    expect(publishMutate).not.toHaveBeenCalled();
+
+    await bump(1);
+    // Confirm opened via the existing handlePublishClick — mutation still guarded.
+    expect(screen.getByText('Publish', { selector: 'button' })).toBeTruthy();
+    expect(publishMutate).not.toHaveBeenCalled();
+
+    // A second increment fires once more — still one dialog, still no auto-mutation.
+    await bump(2);
+    expect(screen.getAllByText('Publish', { selector: 'button' })).toHaveLength(1);
+    expect(publishMutate).not.toHaveBeenCalled();
+
+    // Confirming fires the real mutation exactly once.
+    fireEvent.click(screen.getByText('Publish', { selector: 'button' }));
+    expect(publishMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishSignal never bypasses the readiness guards', async () => {
+    readiness = ROWS({
+      verdict: 'no-go',
+      publishable: false,
+      rows: ROWS().rows.map((row) => (row.id === 'models' ? { ...row, ok: false as const, detail: 'Unknown to the catalog: x/y.' } : row)),
+    });
+    const { bump } = await shellWithSignal();
+    await bump(1);
+    // Blocked: no confirm dialog, blocker notice instead, no mutation.
+    expect(screen.queryByText('Publish', { selector: 'button' })).toBeNull();
+    expect(screen.getByText(/Models in catalog \+ residency served — open the row to fix it/)).toBeTruthy();
+    expect(publishMutate).not.toHaveBeenCalled();
   });
 });

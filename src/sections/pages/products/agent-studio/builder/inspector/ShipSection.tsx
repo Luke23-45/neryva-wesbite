@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { Rocket } from 'lucide-react';
@@ -108,11 +108,18 @@ export function ShipSection({
   versionId,
   role,
   onEditJump,
+  publishSignal = 0,
 }: {
   assistantId: string;
   versionId: string | null;
   role: OrgRole | null;
   onEditJump: (target: PublishEditTarget) => void;
+  /**
+   * Manual publish counter (v10 topbar Publish). Each increment fires the
+   * existing publish flow exactly once — via handlePublishClick, so the
+   * readiness/ack/confirm guards are never bypassed. 0 = idle.
+   */
+  publishSignal?: number;
 }) {
   const canPublish = canSetup(role, 'setup:govern');
   const publishDenied = setupDeniedCopy(role, 'setup:govern');
@@ -124,6 +131,53 @@ export function ShipSection({
 
   const readiness = usePublishReadiness(assistantId, versionId, { acknowledged: acknowledge });
   const publish = usePublishVersion(assistantId);
+
+  // Manual publish (v10 topbar Publish): the builder increments
+  // publishSignal for unblocked clicks; each increment fires the existing
+  // handlePublishClick exactly once. The ref starts at 0 (idle), so a mount
+  // with signal > 0 fires once; StrictMode's double-effect is absorbed by
+  // the last-signal guard. Guards (readiness/ack/confirm) are untouched —
+  // this never calls the mutation directly.
+  const publishClickRef = useRef<() => void>(() => undefined);
+  const lastPublishSignalRef = useRef(0);
+
+  const blockers = readiness.rows.filter((row) => row.ok === false && !(row.ackable && acknowledge));
+
+  function scrollToRow(id: string) {
+    // jsdom has no scrollIntoView — guard so tests exercise the copy.
+    const el = document.getElementById(`ship-row-${id}`);
+    el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    (el as HTMLElement | null)?.focus?.();
+  }
+
+  function handlePublishClick() {
+    if (!readiness.publishable) {
+      const first = blockers[0] ?? null;
+      if (first) {
+        setNotice(`${first.title} — open the row to fix it.`);
+        scrollToRow(first.id);
+      }
+      return;
+    }
+    setNotice(null);
+    setConfirmOpen(true);
+  }
+
+  // Manual publish (v10 topbar Publish): latest-callback ref so the signal
+  // effect below invokes the current handlePublishClick without re-firing
+  // on unrelated renders. Each signal increment fires exactly once; guards
+  // (readiness/ack/confirm) are untouched — this never calls the mutation
+  // directly.
+  useEffect(() => {
+    publishClickRef.current = handlePublishClick;
+  });
+  useEffect(() => {
+    const signal = publishSignal ?? 0;
+    if (signal > lastPublishSignalRef.current) {
+      lastPublishSignalRef.current = signal;
+      publishClickRef.current();
+    }
+  }, [publishSignal]);
 
   // Per-version ceremony state resets with the version (render-time
   // adjustment — an effect here would cascade renders).
@@ -147,7 +201,6 @@ export function ShipSection({
   // are mutable, so the raw prop would not narrow inside callbacks).
   const draftId: string = versionId;
 
-  const blockers = readiness.rows.filter((row) => row.ok === false && !(row.ackable && acknowledge));
   const verdictTone =
     readiness.verdict === 'go' ? 'success' : readiness.verdict === 'conditional-go' ? 'warning' : readiness.verdict === 'no-go' ? 'error' : 'neutral';
   const verdictCopy =
@@ -158,26 +211,6 @@ export function ShipSection({
         : readiness.verdict === 'no-go'
           ? `${PUBLISH_COPY.verdictNoGo} (${blockers.length})`
           : PUBLISH_COPY.verdictUnknown;
-
-  function scrollToRow(id: string) {
-    // jsdom has no scrollIntoView — guard so tests exercise the copy.
-    const el = document.getElementById(`ship-row-${id}`);
-    el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-    (el as HTMLElement | null)?.focus?.();
-  }
-
-  function handlePublishClick() {
-    if (!readiness.publishable) {
-      const first = blockers[0] ?? null;
-      if (first) {
-        setNotice(`${first.title} — open the row to fix it.`);
-        scrollToRow(first.id);
-      }
-      return;
-    }
-    setNotice(null);
-    setConfirmOpen(true);
-  }
 
   function handleConfirm() {
     setConfirmOpen(false);

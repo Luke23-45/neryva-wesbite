@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { KIND_META, KIND_ORDER, SKIPPABLE_KINDS, defaultSatellites, resolveInitialSlot } from './slot-model';
+import {
+  BUILDER_STEP_ANCHORS,
+  KIND_META,
+  KIND_ORDER,
+  resolveInitialSlot,
+} from './slot-model';
+import { LANE_NODE_IDS } from './lane-model';
 
 /**
  * Shortcut-map lock test (C09 PLAN §12 — the FIRST component that adds a
@@ -22,29 +28,39 @@ describe('shortcut map (locked)', () => {
     }
   });
 
-  it('binds every kind by default and skips only the skippable', () => {
-    const satellites = defaultSatellites();
-    for (const kind of KIND_ORDER) {
-      expect(satellites.some((sat) => sat.kind === kind)).toBe(true);
-    }
-    expect([...SKIPPABLE_KINDS].sort()).toEqual(['evaluation', 'knowledge', 'memory', 'tools']);
-    // Platform defaults are runtime truth — budget joins guardrails/brand as unskippable.
-    expect(SKIPPABLE_KINDS.has('budget')).toBe(false);
-    expect(SKIPPABLE_KINDS.has('guardrails')).toBe(false);
-    expect(SKIPPABLE_KINDS.has('brand')).toBe(false);
+  it('labels the evaluation kind "Evaluation" (v10 §8.4 — matches the section)', () => {
+    expect(KIND_META.evaluation.label).toBe('Evaluation');
   });
 });
 
 describe('resolveInitialSlot (C15 ?slot= re-entry)', () => {
-  const sats = [{ id: 'sat:knowledge', kind: 'knowledge' }, { id: 'sat:new', kind: null }];
+  it('resolves every fixed node id (v10: no working set — all 16 resolve)', () => {
+    for (const id of LANE_NODE_IDS) {
+      expect(resolveInitialSlot(id)).toBe(id);
+    }
+  });
 
-  it('resolves spines always, bound kinds by instance, nothing else', () => {
-    expect(resolveInitialSlot('brain', sats)).toBe('brain');
-    expect(resolveInitialSlot('ship', sats)).toBe('ship');
-    expect(resolveInitialSlot('knowledge', sats)).toBe('sat:knowledge');
-    expect(resolveInitialSlot('tools', sats)).toBeNull();
-    expect(resolveInitialSlot('nope', sats)).toBeNull();
-    expect(resolveInitialSlot(null, sats)).toBeNull();
-    expect(resolveInitialSlot('', sats)).toBeNull();
+  it('resolves nothing else', () => {
+    expect(resolveInitialSlot('nope')).toBeNull();
+    expect(resolveInitialSlot('sat:knowledge')).toBeNull();
+    expect(resolveInitialSlot(null)).toBeNull();
+    expect(resolveInitialSlot(undefined)).toBeNull();
+    expect(resolveInitialSlot('')).toBeNull();
+  });
+});
+
+describe('BUILDER_STEP_ANCHORS (v10 fixed nodes)', () => {
+  it('anchors every node id to an editor section', () => {
+    for (const id of LANE_NODE_IDS) {
+      expect(typeof BUILDER_STEP_ANCHORS[id]).toBe('string');
+      expect(BUILDER_STEP_ANCHORS[id].trim()).not.toBe('');
+    }
+  });
+
+  it('anchors the four new v10 nodes', () => {
+    expect(BUILDER_STEP_ANCHORS.instructions).toBe('instructions');
+    expect(BUILDER_STEP_ANCHORS.credentials).toBe('credentials');
+    expect(BUILDER_STEP_ANCHORS.samples).toBe('samples');
+    expect(BUILDER_STEP_ANCHORS.try).toBe('try');
   });
 });

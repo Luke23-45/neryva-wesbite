@@ -1,11 +1,11 @@
-import type { RefObject } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { ActionButton } from '@components/common/ui/ActionButton';
+import { useMemo, useState, type ReactNode, type RefObject } from 'react';
 import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
+import { canSetup } from '@lib/engine/capabilities';
 import type { BuilderNode } from '../lib/projector';
-import { KIND_META, KIND_ORDER, SPINE_META, type SlotKind, type SpineId } from '../lib/slot-model';
+import { LANE_META, LANE_NODES, laneOf, type LaneId, type LaneNodeId } from '../lib/lane-model';
+import { glyphFor, StatusChip } from '../lib/node-chrome';
 import { PurposeInspector, type PurposeFormState, type PurposeHandle } from './PurposeInspector';
 import { InstructionsSection } from './InstructionsSection';
 import { BrandSection } from './BrandSection';
@@ -18,24 +18,23 @@ import { BudgetSection } from './BudgetSection';
 import { TrySection } from './TrySection';
 import { EvaluationSection } from './EvaluationSection';
 import { ShipSection } from './ShipSection';
+import { CredentialsPanel } from './CredentialsPanel';
+import { SamplesSection } from './SamplesSection';
+import { NotAvailablePanel } from './NotAvailablePanel';
+import { PurposeExtras, type PurposeNodeDatum } from './PurposeExtras';
 import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from './TraceDrawer';
 import {
   Body,
   EmptySelect,
-  Head,
+  HeadIconTile,
+  HeadRow,
+  HeadText,
+  HeadTitle,
+  InspectorHead,
+  LockedWrap,
+  MetaLine,
   Panel,
-  PassTag,
-  Placeholder,
-  Subtitle,
-  Title,
-  TypeBlurb,
-  TypeDot,
-  TypeLabel,
-  TypeList,
-  TypeMain,
-  TypeNote,
-  TypeRow,
 } from './BuilderInspector.styles';
 
 export interface InspectorContext {
@@ -71,11 +70,28 @@ export interface InspectorContext {
    * increments it; the mounted section fires its doSave when it changes.
    */
   saveSignal: number;
+  /**
+   * Manual publish counter (v10 §8.12 — topbar Publish). Blocked clicks
+   * never reach it — they select the ship node instead; unblocked clicks
+   * increment it and the Ship section fires its publish flow.
+   */
+  publishSignal: number;
 }
 
 interface BuilderInspectorProps {
   selected: BuilderNode | null;
   context: InspectorContext;
+  /**
+   * Projector nodes (id/label/status) for the purpose NEXT STEPS + CTA
+   * (LEDGER.md I6/I7). Wired by the coordinator: nodes={paletteNodes}.
+   * Absent → the extras stay hidden (never invented).
+   */
+  nodes?: PurposeNodeDatum[];
+  /**
+   * Node selection for next-step chevrons + CTA (LEDGER.md I6/I7).
+   * Wired by the coordinator: onSelectNode={select}.
+   */
+  onSelectNode?: (id: string) => void;
   purposeRef?: RefObject<PurposeHandle | null>;
   onFormState?: (state: PurposeFormState) => void;
   onComposerDirty?: (dirty: boolean) => void;
@@ -87,46 +103,65 @@ interface BuilderInspectorProps {
   onMemoryDirty?: (dirty: boolean) => void;
   onBudgetDirty?: (dirty: boolean) => void;
   onCreated?: (assistantId: string) => void;
-  /** Empty satellite claims a kind (singleton enforced upstream). */
-  onBindKind?: (satelliteId: string, kind: SlotKind) => void;
 }
 
-/** Which component pass lights each slot (placeholder copy cites the owner). */
-const SLOT_PASS: Record<string, string> = {
-  context: 'C02',
-  brain: 'C04',
-  knowledge: 'C05',
-  tools: 'C06',
-  guardrails: 'C07',
-  memory: 'C08',
-  budget: 'C09',
-  response: 'C13',
-  evaluation: 'C10',
-  ship: 'C14',
-};
+function isLaneNodeId(id: string): id is LaneNodeId {
+  return id in LANE_NODES;
+}
 
-const SLOT_WHAT: Record<string, string> = {
-  context: 'Assembled context preview — history, scope, summary, and what retrieval feeds the brain.',
-  brain: 'Model policy — allowed models with live availability truth, fallback, and cost labels.',
-  knowledge: 'Pinned sources with states, embedding coverage truth, and the degraded path.',
-  tools: 'Bound tools with approvals, drift re-pin, and live/shadow execution mode.',
-  guardrails: 'Policy plus blocking/logging execution mode with per-run observation.',
-  memory: 'Scope, history window, and summary — plus org scrub/TTL governance.',
-  budget: 'Spend, token, call, and wall-clock caps with rough estimates.',
-  response: 'The Try console — chunks, directive, tool calls, verdicts, cost.',
-  evaluation: 'Datasets, runs, decisions with provenance, and shadow state.',
-  ship: 'Publish gates, degraded acknowledge, and the release itself.',
-};
+/** "Node ID · {slotKey} · {lane label}" — the lane comes from lane-model, never derived. */
+function laneLabelFor(slotKey: string, fallback: LaneId): string {
+  const lane: LaneId = isLaneNodeId(slotKey) ? laneOf(slotKey) : fallback;
+  return LANE_META[lane].label;
+}
 
 /**
- * Right inspector mount (BUILD_PLAN.md §3): exactly one selection at a time.
- * C01 lights Purpose only — every other slot renders an honest placeholder
- * that names its owning pass and links the Engine Room, never a dead panel.
- * Empty satellites render the kind picker (type-as-optional, §4).
+ * Credentials node mount (v10 §8.7): the panel's own home with the same
+ * wiring BrainSection gives its embedded instance — pinned providers from
+ * the saved draft's allowed models, role-derived read/govern gates, and
+ * local dialog state. BrainSection keeps its embedded instance (its model
+ * fix actions open the inline forms there) — both read the same cache.
+ */
+function CredentialsNode({ context }: { context: InspectorContext }) {
+  const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const pinnedProviders = useMemo(
+    () => [...new Set((context.definition?.model_policy.allowed_models ?? []).map((ref) => ref.split('/')[0] ?? ref))],
+    [context.definition],
+  );
+  return (
+    <CredentialsPanel
+      pinnedProviders={pinnedProviders}
+      canGovern={canSetup(context.role, 'setup:govern')}
+      canRead={canSetup(context.role, 'setup:author')}
+      highlightProvider={null}
+      revokeOpenId={revokeCredentialId}
+      connectOpen={connectOpen}
+      onConnectOpenChange={setConnectOpen}
+      onRevokeOpenChange={setRevokeCredentialId}
+    />
+  );
+}
+
+/**
+ * Right inspector mount (v10 §4): exactly one selection at a time. Header is
+ * the v10 chrome — kind icon tile, title, shared status chip, and the
+ * "Node ID · {slotKey} · {lane}" meta line. No overflow menu: no section
+ * exposes header actions, and C5 forbids rendering dead ones.
+ *
+ * Node → section mapping (§6, all 14 functional sections keep working with
+ * zero behavior change inside the sections — only re-homed):
+ * purpose → PurposeInspector (+ build-mode extras); instructions →
+ * InstructionsSection; brain/knowledge/tools/memory/guardrails/brand/budget
+ * → their sections; credentials → CredentialsPanel; samples →
+ * SamplesSection; evaluation → EvaluationSection; ship → ShipSection; try →
+ * TrySection; context/response → honest NotAvailablePanel (§8.8/§8.9).
  */
 export function BuilderInspector({
   selected,
   context,
+  nodes,
+  onSelectNode,
   purposeRef,
   onFormState,
   onComposerDirty,
@@ -138,176 +173,90 @@ export function BuilderInspector({
   onMemoryDirty,
   onBudgetDirty,
   onCreated,
-  onBindKind,
 }: BuilderInspectorProps) {
-  const navigate = useNavigate();
-
   if (!selected) {
     return (
       <Panel aria-label="Inspector">
-        <Head>
-          <Title>Inspector</Title>
-          <Subtitle>Select a component on the circuit</Subtitle>
-        </Head>
+        <InspectorHead>
+          <HeadRow>
+            <HeadText>
+              <HeadTitle>Inspector</HeadTitle>
+              <MetaLine>Select a component on the circuit</MetaLine>
+            </HeadText>
+          </HeadRow>
+        </InspectorHead>
         <Body>
-          <EmptySelect>Click any slot — spine or satellite — to configure it here. The rail lists every kind.</EmptySelect>
+          <EmptySelect>Click any node on the circuit to configure it here.</EmptySelect>
         </Body>
       </Panel>
     );
   }
 
   const { data } = selected;
+  const slotKey = data.slotKey;
+  const agentId = context.agentId;
 
-  if (data.slotKey === 'purpose') {
-    return (
-      <Panel aria-label="Purpose inspector">
-        <Head>
-          <Title>Purpose</Title>
-          <Subtitle>{context.mode === 'new' ? 'Name it — identity is set once' : 'Identity + instructions'}</Subtitle>
-        </Head>
-        <Body>
-          <PurposeInspector
-            ref={purposeRef}
-            mode={context.mode}
-            agentId={context.agentId}
-            agentName={context.agentName}
-            description={context.description}
-            canAuthor={context.canAuthor}
-            role={context.role}
-            onFormState={onFormState}
-            onCreated={onCreated}
-          />
-          {context.mode === 'build' && context.agentId && (
-            <InstructionsSection
-              assistantId={context.agentId}
-              definition={context.definition}
-              versionId={context.versionId}
-              versionHash={context.versionHash}
-              isDraft={context.isDraft}
-              canAuthor={context.canAuthor}
-              onDirtyChange={onComposerDirty ?? (() => undefined)}
-            saveSignal={context.saveSignal}
-            />
-          )}
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'brand') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Brand inspector">
-          <Head>
-            <Title>Brand</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the voice slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Brand inspector">
-        <Head>
-          <Title>Brand</Title>
-          <Subtitle>How every reply sounds</Subtitle>
-        </Head>
-        <Body>
-          <BrandSection
+  let body: ReactNode;
+  if (slotKey === 'purpose') {
+    // Purpose keeps identity only (v10 §8.5) — the composer moved to the
+    // Instructions node. Build mode adds the linked-blueprint card, next
+    // steps, and CTA (I5/I6/I7), all data-driven.
+    body = (
+      <>
+        <PurposeInspector
+          ref={purposeRef}
+          mode={context.mode}
+          agentId={context.agentId}
+          agentName={context.agentName}
+          description={context.description}
+          canAuthor={context.canAuthor}
+          role={context.role}
+          onFormState={onFormState}
+          onCreated={onCreated}
+        />
+        {context.mode === 'build' && context.agentId && nodes && onSelectNode && (
+          <PurposeExtras
             assistantId={context.agentId}
+            versionId={context.versionId}
+            nodes={nodes}
+            onSelectNode={onSelectNode}
+          />
+        )}
+      </>
+    );
+  } else if (slotKey === 'context') {
+    body = (
+      <NotAvailablePanel title="Context" blurb="Session history, scope, and summary controls will live here." />
+    );
+  } else if (slotKey === 'response') {
+    body = (
+      <NotAvailablePanel title="Response" blurb="Output formatting, citations, and latency controls will live here." />
+    );
+  } else if (context.mode === 'new' || agentId === null) {
+    body = (
+      <LockedWrap>Name the agent first — this node wakes up on the circuit once the agent exists.</LockedWrap>
+    );
+  } else {
+    const id: string = agentId;
+    switch (slotKey) {
+      case 'instructions':
+        body = (
+          <InstructionsSection
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
-            onDirtyChange={onBrandDirty ?? (() => undefined)}
+            onDirtyChange={onComposerDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.nodeType === 'empty') {
-    if (!context.canAuthor) {
-      return (
-        <Panel aria-label="Choose component type">
-          <Head>
-            <Title>New component</Title>
-            <Subtitle>Viewing only</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Adding components requires an owner, admin, or developer — your role is {context.role ?? 'unknown'}.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Choose component type">
-        <Head>
-          <Title>New component</Title>
-          <Subtitle>Choose a type — parameters follow the kind</Subtitle>
-        </Head>
-        <Body>
-          <TypeList>
-            {KIND_ORDER.map((kind) => {
-              const meta = KIND_META[kind];
-              return (
-                <TypeRow
-                  key={kind}
-                  type="button"
-                  onClick={() => onBindKind?.(selected.id, kind)}
-                  title={meta.blurb}
-                >
-                  <TypeDot $color={meta.color} aria-hidden="true" />
-                  <TypeMain>
-                    <TypeLabel>{meta.label}</TypeLabel>
-                    <TypeBlurb>{meta.blurb}</TypeBlurb>
-                  </TypeMain>
-                  <TypeNote>{meta.shortcut}</TypeNote>
-                </TypeRow>
-              );
-            })}
-          </TypeList>
-        </Body>
-      </Panel>
-    );
-  }
-
-  const key = (data.kind ?? data.slotKey) as string;
-  const title = data.kind ? KIND_META[data.kind as SlotKind].label : (SPINE_META[data.slotKey as SpineId]?.label ?? data.title);
-
-  if (data.slotKey === 'brain') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Brain inspector">
-          <Head>
-            <Title>Brain</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Brain slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Brain inspector">
-        <Head>
-          <Title>Brain</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Model policy'}</Subtitle>
-        </Head>
-        <Body>
+        );
+        break;
+      case 'brain':
+        body = (
           <BrainSection
-            assistantId={context.agentId}
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
@@ -316,36 +265,26 @@ export function BuilderInspector({
             onDirtyChange={onBrainDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'tools') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Tools inspector">
-          <Head>
-            <Title>Tools</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Tools slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Tools inspector">
-        <Head>
-          <Title>Tools</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Bound capabilities'}</Subtitle>
-        </Head>
-        <Body>
+        );
+        break;
+      case 'knowledge':
+        body = (
+          <KnowledgeSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onKnowledgeDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'tools':
+        body = (
           <ToolsSection
-            assistantId={context.agentId}
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
@@ -354,74 +293,12 @@ export function BuilderInspector({
             onDirtyChange={onToolsDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'guardrails') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Guardrails inspector">
-          <Head>
-            <Title>Guardrails</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Guardrails slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Guardrails inspector">
-        <Head>
-          <Title>Guardrails</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Protection and verdict mode'}</Subtitle>
-        </Head>
-        <Body>
-          <GuardrailsSection
-            assistantId={context.agentId}
-            definition={context.definition}
-            versionId={context.versionId}
-            versionHash={context.versionHash}
-            isDraft={context.isDraft}
-            canAuthor={context.canAuthor}
-            onDirtyChange={onGuardrailsDirty ?? (() => undefined)}
-            saveSignal={context.saveSignal}
-          />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'memory') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Memory inspector">
-          <Head>
-            <Title>Memory</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Memory slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Memory inspector">
-        <Head>
-          <Title>Memory</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Scope and history'}</Subtitle>
-        </Head>
-        <Body>
+        );
+        break;
+      case 'memory':
+        body = (
           <MemorySection
-            assistantId={context.agentId}
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
@@ -430,36 +307,40 @@ export function BuilderInspector({
             onDirtyChange={onMemoryDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'budget') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Budget inspector">
-          <Head>
-            <Title>Budget</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Budget slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Budget inspector">
-        <Head>
-          <Title>Budget</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Caps and estimates'}</Subtitle>
-        </Head>
-        <Body>
+        );
+        break;
+      case 'guardrails':
+        body = (
+          <GuardrailsSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onGuardrailsDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'brand':
+        body = (
+          <BrandSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onBrandDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'budget':
+        body = (
           <BudgetSection
-            assistantId={context.agentId}
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
@@ -468,36 +349,53 @@ export function BuilderInspector({
             onDirtyChange={onBudgetDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.slotKey === 'response') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Try inspector">
-          <Head>
-            <Title>Try</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Try console wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Try inspector">
-        <Head>
-          <Title>Try</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Try it before you ship it'}</Subtitle>
-        </Head>
-        <Body>
+        );
+        break;
+      case 'credentials':
+        body = <CredentialsNode context={context} />;
+        break;
+      case 'samples':
+        // Browse-only gallery: the composer's own gallery (Instructions
+        // node) keeps the working insert — a cross-node insert would be new
+        // functionality. Inserting stays available in the Instructions node.
+        body = <SamplesSection assistantId={id} canAuthor={false} startOpen={false} onInsert={() => undefined} />;
+        break;
+      case 'evaluation':
+        body = (
+          <EvaluationSection
+            assistantId={id}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            versionStatus={context.versionStatus}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            role={context.role}
+          />
+        );
+        break;
+      case 'ship':
+        body = (
+          <ShipSection
+            assistantId={id}
+            versionId={context.versionId}
+            role={context.role}
+            publishSignal={context.publishSignal}
+            onEditJump={(target) => {
+              if (context.onShipJump) {
+                context.onShipJump(target);
+                return;
+              }
+              if (target !== 'evaluation') {
+                context.onEditJump(target);
+              }
+            }}
+          />
+        );
+        break;
+      case 'try':
+        body = (
           <TrySection
-            assistantId={context.agentId}
+            assistantId={id}
             definition={context.definition}
             versionId={context.versionId}
             versionHash={context.versionHash}
@@ -510,150 +408,31 @@ export function BuilderInspector({
             onTryEvent={context.onTryEvent}
             onEditJump={context.onEditJump}
           />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.kind === 'evaluation') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Evaluation inspector">
-          <Head>
-            <Title>Evaluator</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Evaluator slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
+        );
+        break;
+      default:
+        body = <LockedWrap>Unknown node &ldquo;{slotKey}&rdquo; — nothing to configure here.</LockedWrap>;
+        break;
     }
-    return (
-      <Panel aria-label="Evaluation inspector">
-        <Head>
-          <Title>Evaluator</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Proof this agent behaves'}</Subtitle>
-        </Head>
-        <Body>
-          <EvaluationSection
-            assistantId={context.agentId}
-            versionId={context.versionId}
-            versionHash={context.versionHash}
-            versionStatus={context.versionStatus}
-            isDraft={context.isDraft}
-            canAuthor={context.canAuthor}
-            role={context.role}
-          />
-        </Body>
-      </Panel>
-    );
-  }
-
-  if (data.slotKey === 'ship') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Ship inspector">
-          <Head>
-            <Title>Ship</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Ship slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Ship inspector">
-        <Head>
-          <Title>Ship</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Gates, then publish'}</Subtitle>
-        </Head>
-        <Body>
-          <ShipSection
-            assistantId={context.agentId}
-            versionId={context.versionId}
-            role={context.role}
-            onEditJump={(target) => {
-              if (context.onShipJump) {
-                context.onShipJump(target);
-                return;
-              }
-              if (target !== 'evaluation') {
-                context.onEditJump(target);
-              }
-            }}
-          />
-        </Body>
-      </Panel>
-    );
-  }
-
-  const pass = SLOT_PASS[key] ?? 'later';  const what = SLOT_WHAT[key] ?? 'Full configuration.';
-
-  if (data.kind === 'knowledge') {
-    if (context.mode === 'new' || !context.agentId) {
-      return (
-        <Panel aria-label="Knowledge inspector">
-          <Head>
-            <Title>Knowledge</Title>
-            <Subtitle>Locked until the agent exists</Subtitle>
-          </Head>
-          <Body>
-            <Placeholder>
-              <span>Name the agent first — the Knowledge slot wakes up on the circuit.</span>
-            </Placeholder>
-          </Body>
-        </Panel>
-      );
-    }
-    return (
-      <Panel aria-label="Knowledge inspector">
-        <Head>
-          <Title>Knowledge</Title>
-          <Subtitle>{data.subtitle ?? data.hint ?? 'Pinned sources'}</Subtitle>
-        </Head>
-        <Body>
-          <KnowledgeSection
-            assistantId={context.agentId}
-            definition={context.definition}
-            versionId={context.versionId}
-            versionHash={context.versionHash}
-            isDraft={context.isDraft}
-            canAuthor={context.canAuthor}
-            onDirtyChange={onKnowledgeDirty ?? (() => undefined)}
-            saveSignal={context.saveSignal}
-          />
-        </Body>
-      </Panel>
-    );
   }
 
   return (
-    <Panel aria-label={`${title} inspector`}>
-      <Head>
-        <Title>{title}</Title>
-        <Subtitle>{data.subtitle ?? data.hint ?? 'Guided configuration'}</Subtitle>
-      </Head>
-      <Body>
-        <Placeholder>
-          <PassTag>{pass} PASS</PassTag>
-          <span>{what}</span>
-          <span>
-            Until then, this slot is fully editable in the Engine Room — nothing here is a dead end.
-          </span>
-        </Placeholder>
-        {context.editPath && (
-          <ActionButton size="sm" variant="secondary" onClick={() => navigate({ to: context.editPath as string })}>
-            Open in Engine Room
-          </ActionButton>
-        )}
-      </Body>
+    <Panel aria-label={`${data.title} inspector`}>
+      <InspectorHead>
+        <HeadRow>
+          <HeadIconTile $color={data.color} aria-hidden="true">
+            {glyphFor(slotKey)}
+          </HeadIconTile>
+          <HeadText>
+            <HeadTitle>{data.title}</HeadTitle>
+            <MetaLine>
+              Node ID · {slotKey} · {laneLabelFor(slotKey, data.lane)}
+            </MetaLine>
+          </HeadText>
+          <StatusChip status={data.status} />
+        </HeadRow>
+      </InspectorHead>
+      <Body>{body}</Body>
     </Panel>
   );
 }

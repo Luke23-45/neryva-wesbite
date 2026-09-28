@@ -1,10 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import toast from 'react-hot-toast';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
+import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useAssistant, useAssistantDefinition, useAssistantVersions, useKnowledgeHealth, usePublishReadiness, DRAFT_WRITE_MUTATION_KEY } from '@hooks/studio/useAgentAuthoring';
 import { useIsMutating } from '@tanstack/react-query';
@@ -12,24 +11,24 @@ import { useModelAvailability } from '@hooks/studio/useSetupModels';
 import { useEvalRuns } from '@hooks/studio/useSetupEval';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { BUILT_IN_TOOLS, useToolCatalog } from '@hooks/studio/useSetupTools';
+import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { BuilderTopBar } from './topbar/BuilderTopBar';
-import { ComponentPalette } from './palette/ComponentPalette';
+import { ComponentPalette, type PaletteHealth, type PaletteNodeEntry } from './palette/ComponentPalette';
 import { BuilderInspector, type InspectorContext } from './inspector/BuilderInspector';
 import type { TraceEditTarget } from './inspector/TraceDrawer';
 import { OriginScreen } from './origin/OriginScreen';
 import { TemplateBanner } from '../templates/TemplateBanner';
 import type { PurposeFormState, PurposeHandle } from './inspector/PurposeInspector';
 import { BuilderBottomBar } from './bottombar/BuilderBottomBar';
+import { BuilderStatusBar } from './statusbar/BuilderStatusBar';
 import { deriveBottomAction, type BottomPrimary } from './lib/bottom-action';
-import { knowledgeSlot, projectBuilderGraph } from './lib/projector';
+import { knowledgeSlot, projectBuilderGraph, FUNCTIONAL_NODE_IDS } from './lib/projector';
 import { selectVersionEvalState } from './lib/eval-model';
 import type { PublishEditTarget } from './lib/publish-model';
-import { satelliteKind, useBuilderUI } from './lib/builder-store';
+import { useBuilderUI } from './lib/builder-store';
 import { usableRefs } from './lib/brain-model';
 import {
-  KIND_ORDER,
-  SKIPPABLE_KINDS,
   buildAgentBuildPath,
   buildAgentEditPath,
   resolveInitialSlot,
@@ -53,37 +52,9 @@ export interface AgentBuilderProps {
   initialSlot?: string | null;
 }
 
-/** Draft-emptiness per kind: only empty kinds may leave the working set (§4r2). */
-function kindDraftEmpty(
-  kind: SlotKind,
-  definition: { context_policy: { knowledge_sources: string[]; memory_scope: string }; tools: unknown[]; brand: string } | null,
-): boolean {
-  if (!definition) return true;
-  switch (kind) {
-    case 'knowledge':
-      return definition.context_policy.knowledge_sources.length === 0;
-    case 'tools':
-      return definition.tools.length === 0;
-    case 'brand':
-      return (definition.brand || '').trim() === '';
-    case 'memory':
-      // The default scope is a standing configuration, not absence.
-      return false;
-    case 'guardrails':
-      // Platform defaults are runtime truth from birth.
-      return false;
-    case 'budget':
-      // Platform defaults are runtime truth from birth.
-      return false;
-    case 'evaluation':
-      // Runs are unread in C01 — never strand a kind the UI cannot see.
-      return false;
-  }
-}
-
 export function AgentBuilder({ mode, agentId = null, initialSlot = null }: AgentBuilderProps) {
   const navigate = useNavigate();
-  const { role } = useOrg();
+  const { role, name: orgName } = useOrg();
   const canAuthor = canSetup(role, 'setup:author');
 
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
@@ -115,20 +86,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
 
   const agentKey = mode === 'build' ? agentId : null;
   const {
-    satellites,
     positions,
     selectedId,
-    skipped,
     paletteFilter,
     hydrate,
     select,
-    addSatellite,
-    bindSatellite,
-    deleteSatellite,
     setPosition,
     persistPositions,
     tidy,
-    toggleSkip,
     setPaletteFilter,
   } = useBuilderUI();
 
@@ -203,39 +168,23 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setLastTry(event);
   }, []);
 
-  // Trace Edit jumps land on builder slots (C13): spines by id, satellite
-  // kinds by their bound instance; an unbound kind is a no-op, never a jump
-  // to nowhere.
+  // Trace Edit jumps land on builder slots (C13): fixed 16-node ids —
+  // every TraceEditTarget IS a node id, so jumps select directly.
   const onEditJump = useCallback(
     (target: TraceEditTarget) => {
-      if (target === 'purpose' || target === 'brain') {
-        select(target);
-        return;
-      }
-      const instance = satellites.find((s) => s.kind === target);
-      if (instance) {
-        select(instance.id);
-      }
+      select(target);
     },
-    [select, satellites],
+    [select],
   );
 
-  // Ship fix jumps (C14): the evaluation satellite rides the same
-  // select-by-kind rule; every other target is a trace jump. Disabled in
-  // new mode — the Ship slot is locked there.
+  // Ship fix jumps (C14): every PublishEditTarget IS a fixed node id.
+  // Disabled in new mode — the Ship slot is locked there.
   const onShipJump = useCallback(
     (target: PublishEditTarget) => {
       if (mode === 'new') return;
-      if (target === 'evaluation') {
-        const instance = satellites.find((s) => s.kind === 'evaluation');
-        if (instance) {
-          select(instance.id);
-        }
-        return;
-      }
-      onEditJump(target);
+      select(target);
     },
-    [mode, satellites, select, onEditJump],
+    [mode, select],
   );
 
   const onBrandDirty = useCallback((dirty: boolean) => {
@@ -251,6 +200,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   // A2-23: honest save readout — a draft write in flight must never display as "Saved".
   const draftWritesInFlight = useIsMutating({ mutationKey: [...DRAFT_WRITE_MUTATION_KEY] });
 
+  /**
+   * Provider-credential count for the credentials node (v10 §8.3). Same
+   * cached read the CredentialsPanel owns — React Query dedupes, so this is
+   * no extra network. Disabled in new mode (node is locked there anyway).
+   * ProviderCredential exposes no expiry field — expired stays 0 ("none
+   * reported"), never invented.
+   */
+  const credentials = useProviderCredentials({ enabled: mode === 'build' });
+
   const modelLabel = useCallback(
     (ref: string) => models.data?.find((m) => m.ref === ref)?.displayName ?? ref,
     [models.data],
@@ -264,10 +222,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         hasDraft,
         definition,
         librarySlugs,
-        satellites,
         positions,
         selectedId,
-        skippedIds: skipped,
         modelLabel,
         models: models.data,
         knowledgeHealth: health.data ?? undefined,
@@ -280,6 +236,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           lastTryAt: lastTry?.at ?? null,
           lastTryFailed: lastTry?.failed ?? false,
         },
+        credentialsSummary: credentials.data ? { count: credentials.data.length, expired: 0 } : undefined,
         evalState: (() => {
           const row = (allVersions.data ?? []).find((v) => v.id === (form.data?.versionId ?? null)) ?? null;
           if (!row) return undefined;
@@ -296,7 +253,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
               ? { verdict: 'unknown' as const, blockers: 0, checking: true }
               : undefined,
       }),
-    [mode, agentName, hasDraft, definition, librarySlugs, satellites, positions, selectedId, skipped, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending],
+    [mode, agentName, hasDraft, definition, librarySlugs, positions, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data],
   );
 
   const selectedNode = projected.nodes.find((n) => n.id === selectedId) ?? null;
@@ -316,8 +273,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     }
     if (form.data === undefined) return;
     if (initialSlot) {
-      // Spines always exist; kinds only when bound (resolveInitialSlot).
-      const resolved = resolveInitialSlot(initialSlot, satellites);
+      // All 16 ids exist (resolveInitialSlot) — unknown values fall
+      // through to default selection, never an error.
+      const resolved = resolveInitialSlot(initialSlot);
       if (resolved) {
         defaultedFor.current = scopeKey;
         select(resolved);
@@ -330,29 +288,50 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       select('brain');
       return;
     }
-    const knowledge = satellites.find((s) => s.kind === 'knowledge');
-    select(knowledge ? knowledge.id : 'purpose');
-  }, [mode, scopeKey, selectedId, form.data, definition, satellites, select, initialSlot]);
+    select('knowledge');
+  }, [mode, scopeKey, selectedId, form.data, definition, select, initialSlot]);
 
-  const boundKinds = useMemo(
-    () => KIND_ORDER.filter((kind) => satellites.some((s) => s.kind === kind)),
-    [satellites],
+  // ── v10 palette mapping (WS-A) ─────────────────────────────────────
+  // The 16 fixed lane nodes — lane assignment, per-node colors, and
+  // readiness-derived health, all projected from contract truth. Nothing
+  // is invented: every row rides the node's own grade.
+  const paletteNodes = useMemo<PaletteNodeEntry[]>(() => {
+    return projected.nodes.map((node) => ({
+      id: node.id,
+      label: node.data.title,
+      color: node.data.color,
+      statusText: node.data.subtitle ?? node.data.hint ?? '',
+      status: node.data.status,
+      lane: node.data.lane,
+    }));
+  }, [projected.nodes]);
+
+  // Palette health (v10 §8.10): the 14 functional ids (everything except
+  // context/response — the honest not-yet-available panels never count as
+  // unconfigured). configured = 'ready' nodes among them; nextStep =
+  // first attention/error, else first untouched, else null.
+  const paletteHealth = useMemo<PaletteHealth>(() => {
+    const functional = projected.nodes.filter((n) => (FUNCTIONAL_NODE_IDS as readonly string[]).includes(n.id));
+    const configured = functional.filter((n) => n.data.status === 'ready').length;
+    const next =
+      functional.find((n) => n.data.status === 'attention' || n.data.status === 'error') ??
+      functional.find((n) => n.data.status === 'untouched') ??
+      null;
+    return {
+      configured,
+      total: functional.length,
+      blockers: mode === 'build' ? shipReadiness.rows.filter((row) => row.ok === false).length : 0,
+      // No defensible advisory count exists yet (the only candidate,
+      // noChangeHint, is boolean) — omitted rather than invented (§8.11).
+      suggestions: 0,
+      nextStep: next ? { label: next.data.title, nodeId: next.id } : null,
+    };
+  }, [projected.nodes, shipReadiness.rows, mode]);
+
+  const handlePaletteFilterChange = useCallback(
+    (filter: string | null) => setPaletteFilter(filter as SlotKind | null),
+    [setPaletteFilter],
   );
-  const liveKinds = useMemo(() => {
-    if (!definition) return [];
-    const live: SlotKind[] = [];
-    if (definition.context_policy.knowledge_sources.length > 0) live.push('knowledge');
-    if (definition.tools.length > 0) live.push('tools');
-    if ((definition.brand || '').trim() !== '') live.push('brand');
-    live.push('memory', 'guardrails');
-    return live;
-  }, [definition]);
-
-  const selectedSkippableUntouched = useMemo(() => {
-    if (!selectedNode || selectedNode.data.nodeType !== 'satellite' || !selectedNode.data.kind) return false;
-    if (!SKIPPABLE_KINDS.has(selectedNode.data.kind)) return false;
-    return selectedNode.data.status === 'untouched' || selectedNode.data.status === 'info';
-  }, [selectedNode]);
 
   const bottomAction = useMemo(() => {
     // Knowledge attention (C05): the graded satellite's own verdict, computed
@@ -368,62 +347,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       instructionsEmpty:
         mode === 'build' && hasDraft && (definition?.instructions.trim() ?? '') === '',
       knowledgeAttention: grade !== null && grade.status === 'attention' ? grade.subtitle : null,
-      selectedSkippableUntouched: canAuthor && selectedSkippableUntouched,
+      // v10: skip toggling is removed from the fixed topology — the bottom
+      // bar never offers skip (showSkip stays false with this false).
+      selectedSkippableUntouched: false,
       selectedSlot: selectedId,
     });
-  }, [mode, formState.valid, hasDraft, definition, librarySlugs, health.data, models.data, canAuthor, selectedSkippableUntouched, selectedId]);
+  }, [mode, formState.valid, hasDraft, definition, librarySlugs, health.data, models.data, selectedId]);
 
   // — Actions —
-
-  const ensureKind = useCallback(
-    (kind: SlotKind) => {
-      if (mode === 'new') return;
-      const existing = satellites.find((s) => s.kind === kind);
-      if (existing) {
-        select(existing.id);
-        return;
-      }
-      if (!canAuthor) {
-        toast.error(setupDeniedCopy(role, 'setup:author'));
-        return;
-      }
-      const id = addSatellite();
-      const result = bindSatellite(id, kind);
-      if (result === 'invalid') {
-        // Untrusted payload (see store) — drop the card we just made.
-        deleteSatellite(id);
-        return;
-      }
-      if (result !== 'ok') {
-        // Defensive: singleton raced us — focus the winner, never duplicate.
-        const winner = useBuilderUI.getState().satellites.find((s) => s.kind === kind);
-        if (winner) select(winner.id);
-        return;
-      }
-      select(id);
-    },
-    [mode, satellites, select, canAuthor, role, addSatellite, bindSatellite, deleteSatellite],
-  );
-
-  const handleBindKind = useCallback(
-    (satelliteId: string, kind: SlotKind) => {
-      const result = bindSatellite(satelliteId, kind);
-      if (result === 'ok') {
-        select(satelliteId);
-        return;
-      }
-      if (result === 'invalid') return;
-      if (result === 'duplicate') {
-        const winner = satellites.find((s) => s.kind === kind);
-        if (winner) select(winner.id);
-        toast.success('That kind is already on the canvas — focused it.');
-        return;
-      }
-      // 'occupied' / 'missing': the card changed under us — say so, stay put.
-      toast.error('That card already has a type — pick an empty card.');
-    },
-    [bindSatellite, satellites, select],
-  );
 
   const handlePrimary = useCallback(
     (primary: BottomPrimary) => {
@@ -432,38 +363,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         return;
       }
       if (primary.action === 'select') {
-        // Kind targets (C05 'knowledge') resolve to the bound satellite —
-        // spine ids pass through untouched.
-        const bound = satellites.find((s) => s.kind === (primary.target as SlotKind));
-        select(bound ? bound.id : primary.target);
+        // Fixed 16-node ids — bottom-action targets select directly.
+        select(primary.target);
         return;
       }
       if (agentId) navigate({ to: buildAgentEditPath(agentId) });
     },
-    [agentId, navigate, select, satellites],
+    [agentId, navigate, select],
   );
-
-  const handleSkip = useCallback(() => {
-    if (!bottomAction.skipTarget) return;
-    const unskipping = skipped.includes(bottomAction.skipTarget);
-    toggleSkip(bottomAction.skipTarget);
-    toast.success(unskipping ? 'Back on the circuit.' : 'Skipped — skipped is not broken. Revisit anytime from the circuit.');
-  }, [bottomAction.skipTarget, skipped, toggleSkip]);
-
-  const handleDeleteSelected = useCallback(() => {
-    if (!selectedId || mode === 'new' || !canAuthor) return;
-    const kind = satelliteKind(satellites, selectedId);
-    if (kind === null) {
-      // Empty card — always safe.
-      deleteSatellite(selectedId);
-      return;
-    }
-    if (kindDraftEmpty(kind, definition)) {
-      deleteSatellite(selectedId, { draftEmpty: true });
-      return;
-    }
-    toast.error('That component holds configuration — collapse it instead of removing it.');
-  }, [selectedId, mode, canAuthor, satellites, definition, deleteSatellite]);
 
   const handlePortClick = useCallback(
     (kind: SlotKind) => {
@@ -498,11 +405,24 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setSaveSignal((s) => s + 1);
   }, [mode, canAuthor, anySectionDirty, selectedId]);
 
-  // Closed keyboard map, C01 subset (BUILD_PLAN.md §7b): Esc, N, kind keys, M, Delete.
+  // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
+  // on the ship node (the gate truth lives there); unblocked clicks
+  // increment the counter and the Ship section fires its publish flow.
+  const [publishSignal, setPublishSignal] = useState(0);
+  const handlePublish = useCallback(() => {
+    if (mode === 'new' || !canAuthor) return;
+    if (paletteHealth.blockers > 0) {
+      select('ship');
+      return;
+    }
+    setPublishSignal((s) => s + 1);
+  }, [mode, canAuthor, paletteHealth.blockers, select]);
+
+  // Closed keyboard map, v10 (BUILD_PLAN.md §7b): Esc, N, node keys.
   // Never fires from inputs (except Escape, which only ever deselects, and
   // Ctrl/⌘+S, the standard save shortcut — preventDefault stops the browser's
   // own save dialog).
-  // Kind keys summon-or-focus (singleton, §4r1) — the footer promises them.
+  // Node keys select the fixed node id directly — the footer promises them.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -530,40 +450,28 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         return;
       }
       if (mode === 'new' || !canAuthor) return;
-      // ⇧K summons knowledge (PLAN v2: bare K navigates to the Knowledge
+      // ⇧K selects knowledge (PLAN v2: bare K navigates to the Knowledge
       // library page studio-wide — the builder must not steal it).
       if (event.shiftKey && (event.key === 'K' || event.key === 'k')) {
         event.preventDefault();
-        ensureKind('knowledge');
+        select('knowledge');
         return;
       }
-      const kindKey: Record<string, SlotKind> = { t: 'tools', g: 'guardrails', b: 'brand', e: 'evaluation', s: 'budget' };
+      const nodeKey: Record<string, string> = { t: 'tools', g: 'guardrails', b: 'brand', e: 'evaluation', s: 'budget' };
       const lower = event.key.toLowerCase();
-      if (!event.shiftKey && kindKey[lower] !== undefined) {
+      if (!event.shiftKey && nodeKey[lower] !== undefined) {
         event.preventDefault();
-        ensureKind(kindKey[lower] as SlotKind);
+        select(nodeKey[lower]);
         return;
       }
       if (event.shiftKey && (event.key === 'M' || event.key === 'm')) {
         event.preventDefault();
-        ensureKind('memory');
-        return;
-      }
-      if (event.key === 'm' || event.key === 'M') {
-        if (selectedSkippableUntouched && selectedId) {
-          event.preventDefault();
-          toggleSkip(selectedId);
-        }
-        return;
-      }
-      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedId) {
-        event.preventDefault();
-        handleDeleteSelected();
+        select('memory');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, budgetDirty, canAuthor, selectedSkippableUntouched, selectedId, toggleSkip, handleDeleteSelected, ensureKind, requestSave]);
+  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, budgetDirty, canAuthor, requestSave]);
 
   const inspectorContext: InspectorContext = useMemo(
     () => ({
@@ -594,8 +502,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       onShipJump,
       /** Manual save counter — sections fire doSave when it increments. */
       saveSignal,
+      /**
+       * Manual publish counter (v10 §8.12 — topbar Publish). The Ship
+       * section fires its publish flow when this increments; blocked
+       * clicks never reach it — they select the ship node instead.
+       */
+      publishSignal,
     }),
-    [mode, agentId, agentName, description, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal],
+    [mode, agentId, agentName, description, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal],
   );
 
   // — Build-mode loading / not-found (firsthand states, never blank) —
@@ -628,12 +542,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       <BuilderTopBar
         mode={mode}
         agentName={agentName}
+        orgName={orgName}
         hasDraft={hasDraft}
         hasLive={hasLive}
         saveState={saveState}
         editPath={mode === 'build' && agentId ? buildAgentEditPath(agentId) : null}
         onSave={requestSave}
         canAuthor={canAuthor}
+        onTestRun={() => select('try')}
+        onPublish={handlePublish}
+        blockingCount={paletteHealth.blockers}
       />
       {mode === 'build' && agentId && form.data?.versionId && (
         <div style={{ padding: '0 16px' }}>
@@ -643,13 +561,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       <Main>
         <ComponentPalette
           ref={searchRef}
-          boundKinds={boundKinds}
-          liveKinds={liveKinds}
+          nodes={paletteNodes}
+          selectedId={selectedId}
           filter={paletteFilter}
-          onFilterChange={setPaletteFilter}
-          onPickKind={ensureKind}
+          onFilterChange={handlePaletteFilterChange}
+          onSelectNode={select}
           locked={mode === 'new'}
           canAuthor={canAuthor}
+          health={paletteHealth}
+          onHealthReview={() => select('ship')}
+          onHealthNext={(nodeId) => select(nodeId)}
         />
         <Suspense
           fallback={
@@ -669,15 +590,23 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
               onSelectNode={select}
               onNodePosition={setPosition}
               onPositionsCommitted={persistPositions}
-              onDropKind={ensureKind}
               onPortClick={handlePortClick}
               onTidy={handleTidy}
+              blockers={paletteHealth.blockers}
+              suggestions={paletteHealth.suggestions}
+              onValidate={() => {
+                shipReadiness.retry();
+                select('ship');
+              }}
+              onReviewIssues={() => select('ship')}
             />
           )}
         </Suspense>
         <BuilderInspector
           selected={selectedNode}
           context={inspectorContext}
+          nodes={paletteNodes}
+          onSelectNode={select}
           purposeRef={purposeRef}
           onFormState={onFormState}
           onComposerDirty={onComposerDirty}
@@ -697,16 +626,24 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
             });
             navigate({ to: buildAgentBuildPath(id) });
           }}
-          onBindKind={handleBindKind}
         />
       </Main>
-      <BuilderBottomBar
-        action={bottomAction}
-        createReady={formState.valid}
-        busy={false}
-        onPrimary={handlePrimary}
-        onSkip={handleSkip}
-      />
+      {mode === 'build' ? (
+        <BuilderStatusBar
+          configured={paletteHealth.configured}
+          total={14}
+          blockers={paletteHealth.blockers}
+          suggestions={paletteHealth.suggestions}
+          version={shipReadiness.version?.version ?? null}
+        />
+      ) : (
+        <BuilderBottomBar
+          action={bottomAction}
+          createReady={formState.valid}
+          busy={false}
+          onPrimary={handlePrimary}
+        />
+      )}
     </Shell>
   );
 }

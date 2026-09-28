@@ -1,16 +1,16 @@
 /**
  * Builder slot model (BUILD_PLAN.md §4 + §1b + §7b) — the closed vocabulary
  * every builder surface reads. No React, no I/O except the explicitly
- * non-authoritative UI-state helpers (positions/skips/view-set persist to
+ * non-authoritative UI-state helpers (node positions persist to
  * localStorage per agent; cosmetic resets acceptable, data loss impossible —
  * the draft is the only contract truth).
  *
- * Three load-bearing rules (§4):
- *  1. Singleton binding — one satellite per kind; bound kinds focus, never duplicate.
- *  2. Mandatory while configured — bound-to-live-config satellites cannot be
- *     deleted or re-typed (the canvas must never hide runtime truth).
- *  3. Rail is the canonical inventory — canvas is the working set.
+ * v10: the canvas is a FIXED 16-node topology (lane-model.ts) — the
+ * satellite working set and skip flags are gone. Closed vocabularies that
+ * remain: SlotKind (the seven kind nodes), SpineId, SlotStatus.
  */
+
+import { LANE_NODE_IDS } from './lane-model';
 
 export type SlotKind = 'knowledge' | 'tools' | 'memory' | 'guardrails' | 'evaluation' | 'brand' | 'budget';
 
@@ -75,7 +75,7 @@ export const KIND_META: Record<SlotKind, KindMeta> = {
   },
   evaluation: {
     kind: 'evaluation',
-    label: 'Evaluator',
+    label: 'Evaluation',
     blurb: 'Proof this agent behaves',
     color: '#30D158',
     shortcut: 'E',
@@ -99,10 +99,6 @@ export const KIND_META: Record<SlotKind, KindMeta> = {
   },
 };
 
-/** Kinds the maker may explicitly dismiss (Skip for now — §F/G). Brand is NOT
- *  skippable: the platform default applies regardless, so a skip would be a lie. */
-export const SKIPPABLE_KINDS: ReadonlySet<SlotKind> = new Set(['knowledge', 'tools', 'memory', 'evaluation']);
-
 export const SPINE_IDS: readonly SpineId[] = ['purpose', 'context', 'brain', 'response', 'ship'];
 
 export const SPINE_META: Record<SpineId, { label: string; blurb: string }> = {
@@ -113,25 +109,6 @@ export const SPINE_META: Record<SpineId, { label: string; blurb: string }> = {
   ship: { label: 'Ship', blurb: 'Gates, then publish' },
 };
 
-/** A satellite view: `{id, kind | null}` — null-kind cards ARE the type picker (§4). */
-export interface SatelliteView {
-  id: string;
-  kind: SlotKind | null;
-}
-
-/** Default working set: the five kinds bound but empty (ghosts until configured),
- *  plus one empty card so the type picker is discoverable from the first paint
- *  (the reference shows it open — the card is the picker). Deleting it persists;
- *  the rail/palette re-summon on demand. */
-export function defaultSatellites(): SatelliteView[] {
-  return [...KIND_ORDER.map((kind) => ({ id: `sat:${kind}`, kind })), { id: 'sat:new', kind: null }];
-}
-
-/** Stable id for ad-hoc empty cards (no crypto dependency — jsdom-safe). */
-export function newSatelliteId(): string {
-  return `sat:custom:${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
-}
-
 /**
  * Engine Room anchor map (BUILD_PLAN.md §K) — builder step → editor section id.
  * The ids land with their component passes; until then Room links use the
@@ -139,14 +116,19 @@ export function newSatelliteId(): string {
  */
 export const BUILDER_STEP_ANCHORS: Record<string, string> = {
   purpose: 'identity',
+  instructions: 'instructions',
   context: 'context',
   brain: 'model',
   knowledge: 'knowledge',
   tools: 'tools',
   guardrails: 'guardrails',
   memory: 'memory',
+  credentials: 'credentials',
+  samples: 'samples',
   budget: 'budget',
   response: 'try',
+  brand: 'brand',
+  try: 'try',
   evaluation: 'evaluation',
   ship: 'publish',
 };
@@ -157,21 +139,14 @@ export function buildAgentBuildPath(agentId: string): string {
 
 /**
  * C15 re-entry (?slot=): resolve a requested slot to a selectable node id.
- * Spine ids always resolve; satellite kinds resolve only when bound (an
- * unbound kind is null — the caller falls through to default selection,
- * never a surprise card). Unknown values are null, never an error.
+ * The v10 canvas is a fixed 16-node topology (lane-model) — every id in
+ * LANE_NODE_IDS resolves; unknown values are null, never an error.
  */
-export function resolveInitialSlot(
-  slot: string | null | undefined,
-  satellites: Array<{ id: string; kind: string | null }>,
-): string | null {
+export function resolveInitialSlot(slot: string | null | undefined): string | null {
   if (!slot) {
     return null;
   }
-  if ((SPINE_IDS as readonly string[]).includes(slot)) {
-    return slot;
-  }
-  return satellites.find((s) => s.kind === slot)?.id ?? null;
+  return (LANE_NODE_IDS as readonly string[]).includes(slot) ? slot : null;
 }
 
 export function buildAgentEditPath(agentId: string): string {
@@ -208,15 +183,6 @@ function writeJson(key: string, value: unknown): void {
   }
 }
 
-export function readSkipped(agentId: string): string[] {
-  const list = readJson<unknown>(storageKey(agentId, 'skipped'), []);
-  return Array.isArray(list) ? list.filter((v): v is string => typeof v === 'string') : [];
-}
-
-export function writeSkipped(agentId: string, skipped: string[]): void {
-  writeJson(storageKey(agentId, 'skipped'), skipped);
-}
-
 export function readPositions(agentId: string): Record<string, { x: number; y: number }> {
   const record = readJson<unknown>(storageKey(agentId, 'positions'), {});
   if (typeof record !== 'object' || record === null) return {};
@@ -245,26 +211,4 @@ export function clearPositions(agentId: string): void {
   } catch {
     // Covered above — UI state never breaks the builder.
   }
-}
-
-export function readSatellites(agentId: string): SatelliteView[] | null {
-  const list = readJson<unknown>(storageKey(agentId, 'satellites'), null);
-  if (!Array.isArray(list)) return null;
-  const views: SatelliteView[] = [];
-  for (const entry of list) {
-    if (typeof entry !== 'object' || entry === null) continue;
-    const record = entry as Record<string, unknown>;
-    if (typeof record.id !== 'string') continue;
-    const kind =
-      record.kind === null || (typeof record.kind === 'string' && (KIND_ORDER as readonly string[]).includes(record.kind))
-        ? (record.kind as SlotKind | null)
-        : null;
-    // Persisted garbage degrades to an empty card, never a crash.
-    views.push({ id: record.id, kind: typeof record.kind === 'string' && kind === null ? null : kind });
-  }
-  return views;
-}
-
-export function writeSatellites(agentId: string, satellites: SatelliteView[]): void {
-  writeJson(storageKey(agentId, 'satellites'), satellites);
 }

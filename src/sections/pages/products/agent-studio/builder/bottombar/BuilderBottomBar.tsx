@@ -8,7 +8,9 @@ interface BuilderBottomBarProps {
   createReady: boolean;
   busy: boolean;
   onPrimary: (primary: BottomPrimary) => void;
-  onSkip: () => void;
+  /** Skip secondary — rendered only when the action offers it. Optional: the
+   *  v10 fixed topology removed skip toggling, so new-mode callers omit it. */
+  onSkip?: () => void;
 }
 
 /**
@@ -28,7 +30,7 @@ export function BuilderBottomBar({ action, createReady, busy, onPrimary, onSkip 
           </>
         )}
       </Whisper>
-      {action.showSkip && (
+      {action.showSkip && onSkip && (
         <ActionButton size="sm" variant="ghost" disabled={busy} onClick={onSkip}>
           Skip for now
         </ActionButton>

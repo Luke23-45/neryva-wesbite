@@ -4,9 +4,9 @@
  * makes "no invented states" executable (tests assert ghosts where data is
  * absent). React Flow renders the output; it never derives anything itself.
  *
- * C01 scope (deliberate, recorded): compact + ghost + locked densities only.
- * Expansion, instance rows, and inline controls land with their content
- * passes (C04 Brain dropdown, C05 Knowledge rows, C06 approvals, C13 Try).
+ * v10: fixed 16-node lane topology (lane-model.ts) — no satellite working
+ * set, no empty cards, no column math. Every node has a permanent id; drag
+ * positions persist per agent and override the canonical lane coordinates.
  * Statuses a pass hasn't earned yet are never claimed: evaluation with runs
  * is `info` (run truth is the C10 gap). Knowledge earned its grade in C05,
  * tools in C06 (usability from draft entries × catalog rows × pin states).
@@ -15,14 +15,14 @@ import type { Edge, Node } from '@xyflow/react';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import {
   KIND_META,
-  SKIPPABLE_KINDS,
+  KIND_ORDER,
   SPINE_IDS,
   SPINE_META,
-  type SatelliteView,
   type SlotKind,
   type SlotStatus,
   type SpineId,
 } from './slot-model';
+import { LANE_NODES, LANE_NODE_IDS, laneOf, type LaneId, type LaneNodeId } from './lane-model';
 import { parseInstructions } from './instructions-model';
 import { gradeGuardrails, parseGuardrailMode } from './guardrails-model';
 import { gradeMemory, parseMemoryScope } from './memory-model';
@@ -30,7 +30,6 @@ import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
 import type { VersionEvalState } from './eval-model';
 import { gradeShip } from './publish-model';
-import { gradeResponse } from './try-model';
 import { firstBlocker, reasonFix, usableRefs, type CatalogRow } from './brain-model';
 
 export interface BuilderNodeData extends Record<string, unknown> {
@@ -45,8 +44,12 @@ export interface BuilderNodeData extends Record<string, unknown> {
   selected: boolean;
   /** Purpose immutability glyph (no engine rename verb — C01 SPEC). */
   lock: boolean;
+  /** The node's own flat color (C1) — icon tiles, palette rows, canvas minimap. */
+  color: string;
   /** Dock-port color (satellites only; null = no port). */
   portColor: string | null;
+  /** Lane this node belongs to (v10 — from lane-model, never derived). */
+  lane: LaneId;
 }
 
 export type BuilderNode = Node<BuilderNodeData>;
@@ -56,6 +59,9 @@ export type BuilderEdgeVariant = 'flow' | 'inhibit' | 'verdict';
 export interface BuilderEdgeData extends Record<string, unknown> {
   variant: BuilderEdgeVariant;
   lit: boolean;
+  /** Dashed semantic-edge label (mockup: "spend cap", "voice & tone") —
+   *  present only when the relation is real and named. */
+  label?: string;
 }
 
 export type BuilderEdge = Edge<BuilderEdgeData>;
@@ -67,10 +73,8 @@ export interface ProjectorInput {
   definition: ConsumerDefinition | null;
   /** Library slugs present (for "n of m mapped" honesty; null = still loading). */
   librarySlugs: string[] | null;
-  satellites: SatelliteView[];
   positions: Record<string, { x: number; y: number }>;
   selectedId: string | null;
-  skippedIds: string[];
   /** Catalog display lookup; fallback is the raw ref (never blank, never invented). */
   modelLabel: (ref: string) => string;
   /**
@@ -114,6 +118,22 @@ export interface ProjectorInput {
    * Ship section, so no bottom-action input reads this.
    */
   shipReadiness?: { verdict: 'go' | 'conditional-go' | 'no-go' | 'unknown'; blockers: number; checking: boolean } | undefined;
+  /**
+   * Provider-credential summary (from useProviderCredentials — the same cached
+   * read the CredentialsPanel owns, never a second fetch). Undefined = not
+   * readable yet (role gating or still loading — neutral, never invented).
+   * `expired` is 0 by construction: the engine exposes no credential-expiry
+   * field (ProviderCredential carries revokedAt/compromised only), so no
+   * expiry is ever claimed.
+   */
+  credentialsSummary?: { count: number; expired: number } | undefined;
+  /**
+   * Samples summary. Undefined = ungradable: the samples gallery has no
+   * "configured" count in the contract (inserts are append-only instruction
+   * blocks, not a tracked collection) — counting gallery cards would invent
+   * agent state. The node renders info, the edge draws dim.
+   */
+  samplesSummary?: { count: number } | undefined;
 }
 
 /** Minimal health-pin shape for usability math (superset-compatible). */
@@ -124,39 +144,7 @@ export interface HealthPin {
   embeddingComplete: boolean | null;
 }
 
-// ─── Canonical slot layout (BUILD_PLAN.md §13: constant topology, no ELK) ───
-
-const NODE_W = 240;
-const SPINE_X = 0;
-const LEFT_X = -340;
-const RIGHT_X = 340;
-const SPINE_GAP = 150;
-const STACK_GAP = 150;
-
-function spineDefaults(): Record<SpineId, { x: number; y: number }> {
-  const out = {} as Record<SpineId, { x: number; y: number }>;
-  SPINE_IDS.forEach((id, i) => {
-    out[id] = { x: SPINE_X, y: i * SPINE_GAP };
-  });
-  return out;
-}
-
-/** Left column stacks knowledge-likes, right column the rest; customs append. */
-function columnFor(kind: SlotKind | null, index: number): 'left' | 'right' {
-  if (kind === 'knowledge' || kind === 'memory' || kind === 'brand') return 'left';
-  if (kind === null) return index % 2 === 0 ? 'right' : 'left';
-  return 'right';
-}
-
 // ─── Status derivation (per-slot truth tables) ─────────────────────────────
-
-function isSkipped(slotKey: string, kind: SlotKind | null, status: SlotStatus, skippedIds: string[]): boolean {
-  if (!skippedIds.includes(slotKey)) return false;
-  // Skip evaporates the moment real configuration lands (BUILD_PLAN.md §G).
-  if (status === 'ready' || status === 'attention' || status === 'error') return false;
-  if (kind !== null && !SKIPPABLE_KINDS.has(kind)) return false;
-  return status === 'untouched' || status === 'info';
-}
 
 export function brainSubtitle(
   definition: ConsumerDefinition | null,
@@ -360,21 +348,32 @@ export function toolsSlot(
 
 // ─── Projection ────────────────────────────────────────────────────────────
 
+// ─── Projection (v10: fixed 16-node lane topology) ──────────────────────────
+
 export interface ProjectedGraph {
   nodes: BuilderNode[];
   edges: BuilderEdge[];
 }
 
+/**
+ * The 14 functional ids — everything except context/response, which render
+ * honest "not yet available" panels (§8.8/8.9, deferred D5/D6). Health and
+ * next-step math read exactly this set.
+ */
+export const FUNCTIONAL_NODE_IDS: readonly LaneNodeId[] = LANE_NODE_IDS.filter(
+  (id): id is LaneNodeId => id !== 'context' && id !== 'response',
+);
+
 export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
-  const { mode, definition, satellites, positions, selectedId, skippedIds } = input;
+  const { mode, definition, positions, selectedId } = input;
   const locked = mode === 'new';
   const nodes: BuilderNode[] = [];
   const edges: BuilderEdge[] = [];
-  const spinePos = spineDefaults();
-  const at = (key: string, fallback: { x: number; y: number }) => positions[key] ?? fallback;
+  const at = (id: LaneNodeId, fallback: { x: number; y: number }): { x: number; y: number } =>
+    positions[id] ?? { x: fallback.x, y: fallback.y };
 
   const push = (
-    id: string,
+    id: LaneNodeId,
     data: {
       slotKey: string;
       nodeType: 'spine' | 'satellite' | 'empty';
@@ -384,210 +383,82 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       hint: string | null;
       status: SlotStatus;
       lock: boolean;
+      color: string;
       portColor: string | null;
     },
     position: { x: number; y: number },
   ) => {
-    const status: SlotStatus = isSkipped(id, data.kind, data.status, skippedIds) ? 'skipped' : data.status;
     nodes.push({
       id,
       type: 'slot',
       position: at(id, position),
       selectable: true,
       draggable: true,
-      data: { ...data, status, selected: selectedId === id },
+      data: { ...data, selected: selectedId === id, lane: laneOf(id) },
     });
   };
 
-  // — Spine —
-  // Brain readiness is usability, not presence (C04): an allowed set with zero
-  // usable models is attention-graded — publish refuses it. A still-loading
-  // catalog claims nothing (info, neutral) — never a false green.
-  const allowedModels = definition?.model_policy.allowed_models ?? [];
-  const usableModels = usableRefs(allowedModels, input.models);
-  const brainReady = usableModels.length > 0;
-  const brainBlocker = allowedModels.length > 0 && usableModels.length === 0 && input.models !== undefined
-    ? firstBlocker(allowedModels, input.models)
-    : null;
-  const brainChecking = allowedModels.length > 0 && usableModels.length === 0 && input.models === undefined;
-  const pinCount = definition?.context_policy.knowledge_sources.length ?? 0;
-  // Purpose carries identity AND instructions (C02): a draft without instructions
-  // is attention-graded — publish refuses it, so the circuit says so early.
-  // Subtitle carries payload truth (chars that ship · rules that bind).
-  const instructionsText = definition?.instructions ?? '';
-  const instructionsEmpty = definition !== null && instructionsText.trim() === '';
-  const purposeRules = instructionsEmpty
-    ? 0
-    : parseInstructions(instructionsText).filter((b) => b.type === 'rule').length;
-
+  // — Identity lane —
+  // Purpose is identity ONLY (v10 §8.5): instructions moved to the
+  // Instructions node — purpose no longer grades them. Subtitle carries the
+  // name, never derived payload.
   push(
     'purpose',
     {
       slotKey: 'purpose',
       nodeType: 'spine',
       kind: null,
-      title: SPINE_META.purpose.label,
-      subtitle: locked
-        ? 'Name your agent to begin'
-        : !definition
-          ? (input.assistantName ?? SPINE_META.purpose.blurb)
-          : instructionsEmpty
-            ? (input.assistantName ?? SPINE_META.purpose.blurb)
-            : (`${input.assistantName ?? 'Untitled'} · ${instructionsText.length.toLocaleString()} chars · ${purposeRules} rules`),
-      hint: definition !== null && instructionsEmpty ? 'Missing — publish refuses' : null,
-      status: locked ? 'info' : definition !== null && instructionsEmpty ? 'attention' : 'ready',
+      title: LANE_NODES.purpose.label,
+      subtitle: locked ? 'Name your agent to begin' : (input.assistantName ?? SPINE_META.purpose.blurb),
+      hint: null,
+      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
       lock: !locked,
-      portColor: null,
+      color: LANE_NODES.purpose.color,
+      portColor: LANE_NODES.purpose.color,
     },
-    spinePos.purpose,
+    LANE_NODES.purpose,
   );
 
+  // Instructions (v10 §8.5 — new node): a draft without instructions is
+  // attention-graded — publish refuses it, so the circuit says so early.
+  // Subtitle carries payload truth (chars that ship · rules that bind).
+  const instructionsText = definition?.instructions ?? '';
+  const instructionsEmpty = definition === null || instructionsText.trim() === '';
+  const instructionsRules = instructionsEmpty
+    ? 0
+    : parseInstructions(instructionsText).filter((b) => b.type === 'rule').length;
   push(
-    'context',
+    'instructions',
     {
-      slotKey: 'context',
+      slotKey: 'instructions',
       nodeType: 'spine',
       kind: null,
-      title: SPINE_META.context.label,
-      subtitle: locked ? null : contextSubtitle(definition),
-      hint: locked ? 'Create the agent first' : 'Derived from brain + knowledge + memory',
-      status: locked ? 'locked' : definition ? (brainReady ? 'ready' : 'untouched') : 'untouched',
-      lock: false,
-      portColor: null,
-    },
-    spinePos.context,
-  );
-
-  push(
-    'brain',
-    {
-      slotKey: 'brain',
-      nodeType: 'spine',
-      kind: null,
-      title: SPINE_META.brain.label,
-      subtitle: locked
-        ? null
-        : allowedModels.length === 0
+      title: LANE_NODES.instructions.label,
+      subtitle:
+        locked || instructionsEmpty
           ? null
-          : brainChecking
-            ? 'Checking catalog…'
-            : brainBlocker
-              ? (brainBlocker.reason === null
-                ? 'Unknown model — publish refuses'
-                : `No usable model — ${reasonFix(brainBlocker.reason).label}`)
-              : brainSubtitle(definition, input.modelLabel),
-      hint: locked
-        ? 'Create the agent first'
-        : allowedModels.length === 0
-          ? 'No model yet — pick one below'
-          : brainChecking
-            ? 'Catalog still loading'
-            : brainBlocker
-              ? (brainBlocker.reason === null ? 'Not in the catalog' : `unusable: ${brainBlocker.reason}`)
-              : null,
-      status: locked
-        ? 'locked'
-        : brainReady
-          ? 'ready'
-          : brainChecking
-            ? 'info'
-            : brainBlocker
-              ? 'attention'
-              : 'untouched',
+          : `${instructionsText.length.toLocaleString()} chars · ${instructionsRules} rules`,
+      hint: locked ? 'Create the agent first' : instructionsEmpty ? 'Missing — publish refuses' : null,
+      status: locked ? 'locked' : instructionsEmpty ? 'attention' : 'ready',
       lock: false,
-      portColor: null,
+      color: LANE_NODES.instructions.color,
+      portColor: LANE_NODES.instructions.color,
     },
-    spinePos.brain,
+    LANE_NODES.instructions,
   );
 
-  // Response spine (C13): graded from try state when known, placeholder
-  // otherwise. Usability only — try never gates publish.
-  const responseGrade = !locked && input.tryState ? gradeResponse({ ...input.tryState, nowMs: Date.now() }) : null;
-  push(
-    'response',
-    {
-      slotKey: 'response',
-      nodeType: 'spine',
-      kind: null,
-      title: SPINE_META.response.label,
-      subtitle: responseGrade?.subtitle ?? null,
-      hint: locked ? 'Create the agent first' : (responseGrade?.hint ?? 'Not tried yet — Try lands in C13'),
-      status: locked ? 'locked' : (responseGrade?.status ?? 'untouched'),
-      lock: false,
-      portColor: null,
-    },
-    spinePos.response,
-  );
+  // — Kind nodes (fixed set, id = kind; grading is the pre-v10 truth) —
+  const pinCount = definition?.context_policy.knowledge_sources.length ?? 0;
+  const brandVoice = (definition?.brand || '').trim();
+  const budgetGrade = !locked && definition ? gradeBudget(definition.budget, null) : null;
 
-  // Ship spine (C14): graded from publish readiness when known,
-  // pre-C14 ghost otherwise. Signal only — publish executes in the section.
-  const shipGrade = !locked && input.shipReadiness ? gradeShip({ locked: false, readiness: input.shipReadiness }) : null;
-  push(
-    'ship',
-    {
-      slotKey: 'ship',
-      nodeType: 'spine',
-      kind: null,
-      title: SPINE_META.ship.label,
-      subtitle: shipGrade?.subtitle ?? null,
-      hint: locked ? 'Create the agent first' : (shipGrade?.hint ?? 'Publish gates are checked in the Ship section'),
-      status: locked ? 'locked' : (shipGrade?.status ?? 'untouched'),
-      lock: false,
-      portColor: null,
-    },
-    spinePos.ship,
-  );
-
-  // Spine chain edges (always structural; lit only where data actually flows —
-  // nothing flows without a draft, so a version-less scaffold stays dim).
-  const chain: SpineId[] = [...SPINE_IDS];
-  for (let i = 0; i < chain.length - 1; i += 1) {
-    const from = nodes.find((n) => n.id === chain[i]);
-    edges.push({
-      id: `e:${chain[i]}:${chain[i + 1]}`,
-      source: chain[i],
-      target: chain[i + 1],
-      type: 'data',
-      data: {
-        variant: 'flow',
-        lit: !locked && !!definition && (from?.data.status === 'ready' || from?.data.status === 'info'),
-      },
-    });
-  }
-
-  // — Satellites (column flow; customs append per side) —
-  const cursors = { left: 2 * SPINE_GAP, right: SPINE_GAP };
-  satellites.forEach((sat, index) => {
-    const side = columnFor(sat.kind, index);
-    const y = cursors[side];
-    cursors[side] += STACK_GAP;
-    const x = side === 'left' ? LEFT_X : RIGHT_X;
-
-    if (sat.kind === null) {
-      push(
-        sat.id,
-        {
-          slotKey: sat.id,
-          nodeType: 'empty',
-          kind: null,
-          title: 'New component',
-          subtitle: null,
-          hint: locked ? 'Create the agent first' : 'Choose a type — ⇧K · T · G · B · E · ⇧M · S',
-          status: locked ? 'locked' : 'untouched',
-          lock: false,
-          portColor: null,
-        },
-        { x, y },
-      );
-      return;
-    }
-
-    const meta = KIND_META[sat.kind];
+  for (const kind of KIND_ORDER) {
+    const meta = KIND_META[kind];
     let subtitle: string | null = null;
     let hint = 'Not configured';
     let status: SlotStatus = locked ? 'locked' : 'untouched';
     if (!locked && definition) {
-      switch (sat.kind) {
+      switch (kind) {
         case 'knowledge': {
           const grade = knowledgeSlot(definition, input.librarySlugs, input.knowledgeHealth);
           subtitle = grade.subtitle;
@@ -641,7 +512,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
             hint = grade.hint;
             status = grade.status;
           } else {
-            hint = 'Datasets attach in the Evaluator section';
+            hint = 'Datasets attach in the Evaluation section';
           }
           break;
         }
@@ -649,55 +520,53 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
           // Born-ready pattern (guardrails/memory precedent): an empty brand
           // is the VALID platform-default state — never red, never ghosted
           // once a draft exists to carry it.
-          const voice = (definition.brand || '').trim();
-          if (voice === '') {
-            subtitle = 'Platform default';
-          } else {
-            subtitle = `${voice.length.toLocaleString()} chars`;
-          }
+          subtitle = brandVoice === '' ? 'Platform default' : `${brandVoice.length.toLocaleString()} chars`;
           status = 'ready';
           break;
         }
         case 'budget': {
           // No costs read in the shell (the section/panel price estimates where
-          // costs are loaded) — the satellite grades caps only, never $0-fakes.
-          const grade = gradeBudget(definition.budget, null);
-          subtitle = grade.subtitle;
+          // costs are loaded) — the node grades caps only, never $0-fakes.
+          subtitle = budgetGrade?.subtitle ?? null;
           hint = 'Caps stop runs closed — estimates live in the Budget slot.';
-          status = grade.status;
+          status = budgetGrade?.status ?? 'untouched';
           break;
         }
       }
     } else if (!locked && !definition) {
-      if (sat.kind === 'guardrails' || sat.kind === 'budget') {
+      if (kind === 'guardrails' || kind === 'budget') {
         subtitle = 'Platform defaults';
         status = 'ready';
       }
     }
 
     push(
-      sat.id,
+      kind,
       {
-        slotKey: sat.id,
+        slotKey: kind,
         nodeType: 'satellite',
-        kind: sat.kind,
+        kind,
         title: meta.label,
         subtitle,
         hint,
         status,
         lock: false,
+        color: meta.color,
         portColor: meta.color,
       },
-      { x, y },
+      LANE_NODES[kind],
     );
 
     // Derived runtime legs (BUILD_PLAN.md §5) — dim until the endpoint carries data.
     // Brand rides the context leg (voice feeds assembly); like guardrails
     // defaults it flows whenever a draft exists to carry it. The evaluation
     // verdict leg lights on a fresh PASS only (C10 signal, never a gate).
-    const legTarget = sat.kind === 'knowledge' || sat.kind === 'memory' || sat.kind === 'brand' ? 'context' : 'brain';
+    // Budget has no generic leg — its only brain relation is the labeled
+    // 'spend cap' edge below (a second e:budget:brain would duplicate the id).
+    if (kind === 'budget') continue;
+    const legTarget = kind === 'knowledge' || kind === 'memory' || kind === 'brand' ? 'context' : 'brain';
     const evalFreshPass =
-      sat.kind === 'evaluation' &&
+      kind === 'evaluation' &&
       input.evalState?.latest !== null &&
       input.evalState?.latest !== undefined &&
       input.evalState.latest.decision === 'PASS' &&
@@ -706,31 +575,315 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     const lit =
       !locked &&
       !!definition &&
-      (sat.kind === 'knowledge'
+      (kind === 'knowledge'
         ? pinCount > 0
-        : sat.kind === 'tools'
+        : kind === 'tools'
           ? definition.tools.length > 0
-          : sat.kind === 'memory'
+          : kind === 'memory'
             ? definition.context_policy.memory_scope !== 'none'
-            : sat.kind === 'guardrails' || sat.kind === 'brand'
+            : kind === 'guardrails' || kind === 'brand'
               ? true
-              : sat.kind === 'evaluation'
+              : kind === 'evaluation'
                 ? evalFreshPass
                 : false);
     edges.push({
-      id: `e:${sat.id}:${legTarget}`,
-      source: sat.id,
+      id: `e:${kind}:${legTarget}`,
+      source: kind,
       target: legTarget,
       type: 'data',
       data: {
-        variant: sat.kind === 'guardrails' ? 'inhibit' : sat.kind === 'evaluation' ? 'verdict' : 'flow',
+        variant: kind === 'guardrails' ? 'inhibit' : kind === 'evaluation' ? 'verdict' : 'flow',
         lit,
       },
     });
+  }
+
+  // — Cognition lane (brain, context, samples) —
+  // Brain readiness is usability, not presence (C04): an allowed set with zero
+  // usable models is attention-graded — publish refuses it. A still-loading
+  // catalog claims nothing (info, neutral) — never a false green.
+  const allowedModels = definition?.model_policy.allowed_models ?? [];
+  const usableModels = usableRefs(allowedModels, input.models);
+  const brainReady = usableModels.length > 0;
+  const brainBlocker = allowedModels.length > 0 && usableModels.length === 0 && input.models !== undefined
+    ? firstBlocker(allowedModels, input.models)
+    : null;
+  const brainChecking = allowedModels.length > 0 && usableModels.length === 0 && input.models === undefined;
+  push(
+    'brain',
+    {
+      slotKey: 'brain',
+      nodeType: 'spine',
+      kind: null,
+      title: SPINE_META.brain.label,
+      subtitle: locked
+        ? null
+        : allowedModels.length === 0
+          ? null
+          : brainChecking
+            ? 'Checking catalog…'
+            : brainBlocker
+              ? (brainBlocker.reason === null
+                ? 'Unknown model — publish refuses'
+                : `No usable model — ${reasonFix(brainBlocker.reason).label}`)
+              : brainSubtitle(definition, input.modelLabel),
+      hint: locked
+        ? 'Create the agent first'
+        : allowedModels.length === 0
+          ? 'No model yet — pick one below'
+          : brainChecking
+            ? 'Catalog still loading'
+            : brainBlocker
+              ? (brainBlocker.reason === null ? 'Not in the catalog' : `unusable: ${brainBlocker.reason}`)
+              : null,
+      status: locked
+        ? 'locked'
+        : brainReady
+          ? 'ready'
+          : brainChecking
+            ? 'info'
+            : brainBlocker
+              ? 'attention'
+              : 'untouched',
+      lock: false,
+      color: LANE_NODES.brain.color,
+      portColor: LANE_NODES.brain.color,
+    },
+    LANE_NODES.brain,
+  );
+
+  // Context and Response are rendered for visual parity (§8.8/8.9) with
+  // honest not-yet-available panels (deferred D5/D6) — never fake sections.
+  for (const id of ['context', 'response'] as const) {
+    push(
+      id,
+      {
+        slotKey: id,
+        nodeType: 'spine',
+        kind: null,
+        title: LANE_NODES[id].label,
+        subtitle: null,
+        hint: locked ? 'Create the agent first' : 'Not yet available in this release',
+        status: locked ? 'locked' : 'untouched',
+        lock: false,
+        color: LANE_NODES[id].color,
+        portColor: LANE_NODES[id].color,
+      },
+      LANE_NODES[id],
+    );
+  }
+
+  // Samples (v10 §8.7): the gallery has no "configured" count in the
+  // contract, so without a summary this is info, never an invented number.
+  const samples = input.samplesSummary;
+  push(
+    'samples',
+    {
+      slotKey: 'samples',
+      nodeType: 'satellite',
+      kind: null,
+      title: LANE_NODES.samples.label,
+      subtitle: samples && samples.count > 0 ? `${samples.count} samples` : null,
+      hint: locked
+        ? 'Create the agent first'
+        : !samples
+          ? 'Configured in the Samples section'
+          : samples.count === 0
+            ? 'Add examples to steer replies'
+            : null,
+      status: locked ? 'locked' : !samples ? 'info' : samples.count === 0 ? 'untouched' : 'ready',
+      lock: false,
+      color: LANE_NODES.samples.color,
+      portColor: LANE_NODES.samples.color,
+    },
+    LANE_NODES.samples,
+  );
+
+  // Credentials (v10 §8.7): graded from the cached credential list — the
+  // same read the CredentialsPanel owns. The engine exposes no expiry
+  // field, so `expired` is 0 by construction and never claims a re-auth.
+  const creds = input.credentialsSummary;
+  push(
+    'credentials',
+    {
+      slotKey: 'credentials',
+      nodeType: 'satellite',
+      kind: null,
+      title: LANE_NODES.credentials.label,
+      subtitle: creds ? `${creds.count} configured` : null,
+      hint: locked
+        ? 'Create the agent first'
+        : !definition
+          ? 'Configured in the Credentials section'
+          : !creds
+            ? 'Configured in the Credentials section'
+            : creds.expired > 0
+              ? `${creds.expired} expired — re-authenticate`
+              : creds.count === 0
+                ? 'No provider keys — connect one in the Credentials section'
+                : null,
+      status: locked
+        ? 'locked'
+        : !definition
+          ? 'untouched'
+          : !creds
+            ? 'info'
+            : creds.expired > 0
+              ? 'attention'
+              : creds.count === 0
+                ? 'untouched'
+                : 'ready',
+      lock: false,
+      color: LANE_NODES.credentials.color,
+      portColor: LANE_NODES.credentials.color,
+    },
+    LANE_NODES.credentials,
+  );
+
+  // — Delivery lane —
+  // Try (v10 §8.6 — the topbar "Test run" lands here): graded from try state
+  // only. No timestamps anywhere (C2/A2) — the run's age is not a grade.
+  const tryState = input.tryState;
+  push(
+    'try',
+    {
+      slotKey: 'try',
+      nodeType: 'satellite',
+      kind: null,
+      title: LANE_NODES.try.label,
+      subtitle: tryState?.lastTryFailed ? 'Last run failed' : tryState?.lastTryAt ? 'Last run ok' : null,
+      hint: locked
+        ? 'Create the agent first'
+        : !tryState?.hasRunnableVersion
+          ? 'Save a draft first'
+          : tryState.lastTryFailed
+            ? 'Open Try for the stop line'
+            : tryState.lastTryAt
+              ? null
+              : 'Not tried yet',
+      status: locked
+        ? 'locked'
+        : !tryState?.hasRunnableVersion
+          ? 'locked'
+          : tryState.lastTryFailed
+            ? 'attention'
+            : tryState.lastTryAt
+              ? 'ready'
+              : 'untouched',
+      lock: false,
+      color: LANE_NODES.try.color,
+      portColor: LANE_NODES.try.color,
+    },
+    LANE_NODES.try,
+  );
+
+  // Ship spine (C14): graded from publish readiness when known,
+  // pre-C14 ghost otherwise. Signal only — publish executes in the section.
+  const shipGrade = !locked && input.shipReadiness ? gradeShip({ locked: false, readiness: input.shipReadiness }) : null;
+  push(
+    'ship',
+    {
+      slotKey: 'ship',
+      nodeType: 'spine',
+      kind: null,
+      title: SPINE_META.ship.label,
+      subtitle: shipGrade?.subtitle ?? null,
+      hint: locked ? 'Create the agent first' : (shipGrade?.hint ?? 'Publish gates are checked in the Ship section'),
+      status: locked ? 'locked' : (shipGrade?.status ?? 'untouched'),
+      lock: false,
+      color: LANE_NODES.ship.color,
+      portColor: LANE_NODES.ship.color,
+    },
+    LANE_NODES.ship,
+  );
+
+  // — Edges —
+  // Spine chain (always structural; lit only where data actually flows —
+  // nothing flows without a draft, so a version-less scaffold stays dim).
+  const chain: SpineId[] = [...SPINE_IDS];
+  for (let i = 0; i < chain.length - 1; i += 1) {
+    const from = nodes.find((n) => n.id === chain[i]);
+    edges.push({
+      id: `e:${chain[i]}:${chain[i + 1]}`,
+      source: chain[i],
+      target: chain[i + 1],
+      type: 'data',
+      data: {
+        variant: 'flow',
+        lit: !locked && !!definition && (from?.data.status === 'ready' || from?.data.status === 'info'),
+      },
+    });
+  }
+
+  // instructions→brain: instructions assemble into the prompt the brain runs.
+  edges.push({
+    id: 'e:instructions:brain',
+    source: 'instructions',
+    target: 'brain',
+    type: 'data',
+    data: { variant: 'flow', lit: !locked && !!definition && !instructionsEmpty },
+  });
+
+  // samples→instructions: samples steer the composer. When samples are
+  // ungradable the target degrades to brain — the edge stays dim either
+  // way (no invented steering claimed).
+  const samplesTarget: LaneNodeId = samples ? 'instructions' : 'brain';
+  edges.push({
+    id: `e:samples:${samplesTarget}`,
+    source: 'samples',
+    target: samplesTarget,
+    type: 'data',
+    data: { variant: 'flow', lit: !locked && (samples?.count ?? 0) > 0 },
+  });
+
+  // credentials→tools: BYOK keys are what let bound tools actually run.
+  edges.push({
+    id: 'e:credentials:tools',
+    source: 'credentials',
+    target: 'tools',
+    type: 'data',
+    data: { variant: 'flow', lit: !locked && (creds?.count ?? 0) > 0 },
+  });
+
+  // try→response: a try run IS the response preview.
+  edges.push({
+    id: 'e:try:response',
+    source: 'try',
+    target: 'response',
+    type: 'data',
+    data: { variant: 'flow', lit: !locked && !!tryState?.lastTryAt },
+  });
+
+  // budget→brain 'spend cap' (dashed): caps constrain the brain's spend.
+  // Lit only when a spend cap is actually set — gradeBudget's return says
+  // "Capped" exactly then (caps only, never $0-fakes).
+  edges.push({
+    id: 'e:budget:brain',
+    source: 'budget',
+    target: 'brain',
+    type: 'data',
+    data: {
+      variant: 'verdict',
+      lit: !locked && !!definition && (budgetGrade?.subtitle.startsWith('Capped') ?? false),
+      label: 'spend cap',
+    },
+  });
+
+  // brand→response 'voice & tone' (dashed): voice shapes every reply.
+  edges.push({
+    id: 'e:brand:response',
+    source: 'brand',
+    target: 'response',
+    type: 'data',
+    data: {
+      variant: 'verdict',
+      lit: !locked && !!definition && brandVoice !== '',
+      label: 'voice & tone',
+    },
   });
 
   return { nodes, edges };
 }
 
 /** Node footprint estimate (layout math only — React Flow measures the real boxes). */
-export const ESTIMATED_NODE_SIZE = { w: NODE_W, h: 96 };
+export const ESTIMATED_NODE_SIZE = { w: 200, h: 100 };

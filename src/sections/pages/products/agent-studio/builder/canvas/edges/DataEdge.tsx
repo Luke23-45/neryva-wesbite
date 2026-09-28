@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { getBezierPath, type EdgeProps } from '@xyflow/react';
+import { EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react';
 import type { BuilderEdge } from '../../lib/projector';
 
 const DIM = '#3A3A3F';
@@ -25,7 +25,8 @@ export const DataEdge = memo(function DataEdge({
 }: EdgeProps<BuilderEdge>) {
   const variant = data?.variant ?? 'flow';
   const lit = data?.lit === true;
-  const [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const label = typeof data?.label === 'string' && data.label.length > 0 ? data.label : null;
+  const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
 
   const markerId = `${id}-${variant}`;
   const color = lit ? LIT : DIM;
@@ -61,6 +62,27 @@ export const DataEdge = memo(function DataEdge({
         markerEnd={`url(#${markerId})`}
         style={lit ? { filter: 'drop-shadow(0 0 4px rgba(147, 197, 253, 0.45))' } : undefined}
       />
+      {label && (
+        <EdgeLabelRenderer>
+          <div
+            className="data-edge-label"
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              fontSize: 10,
+              fontStyle: 'italic',
+              color: '#7C8698',
+              background: '#0A0D12',
+              padding: '1px 6px',
+              borderRadius: 4,
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+            }}
+          >
+            {label}
+          </div>
+        </EdgeLabelRenderer>
+      )}
     </>
   );
 });
