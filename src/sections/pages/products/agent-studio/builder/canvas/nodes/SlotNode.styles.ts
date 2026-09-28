@@ -14,26 +14,14 @@ export const NodeWrap = styled.div`
   height: 100px;
 `;
 
-/** Selection chrome: halo + 4 corner squares. Non-interactive, aria-hidden. */
-export const Halo = styled.div`
-  position: absolute;
-  inset: -8px;
-  border-radius: 18px;
-  background: rgba(88, 166, 255, 0.18);
-  border: 3px solid #58a6ff;
-  pointer-events: none;
-`;
-
-export const CornerSquare = styled.div`
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: #58a6ff;
-  pointer-events: none;
-`;
-
-export const NodeCard = styled.div<{ $ghost: boolean; $locked: boolean }>`
+/**
+ * Selection is deliberately quiet: no overlay, no ring, no corner chrome.
+ * A selected card keeps its 1px border at the same weight — the border
+ * simply lightens to a neutral tone and the card lifts with a soft shadow,
+ * like picking a physical card off the desk. Hover stays a whisper beneath
+ * it (border nudge only) so selection reads as a deliberate step up.
+ */
+export const NodeCard = styled.div<{ $ghost: boolean; $locked: boolean; $selected: boolean }>`
   position: relative;
   width: 200px;
   height: 100px;
@@ -53,6 +41,20 @@ export const NodeCard = styled.div<{ $ghost: boolean; $locked: boolean }>`
 
   &:hover {
     border-color: #334052;
+  }
+
+  ${({ $selected }) =>
+    $selected &&
+    css`
+      border-color: #d7dee8;
+      box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.45),
+        0 12px 28px rgba(0, 0, 0, 0.4);
+    `}
+
+  &:focus-visible {
+    outline: 2px solid #e9edf3;
+    outline-offset: 2px;
   }
 `;
 

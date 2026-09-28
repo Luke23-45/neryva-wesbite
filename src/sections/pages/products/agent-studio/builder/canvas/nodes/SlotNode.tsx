@@ -5,11 +5,9 @@ import type { BuilderNodeData } from '../../lib/projector';
 import type { SlotKind } from '../../lib/slot-model';
 import { glyphFor, StatusChip } from '../../lib/node-chrome';
 import {
-  CornerSquare,
   Divider,
   EmptyGlyph,
   GearButton,
-  Halo,
   IconTile,
   LockGlyph,
   NodeCard,
@@ -63,15 +61,6 @@ export const SlotNode = memo(function SlotNode({ id, data }: NodeProps) {
 
   return (
     <NodeWrap>
-      {selected && (
-        <>
-          <Halo data-testid="node-halo" aria-hidden="true" />
-          <CornerSquare data-testid="node-corner" style={{ left: -4, top: -4 }} aria-hidden="true" />
-          <CornerSquare data-testid="node-corner" style={{ right: -4, top: -4 }} aria-hidden="true" />
-          <CornerSquare data-testid="node-corner" style={{ left: -4, bottom: -4 }} aria-hidden="true" />
-          <CornerSquare data-testid="node-corner" style={{ right: -4, bottom: -4 }} aria-hidden="true" />
-        </>
-      )}
       {node.portColor && node.kind && (
         <PortDot
           type="button"
@@ -88,6 +77,7 @@ export const SlotNode = memo(function SlotNode({ id, data }: NodeProps) {
       <NodeCard
         $ghost={ghost}
         $locked={node.status === 'locked'}
+        $selected={selected}
         role="button"
         tabIndex={-1}
         aria-label={`${node.title} — ${label}`}

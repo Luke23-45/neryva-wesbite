@@ -118,16 +118,21 @@ describe('SlotNode', () => {
     solid.unmount();
   });
 
-  it('renders the selection halo and four non-interactive corner squares when selected', () => {
-    const { container } = renderNode({ selected: true });
-    expect(container.querySelector('[data-testid="node-halo"]')).toBeTruthy();
-    expect(container.querySelectorAll('[data-testid="node-corner"]').length).toBe(4);
-  });
-
-  it('renders no selection chrome when unselected', () => {
-    const { container } = renderNode({ selected: false });
+  it('marks selection with a lightened 1px border and lift shadow — no overlay, no chrome', () => {
+    const { container } = renderNode({ selected: true, status: 'ready' });
+    const style = getComputedStyle(cardOf(container));
+    expect(style.borderTopColor).toBe('rgb(215, 222, 232)');
+    expect(style.borderTopWidth).toBe('1px');
+    expect(style.boxShadow).not.toBe('none');
     expect(container.querySelector('[data-testid="node-halo"]')).toBeNull();
     expect(container.querySelectorAll('[data-testid="node-corner"]').length).toBe(0);
+  });
+
+  it('keeps the default border and no shadow when unselected', () => {
+    const { container } = renderNode({ selected: false, status: 'ready' });
+    const style = getComputedStyle(cardOf(container));
+    expect(style.borderTopColor).toBe('rgb(38, 47, 63)');
+    expect(style.boxShadow === 'none' || style.boxShadow === '').toBe(true);
   });
 
   it('opens the inspector via selection when the gear is clicked', () => {
