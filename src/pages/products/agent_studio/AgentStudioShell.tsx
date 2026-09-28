@@ -9,6 +9,7 @@
  */
 import { Outlet } from '@tanstack/react-router';
 import { StudioShell, type NavConfig } from '@/sections/pages/products/agent-studio/StudioShell';
+import { BuilderTopbarSlotsProvider } from '@/sections/pages/products/agent-studio/builder/topbar/BuilderTopbarSlots';
 import { SessionGate } from '@components/platform/SessionGate';
 import { EntitlementBanner } from '@components/platform/Entitlement';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
@@ -83,12 +84,45 @@ export default function AgentStudioShellPage() {
     // orgId here is only ever mid-propagation, never a real empty state.
     return (
       <SessionGate>
+        <BuilderTopbarSlotsProvider>
+          <StudioShell
+            nav={navConfig}
+            user={user}
+            workspace={workspace}
+            searchPlaceholder={data.searchPlaceholder}
+            recentChats={null}
+            topbarOrg={<OrgSwitcher />}
+            banner={
+              <>
+                <StatusBanner />
+                <EntitlementBanner product="agent_studio" displayName="Agent Studio" />
+              </>
+            }
+          >
+            <div style={{ padding: 24, maxWidth: 1120 }}>
+              <Skeleton $h="28px" $w="260px" />
+              <div style={{ height: 16 }} />
+              <Skeleton $h="180px" $r="12px" />
+              <div style={{ height: 16 }} />
+              <Skeleton $h="14px" />
+              <Skeleton $h="14px" $w="70%" />
+            </div>
+          </StudioShell>
+        </BuilderTopbarSlotsProvider>
+        <StepUpModal />
+      </SessionGate>
+    );
+  }
+
+  return (
+    <SessionGate>
+      <BuilderTopbarSlotsProvider>
         <StudioShell
           nav={navConfig}
           user={user}
           workspace={workspace}
           searchPlaceholder={data.searchPlaceholder}
-          recentChats={null}
+          recentChats={recentChats}
           topbarOrg={<OrgSwitcher />}
           banner={
             <>
@@ -97,38 +131,9 @@ export default function AgentStudioShellPage() {
             </>
           }
         >
-          <div style={{ padding: 24, maxWidth: 1120 }}>
-            <Skeleton $h="28px" $w="260px" />
-            <div style={{ height: 16 }} />
-            <Skeleton $h="180px" $r="12px" />
-            <div style={{ height: 16 }} />
-            <Skeleton $h="14px" />
-            <Skeleton $h="14px" $w="70%" />
-          </div>
+          <Outlet />
         </StudioShell>
-        <StepUpModal />
-      </SessionGate>
-    );
-  }
-
-  return (
-    <SessionGate>
-      <StudioShell
-        nav={navConfig}
-        user={user}
-        workspace={workspace}
-        searchPlaceholder={data.searchPlaceholder}
-        recentChats={recentChats}
-        topbarOrg={<OrgSwitcher />}
-        banner={
-          <>
-            <StatusBanner />
-            <EntitlementBanner product="agent_studio" displayName="Agent Studio" />
-          </>
-        }
-      >
-        <Outlet />
-      </StudioShell>
+      </BuilderTopbarSlotsProvider>
       <StepUpModal />
     </SessionGate>
   );

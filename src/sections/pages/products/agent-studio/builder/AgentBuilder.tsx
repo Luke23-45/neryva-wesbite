@@ -14,7 +14,7 @@ import { BUILT_IN_TOOLS, useToolCatalog } from '@hooks/studio/useSetupTools';
 import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { BuilderTopbarActions, BuilderTopbarIdentity } from './topbar/BuilderTopBar';
-import { BuilderTopbarSlotsContext, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
+import { usePublishBuilderTopbarSlots, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 import {
   clampWidth,
   loadPanelLayout,
@@ -30,7 +30,6 @@ import { OriginScreen } from './origin/OriginScreen';
 import { TemplateBanner } from '../templates/TemplateBanner';
 import type { PurposeFormState, PurposeHandle } from './inspector/PurposeInspector';
 import { BuilderBottomBar } from './bottombar/BuilderBottomBar';
-import { BuilderStatusBar } from './statusbar/BuilderStatusBar';
 import { deriveBottomAction, type BottomPrimary } from './lib/bottom-action';
 import { knowledgeSlot, projectBuilderGraph, FUNCTIONAL_NODE_IDS } from './lib/projector';
 import { selectVersionEvalState } from './lib/eval-model';
@@ -540,6 +539,12 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     expandPanel,
   ]);
 
+  // Publish the merged topbar slots to the layout-level provider above
+  // StudioShell (T19 — the provider must sit above the shell, not inside
+  // this component, or the shell reads null and the builder topbar never
+  // renders). Cleared on unmount so no stale chrome lingers.
+  usePublishBuilderTopbarSlots(topbarSlots);
+
   // Closed keyboard map, v10 (BUILD_PLAN.md §7b): Esc, N, node keys.
   // Never fires from inputs (except Escape, which only ever deselects, and
   // Ctrl/⌘+S, the standard save shortcut — preventDefault stops the browser's
@@ -659,124 +664,116 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }
 
   return (
-    <BuilderTopbarSlotsContext.Provider value={topbarSlots}>
-      <Shell>
-        {guardDialog}
-        {mode === 'build' && agentId && form.data?.versionId && (
-          <div style={{ padding: '0 16px' }}>
-            <TemplateBanner assistantId={agentId} versionId={form.data.versionId} />
-          </div>
-        )}
-      <Main>
-        {!panelLayout.paletteCollapsed && (
-          <ComponentPalette
-            ref={searchRef}
-            asideRef={paletteAsideRef}
-            // Intentional ref read during render (T15): the drag mutates the
-            // aside width directly in the DOM; if an unrelated re-render lands
-            // mid-drag, the prop must reflect the live width or React snaps it
-            // back to the stale committed width. Read-only — never written here.
-            // eslint-disable-next-line react-hooks/refs
-            width={liveWidthRef.current.palette ?? panelLayout.paletteWidth}
-            onResizeDelta={(dx) => handlePanelDelta('palette', dx)}
-            onResizeEnd={() => handlePanelEnd('palette')}
-            onCollapse={() => collapsePanel('palette')}
-            nodes={paletteNodes}
-            selectedId={selectedId}
-            filter={paletteFilter}
-            onFilterChange={handlePaletteFilterChange}
-            onSelectNode={select}
-            locked={mode === 'new'}
-            canAuthor={canAuthor}
-            health={paletteHealth}
-            onHealthReview={() => select('ship')}
-            onHealthNext={(nodeId) => select(nodeId)}
-          />
-        )}
-        <Suspense
-          fallback={
-            <LoadingVeil>
-              <Skeleton $h="240px" $r="12px" />
-            </LoadingVeil>
-          }
-        >
-          {mode === 'new' && origin === 'choose' ? (
-            <OriginScreen onBlank={() => setOrigin('blank')} />
-          ) : (
-            <AgentCanvas
-              nodes={projected.nodes}
-              edges={projected.edges}
-              layoutRev={layoutRev}
-              locked={mode === 'new'}
-              onSelectNode={select}
-              onNodePosition={setPosition}
-              onPositionsCommitted={persistPositions}
-              onPortClick={handlePortClick}
-              onTidy={handleTidy}
-              blockers={paletteHealth.blockers}
-              suggestions={paletteHealth.suggestions}
-              onValidate={() => {
-                shipReadiness.retry();
-                select('ship');
-              }}
-              onReviewIssues={() => select('ship')}
-            />
-          )}
-        </Suspense>
-        {!panelLayout.inspectorCollapsed && (
-          <BuilderInspector
-            selected={selectedNode}
-          context={inspectorContext}
-          nodes={paletteNodes}
-          onSelectNode={select}
-          purposeRef={purposeRef}
-          onFormState={onFormState}
-          onComposerDirty={onComposerDirty}
-          onBrandDirty={onBrandDirty}
-          onBrainDirty={onBrainDirty}
-          onKnowledgeDirty={onKnowledgeDirty}
-          onToolsDirty={onToolsDirty}
-          onGuardrailsDirty={onGuardrailsDirty}
-          onMemoryDirty={onMemoryDirty}
-          onBudgetDirty={onBudgetDirty}
-          asideRef={inspectorAsideRef}
-          // Intentional ref read during render (T15): same as the palette —
-          // keeps the live drag width stable across unrelated re-renders.
+    <Shell>
+      {guardDialog}
+      {mode === 'build' && agentId && form.data?.versionId && (
+        <div style={{ padding: '0 16px' }}>
+          <TemplateBanner assistantId={agentId} versionId={form.data.versionId} />
+        </div>
+      )}
+    <Main>
+      {!panelLayout.paletteCollapsed && (
+        <ComponentPalette
+          ref={searchRef}
+          asideRef={paletteAsideRef}
+          // Intentional ref read during render (T15): the drag mutates the
+          // aside width directly in the DOM; if an unrelated re-render lands
+          // mid-drag, the prop must reflect the live width or React snaps it
+          // back to the stale committed width. Read-only — never written here.
           // eslint-disable-next-line react-hooks/refs
-          width={liveWidthRef.current.inspector ?? panelLayout.inspectorWidth}
-          onResizeDelta={(dx) => handlePanelDelta('inspector', dx)}
-          onResizeEnd={() => handlePanelEnd('inspector')}
-          onCollapse={() => collapsePanel('inspector')}
-          onCreated={(id) => {
-            // A2-02: creation consumed the Purpose form — it is not "unsaved
-            // changes". Clear it synchronously (flushSync) so the dirty
-            // guard's shouldBlockFn sees clean state before we navigate.
-            flushSync(() => {
-              setFormState({ dirty: false, valid: false });
-            });
-            navigate({ to: buildAgentBuildPath(id) });
-          }}
-        />
-        )}
-      </Main>
-      {mode === 'build' ? (
-        <BuilderStatusBar
-          configured={paletteHealth.configured}
-          total={14}
-          blockers={paletteHealth.blockers}
-          suggestions={paletteHealth.suggestions}
-          version={shipReadiness.version?.version ?? null}
-          editPath={agentId ? buildAgentEditPath(agentId) : null}
-        />
-      ) : (
-        <BuilderBottomBar
-          action={bottomAction}
-          createReady={formState.valid}
-          busy={false}
-          onPrimary={handlePrimary}
+          width={liveWidthRef.current.palette ?? panelLayout.paletteWidth}
+          onResizeDelta={(dx) => handlePanelDelta('palette', dx)}
+          onResizeEnd={() => handlePanelEnd('palette')}
+          onCollapse={() => collapsePanel('palette')}
+          nodes={paletteNodes}
+          selectedId={selectedId}
+          filter={paletteFilter}
+          onFilterChange={handlePaletteFilterChange}
+          onSelectNode={select}
+          locked={mode === 'new'}
+          canAuthor={canAuthor}
+          health={paletteHealth}
+          onHealthReview={() => select('ship')}
+          onHealthNext={(nodeId) => select(nodeId)}
         />
       )}
+      <Suspense
+        fallback={
+          <LoadingVeil>
+            <Skeleton $h="240px" $r="12px" />
+          </LoadingVeil>
+        }
+      >
+        {mode === 'new' && origin === 'choose' ? (
+          <OriginScreen onBlank={() => setOrigin('blank')} />
+        ) : (
+          <AgentCanvas
+            nodes={projected.nodes}
+            edges={projected.edges}
+            layoutRev={layoutRev}
+            locked={mode === 'new'}
+            onSelectNode={select}
+            onNodePosition={setPosition}
+            onPositionsCommitted={persistPositions}
+            onPortClick={handlePortClick}
+            onTidy={handleTidy}
+            blockers={paletteHealth.blockers}
+            suggestions={paletteHealth.suggestions}
+            onValidate={() => {
+              shipReadiness.retry();
+              select('ship');
+            }}
+            onReviewIssues={() => select('ship')}
+            onEngineRoom={
+              mode === 'build' && agentId ? () => navigate({ to: buildAgentEditPath(agentId) }) : undefined
+            }
+          />
+        )}
+      </Suspense>
+      {!panelLayout.inspectorCollapsed && (
+        <BuilderInspector
+          selected={selectedNode}
+        context={inspectorContext}
+        nodes={paletteNodes}
+        onSelectNode={select}
+        purposeRef={purposeRef}
+        onFormState={onFormState}
+        onComposerDirty={onComposerDirty}
+        onBrandDirty={onBrandDirty}
+        onBrainDirty={onBrainDirty}
+        onKnowledgeDirty={onKnowledgeDirty}
+        onToolsDirty={onToolsDirty}
+        onGuardrailsDirty={onGuardrailsDirty}
+        onMemoryDirty={onMemoryDirty}
+        onBudgetDirty={onBudgetDirty}
+        asideRef={inspectorAsideRef}
+        // Intentional ref read during render (T15): same as the palette —
+        // keeps the live drag width stable across unrelated re-renders.
+        // eslint-disable-next-line react-hooks/refs
+        width={liveWidthRef.current.inspector ?? panelLayout.inspectorWidth}
+        onResizeDelta={(dx) => handlePanelDelta('inspector', dx)}
+        onResizeEnd={() => handlePanelEnd('inspector')}
+        onCollapse={() => collapsePanel('inspector')}
+        onCreated={(id) => {
+          // A2-02: creation consumed the Purpose form — it is not "unsaved
+          // changes". Clear it synchronously (flushSync) so the dirty
+          // guard's shouldBlockFn sees clean state before we navigate.
+          flushSync(() => {
+            setFormState({ dirty: false, valid: false });
+          });
+          navigate({ to: buildAgentBuildPath(id) });
+        }}
+      />
+      )}
+    </Main>
+    {mode === 'new' && (
+      <BuilderBottomBar
+        action={bottomAction}
+        createReady={formState.valid}
+        busy={false}
+        onPrimary={handlePrimary}
+      />
+    )}
       </Shell>
-    </BuilderTopbarSlotsContext.Provider>
   );
 }

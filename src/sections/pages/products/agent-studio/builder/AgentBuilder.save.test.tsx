@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
 import { defaultConsumer } from '@lib/engine/agent-payload';
 import { AgentBuilder } from './AgentBuilder';
-import { useBuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
+import { BuilderTopbarSlotsProvider, useBuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 
 const saveMutate = vi.fn();
 const updateMutate = vi.fn();
@@ -41,9 +41,10 @@ vi.mock('./canvas/AgentCanvas', () => ({
 }));
 
 vi.mock('../templates/TemplateBanner', () => ({
-  // Rendered inside AgentBuilder's slot provider in build mode — stand in
-  // for StudioShell by mounting the real actions slot, so the Save button
-  // under test is the production one wired to the real save path.
+  // Rendered inside AgentBuilder's tree in build mode — stand in for
+  // StudioShell by mounting the real actions slot, so the Save button
+  // under test is the production one wired to the real save path. The
+  // layout-level provider (AgentStudioShellPage in production) sits above.
   TemplateBanner: () => <TopbarSlotStandIn />,
 }));
 
@@ -125,7 +126,9 @@ function shell() {
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <AgentBuilder mode="build" agentId="agent-1" initialSlot="brain" />
+        <BuilderTopbarSlotsProvider>
+          <AgentBuilder mode="build" agentId="agent-1" initialSlot="brain" />
+        </BuilderTopbarSlotsProvider>
       </QueryClientProvider>
     </ThemeProvider>,
   );

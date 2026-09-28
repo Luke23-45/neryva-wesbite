@@ -138,6 +138,19 @@ describe('AgentCanvas toolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
     expect(handlers.onValidate).toHaveBeenCalledTimes(1);
   });
+
+  it('shows the Engine Room button only when onEngineRoom is provided', () => {
+    const onEngineRoom = vi.fn();
+    renderCanvas({ onEngineRoom });
+    const btn = screen.getByRole('button', { name: 'Engine Room — advanced editor' });
+    fireEvent.click(btn);
+    expect(onEngineRoom).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the Engine Room button when onEngineRoom is undefined', () => {
+    renderCanvas();
+    expect(screen.queryByRole('button', { name: 'Engine Room — advanced editor' })).toBeNull();
+  });
 });
 
 describe('AgentCanvas issues pill', () => {

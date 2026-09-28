@@ -14,7 +14,7 @@ import {
   type Node,
   type NodeTypes,
 } from '@xyflow/react';
-import { Grid2x2, Map as MapIcon, Maximize, Minus, Plus, ShieldCheck, Wand2 } from 'lucide-react';
+import { Code2, Grid2x2, Map as MapIcon, Maximize, Minus, Plus, ShieldCheck, Wand2 } from 'lucide-react';
 import { CanvasSlotNode, type RuntimeSlotNodeData } from './nodes/SlotNode';
 import { LANE_NODE_TYPE, LaneNode, toLaneNodes, type LaneHullGeom } from './LaneHull';
 import { DataEdge } from './edges/DataEdge';
@@ -50,6 +50,12 @@ export interface AgentCanvasProps {
   /** Opens the validation/issues surface. */
   onValidate: () => void;
   onReviewIssues: () => void;
+  /**
+   * Opens the Engine Room (advanced editor). The button is omitted when
+   * undefined — the status bar's old Engine Room link lives here now, as a
+   * quiet toolbar icon, so no 32px bar is needed to keep it one click away.
+   */
+  onEngineRoom?: () => void;
 }
 
 const nodeTypes: NodeTypes = { slot: CanvasSlotNode, [LANE_NODE_TYPE]: LaneNode };
@@ -239,6 +245,19 @@ function FlowCanvas(props: AgentCanvasProps) {
           <ShieldCheck size={13} strokeWidth={1.8} />
           Validate
         </ToolButton>
+        {props.onEngineRoom && (
+          <>
+            <ToolbarDivider aria-hidden="true" />
+            <ToolButton
+              type="button"
+              onClick={props.onEngineRoom}
+              title="Engine Room — advanced editor"
+              aria-label="Engine Room — advanced editor"
+            >
+              <Code2 size={14} strokeWidth={1.8} />
+            </ToolButton>
+          </>
+        )}
       </Toolbar>
       <IssuesPill blockers={props.blockers} suggestions={props.suggestions} onReviewIssues={props.onReviewIssues} />
     </CanvasWrap>
