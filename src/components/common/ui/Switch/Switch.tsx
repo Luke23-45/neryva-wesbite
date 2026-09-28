@@ -27,6 +27,7 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
   return (
     <Root>
       <Track
+        type="button"
         role="switch"
         aria-checked={checked}
         aria-disabled={disabled || undefined}
@@ -71,7 +72,10 @@ const Track = styled(motion.button)<{ $checked: boolean }>`
   height: 22px;
   border-radius: 999px;
   border: 1px solid ${({ $checked }) => ($checked ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
-  background: ${({ $checked }) => ($checked ? '#3b82f6' : 'rgba(255, 255, 255, 0.10)')};
+  background: ${({ $checked }) =>
+    $checked
+      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
+      : 'rgba(255, 255, 255, 0.10)'};
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.10),
     0 0 0 0 rgba(147, 197, 253, 0);

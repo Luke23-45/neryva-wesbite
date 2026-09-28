@@ -793,7 +793,10 @@ const OtpCell = styled.div<{ $filled: boolean }>`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 22px;
   color: ${({ $filled, theme }) => ($filled ? theme.app.text.primary : 'transparent')};
-  background: rgba(255, 255, 255, 0.03);
+  background: ${({ $filled }) =>
+    $filled
+      ? 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))'
+      : 'rgba(255, 255, 255, 0.03)'};
   border: 1px solid ${({ $filled, theme }) =>
     $filled ? theme.app.status.lilac.border : theme.app.border.strong};
   transition: border-color ${({ theme }) => theme.transitions.fast},
@@ -917,7 +920,7 @@ const PrimaryBtn = styled(motion.button)`
   align-items: center;
   gap: 6px;
   border: 0;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};

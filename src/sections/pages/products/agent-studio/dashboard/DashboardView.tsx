@@ -350,6 +350,7 @@ function DashboardContent() {
                         dataKey: key,
                         name: key.replace(/_/g, ' '),
                         color: ['#8b8ff8', '#05e3a4', '#f5b942'][i % 3],
+                        gradientId: `dash-grad-${key}`,
                       }))}
                       height={260}
                     />

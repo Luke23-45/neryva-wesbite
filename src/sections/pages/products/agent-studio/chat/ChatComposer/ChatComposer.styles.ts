@@ -93,7 +93,7 @@ export const SendButton = styled.button<{ $enabled: boolean }>`
   cursor: ${({ $enabled }) => ($enabled ? 'pointer' : 'default')};
   border-radius: 10px;
   background: ${({ $enabled, theme }) =>
-    $enabled ? '#3b82f6' : theme.app.surface.active};
+    $enabled ? theme.colors.gradients.primary : theme.app.surface.active};
   color: ${({ $enabled, theme }) => ($enabled ? '#fff' : theme.app.text.ghost)};
   flex-shrink: 0;
   transition: background ${({ theme }) => theme.transitions.fast},

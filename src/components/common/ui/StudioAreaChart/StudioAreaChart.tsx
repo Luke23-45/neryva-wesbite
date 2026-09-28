@@ -14,6 +14,7 @@ type Series = {
   dataKey: string;
   name?: string;
   color: string;
+  gradientId: string;
 };
 
 type Props = {
@@ -50,6 +51,14 @@ export function StudioAreaChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <RAreaChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+        <defs>
+          {series.map((s) => (
+            <linearGradient id={s.gradientId} key={s.gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0} />
+            </linearGradient>
+          ))}
+        </defs>
         <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.06)" vertical={false} />
         <XAxis
           dataKey={xKey}
@@ -79,8 +88,7 @@ export function StudioAreaChart({
             name={s.name ?? s.dataKey}
             stroke={s.color}
             strokeWidth={1.75}
-            fill={s.color}
-            fillOpacity={0.12}
+            fill={`url(#${s.gradientId})`}
           />
         ))}
       </RAreaChart>

@@ -5,7 +5,11 @@ export const Trigger = styled.button`
   height: 30px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.app.border.strong};
-  background: ${({ theme }) => theme.app.surface.subtle};
+  background: linear-gradient(
+    135deg,
+    rgba(192, 132, 252, 0.30) 0%,
+    rgba(37, 99, 235, 0.30) 100%
+  );
   color: ${({ theme }) => theme.app.text.primary};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
@@ -35,7 +39,7 @@ export const Avatar = styled.div`
   width: 36px;
   height: 36px;
   border-radius: 9px;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.gradients.primary};
   display: inline-flex;
   align-items: center;
   justify-content: center;

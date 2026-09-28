@@ -76,7 +76,7 @@ export const Bubble = styled.div<{ $role: 'user' | 'agent' }>`
   align-self: ${({ $role }) => ($role === 'user' ? 'flex-end' : 'flex-start')};
   background: ${({ $role, theme }) =>
     $role === 'user'
-      ? 'rgba(192, 132, 252, 0.15)'
+      ? 'linear-gradient(135deg, rgba(192,132,252,0.18) 0%, rgba(37,99,235,0.18) 100%)'
       : theme.app.surface.tint};
   border: 1px solid
     ${({ $role, theme }) => ($role === 'user' ? 'rgba(192, 132, 252, 0.30)' : theme.app.border.strong)};

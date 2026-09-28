@@ -41,7 +41,11 @@ export const ShellSidebar = styled.aside<{ $mobileOpen?: boolean; $collapsed?: b
       display: none;
     }
   `}
-  background: ${({ theme }) => theme.app.bg.raised};
+  background: linear-gradient(
+    180deg,
+    ${({ theme }) => theme.app.bg.raised} 0%,
+    ${({ theme }) => theme.app.bg.deep} 100%
+  );
   border-right: 1px solid ${({ theme }) => theme.app.border.default};
   z-index: 50;
 
@@ -312,7 +316,7 @@ export const UserAvatar = styled.div`
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -352,7 +356,9 @@ export const UpgradeCard = styled.div`
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.app.border.strong};
-  background: ${({ theme }) => theme.app.surface.subtle};
+  background:
+    linear-gradient(180deg, rgba(192, 132, 252, 0.10), rgba(37, 99, 235, 0.06)),
+    ${({ theme }) => theme.app.surface.subtle};
 `;
 
 export const UpgradeTitle = styled.div`
@@ -365,7 +371,14 @@ export const ShellBody = styled.div`
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: ${({ theme }) => theme.app.bg.base};
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(124, 92, 255, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 90% 10%, rgba(37, 99, 235, 0.05), transparent 60%),
+    linear-gradient(
+      180deg,
+      ${({ theme }) => theme.app.bg.base} 0%,
+      ${({ theme }) => theme.app.bg.deep} 100%
+    );
 `;
 
 export const Topbar = styled.div`

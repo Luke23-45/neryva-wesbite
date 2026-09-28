@@ -9,34 +9,30 @@ export const AuthWrapper = styled.main`
   position: relative;
   overflow: hidden;
 
-  /* Flat 1px hairline layers (were zero-transition gradients — identical rendering). */
-  background:
+  background-color: #fafaf9;
+  background-image:
     /* ── Vertical lines (8, asymmetric spacing) ── */
-    rgba(0,0,0,0.03),
-    rgba(0,0,0,0.06),
-    rgba(0,0,0,0.04),
-    rgba(0,0,0,0.02),
-    rgba(0,0,0,0.10),
-    rgba(0,0,0,0.10),
-    rgba(0,0,0,0.04),
-    rgba(0,0,0,0.03),
+    linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
+    linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0.06)),
+    linear-gradient(to bottom, rgba(0,0,0,0.04), rgba(0,0,0,0.04)),
+    linear-gradient(to bottom, rgba(0,0,0,0.02), rgba(0,0,0,0.02)),
+    linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.10)),
+    linear-gradient(to bottom, rgba(0,0,0,0.10), rgba(0,0,0,0.10)),
+    linear-gradient(to bottom, rgba(0,0,0,0.04), rgba(0,0,0,0.04)),
+    linear-gradient(to bottom, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
     /* ── Horizontal lines (6, asymmetric spacing) ── */
-    rgba(0,0,0,0.03),
-    rgba(0,0,0,0.05),
-    rgba(0,0,0,0.07),
-    rgba(0,0,0,0.07),
-    rgba(0,0,0,0.05),
-    rgba(0,0,0,0.03),
-    /* ── base ── */
-    #fafaf9;
+    linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.03)),
+    linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0.05)),
+    linear-gradient(to right, rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+    linear-gradient(to right, rgba(0,0,0,0.07), rgba(0,0,0,0.07)),
+    linear-gradient(to right, rgba(0,0,0,0.05), rgba(0,0,0,0.05)),
+    linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.03));
   background-size:
     1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%, 1px 100%,
-    100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px,
-    100% 100%;
+    100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px, 100% 1px;
   background-position:
     7% 0, 18% 0, 32% 0, 42% 0, calc(50vw - 208px) 0, calc(50vw + 272px) 0, 73% 0, 91% 0,
-    0 5%, 0 16%, 0 calc(50vh - 220px), 0 calc(50vh + 220px), 0 84%, 0 95%,
-    0 0;
+    0 5%, 0 16%, 0 calc(50vh - 220px), 0 calc(50vh + 220px), 0 84%, 0 95%;
   background-repeat: no-repeat;
 `;
 

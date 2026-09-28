@@ -4,7 +4,7 @@
  * An iOS-idiom grouped sheet: one centered narrow column on a cool-gray
  * canvas, white inset cards with hairline dividers, small section headers,
  * tinted glyph tiles, a real switch for consent, and a bottom-pinned action
- * dock. Nothing is shared with the sign-in surface except the flat brand blue
+ * dock. Nothing is shared with the sign-in surface except the brand gradient
  * on the avatar — the two screens can never read as the same page.
  *
  * Every value resolves through the design tokens (`src/styles/theme/*`).
@@ -76,7 +76,7 @@ export const Avatar = styled.span`
   display: grid;
   place-items: center;
   border-radius: ${({ theme }) => theme.radii['3xl']};
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #ffffff;
   font-size: 24px;
   font-weight: 500;
@@ -130,7 +130,7 @@ export const IdGlyph = styled.span`
   display: grid;
   place-items: center;
   border-radius: 8px;
-  background: #3b82f6;
+  background: ${({ theme }) => theme.colors.gradients.primary};
   color: #ffffff;
 
   svg {
@@ -219,7 +219,7 @@ export const Row = styled.div`
   }
 `;
 
-/** Tinted glyph tile — flat brand colors, chosen per row by tone. */
+/** Tinted glyph tile — the brand gradient set, chosen per row by tone. */
 export const Tile = styled.span<{ $tone: 'warm' | 'primary' }>`
   width: 32px;
   height: 32px;
@@ -228,7 +228,7 @@ export const Tile = styled.span<{ $tone: 'warm' | 'primary' }>`
   place-items: center;
   border-radius: 8px;
   color: #ffffff;
-  background: ${({ $tone }) => ($tone === 'warm' ? '#10b981' : '#3b82f6')};
+  background: ${({ $tone, theme }) => theme.colors.gradients[$tone]};
 
   svg {
     width: 17px;

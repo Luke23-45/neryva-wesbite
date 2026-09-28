@@ -65,12 +65,12 @@ export const PassFill = styled.div<{ $pct: number; $tone: string }>`
   width: ${({ $pct }) => `${$pct}%`};
   background: ${({ $tone }) =>
     $tone === 'emerald'
-      ? '#10b981'
+      ? 'linear-gradient(90deg, #34d399, #10b981)'
       : $tone === 'azure'
-        ? '#3b82f6'
+        ? 'linear-gradient(90deg, #93c5fd, #2563eb)'
         : $tone === 'warning'
-          ? '#f59e0b'
-          : '#ef4444'};
+          ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+          : 'linear-gradient(90deg, #f87171, #ef4444)'};
   border-radius: 3px;
 `;
 

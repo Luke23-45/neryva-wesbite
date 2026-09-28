@@ -58,6 +58,7 @@ export function AnalyticsView() {
     dataKey: key,
     name: key.replace(/_/g, ' '),
     color: SERIES_COLORS[i % SERIES_COLORS.length],
+    gradientId: `analytics-grad-${key}`,
   }));
 
   return (
