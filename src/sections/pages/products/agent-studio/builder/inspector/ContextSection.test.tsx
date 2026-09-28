@@ -116,3 +116,24 @@ describe('ContextSection', () => {
     expect(screen.queryByLabelText('History limit in messages')).toBeNull();
   });
 });
+
+describe('ContextSection save lifecycle (model-less draft regression)', () => {
+  it('saves on a model-less draft — the shared pipeline never throws on empty models', async () => {
+    const def = definitionWith({ memory_scope: 'user', history_limit: 20, summary_enabled: true });
+    def.model_policy = { allowed_models: [], fallback_enabled: false };
+    await act(async () => {
+      shell({ definition: def });
+    });
+    const summary = screen.getByRole('group', { name: 'Conversation summary' });
+    await act(async () => {
+      fireEvent.click(summary.querySelectorAll('button')[1] as HTMLElement);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.context_policy.summary_enabled).toBe(false);
+    expect(sent.definition.model_policy.allowed_models).toEqual([]);
+  });
+});

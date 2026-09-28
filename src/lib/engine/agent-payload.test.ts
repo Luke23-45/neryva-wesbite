@@ -289,8 +289,12 @@ describe('toEnginePayload', () => {
     expect(toEnginePayload(def).budget_policy).toEqual({ max_cost_micros: 0 });
   });
 
-  it('fails closed on programmer errors (empty models, nameless tools)', () => {
-    expect(() => toEnginePayload(defaultConsumer())).toThrow(/allowed_models/);
+  it('accepts a model-less draft — empty allowed_models is work-in-progress, not a programmer error', () => {
+    const wire = toEnginePayload(defaultConsumer());
+    expect(wire.model_policy.allowed_models).toEqual([]);
+  });
+
+  it('fails closed on programmer errors (nameless tools)', () => {
     const def = consumer();
     def.tools = [{ name: '  ', access: 'read', approval: 'never', execution_mode: 'live' }];
     expect(() => toEnginePayload(def)).toThrow(/tools\[0\].name/);

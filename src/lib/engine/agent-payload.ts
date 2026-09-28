@@ -327,14 +327,16 @@ function nonBlank(value: string): string | null {
 }
 
 /**
- * Consumer → wire. THROWS on programmer errors (empty model list, nameless
- * tool, unknown scope) — the editor pre-validates via setup-caps; a throw
- * here is a form bug, never a user message. Field paths in the message.
+ * Consumer → wire. THROWS on programmer errors (nameless tool, unknown scope)
+ * — the editor pre-validates via setup-caps; a throw here is a form bug,
+ * never a user message. Field paths in the message.
+ *
+ * NOTE: an empty model list is NOT a programmer error — drafts are
+ * work-in-progress and may be model-less (the engine requires a model only
+ * at publish). It used to throw here, which made every builder section's
+ * save fail on a model-less agent.
  */
 export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
-  if (def.model_policy.allowed_models.length === 0) {
-    throw new Error('model_policy.allowed_models: pick at least one allowed model');
-  }
   const memoryScope = def.context_policy.memory_scope === 'org' ? 'organization' : def.context_policy.memory_scope;
   if (!['none', 'conversation', 'organization', 'user', 'assistant'].includes(memoryScope)) {
     throw new Error(`context_policy.memory_scope: unknown scope "${def.context_policy.memory_scope}"`);

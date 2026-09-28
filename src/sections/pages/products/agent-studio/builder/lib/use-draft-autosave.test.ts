@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { useDraftAutosave, type DraftAutosaveGates } from './use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal, type DraftAutosaveGates } from './use-draft-autosave';
 import { AUTOSAVE_MS } from './draft-save';
+import toast from 'react-hot-toast';
+
+vi.mock('react-hot-toast', () => ({
+  default: { success: vi.fn(), error: vi.fn() },
+}));
+
+const toastError = vi.mocked(toast.error);
 
 /**
  * A2-23 regression: inspector sections unmount when the user switches
@@ -94,5 +101,71 @@ describe('useDraftAutosave (A2-23)', () => {
     expect(doSave).not.toHaveBeenCalled();
     unmount();
     expect(doSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('useManualSaveSignal (loud held saves)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function hold(overrides: Record<string, unknown> = {}) {
+    return {
+      canAuthor: true,
+      blocked: false as boolean | null | undefined,
+      conflict: null as unknown,
+      holdReason: () => 'Trim to save.',
+      ...overrides,
+    };
+  }
+
+  it('does nothing while the signal is 0', () => {
+    const doSave = vi.fn();
+    renderHook(() => useManualSaveSignal(0, doSave, hold({ blocked: true })));
+    expect(doSave).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('fires doSave on an explicit signal when nothing holds it', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(({ signal }) => useManualSaveSignal(signal, doSave, hold()), {
+      initialProps: { signal: 0 },
+    });
+    rerender({ signal: 1 });
+    expect(doSave).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('toasts the hold reason instead of silently swallowing a held save', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(({ signal }) => useManualSaveSignal(signal, doSave, hold({ blocked: true })), {
+      initialProps: { signal: 0 },
+    });
+    rerender({ signal: 1 });
+    expect(doSave).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(toastError).toHaveBeenCalledWith('Trim to save.');
+  });
+
+  it('falls back to a generic message when no reason is provided', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(
+      ({ signal }) => useManualSaveSignal(signal, doSave, hold({ blocked: true, holdReason: () => null })),
+      { initialProps: { signal: 0 } },
+    );
+    rerender({ signal: 1 });
+    expect(doSave).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining('held'));
+  });
+
+  it('stays quiet when an unresolved conflict dialog is open', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(
+      ({ signal }) => useManualSaveSignal(signal, doSave, hold({ blocked: true, conflict: { open: true } })),
+      { initialProps: { signal: 0 } },
+    );
+    rerender({ signal: 1 });
+    expect(doSave).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
   });
 });

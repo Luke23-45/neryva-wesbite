@@ -12,7 +12,7 @@ import {
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { ROLE_LIMITS, type RolePolicy } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
-import { useDraftAutosave } from '../lib/use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
 import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
 import { StaticLabel, StaticRow } from './BrainSection.styles';
@@ -284,11 +284,14 @@ export function RoleSection({
     [current],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
-  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
-  useEffect(() => {
-    if (saveSignal > 0) doSave();
-  }, [saveSignal, doSave]);
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
+  // save toasts its reason instead of swallowing the click.
+  useManualSaveSignal(saveSignal, doSave, {
+    canAuthor,
+    blocked,
+    conflict,
+    holdReason: () => heldMessages[0] ?? null,
+  });
 
   const patch = useCallback((part: Partial<RolePolicyState>) => {
     setPolicy((prev) => ({ ...prev, ...part }));

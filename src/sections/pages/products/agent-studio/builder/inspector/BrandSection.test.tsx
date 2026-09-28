@@ -235,3 +235,25 @@ describe('BrandSection voice', () => {
     expect(screen.getByText(/tokens \(est\.\)/)).toBeTruthy();
   });
 });
+
+describe('BrandSection save lifecycle (model-less draft regression)', () => {
+  it('saves brand on a model-less draft — a missing model never holds a brand save', async () => {
+    withFakeTimers();
+    await act(async () => {
+      shell({
+        definition: {
+          ...DEFINITION,
+          model_policy: { allowed_models: [], fallback_enabled: false },
+        },
+      });
+    });
+    expect(screen.queryByText(/Pick at least one allowed model/)).toBeNull();
+    fireEvent.change(screen.getByDisplayValue('Short sentences.'), { target: { value: 'Brave voice.' } });
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(input.definition.brand).toBe('Brave voice.');
+  });
+});

@@ -211,3 +211,93 @@ describe('InstructionsSection composer', () => {
     expect(screen.queryByText(/composer paused/)).toBeNull();
   });
 });
+
+describe('InstructionsSection save lifecycle (model-less draft regression)', () => {
+  const MODEL_LESS: AgentDefinition = {
+    ...DEFINITION,
+    model_policy: { allowed_models: [], fallback_enabled: false },
+  };
+
+  function boot(props?: Partial<React.ComponentProps<typeof InstructionsSection>>) {
+    let r: ReturnType<typeof render> | undefined;
+    return {
+      render: async () => {
+        await act(async () => {
+          r = shell(props);
+        });
+        return r!;
+      },
+      rerender: async (next: Partial<React.ComponentProps<typeof InstructionsSection>>) => {
+        await act(async () => {
+          r!.rerender(
+            <ThemeProvider theme={theme}>
+              <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+                <InstructionsSection
+                  assistantId="agent-main"
+                  definition={DEFINITION}
+                  versionId="v1"
+                  versionHash="h1"
+                  isDraft
+                  canAuthor
+                  onDirtyChange={() => undefined}
+                  saveSignal={0}
+                  {...props}
+                  {...next}
+                />
+              </QueryClientProvider>
+            </ThemeProvider>,
+          );
+        });
+      },
+    };
+  }
+
+  it('saves instructions on a model-less draft — a missing model never holds an instructions save', async () => {
+    withFakeTimers();
+    const b = boot({ definition: MODEL_LESS });
+    await b.render();
+    // No held whisper about models: the gate is own-section only.
+    expect(screen.queryByText(/Pick at least one allowed model/)).toBeNull();
+    fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition; expectedHash: string };
+    expect(input.definition.instructions).toContain('Concierge!!');
+  });
+
+  it('explicit Save while held toasts the reason instead of swallowing the click', async () => {
+    const over = `## Role\n${'x'.repeat(20001)}\n\n## Rules\n- Be kind.\n`;
+    const b = boot({ definition: { ...DEFINITION, instructions: over }, saveSignal: 0 });
+    await b.render();
+    expect(screen.getByText(/over the 20,000 cap/)).toBeTruthy();
+    // Topbar Save (saveSignal) while the section is held must explain itself.
+    await b.rerender({ definition: { ...DEFINITION, instructions: over }, saveSignal: 1 });
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(saveMutate).not.toHaveBeenCalled();
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/over the 20,000 cap/));
+  });
+
+  it('adopts fresh server text on a stale remount instead of sticking on old text', async () => {
+    const OLD = '## Role\nOld role.\n\n## Rules\n- Be kind.\n';
+    const NEW = '## Role\nNew role.\n\n## Rules\n- Be kind.\n';
+    const b = boot({ definition: { ...DEFINITION, instructions: OLD }, versionHash: 'h1' });
+    await b.render();
+    expect(screen.getByDisplayValue('Old role.')).toBeTruthy();
+    // The refetch delivers a newer revision while the user typed nothing —
+    // the section must converge on the server text rather than stick.
+    await b.rerender({ definition: { ...DEFINITION, instructions: NEW }, versionHash: 'h2' });
+    expect(screen.getByDisplayValue('New role.')).toBeTruthy();
+  });
+
+  it('keeps local edits over a newer server revision (edits always win)', async () => {
+    const OLD = '## Role\nOld role.\n\n## Rules\n- Be kind.\n';
+    const SERVER = '## Role\nServer role.\n\n## Rules\n- Be kind.\n';
+    const b = boot({ definition: { ...DEFINITION, instructions: OLD }, versionHash: 'h1' });
+    await b.render();
+    fireEvent.change(screen.getByDisplayValue('Old role.'), { target: { value: 'My unsaved edit.' } });
+    await b.rerender({ definition: { ...DEFINITION, instructions: SERVER }, versionHash: 'h2' });
+    expect(screen.getByDisplayValue('My unsaved edit.')).toBeTruthy();
+  });
+});

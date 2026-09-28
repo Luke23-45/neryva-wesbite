@@ -26,7 +26,7 @@ import {
   type InstructionBlock,
 } from '../lib/instructions-model';
 import { buildDraftPayload } from '../lib/draft-save';
-import { useDraftAutosave } from '../lib/use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
 import { SamplesSection } from './SamplesSection';
 import {
@@ -115,7 +115,7 @@ export function InstructionsSection({
   const sourceText = definition?.instructions ?? '';
   const initKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
 
-  const [docKey, setDocKey] = useState(initKey);
+  const [base, setBase] = useState(() => ({ key: initKey, text: sourceText }));
   const [blocks, setBlocks] = useState<InstructionBlock[]>(() =>
     ensureSingletons(parseInstructions(sourceText)),
   );
@@ -136,13 +136,17 @@ export function InstructionsSection({
   const composed = overridden ? rawOverride : composeInstructions(blocks);
   const dirty = composed !== sourceText;
 
-  // Adopt server text whenever clean (save echo, 409-adopt, reload-theirs).
-  // Local edits ALWAYS win — adoption only fires on exact equality. State
-  // adjustment during render (sanctioned pattern: previous-value tracking),
-  // never cascading effects.
-  const shouldAdopt = docKey !== initKey && !dirty;
+  // Adopt server text on prop revision (save echo, 409-adopt, reload-theirs,
+  // stale remount). Local edits ALWAYS win — adoption fires only when the
+  // user hasn't diverged from what they were shown (base.text) or the local
+  // content already equals the incoming server text. A remount that
+  // initialized from stale props (save round-trip in flight) converges
+  // instead of sticking on the old text forever. State adjustment during
+  // render (sanctioned pattern: previous-value tracking), never cascading
+  // effects.
+  const shouldAdopt = base.key !== initKey && (composed === sourceText || composed === base.text);
   if (shouldAdopt) {
-    setDocKey(initKey);
+    setBase({ key: initKey, text: sourceText });
     setBlocks(ensureSingletons(parseInstructions(sourceText)));
     if (overridden) {
       setOverridden(false);
@@ -196,11 +200,16 @@ export function InstructionsSection({
         `${(chars - INSTRUCTIONS_LIMIT).toLocaleString()} over the ${INSTRUCTIONS_LIMIT.toLocaleString()} cap — trim to save.`,
       );
     }
-    // checkDefinitionCaps is the Room-parity gate (models-missing, empty,
-    // over-limit, secrets): first message verbatim, never paraphrased.
-    const first = capsIssues[0];
-    if (first && !(overLimit && first.path === 'instructions')) {
-      messages.push(first.message);
+    // Own-section gate only: completeness issues elsewhere in the definition
+    // (no model picked, empty brand…) must never hold an instructions save —
+    // drafts are work-in-progress and the publish gate owns completeness.
+    // An unfiltered capsIssues[0] here used to silently refuse every save on
+    // a model-less agent (manual, autosave, and unmount flush alike), so
+    // typed text vanished on the next card switch.
+    for (const issue of capsIssues) {
+      if (issue.path !== 'instructions') continue;
+      if (overLimit) continue; // already messaged above
+      messages.push(issue.message);
     }
     return messages;
   }, [overLimit, chars, capsIssues]);
@@ -334,11 +343,14 @@ export function InstructionsSection({
     [composed],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
-  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
-  useEffect(() => {
-    if (saveSignal > 0) doSave();
-  }, [saveSignal, doSave]);
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
+  // save toasts its reason instead of swallowing the click.
+  useManualSaveSignal(saveSignal, doSave, {
+    canAuthor,
+    blocked,
+    conflict,
+    holdReason: () => (secretHit !== null ? 'Looks like a pasted credential — secrets are refused at save. Mention it, don’t paste it.' : (heldMessages[0] ?? null)),
+  });
 
   const focusBlock = useCallback((id: string) => {
     setTab('compose');

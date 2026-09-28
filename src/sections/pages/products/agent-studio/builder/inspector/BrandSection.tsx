@@ -12,7 +12,7 @@ import {
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import { buildDraftPayload } from '../lib/draft-save';
-import { useDraftAutosave } from '../lib/use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import {
   BRAND_LIMIT,
   countBrandChars,
@@ -125,9 +125,14 @@ export function BrandSection({
         `${(chars - BRAND_LIMIT).toLocaleString()} over the ${BRAND_LIMIT.toLocaleString()} cap — trim to save.`,
       );
     }
-    const first = capsIssues[0];
-    if (first && !(overLimit && first.path === 'brand')) {
-      messages.push(first.message);
+    // Own-section gate only: completeness issues elsewhere (no model picked…)
+    // must never hold a brand save — drafts are work-in-progress; the publish
+    // gate owns completeness. An unfiltered capsIssues[0] used to silently
+    // refuse every save on a model-less agent.
+    for (const issue of capsIssues) {
+      if (issue.path !== 'brand') continue;
+      if (overLimit) continue; // already messaged above
+      messages.push(issue.message);
     }
     return messages;
   }, [overLimit, chars, capsIssues]);
@@ -181,11 +186,14 @@ export function BrandSection({
     [text],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
-  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
-  useEffect(() => {
-    if (saveSignal > 0) doSave();
-  }, [saveSignal, doSave]);
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
+  // save toasts its reason instead of swallowing the click.
+  useManualSaveSignal(saveSignal, doSave, {
+    canAuthor,
+    blocked,
+    conflict,
+    holdReason: () => (secretHit ? 'This looks like a pasted credential — brand ships into every reply. Mention it, don’t paste it.' : (heldMessages[0] ?? null)),
+  });
 
   const applySample = useCallback((sampleText: string, source: string) => {
     if (isBrandEmpty(sourceText) && isBrandEmpty(text)) {

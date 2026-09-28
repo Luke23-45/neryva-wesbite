@@ -15,7 +15,7 @@ import { useModelCosts } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
-import { useDraftAutosave } from '../lib/use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import {
   BUDGET_BOUNDS,
   CAP_LABELS,
@@ -183,11 +183,14 @@ export function BudgetSection({
     [current],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
-  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
-  useEffect(() => {
-    if (saveSignal > 0) doSave();
-  }, [saveSignal, doSave]);
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
+  // save toasts its reason instead of swallowing the click.
+  useManualSaveSignal(saveSignal, doSave, {
+    canAuthor,
+    blocked,
+    conflict,
+    holdReason: () => heldMessages[0] ?? null,
+  });
 
   const patch = useCallback((part: Partial<BudgetState>) => {
     setBudget((prev) => ({ ...prev, ...part }));

@@ -24,7 +24,7 @@ import {
 } from '@hooks/studio/useSetupProviders';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
-import { useDraftAutosave } from '../lib/use-draft-autosave';
+import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import {
   ENGINE_RANGES,
   firstBlocker,
@@ -286,11 +286,14 @@ export function ModelSection({
     [current],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
-  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
-  useEffect(() => {
-    if (saveSignal > 0) doSave();
-  }, [saveSignal, doSave]);
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
+  // save toasts its reason instead of swallowing the click.
+  useManualSaveSignal(saveSignal, doSave, {
+    canAuthor,
+    blocked,
+    conflict,
+    holdReason: () => heldMessages[0] ?? null,
+  });
 
   const onFixRequest = useCallback(
     (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {
