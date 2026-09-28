@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Lock, Settings } from 'lucide-react';
 import type { BuilderNodeData } from '../../lib/projector';
 import type { SlotKind } from '../../lib/slot-model';
-import { glyphFor, StatusChip } from '../../lib/node-chrome';
+import { glyphFor, NodeStatusIcon } from '../../lib/node-chrome';
 import {
   Divider,
   EmptyGlyph,
@@ -94,7 +94,7 @@ export const SlotNode = memo(function SlotNode({ id, data }: NodeProps) {
               </LockGlyph>
             )}
           </NodeTitle>
-          <StatusChip status={node.status} />
+          <NodeStatusIcon status={node.status} />
         </NodeHeader>
         <Divider aria-hidden="true" />
         {node.subtitle ? <NodeSubtitle>{node.subtitle}</NodeSubtitle> : null}

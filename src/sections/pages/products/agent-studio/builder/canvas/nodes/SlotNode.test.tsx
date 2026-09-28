@@ -82,16 +82,28 @@ describe('SlotNode', () => {
   });
 
   it.each([
-    ['ready', 'READY'],
-    ['attention', 'REVIEW'],
-    ['error', 'REVIEW'],
-    ['untouched', 'EMPTY'],
-    ['locked', 'EMPTY'],
-    ['skipped', 'SKIPPED'],
-    ['info', 'SYNC'],
-  ] as Array<[SlotStatus, string]>)('renders the %s status as the %s chip', (status, chip) => {
-    renderNode({ status });
-    expect(screen.getByText(chip)).toBeTruthy();
+    ['ready', 'Configured'],
+    ['attention', 'Needs attention'],
+    ['error', 'Needs attention'],
+    ['untouched', 'Not configured'],
+    ['locked', 'Not configured'],
+    ['skipped', 'Skipped'],
+    ['info', 'Syncing'],
+  ] as Array<[SlotStatus, string]>)('renders the %s status as an icon labeled "%s"', (status, label) => {
+    const { unmount } = renderNode({ status });
+    expect(screen.getByRole('img', { name: label })).toBeTruthy();
+    // Professional language: no all-caps text chips anywhere on the card.
+    for (const chip of ['READY', 'REVIEW', 'EMPTY', 'SKIPPED', 'SYNC']) {
+      expect(screen.queryByText(chip)).toBeNull();
+    }
+    unmount();
+  });
+
+  it('marks the syncing icon as an ongoing process', () => {
+    const { container } = renderNode({ status: 'info' });
+    const icon = screen.getByRole('img', { name: 'Syncing' });
+    expect(icon.getAttribute('data-spin')).toBe('true');
+    expect(container.querySelector('[data-spin="true"] svg')).toBeTruthy();
   });
 
   it('keeps a uniform 1px border for every status (A3 — no status-tinted variants)', () => {

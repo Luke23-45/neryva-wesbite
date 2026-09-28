@@ -109,18 +109,31 @@ export const LockGlyph = styled.span`
   flex: none;
 `;
 
-export const StatusChip = styled.span<{ $fg: string; $bg: string; $border: string }>`
+export const StatusIconWrap = styled.span`
+  display: inline-flex;
   flex: none;
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  line-height: 1;
-  padding: 5px 7px;
-  border-radius: 8px;
-  color: ${({ $fg }) => $fg};
-  background: ${({ $bg }) => $bg};
-  border: 1px solid ${({ $border }) => $border};
-  white-space: nowrap;
+  width: 14px;
+  height: 14px;
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+  /* The syncing icon represents an ongoing process — a gentle rotation is
+     honest motion. Frozen under prefers-reduced-motion. */
+  &[data-spin='true'] svg {
+    animation: nrv-status-spin 2.6s linear infinite;
+  }
+  @keyframes nrv-status-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &[data-spin='true'] svg {
+      animation: none;
+    }
+  }
 `;
 
 export const Divider = styled.div`

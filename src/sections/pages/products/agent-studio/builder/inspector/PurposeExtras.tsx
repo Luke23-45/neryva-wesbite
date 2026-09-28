@@ -1,7 +1,7 @@
 import { ChevronRight, LayoutTemplate } from 'lucide-react';
 import { usePublishReadiness } from '@hooks/studio/useAgentAuthoring';
 import { FUNCTIONAL_NODE_IDS } from '../lib/projector';
-import { chipForStatus } from '../lib/node-chrome';
+import { statusDotColor } from '../lib/node-chrome';
 import type { SlotStatus } from '../lib/slot-model';
 import {
   BlueprintCard,
@@ -84,7 +84,7 @@ export function PurposeExtras({ assistantId, versionId, nodes, onSelectNode }: P
         <NextStepsList>
           {steps.length === 0 ? (
             <NextStepRow type="button" onClick={() => onSelectNode('ship')}>
-              <NextStepDot $color={chipForStatus('ready').fg} aria-hidden="true" />
+              <NextStepDot $color={statusDotColor('ready')} aria-hidden="true" />
               <NextStepLabel>Ready to publish — review the Ship node.</NextStepLabel>
               <NextStepChevron aria-hidden="true">
                 <ChevronRight size={14} strokeWidth={1.8} />
@@ -95,7 +95,7 @@ export function PurposeExtras({ assistantId, versionId, nodes, onSelectNode }: P
               const urgent = step.status === 'attention' || step.status === 'error';
               return (
                 <NextStepRow key={step.id} type="button" onClick={() => onSelectNode(step.id)}>
-                  <NextStepDot $color={chipForStatus(step.status).fg} aria-hidden="true" />
+                  <NextStepDot $color={statusDotColor(step.status)} aria-hidden="true" />
                   <NextStepLabel>
                     {urgent ? 'Fix' : 'Set up'} {step.label}
                   </NextStepLabel>
