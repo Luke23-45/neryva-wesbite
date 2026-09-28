@@ -180,3 +180,31 @@ export const PublishBadge = styled.span`
   justify-content: center;
   pointer-events: none;
 `;
+
+/** T15: ghost icon button that restores a collapsed sidebar. 28×28 so it
+ * sits comfortably in the 48px merged bar next to the other actions.
+ * Flat colors only. */
+export const PanelToggleButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7c8698;
+  cursor: pointer;
+  flex: none;
+
+  &:hover {
+    background: #1a2230;
+    color: #e9edf3;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2f7fe0;
+    outline-offset: 1px;
+  }
+`;

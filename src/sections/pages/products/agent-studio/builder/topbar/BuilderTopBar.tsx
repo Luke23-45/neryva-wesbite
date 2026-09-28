@@ -1,4 +1,4 @@
-import { Play, Upload, Waypoints } from 'lucide-react';
+import { PanelLeftOpen, PanelRightOpen, Play, Upload, Waypoints } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import {
@@ -8,6 +8,7 @@ import {
   Crumb,
   IdentityGroup,
   LogoMark,
+  PanelToggleButton,
   Pills,
   PublishBadge,
   PublishButton,
@@ -34,6 +35,9 @@ export interface BuilderTopbarIdentityProps {
   orgName: string | null;
   hasDraft: boolean;
   hasLive: boolean;
+  /** T15: palette hidden → show the restore button before the mark. */
+  paletteCollapsed?: boolean;
+  onRestorePalette?: () => void;
 }
 
 export interface BuilderTopbarActionsProps {
@@ -48,6 +52,9 @@ export interface BuilderTopbarActionsProps {
   onPublish: () => void;
   /** Live blocking-issue count; 0 → no badge rendered. */
   blockingCount: number;
+  /** T15: inspector hidden → show the restore button after Publish. */
+  inspectorCollapsed?: boolean;
+  onRestoreInspector?: () => void;
 }
 
 const SAVE_COPY: Record<BuilderSaveState, string> = {
@@ -70,9 +77,21 @@ export function BuilderTopbarIdentity({
   orgName,
   hasDraft,
   hasLive,
+  paletteCollapsed = false,
+  onRestorePalette,
 }: BuilderTopbarIdentityProps) {
   return (
     <IdentityGroup>
+      {paletteCollapsed && (
+        <PanelToggleButton
+          type="button"
+          onClick={onRestorePalette}
+          title="Show component palette"
+          aria-label="Show component palette"
+        >
+          <PanelLeftOpen size={15} aria-hidden="true" />
+        </PanelToggleButton>
+      )}
       <LogoMark data-testid="topbar-logo" aria-hidden="true">
         <Waypoints size={14} color="#ffffff" />
       </LogoMark>
@@ -113,6 +132,8 @@ export function BuilderTopbarActions({
   onTestRun,
   onPublish,
   blockingCount,
+  inspectorCollapsed = false,
+  onRestoreInspector,
 }: BuilderTopbarActionsProps) {
   const busy = saveState !== 'saved';
   // Honest disabled state: enabled only when there is something dirty to
@@ -161,6 +182,16 @@ export function BuilderTopbarActions({
           </PublishButton>
           {blockingCount > 0 && <PublishBadge data-testid="publish-badge">{blockingCount}</PublishBadge>}
         </PublishWrap>
+      )}
+      {inspectorCollapsed && (
+        <PanelToggleButton
+          type="button"
+          onClick={onRestoreInspector}
+          title="Show inspector"
+          aria-label="Show inspector"
+        >
+          <PanelRightOpen size={15} aria-hidden="true" />
+        </PanelToggleButton>
       )}
     </ActionsGroup>
   );

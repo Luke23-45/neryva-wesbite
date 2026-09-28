@@ -223,3 +223,33 @@ describe('BuilderTopbarActions Publish (T10)', () => {
     expect(screen.queryByText(/engine room/i)).toBeNull();
   });
 });
+
+describe('BuilderTopbar panel restore buttons (T15)', () => {
+  it('renders no palette restore button by default', () => {
+    renderIdentity();
+    expect(screen.queryByRole('button', { name: 'Show component palette' })).toBeNull();
+  });
+
+  it('renders no inspector restore button by default', () => {
+    renderActions();
+    expect(screen.queryByRole('button', { name: 'Show inspector' })).toBeNull();
+  });
+
+  it('shows the palette restore button before the mark when the palette is collapsed', () => {
+    const onRestorePalette = vi.fn();
+    renderIdentity({ paletteCollapsed: true, onRestorePalette });
+    const btn = screen.getByRole('button', { name: 'Show component palette' });
+    expect(btn.getAttribute('title')).toBe('Show component palette');
+    fireEvent.click(btn);
+    expect(onRestorePalette).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the inspector restore button when the inspector is collapsed', () => {
+    const onRestoreInspector = vi.fn();
+    renderActions({ inspectorCollapsed: true, onRestoreInspector });
+    const btn = screen.getByRole('button', { name: 'Show inspector' });
+    expect(btn.getAttribute('title')).toBe('Show inspector');
+    fireEvent.click(btn);
+    expect(onRestoreInspector).toHaveBeenCalledTimes(1);
+  });
+});

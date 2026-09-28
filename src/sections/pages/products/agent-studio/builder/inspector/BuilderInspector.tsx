@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode, type RefObject } from 'react';
+import { PanelRightClose } from 'lucide-react';
 import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
@@ -26,6 +27,7 @@ import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from './TraceDrawer';
 import {
   Body,
+  CollapseButton,
   EmptySelect,
   HeadIconTile,
   HeadRow,
@@ -36,6 +38,7 @@ import {
   MetaLine,
   Panel,
 } from './BuilderInspector.styles';
+import { ResizeHandle } from '../ResizeHandle';
 
 export interface InspectorContext {
   mode: 'new' | 'build';
@@ -103,6 +106,21 @@ interface BuilderInspectorProps {
   onMemoryDirty?: (dirty: boolean) => void;
   onBudgetDirty?: (dirty: boolean) => void;
   onCreated?: (assistantId: string) => void;
+  /**
+   * T15 — resizable/collapsible sidebar. Controlled width in px; the parent
+   * mutates the aside's style.width directly mid-drag (via asideRef) and
+   * commits on pointer-up. Inspector never goes below 300px (its forms are
+   * the densest surface in the builder).
+   */
+  width?: number;
+  /** Ref to the Panel aside for direct width mutation during drags. */
+  asideRef?: RefObject<HTMLElement | null>;
+  /** Live drag deltas (px, positive = pointer moved right). */
+  onResizeDelta?: (dx: number) => void;
+  /** Drag/keyboard resize finished — commit + persist. */
+  onResizeEnd?: () => void;
+  /** Hide the inspector; a restore button appears in the topbar (width kept). */
+  onCollapse?: () => void;
 }
 
 function isLaneNodeId(id: string): id is LaneNodeId {
@@ -173,21 +191,44 @@ export function BuilderInspector({
   onMemoryDirty,
   onBudgetDirty,
   onCreated,
+  width,
+  asideRef,
+  onResizeDelta,
+  onResizeEnd,
+  onCollapse,
 }: BuilderInspectorProps) {
+  const collapseButton = onCollapse ? (
+    <CollapseButton
+      type="button"
+      onClick={onCollapse}
+      title="Hide inspector"
+      aria-label="Hide inspector"
+    >
+      <PanelRightClose size={14} aria-hidden="true" />
+    </CollapseButton>
+  ) : null;
   if (!selected) {
     return (
-      <Panel aria-label="Inspector">
+      <Panel aria-label="Inspector" ref={asideRef} style={width != null ? { width } : undefined}>
         <InspectorHead>
           <HeadRow>
             <HeadText>
               <HeadTitle>Inspector</HeadTitle>
               <MetaLine>Select a component on the circuit</MetaLine>
             </HeadText>
+            {collapseButton}
           </HeadRow>
         </InspectorHead>
         <Body>
           <EmptySelect>Click any node on the circuit to configure it here.</EmptySelect>
         </Body>
+        <ResizeHandle
+          side="right"
+          label="Resize inspector"
+          onDelta={(dx) => onResizeDelta?.(dx)}
+          onResizeEnd={() => onResizeEnd?.()}
+          onCollapse={() => onCollapse?.()}
+        />
       </Panel>
     );
   }
@@ -417,7 +458,7 @@ export function BuilderInspector({
   }
 
   return (
-    <Panel aria-label={`${data.title} inspector`}>
+    <Panel aria-label={`${data.title} inspector`} ref={asideRef} style={width != null ? { width } : undefined}>
       <InspectorHead>
         <HeadRow>
           <HeadIconTile $color={data.color} aria-hidden="true">
@@ -430,9 +471,17 @@ export function BuilderInspector({
             </MetaLine>
           </HeadText>
           <StatusChip status={data.status} />
+          {collapseButton}
         </HeadRow>
       </InspectorHead>
       <Body>{body}</Body>
+      <ResizeHandle
+        side="right"
+        label="Resize inspector"
+        onDelta={(dx) => onResizeDelta?.(dx)}
+        onResizeEnd={() => onResizeEnd?.()}
+        onCollapse={() => onCollapse?.()}
+      />
     </Panel>
   );
 }

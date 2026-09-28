@@ -13,6 +13,8 @@ export const Panel = styled.aside`
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* T15: the resize handle is absolutely positioned against the inner edge. */
+  position: relative;
   background: #0d1117;
   border-left: 1px solid #1e2530;
   overflow-y: auto;
@@ -27,6 +29,35 @@ export const HeadRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+`;
+
+/** T15: ghost icon button that hides the inspector into the topbar.
+ * `margin-left: auto` pins it to the right in both head variants (empty
+ * state and node head, where it sits after the StatusChip). Flat colors. */
+export const CollapseButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7c8698;
+  cursor: pointer;
+
+  &:hover {
+    background: #1a2230;
+    color: #e9edf3;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2f7fe0;
+    outline-offset: 1px;
+  }
 `;
 
 export const HeadIconTile = styled.span<{ $color: string }>`

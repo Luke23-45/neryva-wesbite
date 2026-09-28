@@ -15,6 +15,14 @@ import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { BuilderTopbarActions, BuilderTopbarIdentity } from './topbar/BuilderTopBar';
 import { BuilderTopbarSlotsContext, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
+import {
+  clampWidth,
+  loadPanelLayout,
+  savePanelLayout,
+  PALETTE_LIMITS,
+  INSPECTOR_LIMITS,
+  type PanelLayout,
+} from './panels';
 import { ComponentPalette, type PaletteHealth, type PaletteNodeEntry } from './palette/ComponentPalette';
 import { BuilderInspector, type InspectorContext } from './inspector/BuilderInspector';
 import type { TraceEditTarget } from './inspector/TraceDrawer';
@@ -420,6 +428,65 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }, [mode, canAuthor, paletteHealth.blockers, select]);
 
   /**
+   * T15 — resizable + collapsible sidebars. Widths persist to localStorage.
+   * During a drag the aside's style.width is mutated directly (no setState —
+   * this is what keeps the drag at 60fps); the width commits on pointer-up.
+   * `layoutRef` mirrors state so drag handlers never read stale closures,
+   * and persisting happens outside setState updaters.
+   */
+  const [panelLayout, setPanelLayout] = useState<PanelLayout>(loadPanelLayout);
+  const layoutRef = useRef(panelLayout);
+  const paletteAsideRef = useRef<HTMLElement | null>(null);
+  const inspectorAsideRef = useRef<HTMLElement | null>(null);
+  const liveWidthRef = useRef<{ palette?: number; inspector?: number }>({});
+
+  const updatePanelLayout = useCallback((patch: Partial<PanelLayout>) => {
+    layoutRef.current = { ...layoutRef.current, ...patch };
+    setPanelLayout(layoutRef.current);
+    savePanelLayout(layoutRef.current);
+  }, []);
+
+  const handlePanelDelta = useCallback((side: 'palette' | 'inspector', dx: number) => {
+    const limits = side === 'palette' ? PALETTE_LIMITS : INSPECTOR_LIMITS;
+    const key = side === 'palette' ? 'paletteWidth' : 'inspectorWidth';
+    const base = liveWidthRef.current[side] ?? layoutRef.current[key];
+    // Right panel: its inner (resize) edge is on the left, so a rightward
+    // pointer move narrows it — invert the delta.
+    const next = clampWidth(base + (side === 'palette' ? dx : -dx), limits);
+    liveWidthRef.current[side] = next;
+    const aside = side === 'palette' ? paletteAsideRef.current : inspectorAsideRef.current;
+    if (aside) aside.style.width = `${next}px`;
+  }, []);
+
+  const handlePanelEnd = useCallback(
+    (side: 'palette' | 'inspector') => {
+      const w = liveWidthRef.current[side];
+      liveWidthRef.current[side] = undefined;
+      if (w == null) return;
+      if (side === 'palette') updatePanelLayout({ paletteWidth: w });
+      else updatePanelLayout({ inspectorWidth: w });
+    },
+    [updatePanelLayout],
+  );
+
+  const collapsePanel = useCallback(
+    (side: 'palette' | 'inspector') => {
+      // A mid-drag collapse must not resurrect a stale live width on expand.
+      liveWidthRef.current[side] = undefined;
+      updatePanelLayout(side === 'palette' ? { paletteCollapsed: true } : { inspectorCollapsed: true });
+    },
+    [updatePanelLayout],
+  );
+
+  const expandPanel = useCallback(
+    (side: 'palette' | 'inspector') => {
+      liveWidthRef.current[side] = undefined;
+      updatePanelLayout(side === 'palette' ? { paletteCollapsed: false } : { inspectorCollapsed: false });
+    },
+    [updatePanelLayout],
+  );
+
+  /**
    * Merged builder topbar (ledger T13): instead of a stacked 56px row,
    * the builder provides identity/actions slots that `StudioShell` renders
    * inside its single 48px app topbar. Null during build-mode
@@ -437,6 +504,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           orgName={orgName}
           hasDraft={hasDraft}
           hasLive={hasLive}
+          paletteCollapsed={panelLayout.paletteCollapsed}
+          onRestorePalette={() => expandPanel('palette')}
         />
       ),
       actions: (
@@ -448,6 +517,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           onTestRun={() => select('try')}
           onPublish={handlePublish}
           blockingCount={paletteHealth.blockers}
+          inspectorCollapsed={panelLayout.inspectorCollapsed}
+          onRestoreInspector={() => expandPanel('inspector')}
         />
       ),
     };
@@ -464,6 +535,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     select,
     handlePublish,
     paletteHealth.blockers,
+    panelLayout.paletteCollapsed,
+    panelLayout.inspectorCollapsed,
+    expandPanel,
   ]);
 
   // Closed keyboard map, v10 (BUILD_PLAN.md §7b): Esc, N, node keys.
@@ -594,19 +668,31 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           </div>
         )}
       <Main>
-        <ComponentPalette
-          ref={searchRef}
-          nodes={paletteNodes}
-          selectedId={selectedId}
-          filter={paletteFilter}
-          onFilterChange={handlePaletteFilterChange}
-          onSelectNode={select}
-          locked={mode === 'new'}
-          canAuthor={canAuthor}
-          health={paletteHealth}
-          onHealthReview={() => select('ship')}
-          onHealthNext={(nodeId) => select(nodeId)}
-        />
+        {!panelLayout.paletteCollapsed && (
+          <ComponentPalette
+            ref={searchRef}
+            asideRef={paletteAsideRef}
+            // Intentional ref read during render (T15): the drag mutates the
+            // aside width directly in the DOM; if an unrelated re-render lands
+            // mid-drag, the prop must reflect the live width or React snaps it
+            // back to the stale committed width. Read-only — never written here.
+            // eslint-disable-next-line react-hooks/refs
+            width={liveWidthRef.current.palette ?? panelLayout.paletteWidth}
+            onResizeDelta={(dx) => handlePanelDelta('palette', dx)}
+            onResizeEnd={() => handlePanelEnd('palette')}
+            onCollapse={() => collapsePanel('palette')}
+            nodes={paletteNodes}
+            selectedId={selectedId}
+            filter={paletteFilter}
+            onFilterChange={handlePaletteFilterChange}
+            onSelectNode={select}
+            locked={mode === 'new'}
+            canAuthor={canAuthor}
+            health={paletteHealth}
+            onHealthReview={() => select('ship')}
+            onHealthNext={(nodeId) => select(nodeId)}
+          />
+        )}
         <Suspense
           fallback={
             <LoadingVeil>
@@ -637,8 +723,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
             />
           )}
         </Suspense>
-        <BuilderInspector
-          selected={selectedNode}
+        {!panelLayout.inspectorCollapsed && (
+          <BuilderInspector
+            selected={selectedNode}
           context={inspectorContext}
           nodes={paletteNodes}
           onSelectNode={select}
@@ -652,6 +739,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           onGuardrailsDirty={onGuardrailsDirty}
           onMemoryDirty={onMemoryDirty}
           onBudgetDirty={onBudgetDirty}
+          asideRef={inspectorAsideRef}
+          // Intentional ref read during render (T15): same as the palette —
+          // keeps the live drag width stable across unrelated re-renders.
+          // eslint-disable-next-line react-hooks/refs
+          width={liveWidthRef.current.inspector ?? panelLayout.inspectorWidth}
+          onResizeDelta={(dx) => handlePanelDelta('inspector', dx)}
+          onResizeEnd={() => handlePanelEnd('inspector')}
+          onCollapse={() => collapsePanel('inspector')}
           onCreated={(id) => {
             // A2-02: creation consumed the Purpose form — it is not "unsaved
             // changes". Clear it synchronously (flushSync) so the dirty
@@ -662,6 +757,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
             navigate({ to: buildAgentBuildPath(id) });
           }}
         />
+        )}
       </Main>
       {mode === 'build' ? (
         <BuilderStatusBar

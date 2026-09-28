@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useState } from 'react';
+import { forwardRef, useMemo, useState, type RefObject } from 'react';
 import {
   BookOpen,
   Brain,
@@ -14,6 +14,7 @@ import {
   MemoryStick,
   MessageSquare,
   Mic,
+  PanelLeftClose,
   Play,
   Plug,
   Rocket,
@@ -24,11 +25,14 @@ import {
 } from 'lucide-react';
 import { LANE_META, LANE_ORDER, type LaneId } from '../lib/lane-model';
 import type { SlotStatus } from '../lib/slot-model';
+import { ResizeHandle } from '../ResizeHandle';
 import {
   ClearFilter,
+  CollapseButton,
   CountChip,
   FilterRow,
   GroupLabel,
+  HeaderActions,
   HeaderRow,
   HealthCard,
   HealthInner,
@@ -86,6 +90,20 @@ export interface ComponentPaletteProps {
   /** Selects the ship node (issues surface). */
   onHealthReview: () => void;
   onHealthNext: (nodeId: string) => void;
+  /**
+   * T15 — resizable/collapsible sidebar. Controlled width in px; the parent
+   * mutates the aside's style.width directly mid-drag (via asideRef) and
+   * commits on pointer-up, so dragging never re-renders at 60fps.
+   */
+  width?: number;
+  /** Ref to the Rail aside for direct width mutation during drags. */
+  asideRef?: RefObject<HTMLElement | null>;
+  /** Live drag deltas (px, positive = pointer moved right). */
+  onResizeDelta?: (dx: number) => void;
+  /** Drag/keyboard resize finished — commit + persist. */
+  onResizeEnd?: () => void;
+  /** Hide the palette; a restore button appears in the topbar (width kept). */
+  onCollapse?: () => void;
 }
 
 /** Node glyphs (lucide). The 7 pre-v10 kinds keep their existing icons (C4). */
@@ -188,7 +206,23 @@ function ProgressRing({ pct }: { pct: number }) {
  * card derives from the real readiness derivation. Nothing is invented.
  */
 export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPaletteProps>(function ComponentPalette(
-  { nodes, selectedId, filter, onFilterChange, onSelectNode, locked, canAuthor, health, onHealthReview, onHealthNext },
+  {
+    nodes,
+    selectedId,
+    filter,
+    onFilterChange,
+    onSelectNode,
+    locked,
+    canAuthor,
+    health,
+    onHealthReview,
+    onHealthNext,
+    width,
+    asideRef,
+    onResizeDelta,
+    onResizeEnd,
+    onCollapse,
+  },
   searchRef,
 ) {
   const [query, setQuery] = useState('');
@@ -220,10 +254,22 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
   const ringPct = health.total > 0 ? health.configured / health.total : 0;
 
   return (
-    <Rail aria-label="Component palette">
+    <Rail aria-label="Component palette" ref={asideRef} style={width != null ? { width } : undefined}>
       <HeaderRow>
         <RailTitle>COMPONENTS</RailTitle>
-        <CountChip aria-label={`${nodes.length} components`}>{nodes.length}</CountChip>
+        <HeaderActions>
+          <CountChip aria-label={`${nodes.length} components`}>{nodes.length}</CountChip>
+          {onCollapse && (
+            <CollapseButton
+              type="button"
+              onClick={onCollapse}
+              title="Hide component palette"
+              aria-label="Hide component palette"
+            >
+              <PanelLeftClose size={14} aria-hidden="true" />
+            </CollapseButton>
+          )}
+        </HeaderActions>
       </HeaderRow>
       <SearchWrap>
         <SearchInput
@@ -344,6 +390,13 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
           )}
         </HealthInner>
       </HealthCard>
+      <ResizeHandle
+        side="left"
+        label="Resize component palette"
+        onDelta={(dx) => onResizeDelta?.(dx)}
+        onResizeEnd={() => onResizeEnd?.()}
+        onCollapse={() => onCollapse?.()}
+      />
     </Rail>
   );
 });

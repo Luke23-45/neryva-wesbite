@@ -8,6 +8,8 @@ export const Rail = styled.aside`
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* T15: the resize handle is absolutely positioned against the inner edge. */
+  position: relative;
   gap: 4px;
   padding: 14px 12px 12px;
   background: #0d1117;
@@ -20,6 +22,39 @@ export const HeaderRow = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 2px 6px 10px;
+`;
+
+/** T15: count chip + collapse button at the right of the header row. */
+export const HeaderActions = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+/** T15: ghost icon button that hides the sidebar into the topbar. Flat
+ * colors only; 24×24 to sit inside the 10px header row padding. */
+export const CollapseButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #7c8698;
+  cursor: pointer;
+
+  &:hover {
+    background: #1a2230;
+    color: #e9edf3;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2f7fe0;
+    outline-offset: 1px;
+  }
 `;
 
 export const RailTitle = styled.div`
