@@ -66,6 +66,11 @@ export interface InspectorContext {
    * onEditJump (an unbound kind is a no-op, never a jump to nowhere).
    */
   onShipJump?: (target: PublishEditTarget) => void;
+  /**
+   * Manual save counter (topbar Save button / Ctrl+S / ⌘S). AgentBuilder
+   * increments it; the mounted section fires its doSave when it changes.
+   */
+  saveSignal: number;
 }
 
 interface BuilderInspectorProps {
@@ -181,6 +186,7 @@ export function BuilderInspector({
               isDraft={context.isDraft}
               canAuthor={context.canAuthor}
               onDirtyChange={onComposerDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
             />
           )}
         </Body>
@@ -219,6 +225,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onBrandDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -307,6 +314,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onBrainDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -344,6 +352,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onToolsDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -381,6 +390,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onGuardrailsDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -418,6 +428,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onMemoryDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -455,6 +466,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onBudgetDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>
@@ -615,6 +627,7 @@ export function BuilderInspector({
             isDraft={context.isDraft}
             canAuthor={context.canAuthor}
             onDirtyChange={onKnowledgeDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
           />
         </Body>
       </Panel>

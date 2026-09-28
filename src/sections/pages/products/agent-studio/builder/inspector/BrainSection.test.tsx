@@ -88,6 +88,7 @@ function shell(props?: Partial<React.ComponentProps<typeof BrainSection>>) {
           isDraft
           canAuthor
           onDirtyChange={() => undefined}
+          saveSignal={0}
           {...props}
         />
       </QueryClientProvider>
@@ -216,5 +217,24 @@ describe('BrainSection policy', () => {
     const scholar = screen.getByText('Scholar').closest('button');
     expect(scholar?.disabled).toBe(true);
     expect(screen.getByText(/Off|On — next allowed/)).toBeTruthy();
+  });
+});
+
+describe('BrainSection manual save signal', () => {
+  it('fires doSave exactly once when saveSignal increments', async () => {
+    await act(async () => {
+      shell({ saveSignal: 1 });
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const input = updateMutate.mock.calls[0][0] as { expectedHash: string };
+    expect(input.expectedHash).toBe('h1');
+  });
+
+  it('does not save on mount when saveSignal is 0', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(saveMutate).not.toHaveBeenCalled();
   });
 });

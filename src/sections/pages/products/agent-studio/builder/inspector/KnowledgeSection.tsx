@@ -90,6 +90,9 @@ export interface KnowledgeSectionProps {
   isDraft: boolean;
   canAuthor: boolean;
   onDirtyChange: (dirty: boolean) => void;
+  /** Manual save counter (topbar Save button / Ctrl+S) — fires doSave when it increments.
+   *  Optional: sections rendered without a save source (tests, standalone) default to 0. */
+  saveSignal?: number;
 }
 
 interface ConflictState {
@@ -137,6 +140,7 @@ export function KnowledgeSection({
   isDraft,
   canAuthor,
   onDirtyChange,
+  saveSignal = 0,
 }: KnowledgeSectionProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -300,6 +304,12 @@ export function KnowledgeSection({
     doSave,
     [current],
   );
+
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
+  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
+  useEffect(() => {
+    if (saveSignal > 0) doSave();
+  }, [saveSignal, doSave]);
 
   const unmap = useCallback(
     (slug: string) => {

@@ -1,0 +1,181 @@
+// @vitest-environment jsdom
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { ReactNode } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { ThemeProvider } from 'styled-components';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { theme } from '@styles/theme';
+import { defaultConsumer } from '@lib/engine/agent-payload';
+import { AgentBuilder } from './AgentBuilder';
+
+const saveMutate = vi.fn();
+const updateMutate = vi.fn();
+
+vi.mock('react-hot-toast', () => ({
+  default: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock('@/Context/OrgContext', () => ({
+  useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
+}));
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    // The topbar renders a router Link (editPath is a real path in build mode).
+    // Stand it in for a plain anchor — routing is out of scope for save tests.
+    Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to ?? '#'}>{children}</a>,
+  };
+});
+
+vi.mock('@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard', () => ({
+  useDirtyGuard: () => ({ dialog: null }),
+}));
+
+// The canvas is irrelevant to the save path — keep the heavy flow lib out of jsdom.
+vi.mock('./canvas/AgentCanvas', () => ({
+  AgentCanvas: () => null,
+}));
+
+vi.mock('../templates/TemplateBanner', () => ({
+  TemplateBanner: () => null,
+}));
+
+const DEFINITION = {
+  ...defaultConsumer(),
+  instructions: '## Role\nR.\n',
+  model_policy: { allowed_models: ['a/b'], fallback_enabled: false },
+};
+
+vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
+  return {
+    ...actual,
+    useAssistant: () => ({ data: { name: 'Test agent', activeVersionId: null }, isFetching: false }),
+    useAssistantDefinition: () => ({
+      data: { definition: DEFINITION, versionId: 'v9', hash: 'h2', status: 'DRAFT', isDraft: true },
+      isPending: false,
+      isFetching: false,
+      isError: false,
+    }),
+    useAssistantVersions: () => ({ data: [] }),
+    useKnowledgeHealth: () => ({ data: undefined }),
+    usePublishReadiness: () => ({ rows: [], verdict: 'unknown', isPending: false }),
+    useSaveDraftVersion: () => ({ mutate: saveMutate, isPending: false }),
+    useUpdateDraftVersion: () => ({ mutate: updateMutate, isPending: false }),
+  };
+});
+
+vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
+  return {
+    ...actual,
+    useModelAvailability: () => ({
+      data: [
+        {
+          provider: 'a',
+          modelId: 'b',
+          ref: 'a/b',
+          displayName: 'A B',
+          contextWindowTokens: null,
+          maxOutputTokens: null,
+          capabilities: {},
+          residency: null,
+          usable: true,
+          reasons: [],
+        },
+      ],
+      isPending: false,
+      isFetching: false,
+      isError: false,
+    }),
+  };
+});
+
+vi.mock('@hooks/studio/useSetupEval', () => ({
+  useEvalRuns: () => ({ data: [] }),
+}));
+
+vi.mock('@hooks/studio/useSetupKnowledge', () => ({
+  useDocuments: () => ({ data: [], isFetching: false }),
+}));
+
+vi.mock('@hooks/studio/useSetupTools', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hooks/studio/useSetupTools')>();
+  return { ...actual, useToolCatalog: () => ({ data: [] }) };
+});
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return { ...actual, useIsMutating: () => 0 };
+});
+
+function shell() {
+  return render(
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <AgentBuilder mode="build" agentId="agent-1" initialSlot="brain" />
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+function ctrlS(): KeyboardEvent {
+  const ev = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+  window.dispatchEvent(ev);
+  return ev;
+}
+
+describe('AgentBuilder manual save', () => {
+  beforeEach(() => {
+    saveMutate.mockReset();
+    updateMutate.mockReset();
+  });
+
+  it('Ctrl+S preventDefaults and saves the dirty section exactly once', async () => {
+    await act(async () => {
+      shell();
+    });
+    // Brain is mounted via initialSlot — flip Fallback to make it dirty.
+    fireEvent.click(await screen.findByLabelText('Fallback'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled());
+    saveMutate.mockClear();
+    updateMutate.mockClear();
+
+    const ev = ctrlS();
+    expect(ev.defaultPrevented).toBe(true);
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+    const input = updateMutate.mock.calls[0][0] as { expectedHash: string };
+    expect(input.expectedHash).toBe('h2');
+  });
+
+  it('Ctrl+S is a no-op when nothing is dirty', async () => {
+    await act(async () => {
+      shell();
+    });
+    await screen.findByLabelText('Fallback');
+
+    const ev = ctrlS();
+    expect(ev.defaultPrevented).toBe(true);
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(saveMutate).not.toHaveBeenCalled();
+  });
+
+  it('topbar Save button is disabled until a section goes dirty, then fires the save', async () => {
+    await act(async () => {
+      shell();
+    });
+    const btn = screen.getByRole('button', { name: 'Save changes' });
+    expect(btn).toBeDisabled();
+
+    fireEvent.click(await screen.findByLabelText('Fallback'));
+    await waitFor(() => expect(btn).toBeEnabled());
+    saveMutate.mockClear();
+    updateMutate.mockClear();
+
+    fireEvent.click(btn);
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+  });
+});

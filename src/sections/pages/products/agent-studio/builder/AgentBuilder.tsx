@@ -478,8 +478,30 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setLayoutRev((rev) => rev + 1);
   }, [tidy]);
 
+  // A2-23: honest save readout — a draft write in flight must never display as "Saved".
+  // Computed here (above the keyboard map) so the manual-save trigger can
+  // no-op when nothing is dirty.
+  const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
+  const saving = draftWritesInFlight > 0;
+  const anySectionDirty =
+    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty;
+  const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
+
+  // Manual save signal (topbar Save button / Ctrl+S / ⌘S). Sections watch
+  // this counter and fire their own doSave; only the mounted section is
+  // listening, and doSave already guards on canAuthor/blocked/conflict.
+  const [saveSignal, setSaveSignal] = useState(0);
+  const requestSave = useCallback(() => {
+    if (mode === 'new' || !canAuthor || !anySectionDirty) return;
+    // No section mounted to hear the signal (e.g. explicit deselect) — no-op.
+    if (selectedId === null) return;
+    setSaveSignal((s) => s + 1);
+  }, [mode, canAuthor, anySectionDirty, selectedId]);
+
   // Closed keyboard map, C01 subset (BUILD_PLAN.md §7b): Esc, N, kind keys, M, Delete.
-  // Never fires from inputs (except Escape, which only ever deselects).
+  // Never fires from inputs (except Escape, which only ever deselects, and
+  // Ctrl/⌘+S, the standard save shortcut — preventDefault stops the browser's
+  // own save dialog).
   // Kind keys summon-or-focus (singleton, §4r1) — the footer promises them.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -494,6 +516,11 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty) return;
         select(null);
         setPaletteFilter(null);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
+        event.preventDefault();
+        requestSave();
         return;
       }
       if (inField || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -536,7 +563,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, budgetDirty, canAuthor, selectedSkippableUntouched, selectedId, toggleSkip, handleDeleteSelected, ensureKind]);
+  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, budgetDirty, canAuthor, selectedSkippableUntouched, selectedId, toggleSkip, handleDeleteSelected, ensureKind, requestSave]);
 
   const inspectorContext: InspectorContext = useMemo(
     () => ({
@@ -565,8 +592,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       onTryEvent,
       onEditJump,
       onShipJump,
+      /** Manual save counter — sections fire doSave when it increments. */
+      saveSignal,
     }),
-    [mode, agentId, agentName, description, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump],
+    [mode, agentId, agentName, description, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal],
   );
 
   // — Build-mode loading / not-found (firsthand states, never blank) —
@@ -593,12 +622,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     );
   }
 
-  const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
-  const saving = draftWritesInFlight > 0;
-  const anySectionDirty =
-    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty;
-  const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
-
   return (
     <Shell>
       {guardDialog}
@@ -609,6 +632,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         hasLive={hasLive}
         saveState={saveState}
         editPath={mode === 'build' && agentId ? buildAgentEditPath(agentId) : null}
+        onSave={requestSave}
+        canAuthor={canAuthor}
       />
       {mode === 'build' && agentId && form.data?.versionId && (
         <div style={{ padding: '0 16px' }}>

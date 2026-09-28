@@ -56,6 +56,7 @@ function shell(props?: Partial<React.ComponentProps<typeof InstructionsSection>>
           isDraft
           canAuthor
           onDirtyChange={() => undefined}
+          saveSignal={0}
           {...props}
         />
       </QueryClientProvider>

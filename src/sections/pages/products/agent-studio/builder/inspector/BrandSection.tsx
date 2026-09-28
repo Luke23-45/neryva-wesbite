@@ -45,6 +45,9 @@ export interface BrandSectionProps {
   isDraft: boolean;
   canAuthor: boolean;
   onDirtyChange: (dirty: boolean) => void;
+  /** Manual save counter (topbar Save button / Ctrl+S) — fires doSave when it increments.
+   *  Optional: sections rendered without a save source (tests, standalone) default to 0. */
+  saveSignal?: number;
 }
 
 interface ConflictState {
@@ -68,6 +71,7 @@ export function BrandSection({
   isDraft,
   canAuthor,
   onDirtyChange,
+  saveSignal = 0,
 }: BrandSectionProps) {
   const queryClient = useQueryClient();
   const sourceText = definition?.brand ?? '';
@@ -176,6 +180,12 @@ export function BrandSection({
     doSave,
     [text],
   );
+
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
+  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
+  useEffect(() => {
+    if (saveSignal > 0) doSave();
+  }, [saveSignal, doSave]);
 
   const applySample = useCallback((sampleText: string, source: string) => {
     if (isBrandEmpty(sourceText) && isBrandEmpty(text)) {

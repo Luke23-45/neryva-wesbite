@@ -78,6 +78,9 @@ export interface InstructionsSectionProps {
   isDraft: boolean;
   canAuthor: boolean;
   onDirtyChange: (dirty: boolean) => void;
+  /** Manual save counter (topbar Save button / Ctrl+S) — fires doSave when it increments.
+   *  Optional: sections rendered without a save source (tests, standalone) default to 0. */
+  saveSignal?: number;
 }
 
 interface ConflictState {
@@ -106,6 +109,7 @@ export function InstructionsSection({
   isDraft,
   canAuthor,
   onDirtyChange,
+  saveSignal = 0,
 }: InstructionsSectionProps) {
   const queryClient = useQueryClient();
   const sourceText = definition?.instructions ?? '';
@@ -329,6 +333,12 @@ export function InstructionsSection({
     doSave,
     [composed],
   );
+
+  // Manual save (topbar Save button / Ctrl+S / ⌘S): doSave already guards
+  // on canAuthor/blocked/conflict/null, so a no-op signal is harmless.
+  useEffect(() => {
+    if (saveSignal > 0) doSave();
+  }, [saveSignal, doSave]);
 
   const focusBlock = useCallback((id: string) => {
     setTab('compose');

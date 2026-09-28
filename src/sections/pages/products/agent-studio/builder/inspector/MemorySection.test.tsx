@@ -67,6 +67,7 @@ function shell(props?: Partial<React.ComponentProps<typeof MemorySection>>) {
           isDraft
           canAuthor
           onDirtyChange={() => undefined}
+          saveSignal={0}
           {...props}
         />
       </QueryClientProvider>
@@ -137,6 +138,7 @@ describe('MemorySection', () => {
             isDraft
             canAuthor
             onDirtyChange={() => undefined}
+          saveSignal={0}
           />
         </QueryClientProvider>
       </ThemeProvider>,
@@ -156,6 +158,7 @@ describe('MemorySection', () => {
             isDraft
             canAuthor
             onDirtyChange={() => undefined}
+          saveSignal={0}
           />
         </QueryClientProvider>
       </ThemeProvider>,
