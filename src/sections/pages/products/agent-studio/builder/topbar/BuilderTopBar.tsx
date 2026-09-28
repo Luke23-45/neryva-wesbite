@@ -13,7 +13,6 @@ import {
   PublishBadge,
   PublishButton,
   PublishWrap,
-  SaveDot,
   SaveState,
   TestRunButton,
 } from './BuilderTopBar.styles';
@@ -135,7 +134,6 @@ export function BuilderTopbarActions({
   inspectorCollapsed = false,
   onRestoreInspector,
 }: BuilderTopbarActionsProps) {
-  const busy = saveState !== 'saved';
   // Honest disabled state: enabled only when there is something dirty to
   // save. Nothing to save in new mode, nothing dirty when saved/syncing,
   // a write already in flight, or the viewer can't author.
@@ -162,7 +160,6 @@ export function BuilderTopbarActions({
   return (
     <ActionsGroup>
       <SaveState aria-live="polite">
-        <SaveDot $busy={busy} aria-hidden="true" />
         {mode === 'new' ? 'Not created yet' : SAVE_COPY[saveState]}
       </SaveState>
       <ActionButton size="sm" variant="primary" onClick={onSave} disabled={saveDisabled} title={saveTitle} aria-label="Save changes">

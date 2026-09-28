@@ -29,7 +29,6 @@ import {
   ToolButton,
   Toolbar,
   ToolbarDivider,
-  ValidateDot,
   ZoomLabel,
 } from './AgentCanvas.styles';
 
@@ -239,7 +238,6 @@ function FlowCanvas(props: AgentCanvasProps) {
         <ToolButton type="button" onClick={props.onValidate} title="Validate agent">
           <ShieldCheck size={13} strokeWidth={1.8} />
           Validate
-          <ValidateDot $blocked={props.blockers > 0} data-testid="validate-dot" aria-hidden="true" />
         </ToolButton>
       </Toolbar>
       <IssuesPill blockers={props.blockers} suggestions={props.suggestions} onReviewIssues={props.onReviewIssues} />

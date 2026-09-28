@@ -133,19 +133,10 @@ describe('AgentCanvas toolbar', () => {
     expect(screen.queryByText('OVERVIEW')).toBeNull();
   });
 
-  it('wires Validate to onValidate with an amber dot when blockers exist', () => {
-    const { handlers, container } = renderCanvas({ blockers: 2 });
+  it('wires Validate to onValidate', () => {
+    const { handlers } = renderCanvas({ blockers: 2 });
     fireEvent.click(screen.getByRole('button', { name: 'Validate' }));
     expect(handlers.onValidate).toHaveBeenCalledTimes(1);
-    const dot = container.querySelector('[data-testid="validate-dot"]');
-    expect(dot).toBeTruthy();
-    expect(getComputedStyle(dot as Element).backgroundColor).toBe('rgb(245, 165, 36)');
-  });
-
-  it('shows a green validate dot when nothing blocks', () => {
-    const { container } = renderCanvas({ blockers: 0, suggestions: 0 });
-    const dot = container.querySelector('[data-testid="validate-dot"]');
-    expect(getComputedStyle(dot as Element).backgroundColor).toBe('rgb(61, 214, 140)');
   });
 });
 

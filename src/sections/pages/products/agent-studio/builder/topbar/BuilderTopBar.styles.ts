@@ -84,13 +84,6 @@ export const SaveState = styled.span`
   white-space: nowrap;
 `;
 
-export const SaveDot = styled.span<{ $busy: boolean }>`
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: ${({ theme, $busy }) => ($busy ? theme.app.status.warning.fg : theme.app.status.success.fg)};
-`;
-
 /** Test-run button (T9, build mode only): dark secondary action. Calls
  * onTestRun — the same Try-node flow, never a second implementation. */
 export const TestRunButton = styled.button`

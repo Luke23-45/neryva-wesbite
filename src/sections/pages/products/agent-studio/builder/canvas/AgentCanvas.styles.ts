@@ -86,14 +86,6 @@ export const ZoomLabel = styled.span`
   user-select: none;
 `;
 
-export const ValidateDot = styled.span<{ $blocked: boolean }>`
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: 50%;
-  background: ${({ $blocked }) => ($blocked ? '#F5A524' : '#3DD68C')};
-`;
-
 export const MinimapWrap = styled.div`
   position: absolute;
   right: 12px;
