@@ -1,6 +1,6 @@
 /**
  * Studio onboarding checklist (ledger S-6) — the engine's live first-run
- * state (project? key? trial? usage?) from GET /console/onboarding, plus the
+ * state (project? key? usage?) from GET /console/onboarding, plus the
  * activation truth (first-run ledger F3: earliest COMPLETED standard/test run
  * per org — test-runs count, eval-harness runs do not).
  */

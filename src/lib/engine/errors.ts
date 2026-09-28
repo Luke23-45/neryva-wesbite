@@ -7,7 +7,7 @@
  * surfaces with the same words everywhere.
  *
  * Copy follows the access-model: nothing dead-ends — every state names the
- * way out (billing CTA, trial review, retry).
+ * way out (billing CTA, retry).
  */
 import toast from 'react-hot-toast';
 import { ApiError } from './client';
@@ -15,7 +15,7 @@ import { ApiError } from './client';
 export type EngineErrorKind =
   | 'auth' // session dead — re-entry
   | 'paywall' // 402 past_due / seat_limit_reached — billing or seats CTA
-  | 'entitlement' // 403 entitlement_required — trial/review CTA
+  | 'entitlement' // 403 entitlement_required — billing CTA
   | 'forbidden' // 403 role-based
   | 'rate' // 429 / quota_exceeded(events)
   | 'retry' // 5xx / network / serialization_failure — worth trying again
@@ -68,8 +68,8 @@ export function describeEngineError(error: unknown): EngineErrorView {
         kind: 'entitlement',
         tone: 'warning',
         title: 'Not enabled for this organization',
-        message: 'This product isn’t active for your organization yet. Start a trial from the console home, or ask an owner or billing manager to enable it.',
-        action: { label: 'Review products', to: '/platform' },
+        message: 'This product isn’t active for your organization yet. Ask an owner or billing manager to enable it, or open billing to add payment.',
+        action: { label: 'Open billing', to: '/platform/billing' },
         retryable: false,
       };
     case 'forbidden':

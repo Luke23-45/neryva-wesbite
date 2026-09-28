@@ -128,7 +128,7 @@ type Props = {
   topbarExtra?: ReactNode;
   /** The active-org switcher for the topbar (replaces the static title). */
   topbarOrg?: ReactNode;
-  /** Entitlement-mode strip (trial countdown, payment alert, …). */
+  /** Entitlement-mode strip (payment alert, suspension notice, …). */
   banner?: ReactNode;
   children: ReactNode;
 };

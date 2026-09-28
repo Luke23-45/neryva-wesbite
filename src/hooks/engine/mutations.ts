@@ -341,21 +341,6 @@ export function useUpdateOrgSettings() {
   );
 }
 
-export function useStartTrial() {
-  return useEngineMutation<{ product: string; days?: number }, unknown>(
-    (orgId, input) => ({ path: `/console/org/${orgId}/entitlements/${input.product}/trial`, init: { method: 'POST', body: { ...(input.days ? { days: input.days } : {}) }, idempotent: true } }),
-    ['entitlements', 'home'],
-    'Trial started',
-    {
-      act: 'Start trial',
-      // OrgContext's entitlementState (which gates the Studio shell's
-      // "New chat" button and dashboard banner) reads ['org', 'home'],
-      // not ['engine', …] — without this the UI stays stale until reload.
-      extraInvalidates: [['org', 'home']],
-    },
-  );
-}
-
 export function useTransferOwnership() {
   return useEngineMutation<{ targetAccountId: string; mfaProof: string }, unknown>(
     (orgId, input) => ({ path: `/console/org/${orgId}/transfer-ownership`, init: { method: 'POST', body: { target_account_id: input.targetAccountId }, idempotent: true, mfaProof: input.mfaProof } }),

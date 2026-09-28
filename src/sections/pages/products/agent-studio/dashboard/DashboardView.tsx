@@ -71,8 +71,14 @@ const rangeOptions: { value: Range; label: string }[] = [
   { value: '30d', label: '30d' },
 ];
 
-const stateTone = (state: string): 'success' | 'azure' | 'warning' | 'error' | 'neutral' =>
-  state === 'active' ? 'success' : state === 'trial' ? 'azure' : state === 'past_due' ? 'warning' : state === 'suspended' ? 'error' : 'neutral';
+const stateTone = (state: string): 'success' | 'warning' | 'error' | 'neutral' => {
+  // Trials are not offered: an engine-reported trial state grants full access
+  // and is displayed as active.
+  const display = state === 'trial' ? 'active' : state;
+  return display === 'active' ? 'success' : display === 'past_due' ? 'warning' : display === 'suspended' ? 'error' : 'neutral';
+};
+
+const displayState = (state: string): string => (state === 'trial' ? 'active' : state.replace('_', ' '));
 
 /**
  * Format a satellite status for display. The backend may return internal
@@ -267,7 +273,7 @@ function DashboardContent() {
                   <KpiCardValue>
                     {row ? (
                       <StatusPill tone={stateTone(row.status)} dot={false}>
-                        {row.status.replace('_', ' ')}
+                        {displayState(row.status)}
                       </StatusPill>
                     ) : (
                       <StatusPill tone="neutral" dot={false}>not enabled</StatusPill>

@@ -1,23 +1,21 @@
 /**
  * /platform home: the console-home payload — org header summary, seat cards,
  * and one card per registered product with its entitlement state per the
- * access-model (owned → summary; none → brief + trial CTA).
+ * access-model (owned → summary; none → brief + billing CTA). There is no
+ * trial: enabling a product means paying for it via billing.
  */
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
-import { Rocket } from 'lucide-react';
 import { engine } from '@lib/engine/client';
 import { useSessionStore } from '@lib/engine/auth';
 import { clearInviteBanner, readInviteBanner } from '@lib/engine/invite-stash';
 import { useOrg } from '@/Context/OrgContext';
-import { useOrgSummary, useEntitlements } from '@hooks/engine/queries';
-import { useStartTrial } from '@hooks/engine/mutations';
+import { useOrgSummary } from '@hooks/engine/queries';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { StatusPill } from '@components/common/ui/StatusPill/StatusPill';
-import { ActionButton } from '@components/common/ui/ActionButton/ActionButton';
 import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, KpiGrid } from '@components/common/ui/ViewLayout';
 
@@ -89,8 +87,14 @@ const InviteBannerDismiss = styled.button`
   cursor: pointer;
 `;
 
-const toneFor = (state: string) =>
-  state === 'active' ? 'success' : state === 'trial' ? 'azure' : state === 'past_due' ? 'warning' : state === 'suspended' ? 'error' : state === 'expired' ? 'neutral' : 'neutral';
+const toneFor = (state: string) => {
+  // Trials are not offered: an engine-reported trial state grants full access
+  // and is displayed as active.
+  const display = state === 'trial' ? 'active' : state;
+  return display === 'active' ? 'success' : display === 'past_due' ? 'warning' : display === 'suspended' ? 'error' : 'neutral';
+};
+
+const displayState = (state: string) => (state === 'trial' ? 'active' : state.replace('_', ' '));
 
 interface HomeProduct {
   key: string;
@@ -105,19 +109,25 @@ interface HomeProduct {
    * The footer honors this verbatim — the console never re-derives purchase
    * policy from entitlement_state (D1-04: that divergence offered "Start
    * trial" on pre-GA products the engine marks coming_soon).
+   *
+   * Trials are not offered: the legacy `start_trial` / `renew` server kinds
+   * are normalized to `enable_billing` — enabling a product means paying for
+   * it via billing.
    */
   cta: string | null;
 }
 
-type ProductCtaKind = 'manage' | 'start_trial' | 'ask_admin' | 'resolve_billing' | 'renew' | 'coming_soon';
+type ProductCtaKind = 'manage' | 'enable_billing' | 'ask_admin' | 'resolve_billing' | 'coming_soon';
 const CTA_KINDS: ReadonlySet<string> = new Set([
   'manage',
-  'start_trial',
+  'enable_billing',
   'ask_admin',
   'resolve_billing',
-  'renew',
   'coming_soon',
 ]);
+
+/** Legacy server kinds that used to start a trial — now route to billing. */
+const TRIAL_KINDS: ReadonlySet<string> = new Set(['start_trial', 'renew']);
 
 /**
  * Footer CTA for a product card (D1-04). The engine already folds stage +
@@ -129,9 +139,12 @@ function footerCtaKind(product: HomeProduct, role: string | null): ProductCtaKin
   if (product.cta && CTA_KINDS.has(product.cta)) {
     return product.cta as ProductCtaKind;
   }
+  if (product.cta && TRIAL_KINDS.has(product.cta)) {
+    return 'enable_billing';
+  }
   if (product.entitlement_state === 'none' || product.entitlement_state === 'expired') {
     if (role === 'owner' || role === 'billing') {
-      return product.entitlement_state === 'expired' ? 'renew' : 'start_trial';
+      return 'enable_billing';
     }
     return 'ask_admin';
   }
@@ -143,8 +156,6 @@ export default function PlatformHomePage() {
   const accountId = useSessionStore((s) => s.account?.id ?? null);
   const { orgId, name, role } = useOrg();
   const summary = useOrgSummary();
-  const entitlements = useEntitlements();
-  const startTrial = useStartTrial();
 
   const home = useQuery({
     // D1-05: orgId + accountId in the key — the grid must re-resolve on org
@@ -225,15 +236,13 @@ export default function PlatformHomePage() {
             {(data) => (
               <CardGrid>
                 {data.products.map((product) => {
-                  const entitlement = entitlements.data?.entitlements.find((e) => e.product === product.key);
-                  const daysLeft = entitlement?.msRemaining ? Math.ceil(entitlement.msRemaining / 86_400_000) : null;
                   return (
                     <ProductCard key={product.key}>
                       <CardTitle>
                         {product.display_name}
-                        <StatusPill tone={toneFor(product.entitlement_state)}>{product.entitlement_state.replace('_', ' ')}</StatusPill>
+                        <StatusPill tone={toneFor(product.entitlement_state)}>{displayState(product.entitlement_state)}</StatusPill>
                       </CardTitle>
-                      <CardBrief>{daysLeft !== null && product.entitlement_state === 'trial' ? `${daysLeft} day(s) left in trial · ` : ''}{product.brief}</CardBrief>
+                      <CardBrief>{product.brief}</CardBrief>
                       <CardFooter>
                         {(() => {
                           const cta = footerCtaKind(product, role);
@@ -242,12 +251,11 @@ export default function PlatformHomePage() {
                               return <CardBrief>Coming soon.</CardBrief>;
                             case 'ask_admin':
                               return <CardBrief>Ask your admin to enable {product.display_name}.</CardBrief>;
-                            case 'start_trial':
-                            case 'renew':
+                            case 'enable_billing':
                               return (
-                                <ActionButton variant="primary" size="sm" onClick={() => startTrial.mutate({ product: product.key })}>
-                                  <Rocket size={13} /> {cta === 'renew' ? 'Renew' : 'Start trial'}
-                                </ActionButton>
+                                <Link to="/platform/billing" style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}>
+                                  Enable via billing →
+                                </Link>
                               );
                             case 'resolve_billing':
                               return (

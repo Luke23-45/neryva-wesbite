@@ -11,10 +11,11 @@ describe('describeEngineError', () => {
     expect(view.retryable).toBe(false);
   });
 
-  it('maps entitlement_required to the trial/review panel', () => {
+  it('maps entitlement_required to the billing panel (no trial offered)', () => {
     const view = describeEngineError(new ApiError(403, 'entitlement_required', 'Entitlement required'));
     expect(view.kind).toBe('entitlement');
-    expect(view.action?.to).toBe('/platform');
+    expect(view.action?.to).toBe('/platform/billing');
+    expect(view.message).not.toMatch(/trial/i);
   });
 
   it('maps role denials to a permissions panel without an upgrade lie', () => {

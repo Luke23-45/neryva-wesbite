@@ -31,12 +31,18 @@ import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type Enti
  * direction (Google-tied purchase; no Stripe in the console).
  */
 
-function stateTone(state: string): 'success' | 'azure' | 'warning' | 'error' | 'neutral' {
-  if (state === 'active') return 'success';
-  if (state === 'trial') return 'azure';
-  if (state === 'past_due') return 'warning';
-  if (state === 'suspended') return 'error';
+function stateTone(state: string): 'success' | 'warning' | 'error' | 'neutral' {
+  // Trials are not offered: an engine-reported trial state grants full access
+  // and is displayed as active.
+  const display = state === 'trial' ? 'active' : state;
+  if (display === 'active') return 'success';
+  if (display === 'past_due') return 'warning';
+  if (display === 'suspended') return 'error';
   return 'neutral';
+}
+
+function displayStatus(status: string): string {
+  return status === 'trial' ? 'active' : status.replace('_', ' ');
 }
 
 export function SettingsBilling() {
@@ -45,21 +51,19 @@ export function SettingsBilling() {
   const limits = useOrgLimits();
   const meters = parseQuotaMeters(limits.data, 'agent_studio');
 
-  const daysLeft = row?.msRemaining ? Math.ceil(row.msRemaining / 86_400_000) : null;
-
   return (
     <>
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel
           title="Agent Studio"
-          subtitle={periodSubtitle(row, daysLeft)}
+          subtitle={periodSubtitle(row)}
         >
           <PlanCard>
             <PlanName>Entitlement</PlanName>
             <PlanStatus>
               {row ? (
                 <StatusPill tone={stateTone(row.status)} dot={false}>
-                  {row.status.replace('_', ' ')}
+                  {displayStatus(row.status)}
                 </StatusPill>
               ) : entitlements.isPending ? (
                 <Skeleton $h="22px" $w="92px" $r="999px" />
@@ -165,12 +169,9 @@ export function SettingsBilling() {
   );
 }
 
-function periodSubtitle(row: EntitlementRow | undefined, daysLeft: number | null): string {
+function periodSubtitle(row: EntitlementRow | undefined): string {
   if (!row) {
     return 'Enable Agent Studio for this organization from the console.';
-  }
-  if (row.status === 'trial' && daysLeft !== null) {
-    return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in the trial.`;
   }
   if (row.periodEnd) {
     const at = Date.parse(row.periodEnd);

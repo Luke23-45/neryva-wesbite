@@ -2,28 +2,25 @@
  * Entitlement rendering (frontend-engine-integration-plan A4, access-model
  * "what not bought yet means in the UI"):
  *
- *  - `EntitlementBanner` — the mode strip under the topbar: trial countdown,
- *    payment alert, suspension notice, or the start/renew CTA. CTA copy is
- *    role-aware (owner/billing get the action, everyone else gets "ask").
+ *  - `EntitlementBanner` — the mode strip under the topbar: payment alert,
+ *    suspension notice, or the enable/billing CTA. There is no trial — the
+ *    banner never offers or counts down one.
  *  - `EntitlementGate` — children render only while reads are alive; the
  *    blocked states render the honest brief + CTA instead.
  *
  * `useEntitlement(product)` (the state + derived flags) lives in
  * ./useEntitlement.ts so this file exports only components.
  *
- * Actions themselves stay wired in their owning tasks (trial start is B-5);
- * here we link to the surface that owns the action — no fake buttons.
+ * Actions link to the surface that owns them (billing) — no fake buttons.
  */
 import { type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
-import { AlertTriangle, ArrowRight, PauseCircle, Rocket, Sparkles } from 'lucide-react';
-import { engine } from '@lib/engine/client';
+import { AlertTriangle, ArrowRight, PauseCircle, Sparkles } from 'lucide-react';
 import { useOrg } from '@/Context/OrgContext';
 import { useEntitlement } from './useEntitlement';
 
-const BannerWrap = styled.div<{ $tone: 'info' | 'warning' | 'error' | 'neutral' }>`
+const BannerWrap = styled.div<{ $tone: 'warning' | 'error' | 'neutral' }>`
   display: flex;
   align-items: center;
   gap: 10px;
@@ -38,18 +35,14 @@ const BannerWrap = styled.div<{ $tone: 'info' | 'warning' | 'error' | 'neutral' 
         ? 'rgba(245, 185, 66, 0.35)'
         : $tone === 'error'
           ? 'rgba(248, 113, 113, 0.35)'
-          : $tone === 'info'
-            ? 'rgba(99, 102, 241, 0.3)'
-            : 'rgba(255, 255, 255, 0.1)'};
+          : 'rgba(255, 255, 255, 0.1)'};
   background:
     ${({ $tone }) =>
       $tone === 'warning'
         ? 'rgba(245, 185, 66, 0.08)'
         : $tone === 'error'
           ? 'rgba(248, 113, 113, 0.08)'
-          : $tone === 'info'
-            ? 'rgba(99, 102, 241, 0.08)'
-            : 'rgba(255, 255, 255, 0.03)'};
+          : 'rgba(255, 255, 255, 0.03)'};
 `;
 
 const BannerIcon = styled.span`
@@ -101,69 +94,27 @@ const ActionLink = styled.a`
   }
 `;
 
-interface EntitlementRow {
-  product: string;
-  plan: string;
-  status: string;
-  msRemaining: number | null;
-}
-
-function useEntitlementRows(): EntitlementRow[] | undefined {
-  const { orgId } = useOrg();
-  // Same key as @hooks/engine/queries useEntitlements — one cache entry.
-  const rows = useQuery({
-    queryKey: ['engine', 'entitlements', orgId],
-    queryFn: () => engine<{ entitlements: EntitlementRow[] }>(`/console/org/${orgId}/entitlements`),
-    enabled: !!orgId,
-    staleTime: 30_000,
-  });
-  return rows.data?.entitlements;
-}
-
-function daysLeft(row: EntitlementRow | undefined): number | null {
-  const ms = row?.msRemaining;
-  if (typeof ms !== 'number' || ms <= 0) {
-    return null;
-  }
-  return Math.ceil(ms / 86_400_000);
-}
-
 /**
  * The product-mode strip for the active organization. Renders nothing on
- * `active` — the absence of a banner is the good state.
+ * `active` — the absence of a banner is the good state. An engine-reported
+ * `trial` state is treated the same: trials are not offered, and a trial
+ * state grants full access, so no trial-specific UI is ever shown.
  */
 export function EntitlementBanner({ product, displayName }: { product: string; displayName?: string }) {
   const { role } = useOrg();
   const { state } = useEntitlement(product);
-  const rows = useEntitlementRows();
-  const row = rows?.find((r) => r.product === product);
   const label = displayName ?? 'This product';
 
-  if (state === 'active') {
+  if (state === 'active' || state === 'trial') {
     return null;
   }
 
   const canDecide = role === 'owner' || role === 'billing';
-  const productsLink = (
-    <BannerAction as={Link} to="/platform">
-      Review products <ArrowRight size={12} />
+  const billingLink = (
+    <BannerAction as={Link} to="/platform/billing">
+      Open billing <ArrowRight size={12} />
     </BannerAction>
   );
-
-  if (state === 'trial') {
-    const days = daysLeft(row);
-    return (
-      <BannerWrap $tone="info">
-        <BannerIcon><Rocket size={15} /></BannerIcon>
-        <BannerText>
-          <strong>{label} trial</strong>
-          {days !== null ? ` — ${days} day${days === 1 ? '' : 's'} left. ` : ' — '}
-          Everything works; usage counts against the trial limits.
-        </BannerText>
-        {canDecide ? productsLink : null}
-      </BannerWrap>
-    );
-  }
 
   if (state === 'past_due') {
     return (
@@ -195,21 +146,17 @@ export function EntitlementBanner({ product, displayName }: { product: string; d
     );
   }
 
-  // none | expired — never entitled, or the trial lapsed.
+  // none | expired — never entitled, or the entitlement lapsed. No trial is
+  // offered: enabling a product means paying for it via billing.
   return (
     <BannerWrap $tone="neutral">
       <BannerIcon><Sparkles size={15} /></BannerIcon>
       <BannerText>
-        {state === 'expired' ? (
-          <>
-            <strong>{label} trial ended.</strong>{' '}
-          </>
-        ) : null}
         {canDecide
-          ? `Start your ${label} trial — it takes about a minute.`
+          ? `Enable ${label} for this organization — add billing to get started.`
           : `${label} isn’t enabled for this organization yet. Ask an owner or billing manager to enable it.`}
       </BannerText>
-      {canDecide ? productsLink : null}
+      {canDecide ? billingLink : null}
     </BannerWrap>
   );
 }
@@ -262,7 +209,7 @@ export function EntitlementGate({
   children: ReactNode;
 }) {
   const { role } = useOrg();
-  const { state, readBlocked } = useEntitlement(product);
+  const { readBlocked } = useEntitlement(product);
   const label = displayName ?? 'This product';
   const canDecide = role === 'owner' || role === 'billing';
 
@@ -274,16 +221,16 @@ export function EntitlementGate({
     <GateWrap>
       <GateIcon><Sparkles size={18} /></GateIcon>
       <GateTitle>
-        {state === 'expired' ? `Your ${label} trial ended` : `${label} isn’t enabled yet`}
+        {label} isn’t enabled yet
       </GateTitle>
       <GateBody>
         {canDecide
-          ? `Enable ${label} for this organization from the console — the trial starts immediately and everything in here works from the first minute.`
+          ? `Enable ${label} for this organization from the console — add billing to get started.`
           : `${label} isn’t enabled for this organization yet. Ask an owner or billing manager to enable it.`}
       </GateBody>
       {canDecide ? (
-        <ActionLink as={Link} to="/platform">
-          Review products <ArrowRight size={12} />
+        <ActionLink as={Link} to="/platform/billing">
+          Open billing <ArrowRight size={12} />
         </ActionLink>
       ) : null}
     </GateWrap>
