@@ -5,8 +5,7 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
 import { canSetup } from '@lib/engine/capabilities';
 import type { BuilderNode } from '../lib/projector';
-import { LANE_META, LANE_NODES, laneOf, type LaneId, type LaneNodeId } from '../lib/lane-model';
-import { glyphFor, StatusChip } from '../lib/node-chrome';
+import { glyphFor } from '../lib/node-chrome';
 import { PurposeInspector, type PurposeFormState, type PurposeHandle } from './PurposeInspector';
 import { InstructionsSection } from './InstructionsSection';
 import { BrandSection } from './BrandSection';
@@ -121,16 +120,6 @@ interface BuilderInspectorProps {
   onResizeEnd?: () => void;
   /** Hide the inspector; a restore button appears in the topbar (width kept). */
   onCollapse?: () => void;
-}
-
-function isLaneNodeId(id: string): id is LaneNodeId {
-  return id in LANE_NODES;
-}
-
-/** "Node ID · {slotKey} · {lane label}" — the lane comes from lane-model, never derived. */
-function laneLabelFor(slotKey: string, fallback: LaneId): string {
-  const lane: LaneId = isLaneNodeId(slotKey) ? laneOf(slotKey) : fallback;
-  return LANE_META[lane].label;
 }
 
 /**
@@ -466,11 +455,7 @@ export function BuilderInspector({
           </HeadIconTile>
           <HeadText>
             <HeadTitle>{data.title}</HeadTitle>
-            <MetaLine>
-              Node ID · {slotKey} · {laneLabelFor(slotKey, data.lane)}
-            </MetaLine>
           </HeadText>
-          <StatusChip status={data.status} />
           {collapseButton}
         </HeadRow>
       </InspectorHead>

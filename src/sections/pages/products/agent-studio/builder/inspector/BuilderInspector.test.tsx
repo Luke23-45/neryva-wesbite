@@ -174,11 +174,11 @@ describe('BuilderInspector node mapping', () => {
     expect(screen.getByTestId(testId)).toBeTruthy();
   });
 
-  it('renders the header with title, chip, and Node ID meta', async () => {
+  it('renders the header with icon and title only — no meta line, no chip', async () => {
     await shell({ selected: node('brain', 'ready') });
     expect(screen.getByText('brain')).toBeTruthy();
-    expect(screen.getByText(/Node ID · brain ·/)).toBeTruthy();
-    expect(screen.getByText('READY')).toBeTruthy();
+    expect(screen.queryByText(/Node ID · brain ·/)).toBeNull();
+    expect(screen.queryByText('READY')).toBeNull();
   });
 
   it('keeps purpose identity-only: no instructions section under purpose', async () => {
