@@ -4,19 +4,16 @@ import {
   Brain,
   Component,
   Contact,
-  Cpu,
   FlaskConical,
   History,
   KeyRound,
   Layers,
   ListOrdered,
-  Lock,
   MemoryStick,
   MessageSquare,
   Mic,
   PanelLeftClose,
   Play,
-  Plug,
   Rocket,
   ShieldCheck,
   Target,
@@ -42,7 +39,6 @@ import {
   HealthTop,
   IconTile,
   LockedNote,
-  LockGlyph,
   NextHint,
   Rail,
   RailTitle,
@@ -50,7 +46,6 @@ import {
   Row,
   RowLabel,
   RowMain,
-  RowSide,
   SearchInput,
   SearchWrap,
   StatusDot,
@@ -75,7 +70,7 @@ export interface PaletteHealth {
 }
 
 export interface ComponentPaletteProps {
-  /** 16 nodes in lane order (projector-wired). */
+  /** 17 nodes in lane order (projector-wired). */
   nodes: PaletteNodeEntry[];
   selectedId: string | null;
   /** Port-click filter (node/kind id or null). */
@@ -120,40 +115,11 @@ const NODE_ICONS: Record<string, React.ReactNode> = {
   brand: <Mic size={13} strokeWidth={1.8} />,
   budget: <Wallet size={13} strokeWidth={1.8} />,
   response: <MessageSquare size={13} strokeWidth={1.8} />,
+  role: <Contact size={13} strokeWidth={1.8} />,
   evaluation: <FlaskConical size={13} strokeWidth={1.8} />,
   ship: <Rocket size={13} strokeWidth={1.8} />,
   try: <Play size={13} strokeWidth={1.8} />,
 };
-
-interface RoadmapRow {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  disabledReason: string;
-}
-
-/** Roadmap rows: locked at 55% opacity, NO chips (no real data source — §8.10). */
-const ROADMAP_ROWS: readonly RoadmapRow[] = [
-  {
-    id: 'connector',
-    label: 'Connector',
-    icon: <Plug size={13} strokeWidth={1.8} />,
-    disabledReason:
-      'Connectors sync into the Knowledge library — manage them in the Knowledge slot’s Connector tab.',
-  },
-  {
-    id: 'model',
-    label: 'Model',
-    icon: <Cpu size={13} strokeWidth={1.8} />,
-    disabledReason: 'Models attach through the Brain slot — pick them in the Brain section.',
-  },
-  {
-    id: 'role',
-    label: 'Role',
-    icon: <Contact size={13} strokeWidth={1.8} />,
-    disabledReason: 'Planned — not yet available in this release.',
-  },
-];
 
 function nodeIcon(id: string): React.ReactNode {
   // Interim projector ids carry a `sat:` prefix (e.g. `sat:knowledge`);
@@ -229,12 +195,6 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
     });
   }, [nodes, filter, query]);
 
-  const visibleRoadmap = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return ROADMAP_ROWS;
-    return ROADMAP_ROWS.filter((row) => row.label.toLowerCase().includes(q));
-  }, [query]);
-
   const filterLabel = useMemo(() => {
     if (!filter) return null;
     return nodes.find((node) => node.id === filter || node.id === `sat:${filter}`)?.label ?? filter;
@@ -305,24 +265,6 @@ export const ComponentPalette = forwardRef<HTMLInputElement, ComponentPalettePro
           </div>
         );
       })}
-      {visibleRoadmap.length > 0 && (
-        <div>
-          <GroupLabel>ROADMAP</GroupLabel>
-          {visibleRoadmap.map((row) => (
-            <Row key={row.id} type="button" $selected={false} $dimmed disabled title={row.disabledReason}>
-              <IconTile $color="#8E8E93">{row.icon}</IconTile>
-              <RowMain>
-                <RowLabel>{row.label}</RowLabel>
-              </RowMain>
-              <RowSide>
-                <LockGlyph aria-label="locked">
-                  <Lock size={11} strokeWidth={2} />
-                </LockGlyph>
-              </RowSide>
-            </Row>
-          ))}
-        </div>
-      )}
       {locked && (
         <LockedNote>The palette wakes up the moment the agent exists — name it first.</LockedNote>
       )}

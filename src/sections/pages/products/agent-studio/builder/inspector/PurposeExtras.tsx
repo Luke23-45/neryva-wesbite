@@ -38,7 +38,7 @@ interface PurposeExtrasProps {
 /**
  * Next-step candidates from REAL node grades (LEDGER.md I6): nodes graded
  * attention/error first, then untouched functional nodes. Context/response
- * are excluded — their honest panels never count as setup work. Max 3.
+ * are excluded — readiness math still reads the 14 functional ids. Max 3.
  */
 export function nextStepCandidates(nodes: PurposeNodeDatum[]): PurposeNodeDatum[] {
   const functional = nodes.filter((n) => (FUNCTIONAL_NODE_IDS as readonly string[]).includes(n.id));

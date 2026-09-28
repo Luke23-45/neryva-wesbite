@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ComponentPalette, type PaletteHealth, type PaletteNodeEntry } from './ComponentPalette';
 import type { LaneId } from '../lib/lane-model';
 import type { SlotStatus } from '../lib/slot-model';
@@ -15,10 +15,11 @@ function node(
   return { id, label, color: '#58A6FF', statusText, status, lane };
 }
 
-/** 16 nodes in v10 lane order. */
+/** 17 nodes in v10 lane order. */
 const NODES: PaletteNodeEntry[] = [
   node('purpose', 'Purpose', 'identity', 'ready', 'Agent named'),
   node('instructions', 'Instructions', 'identity', 'attention', 'Add rules'),
+  node('role', 'Role', 'identity', 'untouched'),
   node('knowledge', 'Knowledge', 'capabilities', 'ready', '3 sources'),
   node('tools', 'Tools', 'capabilities', 'untouched'),
   node('memory', 'Memory', 'capabilities', 'untouched'),
@@ -67,17 +68,21 @@ describe('ComponentPalette (v10)', () => {
     expect(screen.getByLabelText('3 components')).toHaveTextContent('3');
   });
 
-  it('renders lane groups in v10 order, then ROADMAP', () => {
+  it('renders lane groups in v10 order with no roadmap group', () => {
     renderPalette();
-    const labels = screen.getAllByText(/^(IDENTITY|CAPABILITIES|COGNITION|CONTROL & STYLE|OUTPUT & DELIVERY|ROADMAP)$/);
+    const labels = screen.getAllByText(/^(IDENTITY|CAPABILITIES|COGNITION|CONTROL & STYLE|OUTPUT & DELIVERY)$/);
     expect(labels.map((el) => el.textContent)).toEqual([
       'IDENTITY',
       'CAPABILITIES',
       'COGNITION',
       'CONTROL & STYLE',
       'OUTPUT & DELIVERY',
-      'ROADMAP',
     ]);
+    expect(screen.queryByText('ROADMAP')).not.toBeInTheDocument();
+    // Role is a real row in the IDENTITY group now.
+    const role = screen.getByRole('button', { name: /Role/ });
+    const group = role.closest('div');
+    expect(group?.textContent).toContain('IDENTITY');
   });
 
   it('search filters rows by label; placeholder carries no ⌘K hint (A4)', () => {
@@ -106,21 +111,13 @@ describe('ComponentPalette (v10)', () => {
     expect(props.onFilterChange).toHaveBeenCalledWith(null);
   });
 
-  it('roadmap rows are disabled, carry no chips, and explain honestly', () => {
-    renderPalette();
-    const connector = screen.getByTitle(
-      'Connectors sync into the Knowledge library — manage them in the Knowledge slot’s Connector tab.',
-    );
-    expect(connector).toBeDisabled();
-    // No status text, no status dot, no chips — nothing invented.
-    expect(within(connector).queryByLabelText(/^status:/)).toBeNull();
-    expect(connector.textContent).not.toMatch(/BETA|Q3/i);
-    expect(
-      screen.getByTitle('Models attach through the Brain slot — pick them in the Brain section.'),
-    ).toBeDisabled();
-    expect(screen.getByTitle('Planned — not yet available in this release.')).toBeDisabled();
-    // The old 'note' entry is gone.
-    expect(screen.queryByText('Note')).not.toBeInTheDocument();
+  it('role is a normal selectable row (no locked roadmap rows remain)', () => {
+    const { props } = renderPalette();
+    const role = screen.getByRole('button', { name: /Role/ });
+    expect(role).not.toBeDisabled();
+    expect(role).toHaveAttribute('title', 'Select Role');
+    fireEvent.click(role);
+    expect(props.onSelectNode).toHaveBeenCalledWith('role');
   });
 
   it('health ring shows configured/total as a percent (5/12 → 42%)', () => {

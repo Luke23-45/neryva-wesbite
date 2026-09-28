@@ -27,6 +27,128 @@
 export type ConsumerApproval = 'never' | 'on_effect' | 'always';
 export type EngineApproval = 'required' | 'optional';
 export type ConsumerMemoryScope = 'none' | 'conversation' | 'org' | 'user' | 'assistant';
+
+export type ResponseOutputFormat = 'markdown' | 'plain';
+export type ResponseStreaming = 'auto' | 'on' | 'off';
+
+/**
+ * Per-agent response policy (Response node). Optional on the consumer
+ * definition: absent = engine defaults (markdown, citations on, streaming
+ * auto). Every member is optional on input — the engine applies defaults
+ * for whatever is missing, so a partial object is valid (never treated as
+ * garbage). The console's Response section always writes the full object
+ * on the first edit; partial keys only arrive from foreign payloads.
+ */
+export interface ResponsePolicy {
+  output_format?: ResponseOutputFormat;
+  citations_enabled?: boolean;
+  streaming?: ResponseStreaming;
+  /** Only meaningful when the model supports reasoning (engine contract: string). */
+  reasoning_effort?: string;
+  top_p?: number;
+}
+
+/** Console defaults applied when the draft carries no response_policy. */
+export const DEFAULT_RESPONSE_POLICY: Required<
+  Pick<ResponsePolicy, 'output_format' | 'citations_enabled' | 'streaming'>
+> = {
+  output_format: 'markdown',
+  citations_enabled: true,
+  streaming: 'auto',
+};
+
+/**
+ * Accepts a valid partial policy — each member is validated independently
+ * and invalid members are dropped. Returns undefined only when nothing
+ * recognizable survives: `{ output_format: 'html' }` is garbage, but
+ * `{ output_format: 'plain' }` is a real policy.
+ */
+export function parseResponsePolicy(raw: unknown): ResponsePolicy | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as Record<string, unknown>;
+  const policy: ResponsePolicy = {};
+  if (r.output_format === 'markdown' || r.output_format === 'plain') policy.output_format = r.output_format;
+  if (typeof r.citations_enabled === 'boolean') policy.citations_enabled = r.citations_enabled;
+  if (r.streaming === 'auto' || r.streaming === 'on' || r.streaming === 'off') policy.streaming = r.streaming;
+  if (typeof r.reasoning_effort === 'string' && r.reasoning_effort.length > 0) {
+    policy.reasoning_effort = r.reasoning_effort;
+  }
+  if (typeof r.top_p === 'number' && Number.isFinite(r.top_p) && r.top_p >= 0 && r.top_p <= 1) {
+    policy.top_p = r.top_p;
+  }
+  return Object.keys(policy).length > 0 ? policy : undefined;
+}
+
+/**
+ * Engine limits for the Role node (D-N2 option A — structured persona).
+ * Mirrors the engine's rolePolicySchema (strict, all-optional): the single
+ * source the section's inputs and setup-caps both read.
+ */
+export const ROLE_LIMITS = {
+  role: 200,
+  goal: 500,
+  traits: { max: 10, item: 60 },
+  communication_style: 500,
+  knowledge_areas: { max: 20, item: 80 },
+  prohibited_topics: { max: 20, item: 80 },
+} as const;
+
+/**
+ * Per-agent role policy (Role node — D-N2 option A: structured persona,
+ * composed into the system prompt server-side). Optional on the consumer
+ * definition: absent = no persona configured (valid — the engine composes
+ * nothing). Every member is optional on input; the console's Role section
+ * writes only non-blank members and omits the object when nothing is set.
+ */
+export interface RolePolicy {
+  role?: string;
+  goal?: string;
+  traits?: string[];
+  communication_style?: string;
+  knowledge_areas?: string[];
+  prohibited_topics?: string[];
+}
+
+/**
+ * Accepts a valid partial policy — each member is validated independently
+ * and invalid members are dropped (over-limit strings, over-long lists, or
+ * non-string items void the member, never the whole policy). Returns
+ * undefined only when nothing recognizable survives.
+ */
+export function parseRolePolicy(raw: unknown): RolePolicy | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as Record<string, unknown>;
+  const policy: RolePolicy = {};
+  const text = (value: unknown, max: number): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed !== '' && trimmed.length <= max ? trimmed : undefined;
+  };
+  const list = (value: unknown, maxItems: number, maxItem: number): string[] | undefined => {
+    if (!Array.isArray(value) || value.length === 0 || value.length > maxItems) return undefined;
+    const items: string[] = [];
+    for (const entry of value) {
+      const cleaned = text(entry, maxItem);
+      if (cleaned === undefined) return undefined;
+      items.push(cleaned);
+    }
+    return items;
+  };
+  const role = text(r.role, ROLE_LIMITS.role);
+  if (role !== undefined) policy.role = role;
+  const goal = text(r.goal, ROLE_LIMITS.goal);
+  if (goal !== undefined) policy.goal = goal;
+  const traits = list(r.traits, ROLE_LIMITS.traits.max, ROLE_LIMITS.traits.item);
+  if (traits !== undefined) policy.traits = traits;
+  const style = text(r.communication_style, ROLE_LIMITS.communication_style);
+  if (style !== undefined) policy.communication_style = style;
+  const areas = list(r.knowledge_areas, ROLE_LIMITS.knowledge_areas.max, ROLE_LIMITS.knowledge_areas.item);
+  if (areas !== undefined) policy.knowledge_areas = areas;
+  const topics = list(r.prohibited_topics, ROLE_LIMITS.prohibited_topics.max, ROLE_LIMITS.prohibited_topics.item);
+  if (topics !== undefined) policy.prohibited_topics = topics;
+  return Object.keys(policy).length > 0 ? policy : undefined;
+}
+
 export type ToolAccess = 'read' | 'write';
 
 export type ToolExecutionMode = 'live' | 'shadow';
@@ -67,6 +189,17 @@ export interface ConsumerDefinition {
     knowledge_sources: string[];
     memory_scope: ConsumerMemoryScope;
   };
+  /**
+   * Per-agent response policy (Response node). Optional: absent = engine
+   * defaults; the console writes the full object on the first edit.
+   */
+  response_policy?: ResponsePolicy;
+  /**
+   * Per-agent role policy (Role node — D-N2 option A: structured persona).
+   * Optional: absent = no persona configured (valid); the console writes
+   * only non-blank members and omits the object when nothing is set.
+   */
+  role_policy?: RolePolicy;
   /** Consumer-only: never on the wire (template/consumer extension). */
   max_context_tokens: number;
   tools: ConsumerTool[];
@@ -106,6 +239,33 @@ export interface EnginePayload {
   budget_policy?: Record<string, unknown>;
   model_policy: { allowed_models: string[]; fallback_enabled: boolean };
   context_policy: { history_limit: number; summary_enabled: boolean; knowledge_sources: string[]; memory_scope: string };
+  /**
+   * response_policy is written through only when the Response node set it
+   * (absent = engine defaults). Every member is optional on input — the
+   * wire materializes the console defaults for missing members. Sections
+   * outside Response never fabricate it.
+   */
+  response_policy?: {
+    output_format?: 'markdown' | 'plain';
+    citations_enabled?: boolean;
+    streaming?: 'auto' | 'on' | 'off';
+    reasoning_effort?: string;
+    top_p?: number;
+  };
+  /**
+   * role_policy is written through only when at least one member is set
+   * (absent = no persona configured — valid). Every member is optional on
+   * input; blank strings and empty lists never ship. Sections outside Role
+   * never fabricate it.
+   */
+  role_policy?: {
+    role?: string;
+    goal?: string;
+    traits?: string[];
+    communication_style?: string;
+    knowledge_areas?: string[];
+    prohibited_topics?: string[];
+  };
   tool_policy: { tools: Array<{ name: string; access: string; approval: string; schema_hash?: string; execution_mode?: string }> };
   knowledge_policy?: { retrieval_enabled: boolean; max_results: number };
   guardrail_policy: { input_policy: string; output_policy: string; pii_redaction: boolean; execution_mode: string };
@@ -117,7 +277,9 @@ export function defaultConsumer(): ConsumerDefinition {
     instructions: '',
     model_policy: { allowed_models: [], fallback_enabled: false },
     model_params: {},
-    context_policy: { history_limit: 30, summary_enabled: true, knowledge_sources: [], memory_scope: 'user' },
+    // Contract ceiling aligned to the runtime served-20: fresh drafts start
+    // at the max the run will actually read.
+    context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: [], memory_scope: 'user' },
     max_context_tokens: 32_000,
     tools: [],
     knowledge_policy: { retrieval_enabled: false, max_results: 5 },
@@ -207,6 +369,40 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
       knowledge_sources: [...def.context_policy.knowledge_sources],
       memory_scope: memoryScope,
     },
+    // Response node: written only when the maker set it (absent = engine
+    // defaults). The object may be partial (foreign payloads) — the wire
+    // materializes the console defaults for missing members, never sends
+    // undefined values.
+    ...(def.response_policy
+      ? {
+          response_policy: {
+            output_format: def.response_policy.output_format ?? DEFAULT_RESPONSE_POLICY.output_format,
+            citations_enabled: def.response_policy.citations_enabled ?? DEFAULT_RESPONSE_POLICY.citations_enabled,
+            streaming: def.response_policy.streaming ?? DEFAULT_RESPONSE_POLICY.streaming,
+            ...(def.response_policy.reasoning_effort !== undefined
+              ? { reasoning_effort: def.response_policy.reasoning_effort }
+              : {}),
+            ...(def.response_policy.top_p !== undefined ? { top_p: def.response_policy.top_p } : {}),
+          },
+        }
+      : {}),
+    // Role node (D-N2 option A): written only when at least one member is
+    // set (absent = no persona configured — valid, the engine composes
+    // nothing). Blank strings and empty lists never ship; the section owns
+    // this key and no other section fabricates it.
+    ...(() => {
+      const rp = def.role_policy;
+      if (!rp) return {};
+      const members: NonNullable<EnginePayload['role_policy']> = {
+        ...(rp.role?.trim() ? { role: rp.role.trim() } : {}),
+        ...(rp.goal?.trim() ? { goal: rp.goal.trim() } : {}),
+        ...(rp.traits?.length ? { traits: [...rp.traits] } : {}),
+        ...(rp.communication_style?.trim() ? { communication_style: rp.communication_style.trim() } : {}),
+        ...(rp.knowledge_areas?.length ? { knowledge_areas: [...rp.knowledge_areas] } : {}),
+        ...(rp.prohibited_topics?.length ? { prohibited_topics: [...rp.prohibited_topics] } : {}),
+      };
+      return Object.keys(members).length > 0 ? { role_policy: members } : {};
+    })(),
     tool_policy: { tools },
     // Explicit toggle, never silent fallback: the engine defaults OFF, and
     // the UI always states the value it sends.
@@ -326,6 +522,12 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     ? context.knowledge_sources.filter((s): s is string => typeof s === 'string')
     : base.context_policy.knowledge_sources;
 
+  // Garbage resolves to absent (engine defaults render), never a guess.
+  const responsePolicy = parseResponsePolicy(pick(r.response_policy, r.responsePolicy));
+
+  // Role (D-N2 option A): garbage resolves to absent (no persona), never a guess.
+  const rolePolicy = parseRolePolicy(pick(r.role_policy, r.rolePolicy));
+
   // All 5 engine scopes round-trip (C08: `user` is the default and is offered,
   // never omitted). Unknown strings resolve the engine default, never a guess.
   const scopeRaw = str(context.memory_scope) ?? 'user';
@@ -361,6 +563,10 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       knowledge_sources: knowledgeSources,
       memory_scope: memoryScope,
     },
+    // Garbage resolves to absent (engine defaults render), never a guess.
+    ...(responsePolicy !== undefined ? { response_policy: responsePolicy } : {}),
+    // Garbage resolves to absent (no persona configured), never a guess.
+    ...(rolePolicy !== undefined ? { role_policy: rolePolicy } : {}),
     max_context_tokens: numOr(pick(r.max_context_tokens, r.maxContextTokens), base.max_context_tokens),
     tools,
     knowledge_policy: {

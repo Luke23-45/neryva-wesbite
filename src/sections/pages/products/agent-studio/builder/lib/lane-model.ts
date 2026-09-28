@@ -1,7 +1,7 @@
 /**
  * Agent Builder v10 lane topology (LEDGER.md §8.1 — lanes YES).
  *
- * 16 FIXED nodes in 5 dashed lanes. This model owns lane labels, order,
+ * 17 FIXED nodes in 5 dashed lanes. This model owns lane labels, order,
  * per-node colors, and canonical positions only — grading lives in
  * projector.ts. Visual restyle: node cards are 200×100, lanes are dashed
  * hulls; nothing here is derived from data (no invented states possible).
@@ -27,6 +27,7 @@ export const LANE_ORDER: readonly LaneId[] = ['identity', 'capabilities', 'cogni
 export type LaneNodeId =
   | 'purpose'
   | 'instructions'
+  | 'role'
   | 'knowledge'
   | 'tools'
   | 'memory'
@@ -76,6 +77,7 @@ function spec(
 export const LANE_NODES: Record<LaneNodeId, LaneNodeSpec> = {
   purpose: spec('purpose', 'identity', 'Purpose', '#60A5FA', 'Role, task, rules', 300, 380),
   instructions: spec('instructions', 'identity', 'Instructions', '#38BDF8', 'Directives the agent follows', 300, 550),
+  role: spec('role', 'identity', 'Role', '#F87171', 'Persona this agent plays', 300, 720),
   knowledge: spec('knowledge', 'capabilities', 'Knowledge', '#0A84FF', 'Documents this agent may retrieve', 560, 210),
   tools: spec('tools', 'capabilities', 'Tools', '#A78BFA', 'Capabilities this agent may call', 560, 380),
   memory: spec('memory', 'capabilities', 'Memory', '#FF9F0A', 'What this agent remembers', 560, 550),
@@ -96,6 +98,7 @@ export const LANE_NODES: Record<LaneNodeId, LaneNodeSpec> = {
 export const LANE_NODE_IDS: readonly LaneNodeId[] = [
   'purpose',
   'instructions',
+  'role',
   'knowledge',
   'tools',
   'memory',
@@ -117,7 +120,7 @@ export function laneOf(id: LaneNodeId): LaneId {
 }
 
 /** Fixed node count — the projector must emit exactly this many. */
-export const NODE_COUNT = 16;
+export const NODE_COUNT = 17;
 
 /** Dashed lane hulls (mockup: 240 wide, top at y=168, 668 tall). */
 export const LANE_HULLS: Record<LaneId, { x: number; y: number; w: number; h: number }> = {

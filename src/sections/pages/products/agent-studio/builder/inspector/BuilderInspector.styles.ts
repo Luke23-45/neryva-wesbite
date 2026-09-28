@@ -252,37 +252,6 @@ export const LockedWrap = styled.div`
   color: #a6b0bf;
 `;
 
-/* ── NotAvailablePanel (§8.8/§8.9 — honest, no actions) ─────────────── */
-
-export const NotAvailableWrap = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #1e2530;
-  background: #10151d;
-`;
-
-export const NotAvailableTitle = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  color: #e9edf3;
-  line-height: 1.5;
-`;
-
-export const NotAvailableBlurb = styled.div`
-  font-size: 13px;
-  color: #a6b0bf;
-  line-height: 1.6;
-`;
-
-export const NotAvailableNote = styled.div`
-  font-size: 12px;
-  color: #7c8698;
-  line-height: 1.6;
-`;
-
 /* ── Purpose extras: linked blueprint (I5), next steps (I6), CTA (I7) ── */
 
 export const ExtrasSection = styled.section`

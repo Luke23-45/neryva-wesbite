@@ -12,6 +12,9 @@ import { BrainSection } from './BrainSection';
 import { KnowledgeSection } from './KnowledgeSection';
 import { ToolsSection } from './ToolsSection';
 import { GuardrailsSection } from './GuardrailsSection';
+import { ContextSection } from './ContextSection';
+import { ResponseSection } from './ResponseSection';
+import { RoleSection } from './RoleSection';
 import { MemorySection } from './MemorySection';
 import { BudgetSection } from './BudgetSection';
 import { TrySection } from './TrySection';
@@ -19,7 +22,6 @@ import { EvaluationSection } from './EvaluationSection';
 import { ShipSection } from './ShipSection';
 import { CredentialsPanel } from './CredentialsPanel';
 import { SamplesSection } from './SamplesSection';
-import { NotAvailablePanel } from './NotAvailablePanel';
 import { PurposeExtras, type PurposeNodeDatum } from './PurposeExtras';
 import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from './TraceDrawer';
@@ -101,6 +103,9 @@ interface BuilderInspectorProps {
   onToolsDirty?: (dirty: boolean) => void;
   onGuardrailsDirty?: (dirty: boolean) => void;
   onMemoryDirty?: (dirty: boolean) => void;
+  onContextDirty?: (dirty: boolean) => void;
+  onResponseDirty?: (dirty: boolean) => void;
+  onRoleDirty?: (dirty: boolean) => void;
   onBudgetDirty?: (dirty: boolean) => void;
   onCreated?: (assistantId: string) => void;
   /**
@@ -154,13 +159,13 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
  * "Node ID · {slotKey} · {lane}" meta line. No overflow menu: no section
  * exposes header actions, and C5 forbids rendering dead ones.
  *
- * Node → section mapping (§6, all 14 functional sections keep working with
+ * Node → section mapping (§6, all 16 functional sections keep working with
  * zero behavior change inside the sections — only re-homed):
  * purpose → PurposeInspector (+ build-mode extras); instructions →
- * InstructionsSection; brain/knowledge/tools/memory/guardrails/brand/budget
- * → their sections; credentials → CredentialsPanel; samples →
- * SamplesSection; evaluation → EvaluationSection; ship → ShipSection; try →
- * TrySection; context/response → honest NotAvailablePanel (§8.8/§8.9).
+ * InstructionsSection; brain/knowledge/tools/memory/guardrails/brand/budget/
+ * context/response → their sections; credentials → CredentialsPanel; samples
+ * → SamplesSection; evaluation → EvaluationSection; ship → ShipSection; try →
+ * TrySection.
  */
 export function BuilderInspector({
   selected,
@@ -176,6 +181,9 @@ export function BuilderInspector({
   onToolsDirty,
   onGuardrailsDirty,
   onMemoryDirty,
+  onContextDirty,
+  onResponseDirty,
+  onRoleDirty,
   onBudgetDirty,
   onCreated,
   width,
@@ -251,14 +259,6 @@ export function BuilderInspector({
           />
         )}
       </>
-    );
-  } else if (slotKey === 'context') {
-    body = (
-      <NotAvailablePanel title="Context" blurb="Session history, scope, and summary controls will live here." />
-    );
-  } else if (slotKey === 'response') {
-    body = (
-      <NotAvailablePanel title="Response" blurb="Output formatting, citations, and latency controls will live here." />
     );
   } else if (context.mode === 'new' || agentId === null) {
     body = (
@@ -351,6 +351,48 @@ export function BuilderInspector({
           />
         );
         break;
+      case 'context':
+        body = (
+          <ContextSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onContextDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'response':
+        body = (
+          <ResponseSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onResponseDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
+      case 'role':
+        body = (
+          <RoleSection
+            assistantId={id}
+            definition={context.definition}
+            versionId={context.versionId}
+            versionHash={context.versionHash}
+            isDraft={context.isDraft}
+            canAuthor={context.canAuthor}
+            onDirtyChange={onRoleDirty ?? (() => undefined)}
+            saveSignal={context.saveSignal}
+          />
+        );
+        break;
       case 'brand':
         body = (
           <BrandSection
@@ -439,7 +481,7 @@ export function BuilderInspector({
         );
         break;
       default:
-        body = <LockedWrap>Unknown node &ldquo;{slotKey}&rdquo; — nothing to configure here.</LockedWrap>;
+        body = <LockedWrap>Unknown node &ldquo;{slotKey}&rdquo; — nothing to configure.</LockedWrap>;
         break;
     }
   }

@@ -167,6 +167,43 @@ export function contextSubtitle(definition: ConsumerDefinition | null): string |
 }
 
 /**
+ * Response node subtitle — payload truth with engine defaults applied
+ * (absent policy = markdown, citations on, streaming auto).
+ */
+export function responseSubtitle(definition: ConsumerDefinition | null): string | null {
+  if (!definition) return null;
+  const policy = definition.response_policy;
+  // Missing members read as the engine defaults — a partial policy never
+  // renders the wrong format or "citations off" (absent = markdown, on, auto).
+  const format = policy?.output_format === 'plain' ? 'Plain text' : 'Markdown';
+  const citations = policy?.citations_enabled === false ? 'off' : 'on';
+  const streaming = policy?.streaming ?? 'auto';
+  return `${format} · citations ${citations} · streaming ${streaming}`;
+}
+
+/**
+ * Role node subtitle — payload truth (D-N2 option A). Absent policy renders
+ * nothing (no persona is valid and the default). A set policy shows the role
+ * name plus how many of the other five persona fields are filled.
+ */
+export function roleSubtitle(definition: ConsumerDefinition | null): string | null {
+  if (!definition) return null;
+  const policy = definition.role_policy;
+  if (!policy) return null;
+  const name = policy.role?.trim() || null;
+  const extras =
+    (policy.goal?.trim() ? 1 : 0) +
+    (policy.traits?.length ? 1 : 0) +
+    (policy.communication_style?.trim() ? 1 : 0) +
+    (policy.knowledge_areas?.length ? 1 : 0) +
+    (policy.prohibited_topics?.length ? 1 : 0);
+  if (!name && extras === 0) return null;
+  const shown = name && name.length > 42 ? `${name.slice(0, 42)}…` : name;
+  if (!shown) return extras === 1 ? 'Persona · 1 field set' : `Persona · ${extras} fields set`;
+  return extras > 0 ? `${shown} · +${extras} more` : shown;
+}
+
+/**
  * Knowledge usability grade (C05) — readiness, not presence. Draft pins ×
  * library mapping × ACTIVE-version health:
  * - no pins: ready + stated (retrieval off = deliberate; on-but-empty = named);
@@ -356,12 +393,13 @@ export interface ProjectedGraph {
 }
 
 /**
- * The 14 functional ids — everything except context/response, which render
- * honest "not yet available" panels (§8.8/8.9, deferred D5/D6). Health and
- * next-step math read exactly this set.
+ * The 14 functional ids — everything except context/response/role. Health
+ * and next-step math read exactly this set (the three own real sections but
+ * stay out of readiness math — their defaults are valid without explicit
+ * configuration, pending their ship-flow integration).
  */
 export const FUNCTIONAL_NODE_IDS: readonly LaneNodeId[] = LANE_NODE_IDS.filter(
-  (id): id is LaneNodeId => id !== 'context' && id !== 'response',
+  (id): id is LaneNodeId => id !== 'context' && id !== 'response' && id !== 'role',
 );
 
 export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
@@ -652,8 +690,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     LANE_NODES.brain,
   );
 
-  // Context and Response are rendered for visual parity (§8.8/8.9) with
-  // honest not-yet-available panels (deferred D5/D6) — never fake sections.
+  // Context and Response are real sections (the Context node owns
+  // context_policy; the Response node owns response_policy). Subtitles carry
+  // payload truth; the two stay out of FUNCTIONAL_NODE_IDS — health and
+  // next-step math still read the 14 legacy-functional nodes.
   for (const id of ['context', 'response'] as const) {
     push(
       id,
@@ -662,9 +702,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         nodeType: 'spine',
         kind: null,
         title: LANE_NODES[id].label,
-        subtitle: null,
-        hint: locked ? 'Create the agent first' : 'Not yet available in this release',
-        status: locked ? 'locked' : 'untouched',
+        subtitle: id === 'context' ? contextSubtitle(definition) : responseSubtitle(definition),
+        hint: locked ? 'Create the agent first' : null,
+        status: locked ? 'locked' : definition ? 'ready' : 'untouched',
         lock: false,
         color: LANE_NODES[id].color,
         portColor: LANE_NODES[id].color,
@@ -672,6 +712,27 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       LANE_NODES[id],
     );
   }
+
+  // Role is a real section (the Role node owns role_policy — D-N2 option A,
+  // structured persona, composed into the system prompt server-side).
+  // Subtitle carries payload truth; like context/response it stays out of
+  // FUNCTIONAL_NODE_IDS — no persona is a valid default.
+  push(
+    'role',
+    {
+      slotKey: 'role',
+      nodeType: 'spine',
+      kind: null,
+      title: LANE_NODES.role.label,
+      subtitle: roleSubtitle(definition),
+      hint: locked ? 'Create the agent first' : null,
+      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
+      lock: false,
+      color: LANE_NODES.role.color,
+      portColor: LANE_NODES.role.color,
+    },
+    LANE_NODES.role,
+  );
 
   // Samples (v10 §8.7): the gallery has no "configured" count in the
   // contract, so without a summary this is info, never an invented number.

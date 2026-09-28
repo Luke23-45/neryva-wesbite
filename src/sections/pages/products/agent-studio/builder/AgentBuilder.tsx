@@ -162,6 +162,24 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setMemoryDirty(dirty);
   }, []);
 
+  const [contextDirty, setContextDirty] = useState(false);
+
+  const onContextDirty = useCallback((dirty: boolean) => {
+    setContextDirty(dirty);
+  }, []);
+
+  const [responseDirty, setResponseDirty] = useState(false);
+
+  const onResponseDirty = useCallback((dirty: boolean) => {
+    setResponseDirty(dirty);
+  }, []);
+
+  const [roleDirty, setRoleDirty] = useState(false);
+
+  const onRoleDirty = useCallback((dirty: boolean) => {
+    setRoleDirty(dirty);
+  }, []);
+
   const [budgetDirty, setBudgetDirty] = useState(false);
 
   const onBudgetDirty = useCallback((dirty: boolean) => {
@@ -176,7 +194,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setLastTry(event);
   }, []);
 
-  // Trace Edit jumps land on builder slots (C13): fixed 16-node ids —
+  // Trace Edit jumps land on builder slots (C13): fixed 17-node ids —
   // every TraceEditTarget IS a node id, so jumps select directly.
   const onEditJump = useCallback(
     (target: TraceEditTarget) => {
@@ -199,10 +217,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setBrandDirty(dirty);
   }, []);
 
-  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + knowledge + tools + guardrails + memory + budget.
+  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + knowledge + tools + guardrails + memory + context + response + budget.
   // (Selection, drags, and skips are UI state — rebuilding them is free.)
   const { dialog: guardDialog } = useDirtyGuard(
-    (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty,
+    (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
   );
 
   // A2-23: honest save readout — a draft write in flight must never display as "Saved".
@@ -300,7 +318,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }, [mode, scopeKey, selectedId, form.data, definition, select, initialSlot]);
 
   // ── v10 palette mapping (WS-A) ─────────────────────────────────────
-  // The 16 fixed lane nodes — lane assignment, per-node colors, and
+  // The 17 fixed lane nodes — lane assignment, per-node colors, and
   // readiness-derived health, all projected from contract truth. Nothing
   // is invented: every row rides the node's own grade.
   const paletteNodes = useMemo<PaletteNodeEntry[]>(() => {
@@ -315,9 +333,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }, [projected.nodes]);
 
   // Palette health (v10 §8.10): the 14 functional ids (everything except
-  // context/response — the honest not-yet-available panels never count as
-  // unconfigured). configured = 'ready' nodes among them; nextStep =
-  // first attention/error, else first untouched, else null.
+  // context/response — excluded from readiness math). configured = 'ready'
+  // nodes among them; nextStep = first attention/error, else first untouched,
+  // else null.
   const paletteHealth = useMemo<PaletteHealth>(() => {
     const functional = projected.nodes.filter((n) => (FUNCTIONAL_NODE_IDS as readonly string[]).includes(n.id));
     const configured = functional.filter((n) => n.data.status === 'ready').length;
@@ -399,7 +417,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
   const saving = draftWritesInFlight > 0;
   const anySectionDirty =
-    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty;
+    composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || budgetDirty;
   const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
 
   // Manual save signal (topbar Save button / Ctrl+S / ⌘S). Sections watch
@@ -558,9 +576,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       if (event.key === 'Escape') {
         // Never strand unsaved input: Escape must not unmount the Purpose
         // form (new mode), the composer, the voice, brain, knowledge, tools,
-        // guardrails, memory, or budget while any is dirty.
+        // guardrails, memory, context, response, role, or budget while any is dirty.
         // Dirty surfaces blur instead (their own Esc handlers); selection stays.
-        if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || budgetDirty) return;
+        if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
         select(null);
         setPaletteFilter(null);
         return;
@@ -598,7 +616,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, budgetDirty, canAuthor, requestSave]);
+  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, contextDirty, responseDirty, roleDirty, budgetDirty, canAuthor, requestSave]);
 
   const inspectorContext: InspectorContext = useMemo(
     () => ({
@@ -745,6 +763,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         onToolsDirty={onToolsDirty}
         onGuardrailsDirty={onGuardrailsDirty}
         onMemoryDirty={onMemoryDirty}
+        onContextDirty={onContextDirty}
+        onResponseDirty={onResponseDirty}
+        onRoleDirty={onRoleDirty}
         onBudgetDirty={onBudgetDirty}
         asideRef={inspectorAsideRef}
         // Intentional ref read during render (T15): same as the palette —

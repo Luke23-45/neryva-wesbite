@@ -1,36 +1,16 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
 import { defaultConsumer } from '@lib/engine/agent-payload';
-import toast from 'react-hot-toast';
 import { MemorySection } from './MemorySection';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
-
-const saveMutate = vi.fn();
-const updateMutate = vi.fn();
-
-vi.mock('react-hot-toast', () => {
-  const fn = vi.fn() as never;
-  const success = vi.fn() as never;
-  const error = vi.fn() as never;
-  return { default: Object.assign(fn, { success, error }) };
-});
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
-
-vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
-  return {
-    ...actual,
-    useSaveDraftVersion: () => ({ mutate: saveMutate, isPending: false }),
-    useUpdateDraftVersion: () => ({ mutate: updateMutate, isPending: false }),
-  };
-});
 
 const ASSISTANT_ROWS = [{ id: 'm-a1', content: 'Assistant fact one', scopeType: 'assistant', visibility: 'private' }];
 const ORG_ROWS = [{ id: 'm-o1', content: 'Org ships Fridays', scopeType: 'organization', visibility: 'organization' }];
@@ -50,13 +30,14 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
 
 function definitionWith(context: Partial<AgentDefinition['context_policy']>): AgentDefinition {
   const def = defaultConsumer();
-  return { ...def, instructions: '## Role\nR.\n', context_policy: { ...def.context_policy, ...context } };
+  return { ...def, instructions: '## Role\\nR.\\n', context_policy: { ...def.context_policy, ...context } };
 }
 
-const FRESH = definitionWith({ memory_scope: 'user', history_limit: 30 });
+const FRESH = definitionWith({ memory_scope: 'user', history_limit: 20 });
 
 function shell(props?: Partial<React.ComponentProps<typeof MemorySection>>) {
-  return render(
+  const onDirtyChange = vi.fn();
+  render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemorySection
@@ -66,62 +47,32 @@ function shell(props?: Partial<React.ComponentProps<typeof MemorySection>>) {
           versionHash="h1"
           isDraft
           canAuthor
-          onDirtyChange={() => undefined}
+          onDirtyChange={onDirtyChange}
           saveSignal={0}
           {...props}
         />
       </QueryClientProvider>
     </ThemeProvider>,
   );
+  return { onDirtyChange };
 }
 
-beforeEach(() => {
-  saveMutate.mockReset();
-  updateMutate.mockReset();
-  vi.mocked(toast.success).mockReset();
-  vi.useFakeTimers();
-});
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
 describe('MemorySection', () => {
-  it('renders the 5-option scope control with User default, history, and org defaults', () => {
+  it('reports scope and history read-only and points at the Context node', () => {
     shell();
-    const group = screen.getByRole('group', { name: 'Memory scope' });
-    expect(group.querySelectorAll('button')).toHaveLength(5);
-    expect(screen.getByText(/never visible across accounts/)).toBeTruthy();
-    expect(screen.getByText(/stored, not served/)).toBeTruthy();
-    expect(screen.getByText(/rolling summary/)).toBeTruthy();
+    // No editing controls: scope pills and the history stepper live in the
+    // Context node now.
+    expect(screen.queryByRole('group', { name: 'Memory scope' })).toBeNull();
+    expect(screen.queryByLabelText('History limit in messages')).toBeNull();
+    expect(screen.getByText(/Scope and history are set in the Context node/)).toBeTruthy();
+    expect(screen.getByText(/20 messages/)).toBeTruthy();
     expect(screen.getByText(/PII scrubbed before embedding/)).toBeTruthy();
   });
 
-  it('switching scope to none autosaves the context policy', async () => {
-    shell();
-    const group = screen.getByRole('group', { name: 'Memory scope' });
-    await act(async () => {
-      fireEvent.click(group.querySelectorAll('button')[4] as HTMLElement);
-    });
-    expect(screen.getAllByText(/No memories surface/).length).toBeGreaterThan(0);
-    await act(async () => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(updateMutate).toHaveBeenCalledTimes(1);
-    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    expect(sent.definition.context_policy.memory_scope).toBe('none');
-  });
-
-  it('steps history within 1–100 and clamps typed overflow', async () => {
-    shell();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'More history messages' }));
-    });
-    expect(screen.getByDisplayValue('31')).toBeTruthy();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('History limit in messages'), { target: { value: '500' } });
-    });
-    expect(screen.getByDisplayValue('100')).toBeTruthy();
+  it('always reports clean — nothing here writes', () => {
+    const { onDirtyChange } = shell({ definition: definitionWith({ memory_scope: 'none' }) });
+    expect(onDirtyChange).toHaveBeenCalledWith(false);
+    expect(onDirtyChange).not.toHaveBeenCalledWith(true);
   });
 
   it('previews assistant and org rows read-only, never user rows', () => {
@@ -132,13 +83,13 @@ describe('MemorySection', () => {
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
           <MemorySection
             assistantId="agent-main"
-            definition={definitionWith({ memory_scope: 'assistant', history_limit: 30 })}
+            definition={definitionWith({ memory_scope: 'assistant', history_limit: 20 })}
             versionId="v1"
             versionHash="h1"
             isDraft
             canAuthor
             onDirtyChange={() => undefined}
-          saveSignal={0}
+            saveSignal={0}
           />
         </QueryClientProvider>
       </ThemeProvider>,
@@ -152,24 +103,29 @@ describe('MemorySection', () => {
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
           <MemorySection
             assistantId="agent-main"
-            definition={definitionWith({ memory_scope: 'org', history_limit: 30 })}
+            definition={definitionWith({ memory_scope: 'org', history_limit: 20 })}
             versionId="v1"
             versionHash="h1"
             isDraft
             canAuthor
             onDirtyChange={() => undefined}
-          saveSignal={0}
+            saveSignal={0}
           />
         </QueryClientProvider>
       </ThemeProvider>,
     );
     expect(screen.getByText(/Org ships Fridays/)).toBeTruthy();
-    expect(screen.getByText(/no preview here/)).toBeTruthy();
+    expect(screen.queryByText(/Assistant fact one/)).toBeNull();
   });
 
-  it('renders read-only with the role explanation for viewers', () => {
+  it('shows the denied-capability note for viewers', () => {
     shell({ canAuthor: false });
     expect(screen.getByText(/needs an owner, admin, or developer/)).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Memory scope' })).toBeNull();
+  });
+
+  it('renders the loading state without a definition', () => {
+    shell({ definition: null });
+    expect(screen.getByText(/Loading the draft/)).toBeTruthy();
   });
 });

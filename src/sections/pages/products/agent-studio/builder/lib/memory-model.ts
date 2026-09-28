@@ -53,8 +53,15 @@ export const SCOPE_CONSEQUENCES: Record<MemoryScope, string> = {
 };
 
 export const HISTORY_MIN = 1;
+/**
+ * Legacy contract ceiling (the engine accepted 100 before the contract
+ * aligned to the runtime served-20). The editor now caps at
+ * HISTORY_SERVED_MAX; this stays for grading legacy drafts, never for
+ * new input.
+ */
 export const HISTORY_MAX = 100;
-/** The run serves at most this many recent messages (mcp-authority:2066-2067). */
+/** The run serves at most this many recent messages (mcp-authority:2066-2067)
+ * — and the contract now caps input at the same value. */
 export const HISTORY_SERVED_MAX = 20;
 
 export function servedHistory(limit: number): number {
@@ -62,11 +69,13 @@ export function servedHistory(limit: number): number {
   return Math.min(Math.max(HISTORY_MIN, limit), HISTORY_SERVED_MAX);
 }
 
-/** Engine accepts 100; the run serves 20 — state, never cap. */
-export const SERVED_20_COPY = 'Runs serve the 20 most recent — higher values are stored, not served.';
+/** The contract caps history at the served max (mcp-authority:2066-2067). */
+export const SERVED_20_COPY = 'Runs serve up to the 20 most recent messages.';
 
-/** Compaction attaches unconditionally outside the window (read path cited above). */
-export const COMPACTION_COPY = 'Older turns arrive as a rolling summary outside the window.';
+/** The runtime compacts into a rolling summary when the flag is on (A4-21).
+ *  Copy states the condition — never claims unconditional attachment. */
+export const COMPACTION_COPY =
+  'When summaries are on, older turns arrive as a rolling summary outside the window.';
 
 /** Why the builder never previews user rows (actor resolves per run). */
 export const USER_PREVIEW_COPY =

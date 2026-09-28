@@ -36,10 +36,16 @@ describe('checkDefinitionCaps', () => {
     expect(checkDefinitionCaps(shapeless).some((i) => i.path.includes('allowed_models[0]'))).toBe(true);
   });
 
-  it('bounds history 1–100 and tools ≤32 with slug-safe names', () => {
+  it('bounds history 1–20 (contract aligned to the runtime served-20) and tools ≤32 with slug-safe names', () => {
     const history = shippable();
     history.context_policy.history_limit = 0;
     expect(checkDefinitionCaps(history).some((i) => i.path === 'context_policy.history_limit')).toBe(true);
+    const over = shippable();
+    over.context_policy.history_limit = 21;
+    expect(checkDefinitionCaps(over).some((i) => i.path === 'context_policy.history_limit')).toBe(true);
+    const atMax = shippable();
+    atMax.context_policy.history_limit = 20;
+    expect(checkDefinitionCaps(atMax).some((i) => i.path === 'context_policy.history_limit')).toBe(false);
     const tools = shippable();
     tools.tools = Array.from({ length: 33 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
     expect(checkDefinitionCaps(tools).some((i) => i.path === 'tools')).toBe(true);
@@ -51,6 +57,83 @@ describe('checkDefinitionCaps', () => {
     expect(checkDefinitionCaps(pinned).some((i) => i.path === 'tools[0].schema_hash')).toBe(true);
   });
 
+  it('accepts all 5 engine memory scopes, rejecting garbage', () => {
+    const assistant = shippable();
+    assistant.context_policy.memory_scope = 'assistant';
+    expect(checkDefinitionCaps(assistant).some((i) => i.path === 'context_policy.memory_scope')).toBe(false);
+    const garbage = shippable();
+    garbage.context_policy.memory_scope = 'everyone' as never;
+    expect(checkDefinitionCaps(garbage).some((i) => i.path === 'context_policy.memory_scope')).toBe(true);
+  });
+
+  it('accepts an absent response_policy and rejects out-of-contract values', () => {
+    const absent = shippable();
+    expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('response_policy'))).toBe(false);
+    const full = shippable();
+    full.response_policy = {
+      output_format: 'plain',
+      citations_enabled: false,
+      streaming: 'on',
+      reasoning_effort: 'high',
+      top_p: 0.9,
+    };
+    expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('response_policy'))).toBe(false);
+    const bad = shippable();
+    bad.response_policy = { output_format: 'html', citations_enabled: true, streaming: 'sometimes' } as never;
+    const issues = checkDefinitionCaps(bad).filter((i) => i.path.startsWith('response_policy'));
+    expect(issues.map((i) => i.path).sort()).toEqual(['response_policy.output_format', 'response_policy.streaming']);
+    const badTopP = shippable();
+    badTopP.response_policy = { output_format: 'markdown', citations_enabled: true, streaming: 'auto', top_p: 2 };
+    expect(checkDefinitionCaps(badTopP).some((i) => i.path === 'response_policy.top_p')).toBe(true);
+    // Members are optional on input: a valid partial holds no autosave.
+    const partial = shippable();
+    partial.response_policy = { output_format: 'plain' };
+    expect(checkDefinitionCaps(partial).some((i) => i.path.startsWith('response_policy'))).toBe(false);
+  });
+  it('accepts an absent role_policy and rejects out-of-contract persona values', () => {
+    // Absent = no persona (valid): no issues.
+    const absent = shippable();
+    expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+    // A full valid persona holds no autosave.
+    const full = shippable();
+    full.role_policy = {
+      role: 'Senior support engineer',
+      goal: 'Resolve tickets in one touch.',
+      traits: ['calm', 'precise'],
+      communication_style: 'Short paragraphs.',
+      knowledge_areas: ['billing'],
+      prohibited_topics: ['politics'],
+    };
+    expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+    // A valid partial holds no autosave.
+    const partial = shippable();
+    partial.role_policy = { role: 'Concierge' };
+    expect(checkDefinitionCaps(partial).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+    // Over-limit text members and lists hold the save.
+    const bad = shippable();
+    bad.role_policy = {
+      role: 'x'.repeat(201),
+      goal: 'y'.repeat(501),
+      communication_style: 'z'.repeat(501),
+      traits: new Array(11).fill('trait'),
+      knowledge_areas: ['x'.repeat(81)],
+      prohibited_topics: new Array(21).fill('topic'),
+    };
+    const issues = checkDefinitionCaps(bad).filter((i) => i.path.startsWith('role_policy'));
+    expect(issues.map((i) => i.path).sort()).toEqual([
+      'role_policy.communication_style',
+      'role_policy.goal',
+      'role_policy.knowledge_areas',
+      'role_policy.prohibited_topics',
+      'role_policy.role',
+      'role_policy.traits',
+    ]);
+    // Non-string members are invalid too.
+    const wrongType = shippable();
+    wrongType.role_policy = { role: 42, traits: 'calm' } as never;
+    const typeIssues = checkDefinitionCaps(wrongType).filter((i) => i.path.startsWith('role_policy'));
+    expect(typeIssues.map((i) => i.path).sort()).toEqual(['role_policy.role', 'role_policy.traits']);
+  });
   it('bounds budgets per the engine caps', () => {
     const tokens = shippable();
     tokens.budget = { max_total_tokens: 999 };
@@ -122,6 +205,10 @@ describe('sectionOf (caps issues → editor sections)', () => {
     expect(sectionOf('model_policy.allowed_models')).toBe('model');
     expect(sectionOf('model_params.max_output_tokens')).toBe('model');
     expect(sectionOf('context_policy.history_limit')).toBe('context');
+    expect(sectionOf('response_policy.output_format')).toBe('response');
+    expect(sectionOf('response_policy')).toBe('response');
+    expect(sectionOf('role_policy.traits')).toBe('role');
+    expect(sectionOf('role_policy')).toBe('role');
     expect(sectionOf('tools[0].name')).toBe('tools');
     expect(sectionOf('knowledge_policy.max_results')).toBe('retrieval');
     expect(sectionOf('budget.max_total_tokens')).toBe('budget');

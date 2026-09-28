@@ -46,7 +46,7 @@ describe('servedHistory / gradeMemory', () => {
     expect(HISTORY_SERVED_MAX).toBe(20);
     expect(servedHistory(100)).toBe(20);
     expect(servedHistory(7)).toBe(7);
-    expect(SERVED_20_COPY).toMatch(/stored, not served/);
+    expect(SERVED_20_COPY).toMatch(/up to the 20 most recent/);
     expect(COMPACTION_COPY).toMatch(/rolling summary/);
   });
   it('grades none as thread-only and over-20 histories with the served note', () => {

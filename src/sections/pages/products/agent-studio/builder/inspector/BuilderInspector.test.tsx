@@ -16,10 +16,9 @@ import { laneOf, type LaneNodeId } from '../lib/lane-model';
 import type { PurposeNodeDatum } from './PurposeExtras';
 
 /**
- * Mapping tests (LEDGER.md §4 I1–I7): the 16 fixed node ids each mount
+ * Mapping tests (LEDGER.md §4 I1–I7): the 17 fixed node ids each mount
  * their section. Sections are stubbed — the mapping is the unit under test;
- * NotAvailablePanel and PurposeExtras stay REAL (their honesty/copy is
- * asserted here).
+ * PurposeExtras stays REAL (its copy is asserted here).
  */
 vi.mock('./PurposeInspector', () => ({
   PurposeInspector: () => <div data-testid="section-purpose" />,
@@ -41,6 +40,15 @@ vi.mock('./GuardrailsSection', () => ({
 }));
 vi.mock('./MemorySection', () => ({
   MemorySection: () => <div data-testid="section-memory" />,
+}));
+vi.mock('./ContextSection', () => ({
+  ContextSection: () => <div data-testid="section-context" />,
+}));
+vi.mock('./ResponseSection', () => ({
+  ResponseSection: () => <div data-testid="section-response" />,
+}));
+vi.mock('./RoleSection', () => ({
+  RoleSection: () => <div data-testid="section-role" />,
 }));
 vi.mock('./BudgetSection', () => ({
   BudgetSection: () => <div data-testid="section-budget" />,
@@ -144,7 +152,7 @@ async function shell(opts: {
   await act(async () => {
     rendered = render(<RouterProvider router={router} />);
   });
-  return { onSelectNode, container: rendered.container };
+  return { onSelectNode, container: rendered.container, unmount: rendered.unmount };
 }
 
 beforeEach(() => {
@@ -159,6 +167,9 @@ describe('BuilderInspector node mapping', () => {
     ['knowledge', 'section-knowledge'],
     ['tools', 'section-tools'],
     ['memory', 'section-memory'],
+    ['context', 'section-context'],
+    ['response', 'section-response'],
+    ['role', 'section-role'],
     ['guardrails', 'section-guardrails'],
     ['brand', 'section-brand'],
     ['budget', 'section-budget'],
@@ -193,25 +204,21 @@ describe('BuilderInspector node mapping', () => {
     expect(screen.queryByTestId('section-brain')).toBeNull();
   });
 
+  it('locks context, response, and role in new mode — the guard pattern holds for the new sections', async () => {
+    for (const id of ['context', 'response', 'role']) {
+      const { unmount } = await shell({
+        selected: node(id),
+        context: buildContext({ mode: 'new', agentId: null }),
+      });
+      expect(screen.getByText(/Name the agent first/)).toBeTruthy();
+      expect(screen.queryByTestId(`section-${id}`)).toBeNull();
+      unmount();
+    }
+  });
+
   it('shows an empty-state when nothing is selected', async () => {
     await shell({ selected: null });
     expect(screen.getByText(/Click any node on the circuit/)).toBeTruthy();
-  });
-});
-
-describe('NotAvailablePanel (context / response)', () => {
-  it('context renders the honest panel with no buttons', async () => {
-    const { container } = await shell({ selected: node('context') });
-    expect(screen.getByText(/Context isn’t available in this release yet/)).toBeTruthy();
-    expect(screen.getByText(/Session history, scope, and summary controls will live here/)).toBeTruthy();
-    expect(container.querySelectorAll('button, a').length).toBe(0);
-  });
-
-  it('response renders the honest panel with no buttons', async () => {
-    await shell({ selected: node('response') });
-    expect(screen.getByText(/Response isn’t available in this release yet/)).toBeTruthy();
-    expect(screen.getByText(/Output formatting, citations, and latency controls will live here/)).toBeTruthy();
-    expect(document.querySelectorAll('aside button, aside a').length).toBe(0);
   });
 });
 

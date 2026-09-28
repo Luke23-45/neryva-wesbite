@@ -156,14 +156,60 @@ describe('projector instructions node', () => {
   });
 });
 
-describe('projector context/response (honest not-yet-available)', () => {
-  it('ghosts both with the same honest copy', () => {
+describe('projector context/response (real sections)', () => {
+  it('carries payload truth in the subtitles with no hint', () => {
     const input = base();
+    expect(statusOf(input, 'context')).toBe('ready');
+    expect(subtitleOf(input, 'context')).toContain('History 20');
+    expect(subtitleOf(input, 'context')).toContain('user');
+    expect(nodeOf(input, 'context')?.hint).toBeNull();
+    expect(statusOf(input, 'response')).toBe('ready');
+    expect(subtitleOf(input, 'response')).toBe('Markdown · citations on · streaming auto');
+    expect(nodeOf(input, 'response')?.hint).toBeNull();
+  });
+
+  it('reports a stored response policy honestly', () => {
+    const def = defaultConsumer();
+    def.response_policy = { output_format: 'plain', citations_enabled: false, streaming: 'off' };
+    const input = base({ definition: def });
+    expect(subtitleOf(input, 'response')).toBe('Plain text · citations off · streaming off');
+  });
+
+  it('locks both in origin mode', () => {
+    const input = base({ mode: 'new', definition: null, hasDraft: false });
     for (const id of ['context', 'response']) {
-      expect(statusOf(input, id)).toBe('untouched');
-      expect(subtitleOf(input, id)).toBeNull();
-      expect(nodeOf(input, id)?.hint).toBe('Not yet available in this release');
+      expect(statusOf(input, id)).toBe('locked');
+      expect(nodeOf(input, id)?.hint).toBe('Create the agent first');
     }
+  });
+});
+
+describe('projector role (real section, D-N2 option A)', () => {
+  it('exists as a real node with payload-truth subtitle', () => {
+    const input = base();
+    expect(statusOf(input, 'role')).toBe('ready');
+    expect(subtitleOf(input, 'role')).toBeNull();
+    expect(nodeOf(input, 'role')?.hint).toBeNull();
+    expect(nodeOf(input, 'role')?.title).toBe('Role');
+  });
+
+  it('summarizes a stored persona without inventing values', () => {
+    const def = defaultConsumer();
+    def.role_policy = { role: 'Senior support engineer', traits: ['calm', 'precise'], goal: 'One-touch resolution' };
+    const input = base({ definition: def });
+    expect(subtitleOf(input, 'role')).toBe('Senior support engineer · +2 more');
+  });
+
+  it('renders null when the policy is blank', () => {
+    const def = defaultConsumer();
+    def.role_policy = { role: '  ', traits: [] };
+    expect(subtitleOf(base({ definition: def }), 'role')).toBeNull();
+  });
+
+  it('locks in origin mode', () => {
+    const input = base({ mode: 'new', definition: null, hasDraft: false });
+    expect(statusOf(input, 'role')).toBe('locked');
+    expect(nodeOf(input, 'role')?.hint).toBe('Create the agent first');
   });
 });
 
@@ -263,7 +309,10 @@ describe('projector edges', () => {
     const badCatalog = [{ ref: 'b/bad', usable: false, reasons: ['provider_credential_missing'] as string[] }];
     const dimLit = litIds(base({ definition: unusable, models: badCatalog }));
     expect(dimLit).toContain('e:purpose:context');
-    expect(dimLit).not.toContain('e:context:brain');
+    // The Context node is real now (engine defaults = genuinely ready), so
+    // its leg lights; the unusable model dims the brain's outbound leg.
+    expect(dimLit).toContain('e:context:brain');
+    expect(dimLit).not.toContain('e:brain:response');
   });
 
   it('draws instructions→brain lit when instructions exist', () => {
@@ -332,11 +381,14 @@ describe('projector edges', () => {
 });
 
 describe('projector health set', () => {
-  it('defines the 14 functional ids (everything except context/response)', () => {
+  it('defines the 14 functional ids (everything except context/response/role)', () => {
     expect(FUNCTIONAL_NODE_IDS).toHaveLength(14);
     expect(FUNCTIONAL_NODE_IDS).not.toContain('context');
     expect(FUNCTIONAL_NODE_IDS).not.toContain('response');
-    expect([...FUNCTIONAL_NODE_IDS].sort()).toEqual(LANE_NODE_IDS.filter((id) => id !== 'context' && id !== 'response').sort());
+    expect(FUNCTIONAL_NODE_IDS).not.toContain('role');
+    expect([...FUNCTIONAL_NODE_IDS].sort()).toEqual(
+      LANE_NODE_IDS.filter((id) => id !== 'context' && id !== 'response' && id !== 'role').sort(),
+    );
   });
 
   it('sizes nodes at 200×100', () => {
@@ -473,7 +525,7 @@ describe('projector memory grading (C08)', () => {
   it('grades from scope and history', () => {
     const fresh = base();
     expect(statusOf(fresh, 'memory')).toBe('ready');
-    expect(subtitleOf(fresh, 'memory')).toBe('User · history 30 (serves ≤20)');
+    expect(subtitleOf(fresh, 'memory')).toBe('User · history 20');
     const def = defaultConsumer();
     def.context_policy.memory_scope = 'none';
     expect(subtitleOf(base({ definition: def }), 'memory')).toBe('None — thread only');

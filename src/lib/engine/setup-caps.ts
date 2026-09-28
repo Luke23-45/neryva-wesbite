@@ -12,6 +12,7 @@
  * secret shapes rejected before persistence (mirrors validation.ts).
  */
 import type { ConsumerDefinition } from './agent-payload';
+import { ROLE_LIMITS } from './agent-payload';
 
 export interface CapIssue {
   /** Dotted field path (e.g. `model_policy.allowed_models`, `budget.max_total_tokens`). */
@@ -28,7 +29,9 @@ export const CAPS = {
   toolNamePattern: /^[a-z0-9_]+$/,
   toolNameMax: 64,
   historyMin: 1,
-  historyMax: 100,
+  // The contract ceiling aligns with the runtime served-20: the run reads at
+  // most 20 messages, so the editor offers 1–20 (the engine rejects above).
+  historyMax: 20,
   resultsMin: 1,
   resultsMax: 20,
   budgetTokensMin: 1000,
@@ -143,10 +146,106 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
   if (!Number.isInteger(def.context_policy.history_limit) || def.context_policy.history_limit < CAPS.historyMin || def.context_policy.history_limit > CAPS.historyMax) {
     issues.push({ path: 'context_policy.history_limit', message: `Must be an integer ${CAPS.historyMin}–${CAPS.historyMax}.` });
   }
-  // C08: all 4 engine scopes are valid (`user` is the default — the old
+  // C08: all 5 engine scopes are valid (`user` is the default — the old
   // "`user` has no maker meaning" issue was proven false by the FL-1.5 runtime).
-  if (!['user', 'none', 'conversation', 'org'].includes(def.context_policy.memory_scope)) {
-    issues.push({ path: 'context_policy.memory_scope', message: 'Memory scope is user, none, conversation, or org.' });
+  if (!['user', 'none', 'conversation', 'assistant', 'org'].includes(def.context_policy.memory_scope)) {
+    issues.push({
+      path: 'context_policy.memory_scope',
+      message: 'Memory scope is user, none, conversation, assistant, or org.',
+    });
+  }
+
+  // Response node: absent = engine defaults (no issue). Present = every
+  // member that IS present must be in contract (members are optional on
+  // input — a partial object is valid; the wire materializes defaults).
+  const response = def.response_policy;
+  if (response !== undefined) {
+    if (
+      response.output_format !== undefined &&
+      response.output_format !== 'markdown' &&
+      response.output_format !== 'plain'
+    ) {
+      issues.push({ path: 'response_policy.output_format', message: 'Output format is markdown or plain.' });
+    }
+    if (response.citations_enabled !== undefined && typeof response.citations_enabled !== 'boolean') {
+      issues.push({ path: 'response_policy.citations_enabled', message: 'Citations must be on or off.' });
+    }
+    if (
+      response.streaming !== undefined &&
+      response.streaming !== 'auto' &&
+      response.streaming !== 'on' &&
+      response.streaming !== 'off'
+    ) {
+      issues.push({ path: 'response_policy.streaming', message: 'Streaming is auto, on, or off.' });
+    }
+    if (response.reasoning_effort !== undefined && typeof response.reasoning_effort !== 'string') {
+      issues.push({ path: 'response_policy.reasoning_effort', message: 'Reasoning effort must be a string.' });
+    }
+    if (
+      response.top_p !== undefined &&
+      (typeof response.top_p !== 'number' || !Number.isFinite(response.top_p) || response.top_p < 0 || response.top_p > 1)
+    ) {
+      issues.push({ path: 'response_policy.top_p', message: 'Top P is a number between 0 and 1.' });
+    }
+  }
+
+  // Response node split: reasoning effort + top-p are model_params members
+  // (the engine's responsePolicySchema is strict with only the three render
+  // fields; the response_policy checks above stay as foreign-payload defense —
+  // parseResponsePolicy still tolerates those members from other clients).
+  // Bounds mirror engine validation.ts: enum + z.number().gt(0).max(1).
+  const effort = def.model_params.reasoning_effort as string | undefined;
+  if (effort !== undefined && !(['minimal', 'low', 'medium', 'high'] as readonly string[]).includes(effort)) {
+    issues.push({ path: 'model_params.reasoning_effort', message: 'Reasoning effort is minimal, low, medium, or high.' });
+  }
+  const topP = def.model_params.top_p;
+  if (topP !== undefined && (typeof topP !== 'number' || !Number.isFinite(topP) || topP <= 0 || topP > 1)) {
+    issues.push({ path: 'model_params.top_p', message: 'Top-p must be above 0 and at most 1.' });
+  }
+
+  // Role node (D-N2 option A — structured persona): absent = no persona (no
+  // issue). Present = every member that IS present must be in contract.
+  // Bounds mirror the engine's rolePolicySchema (ROLE_LIMITS).
+  const rp = def.role_policy;
+  if (rp !== undefined) {
+    if (rp.role !== undefined && (typeof rp.role !== 'string' || rp.role.length > ROLE_LIMITS.role)) {
+      issues.push({ path: 'role_policy.role', message: `Role is at most ${ROLE_LIMITS.role} characters.` });
+    }
+    if (rp.goal !== undefined && (typeof rp.goal !== 'string' || rp.goal.length > ROLE_LIMITS.goal)) {
+      issues.push({ path: 'role_policy.goal', message: `Goal is at most ${ROLE_LIMITS.goal} characters.` });
+    }
+    if (
+      rp.communication_style !== undefined &&
+      (typeof rp.communication_style !== 'string' || rp.communication_style.length > ROLE_LIMITS.communication_style)
+    ) {
+      issues.push({
+        path: 'role_policy.communication_style',
+        message: `Communication style is at most ${ROLE_LIMITS.communication_style} characters.`,
+      });
+    }
+    const lists: Array<{ value: string[] | undefined; path: string; max: number; item: number; label: string }> = [
+      { value: rp.traits, path: 'role_policy.traits', max: ROLE_LIMITS.traits.max, item: ROLE_LIMITS.traits.item, label: 'Traits' },
+      {
+        value: rp.knowledge_areas,
+        path: 'role_policy.knowledge_areas',
+        max: ROLE_LIMITS.knowledge_areas.max,
+        item: ROLE_LIMITS.knowledge_areas.item,
+        label: 'Knowledge areas',
+      },
+      {
+        value: rp.prohibited_topics,
+        path: 'role_policy.prohibited_topics',
+        max: ROLE_LIMITS.prohibited_topics.max,
+        item: ROLE_LIMITS.prohibited_topics.item,
+        label: 'Prohibited topics',
+      },
+    ];
+    for (const { value, path, max, item, label } of lists) {
+      if (value === undefined) continue;
+      if (!Array.isArray(value) || value.length > max || value.some((t) => typeof t !== 'string' || t.length > item)) {
+        issues.push({ path, message: `${label}: at most ${max} items of ${item} characters each.` });
+      }
+    }
   }
 
   if (def.tools.length > CAPS.toolsMax) {
@@ -222,6 +321,10 @@ export function sectionOf(path: string): string {
       return 'model';
     case 'context_policy':
       return 'context';
+    case 'response_policy':
+      return 'response';
+    case 'role_policy':
+      return 'role';
     case 'tools':
       return 'tools';
     case 'knowledge_policy':
