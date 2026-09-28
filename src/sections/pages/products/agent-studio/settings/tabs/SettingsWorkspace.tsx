@@ -229,7 +229,7 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
           {/* ─── Brand color ─── */}
           <FieldGroup>
             <FieldLabel>Brand color</FieldLabel>
-            <FieldHint>Used for the gradient on the brand mark and accents.</FieldHint>
+            <FieldHint>Used for the brand mark and accents.</FieldHint>
             <SwatchRow>
               {PRESETS.map((hex) => (
                 <SwatchBtn

@@ -353,16 +353,9 @@ export function StudioShell({
         >
           <BrandRow>
             <BrandMark viewBox="0 0 32 32" aria-hidden="true">
-              <defs>
-                <linearGradient id="shell-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#c084fc" />
-                  <stop offset="0.55" stopColor="#2563eb" />
-                  <stop offset="1" stopColor="#05e3a4" />
-                </linearGradient>
-              </defs>
               <path
                 d="M6 26V8.5C6 7.12 7.12 6 8.5 6h7.2c3.59 0 6.5 2.91 6.5 6.5S19.29 19 15.7 19H11v7H6z"
-                fill="url(#shell-mark)"
+                fill="#3b82f6"
               />
             </BrandMark>
             <BrandWordmark>

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, Sparkles, ArrowRight } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { Modal } from '@components/common/ui/Modal';
-import { spring, ease } from '@styles/motion';
+import { spring } from '@styles/motion';
 import styled from 'styled-components';
 
 /**
@@ -142,14 +142,6 @@ export function UpgradeModal() {
               animate={{ opacity: 1, y: 0 }}
               custom={i}
             >
-              {t.featured && (
-                <FeaturedHalo
-                  aria-hidden="true"
-                  initial={{ opacity: 0.6 }}
-                  animate={{ opacity: [0.4, 0.7, 0.4] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: ease.standard }}
-                />
-              )}
               {t.featured && <MostPopular>Most popular</MostPopular>}
 
               <PlanHeader>
@@ -231,17 +223,6 @@ const PlanCard = styled(motion.div)<{ $featured?: boolean }>`
     outline: 2px solid ${({ theme }) => theme.colors.accent.azure};
     outline-offset: 2px;
   }
-`;
-
-const FeaturedHalo = styled(motion.div)`
-  position: absolute;
-  inset: -40%;
-  background: radial-gradient(
-    ellipse at 50% 0%,
-    ${({ theme }) => theme.colors.accent.azure} 0%,
-    transparent 60%
-  );
-  pointer-events: none;
 `;
 
 const MostPopular = styled.span`

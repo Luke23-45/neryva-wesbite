@@ -591,7 +591,7 @@ const InviteBtn = styled(motion.button)`
   height: 36px;
   border: 0;
   border-radius: 9px;
-  background: ${({ theme }) => theme.colors.gradients.primary};
+  background: #3b82f6;
   color: #fff;
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};
@@ -667,7 +667,7 @@ const RoleButton = styled(motion.button)<{ $open: boolean }>`
   border: 1px solid ${({ $open }) => ($open ? 'rgba(192, 132, 252, 0.45)' : 'rgba(255, 255, 255, 0.08)')};
   background: ${({ $open }) =>
     $open
-      ? 'linear-gradient(180deg, rgba(192, 132, 252, 0.08), rgba(37,99,235,0.04))'
+      ? 'rgba(192, 132, 252, 0.08)'
       : 'rgba(255, 255, 255, 0.03)'};
   color: ${({ theme }) => theme.app.text.primary};
   font-family: inherit;

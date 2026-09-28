@@ -69,12 +69,12 @@ export const Avatar = styled.div<{ $tone: string }>`
   color: #fff;
   background: ${({ $tone }) =>
     $tone === 'lilac'
-      ? 'linear-gradient(135deg, #a855f7 0%, #c084fc 100%)'
+      ? '#a855f7'
       : $tone === 'azure'
-        ? 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)'
+        ? '#3b82f6'
         : $tone === 'emerald'
-          ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
-          : 'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)'};
+          ? '#10b981'
+          : '#9ca3af'};
   flex-shrink: 0;
 `;
 

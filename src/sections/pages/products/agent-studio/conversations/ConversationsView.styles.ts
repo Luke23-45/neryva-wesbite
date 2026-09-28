@@ -232,7 +232,7 @@ export const Bubble = styled.div<{ $role: 'user' | 'agent' }>`
   background: ${({ $role, theme }) =>
     $role === 'user'
       ? theme.app.surface.tint
-      : 'linear-gradient(180deg, rgba(192, 132, 252, 0.10), rgba(37, 99, 235, 0.06))'};
+      : 'rgba(192, 132, 252, 0.08)'};
   border: 1px solid
     ${({ $role, theme }) => ($role === 'user' ? theme.app.border.strong : 'rgba(192, 132, 252, 0.18)')};
 `;

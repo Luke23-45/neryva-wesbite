@@ -3,23 +3,10 @@ import type { SlotStatus } from '../../lib/slot-model';
 
 export const NodeCard = styled.div<{ $status: SlotStatus; $selected: boolean; $ghost: boolean }>`
   width: 240px;
-  padding: 10px 12px 10px 14px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: ${({ theme }) => theme.app.bg.raised};
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-left: 3px solid
-    ${({ theme, $status }) =>
-      $status === 'ready'
-        ? theme.app.status.success.fg
-        : $status === 'attention'
-          ? theme.app.status.warning.fg
-          : $status === 'error'
-            ? theme.app.status.error.fg
-            : $status === 'info'
-              ? theme.app.status.info.fg
-              : $status === 'skipped'
-                ? theme.app.text.faint
-                : theme.app.border.strong};
   box-shadow: ${({ theme }) => theme.app.shadow.md};
   opacity: ${({ $status }) => ($status === 'locked' ? 0.55 : 1)};
   cursor: pointer;
@@ -29,7 +16,6 @@ export const NodeCard = styled.div<{ $status: SlotStatus; $selected: boolean; $g
     $ghost &&
     css`
       border-style: dashed;
-      border-left-style: dashed;
     `}
 
   ${({ theme, $selected }) =>

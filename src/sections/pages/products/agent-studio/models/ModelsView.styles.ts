@@ -8,7 +8,7 @@ export const RoutingCard = styled.div`
   padding: 16px 20px;
   border-radius: 14px;
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: linear-gradient(180deg, rgba(192, 132, 252, 0.08), rgba(37, 99, 235, 0.04));
+  background: rgba(59, 130, 246, 0.06);
   flex-wrap: wrap;
 `;
 
@@ -52,7 +52,7 @@ export const RoutingBadge = styled.span<{ $variant: 'default' | 'primary' }>`
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   background: ${({ $variant, theme }) =>
-    $variant === 'primary' ? theme.colors.gradients.primary : theme.app.surface.tint};
+    $variant === 'primary' ? '#3b82f6' : theme.app.surface.tint};
   border: 1px solid
     ${({ $variant, theme }) => ($variant === 'primary' ? 'transparent' : theme.app.border.default)};
   color: ${({ $variant, theme }) => ($variant === 'primary' ? '#fff' : theme.app.text.secondary)};
