@@ -12,6 +12,7 @@ export const Panel = styled.aside`
   flex: none;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   background: #0d1117;
   border-left: 1px solid #1e2530;
   overflow-y: auto;

@@ -7,6 +7,7 @@ export const Rail = styled.aside`
   flex: none;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   gap: 4px;
   padding: 14px 12px 12px;
   background: #0d1117;

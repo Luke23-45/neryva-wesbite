@@ -2,7 +2,10 @@ import styled from 'styled-components';
 
 export const Shell = styled.div`
   flex: 1;
-  min-height: 560px;
+  /* Fixed-viewport chain: the builder column fills the bounded ContentArea
+     exactly; the old 560px floor would force the page taller than the
+     viewport on short screens. */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -13,6 +16,9 @@ export const Main = styled.div`
   min-height: 0;
   display: flex;
   align-items: stretch;
+  /* The three columns (palette / canvas / inspector) own their scroll;
+     the page never does. */
+  overflow: hidden;
 
   ${({ theme }) => theme.media.tablet} {
     flex-direction: column;

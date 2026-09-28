@@ -17,6 +17,28 @@ export const ShellRoot = styled.section<{ $collapsed?: boolean; $builder?: boole
   ${({ theme }) => theme.media.tablet} {
     grid-template-columns: 1fr;
   }
+
+  /* Builder: Figma-style fixed viewport. The page itself never scrolls —
+     the palette rail and inspector scroll internally at a fixed height,
+     and the canvas holds still. Bounded chain: this root (100dvh, hidden)
+     → ShellBody (min-height: 0) → ContentArea (flex: 1, hidden) →
+     AgentBuilder Shell/Main (flex: 1, min-height: 0, hidden) → Rail/Panel
+     (overflow-y: auto). On tablet the builder falls back to page scroll. */
+  ${({ $builder, theme }) =>
+    $builder &&
+    `
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    grid-template-rows: minmax(0, 1fr);
+
+    ${theme.media.tablet} {
+      height: auto;
+      min-height: 100vh;
+      overflow: visible;
+      grid-template-rows: none;
+    }
+  `}
 `;
 
 /* ─── Sidebar ─── */
@@ -365,6 +387,9 @@ export const ShellBody = styled.div`
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* Builder fixed-viewport chain: the grid item must be allowed to shrink
+     below content height, otherwise min-height: auto forces the page tall. */
+  min-height: 0;
   background: ${({ theme }) => theme.app.bg.base};
 `;
 
@@ -393,6 +418,7 @@ export const Topbar = styled.div<{ $builder?: boolean }>`
     $builder &&
     `
     height: 48px;
+    flex: none;
     padding: 0 16px;
     gap: 12px;
   `}
@@ -507,6 +533,10 @@ export const ContentArea = styled.main`
   flex-direction: column;
   width: 100%;
   min-height: 0;
+  /* Builder fixed-viewport chain: clip at the flex bound so the columns
+     below (not the page) do the scrolling. Harmless on other pages —
+     with unconstrained height nothing clips. */
+  overflow: hidden;
 `;
 
 export const BannerSlot = styled.div`

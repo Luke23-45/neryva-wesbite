@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
 import { defaultConsumer } from '@lib/engine/agent-payload';
 import { AgentBuilder } from './AgentBuilder';
+import { useBuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 
 const saveMutate = vi.fn();
 const updateMutate = vi.fn();
@@ -40,8 +41,16 @@ vi.mock('./canvas/AgentCanvas', () => ({
 }));
 
 vi.mock('../templates/TemplateBanner', () => ({
-  TemplateBanner: () => null,
+  // Rendered inside AgentBuilder's slot provider in build mode — stand in
+  // for StudioShell by mounting the real actions slot, so the Save button
+  // under test is the production one wired to the real save path.
+  TemplateBanner: () => <TopbarSlotStandIn />,
 }));
+
+function TopbarSlotStandIn() {
+  const slots = useBuilderTopbarSlots();
+  return <>{slots?.actions}</>;
+}
 
 const DEFINITION = {
   ...defaultConsumer(),
