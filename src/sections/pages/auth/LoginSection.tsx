@@ -84,36 +84,16 @@ const PROVIDER_META: Record<string, { label: string; Icon: ComponentType }> = {
 export const LogoMark = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="70" height="70" aria-hidden="true">
         <defs>
-            <linearGradient id="authWingUpper" x1="0%" y1="100%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#c084fc" />
-                <stop offset="50%" stopColor="#818cf8" />
-                <stop offset="100%" stopColor="#6366f1" />
-            </linearGradient>
-            <linearGradient id="authWingMiddle" x1="0%" y1="50%" x2="100%" y2="50%">
-                <stop offset="0%" stopColor="#00a8cc" />
-                <stop offset="60%" stopColor="#05e3a4" />
-                <stop offset="100%" stopColor="#00ff87" />
-            </linearGradient>
-            <linearGradient id="authWingLower" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0284c7" />
-                <stop offset="50%" stopColor="#2563eb" />
-                <stop offset="100%" stopColor="#1e1b4b" />
-            </linearGradient>
-            <linearGradient id="authObelisk" x1="50%" y1="0%" x2="50%" y2="100%">
-                <stop offset="0%" stopColor="#7c3aed" />
-                <stop offset="50%" stopColor="#a855f7" />
-                <stop offset="100%" stopColor="#2e0854" />
-            </linearGradient>
             <g id="authWing">
-                <polygon points="45,-280 340,-420 430,-420 260,-190 55,-95" fill="url(#authWingUpper)" />
-                <polygon points="26,-70 460,-110 450,-35 175,115 20,25" fill="url(#authWingMiddle)" />
-                <polygon points="14,55 310,240 245,305 55,395 14,325" fill="url(#authWingLower)" />
+                <polygon points="45,-280 340,-420 430,-420 260,-190 55,-95" fill="#818cf8" />
+                <polygon points="26,-70 460,-110 450,-35 175,115 20,25" fill="#05e3a4" />
+                <polygon points="14,55 310,240 245,305 55,395 14,325" fill="#2563eb" />
             </g>
         </defs>
         <g transform="translate(500,500)">
             <use href="#authWing" transform="scale(-1,1)" />
             <use href="#authWing" />
-            <polygon points="0,-440 30,-290 30,-115 0,45 -30,-115 -30,-290" fill="url(#authObelisk)" />
+            <polygon points="0,-440 30,-290 30,-115 0,45 -30,-115 -30,-290" fill="#7c3aed" />
         </g>
     </svg>
 );

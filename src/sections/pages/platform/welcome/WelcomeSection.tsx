@@ -4,7 +4,7 @@
  * An iOS-idiom grouped sheet: one centered narrow column on a cool-gray
  * canvas, white inset cards with hairline dividers, small section headers,
  * tinted glyph tiles, a real consent switch, and a bottom-pinned action dock.
- * Nothing is shared with the sign-in surface except the brand gradient on the
+ * Nothing is shared with the sign-in surface except the flat brand blue on the
  * avatar — the two screens never read as the same page.
  *
  * Consent is not decoration. The engine auto-provisions the personal workspace

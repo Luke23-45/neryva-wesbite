@@ -77,11 +77,7 @@ export const Banner = styled.div`
   padding: 10px 14px;
   margin-bottom: 28px;
   border-radius: 12px;
-  background: linear-gradient(
-    180deg,
-    ${({ theme }) => theme.app.surface.tint},
-    ${({ theme }) => theme.app.surface.subtle}
-  );
+  background: ${({ theme }) => theme.app.surface.tint};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   color: ${({ theme }) => theme.app.text.body};
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;

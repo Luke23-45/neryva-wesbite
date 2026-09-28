@@ -168,7 +168,6 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
     dataKey: key,
     name: key.replace(/_/g, ' '),
     color: SERIES_COLORS[i % SERIES_COLORS.length],
-    gradientId: `usage-grad-${key}`,
   }));
 
   const setProduct = (next: string) => {

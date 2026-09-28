@@ -19,10 +19,7 @@ export const GhostButton = styled.button`
 
 export const DangerButton = styled.button<{ $destructive?: boolean }>`
   border: 0;
-  background: ${({ $destructive }) =>
-    $destructive
-      ? '#ef4444'
-      : 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'};
+  background: ${({ $destructive }) => ($destructive ? '#ef4444' : '#3b82f6')};
   color: #fff;
   font-family: inherit;
   font-size: 13px;

@@ -160,14 +160,14 @@ export function ToolsView() {
                   ))}
                 </select>
               </label>
-              <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
+              <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
                 <Switch
                   checked={showDisabled}
                   onChange={setShowDisabled}
                   label="Show disabled tools"
                   id="show-disabled-tools"
                 />
-              </label>
+              </div>
             </div>
             <QueryView
               query={catalog}

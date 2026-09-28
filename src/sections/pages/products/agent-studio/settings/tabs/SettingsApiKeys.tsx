@@ -650,7 +650,7 @@ const PrimaryButton = styled(motion.button)`
   align-items: center;
   gap: 6px;
   border: 0;
-  background: ${({ theme }) => theme.colors.gradients.primary};
+  background: #3b82f6;
   color: #fff;
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};
@@ -863,9 +863,9 @@ const Dot = styled(motion.div)<{ $active: boolean; $reached: boolean }>`
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: ${({ $active, $reached, theme }) => ($active ? '#fff' : $reached ? theme.app.text.primary : theme.app.text.faint)};
-  background: ${({ $active, $reached, theme }) =>
+  background: ${({ $active, $reached }) =>
     $active
-      ? theme.colors.gradients.primary
+      ? '#3b82f6'
       : $reached
         ? 'rgba(192, 132, 252, 0.20)'
         : 'rgba(255, 255, 255, 0.04)'};
@@ -983,9 +983,9 @@ const Toggle = styled(motion.button)<{ $on: boolean }>`
   height: 22px;
   border-radius: 999px;
   border: 1px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.strong)};
-  background: ${({ $on, theme }) =>
+  background: ${({ $on }) =>
     $on
-      ? theme.colors.gradients.primary
+      ? '#3b82f6'
       : 'rgba(255, 255, 255, 0.10)'};
   cursor: pointer;
   padding: 0;
@@ -1034,7 +1034,7 @@ const ExpiryCard = styled(motion.button)<{ $on: boolean }>`
     ${({ $on }) => ($on ? 'rgba(96, 165, 250, 0.50)' : 'rgba(255, 255, 255, 0.06)')};
   background: ${({ $on }) =>
     $on
-      ? 'linear-gradient(180deg, rgba(96, 165, 250, 0.10), rgba(37, 99, 235, 0.04))'
+      ? 'rgba(96, 165, 250, 0.08)'
       : 'rgba(255, 255, 255, 0.02)'};
   cursor: pointer;
   font-family: inherit;
@@ -1048,9 +1048,9 @@ const Radio = styled.span<{ $on: boolean }>`
   height: 18px;
   border-radius: 50%;
   border: 1.5px solid ${({ $on, theme }) => ($on ? 'transparent' : theme.app.border.hover)};
-  background: ${({ $on, theme }) =>
+  background: ${({ $on }) =>
     $on
-      ? theme.colors.gradients.primary
+      ? '#3b82f6'
       : 'transparent'};
   display: inline-flex;
   align-items: center;

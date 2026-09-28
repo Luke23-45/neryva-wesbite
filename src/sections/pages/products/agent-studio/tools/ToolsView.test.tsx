@@ -119,4 +119,18 @@ describe('ToolsView catalog (C06)', () => {
     expect(screen.getByText('Must be a number ≥ 1.')).toBeTruthy();
     expect(screen.getByText('Instantiate').closest('button')?.disabled).toBe(true);
   });
+
+  it('toggles "Show disabled tools" exactly once per label click', async () => {
+    await act(async () => {
+      shell();
+    });
+    // The switch renders its own label; there must be no wrapping <label>
+    // that could double-activate the toggle in real browsers.
+    const toggle = screen.getByRole('switch', { name: 'Show disabled tools' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(screen.getByText('Show disabled tools'));
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByText('Show disabled tools'));
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+  });
 });
