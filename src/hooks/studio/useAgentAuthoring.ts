@@ -537,6 +537,47 @@ export function useCreateAssistant() {
   });
 }
 
+/**
+ * Renames an agent / updates its description (PATCH identity endpoint).
+ * Invalidates the whole authoring query family on success, so the new
+ * identity lands in the topbar, the inspector, the canvas Purpose card,
+ * and the agent list at once. A 409 (name taken in this organization)
+ * stays silent here — the editor shows the inline "name taken" recovery.
+ */
+export interface UpdateAssistantIdentityInput {
+  assistantId: string;
+  name: string;
+  /** Trimmed description; an empty string clears it server-side. */
+  description: string;
+}
+
+export function useUpdateAssistantIdentity() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: UpdateAssistantIdentityInput) => {
+      const raw = await engine<Record<string, unknown>>(
+        `/console/org/${orgId}/assistants/${input.assistantId}`,
+        {
+          method: 'PATCH',
+          body: { name: input.name, description: input.description },
+          idempotent: true,
+        },
+      );
+      const assistant =
+        typeof raw.assistant === 'object' && raw.assistant !== null
+          ? (raw.assistant as Record<string, unknown>)
+          : {};
+      await queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] });
+      return { assistant };
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 409) return;
+      toastEngineError(error, 'Could not save the agent identity');
+    },
+  });
+}
+
 /** Mutation key shared by both draft-write mutations — the builder top bar
  * derives its honest "Saving…" readout from it (A2-23). */
 export const DRAFT_WRITE_MUTATION_KEY = ['studio', 'assistants', 'draft-write'] as const;

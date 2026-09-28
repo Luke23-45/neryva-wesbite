@@ -66,25 +66,45 @@ export const ReadKey = styled.dt`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
+/** Identity header: key on the left, edit affordance pinned top-right. */
+export const IdentityHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
+export const EditIconButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.muted};
+  cursor: pointer;
+  flex: none;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+    background: ${({ theme }) => theme.app.surface.subtle};
+    border-color: ${({ theme }) => theme.app.border.default};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.status.info.fg};
+    outline-offset: 2px;
+  }
+`;
+
 export const ReadValue = styled.dd`
   margin: 0;
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.primary};
   line-height: 1.55;
   overflow-wrap: anywhere;
-`;
-
-export const LockNote = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.55;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: ${({ theme }) => theme.app.surface.subtle};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const RowActions = styled.div`

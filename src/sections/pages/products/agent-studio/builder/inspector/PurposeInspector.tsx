@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Lock } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
@@ -8,16 +8,17 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ApiError } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import type { OrgRole } from '@/Context/OrgContext';
-import { useCreateAssistant } from '@hooks/studio/useAgentAuthoring';
+import { useCreateAssistant, useUpdateAssistantIdentity } from '@hooks/studio/useAgentAuthoring';
 import { ClonePicker } from '../../agents/ClonePicker';
 import { buildAgentBuildPath, buildAgentEditPath } from '../lib/slot-model';
 import { DESCRIPTION_MAX, isDescriptionValid, isNameValid, NAME_MAX, NAME_MIN, suggestRename } from './purpose-model';
 import {
   Counter,
   DeniedPanel,
+  EditIconButton,
   Form,
   GalleryLink,
-  LockNote,
+  IdentityHead,
   ReadKey,
   ReadRow,
   ReadRows,
@@ -53,9 +54,9 @@ interface PurposeInspectorProps {
 /**
  * C01 Identity — the only live inspector in the C01 pass (c01-identity/SPEC).
  * New mode: the creation contract (counters, 409 one-tap rename, viewer
- * copy). Build mode: identity is read-only — the engine has no rename verb,
- * so the inspector states the lock instead of offering a field, with Clone
- * as the honest rename path.
+ * copy). Build mode: identity reads NAME/DESCRIPTION with a pencil
+ * affordance (authors only) that opens the whole identity block for
+ * inline editing — Save PATCHes the identity endpoint, Cancel discards.
  */
 export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>(function PurposeInspector(
   { mode, agentId, agentName, description, canAuthor, role, onFormState, onCreated },
@@ -65,7 +66,9 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const [desc, setDesc] = useState('');
   const [taken, setTaken] = useState(false);
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const create = useCreateAssistant();
+  const updateIdentity = useUpdateAssistantIdentity();
   const navigate = useNavigate();
 
   const trimmed = name.trim();
@@ -108,12 +111,144 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
 
   const suggestion = useMemo(() => suggestRename(trimmed || 'Untitled agent'), [trimmed]);
 
+  // ── Build-mode identity editing ──────────────────────────────────────────
+  // The whole identity block (name + description) goes into edit mode from
+  // the pencil affordance; Save PATCHes the identity endpoint, Cancel
+  // discards. Authors only — viewers never see the pencil.
+
+  const enterEdit = useCallback(() => {
+    setName(agentName ?? '');
+    setDesc(description ?? '');
+    setTaken(false);
+    setEditing(true);
+  }, [agentName, description]);
+
+  const cancelEdit = useCallback(() => {
+    setEditing(false);
+    setTaken(false);
+  }, []);
+
+  const editNameValid = isNameValid(name);
+  const editDescValid = isDescriptionValid(desc);
+  const editValid = editNameValid && editDescValid;
+  const editDirty =
+    name.trim() !== (agentName ?? '').trim() || desc.trim() !== (description ?? '').trim();
+
+  const saveIdentity = useCallback(() => {
+    if (mode !== 'build' || !agentId || !editValid || !editDirty || updateIdentity.isPending) return;
+    setTaken(false);
+    updateIdentity.mutate(
+      { assistantId: agentId, name: trimmed, description: desc.trim() },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          toast.success('Agent identity saved');
+        },
+        onError: (error) => {
+          // Duplicate (organization_id, name): typed 409 → inline recovery,
+          // never a raw toast (same contract as creation).
+          if (error instanceof ApiError && error.status === 409) {
+            setTaken(true);
+          }
+          // All other failures keep the hook's verbatim toast (no double-surface).
+        },
+      },
+    );
+  }, [mode, agentId, editValid, editDirty, updateIdentity, trimmed, desc]);
+
   if (mode === 'build') {
+    if (editing) {
+      return (
+        <Form
+          onSubmit={(event) => {
+            event.preventDefault();
+            saveIdentity();
+          }}
+        >
+          <div>
+            <TextInput
+              label="Agent name"
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setTaken(false);
+              }}
+              placeholder="e.g. Billing concierge"
+              autoFocus
+              maxLength={NAME_MAX + 12}
+              aria-describedby="purpose-edit-name-counter"
+            />
+            <Counter id="purpose-edit-name-counter">
+              {name.length} / {NAME_MAX} · needs {NAME_MIN}–{NAME_MAX}
+            </Counter>
+          </div>
+          <div>
+            <TextArea
+              label="Description (optional)"
+              value={desc}
+              onChange={(event) => setDesc(event.target.value)}
+              placeholder="What this agent does"
+              rows={3}
+              aria-describedby="purpose-edit-desc-counter"
+            />
+            <Counter id="purpose-edit-desc-counter">
+              {desc.length} / {DESCRIPTION_MAX}
+            </Counter>
+          </div>
+          {taken && (
+            <TakenPanel role="alert">
+              <TakenTitle>That name is taken</TakenTitle>
+              <TakenBody>
+                An agent called “{trimmed}” already exists in this organization. Pick another name — or take the next
+                free one in one tap.
+              </TakenBody>
+              <RowActions>
+                <ActionButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setName(suggestion);
+                    setTaken(false);
+                  }}
+                >
+                  Use “{suggestion}”
+                </ActionButton>
+              </RowActions>
+            </TakenPanel>
+          )}
+          <RowActions>
+            <ActionButton
+              size="sm"
+              variant="secondary"
+              type="submit"
+              disabled={!editValid || !editDirty || updateIdentity.isPending}
+            >
+              {updateIdentity.isPending ? 'Saving…' : 'Save'}
+            </ActionButton>
+            <ActionButton size="sm" variant="ghost" onClick={cancelEdit}>
+              Cancel
+            </ActionButton>
+          </RowActions>
+        </Form>
+      );
+    }
     return (
       <div>
         <ReadRows>
           <ReadRow>
-            <ReadKey>NAME</ReadKey>
+            <IdentityHead>
+              <ReadKey>NAME</ReadKey>
+              {agentId && canAuthor && (
+                <EditIconButton
+                  type="button"
+                  onClick={enterEdit}
+                  aria-label="Edit agent name and description"
+                  title="Edit name and description"
+                >
+                  <Pencil size={13} strokeWidth={1.7} aria-hidden="true" />
+                </EditIconButton>
+              )}
+            </IdentityHead>
             <ReadValue>{agentName ?? 'Untitled agent'}</ReadValue>
           </ReadRow>
           <ReadRow>
@@ -121,13 +256,6 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
             <ReadValue>{description ?? 'No description yet.'}</ReadValue>
           </ReadRow>
         </ReadRows>
-        <LockNote style={{ marginTop: 14 }}>
-          <Lock size={13} strokeWidth={1.8} aria-hidden="true" />
-          <span>
-            Identity is set at creation — the engine has no rename verb. To iterate on identity, clone the agent and
-            name the copy.
-          </span>
-        </LockNote>
         <RowActions style={{ marginTop: 12 }}>
           {agentId && canAuthor && (
             <ActionButton
