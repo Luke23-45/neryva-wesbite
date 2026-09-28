@@ -222,7 +222,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setBrandDirty(dirty);
   }, []);
 
-  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + budget.
+  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + role + budget.
   // (Selection, drags, and skips are UI state — rebuilding them is free.)
   const { dialog: guardDialog } = useDirtyGuard(
     (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
@@ -422,7 +422,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
   const saving = draftWritesInFlight > 0;
   const anySectionDirty =
-    composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || budgetDirty;
+    composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty;
   const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
 
   // Manual save signal (topbar Save button / Ctrl+S / ⌘S). Sections watch

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
 import { defaultConsumer } from '@lib/engine/agent-payload';
 import { AgentBuilder } from './AgentBuilder';
+import { useBuilderUI } from './lib/builder-store';
 import { BuilderTopbarSlotsProvider, useBuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 
 const saveMutate = vi.fn();
@@ -189,5 +190,42 @@ describe('AgentBuilder manual save', () => {
 
     fireEvent.click(btn);
     await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('AgentBuilder manual save (roleDirty regression)', () => {
+  beforeEach(() => {
+    saveMutate.mockReset();
+    updateMutate.mockReset();
+    // The selection lives in a module-level zustand store — a previous
+    // test's selection would otherwise suppress initialSlot handling.
+    useBuilderUI.getState().hydrate(null);
+  });
+
+  it('topbar Save fires when ONLY the Role section is dirty', async () => {
+    await act(async () => {
+      render(
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <BuilderTopbarSlotsProvider>
+              <AgentBuilder mode="build" agentId="agent-1" initialSlot="role" />
+            </BuilderTopbarSlotsProvider>
+          </QueryClientProvider>
+        </ThemeProvider>,
+      );
+    });
+    const btn = screen.getByRole('button', { name: 'Save changes' });
+    expect(btn).toBeDisabled();
+
+    // Role is the only dirty section — the save signal must still reach it.
+    fireEvent.change(await screen.findByLabelText('Role'), { target: { value: 'Support lead' } });
+    await waitFor(() => expect(btn).toBeEnabled());
+    saveMutate.mockClear();
+    updateMutate.mockClear();
+
+    fireEvent.click(btn);
+    await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
+    const input = updateMutate.mock.calls[0][0] as { definition: { role_policy: { role: string } } };
+    expect(input.definition.role_policy.role).toBe('Support lead');
   });
 });
