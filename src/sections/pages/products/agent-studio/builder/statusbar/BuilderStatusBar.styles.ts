@@ -57,9 +57,31 @@ export const Center = styled.div`
 export const Right = styled.div`
   display: flex;
   align-items: center;
+  gap: 10px;
   margin-left: auto;
   color: ${TEXT_MUTED};
   font-size: 10px;
+`;
+
+/** Engine Room escape hatch — a deliberately subtle text link, not chrome.
+ * One click away, out of the merged topbar's prime real estate. */
+export const EngineRoomLink = styled.a`
+  font-size: 10px;
+  color: ${TEXT_MUTED};
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 4px 2px;
+  border-radius: 6px;
+
+  &:hover {
+    color: ${TEXT_PRIMARY};
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #2f7fe0;
+    outline-offset: 1px;
+  }
 `;
 
 export const DraftPill = styled.span`

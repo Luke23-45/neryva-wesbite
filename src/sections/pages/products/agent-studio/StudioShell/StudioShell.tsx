@@ -32,6 +32,7 @@ import {
   TopbarTitle,
   TopbarSubtitle,
   TopbarBackLink,
+  TopbarDivider,
   TopbarSearchHint,
   TopbarKbd,
   TopbarRight,
@@ -84,6 +85,7 @@ import { SidebarDomains } from './SidebarDomains';
 import { SidebarSection } from './SidebarSection';
 import { useNavBadges } from './useNavBadges';
 import { useSidebarPrefs } from './useSidebarPrefs';
+import { useBuilderTopbarSlots } from '../builder/topbar/BuilderTopbarSlots';
 
 export type RecentChat = { id: string; title: string; to: string; updatedAt: string | null };
 
@@ -184,6 +186,11 @@ export function StudioShell({
   const { role } = useOrg();
   const badges = useNavBadges(nav);
   const { collapsed, toggleCollapsed, pinnedLevel1, pinLevel1 } = useSidebarPrefs(location.pathname);
+  // Merged builder bar (ledger T13): the builder provides identity/actions
+  // slots rendered inline in this single topbar. Null on non-builder pages
+  // and during the builder's loading/not-found states — the shell topbar is
+  // then byte-for-byte what it was before.
+  const builderSlots = useBuilderTopbarSlots();
 
   // Palette + recents read real data. Conversations always load (the
   // sidebar recents use them, calm 15s staleness); members/keys/assistants
@@ -468,7 +475,7 @@ export function StudioShell({
       )}
 
       <ShellBody>
-        <Topbar>
+        <Topbar $builder={isBuilder}>
           <TopbarLeft>
             <MobileMenuButton
               $variant="menu"
@@ -486,6 +493,13 @@ export function StudioShell({
                 <TopbarSubtitle>Studio</TopbarSubtitle>
               </>
             )}
+            {isBuilder && builderSlots && (
+              <>
+                <TopbarDivider aria-hidden="true" />
+                {builderSlots.identity}
+                <TopbarDivider aria-hidden="true" />
+              </>
+            )}
             {!isBuilder && activeDomain !== null && (
               <TopbarSubtitle>
                 {activeDomain.label}
@@ -493,12 +507,18 @@ export function StudioShell({
               </TopbarSubtitle>
             )}
             {topbarExtra}
-            <TopbarSearchHint onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
+            <TopbarSearchHint $builder={isBuilder} onClick={() => setPaletteOpen(true)} aria-label="Open command palette">
               <SearchIcon size={11} strokeWidth={1.7} />
               Press <TopbarKbd>{modKey} K</TopbarKbd> to search
             </TopbarSearchHint>
           </TopbarLeft>
           <TopbarRight>
+            {isBuilder && builderSlots && (
+              <>
+                {builderSlots.actions}
+                <TopbarDivider aria-hidden="true" />
+              </>
+            )}
             {canWrite ? (
               <IconAction as={Link} to="/agent-studio/chat" aria-label="New chat">
                 <Plus size={15} strokeWidth={1.8} />

@@ -1,23 +1,20 @@
-import { Link } from '@tanstack/react-router';
 import { Play, Upload, Waypoints } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import {
+  ActionsGroup,
   AgentName,
-  Bar,
   Breadcrumb,
   Crumb,
+  IdentityGroup,
   LogoMark,
   Pills,
   PublishBadge,
   PublishButton,
   PublishWrap,
-  RoomLink,
   SaveDot,
   SaveState,
-  Spacer,
   TestRunButton,
-  Wordmark,
 } from './BuilderTopBar.styles';
 
 /**
@@ -30,16 +27,18 @@ import {
  */
 export type BuilderSaveState = 'saving' | 'unsaved' | 'syncing' | 'saved';
 
-export interface BuilderTopBarProps {
+export interface BuilderTopbarIdentityProps {
   mode: 'new' | 'build';
   agentName: string | null;
   /** Breadcrumb org crumb; null → omit the org crumb (keep AgentName). */
   orgName: string | null;
   hasDraft: boolean;
   hasLive: boolean;
+}
+
+export interface BuilderTopbarActionsProps {
+  mode: 'new' | 'build';
   saveState: BuilderSaveState;
-  /** Engine Room path (build mode only — the advanced editor escape hatch). */
-  editPath: string | null;
   /** Manual save trigger (topbar button) — no-ops in new mode. */
   onSave: () => void;
   canAuthor: boolean;
@@ -59,30 +58,62 @@ const SAVE_COPY: Record<BuilderSaveState, string> = {
 };
 
 /**
- * Builder top bar (v10 restyle, LEDGER.md T1–T12): flat logo + AgentStudio
- * wordmark (NO tier badge — the engine exposes no org tier, §8.2), read-only
- * breadcrumb (identity is write-once; the engine has no rename verb, so the
- * bar never offers one), Draft/Live pills, honest save readout + Save button
- * (the single save indicator per A2 — no relative timestamps), Test run and
- * Publish actions in build mode, Engine Room link.
- *
- * Omitted on purpose (C5): Build/Test/Monitor tabs, undo/redo, Realtime,
- * avatar — nothing is rendered until it is wired.
+ * Identity slot (v10 T13): 24px flat mark + read-only breadcrumb (identity
+ * is write-once; the engine has no rename verb, so the bar never offers
+ * one) + Draft/Live pills. The "AgentStudio" wordmark is dropped — the
+ * mark + breadcrumb carry the brand in the merged bar. No tier badge: the
+ * engine exposes no org tier (§8.2).
  */
-export function BuilderTopBar({
+export function BuilderTopbarIdentity({
   mode,
   agentName,
   orgName,
   hasDraft,
   hasLive,
+}: BuilderTopbarIdentityProps) {
+  return (
+    <IdentityGroup>
+      <LogoMark data-testid="topbar-logo" aria-hidden="true">
+        <Waypoints size={14} color="#ffffff" />
+      </LogoMark>
+      <Breadcrumb aria-label="Agent location">
+        {orgName && <Crumb>{orgName} · Agents ·</Crumb>}
+        <AgentName>{mode === 'new' ? 'New agent' : (agentName ?? 'Untitled agent')}</AgentName>
+      </Breadcrumb>
+      <Pills>
+        {mode === 'build' && hasDraft && (
+          <StatusPill tone="info" dot={false}>
+            Draft
+          </StatusPill>
+        )}
+        {mode === 'build' && hasLive && (
+          <StatusPill tone="success" dot={false}>
+            Live
+          </StatusPill>
+        )}
+      </Pills>
+    </IdentityGroup>
+  );
+}
+
+/**
+ * Actions slot (v10 T13): honest save readout + Save button (the single
+ * save indicator per A2 — no relative timestamps), Test run and Publish in
+ * build mode. The Engine Room link moved to the builder status bar
+ * (user 2026-09-28: keep only what's important in the merged bar).
+ *
+ * Omitted on purpose (C5): Build/Test/Monitor tabs, undo/redo, Realtime —
+ * nothing is rendered until it is wired.
+ */
+export function BuilderTopbarActions({
+  mode,
   saveState,
-  editPath,
   onSave,
   canAuthor,
   onTestRun,
   onPublish,
   blockingCount,
-}: BuilderTopBarProps) {
+}: BuilderTopbarActionsProps) {
   const busy = saveState !== 'saved';
   // Honest disabled state: enabled only when there is something dirty to
   // save. Nothing to save in new mode, nothing dirty when saved/syncing,
@@ -108,28 +139,7 @@ export function BuilderTopBar({
       ? `Publish — ${blockingCount} blocking issue${blockingCount === 1 ? '' : 's'} to review first`
       : 'Publish this version';
   return (
-    <Bar>
-      <LogoMark data-testid="topbar-logo" aria-hidden="true">
-        <Waypoints size={16} color="#ffffff" />
-      </LogoMark>
-      <Wordmark>AgentStudio</Wordmark>
-      <Breadcrumb aria-label="Agent location">
-        {orgName && <Crumb>{orgName} · Agents ·</Crumb>}
-        <AgentName>{mode === 'new' ? 'New agent' : (agentName ?? 'Untitled agent')}</AgentName>
-      </Breadcrumb>
-      <Pills>
-        {mode === 'build' && hasDraft && (
-          <StatusPill tone="info" dot={false}>
-            Draft
-          </StatusPill>
-        )}
-        {mode === 'build' && hasLive && (
-          <StatusPill tone="success" dot={false}>
-            Live
-          </StatusPill>
-        )}
-      </Pills>
-      <Spacer />
+    <ActionsGroup>
       <SaveState aria-live="polite">
         <SaveDot $busy={busy} aria-hidden="true" />
         {mode === 'new' ? 'Not created yet' : SAVE_COPY[saveState]}
@@ -152,11 +162,6 @@ export function BuilderTopBar({
           {blockingCount > 0 && <PublishBadge data-testid="publish-badge">{blockingCount}</PublishBadge>}
         </PublishWrap>
       )}
-      {editPath && (
-        <RoomLink as={Link} to={editPath}>
-          Engine Room
-        </RoomLink>
-      )}
-    </Bar>
+    </ActionsGroup>
   );
 }

@@ -13,7 +13,8 @@ import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { BUILT_IN_TOOLS, useToolCatalog } from '@hooks/studio/useSetupTools';
 import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
-import { BuilderTopBar } from './topbar/BuilderTopBar';
+import { BuilderTopbarActions, BuilderTopbarIdentity } from './topbar/BuilderTopBar';
+import { BuilderTopbarSlotsContext, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 import { ComponentPalette, type PaletteHealth, type PaletteNodeEntry } from './palette/ComponentPalette';
 import { BuilderInspector, type InspectorContext } from './inspector/BuilderInspector';
 import type { TraceEditTarget } from './inspector/TraceDrawer';
@@ -418,6 +419,53 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setPublishSignal((s) => s + 1);
   }, [mode, canAuthor, paletteHealth.blockers, select]);
 
+  /**
+   * Merged builder topbar (ledger T13): instead of a stacked 56px row,
+   * the builder provides identity/actions slots that `StudioShell` renders
+   * inside its single 48px app topbar. Null during build-mode
+   * loading/not-found — the shell then shows no builder chrome, exactly
+   * like the old stacked row (which was also absent in those states).
+   */
+  const topbarSlots = useMemo<BuilderTopbarSlots | null>(() => {
+    if (mode === 'build' && assistant.data === undefined) return null;
+    if (mode === 'build' && assistant.data === null) return null;
+    return {
+      identity: (
+        <BuilderTopbarIdentity
+          mode={mode}
+          agentName={agentName}
+          orgName={orgName}
+          hasDraft={hasDraft}
+          hasLive={hasLive}
+        />
+      ),
+      actions: (
+        <BuilderTopbarActions
+          mode={mode}
+          saveState={saveState}
+          onSave={requestSave}
+          canAuthor={canAuthor}
+          onTestRun={() => select('try')}
+          onPublish={handlePublish}
+          blockingCount={paletteHealth.blockers}
+        />
+      ),
+    };
+  }, [
+    mode,
+    assistant.data,
+    agentName,
+    orgName,
+    hasDraft,
+    hasLive,
+    saveState,
+    requestSave,
+    canAuthor,
+    select,
+    handlePublish,
+    paletteHealth.blockers,
+  ]);
+
   // Closed keyboard map, v10 (BUILD_PLAN.md §7b): Esc, N, node keys.
   // Never fires from inputs (except Escape, which only ever deselects, and
   // Ctrl/⌘+S, the standard save shortcut — preventDefault stops the browser's
@@ -537,27 +585,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   }
 
   return (
-    <Shell>
-      {guardDialog}
-      <BuilderTopBar
-        mode={mode}
-        agentName={agentName}
-        orgName={orgName}
-        hasDraft={hasDraft}
-        hasLive={hasLive}
-        saveState={saveState}
-        editPath={mode === 'build' && agentId ? buildAgentEditPath(agentId) : null}
-        onSave={requestSave}
-        canAuthor={canAuthor}
-        onTestRun={() => select('try')}
-        onPublish={handlePublish}
-        blockingCount={paletteHealth.blockers}
-      />
-      {mode === 'build' && agentId && form.data?.versionId && (
-        <div style={{ padding: '0 16px' }}>
-          <TemplateBanner assistantId={agentId} versionId={form.data.versionId} />
-        </div>
-      )}
+    <BuilderTopbarSlotsContext.Provider value={topbarSlots}>
+      <Shell>
+        {guardDialog}
+        {mode === 'build' && agentId && form.data?.versionId && (
+          <div style={{ padding: '0 16px' }}>
+            <TemplateBanner assistantId={agentId} versionId={form.data.versionId} />
+          </div>
+        )}
       <Main>
         <ComponentPalette
           ref={searchRef}
@@ -635,6 +670,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           blockers={paletteHealth.blockers}
           suggestions={paletteHealth.suggestions}
           version={shipReadiness.version?.version ?? null}
+          editPath={agentId ? buildAgentEditPath(agentId) : null}
         />
       ) : (
         <BuilderBottomBar
@@ -644,6 +680,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           onPrimary={handlePrimary}
         />
       )}
-    </Shell>
+      </Shell>
+    </BuilderTopbarSlotsContext.Provider>
   );
 }

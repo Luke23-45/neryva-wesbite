@@ -368,7 +368,7 @@ export const ShellBody = styled.div`
   background: ${({ theme }) => theme.app.bg.base};
 `;
 
-export const Topbar = styled.div`
+export const Topbar = styled.div<{ $builder?: boolean }>`
   position: sticky;
   top: 0;
   z-index: 10;
@@ -385,6 +385,17 @@ export const Topbar = styled.div`
   ${({ theme }) => theme.media.mobile} {
     padding: 12px 18px;
   }
+
+  /* Merged builder bar (ledger T13): a single 48px bar instead of the
+     shell topbar + a stacked 56px builder row. Non-builder pages keep the
+     padding-driven height above. */
+  ${({ $builder }) =>
+    $builder &&
+    `
+    height: 48px;
+    padding: 0 16px;
+    gap: 12px;
+  `}
 `;
 
 export const TopbarLeft = styled.div`
@@ -412,7 +423,7 @@ export const TopbarSubtitle = styled.span`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
-export const TopbarSearchHint = styled.button`
+export const TopbarSearchHint = styled.button<{ $builder?: boolean }>`
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -441,6 +452,17 @@ export const TopbarSearchHint = styled.button`
   ${({ theme }) => theme.media.mobile} {
     display: none;
   }
+
+  /* Merged builder bar (ledger T13): the hint leaves the bar below 900px
+     so the agent identity keeps room. Ctrl+K / Cmd+K still opens the
+     palette — the keyboard path is untouched. */
+  ${({ $builder }) =>
+    $builder &&
+    `
+    @media (max-width: 900px) {
+      display: none;
+    }
+  `}
 `;
 
 export const TopbarKbd = styled.span`
@@ -533,6 +555,15 @@ export const TopbarBackLink = styled(Link)`
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 2px;
   }
+`;
+
+/** Hairline divider between topbar clusters in the merged builder bar
+ * (ledger T13). Flat #1E2530 per C1. */
+export const TopbarDivider = styled.span`
+  width: 1px;
+  height: 20px;
+  flex: none;
+  background: #1e2530;
 `;
 
 /** Row label (carries the collapse-hide hook; icons and badges stay visible). */

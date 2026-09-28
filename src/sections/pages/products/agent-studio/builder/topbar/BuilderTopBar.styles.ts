@@ -1,40 +1,41 @@
 import styled from 'styled-components';
 
 /**
- * v10 topbar (ledger T1–T12, A1): 56px bar, flat colors only — no gradients
- * anywhere on this surface (C1). Hexes are pinned to the v10 spec rather than
- * theme tokens so the bar renders identically regardless of theme tweaks.
+ * Merged builder topbar slots (ledger T13, A1): the 56px standalone `Bar`
+ * is gone — `AgentBuilder` provides `identity`/`actions` slots that
+ * `StudioShell` renders inside its single 48px app topbar. Flat colors only
+ * — no gradients anywhere on this surface (C1). Hexes are pinned to the v10
+ * spec rather than theme tokens so the slots render identically regardless
+ * of theme tweaks.
  */
-export const Bar = styled.header`
-  display: flex;
+
+/** Identity cluster: 24px mark + breadcrumb + Draft/Live pills. */
+export const IdentityGroup = styled.span`
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  height: 56px;
-  padding: 0 16px;
-  background: #0e1218;
-  border-bottom: 1px solid #1e2530;
+  gap: 10px;
+  min-width: 0;
+`;
+
+/** Actions cluster: save readout + Save + Test run + Publish (+badge). */
+export const ActionsGroup = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex: none;
 `;
 
 /** Logo mark (T1): flat #2F7FE0 rounded square, white glyph. Static — not a
- * button or link (A1: absolutely no gradient). */
+ * button or link (A1: absolutely no gradient). 24px in the merged bar. */
 export const LogoMark = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: #2f7fe0;
   flex: none;
-`;
-
-export const Wordmark = styled.span`
-  font-size: 13px;
-  font-weight: 700;
-  color: #e9edf3;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
 `;
 
 /** Breadcrumb (T3): read-only org · Agents crumb; identity is write-once. */
@@ -46,10 +47,15 @@ export const Breadcrumb = styled.nav`
   overflow: hidden;
 `;
 
+/** Org crumb prefix — hidden below 1200px so the agent name keeps room. */
 export const Crumb = styled.span`
   font-size: 11px;
   color: #7c8698;
   white-space: nowrap;
+
+  @media (max-width: 1200px) {
+    display: none;
+  }
 `;
 
 export const AgentName = styled.h1`
@@ -60,17 +66,13 @@ export const AgentName = styled.h1`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 40vw;
+  max-width: 32vw;
 `;
 
 export const Pills = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-`;
-
-export const Spacer = styled.div`
-  flex: 1;
 `;
 
 export const SaveState = styled.span`
@@ -124,8 +126,8 @@ export const TestRunButton = styled.button`
 `;
 
 /** Publish button (T10, build mode only): flat primary; never disabled in
- * build mode — clicking while blocked opens the issues surface (the
- * coordinator wires that). Flat #2F7FE0 per A1. */
+ * build mode — clicking while blocked opens the issues surface. Flat
+ * #2F7FE0 per A1. */
 export const PublishButton = styled.button`
   display: inline-flex;
   align-items: center;
@@ -177,22 +179,4 @@ export const PublishBadge = styled.span`
   align-items: center;
   justify-content: center;
   pointer-events: none;
-`;
-
-export const RoomLink = styled.a`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.status.info.fg};
-  text-decoration: none;
-  white-space: nowrap;
-  padding: 6px 4px;
-  border-radius: 8px;
-
-  &:hover {
-    text-decoration: underline;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
 `;
