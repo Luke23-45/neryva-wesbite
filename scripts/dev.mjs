@@ -43,6 +43,18 @@ function resolveNgrokBin(configured) {
   return null;
 }
 
+// Which flag this ngrok binary wants for a reserved domain: `--url` on
+// newer v3 agents, `--domain` on older ones. Probes `http --help` once.
+function pickDomainFlag(bin) {
+  try {
+    const help = spawnSync(bin, ['http', '--help'], { encoding: 'utf8', shell: false });
+    const text = `${help.stdout || ''}\n${help.stderr || ''}`;
+    if (/--url[\s=:}]/m.test(text)) return 'url';
+    if (/--domain[\s=:}]/m.test(text)) return 'domain';
+  } catch {}
+  return 'url';
+}
+
 // Port vite actually listens on (default matches vite.config.ts), so ngrok
 // forwards to the right place when --port is overridden.
 let port = '3000';
@@ -110,12 +122,28 @@ if (tunnel) {
         console.error((saved.stderr || saved.stdout || '').trim());
         shutdown(1);
       }
+      // The agent is strict about its config schema (a stray legacy key fails
+      // every ngrok invocation with a YAML error). Validate before starting
+      // anything so a broken ngrok.yml surfaces here, not as a dead tunnel.
+      const checked = spawnSync(bin, ['config', 'check'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false,
+      });
+      if (checked.status !== 0) {
+        console.error('[dev] ngrok config invalid — fix or delete %LOCALAPPDATA%\\ngrok\\ngrok.yml,');
+        console.error('[dev] then re-run (the authtoken in .env will be re-saved):');
+        console.error((checked.stderr || checked.stdout || '').trim());
+        shutdown(1);
+      }
     }
     const ngrokArgs = ['http', port];
     if (process.env.NGROK_URL) {
-      // ngrok v3 flag for a reserved static domain (host only, no scheme).
+      // Reserved static domain (host only, no scheme). The flag name depends
+      // on the agent version: newer v3 uses `--url`, older v3 uses `--domain`
+      // (this machine has both). Ask the binary instead of guessing.
       const host = process.env.NGROK_URL.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-      ngrokArgs.push(`--url=${host}`);
+      ngrokArgs.push(`--${pickDomainFlag(bin)}=${host}`);
     }
     // Logging: the agent's default is `log: false` with a TUI dashboard, and
     // the TUI can't render under `npm run` (not a TTY) — so it looks dead.
@@ -134,14 +162,15 @@ if (tunnel) {
     children.push(ngrok);
     ngrok.on('error', (err) => console.error(`[dev] failed to start ${bin}:`, err.message));
     // Tunnel failure shouldn't kill local dev — just report it. An exit
-    // within seconds almost always means the reserved domain is already
-    // bound by another agent (ERR_NGROK_334): only one agent can hold it.
+    // within seconds usually means either the reserved domain is already
+    // bound by another agent (ERR_NGROK_334 — stop the other instance) or
+    // ngrok rejected its flags; the ERROR line it printed above says which.
     ngrok.on('exit', (code) => {
       if (code === 0) return;
       console.error(`[dev] ngrok exited (code ${code}). Local vite keeps running — Ctrl+C to stop.`);
       if (Date.now() - ngrokStart < 15000) {
-        console.error('[dev] It died right away — likely another `npm run dev -- --tunnel`');
-        console.error('[dev] already holds this domain. Stop the other instance first.');
+        console.error('[dev] It died right away — check the ngrok ERROR line above: either another');
+        console.error('[dev] `npm run dev -- --tunnel` already holds this domain, or a flag was rejected.');
       }
     });
     // Confirm the tunnel is actually online via the local agent API
