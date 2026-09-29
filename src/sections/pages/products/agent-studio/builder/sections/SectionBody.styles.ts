@@ -46,3 +46,19 @@ export const SectionPane = styled.div`
     display: none;
   }
 `;
+
+/**
+ * Section content column (builder redesign).
+ *
+ * Form-density sections constrain to a readable measure — psychology:
+ * a bounded line length lowers cognitive load and the page feels calm
+ * instead of stretched. List/table-density sections pass $wide to take
+ * the full pane.
+ */
+export const SectionContent = styled.div<{ $wide?: boolean }>`
+  max-width: ${({ $wide }) => ($wide ? 'none' : '720px')};
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding-top: 8px;
+`;

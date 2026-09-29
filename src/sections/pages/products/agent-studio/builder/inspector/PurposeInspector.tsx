@@ -1,6 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
@@ -10,18 +9,26 @@ import { setupDeniedCopy } from '@lib/engine/capabilities';
 import type { OrgRole } from '@/Context/OrgContext';
 import { useCreateAssistant, useUpdateAssistantIdentity } from '@hooks/studio/useAgentAuthoring';
 import { buildAgentBuildPath, buildAgentEditPath } from '../lib/slot-model';
+import { SectionContent } from '../sections/SectionBody.styles';
 import { DESCRIPTION_MAX, isDescriptionValid, isNameValid, NAME_MAX, NAME_MIN, suggestRename } from './purpose-model';
 import {
+  Avatar,
+  CardActions,
   Counter,
   DeniedPanel,
-  EditIconButton,
+  FieldBlock,
+  FieldHead,
   Form,
   GalleryLink,
-  IdentityHead,
-  ReadKey,
-  ReadRow,
-  ReadRows,
-  ReadValue,
+  Helper,
+  IdentityCard,
+  IdentityDesc,
+  IdentityEmpty,
+  IdentityMain,
+  IdentityName,
+  MetaButton,
+  MetaDot,
+  MetaRow,
   RowActions,
   TakenBody,
   TakenPanel,
@@ -51,11 +58,12 @@ interface PurposeInspectorProps {
 }
 
 /**
- * C01 Identity — the only live inspector in the C01 pass (c01-identity/SPEC).
- * New mode: the creation contract (counters, 409 one-tap rename, viewer
- * copy). Build mode: identity reads NAME/DESCRIPTION with a pencil
- * affordance (authors only) that opens the whole identity block for
- * inline editing — Save PATCHes the identity endpoint, Cancel discards.
+ * C01 Identity — redesigned.
+ *
+ * The read state is a profile card: identity is a face, and faces get
+ * presence. The form states give the name field visual primacy and guide
+ * with helper microcopy instead of bare counters. All data logic is
+ * unchanged — creation contract, 409 one-tap rename, identity PATCH.
  */
 export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>(function PurposeInspector(
   { mode, agentId, agentName, description, canAuthor, role, onFormState, onCreated },
@@ -109,10 +117,10 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
 
   const suggestion = useMemo(() => suggestRename(trimmed || 'Untitled agent'), [trimmed]);
 
-  // ── Build-mode identity editing ──────────────────────────────────────────
+  // ── Build-mode identity editing ──────────────────────────────────
   // The whole identity block (name + description) goes into edit mode from
-  // the pencil affordance; Save PATCHes the identity endpoint, Cancel
-  // discards. Authors only — viewers never see the pencil.
+  // the Edit affordance; Save PATCHes the identity endpoint, Cancel
+  // discards. Authors only — viewers never see the edit control.
 
   const enterEdit = useCallback(() => {
     setName(agentName ?? '');
@@ -154,200 +162,224 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
     );
   }, [mode, agentId, editValid, editDirty, updateIdentity, trimmed, desc]);
 
+  const initial = (agentName ?? '').trim().charAt(0).toUpperCase() || '·';
+
   if (mode === 'build') {
     if (editing) {
       return (
-        <Form
-          onSubmit={(event) => {
-            event.preventDefault();
-            saveIdentity();
-          }}
-        >
-          <div>
-            <TextInput
-              label="Agent name"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                setTaken(false);
-              }}
-              placeholder="e.g. Billing concierge"
-              autoFocus
-              maxLength={NAME_MAX + 12}
-              aria-describedby="purpose-edit-name-counter"
-            />
-            <Counter id="purpose-edit-name-counter">
-              {name.length} / {NAME_MAX} · needs {NAME_MIN}–{NAME_MAX}
-            </Counter>
-          </div>
-          <div>
-            <TextArea
-              label="Description (optional)"
-              value={desc}
-              onChange={(event) => setDesc(event.target.value)}
-              placeholder="What this agent does"
-              rows={3}
-              aria-describedby="purpose-edit-desc-counter"
-            />
-            <Counter id="purpose-edit-desc-counter">
-              {desc.length} / {DESCRIPTION_MAX}
-            </Counter>
-          </div>
-          {taken && (
-            <TakenPanel role="alert">
-              <TakenTitle>That name is taken</TakenTitle>
-              <TakenBody>
-                An agent called “{trimmed}” already exists in this organization. Pick another name — or take the next
-                free one in one tap.
-              </TakenBody>
-              <RowActions>
-                <ActionButton
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setName(suggestion);
-                    setTaken(false);
-                  }}
-                >
-                  Use “{suggestion}”
-                </ActionButton>
-              </RowActions>
-            </TakenPanel>
-          )}
-          <RowActions>
-            <ActionButton
-              size="sm"
-              variant="secondary"
-              type="submit"
-              disabled={!editValid || !editDirty || updateIdentity.isPending}
-            >
-              {updateIdentity.isPending ? 'Saving…' : 'Save'}
-            </ActionButton>
-            <ActionButton size="sm" variant="ghost" onClick={cancelEdit}>
-              Cancel
-            </ActionButton>
-          </RowActions>
-        </Form>
+        <SectionContent>
+          <Form
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveIdentity();
+            }}
+          >
+            <FieldBlock>
+              <FieldHead>
+                <Counter id="purpose-edit-name-counter" aria-live="polite">
+                  {name.length} / {NAME_MAX}
+                </Counter>
+              </FieldHead>
+              <TextInput
+                label="Agent name"
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setTaken(false);
+                }}
+                placeholder="e.g. Billing concierge"
+                autoFocus
+                maxLength={NAME_MAX + 12}
+                aria-describedby="purpose-edit-name-counter purpose-edit-name-help"
+              />
+              <Helper id="purpose-edit-name-help">
+                {NAME_MIN}–{NAME_MAX} characters. This is how your team finds the agent.
+              </Helper>
+            </FieldBlock>
+            <FieldBlock>
+              <FieldHead>
+                <Counter id="purpose-edit-desc-counter" aria-live="polite">
+                  {desc.length} / {DESCRIPTION_MAX}
+                </Counter>
+              </FieldHead>
+              <TextArea
+                label="Description"
+                value={desc}
+                onChange={(event) => setDesc(event.target.value)}
+                placeholder="What does this agent do?"
+                rows={4}
+                aria-describedby="purpose-edit-desc-counter purpose-edit-desc-help"
+              />
+              <Helper id="purpose-edit-desc-help">
+                Optional. A sentence or two — it shows up wherever the agent is listed.
+              </Helper>
+            </FieldBlock>
+            {taken && (
+              <TakenPanel role="alert">
+                <TakenTitle>That name is taken</TakenTitle>
+                <TakenBody>
+                  An agent called “{trimmed}” already exists in this organization. Pick another name — or take the
+                  next free one in one tap.
+                </TakenBody>
+                <RowActions>
+                  <ActionButton
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setName(suggestion);
+                      setTaken(false);
+                    }}
+                  >
+                    Use “{suggestion}”
+                  </ActionButton>
+                </RowActions>
+              </TakenPanel>
+            )}
+            <RowActions>
+              <ActionButton
+                variant="primary"
+                type="submit"
+                disabled={!editValid || !editDirty || updateIdentity.isPending}
+              >
+                {updateIdentity.isPending ? 'Saving…' : 'Save changes'}
+              </ActionButton>
+              <ActionButton variant="ghost" onClick={cancelEdit}>
+                Cancel
+              </ActionButton>
+            </RowActions>
+          </Form>
+        </SectionContent>
       );
     }
     return (
-      <div>
-        <ReadRows>
-          <ReadRow>
-            <IdentityHead>
-              <ReadKey>NAME</ReadKey>
-              {agentId && canAuthor && (
-                <EditIconButton
-                  type="button"
-                  onClick={enterEdit}
-                  aria-label="Edit agent name and description"
-                  title="Edit name and description"
-                >
-                  <Pencil size={13} strokeWidth={1.7} aria-hidden="true" />
-                </EditIconButton>
-              )}
-            </IdentityHead>
-            <ReadValue>{agentName ?? 'Untitled agent'}</ReadValue>
-          </ReadRow>
-          <ReadRow>
-            <ReadKey>DESCRIPTION</ReadKey>
-            <ReadValue>{description ?? 'No description yet.'}</ReadValue>
-          </ReadRow>
-        </ReadRows>
-        <RowActions style={{ marginTop: 12 }}>
+      <SectionContent>
+        <IdentityCard>
+          <Avatar aria-hidden="true">{initial}</Avatar>
+          <IdentityMain>
+            <IdentityName>{agentName ?? 'Untitled agent'}</IdentityName>
+            {description ? (
+              <IdentityDesc>{description}</IdentityDesc>
+            ) : (
+              <IdentityEmpty>No description yet — add one so the team knows what this agent does.</IdentityEmpty>
+            )}
+          </IdentityMain>
           {agentId && canAuthor && (
-            <ActionButton
-              size="sm"
-              variant="secondary"
-              onClick={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: agentId, returnTo: buildAgentBuildPath(agentId) } })}
+            <CardActions>
+              <ActionButton size="sm" variant="secondary" onClick={enterEdit}>
+                Edit
+              </ActionButton>
+            </CardActions>
+          )}
+        </IdentityCard>
+        <MetaRow>
+          {agentId && canAuthor && (
+            <MetaButton
+              type="button"
+              onClick={() =>
+                navigate({
+                  to: '/agent-studio/agents/clone',
+                  search: { sourceId: agentId, returnTo: buildAgentBuildPath(agentId) },
+                })
+              }
             >
               Clone agent
-            </ActionButton>
+            </MetaButton>
           )}
+          {agentId && canAuthor && <MetaDot aria-hidden="true">·</MetaDot>}
           {agentId && (
-            <ActionButton
-              size="sm"
-              variant="ghost"
-              onClick={() => navigate({ to: buildAgentEditPath(agentId) })}
-            >
+            <MetaButton type="button" onClick={() => navigate({ to: buildAgentEditPath(agentId) })}>
               Open in Engine Room
-            </ActionButton>
+            </MetaButton>
           )}
-        </RowActions>
-      </div>
+        </MetaRow>
+      </SectionContent>
     );
   }
 
   if (!canAuthor) {
     return (
-      <DeniedPanel role="note">
-        <strong>Viewing only.</strong> {setupDeniedCopy(role, 'setup:author')} Ask an owner, admin, or developer to
-        create the agent — or browse the template gallery to see what makers ship.
-      </DeniedPanel>
+      <SectionContent>
+        <DeniedPanel role="note">
+          <strong>Viewing only.</strong> {setupDeniedCopy(role, 'setup:author')} Ask an owner, admin, or developer to
+          create the agent — or browse the template gallery to see what makers ship.
+        </DeniedPanel>
+      </SectionContent>
     );
   }
 
   return (
-    <Form
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-    >
-      <div>
-        <TextInput
-          label="Agent name"
-          value={name}
-          onChange={(event) => {
-            setName(event.target.value);
-            setTaken(false);
-          }}
-          placeholder="e.g. Billing concierge"
-          autoFocus
-          maxLength={NAME_MAX + 12}
-          aria-describedby="purpose-name-counter"
-        />
-        <Counter id="purpose-name-counter">
-          {name.length} / {NAME_MAX} · needs {NAME_MIN}–{NAME_MAX}
-        </Counter>
-      </div>
-      <div>
-        <TextArea
-          label="Description (optional)"
-          value={desc}
-          onChange={(event) => setDesc(event.target.value)}
-          placeholder="What this agent does"
-          rows={3}
-          aria-describedby="purpose-desc-counter"
-        />
-        <Counter id="purpose-desc-counter">
-          {desc.length} / {DESCRIPTION_MAX}
-        </Counter>
-      </div>
-      {taken && (
-        <TakenPanel role="alert">
-          <TakenTitle>That name is taken</TakenTitle>
-          <TakenBody>
-            An agent called “{trimmed}” already exists in this organization. Pick another name — or take the next free
-            one in one tap.
-          </TakenBody>
-          <RowActions>
-            <ActionButton
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setName(suggestion);
-                setTaken(false);
-              }}
-            >
-              Use “{suggestion}”
-            </ActionButton>
-          </RowActions>
-        </TakenPanel>
-      )}
-      <GalleryLink>
-        Starting from a blueprint? <Link to="/agent-studio/templates">Browse the template gallery →</Link>
-      </GalleryLink>
-    </Form>
+    <SectionContent>
+      <Form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <FieldBlock>
+          <FieldHead>
+            <Counter id="purpose-name-counter" aria-live="polite">
+              {name.length} / {NAME_MAX}
+            </Counter>
+          </FieldHead>
+          <TextInput
+            label="Agent name"
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setTaken(false);
+            }}
+            placeholder="e.g. Billing concierge"
+            autoFocus
+            maxLength={NAME_MAX + 12}
+            aria-describedby="purpose-name-counter purpose-name-help"
+          />
+          <Helper id="purpose-name-help">
+            {NAME_MIN}–{NAME_MAX} characters. Give it a name your team will recognize.
+          </Helper>
+        </FieldBlock>
+        <FieldBlock>
+          <FieldHead>
+            <Counter id="purpose-desc-counter" aria-live="polite">
+              {desc.length} / {DESCRIPTION_MAX}
+            </Counter>
+          </FieldHead>
+          <TextArea
+            label="Description"
+            value={desc}
+            onChange={(event) => setDesc(event.target.value)}
+            placeholder="What will this agent do?"
+            rows={4}
+            aria-describedby="purpose-desc-counter purpose-desc-help"
+          />
+          <Helper id="purpose-desc-help">
+            Optional. A sentence or two — it shows up wherever the agent is listed.
+          </Helper>
+        </FieldBlock>
+        {taken && (
+          <TakenPanel role="alert">
+            <TakenTitle>That name is taken</TakenTitle>
+            <TakenBody>
+              An agent called “{trimmed}” already exists in this organization. Pick another name — or take the next
+              free one in one tap.
+            </TakenBody>
+            <RowActions>
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setName(suggestion);
+                  setTaken(false);
+                }}
+              >
+                Use “{suggestion}”
+              </ActionButton>
+            </RowActions>
+          </TakenPanel>
+        )}
+        <GalleryLink>
+          Starting from a blueprint? <Link to="/agent-studio/templates">Browse the template gallery →</Link>
+        </GalleryLink>
+      </Form>
+    </SectionContent>
   );
 });
