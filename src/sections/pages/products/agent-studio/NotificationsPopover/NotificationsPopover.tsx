@@ -19,6 +19,7 @@ import {
   type NotificationItem,
 } from '@hooks/studio/useNotifications';
 import { useStudioStatus } from '@hooks/studio/useStudioStatus';
+import type { StatusAnnouncement } from '@hooks/studio/useStudioStatus';
 import {
   BellDot,
   NotifButton,
@@ -36,6 +37,7 @@ import {
   AnnouncementLabel,
   AnnouncementTitle,
   AnnouncementMessage,
+  AnnouncementLinkRow,
   AnnouncementTime,
   DismissButton,
   EmptyWrap,
@@ -138,6 +140,26 @@ export function NotificationsPopover() {
     }
   };
 
+  /**
+   * NG-ANN-LINK: announcement links are staff-authored (engine `@Roles`-gated
+   * writes). Internal console routes navigate in-app; http(s) URLs open in a
+   * new tab. Anything else (e.g. a `javascript:` scheme or protocol-relative
+   * `//host`) is ignored — never rendered as a raw href. The popover closes
+   * on every handled link, mirroring `openNotification`.
+   */
+  const openAnnouncementLink = (announcement: StatusAnnouncement) => {
+    const link = announcement.link;
+    if (!link) {
+      return;
+    }
+    setOpen(false);
+    if (link.startsWith('/') && !link.startsWith('//')) {
+      void navigate({ to: link });
+    } else if (/^https?:\/\//i.test(link)) {
+      window.open(link, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <Popover ref={ref}>
       <NotifButton
@@ -182,6 +204,13 @@ export function NotificationsPopover() {
                     <AnnouncementLabel>Announcement</AnnouncementLabel>
                     <AnnouncementTitle>{a.title}</AnnouncementTitle>
                     {a.message && <AnnouncementMessage>{a.message}</AnnouncementMessage>}
+                    {/* NG-ANN-LINK: link affordance only when the engine
+                        carries one — no placeholder when absent. */}
+                    {a.link && (
+                      <AnnouncementLinkRow>
+                        <LinkAction onClick={() => openAnnouncementLink(a)}>Learn more</LinkAction>
+                      </AnnouncementLinkRow>
+                    )}
                     <AnnouncementTime>{relativeTime(a.createdAt) ?? 'Recently'}</AnnouncementTime>
                   </AnnouncementBody>
                   <DismissButton type="button" aria-label="Dismiss announcement" onClick={() => dismissAnnouncement(a.id)}>

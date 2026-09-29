@@ -173,6 +173,12 @@ export const AnnouncementTime = styled.div`
   margin-top: 4px;
 `;
 
+// NG-ANN-LINK: the quiet inline action for an announcement's staff-authored
+// link — rendered only when the engine carries one, never as a placeholder.
+export const AnnouncementLinkRow = styled.div`
+  margin-top: 6px;
+`;
+
 export const DismissButton = styled.button`
   border: 0;
   background: transparent;

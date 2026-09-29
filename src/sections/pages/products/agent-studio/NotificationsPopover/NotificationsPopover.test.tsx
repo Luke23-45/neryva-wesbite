@@ -50,10 +50,19 @@ function stubEngine(payloads: {
 }
 
 async function renderPopover() {
-  const rootRoute = createRootRoute({ component: () => <NotificationsPopover /> });
+  // The root renders the popover AND an <Outlet/> (like the real shell
+  // layout) so child routes actually paint on navigation.
+  const rootRoute = createRootRoute({ component: () => (<><NotificationsPopover /><Outlet /></>) });
   const activityRoute = createRoute({ getParentRoute: () => rootRoute, path: '/agent-studio/activity', component: () => <Outlet /> });
+  // NG-ANN-LINK: a second route so internal announcement links have a
+  // navigation target to assert against.
+  const approvalsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/approvals',
+    component: () => <div>Approvals queue</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([activityRoute]),
+    routeTree: rootRoute.addChildren([activityRoute, approvalsRoute]),
     history: createMemoryHistory({ initialEntries: ['/agent-studio/activity'] }),
   });
   await router.load();
@@ -74,6 +83,7 @@ describe('NotificationsPopover', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('shows the unread badge, rows, and relative times from the engine', async () => {
@@ -124,5 +134,57 @@ describe('NotificationsPopover', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Notifications/ }));
     expect(await screen.findByText(/Couldn’t load notifications/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try again/ })).toBeInTheDocument();
+  });
+
+  // NG-ANN-LINK: the engine's announcement `link` must reach the user as an
+  // affordance when present — and nothing extra when absent.
+  it('renders the announcement link affordance only when the engine provides one', async () => {
+    stubEngine({
+      status: {
+        overall: 'operational',
+        announcements: [
+          { id: 'a1', title: 'Scheduled maintenance', message: 'On Saturday', link: '/agent-studio/approvals' },
+          { id: 'a2', title: 'New model available', message: 'No link on this one' },
+        ],
+      },
+    });
+    renderPopover();
+    fireEvent.click(await screen.findByRole('button', { name: /^Notifications/ }));
+    expect(await screen.findByText('Scheduled maintenance')).toBeInTheDocument();
+    expect(screen.getByText('New model available')).toBeInTheDocument();
+    // Exactly one affordance — the announcement without a link gets none.
+    expect(screen.getAllByRole('button', { name: 'Learn more' })).toHaveLength(1);
+  });
+
+  it('navigates in-app for internal announcement links and closes the popover', async () => {
+    stubEngine({
+      status: {
+        overall: 'operational',
+        announcements: [{ id: 'a1', title: 'Approval needed', link: '/agent-studio/approvals' }],
+      },
+    });
+    renderPopover();
+    fireEvent.click(await screen.findByRole('button', { name: /^Notifications/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn more' }));
+    // Internal route navigates like a notification deep-link…
+    expect(await screen.findByText('Approvals queue')).toBeInTheDocument();
+    // …and the popover closes, mirroring notification deep-links.
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('opens external announcement links in a new tab', async () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    stubEngine({
+      status: {
+        overall: 'operational',
+        announcements: [{ id: 'a1', title: 'Incident update', link: 'https://status.example.com/incident-1' }],
+      },
+    });
+    renderPopover();
+    fireEvent.click(await screen.findByRole('button', { name: /^Notifications/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Learn more' }));
+    await waitFor(() =>
+      expect(open).toHaveBeenCalledWith('https://status.example.com/incident-1', '_blank', 'noopener,noreferrer'),
+    );
   });
 });

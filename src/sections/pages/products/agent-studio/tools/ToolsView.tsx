@@ -544,7 +544,7 @@ function UpsertModal({
         {/*
           Gap #21 (console field audit): the engine enforces a 16 KiB
           serialized-size limit and a 32-level nesting limit on input_schema
-          (`assertInputSchemaShape` → 422). Disclose them here so an oversized
+          (`assertInputSchemaShape` → 400). Disclose them here so an oversized
           schema fails client-side expectations, not server-side surprise.
         */}
         <TextArea
@@ -552,7 +552,7 @@ function UpsertModal({
           value={inputSchema}
           onChange={(e) => setInputSchema(e.target.value)}
           rows={8}
-          hint="The engine enforces a 16 KiB serialized-size limit and a 32-level nesting limit (422 beyond)."
+          hint="The engine enforces a 16 KiB serialized-size limit and a 32-level nesting limit (400 beyond)."
         />
         {schemaProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{schemaProblem}</p>}
       </div>

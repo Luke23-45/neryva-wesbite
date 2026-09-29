@@ -4,7 +4,7 @@ import type { AttachmentUpload } from '@hooks/studio/useAttachmentUpload';
  * H3 — client cap mirroring the engine's `AcceptMessageDto.attachments`
  * (`@ArrayMaxSize(4)`, `neryva-engine/src/modules/conversations/dto.ts:39`).
  * The send path never carries more than this, and the attach path refuses
- * past it with an honest toast — so a send can never 422 on attachment
+ * past it with an honest toast — so a send can never 400 on attachment
  * count. If the engine limit ever changes, change this ONE constant;
  * nothing else in the console encodes the 4.
  */

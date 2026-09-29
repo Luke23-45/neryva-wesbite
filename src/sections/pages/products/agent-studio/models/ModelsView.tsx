@@ -606,9 +606,9 @@ function CredentialModal({
     >
       {/*
         Gap #8 (console field audit): the engine enforces a CLOSED provider
-        vocabulary (`isModelProvider` → 422 otherwise). A free-text input let
+        vocabulary (`isModelProvider` → 400 otherwise). A free-text input let
         a typo ride all the way through a fresh MFA step-up to a guaranteed
-        422. A select over the same vocabulary makes the typo unrepresentable.
+        400. A select over the same vocabulary makes the typo unrepresentable.
       */}
       <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
         Provider

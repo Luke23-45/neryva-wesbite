@@ -243,7 +243,7 @@ export function AgentStudioChatView() {
   };
 
   const send = (text: string) => {
-    // H3 — capped at MAX_MESSAGE_ATTACHMENTS so the send can never 422 on
+    // H3 — capped at MAX_MESSAGE_ATTACHMENTS so the send can never 400 on
     // attachment count; failed/quarantined rows are never sent.
     const readyIds = sendableAttachmentIds(attachments.uploads);
     void session.send(text, readyIds.length > 0 ? readyIds : undefined);
@@ -277,7 +277,7 @@ export function AgentStudioChatView() {
   const onAttach = (file: File | null | undefined) => {
     if (!file) return;
     // H3 — cap the pending set at the engine limit BEFORE the upload
-    // starts: with ≥5 pending attachments every send would 422, and the
+    // starts: with ≥5 pending attachments every send would 400, and the
     // only recovery used to be a new thread. The chip strip's remove
     // buttons (wired to attachments.dismiss below) let the user drop one
     // and retry in the same thread — no dead ends.

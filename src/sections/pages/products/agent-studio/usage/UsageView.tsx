@@ -13,7 +13,7 @@ import { useCan } from '@lib/engine/capabilities';
 /**
  * Usage (ledger B-1) — the real metering story for this workspace: the
  * shared UsageExplorer (overview KPIs, daily series, range + product
- * filters, CSV export) preset to Agent Studio, plus live quota meters from
+ * filters, NDJSON export) preset to Agent Studio, plus live quota meters from
  * the org's plan limits. The static report and its double-unit peak label
  * are gone.
  */

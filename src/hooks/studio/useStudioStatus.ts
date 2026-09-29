@@ -19,6 +19,12 @@ export interface StatusAnnouncement {
   id: string;
   title: string;
   message: string | null;
+  /**
+   * Optional staff-authored target (engine `console_announcements.link`):
+   * a console route (`/agent-studio/...`) or an external URL. Null when the
+   * engine carries none — never rendered as a placeholder.
+   */
+  link: string | null;
   createdAt: string | null;
 }
 
@@ -87,11 +93,15 @@ export function parseStatus(raw: unknown): StudioStatus {
         return null;
       }
       const message = firstString(r, ['message', 'body', 'detail']);
+      // NG-ANN-LINK: the engine serializes `link` (console route or external
+      // URL, nullable) on every active announcement — carry it through so the
+      // popover can render the affordance instead of dropping it.
+      const link = firstString(r, ['link']);
       const createdAt = firstString(r, ['created_at', 'published_at']);
       const explicitId = firstString(r, ['id', 'announcement_id']);
       // Stable dismissal key: engine id when present, else content-derived.
       const id = explicitId ?? `${title}|${createdAt ?? ''}`;
-      return { id, title, message, createdAt } satisfies StatusAnnouncement;
+      return { id, title, message, link, createdAt } satisfies StatusAnnouncement;
     })
     .filter((a): a is StatusAnnouncement => a !== null);
 
