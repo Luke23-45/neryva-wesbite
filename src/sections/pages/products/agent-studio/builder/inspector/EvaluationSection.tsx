@@ -31,9 +31,20 @@ import { buildAgentDetailPath } from '../lib/slot-model';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { EvalNoDatasetFix } from './EvalNoDatasetFix';
 import { EvalResults } from './EvalResults';
-import { SectionLabel, Wrap } from './InstructionsSection.styles';
+import {
+  ActionsRow,
+  AttemptsWrap,
+  DatasetLabel,
+  DatasetSelect,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  LinkRow,
+  Muted,
+  Wrap,
+} from './EvaluationSection.styles';
 import { Note } from './TraceDrawer.styles';
-import { Muted } from './TrySection.styles';
 
 export interface EvaluationSectionProps {
   assistantId: string;
@@ -138,57 +149,73 @@ export function EvaluationSection({
 
   return (
     <Wrap>
-      <SectionLabel>Runs against</SectionLabel>
-      <Muted>{runnable ? `${versionLabel} — draft-pinned, snapshot synthesized.` : 'No DRAFT or PUBLISHED version to evaluate — retired versions never execute.'}</Muted>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Runs against</FieldTitle>
+        </FieldHead>
+        <FieldHelper>
+          {runnable ? `${versionLabel} — draft-pinned, snapshot synthesized.` : 'No DRAFT or PUBLISHED version to evaluate — retired versions never execute.'}
+        </FieldHelper>
+      </FieldBlock>
 
-      <SectionLabel>Dataset · {seededDataset ? 'seeded' : 'attach'}</SectionLabel>
-      {seededDataset ? (
-        <Muted>
-          {describeDatasetOrigin(seededDataset.name)} · resolves automatically when the picker stays on template default.
-        </Muted>
-      ) : (
-        <Muted>No template-seeded dataset — pick one explicitly or create it below. The template default fails loudly until then.</Muted>
-      )}
-      <label style={{ fontSize: 13, display: 'block', marginTop: 8 }}>
-        Dataset (omit for the template-seeded default)
-        <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          <option value="">Template default (fails loudly when none exists)</option>
-          {(datasets.data ?? []).map((dataset) => (
-            <option key={dataset.id} value={dataset.id}>
-              {dataset.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {pickedDataset && <Muted>{describeDatasetOrigin(pickedDataset.name)} dataset.</Muted>}
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Dataset</FieldTitle>
+          <FieldHelper>{seededDataset ? 'seeded' : 'attach'}</FieldHelper>
+        </FieldHead>
+        {seededDataset ? (
+          <FieldHelper>
+            {describeDatasetOrigin(seededDataset.name)} · resolves automatically when the picker stays on template default.
+          </FieldHelper>
+        ) : (
+          <FieldHelper>No template-seeded dataset — pick one explicitly or create it below. The template default fails loudly until then.</FieldHelper>
+        )}
+        <DatasetLabel>
+          Dataset (omit for the template-seeded default)
+          <DatasetSelect value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
+            <option value="">Template default (fails loudly when none exists)</option>
+            {(datasets.data ?? []).map((dataset) => (
+              <option key={dataset.id} value={dataset.id}>
+                {dataset.name}
+              </option>
+            ))}
+          </DatasetSelect>
+        </DatasetLabel>
+        {pickedDataset && <FieldHelper>{describeDatasetOrigin(pickedDataset.name)} dataset.</FieldHelper>}
+      </FieldBlock>
 
       {showFixPath && <EvalNoDatasetFix onDatasetCreated={(id) => setDatasetId(id)} canCreate={mayRun} />}
 
-      {mayRun ? (
-        <>
-          <div style={{ maxWidth: 220, marginTop: 8 }}>
-            <TextInput label={EVAL_COPY.attemptsLabel} type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <ActionButton
-              size="sm"
-              disabled={!runnable || evaluate.isPending || running}
-              title={!runnable ? 'No DRAFT or PUBLISHED version to evaluate' : 'Start an eval run for this version'}
-              onClick={() => start({ ...(datasetId ? { datasetId } : {}), attempts: attemptsNumber })}
-            >
-              <FlaskConical size={13} strokeWidth={1.8} />
-              {evaluate.isPending ? 'Starting…' : 'Evaluate version'}
-            </ActionButton>
-            {latest?.datasetId && !running && (
-              <ActionButton size="sm" variant="secondary" onClick={reRun} title={`${EVAL_COPY.reRunSame} — same dataset, same attempts`}>
-                {EVAL_COPY.reRunSame} ↻
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Run</FieldTitle>
+        </FieldHead>
+        {mayRun ? (
+          <>
+            <AttemptsWrap>
+              <TextInput label={EVAL_COPY.attemptsLabel} type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
+            </AttemptsWrap>
+            <ActionsRow>
+              <ActionButton
+                size="sm"
+                disabled={!runnable || evaluate.isPending || running}
+                title={!runnable ? 'No DRAFT or PUBLISHED version to evaluate' : 'Start an eval run for this version'}
+                onClick={() => start({ ...(datasetId ? { datasetId } : {}), attempts: attemptsNumber })}
+              >
+                <FlaskConical size={13} strokeWidth={1.8} />
+                {evaluate.isPending ? 'Starting…' : 'Evaluate version'}
               </ActionButton>
-            )}
-          </div>
-        </>
-      ) : (
-        <Muted>Viewing only — {denied} Verdicts stay visible read-only.</Muted>
-      )}
+              {latest?.datasetId && !running && (
+                <ActionButton size="sm" variant="secondary" onClick={reRun} title={`${EVAL_COPY.reRunSame} — same dataset, same attempts`}>
+                  {EVAL_COPY.reRunSame} ↻
+                </ActionButton>
+              )}
+            </ActionsRow>
+          </>
+        ) : (
+          <FieldHelper>Viewing only — {denied} Verdicts stay visible read-only.</FieldHelper>
+        )}
+      </FieldBlock>
 
       {latest ? (
         <EvalResults
@@ -205,30 +232,34 @@ export function EvaluationSection({
         <EmptyState icon={<FlaskConical size={18} opacity={0.5} />} title="No eval runs yet" description="Evaluate this version — the decision lands here with its provenance." />
       )}
 
-      <SectionLabel>Watching</SectionLabel>
-      {latestDrift ? (
-        <div style={{ marginTop: 8 }}>
-          <Muted>
-            {latestDrift.title ?? 'Model drift'} — {latestDrift.message ?? 'the catalog moved under the active version.'}
-          </Muted>
-          {shadowRuns.length > 0 && (
-            <Muted>
-              {shadowRuns.length} shadow run{shadowRuns.length === 1 ? '' : 's'} observing — never gates releases.
-            </Muted>
-          )}
-        </div>
-      ) : shadowRuns.length > 0 ? (
-        <Muted>
-          {shadowRuns.length} shadow run{shadowRuns.length === 1 ? '' : 's'} observing this version — never gates releases.
-        </Muted>
-      ) : (
-        <Muted>{EVAL_COPY.driftSteady}</Muted>
-      )}
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Watching</FieldTitle>
+        </FieldHead>
+        {latestDrift ? (
+          <>
+            <FieldHelper>
+              {latestDrift.title ?? 'Model drift'} — {latestDrift.message ?? 'the catalog moved under the active version.'}
+            </FieldHelper>
+            {shadowRuns.length > 0 && (
+              <FieldHelper>
+                {shadowRuns.length} shadow run{shadowRuns.length === 1 ? '' : 's'} observing — never gates releases.
+              </FieldHelper>
+            )}
+          </>
+        ) : shadowRuns.length > 0 ? (
+          <FieldHelper>
+            {shadowRuns.length} shadow run{shadowRuns.length === 1 ? '' : 's'} observing this version — never gates releases.
+          </FieldHelper>
+        ) : (
+          <FieldHelper>{EVAL_COPY.driftSteady}</FieldHelper>
+        )}
+      </FieldBlock>
 
-      <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+      <LinkRow>
         <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>{EVAL_COPY.evaluationsLink}</Link>
         <Link to={buildAgentDetailPath(assistantId)}>Open publish gates ›</Link>
-      </div>
+      </LinkRow>
       <Note>{EVAL_COPY.latestWins} Test runs are recorded in audit. <Link to="/platform/audit">Open Audit →</Link></Note>
       {versionRuns.length > 1 && (
         <Muted>
