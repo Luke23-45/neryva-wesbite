@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { Minus, Plus } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { Switch } from '@components/common/ui/Switch';
@@ -52,14 +53,19 @@ import {
 } from '../lib/knowledge-model';
 import { ConflictDialog } from './ConflictDialog';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow, SwitchRow, SwitchSub, SwitchText, SwitchTitle } from './BrainSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import {
+  ConnectorList,
   ConnectorRow,
   DropSub,
   DropTitle,
   Dropzone,
+  EmptyPins,
+  FieldBlock,
   FieldGrid,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
   FileHead,
   FileMeta,
   FileName,
@@ -71,15 +77,23 @@ import {
   PinCard,
   PinFix,
   PinHead,
+  PinList,
   PinMeta,
   PinState,
   PinTitle,
   StepBtn,
   Stepper,
   StepValue,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
   Tab,
+  TabPanel,
   TabStrip,
   TextButton,
+  UploadList,
+  ViewerNote,
 } from './KnowledgeSection.styles';
 
 export interface KnowledgeSectionProps {
@@ -434,8 +448,11 @@ export function KnowledgeSection({
       }}
     >
       {/* Block A · retrieval policy */}
-      <div>
-        <SectionLabel>RETRIEVAL</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Retrieval</FieldTitle>
+          <FieldHelper>Ground answers in pinned sources at runtime.</FieldHelper>
+        </FieldHead>
         {canAuthor ? (
           <SwitchRow>
             <SwitchText>
@@ -445,14 +462,16 @@ export function KnowledgeSection({
             <Switch checked={retrieval} onChange={setRetrieval} label="Retrieval enabled" id="knowledge-retrieval-switch" />
           </SwitchRow>
         ) : (
-          <StaticRow>
-            <StaticLabel>Retrieval</StaticLabel>
-            <span>{retrieval ? 'On' : 'Off — deliberate, not empty'}</span>
-          </StaticRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Retrieval</SwitchTitle>
+              <SwitchSub>{retrieval ? 'On' : 'Off — deliberate, not empty'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
         )}
         <SwitchRow>
           <SwitchText>
-            <SwitchTitle>Max results</SwitchTitle>
+            <SwitchTitle>Results per query</SwitchTitle>
             <SwitchSub>
               Chunks per query · {MAX_RESULTS_MIN}–{MAX_RESULTS_MAX} · default {MAX_RESULTS_DEFAULT}
             </SwitchSub>
@@ -460,28 +479,32 @@ export function KnowledgeSection({
           {canAuthor ? (
             <Stepper>
               <StepBtn type="button" aria-label="Decrease max results" disabled={maxResults <= MAX_RESULTS_MIN} onClick={() => setMaxResults((v) => Math.max(MAX_RESULTS_MIN, v - 1))}>
-                −
+                <Minus size={14} strokeWidth={2} />
               </StepBtn>
               <StepValue aria-live="polite">{maxResults}</StepValue>
               <StepBtn type="button" aria-label="Increase max results" disabled={maxResults >= MAX_RESULTS_MAX} onClick={() => setMaxResults((v) => Math.min(MAX_RESULTS_MAX, v + 1))}>
-                +
+                <Plus size={14} strokeWidth={2} />
               </StepBtn>
             </Stepper>
           ) : (
             <StepValue>{maxResults}</StepValue>
           )}
         </SwitchRow>
-      </div>
+      </FieldBlock>
 
       {/* Block B · pinned sources */}
-      <div>
-        <SectionLabel>
-          PINNED · {pins.length} / {PINS_MAX}
-        </SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Pinned sources</FieldTitle>
+          <FieldHelper>
+            {pins.length} of {PINS_MAX} pinned — slugs resolve to exact versions at publish.
+          </FieldHelper>
+        </FieldHead>
         {pins.length === 0 ? (
-          <PinMeta>{retrieval ? 'Retrieval is on but nothing is pinned — answers will not ground.' : SKIP_COPY}</PinMeta>
+          <EmptyPins>{retrieval ? 'Retrieval is on but nothing is pinned — answers will not ground.' : SKIP_COPY}</EmptyPins>
         ) : (
-          pins.map((slug) => {
+          <PinList>
+            {pins.map((slug) => {
             const matched = matchPinToDocument(slug, inventory);
             const healthPin = healthPins.find((p) => p.sourceSlug === slug);
             if (!matched.resolved) {
@@ -573,14 +596,18 @@ export function KnowledgeSection({
                 )}
               </PinCard>
             );
-          })
+          })}
+          </PinList>
         )}
         <PinMeta>{UNMAP_COPY}</PinMeta>
-      </div>
+      </FieldBlock>
 
       {/* Block C · add sources */}
-      <div>
-        <SectionLabel>ADD SOURCES</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Add sources</FieldTitle>
+          <FieldHelper>Upload, paste, or link — everything lands in the org library first.</FieldHelper>
+        </FieldHead>
         {canAuthor ? (
           <>
             <TabStrip role="tablist" aria-label="Add sources">
@@ -593,7 +620,7 @@ export function KnowledgeSection({
             </TabStrip>
 
             {tab === 'upload' && (
-              <div>
+              <TabPanel>
                 <input
                   ref={fileRef}
                   type="file"
@@ -617,41 +644,47 @@ export function KnowledgeSection({
                   <DropSub>PDF · PNG · JPG · WebP · TXT · MD · CSV · JSON — no Word/Excel, convert first.</DropSub>
                   <DropSub>Uploads write to the org library · Recorded in Audit</DropSub>
                 </Dropzone>
-                {rows.map((row) => (
-                  <FileRow key={row.key}>
-                    <FileHead>
-                      <FileName>{row.file.name}</FileName>
-                      <FileMeta>{(row.file.size / 1024).toFixed(1)} KB</FileMeta>
-                      <MutedButton type="button" onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}>
-                        Remove
-                      </MutedButton>
-                    </FileHead>
-                    <FieldGrid>
-                      <TextInput
-                        label="Pin address intent"
-                        value={row.slug}
-                        onChange={(event) => setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, slug: event.target.value } : r)))}
-                        placeholder="omit to derive"
-                        hint="Kebab 3–64, reserved now — 409 on collision."
-                        error={(row.slug.trim() ? validateSourceSlug(row.slug) : null) ?? undefined}
-                      />
-                      <TextInput
-                        label="Display title"
-                        value={row.title}
-                        onChange={(event) => setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, title: event.target.value } : r)))}
-                        placeholder="Defaults to the slug, else auto"
-                      />
-                    </FieldGrid>
-                  </FileRow>
-                ))}
                 {rows.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
+                  <UploadList>
+                    {rows.map((row) => (
+                      <FileRow key={row.key}>
+                        <FileHead>
+                          <FileName>{row.file.name}</FileName>
+                          <FileMeta>{(row.file.size / 1024).toFixed(1)} KB</FileMeta>
+                          <MutedButton type="button" onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}>
+                            Remove
+                          </MutedButton>
+                        </FileHead>
+                        <FieldGrid>
+                          <TextInput
+                            label="Pin address intent"
+                            value={row.slug}
+                            onChange={(event) => setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, slug: event.target.value } : r)))}
+                            placeholder="omit to derive"
+                            hint="Kebab 3–64, reserved now — 409 on collision."
+                            error={(row.slug.trim() ? validateSourceSlug(row.slug) : null) ?? undefined}
+                          />
+                          <TextInput
+                            label="Display title"
+                            value={row.title}
+                            onChange={(event) => setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, title: event.target.value } : r)))}
+                            placeholder="Defaults to the slug, else auto"
+                          />
+                        </FieldGrid>
+                      </FileRow>
+                    ))}
+                  </UploadList>
+                )}
+                {rows.length > 0 && (
+                  <div>
                     <ActionButton size="sm" disabled={rowsBlocked || authorizing} onClick={authorizeUploads}>
                       Authorize {rows.length} upload{rows.length === 1 ? '' : 's'}
                     </ActionButton>
                   </div>
                 )}
-                {uploads.map((upload) => {
+                {uploads.length > 0 && (
+                  <PinList>
+                    {uploads.map((upload) => {
                   const terminal = upload.status === 'ready' || upload.status === 'failed' || upload.status === 'quarantined';
                   const label =
                     upload.status === 'uploading'
@@ -686,12 +719,14 @@ export function KnowledgeSection({
                       )}
                     </PinCard>
                   );
-                })}
-              </div>
+                    })}
+                  </PinList>
+                )}
+              </TabPanel>
             )}
 
             {tab === 'paste' && (
-              <div>
+              <TabPanel>
                 <InlineForm>
                   <Segmented
                     options={PASTE_MEDIA_TYPES.map((mediaType) => ({ value: mediaType, label: PASTE_LABELS[mediaType as PasteUploadType] }))}
@@ -729,19 +764,17 @@ export function KnowledgeSection({
                   </div>
                   <PinMeta>Pasted bytes ride the same verified session flow as files — pin the slug once READY.</PinMeta>
                 </InlineForm>
-              </div>
+              </TabPanel>
             )}
 
             {tab === 'library' && (
-              <div>
-                <div style={{ marginTop: 8 }}>
-                  <TextInput
-                    aria-label="Filter library"
-                    value={filter}
-                    onChange={(event) => setFilter(event.target.value)}
-                    placeholder="Filter by slug or title…"
-                  />
-                </div>
+              <TabPanel>
+                <TextInput
+                  aria-label="Filter library"
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                  placeholder="Filter by slug or title…"
+                />
                 {documents.isPending ? (
                   <PinMeta>Loading the library…</PinMeta>
                 ) : documents.isError ? (
@@ -749,40 +782,42 @@ export function KnowledgeSection({
                 ) : libraryRows.length === 0 ? (
                   <PinMeta>No documents match — upload or paste one first.</PinMeta>
                 ) : (
-                  libraryRows.slice(0, 30).map((doc) => {
-                    const docLabel = documentStateLabel(doc.state);
-                    const isPinned = pins.includes(doc.sourceSlug);
-                    return (
-                      <PinCard key={doc.id} $tone={isPinned ? 'ok' : 'info'}>
-                        <PinHead>
-                          <StatusDot $status={isPinned ? 'ready' : 'info'} aria-hidden="true" />
-                          <PinTitle>{doc.sourceSlug || '—'}</PinTitle>
-                          <PinState>{docLabel.word}</PinState>
-                        </PinHead>
-                        <PinMeta>
-                          {doc.title ?? 'Untitled'} · v{doc.latestVersion ?? '—'}
-                        </PinMeta>
-                        <PinActions>
-                          {isPinned ? (
-                            <MutedButton type="button" onClick={() => unmap(doc.sourceSlug)}>
-                              Unmap
-                            </MutedButton>
-                          ) : (
-                            <TextButton type="button" onClick={() => pin(doc.sourceSlug)} disabled={!doc.sourceSlug}>
-                              Pin
-                            </TextButton>
-                          )}
-                        </PinActions>
-                      </PinCard>
-                    );
-                  })
+                  <PinList>
+                    {libraryRows.slice(0, 30).map((doc) => {
+                      const docLabel = documentStateLabel(doc.state);
+                      const isPinned = pins.includes(doc.sourceSlug);
+                      return (
+                        <PinCard key={doc.id} $tone={isPinned ? 'ok' : 'info'}>
+                          <PinHead>
+                            <StatusDot $status={isPinned ? 'ready' : 'info'} aria-hidden="true" />
+                            <PinTitle>{doc.sourceSlug || '—'}</PinTitle>
+                            <PinState>{docLabel.word}</PinState>
+                          </PinHead>
+                          <PinMeta>
+                            {doc.title ?? 'Untitled'} · v{doc.latestVersion ?? '—'}
+                          </PinMeta>
+                          <PinActions>
+                            {isPinned ? (
+                              <MutedButton type="button" onClick={() => unmap(doc.sourceSlug)}>
+                                Unmap
+                              </MutedButton>
+                            ) : (
+                              <TextButton type="button" onClick={() => pin(doc.sourceSlug)} disabled={!doc.sourceSlug}>
+                                Pin
+                              </TextButton>
+                            )}
+                          </PinActions>
+                        </PinCard>
+                      );
+                    })}
+                  </PinList>
                 )}
-              </div>
+              </TabPanel>
             )}
 
             {tab === 'connector' && (
-              <div>
-                <PinMeta style={{ marginTop: 8 }}>
+              <TabPanel>
+                <PinMeta>
                   <OrgBadge>org</OrgBadge> Connector accounts are org-wide — syncing pulls documents into the shared library for every agent.
                 </PinMeta>
                 {connectors.isPending ? (
@@ -792,27 +827,29 @@ export function KnowledgeSection({
                 ) : (connectors.data ?? []).length === 0 ? (
                   <PinMeta>No accounts linked yet.</PinMeta>
                 ) : (
-                  (connectors.data ?? []).map((account) => (
-                    <ConnectorRow key={account.id}>
-                      <PinHead>
-                        <PinTitle>{account.displayName}</PinTitle>
-                        <PinState>{account.provider} · {account.state}</PinState>
-                      </PinHead>
-                      <PinMeta>
-                        {account.lastSyncedAt ? `Last sync ${account.lastSyncedAt.slice(0, 16).replace('T', ' ')}` : 'Never synced'}
-                        {account.lastError ? ` · ${account.lastError}` : ''}
-                      </PinMeta>
-                      <PinActions>
-                        <TextButton
-                          type="button"
-                          disabled={syncConnector.isPending}
-                          onClick={() => syncConnector.mutate(account.id)}
-                        >
-                          Sync now
-                        </TextButton>
-                      </PinActions>
-                    </ConnectorRow>
-                  ))
+                  <ConnectorList>
+                    {(connectors.data ?? []).map((account) => (
+                      <ConnectorRow key={account.id}>
+                        <PinHead>
+                          <PinTitle>{account.displayName}</PinTitle>
+                          <PinState>{account.provider} · {account.state}</PinState>
+                        </PinHead>
+                        <PinMeta>
+                          {account.lastSyncedAt ? `Last sync ${account.lastSyncedAt.slice(0, 16).replace('T', ' ')}` : 'Never synced'}
+                          {account.lastError ? ` · ${account.lastError}` : ''}
+                        </PinMeta>
+                        <PinActions>
+                          <TextButton
+                            type="button"
+                            disabled={syncConnector.isPending}
+                            onClick={() => syncConnector.mutate(account.id)}
+                          >
+                            Sync now
+                          </TextButton>
+                        </PinActions>
+                      </ConnectorRow>
+                    ))}
+                  </ConnectorList>
                 )}
                 <PinActions>
                   <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/integrations' })}>
@@ -820,20 +857,20 @@ export function KnowledgeSection({
                   </TextButton>
                 </PinActions>
                 <PinMeta>New accounts link in Integrations (org-wide, role-gated) — synced documents appear in the Library tab.</PinMeta>
-              </div>
+              </TabPanel>
             )}
           </>
         ) : (
-          <StaticRow>
-            <StaticLabel>Sources</StaticLabel>
-            <span>Knowledge editing needs an owner, admin, or developer — {denied}</span>
-          </StaticRow>
+          <ViewerNote>Knowledge editing needs an owner, admin, or developer — {denied}</ViewerNote>
         )}
-      </div>
+      </FieldBlock>
 
       {/* Block D · coverage & publish consequence */}
-      <div>
-        <SectionLabel>COVERAGE & PUBLISH</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Coverage</FieldTitle>
+          <FieldHelper>Pin health reads the active version — new pins resolve to exact versions at publish.</FieldHelper>
+        </FieldHead>
         {(degraded || undercovered || unresolvedCount > 0) && (
           <Whisper $tone="amber">
             {unresolvedCount > 0
@@ -846,8 +883,7 @@ export function KnowledgeSection({
         {pins.length > 0 && !degraded && !undercovered && unresolvedCount === 0 && (
           <PinMeta>All pins resolved{health.data === undefined ? ' — coverage checks while health loads.' : ' and covered.'}</PinMeta>
         )}
-        <PinMeta>Pin health reads the ACTIVE version — new pins resolve to exact versions at publish.</PinMeta>
-      </div>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
