@@ -46,6 +46,7 @@ import {
   FieldHead,
   FieldHelper,
   FieldTitle,
+  CredentialsBlock,
   ModelHero,
   ModelHeroEmpty,
   ModelHeroFix,
@@ -560,7 +561,7 @@ export function ModelSection({
             <FieldTitle>Credentials</FieldTitle>
             <FieldHelper>Fingerprints only — secrets never leave the vault.</FieldHelper>
           </FieldHead>
-          <div style={{ marginTop: 10 }}>
+          <CredentialsBlock>
             <CredentialsPanel
               pinnedProviders={pinnedProviders}
               canGovern={canGovern}
@@ -571,7 +572,7 @@ export function ModelSection({
               onConnectOpenChange={setConnectOpen}
               onRevokeOpenChange={setRevokeCredentialId}
             />
-          </div>
+          </CredentialsBlock>
         </div>
       </FieldBlock>
 

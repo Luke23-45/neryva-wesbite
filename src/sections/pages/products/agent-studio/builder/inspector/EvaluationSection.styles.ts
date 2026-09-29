@@ -54,3 +54,39 @@ export const LinkRow = styled.div`
   flex-wrap: wrap;
   align-items: center;
 `;
+
+export const FixBlock = styled.div`
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border-radius: 14px;
+`;
+
+export const FixTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin-bottom: 6px;
+`;
+
+export const FixForm = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-top: 10px;
+  flex-wrap: wrap;
+`;
+
+export const FixField = styled.div`
+  min-width: 200px;
+  flex: 1;
+`;
+
+export const FixLinks = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+`;

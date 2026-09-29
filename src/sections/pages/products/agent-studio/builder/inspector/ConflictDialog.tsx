@@ -3,9 +3,11 @@ import { Modal } from '@components/common/ui/Modal';
 import { useAssistantDefinition, type AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 import {
   ConflictDiff,
+  ConflictIntro,
   ConflictLabel,
   ConflictPane,
   ConflictText,
+  ConflictWarning,
 } from './InstructionsSection.styles';
 
 export interface ConflictDialogProps {
@@ -66,10 +68,10 @@ export function ConflictDialog({
         </>
       }
     >
-      <p style={{ fontSize: 13, opacity: 0.8 }}>
+      <ConflictIntro>
         Your save carried hash {expectedHash.slice(0, 12) || '—'}; the server is at {currentHash?.slice(0, 12) ?? 'unknown'}.
         Nothing was overwritten. Their text against your attempt:
-      </p>
+      </ConflictIntro>
       <ConflictDiff>
         <ConflictPane>
           <ConflictLabel>THEIRS (SERVER)</ConflictLabel>
@@ -81,9 +83,9 @@ export function ConflictDialog({
         </ConflictPane>
       </ConflictDiff>
       {currentHash === null && (
-        <p style={{ fontSize: 12, color: '#f87171' }}>
+        <ConflictWarning>
           The refusal carried no current hash — reload theirs before retrying.
-        </p>
+        </ConflictWarning>
       )}
     </Modal>
   );

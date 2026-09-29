@@ -184,3 +184,7 @@ export const ToggleChevron = styled.span<{ $open: boolean }>`
   transform: rotate(${({ $open }) => ($open ? 180 : 0)}deg);
   transition: transform ${({ theme }) => theme.transitions.fast};
 `;
+
+export const CredentialsBlock = styled.div`
+  margin-top: 12px;
+`;

@@ -169,3 +169,10 @@ export const SamplesMeta = styled.span`
   font-weight: 400;
   opacity: 0.8;
 `;
+
+export const SamplesBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+`;

@@ -4,9 +4,9 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { TextInput } from '@components/common/ui/TextInput';
 import { useCreateEvalDataset } from '@hooks/studio/useSetupEval';
 import { EVAL_COPY } from '../lib/eval-model';
-import { SectionLabel } from './InstructionsSection.styles';
 import { Note } from './TraceDrawer.styles';
 import { Muted } from './TrySection.styles';
+import { FixBlock, FixField, FixForm, FixLinks, FixTitle } from './EvaluationSection.styles';
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -29,14 +29,14 @@ export function EvalNoDatasetFix({
   const [name, setName] = useState('');
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <SectionLabel>{EVAL_COPY.noDatasetHeadline}</SectionLabel>
+    <FixBlock>
+      <FixTitle>{EVAL_COPY.noDatasetHeadline}</FixTitle>
       <Muted>{EVAL_COPY.noDatasetDetail}</Muted>
       {canCreate && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 8, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 200, flex: 1 }}>
+        <FixForm>
+          <FixField>
             <TextInput label="New dataset name" name="new-dataset-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. refund-regressions" />
-          </div>
+          </FixField>
           <ActionButton
             size="sm"
             disabled={name.trim() === '' || createDataset.isPending}
@@ -59,13 +59,13 @@ export function EvalNoDatasetFix({
           >
             Create dataset
           </ActionButton>
-        </div>
+        </FixForm>
       )}
-      <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+      <FixLinks>
         <Link to="/agent-studio/templates">Install a template →</Link>
         <Link to="/agent-studio/datasets">Open Datasets →</Link>
-      </div>
+      </FixLinks>
       <Note>Datasets are org-shared — one suite can guard many versions.</Note>
-    </div>
+    </FixBlock>
   );
 }

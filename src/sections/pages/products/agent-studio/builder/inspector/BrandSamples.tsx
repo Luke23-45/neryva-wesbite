@@ -10,6 +10,7 @@ import {
   DeniedNote,
   Excerpt,
   RowError,
+  SamplesBody,
   SamplesMeta,
   SamplesToggle,
   ToggleRow,
@@ -90,7 +91,7 @@ export function BrandSamples({ assistantId, canAuthor, startOpen, onInsert }: Br
         <SamplesMeta>3 sources · labeled</SamplesMeta>
       </SamplesToggle>
       {open && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <SamplesBody>
           {!canAuthor && (
             <DeniedNote>
               Viewing only — voices are browsable, but adopting one needs an owner, admin, or developer.
@@ -175,7 +176,7 @@ export function BrandSamples({ assistantId, canAuthor, startOpen, onInsert }: Br
               <TypeNote>Scaffold library · pending review</TypeNote>
             </TypeRow>
           </TypeList>
-        </div>
+        </SamplesBody>
       )}
     </div>
   );

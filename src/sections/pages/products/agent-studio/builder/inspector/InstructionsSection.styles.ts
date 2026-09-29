@@ -374,6 +374,20 @@ export const ConflictLabel = styled.div`
   margin-bottom: 4px;
 `;
 
+export const ConflictIntro = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.body};
+  line-height: 1.65;
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+export const ConflictWarning = styled.p`
+  margin: 12px 0 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: 1.6;
+  color: ${({ theme }) => theme.app.status.error.fg};
+`;
+
 export const ConflictText = styled.pre`
   margin: 0;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
