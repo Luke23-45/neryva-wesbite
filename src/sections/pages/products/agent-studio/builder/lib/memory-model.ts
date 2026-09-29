@@ -114,6 +114,13 @@ export function gradeMemory(policy: MemoryPolicyState): MemoryGrade {
 
 // ─── Org policy (fail-open mirror of readMemoryPolicy) ───────────────────────
 
+// 19-45 (ME-03, 2026-09-29) — READ-ONLY in the console: this parses the
+// org-level memory policy for display (Memory section, read-only Block D).
+// The WRITE path is API-only — PATCH /orgs/:orgId/settings
+// (OrgSettingsService.validatePreferences); no Workspace settings page wires
+// an editor for memory_pii_scrubbing / memory_ttl_default_seconds. Do not
+// build an editor here without a product decision (out of P2 scope).
+
 export type MemoryScrub = 'off' | 'redact' | 'block';
 
 export interface OrgMemoryPolicy {

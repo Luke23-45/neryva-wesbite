@@ -353,7 +353,13 @@ export function ModelSection({
           {primary ? (
             <>
               <ResolvedTitle>
-                <StatusDot $status={usable.includes(primary) ? 'ready' : 'attention'} aria-hidden="true" />
+                {/* M-10: while the catalog is unresolved (loading or failed)
+                    the model's status is unknown — a gray 'info' dot, never
+                    the amber attention badge (unknown ≠ known-bad). */}
+                <StatusDot
+                  $status={catalog === undefined ? 'info' : usable.includes(primary) ? 'ready' : 'attention'}
+                  aria-hidden="true"
+                />
                 {catalog?.find((m) => m.ref === primary)?.displayName ?? primary}
               </ResolvedTitle>
               <ResolvedMeta>
@@ -485,13 +491,23 @@ export function ModelSection({
                 {canAuthor ? (
                   <Segmented
                     options={[
+                      // BR-01: an explicit Default segment — an unset effort
+                      // renders unset (no visual pre-select of 'medium', no
+                      // phantom write; choosing Default clears the value).
+                      { value: 'default', label: 'Default' },
                       { value: 'minimal', label: 'Minimal' },
                       { value: 'low', label: 'Low' },
                       { value: 'medium', label: 'Medium' },
                       { value: 'high', label: 'High' },
                     ]}
-                    value={params.reasoning_effort ?? 'medium'}
-                    onChange={(value) => setParams((prev) => ({ ...prev, reasoning_effort: value as ReasoningEffort }))}
+                    value={params.reasoning_effort ?? 'default'}
+                    onChange={(value) =>
+                      setParams((prev) =>
+                        value === 'default'
+                          ? { ...prev, reasoning_effort: undefined }
+                          : { ...prev, reasoning_effort: value },
+                      )
+                    }
                     size="sm"
                     ariaLabel="Reasoning effort"
                   />

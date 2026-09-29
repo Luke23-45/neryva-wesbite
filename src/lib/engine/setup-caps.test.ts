@@ -79,21 +79,26 @@ describe('checkDefinitionCaps', () => {
     const absent = shippable();
     expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('response_policy'))).toBe(false);
     const full = shippable();
+    // 19-32: reasoning_effort/top_p no longer live on response_policy — they
+    // ride model_params (the engine's strict responsePolicySchema 422s them).
     full.response_policy = {
       output_format: 'plain',
       citations_enabled: false,
       streaming: 'on',
-      reasoning_effort: 'high',
-      top_p: 0.9,
     };
+    full.model_params.reasoning_effort = 'high';
+    full.model_params.top_p = 0.9;
     expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('response_policy'))).toBe(false);
+    expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('model_params'))).toBe(false);
     const bad = shippable();
     bad.response_policy = { output_format: 'html', citations_enabled: true, streaming: 'sometimes' } as never;
     const issues = checkDefinitionCaps(bad).filter((i) => i.path.startsWith('response_policy'));
     expect(issues.map((i) => i.path).sort()).toEqual(['response_policy.output_format', 'response_policy.streaming']);
+    // 19-32: the legacy response_policy top_p check is gone — top_p is a
+    // model_params member now, validated there.
     const badTopP = shippable();
-    badTopP.response_policy = { output_format: 'markdown', citations_enabled: true, streaming: 'auto', top_p: 2 };
-    expect(checkDefinitionCaps(badTopP).some((i) => i.path === 'response_policy.top_p')).toBe(true);
+    badTopP.model_params.top_p = 2;
+    expect(checkDefinitionCaps(badTopP).some((i) => i.path === 'model_params.top_p')).toBe(true);
     // Members are optional on input: a valid partial holds no autosave.
     const partial = shippable();
     partial.response_policy = { output_format: 'plain' };
@@ -143,6 +148,19 @@ describe('checkDefinitionCaps', () => {
     const typeIssues = checkDefinitionCaps(wrongType).filter((i) => i.path.startsWith('role_policy'));
     expect(typeIssues.map((i) => i.path).sort()).toEqual(['role_policy.role', 'role_policy.traits']);
   });
+  it('rejects empty role list members like the engine min(1) does (19-28)', () => {
+    // The UI can't produce empties, but a hand-crafted "" must not slip past
+    // the caps layer — the engine 422s on it.
+    const empty = shippable();
+    empty.role_policy = { traits: ['calm', ''], knowledge_areas: ['billing'], prohibited_topics: [''] };
+    const issues = checkDefinitionCaps(empty).filter((i) => i.path.startsWith('role_policy'));
+    expect(issues.map((i) => i.path).sort()).toEqual(['role_policy.prohibited_topics', 'role_policy.traits']);
+    expect(issues.every((i) => i.message.endsWith('items must not be empty.'))).toBe(true);
+    // Non-empty members hold no autosave.
+    const ok = shippable();
+    ok.role_policy = { traits: ['calm', 'precise'], prohibited_topics: ['politics'] };
+    expect(checkDefinitionCaps(ok).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+  });
   it('bounds budgets per the engine caps', () => {
     const tokens = shippable();
     tokens.budget = { max_total_tokens: 999 };
@@ -187,6 +205,18 @@ describe('checkDefinitionCaps', () => {
     const ok = shippable();
     ok.brand = 'Warm.';
     expect(checkDefinitionCaps(ok)).toEqual([]);
+  });
+  it('counts trimmed brand chars against the 2000 cap (19-31)', () => {
+    // The wire sends brand trimmed: padding must neither consume the budget
+    // nor reject input the engine would accept.
+    const padded = shippable();
+    padded.brand = `  ${'x'.repeat(1999)}  `;
+    expect(checkDefinitionCaps(padded).some((i) => i.path === 'brand')).toBe(false);
+    const over = shippable();
+    over.brand = `  ${'x'.repeat(2001)}  `;
+    const issues = checkDefinitionCaps(over).filter((i) => i.path === 'brand');
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('2,001');
   });
 });
 

@@ -1,23 +1,24 @@
 /**
  * C13 pure model — try-console bounds, copy, and descriptors.
  *
- * Engine binds (verified 2026-09-18, PLAN.md §1):
+ * Engine binds (verified 2026-09-29, PLAN.md §1):
  * - prompt 1–8192 chars: controller owns the lower bound
- *   (`assistants.controller.ts:229-231`), the service owns the upper
- *   (`assistants.service.ts:1468-1471`).
- * - run_kind='test': no quota reserve (`conversations.service.ts:444-450`),
- *   no usage-ledger row (`conversations.service.ts:1586`), draft snapshot
- *   synthesized (`assistants.service.ts:1477`).
+ *   (`assistants.controller.ts:254-256`), the service owns the upper
+ *   (`assistants.service.ts:1246-1248`).
+ * - run_kind='test': no quota reserve (`pg-run.repository.ts:252-256`),
+ *   no usage-ledger row (`pg-run.repository.ts:950`), draft snapshot
+ *   synthesized (`assistants.service.ts:1252`).
  * - wall-clock stop: watchdog → `failRunForBudget` → FAILED +
  *   `run.failed`/`budget_exceeded` + quota release
- *   (`conversations.service.ts:2249-2341`). NO engine cost-stop exists —
+ *   (`conversations.service.ts:806-832`; repository core
+ *   `pg-run.repository.ts:1203-1257`). NO engine cost-stop exists —
  *   cost lines render only from Studio-reported events (SPEC correction D2).
  * - guardrail verdicts are Studio-resolved; the engine records policy
- *   identifiers only (`mcp-authority.service.ts:1962-1964`).
- * - instructions are publish-only (`validation.ts:182-190`) — advisory for try.
+ *   identifiers only (`mcp-authority.service.ts:972-974`).
+ * - instructions are publish-only (`validation.ts:276-282`) — advisory for try.
  */
 
-/** Prompt bounds — mirrors the service (`assistants.service.ts:1469`). */
+/** Prompt bounds — mirrors the service (`assistants.service.ts:1247`). */
 export const TRY_PROMPT_MIN = 1;
 export const TRY_PROMPT_MAX = 8192;
 
@@ -36,7 +37,7 @@ export const TRY_COPY = {
   loggingNotBlock: 'Logged, not blocked — this verdict never stopped the run.',
   /** Reload restores the pointer; the engine holds the thread. */
   reloadRestored: 'Thread restored from the server — the live tail replays from the last event.',
-  /** Test runs write no ledger row (`conversations.service.ts:1586` gate). */
+  /** Test runs write no ledger row (`pg-run.repository.ts:950` gate). */
   noBillRow: 'Test runs write no bill row — measured spend lives in Usage.',
   instructionsAdvisory: 'No instructions yet — try runs, publish refuses.',
   noRunnableVersion: 'No DRAFT or PUBLISHED version to run — save a draft first.',

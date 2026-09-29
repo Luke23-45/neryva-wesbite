@@ -54,16 +54,38 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   };
 });
 
+type CatalogRow = {
+  provider: string;
+  modelId: string;
+  ref: string;
+  displayName: string;
+  contextWindowTokens: null;
+  maxOutputTokens: null;
+  capabilities: Record<string, never>;
+  residency: null;
+  usable: boolean;
+  reasons: string[];
+  requiredProduct: string | null;
+  requiredProductLabel: string | null;
+};
+
+// Per-test catalog override: `undefined` = the catalog is still unresolved
+// (loading or fetch failed). Tests mutate `.rows` and restore it.
+const mockCatalog = vi.hoisted(() => {
+  const rows: CatalogRow[] = [
+    { provider: 'a', modelId: 'b', ref: 'a/b', displayName: 'A B', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
+    { provider: 'c', modelId: 'd', ref: 'c/d', displayName: 'C D', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: null, requiredProductLabel: null },
+    { provider: 'e', modelId: 'f', ref: 'e/f', displayName: 'E F', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: false, reasons: ['subscription_required'], requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' },
+  ];
+  return { rows: rows as CatalogRow[] | undefined };
+});
+
 vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
   return {
     ...actual,
     useModelAvailability: () => ({
-      data: [
-        { provider: 'a', modelId: 'b', ref: 'a/b', displayName: 'A B', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
-        { provider: 'c', modelId: 'd', ref: 'c/d', displayName: 'C D', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: null, requiredProductLabel: null },
-        { provider: 'e', modelId: 'f', ref: 'e/f', displayName: 'E F', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: false, reasons: ['subscription_required'], requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' },
-      ],
+      data: mockCatalog.rows,
       isPending: false,
       isFetching: false,
       isError: false,
@@ -151,6 +173,51 @@ describe('ModelSection policy', () => {
     expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
     // The selected ref shows in the header card and in the picker row.
     expect(screen.getAllByText(/a\/b/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders the resolved dot as unknown (gray) while the catalog loads — never attention (19-37)', async () => {
+    const previous = mockCatalog.rows;
+    mockCatalog.rows = undefined;
+    try {
+      await act(async () => {
+        shell();
+      });
+      const header = screen.getByText(/RESOLVED · FIRST SERVES/).parentElement as HTMLElement;
+      const dot = header.querySelector('span[aria-hidden="true"]') as HTMLElement;
+      expect(dot).toBeTruthy();
+      // 'info' gray (#8B94A3): unknown ≠ known-bad. The amber attention badge
+      // (#F5A524) is reserved for models the catalog confirms unusable.
+      expect(getComputedStyle(dot).backgroundColor).toBe('rgb(139, 148, 163)');
+    } finally {
+      mockCatalog.rows = previous;
+    }
+  });
+
+  it('renders the resolved dot ready (green) once the catalog confirms usability', async () => {
+    await act(async () => {
+      shell();
+    });
+    const header = screen.getByText(/RESOLVED · FIRST SERVES/).parentElement as HTMLElement;
+    const dot = header.querySelector('span[aria-hidden="true"]') as HTMLElement;
+    expect(getComputedStyle(dot).backgroundColor).toBe('rgb(61, 214, 140)'); // #3DD68C
+  });
+
+  it('shows reasoning effort as Default (unset) until the maker picks a value — no Medium pre-select (19-33)', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.click(screen.getByText(/Advanced/));
+    const selected = (name: string) =>
+      screen.getAllByRole('tab').find((tab) => tab.textContent === name)?.getAttribute('aria-selected');
+    expect(selected('Default')).toBe('true');
+    expect(selected('Medium')).toBe('false');
+    // Picking a value then choosing Default clears it again — the unset state
+    // is reachable by the maker, never a phantom write.
+    fireEvent.click(screen.getAllByRole('tab').find((tab) => tab.textContent === 'Medium') as HTMLElement);
+    expect(selected('Medium')).toBe('true');
+    fireEvent.click(screen.getAllByRole('tab').find((tab) => tab.textContent === 'Default') as HTMLElement);
+    expect(selected('Default')).toBe('true');
+    expect(selected('Medium')).toBe('false');
   });
 
   it('renders subscription-locked rows with the product label and billing path', async () => {

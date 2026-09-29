@@ -114,11 +114,14 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
   }
 
   // G4: brand ships to the engine (≤2000) and is composed into the served
-  // prompt — it is validated like any other wire field now.
-  if (def.brand.length > CAPS.brandMax) {
+  // prompt — it is validated like any other wire field now. The wire sends
+  // brand trimmed (agent-payload.ts), so the cap counts the trimmed value —
+  // exact, not merely conservative (19-31).
+  const brandLength = def.brand.trim().length;
+  if (brandLength > CAPS.brandMax) {
     issues.push({
       path: 'brand',
-      message: `Brand voice must be ≤ ${CAPS.brandMax.toLocaleString()} characters (currently ${def.brand.length.toLocaleString()}).`,
+      message: `Brand voice must be ≤ ${CAPS.brandMax.toLocaleString()} characters (currently ${brandLength.toLocaleString()}).`,
     });
   }
 
@@ -178,21 +181,13 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
     ) {
       issues.push({ path: 'response_policy.streaming', message: 'Streaming is auto, on, or off.' });
     }
-    if (response.reasoning_effort !== undefined && typeof response.reasoning_effort !== 'string') {
-      issues.push({ path: 'response_policy.reasoning_effort', message: 'Reasoning effort must be a string.' });
-    }
-    if (
-      response.top_p !== undefined &&
-      (typeof response.top_p !== 'number' || !Number.isFinite(response.top_p) || response.top_p < 0 || response.top_p > 1)
-    ) {
-      issues.push({ path: 'response_policy.top_p', message: 'Top P is a number between 0 and 1.' });
-    }
   }
 
   // Response node split: reasoning effort + top-p are model_params members
   // (the engine's responsePolicySchema is strict with only the three render
-  // fields; the response_policy checks above stay as foreign-payload defense —
-  // parseResponsePolicy still tolerates those members from other clients).
+  // fields; 19-32 removed the legacy response_policy pair — parseResponsePolicy
+  // strips them and fromEnginePayload migrates them into model_params, so no
+  // response_policy-shaped check can see them anymore).
   // Bounds mirror engine validation.ts: enum + z.number().gt(0).max(1).
   const effort = def.model_params.reasoning_effort as string | undefined;
   if (effort !== undefined && !(['minimal', 'low', 'medium', 'high'] as readonly string[]).includes(effort)) {
@@ -244,6 +239,13 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
       if (value === undefined) continue;
       if (!Array.isArray(value) || value.length > max || value.some((t) => typeof t !== 'string' || t.length > item)) {
         issues.push({ path, message: `${label}: at most ${max} items of ${item} characters each.` });
+        continue;
+      }
+      // R-06: the engine's z.string().min(1) also rejects empty members — the
+      // UI can't produce them, but a hand-crafted "" must not slip past the
+      // caps layer either.
+      if (value.some((t) => t.length === 0)) {
+        issues.push({ path, message: `${label}: items must not be empty.` });
       }
     }
   }

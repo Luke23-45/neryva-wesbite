@@ -43,9 +43,13 @@ export interface ResponsePolicy {
   output_format?: ResponseOutputFormat;
   citations_enabled?: boolean;
   streaming?: ResponseStreaming;
-  /** Only meaningful when the model supports reasoning (engine contract: string). */
-  reasoning_effort?: string;
-  top_p?: number;
+  // 19-32 (M-08/RP-04): the legacy reasoning_effort/top_p members are GONE.
+  // The engine's responsePolicySchema is strict with only the three render
+  // fields — the pair rides model_params (the same contract the Brain and
+  // Response sections write). parseResponsePolicy no longer reads them, and
+  // toEnginePayload no longer re-emits them (the engine 422s them loudly).
+  // Legacy drafts carrying the pair inside response_policy are migrated into
+  // model_params on read (fromEnginePayload) — never re-emitted.
 }
 
 /** Console defaults applied when the draft carries no response_policy. */
@@ -70,12 +74,9 @@ export function parseResponsePolicy(raw: unknown): ResponsePolicy | undefined {
   if (r.output_format === 'markdown' || r.output_format === 'plain') policy.output_format = r.output_format;
   if (typeof r.citations_enabled === 'boolean') policy.citations_enabled = r.citations_enabled;
   if (r.streaming === 'auto' || r.streaming === 'on' || r.streaming === 'off') policy.streaming = r.streaming;
-  if (typeof r.reasoning_effort === 'string' && r.reasoning_effort.length > 0) {
-    policy.reasoning_effort = r.reasoning_effort;
-  }
-  if (typeof r.top_p === 'number' && Number.isFinite(r.top_p) && r.top_p >= 0 && r.top_p <= 1) {
-    policy.top_p = r.top_p;
-  }
+  // 19-32: reasoning_effort/top_p are STRIPPED here, not read. They belong to
+  // model_params (engine-strict). Legacy values are migrated on read in
+  // fromEnginePayload — never re-emitted into response_policy.
   return Object.keys(policy).length > 0 ? policy : undefined;
 }
 
@@ -249,8 +250,8 @@ export interface EnginePayload {
     output_format?: 'markdown' | 'plain';
     citations_enabled?: boolean;
     streaming?: 'auto' | 'on' | 'off';
-    reasoning_effort?: string;
-    top_p?: number;
+    // 19-32: no reasoning_effort/top_p — they ride model_params (the engine's
+    // strict responsePolicySchema 422s them here).
   };
   /**
    * role_policy is written through only when at least one member is set
@@ -295,7 +296,20 @@ export function toEngineApproval(approval: ConsumerApproval): EngineApproval {
   return approval === 'always' ? 'required' : 'optional';
 }
 
-/** Engine approval → consumer approval (on_effect intent is authoring-only and does not survive the wire). */
+/**
+ * Engine approval → consumer approval.
+ *
+ * T-04 (19-47) — the lossy round-trip, stated plainly: the engine wire has no
+ * `on_effect` vocabulary, so a save+reload REWRITES an `on_effect` tool as
+ * `never` (`on_effect` → `optional` on save → `never` on load). The authoring
+ * intent does not survive the round-trip — this is by design, not a bug:
+ * runtime enforcement is identical either way because the catalog row's
+ * effect class escalates at authorize time (see effectiveApproval — a
+ * `never` entry against a REQUIRED row still serves `required`). Persisting
+ * the intent would need a new persisted marker plus engine validation/schema
+ * changes; deliberately out of scope, so the rewrite is documented here
+ * instead of hidden.
+ */
 export function fromEngineApproval(approval: unknown): ConsumerApproval {
   return approval === 'required' ? 'always' : 'never';
 }
@@ -374,17 +388,15 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     // Response node: written only when the maker set it (absent = engine
     // defaults). The object may be partial (foreign payloads) — the wire
     // materializes the console defaults for missing members, never sends
-    // undefined values.
+    // undefined values. 19-32: reasoning_effort/top_p are NEVER re-emitted
+    // here — they ride model_params (engine-strict schema 422s them inside
+    // response_policy); legacy drafts are migrated on read instead.
     ...(def.response_policy
       ? {
           response_policy: {
             output_format: def.response_policy.output_format ?? DEFAULT_RESPONSE_POLICY.output_format,
             citations_enabled: def.response_policy.citations_enabled ?? DEFAULT_RESPONSE_POLICY.citations_enabled,
             streaming: def.response_policy.streaming ?? DEFAULT_RESPONSE_POLICY.streaming,
-            ...(def.response_policy.reasoning_effort !== undefined
-              ? { reasoning_effort: def.response_policy.reasoning_effort }
-              : {}),
-            ...(def.response_policy.top_p !== undefined ? { top_p: def.response_policy.top_p } : {}),
           },
         }
       : {}),
@@ -478,6 +490,49 @@ function pick<T>(...candidates: unknown[]): T | undefined {
 }
 
 /**
+ * 19-32 (M-08/RP-04) — legacy migration: pre-model_params drafts carry
+ * reasoning_effort/top_p inside response_policy. Move them into model_params
+ * (the canonical home the engine accepts) so no maker value is lost on
+ * reload. Rules: never overwrite a canonical model_params value (it wins over
+ * the stale legacy key); never re-emit into response_policy (the engine's
+ * strict responsePolicySchema 422s it). A custom reasoning_effort string is
+ * preserved in state — setup-caps holds the save until the maker picks a
+ * preset, so the cast never reaches the wire for a custom value.
+ */
+function migrateLegacyResponseKeys(
+  params: Record<string, unknown>,
+  responsePolicyRaw: Record<string, unknown>,
+): ConsumerDefinition['model_params'] {
+  const migrated: ConsumerDefinition['model_params'] = {
+    ...(typeof params.temperature === 'number' ? { temperature: params.temperature } : {}),
+    ...(typeof params.max_output_tokens === 'number' ? { max_output_tokens: params.max_output_tokens } : {}),
+    ...(typeof params.top_p === 'number' ? { top_p: params.top_p } : {}),
+    ...(params.reasoning_effort === 'minimal' ||
+    params.reasoning_effort === 'low' ||
+    params.reasoning_effort === 'medium' ||
+    params.reasoning_effort === 'high'
+      ? { reasoning_effort: params.reasoning_effort }
+      : {}),
+    ...(str(params.output_schema) ? { output_schema: str(params.output_schema) as string } : {}),
+  };
+  if (
+    migrated.reasoning_effort === undefined &&
+    typeof responsePolicyRaw.reasoning_effort === 'string' &&
+    responsePolicyRaw.reasoning_effort.length > 0
+  ) {
+    migrated.reasoning_effort = responsePolicyRaw.reasoning_effort as 'minimal' | 'low' | 'medium' | 'high';
+  }
+  if (
+    migrated.top_p === undefined &&
+    typeof responsePolicyRaw.top_p === 'number' &&
+    Number.isFinite(responsePolicyRaw.top_p)
+  ) {
+    migrated.top_p = responsePolicyRaw.top_p;
+  }
+  return migrated;
+}
+
+/**
  * Engine row (version / snapshot / template definition / export envelope) →
  * consumer. Tolerant reader: accepts camelCase row columns AND snake_case
  * wire keys (server responses mix both — hand-built views are snake_case,
@@ -513,6 +568,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     }
     const access = tool.access === 'write' ? 'write' : 'read';
     const approvalRaw = str(tool.approval);
+    // Same vocabulary collapse as fromEngineApproval — wire `optional` reads
+    // back as consumer `never` (T-04 19-47: an `on_effect` tool rewrites to
+    // `never` on save+reload; see fromEngineApproval for the full rationale).
     const approval: ConsumerApproval = approvalRaw === 'required' ? 'always' : approvalRaw === 'optional' ? 'never' : 'never';
     const schemaHash = str(tool.schema_hash);
     const modeRaw = str(tool.execution_mode);
@@ -525,7 +583,10 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     : base.context_policy.knowledge_sources;
 
   // Garbage resolves to absent (engine defaults render), never a guess.
-  const responsePolicy = parseResponsePolicy(pick(r.response_policy, r.responsePolicy));
+  // 19-32: the raw response_policy is kept for the legacy migration below —
+  // parseResponsePolicy strips reasoning_effort/top_p (never re-emitted).
+  const responsePolicyRaw = obj(pick(r.response_policy, r.responsePolicy));
+  const responsePolicy = parseResponsePolicy(responsePolicyRaw);
 
   // Role (D-N2 option A): garbage resolves to absent (no persona), never a guess.
   const rolePolicy = parseRolePolicy(pick(r.role_policy, r.rolePolicy));
@@ -550,15 +611,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       allowed_models: allowedModels,
       fallback_enabled: boolOr(model.fallback_enabled, base.model_policy.fallback_enabled),
     },
-    model_params: {
-      ...(typeof params.temperature === 'number' ? { temperature: params.temperature } : {}),
-      ...(typeof params.max_output_tokens === 'number' ? { max_output_tokens: params.max_output_tokens } : {}),
-      ...(typeof params.top_p === 'number' ? { top_p: params.top_p } : {}),
-      ...(params.reasoning_effort === 'minimal' || params.reasoning_effort === 'low' || params.reasoning_effort === 'medium' || params.reasoning_effort === 'high'
-        ? { reasoning_effort: params.reasoning_effort }
-        : {}),
-      ...(str(params.output_schema) ? { output_schema: str(params.output_schema) as string } : {}),
-    },
+    // 19-32: legacy reasoning_effort/top_p inside response_policy are
+    // migrated into model_params here (never re-emitted into response_policy).
+    model_params: migrateLegacyResponseKeys(params, responsePolicyRaw),
     context_policy: {
       history_limit: numOr(context.history_limit, base.context_policy.history_limit),
       summary_enabled: boolOr(context.summary_enabled, base.context_policy.summary_enabled),
@@ -586,7 +641,13 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       ...(typeof budget.max_tool_calls === 'number' ? { max_tool_calls: budget.max_tool_calls } : {}),
       ...(typeof budget.wall_clock_seconds === 'number' ? { wall_clock_seconds: budget.wall_clock_seconds } : {}),
       ...(typeof budget.max_total_tokens === 'number' ? { max_total_tokens: budget.max_total_tokens } : {}),
-      ...(maxCostMicros !== undefined ? { max_cost_cents: maxCostMicros / 10_000 } : {}),
+      // BU-02 (19-35): TRUNCATE sub-cent micros on read. The consumer model is
+      // cent-precision; non-divisible micros (API-set) would otherwise read
+      // as a float cents value whose ×10_000 re-save drifts (save→load→save
+      // unstable, or a fractional micros the engine rejects). The truncated
+      // sub-cent remainder is unrepresentable in cents — documented here,
+      // never silently rounded.
+      ...(maxCostMicros !== undefined ? { max_cost_cents: Math.floor(maxCostMicros / 10_000) } : {}),
     },
     retrieval: {
       memory_max_results: numOr(retrievalRaw.memory_max_results, base.retrieval.memory_max_results),

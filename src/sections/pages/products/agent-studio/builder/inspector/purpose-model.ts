@@ -13,8 +13,14 @@ export function isNameValid(name: string): boolean {
   return trimmed.length >= NAME_MIN && trimmed.length <= NAME_MAX;
 }
 
+/**
+ * Description cap (19-24): the wire sends the trimmed description
+ * (PurposeInspector sends `desc.trim()` on both create and rename), so the
+ * cap counts the trimmed value — exact, never conservative-rejecting input
+ * the engine would accept.
+ */
 export function isDescriptionValid(description: string): boolean {
-  return description.length <= DESCRIPTION_MAX;
+  return description.trim().length <= DESCRIPTION_MAX;
 }
 
 /** One-tap rename recovery: "Billing" → "Billing 2" → "Billing 3" … */

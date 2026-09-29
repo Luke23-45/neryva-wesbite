@@ -102,13 +102,15 @@ describe('fromEnginePayload', () => {
         top_p: 0.9,
       },
     });
+    // 19-32: reasoning_effort/top_p are legacy response_policy keys — they
+    // migrate into model_params on read and are never re-emitted inside
+    // response_policy (the engine's strict schema 422s them there).
     expect(shaped.response_policy).toEqual({
       output_format: 'plain',
       citations_enabled: false,
       streaming: 'off',
-      reasoning_effort: 'high',
-      top_p: 0.9,
     });
+    expect(shaped.model_params).toMatchObject({ reasoning_effort: 'high', top_p: 0.9 });
     expect(toEnginePayload(shaped).response_policy).toEqual(shaped.response_policy);
     const garbage = fromEnginePayload({ ...REGISTRY_DEFINITION, response_policy: { output_format: 'html' } });
     expect(garbage.response_policy).toBeUndefined();
@@ -137,8 +139,17 @@ describe('fromEnginePayload', () => {
       ...REGISTRY_DEFINITION,
       response_policy: { output_format: 'markdown', citations_enabled: true, streaming: 'auto', reasoning_effort: 'turbo' },
     });
-    expect(customEffort.response_policy).toMatchObject({ reasoning_effort: 'turbo' });
-    expect(toEnginePayload(customEffort).response_policy).toMatchObject({ reasoning_effort: 'turbo' });
+    // 19-32: a custom legacy reasoning_effort is preserved in model_params
+    // state (setup-caps holds the save until the maker picks a preset, so
+    // the custom value never reaches the wire through the real save path) —
+    // but it is never re-emitted inside response_policy.
+    expect('reasoning_effort' in (customEffort.response_policy ?? {})).toBe(false);
+    expect(customEffort.model_params.reasoning_effort).toBe('turbo');
+    expect(toEnginePayload(customEffort).response_policy).toEqual({
+      output_format: 'markdown',
+      citations_enabled: true,
+      streaming: 'auto',
+    });
   });
 
   it('passes role_policy through only when set; blanks and garbage resolve to absent', () => {
@@ -316,5 +327,100 @@ describe('approval helpers', () => {
     // even 'never' serves REQUIRED when the row demands it.
     expect(effectiveApproval({ approval: 'never' }, 'REQUIRED')).toBe('required');
     expect(effectiveApproval({ approval: 'never' }, 'NONE')).toBe('optional');
+  });
+});
+
+describe('spend-cap micros→cents round-trip (19-35 BU-02)', () => {
+  const engineDef = (max_cost_micros: number) => ({ budget_policy: { max_cost_micros } });
+
+  it('truncates non-divisible micros on read (documented, never rounded)', () => {
+    // 12_345 micros = 1.2345¢ — the consumer model is cent-precision, so the
+    // sub-cent remainder is truncated on read rather than carried as a float.
+    const consumer = fromEnginePayload(engineDef(12_345));
+    expect(consumer.budget.max_cost_cents).toBe(1);
+  });
+
+  it('save→load→save is stable for API-set (non-divisible) micros', () => {
+    const once = fromEnginePayload(engineDef(12_345));
+    const wire = toEnginePayload(once);
+    expect(wire.budget_policy?.max_cost_micros).toBe(10_000);
+    const twice = fromEnginePayload(wire);
+    expect(twice.budget.max_cost_cents).toBe(1);
+    // Second save is byte-identical to the first — the round-trip converged.
+    expect(toEnginePayload(twice).budget_policy?.max_cost_micros).toBe(10_000);
+  });
+
+  it('divisible micros round-trip exactly', () => {
+    const consumer = fromEnginePayload(engineDef(45_000_000));
+    expect(consumer.budget.max_cost_cents).toBe(4500);
+    expect(toEnginePayload(consumer).budget_policy?.max_cost_micros).toBe(45_000_000);
+  });
+
+  it('leaves absent and zero caps untouched', () => {
+    expect(fromEnginePayload({ budget_policy: {} }).budget.max_cost_cents).toBeUndefined();
+    const zero = fromEnginePayload(engineDef(0));
+    expect(zero.budget.max_cost_cents).toBe(0);
+    expect(toEnginePayload(zero).budget_policy?.max_cost_micros).toBe(0);
+  });
+});
+
+describe('19-32 legacy response_policy keys (M-08/RP-04)', () => {
+  const LEGACY_DRAFT = {
+    instructions: 'Legacy draft.',
+    model_policy: { allowed_models: ['a/b'], fallback_enabled: false },
+    context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: [], memory_scope: 'user' },
+    tool_policy: { tools: [] },
+    knowledge_policy: { retrieval_enabled: false, max_results: 5 },
+    guardrail_policy: { input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking' },
+    model_params: {},
+    // Pre-model_params era: the pair lived inside response_policy.
+    response_policy: { output_format: 'markdown', citations_enabled: true, streaming: 'auto', reasoning_effort: 'high', top_p: 0.7 },
+  };
+
+  it('migrates legacy reasoning_effort/top_p into model_params on read (lossless)', () => {
+    const consumer = fromEnginePayload(LEGACY_DRAFT);
+    expect(consumer.model_params.reasoning_effort).toBe('high');
+    expect(consumer.model_params.top_p).toBe(0.7);
+  });
+
+  it('strips the legacy keys from response_policy on read (never re-emitted)', () => {
+    const consumer = fromEnginePayload(LEGACY_DRAFT);
+    expect(consumer.response_policy).toEqual({ output_format: 'markdown', citations_enabled: true, streaming: 'auto' });
+    expect('reasoning_effort' in (consumer.response_policy ?? {})).toBe(false);
+    expect('top_p' in (consumer.response_policy ?? {})).toBe(false);
+  });
+
+  it('never overwrites canonical model_params with stale legacy keys', () => {
+    const both = {
+      ...LEGACY_DRAFT,
+      model_params: { reasoning_effort: 'low', top_p: 0.3 },
+    };
+    const consumer = fromEnginePayload(both);
+    expect(consumer.model_params.reasoning_effort).toBe('low');
+    expect(consumer.model_params.top_p).toBe(0.3);
+  });
+
+  it('toEnginePayload never emits reasoning_effort/top_p inside response_policy', () => {
+    const consumer = fromEnginePayload(LEGACY_DRAFT);
+    const wire = toEnginePayload(consumer) as unknown as Record<string, Record<string, unknown>>;
+    expect(wire.response_policy).toEqual({ output_format: 'markdown', citations_enabled: true, streaming: 'auto' });
+    expect('reasoning_effort' in wire.response_policy).toBe(false);
+    expect('top_p' in wire.response_policy).toBe(false);
+  });
+
+  it('round-trips a migrated legacy draft onto the engine-strict wire shape', () => {
+    const wire = toEnginePayload(fromEnginePayload(LEGACY_DRAFT)) as unknown as Record<string, Record<string, unknown>>;
+    expect(wire.model_params).toMatchObject({ reasoning_effort: 'high', top_p: 0.7 });
+    expect(Object.keys(wire.response_policy).sort()).toEqual(['citations_enabled', 'output_format', 'streaming']);
+  });
+
+  it('ignores garbage legacy values (non-string effort, non-finite top_p)', () => {
+    const garbage = {
+      ...LEGACY_DRAFT,
+      response_policy: { reasoning_effort: 42, top_p: Number.NaN },
+    };
+    const consumer = fromEnginePayload(garbage);
+    expect(consumer.model_params.reasoning_effort).toBeUndefined();
+    expect(consumer.model_params.top_p).toBeUndefined();
   });
 });
