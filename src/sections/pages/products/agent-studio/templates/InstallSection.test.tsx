@@ -258,6 +258,23 @@ describe('InstallSection (R-1 — the wizard as a routed section)', () => {
     expect(sessionStorage.length).toBe(0);
   });
 
+  it('releases the name dirty guard on the auto-land navigation', async () => {
+    const router = await routerAt(`${INSTALL}?autoLand=builder`);
+    // Rename first so the dirty guard is armed, then install.
+    fireEvent.change(screen.getByLabelText(/Agent name/), { target: { value: 'my-renamed-agent' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Install as draft' }));
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'my-renamed-agent' }),
+      expect.anything(),
+    );
+    await act(async () => {
+      createOpts?.onSuccess?.({ assistantId: 'a-9' });
+    });
+    // The submitted flag must release the guard — arrival, not a blocker dialog.
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/a-9/build');
+    expect(screen.queryByText(/Leave without saving/)).toBeNull();
+  });
+
   it('bounces roles without setup:author before rendering', async () => {
     mockRole = 'viewer';
     const router = await routerAt(INSTALL);
