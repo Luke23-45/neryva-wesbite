@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { Check } from 'lucide-react';
 import { ApiError } from '@lib/engine/client';
 import {
   useSaveDraftVersion,
@@ -15,16 +16,17 @@ import {
   type ReasoningEffort,
 } from '../lib/brain-model';
 import { ConflictDialog } from './ConflictDialog';
+import { EmptyState, Wrap } from './InstructionsSection.styles';
 import {
-  EmptyState,
-  SectionLabel,
-  Wrap,
-} from './InstructionsSection.styles';
-import {
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
   ProfileCard,
   ProfileGrid,
   ProfileMap,
   ProfileMatch,
+  ProfileBlurb,
   ProfileName,
 } from './BrainSection.styles';
 
@@ -242,9 +244,15 @@ export function BrainSection({
         }
       }}
     >
-      <div>
-        <SectionLabel>REASONING PROFILES · INSPECT BEFORE APPLY</SectionLabel>
-        <ProfileGrid style={{ marginTop: 6 }}>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Reasoning profile</FieldTitle>
+          <FieldHelper>
+            How the model thinks — one tap sets temperature, top-p, max output, and reasoning effort.
+            Fine-tune the raw values in Model.
+          </FieldHelper>
+        </FieldHead>
+        <ProfileGrid>
           {MODEL_PRESETS.map((preset) => {
             const matched = matchedPreset?.id === preset.id;
             return (
@@ -256,21 +264,25 @@ export function BrainSection({
                 title={`${preset.blurb} temp ${preset.params.temperature} · top_p ${preset.params.top_p} · ${preset.params.max_output_tokens} tokens · reasoning ${preset.params.reasoning_effort}`}
                 onClick={canAuthor ? () => applyPreset(preset.id) : undefined}
               >
-                <ProfileName>{preset.label}</ProfileName>
+                <ProfileName>
+                  {preset.label}
+                  {matched && (
+                    <ProfileMatch>
+                      <Check size={13} strokeWidth={2.5} aria-hidden="true" />
+                      Current
+                    </ProfileMatch>
+                  )}
+                </ProfileName>
+                <ProfileBlurb>{preset.blurb}</ProfileBlurb>
                 <ProfileMap>
-                  t{preset.params.temperature} · p{preset.params.top_p} · {preset.params.max_output_tokens.toLocaleString()}
+                  temp {preset.params.temperature} · top-p {preset.params.top_p} ·{' '}
+                  {preset.params.max_output_tokens.toLocaleString()} tokens · {preset.params.reasoning_effort} reasoning
                 </ProfileMap>
-                {matched && <ProfileMatch>Matches current</ProfileMatch>}
               </ProfileCard>
             );
           })}
         </ProfileGrid>
-      </div>
-
-      <div style={{ fontSize: 11, opacity: 0.6 }}>
-        Profiles set the Model node's temperature, top-p, max output, and reasoning effort in one tap.
-        Fine-tune the raw values there.
-      </div>
+      </FieldBlock>
 
       {conflict && (
         <ConflictDialog

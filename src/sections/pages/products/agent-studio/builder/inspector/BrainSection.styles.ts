@@ -1,5 +1,12 @@
 import styled from 'styled-components';
 
+export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
+
+/* ── Shared legacy primitives ────────────────────────────────────
+ * Still consumed by sections awaiting their redesign (Budget, Context,
+ * Guardrails, Knowledge, Memory, Response, Tools). Do not restyle here —
+ * each section migrates to the shared field anatomy on its own pass. */
+
 export const ResolvedCard = styled.div<{ $tone: 'ok' | 'attention' }>`
   border: 1px solid
     ${({ theme, $tone }) => ($tone === 'ok' ? theme.app.border.default : theme.app.status.warning.border)};
@@ -56,27 +63,37 @@ export const SwitchSub = styled.div`
   line-height: 1.5;
 `;
 
+/* ── Brain: reasoning profiles ───────────────────────────────────
+ * Choosing how the model thinks is a character choice, not a config
+ * table — cards carry the preset's story (name, blurb, signature) and
+ * the current one wears a confident selected state. */
+
 export const ProfileGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 12px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const ProfileCard = styled.button<{ $active?: boolean }>`
   border: 1px solid
     ${({ theme, $active }) => ($active ? theme.app.status.info.border : theme.app.border.default)};
   background: ${({ theme, $active }) => ($active ? theme.app.status.info.bg : theme.app.surface.subtle)};
-  border-radius: 11px;
-  padding: 10px;
+  border-radius: 16px;
+  padding: 18px;
   text-align: left;
   cursor: pointer;
   font-family: inherit;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  min-height: 168px;
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme }) => theme.app.border.hover};
+    border-color: ${({ theme, $active }) => ($active ? theme.app.status.info.border : theme.app.border.hover)};
   }
 
   &:disabled {
@@ -86,30 +103,42 @@ export const ProfileCard = styled.button<{ $active?: boolean }>`
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
+    outline-offset: 2px;
   }
 `;
 
 export const ProfileName = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
+  font-size: 15px;
   font-weight: 650;
+  letter-spacing: -0.01em;
   color: ${({ theme }) => theme.app.text.primary};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 `;
 
 export const ProfileBlurb = styled.div`
-  font-size: 10px;
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.5;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.55;
+  flex: 1;
 `;
 
 export const ProfileMap = styled.div`
-  font-size: 10px;
-  color: ${({ theme }) => theme.app.text.ghost};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  padding-top: 8px;
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
-export const ProfileMatch = styled.div`
-  font-size: 10px;
+export const ProfileMatch = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 600;
   color: ${({ theme }) => theme.app.status.info.fg};
 `;
