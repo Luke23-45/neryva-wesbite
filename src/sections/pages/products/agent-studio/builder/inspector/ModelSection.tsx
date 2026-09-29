@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { Switch } from '@components/common/ui/Switch';
@@ -38,31 +39,33 @@ import { ConflictDialog } from './ConflictDialog';
 import { ModelPicker } from './ModelPicker';
 import { CredentialsPanel } from './CredentialsPanel';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import {
-  EmptyState,
-  SectionLabel,
-  Whisper,
-  Wrap,
-} from './InstructionsSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import {
   AdvancedToggle,
-  FixRow,
-  ParamGrid,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  ModelHero,
+  ModelHeroEmpty,
+  ModelHeroFix,
+  ModelHeroMain,
+  ModelHeroMeta,
+  ModelHeroName,
+  ParamStack,
   RangeEnds,
   RangeInput,
-  ResolvedCard,
-  ResolvedMeta,
-  ResolvedTitle,
   SliderHead,
+  SliderName,
   SliderRow,
   SliderValue,
-  StaticLabel,
-  StaticRow,
+  StaticFallback,
   SwitchRow,
   SwitchSub,
   SwitchText,
   SwitchTitle,
-} from './BrainSection.styles';
+  ToggleChevron,
+} from './ModelSection.styles';
 
 export interface ModelSectionProps {
   assistantId: string;
@@ -347,80 +350,83 @@ export function ModelSection({
         }
       }}
     >
-      <div>
-        <SectionLabel>RESOLVED · FIRST SERVES</SectionLabel>
-        <ResolvedCard $tone={blocker ? 'attention' : 'ok'} style={{ marginTop: 6 }}>
-          {primary ? (
-            <>
-              <ResolvedTitle>
-                {/* M-10: while the catalog is unresolved (loading or failed)
-                    the model's status is unknown — a gray 'info' dot, never
-                    the amber attention badge (unknown ≠ known-bad). */}
-                <StatusDot
-                  $status={catalog === undefined ? 'info' : usable.includes(primary) ? 'ready' : 'attention'}
-                  aria-hidden="true"
-                />
-                {catalog?.find((m) => m.ref === primary)?.displayName ?? primary}
-              </ResolvedTitle>
-              <ResolvedMeta>
-                {primary} · {primaryCost ? `${costLabel(primaryCost, 'in')} in / ${costLabel(primaryCost, 'out')} out` : 'unpriced'}
-                {fallback && allowed.length > 1 ? ` · fallback next → ${allowed[1]}` : ''}
-              </ResolvedMeta>
-              {blocker && (
-                <FixRow>
-                  <ResolvedMeta>
-                    {blocker.reason === null ? 'Unknown model — publish refuses.' : `unusable: ${humanizeReason(blocker.reason)} — ${reasonFix(blocker.reason).label}.`}
-                  </ResolvedMeta>
-                </FixRow>
-              )}
-            </>
-          ) : (
-            <ResolvedMeta>No model picked yet — choose below. Saving without one is refused.</ResolvedMeta>
-          )}
-        </ResolvedCard>
-      </div>
+      <ModelHero $tone={blocker ? 'attention' : 'ok'}>
+        {primary ? (
+          <ModelHeroMain>
+            <ModelHeroName>
+              {/* M-10: while the catalog is unresolved (loading or failed)
+                  the model's status is unknown — a gray 'info' dot, never
+                  the amber attention badge (unknown ≠ known-bad). */}
+              <StatusDot
+                $status={catalog === undefined ? 'info' : usable.includes(primary) ? 'ready' : 'attention'}
+                aria-hidden="true"
+              />
+              {catalog?.find((m) => m.ref === primary)?.displayName ?? primary}
+            </ModelHeroName>
+            <ModelHeroMeta>
+              {primary} · {primaryCost ? `${costLabel(primaryCost, 'in')} in / ${costLabel(primaryCost, 'out')} out` : 'unpriced'}
+              {fallback && allowed.length > 1 ? ` · fallback next → ${allowed[1]}` : ''}
+            </ModelHeroMeta>
+            {blocker && (
+              <ModelHeroFix>
+                {blocker.reason === null
+                  ? 'Unknown model — publish refuses.'
+                  : `Unusable: ${humanizeReason(blocker.reason)} — ${reasonFix(blocker.reason).label}.`}
+              </ModelHeroFix>
+            )}
+          </ModelHeroMain>
+        ) : (
+          <ModelHeroMain>
+            <ModelHeroEmpty>No model picked yet — choose below. Saving without one is refused.</ModelHeroEmpty>
+          </ModelHeroMain>
+        )}
+      </ModelHero>
 
       {canAuthor ? (
-        <SwitchRow>
-          <SwitchText>
-            <SwitchTitle>Fallback</SwitchTitle>
-            <SwitchSub>When the preferred model is unavailable, serve with the next allowed model — in listed order.</SwitchSub>
-          </SwitchText>
-          <Switch checked={fallback} onChange={setFallback} label="Fallback" id="model-fallback-switch" />
-        </SwitchRow>
+        <FieldBlock>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Fallback</SwitchTitle>
+              <SwitchSub>When the preferred model is unavailable, serve with the next allowed model — in listed order.</SwitchSub>
+            </SwitchText>
+            <Switch checked={fallback} onChange={setFallback} label="Fallback" id="model-fallback-switch" />
+          </SwitchRow>
+          <FieldHelper>Fallback serves availability, not difficulty — a weaker model never silently substitutes quality.</FieldHelper>
+        </FieldBlock>
       ) : (
-        <StaticRow>
-          <StaticLabel>Fallback</StaticLabel>
+        <StaticFallback>
+          <SwitchTitle>Fallback</SwitchTitle>
           <span>{fallback ? 'On — next allowed model, in order' : 'Off'}</span>
-        </StaticRow>
+        </StaticFallback>
       )}
-      <div style={{ fontSize: 11, opacity: 0.6 }}>
-        Fallback serves availability, not difficulty — a weaker model never silently substitutes quality.
-      </div>
 
-      <div>
-        <SectionLabel>
-          MODEL POLICY · {allowed.length} / {ENGINE_RANGES.allowedModelsMax}
-        </SectionLabel>
-        <div style={{ marginTop: 6 }}>
-          <ModelPicker
-            allowed={allowed}
-            catalog={catalog}
-            catalogError={models.isError}
-            costs={costs.data}
-            canAuthor={canAuthor}
-            onChange={setAllowed}
-            onFixRequest={onFixRequest}
-          />
-        </div>
-      </div>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Models</FieldTitle>
+          <FieldHelper>
+            {allowed.length} of {ENGINE_RANGES.allowedModelsMax} picked — first serves, the rest are fallback in order.
+          </FieldHelper>
+        </FieldHead>
+        <ModelPicker
+          allowed={allowed}
+          catalog={catalog}
+          catalogError={models.isError}
+          costs={costs.data}
+          canAuthor={canAuthor}
+          onChange={setAllowed}
+          onFixRequest={onFixRequest}
+        />
+      </FieldBlock>
 
-      <div>
-        <SectionLabel>PARAMETERS</SectionLabel>
-        <ParamGrid style={{ marginTop: 6 }}>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Parameters</FieldTitle>
+          <FieldHelper>Generation defaults for every run. Unset means the model default.</FieldHelper>
+        </FieldHead>
+        <ParamStack>
           <SliderRow>
             <SliderHead>
-              <span>Temperature</span>
+              <SliderName>Temperature</SliderName>
               <SliderValue>{params.temperature ?? 'default'}</SliderValue>
             </SliderHead>
             {canAuthor ? (
@@ -442,13 +448,17 @@ export function ModelSection({
             ) : null}
           </SliderRow>
           <AdvancedToggle type="button" onClick={() => setAdvancedOpen((o) => !o)} aria-expanded={advancedOpen}>
-            Advanced {advancedOpen ? '▾' : '▸'} · top-p, max output, reasoning, schema
+            Advanced
+            <ToggleChevron $open={advancedOpen} aria-hidden="true">
+              <ChevronDown size={15} strokeWidth={2} />
+            </ToggleChevron>
+            <span>· top-p, max output, reasoning, schema</span>
           </AdvancedToggle>
           {advancedOpen && (
             <>
               <SliderRow>
                 <SliderHead>
-                  <span>Top-p</span>
+                  <SliderName>Top-p</SliderName>
                   <SliderValue>{params.top_p ?? 'default'}</SliderValue>
                 </SliderHead>
                 {canAuthor && (
@@ -466,7 +476,7 @@ export function ModelSection({
               </SliderRow>
               <SliderRow>
                 <SliderHead>
-                  <span>Max output tokens</span>
+                  <SliderName>Max output tokens</SliderName>
                   <SliderValue>{params.max_output_tokens?.toLocaleString() ?? 'default'}</SliderValue>
                 </SliderHead>
                 {canAuthor && (
@@ -486,7 +496,7 @@ export function ModelSection({
               </SliderRow>
               <SliderRow>
                 <SliderHead>
-                  <span>Reasoning effort</span>
+                  <SliderName>Reasoning effort</SliderName>
                 </SliderHead>
                 {canAuthor ? (
                   <Segmented
@@ -517,7 +527,7 @@ export function ModelSection({
               </SliderRow>
               <SliderRow>
                 <SliderHead>
-                  <span>Output schema (JSON object)</span>
+                  <SliderName>Output schema (JSON object)</SliderName>
                 </SliderHead>
                 {canAuthor && (
                   <TextArea
@@ -535,8 +545,8 @@ export function ModelSection({
               </SliderRow>
             </>
           )}
-        </ParamGrid>
-      </div>
+        </ParamStack>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
@@ -544,21 +554,26 @@ export function ModelSection({
         </Whisper>
       ))}
 
-      <div data-credentials-panel>
-        <SectionLabel>CREDENTIALS · FINGERPRINTS ONLY</SectionLabel>
-        <div style={{ marginTop: 6 }}>
-          <CredentialsPanel
-            pinnedProviders={pinnedProviders}
-            canGovern={canGovern}
-            canRead={canReadCredentials}
-            highlightProvider={connectProvider}
-            revokeOpenId={revokeCredentialId}
-            connectOpen={connectOpen}
-            onConnectOpenChange={setConnectOpen}
-            onRevokeOpenChange={setRevokeCredentialId}
-          />
+      <FieldBlock>
+        <div data-credentials-panel>
+          <FieldHead>
+            <FieldTitle>Credentials</FieldTitle>
+            <FieldHelper>Fingerprints only — secrets never leave the vault.</FieldHelper>
+          </FieldHead>
+          <div style={{ marginTop: 10 }}>
+            <CredentialsPanel
+              pinnedProviders={pinnedProviders}
+              canGovern={canGovern}
+              canRead={canReadCredentials}
+              highlightProvider={connectProvider}
+              revokeOpenId={revokeCredentialId}
+              connectOpen={connectOpen}
+              onConnectOpenChange={setConnectOpen}
+              onRevokeOpenChange={setRevokeCredentialId}
+            />
+          </div>
         </div>
-      </div>
+      </FieldBlock>
 
       {conflict && (
         <ConflictDialog

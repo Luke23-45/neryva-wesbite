@@ -1,40 +1,14 @@
 import styled from 'styled-components';
 
+export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
+
 /**
  * Role section — redesigned.
  *
- * Six persona fields in a natural top-down order (who → why → how →
- * boundaries), each with a real title and helper microcopy instead of
- * micro-caps labels. Tag editors get tactile chips; viewers get a persona
- * card instead of a definition list.
+ * Field anatomy (FieldBlock/FieldHead/FieldTitle/FieldHelper) is shared
+ * across the builder via InstructionsSection.styles; Role owns only its
+ * tag editor and persona card.
  */
-
-export const FieldBlock = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-export const FieldTitle = styled.h3`
-  margin: 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: ${({ theme }) => theme.app.text.primary};
-`;
-
-export const FieldHelper = styled.p`
-  margin: 0;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.5;
-`;
-
-export const FieldHead = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
 
 /* ── Tag-list editor ───────────────────────────────────────────── */
 

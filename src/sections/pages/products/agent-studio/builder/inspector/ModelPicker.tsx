@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { costLabel, type ModelAvailability, type ModelCost } from '@hooks/studio/useSetupModels';
 import { ENGINE_RANGES, humanizeReason, moveModel, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
 import {
@@ -128,7 +129,7 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
     <Wrap>
       {allowed.length > 0 && (
         <OrderStrip aria-label="Fallback order">
-          <OrderLabel>FALLBACK ORDER · FIRST SERVES</OrderLabel>
+          <OrderLabel>Fallback order — first serves</OrderLabel>
           {allowed.map((ref, index) => (
             <OrderChip key={ref}>
               <OrderIndex>{index + 1}</OrderIndex>
@@ -141,7 +142,7 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
                     disabled={index === 0}
                     onClick={() => onChange(moveModel(allowed, index, index - 1))}
                   >
-                    ↑
+                    <ChevronUp size={15} strokeWidth={2} />
                   </MiniButton>
                   <MiniButton
                     type="button"
@@ -149,10 +150,10 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
                     disabled={index === allowed.length - 1}
                     onClick={() => onChange(moveModel(allowed, index, index + 1))}
                   >
-                    ↓
+                    <ChevronDown size={15} strokeWidth={2} />
                   </MiniButton>
                   <MiniButton type="button" aria-label={`Remove ${ref}`} onClick={() => toggle(ref, false)}>
-                    ×
+                    <X size={15} strokeWidth={2} />
                   </MiniButton>
                 </>
               )}
@@ -177,13 +178,17 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
       <CatalogList>
         {usableVisible.length > 0 && (
           <>
-            <GroupLabel>USABLE · {usableVisible.length}</GroupLabel>
+            <GroupLabel>
+              Usable · {usableVisible.length}
+            </GroupLabel>
             {usableVisible.map((model) => renderRow(model))}
           </>
         )}
         {lockedVisible.length > 0 && (
           <>
-            <GroupLabel>LOCKED · {lockedVisible.length}</GroupLabel>
+            <GroupLabel>
+              Locked · {lockedVisible.length}
+            </GroupLabel>
             {lockedVisible.map((model) => renderRow(model))}
           </>
         )}

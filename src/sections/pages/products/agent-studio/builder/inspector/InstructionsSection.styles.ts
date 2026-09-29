@@ -28,6 +28,37 @@ export const SectionLabel = styled.div`
   gap: 8px;
 `;
 
+/* ── Shared field anatomy ────────────────────────────────────────
+ * Every section's field block: title + helper microcopy above the
+ * control. One source of truth for the builder's field rhythm. */
+
+export const FieldBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+export const FieldHead = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+export const FieldTitle = styled.h3`
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+export const FieldHelper = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.5;
+`;
+
 export const MicroCount = styled.span`
   font-weight: 400;
   letter-spacing: 0;
