@@ -351,6 +351,8 @@ function UpsertModal({
     executionEnvironment?: string | null;
     allowedEgressDomains?: string[] | null;
     annotations?: Record<string, unknown> | null;
+    /** NG-MT-1 — the modal now renders this; prefilled on edit. */
+    rateLimitPerRun?: number | null;
   } | null;
   existingNames: string[];
 }) {
@@ -370,6 +372,12 @@ function UpsertModal({
   const [credential, setCredential] = useState('');
   const urlTrimmed = endpointUrl.trim();
   const urlProblem = !editing && urlTrimmed !== '' && !/^https:\/\//.test(urlTrimmed) ? 'Must be an https URL.' : null;
+  // NG-MT-1 — rate limit per run: mirrors the From-template modal input
+  // (same bounds, same copy). Optional; blank omits it (create → platform
+  // cap; edit → the engine preserves the stored value when omitted).
+  const [rateLimit, setRateLimit] = useState(initial?.rateLimitPerRun != null ? String(initial.rateLimitPerRun) : '');
+  const rateTrimmed = rateLimit.trim();
+  const rateProblem = rateTrimmed === '' ? null : !Number.isFinite(Number(rateTrimmed)) || Number(rateTrimmed) < 1 ? 'Must be a number ≥ 1.' : null;
 
   const normalized = name.trim().toLowerCase();
   const nameProblem = !normalized ? 'Name is required.' : !TOOL_NAME_PATTERN.test(normalized) ? 'Must match ^[a-z][a-z0-9_]{1,63}$ (letter first, 2–64 chars).' : null;
@@ -389,7 +397,7 @@ function UpsertModal({
     schemaProblem = 'Must be valid JSON.';
   }
 
-  const valid = !nameProblem && !schemaProblem && !urlProblem;
+  const valid = !nameProblem && !schemaProblem && !urlProblem && !rateProblem;
 
   return (
     <Modal
@@ -408,6 +416,7 @@ function UpsertModal({
               if (!schemaParsed) {
                 return;
               }
+              const rate = rateLimit.trim() === '' ? undefined : Number(rateLimit);
               upsert.mutate(
                 {
                   name: normalized,
@@ -430,6 +439,10 @@ function UpsertModal({
                   // credential when absent.
                   ...(!editing && urlTrimmed ? { httpBindingUrl: urlTrimmed } : {}),
                   ...(!editing && credential.trim() ? { credential: credential.trim() } : {}),
+                  // NG-MT-1 — mirrors the From-template modal input: bounded
+                  // int ≥ 1; omitted when blank (create → platform cap, edit
+                  // → the engine preserves the stored value).
+                  ...(rate !== undefined && Number.isFinite(rate) ? { rateLimitPerRun: Math.max(1, Math.round(rate)) } : {}),
                 },
                 { onSuccess: () => onClose() },
               );
@@ -511,6 +524,21 @@ function UpsertModal({
             ))}
           </select>
         </label>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        {/*
+          NG-MT-1 (console field audit): the engine validates, stores, and
+          enforces rate_limit_per_run, but this modal never exposed it — only
+          the From-template modal did. Same bounds and copy as that input.
+          On edit the stored value prefills; clearing the field leaves the
+          stored limit unchanged (the engine preserves it when omitted).
+        */}
+        <TextInput label="Rate limit per run (optional)" type="number" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} placeholder="unset = platform cap" error={rateTrimmed ? (rateProblem ?? undefined) : undefined} />
+        {editing && initial?.rateLimitPerRun != null && (
+          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+            Currently {initial.rateLimitPerRun}/run — clearing the field leaves the stored limit unchanged.
+          </p>
+        )}
       </div>
       <div style={{ marginTop: 12 }}>
         {/*
