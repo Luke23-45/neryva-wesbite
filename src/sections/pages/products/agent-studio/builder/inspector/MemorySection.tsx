@@ -13,10 +13,22 @@ import {
   parseMemoryScope,
   type MemoryScope,
 } from '../lib/memory-model';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
-import { ControlLabel, ControlRow, TextButton, ToolMeta } from './ToolsSection.styles';
-import { PreviewItem, PreviewList, PreviewMeta } from './MemorySection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import {
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  PinMeta,
+  PreviewItem,
+  PreviewList,
+  PreviewMeta,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
+  TextButton,
+} from './MemorySection.styles';
 
 export interface MemorySectionProps {
   assistantId: string;
@@ -89,40 +101,49 @@ export function MemorySection({
   return (
     <Wrap>
       {/* Scope + history — owned by the Context node, reported here */}
-      <div>
-        <SectionLabel>SCOPE · READ-ONLY</SectionLabel>
-        <StaticRow>
-          <StaticLabel>Scope</StaticLabel>
-          <span>{scopeLabel(engineScope)}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>History</StaticLabel>
-          <span>
-            {historyLimit} messages (runs serve ≤{HISTORY_SERVED_MAX}). {COMPACTION_COPY}
-          </span>
-        </StaticRow>
-        <ToolMeta>Scope and history are set in the Context node.</ToolMeta>
-      </div>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Session memory</FieldTitle>
+          <FieldHelper>Set in the Context section — reported here.</FieldHelper>
+        </FieldHead>
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>Scope</SwitchTitle>
+            <SwitchSub>{scopeLabel(engineScope)}</SwitchSub>
+          </SwitchText>
+        </SwitchRow>
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>History</SwitchTitle>
+            <SwitchSub>
+              {historyLimit} messages (runs serve ≤{HISTORY_SERVED_MAX}). {COMPACTION_COPY}
+            </SwitchSub>
+          </SwitchText>
+        </SwitchRow>
+      </FieldBlock>
 
       {/* Block C · in scope, read-only */}
-      <div>
-        <SectionLabel>IN SCOPE · READ-ONLY</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>In scope</FieldTitle>
+          <FieldHelper>{USER_PREVIEW_COPY}</FieldHelper>
+        </FieldHead>
         {previewPending ? (
-          <ToolMeta>Checking in-scope memories…</ToolMeta>
+          <PinMeta>Checking in-scope memories…</PinMeta>
         ) : previewError ? (
           <Whisper $tone="amber">In-scope preview is unavailable.</Whisper>
         ) : !previewActive ? (
-          <ToolMeta>
+          <PinMeta>
             {engineScope === 'none'
               ? 'No memories surface under this policy — the agent runs on the thread alone.'
               : 'No library rows surface under this policy — they resolve at run time (per account, or on the thread).'}
-          </ToolMeta>
+          </PinMeta>
         ) : previewRows.length === 0 ? (
-          <ToolMeta>
+          <PinMeta>
             {inAssistantPolicy
               ? 'No assistant memories yet — add rows in the Memory library (Assistant scope) and this agent\u2019s runs will serve them.'
               : 'No org memories yet — an empty memory is a clean slate.'}
-          </ToolMeta>
+          </PinMeta>
         ) : (
           <PreviewList>
             {previewRows.map((row) => (
@@ -135,8 +156,7 @@ export function MemorySection({
             ))}
           </PreviewList>
         )}
-        <ToolMeta>{USER_PREVIEW_COPY}</ToolMeta>
-        <ToolMeta>
+        <PinMeta>
           Thread memories live on the chat.{' '}
           <TextButton
             type="button"
@@ -148,38 +168,46 @@ export function MemorySection({
           >
             Open the Memory library →
           </TextButton>
-        </ToolMeta>
-      </div>
+        </PinMeta>
+      </FieldBlock>
 
       {/* Block D · org defaults, read-only */}
-      <div>
-        <SectionLabel>ORG DEFAULTS · READ-ONLY</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Org defaults</FieldTitle>
+        </FieldHead>
         {orgPolicy.policy ? (
           <>
-            <ControlRow>
-              <ControlLabel>Scrub</ControlLabel>
-              <ToolMeta>{SCRUB_COPY[orgPolicy.policy.scrub]}</ToolMeta>
-            </ControlRow>
-            <ControlRow>
-              <ControlLabel>Default TTL</ControlLabel>
-              <ToolMeta>{describeTtl(orgPolicy.policy.ttlSeconds)} Applies when a memory sets no expiry.</ToolMeta>
-            </ControlRow>
+            <SwitchRow>
+              <SwitchText>
+                <SwitchTitle>Scrub</SwitchTitle>
+                <SwitchSub>{SCRUB_COPY[orgPolicy.policy.scrub]}</SwitchSub>
+              </SwitchText>
+            </SwitchRow>
+            <SwitchRow>
+              <SwitchText>
+                <SwitchTitle>Default TTL</SwitchTitle>
+                <SwitchSub>
+                  {describeTtl(orgPolicy.policy.ttlSeconds)} Applies when a memory sets no expiry.
+                </SwitchSub>
+              </SwitchText>
+            </SwitchRow>
           </>
         ) : orgPolicy.isError ? (
           <Whisper $tone="amber">Org defaults are unreachable.</Whisper>
         ) : (
-          <ToolMeta>Loading org defaults…</ToolMeta>
+          <PinMeta>Loading org defaults…</PinMeta>
         )}
-        <ToolMeta>
+        <PinMeta>
           Scrub and TTL are org policy (owners/admins, Workspace settings). Purge lives in the{' '}
           <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/memory' })}>
             Memory library
           </TextButton>
           .
-        </ToolMeta>
-      </div>
+        </PinMeta>
+      </FieldBlock>
 
-      {!canAuthor && <ToolMeta>Memory needs an owner, admin, or developer — {denied}</ToolMeta>}
+      {!canAuthor && <PinMeta>Memory needs an owner, admin, or developer — {denied}</PinMeta>}
     </Wrap>
   );
 }
