@@ -50,21 +50,34 @@ async function shell() {
       </ThemeProvider>
     ),
   });
+  const cloneProbe = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/agents/clone',
+    validateSearch: (search: Record<string, unknown>) => ({
+      sourceId: typeof search.sourceId === 'string' ? search.sourceId : undefined,
+      returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+    }),
+    component: () => <div>clone page probe</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, cloneProbe]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
-describe('AgentsView (row-menu clone opens the shared picker)', () => {
-  it('opens the picker preselected instead of one-shot cloning', async () => {
-    await shell();
+describe('AgentsView (row-menu clone routes to the clone page)', () => {
+  it('navigates to the clone page preselected instead of one-shot cloning', async () => {
+    const router = await shell();
     fireEvent.click(screen.getByLabelText('Actions for Returns Helper'));
-    fireEvent.click(screen.getByText('Clone'));
-    expect(screen.getByText(/original is untouched/)).toBeTruthy();
-    expect(screen.getByDisplayValue('Returns Helper (copy)')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Clone'));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/clone');
+    expect(router.state.location.search).toMatchObject({ sourceId: 'a1', returnTo: '/agent-studio/agents' });
+    expect(screen.getByText('clone page probe')).toBeTruthy();
   });
 });

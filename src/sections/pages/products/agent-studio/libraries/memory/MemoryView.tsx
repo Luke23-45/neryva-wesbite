@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { ShieldAlert } from 'lucide-react';
@@ -9,7 +9,6 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { Segmented } from '@components/common/ui/Segmented';
 import {
   ViewShell,
@@ -22,16 +21,12 @@ import { pageItem } from '@styles/motion';
 import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import {
-  useCreateMemory,
   useDeleteMemory,
   useMemories,
   useOrgMemoryPolicy,
   usePurgeMemories,
-  useUpdateMemory,
-  type MemoryItem,
 } from '@hooks/studio/useSetupKnowledge';
 import {
-  MEMORY_CONTENT_MAX,
   PURGE_SUBSTRING_MAX,
   PURGE_SUBSTRING_MIN,
   SCRUB_COPY,
@@ -40,6 +35,9 @@ import {
   relativeTime,
   validatePurgeSubstring,
 } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
+import { LIBRARIES_MEMORY_NEW_ROUTE_ID } from './MemoryNewSection';
+import { LIBRARIES_MEMORY_DETAIL_ROUTE_ID } from './MemoryDetailSection';
+import { LIBRARIES_MEMORY_EDIT_ROUTE_ID } from './MemoryEditSection';
 
 type MemoryScope = 'organization' | 'user' | 'assistant';
 
@@ -78,25 +76,6 @@ const FootNote = styled.p`
   line-height: 1.6;
 `;
 
-const DetailGrid = styled.dl`
-  margin: 0;
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  row-gap: 8px;
-  column-gap: 12px;
-  font-size: 13px;
-`;
-
-const DetailKey = styled.dt`
-  color: ${({ theme }) => theme.app.text.ghost};
-`;
-
-const DetailValue = styled.dd`
-  margin: 0;
-  color: ${({ theme }) => theme.app.text.secondary};
-  overflow-wrap: anywhere;
-`;
-
 const ErrorText = styled.p`
   font-size: 12px;
   color: ${({ theme }) => theme.app.status.error.fg};
@@ -129,6 +108,7 @@ function initialScope(): { scope: MemoryScope; scopeId: string | null } {
  */
 export function MemoryView() {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canWrite = canSetup(role, 'setup:author');
   const canGovern = canSetup(role, 'setup:govern');
   const [initial] = useState(initialScope);
@@ -140,11 +120,7 @@ export function MemoryView() {
   const remove = useDeleteMemory();
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; preview: string } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<MemoryItem | null>(null);
   const [purgeOpen, setPurgeOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  // A4-20: edit mode carries the row being corrected; null = create mode.
-  const [editing, setEditing] = useState<{ id: string; content: string } | null>(null);
 
   const visible = useMemo(() => filterMemories(memories.data ?? [], query), [memories.data, query]);
 
@@ -209,10 +185,7 @@ export function MemoryView() {
         <TextInput label="Search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search content…" />
         <ActionButton
           variant="secondary"
-          onClick={() => {
-            setEditing(null);
-            setComposerOpen(true);
-          }}
+          onClick={() => navigate({ to: LIBRARIES_MEMORY_NEW_ROUTE_ID })}
           disabled={!canWrite}
           title={canWrite ? 'Save a memory (audited)' : 'Saving memories needs owner, admin, or developer.'}
         >
@@ -268,7 +241,11 @@ export function MemoryView() {
                     </DataCell>
                     <DataCell $w="14%" title={m.createdAt ?? undefined}>{relativeTime(m.createdAt)}</DataCell>
                     <DataCell $w="44px">
-                      <ActionButton variant="ghost" size="sm" onClick={() => setDetail(m)}>
+                      <ActionButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate({ to: LIBRARIES_MEMORY_DETAIL_ROUTE_ID.replace('$memoryId', m.id) })}
+                      >
                         Detail
                       </ActionButton>
                     </DataCell>
@@ -278,10 +255,7 @@ export function MemoryView() {
                         size="sm"
                         disabled={!canWrite}
                         title={canWrite ? 'Edit this memory\u2019s content (audited)' : 'Editing memories needs owner, admin, or developer.'}
-                        onClick={() => {
-                          setEditing({ id: m.id, content: m.content ?? '' });
-                          setComposerOpen(true);
-                        }}
+                        onClick={() => navigate({ to: LIBRARIES_MEMORY_EDIT_ROUTE_ID.replace('$memoryId', m.id) })}
                       >
                         Edit
                       </ActionButton>
@@ -320,16 +294,6 @@ export function MemoryView() {
         scope — older entries are not listed, and search filters only what is loaded.
       </FootNote>
 
-      <MemoryDetailModal item={detail} onClose={() => setDetail(null)} />
-      <MemoryComposerModal
-        key={`${composerOpen ? 'open' : 'closed'}-${editing ? `edit-${editing.id}` : 'new'}`}
-        open={composerOpen}
-        editing={editing}
-        onClose={() => {
-          setEditing(null);
-          setComposerOpen(false);
-        }}
-      />
       <MemoryPurgeModal open={purgeOpen} onClose={() => setPurgeOpen(false)} />
 
       <ConfirmDialog
@@ -358,177 +322,6 @@ export function MemoryView() {
         }}
       />
     </ViewShell>
-  );
-}
-
-function MemoryDetailModal({ item, onClose }: { item: MemoryItem | null; onClose: () => void }) {
-  const sourceRef = item?.sourceRef;
-  const sourceText = sourceRef
-    ? Object.entries(sourceRef)
-        .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-        .join(' · ')
-    : '—';
-  return (
-    <Modal open={item !== null} onClose={onClose} title="Memory detail" width={600}>
-      {item && (
-        <>
-          <p style={{ fontSize: 13, lineHeight: 1.6 }}>{item.content ?? '—'}</p>
-          <DetailGrid>
-            <DetailKey>Scope</DetailKey>
-            <DetailValue>
-              {item.scopeType ?? 'organization'}
-              {item.scopeId ? ` · ${item.scopeId}` : ''}
-            </DetailValue>
-            <DetailKey>Visibility</DetailKey>
-            <DetailValue>{item.visibility ?? 'organization'}</DetailValue>
-            <DetailKey>Provenance</DetailKey>
-            <DetailValue>{item.provenance ?? '—'}</DetailValue>
-            <DetailKey>Confidence</DetailKey>
-            <DetailValue>{item.confidence !== null && item.confidence !== undefined ? item.confidence : '—'}</DetailValue>
-            <DetailKey>Valid</DetailKey>
-            <DetailValue>
-              {item.validFrom ? relativeTime(item.validFrom) : '—'} →{' '}
-              {item.invalidAt ? relativeTime(item.invalidAt) : 'now'}
-            </DetailValue>
-            <DetailKey>Expires</DetailKey>
-            <DetailValue>{item.expiresAt ? `${relativeTime(item.expiresAt)} · ${item.expiresAt}` : 'no TTL — kept until deleted'}</DetailValue>
-            <DetailKey>Source ref</DetailKey>
-            <DetailValue>{sourceText}</DetailValue>
-            <DetailKey>Embedding</DetailKey>
-            <DetailValue>{item.embeddingModel ?? 'legacy row (pre-model stamp)'}</DetailValue>
-            <DetailKey>Updated</DetailKey>
-            <DetailValue>{item.updatedAt ? `${relativeTime(item.updatedAt)} · ${item.updatedAt}` : '—'}</DetailValue>
-          </DetailGrid>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-/**
- * Composer migrated from KnowledgeView (C05 PLAN §10.5 — moved, not copied):
- * same POST memories contract, now with an organization/user scope picker
- * (the engine coerces anything else to organization, so nothing else is
- * offered) and an 8192-char cap with counter (the engine silent-truncates).
- *
- * A4-20: edit mode (editing != null) PATCHes the row's content only — scope,
- * TTL and provenance are not editable and the picker is hidden with the
- * reason stated, not silently dropped.
- */
-function MemoryComposerModal({
-  open,
-  onClose,
-  editing,
-}: {
-  open: boolean;
-  onClose: () => void;
-  editing: { id: string; content: string } | null;
-}) {
-  const createMemory = useCreateMemory();
-  const updateMemory = useUpdateMemory();
-  const [content, setContent] = useState(editing?.content ?? '');
-  const [scopeType, setScopeType] = useState<'organization' | 'user'>('organization');
-
-  const trimmed = content.trim();
-  const overCap = content.length > MEMORY_CONTENT_MAX;
-  const valid = trimmed !== '' && !overCap;
-  const saving = createMemory.isPending || updateMemory.isPending;
-
-  const save = () => {
-    if (editing) {
-      updateMemory.mutate(
-        { memoryId: editing.id, content: trimmed.slice(0, MEMORY_CONTENT_MAX) },
-        {
-          onSuccess: () => {
-            setContent('');
-            onClose();
-          },
-        },
-      );
-    } else {
-      createMemory.mutate(
-        { content: trimmed.slice(0, MEMORY_CONTENT_MAX), scopeType },
-        {
-          onSuccess: () => {
-            setContent('');
-            onClose();
-          },
-        },
-      );
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={() => {
-        setContent('');
-        onClose();
-      }}
-      title={editing ? 'Edit memory' : 'New memory'}
-      width={560}
-      footer={
-        <>
-          <ActionButton
-            variant="secondary"
-            onClick={() => {
-              setContent('');
-              onClose();
-            }}
-          >
-            Cancel
-          </ActionButton>
-          <ActionButton size="sm" disabled={!valid || saving} onClick={save}>
-            {editing ? 'Save changes' : 'Save memory'}
-          </ActionButton>
-        </>
-      }
-    >
-      <TextArea
-        label="Memory content"
-        id="memory-composer-content"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={4}
-        placeholder="The org ships on Fridays; freeze Thursdays…"
-      />
-      <p style={{ fontSize: 12, opacity: 0.75 }}>
-        {/* M2 (console field audit): the engine truncates at 8192 AFTER PII
-            scrubbing (`memory.service` scrubs → slices the scrubbed text), so
-            redaction markers can shift the final boundary a few characters
-            from this pre-scrub count. Say so — the old copy implied this
-            counter was the exact cut point. */}
-        {content.length.toLocaleString()} / {MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the
-        cap. The cap applies after PII redaction, so the stored text can land a few characters short of this count.
-      </p>
-      {editing ? (
-        <p style={{ fontSize: 12, opacity: 0.75 }}>
-          Scope and TTL are not editable — this only corrects the content. The entry is re-scrubbed,
-          re-embedded, and the change is audited.
-        </p>
-      ) : (
-        <>
-          <div style={{ marginTop: 8 }}>
-            <Segmented
-              options={[
-                { value: 'organization' as const, label: 'Organization' },
-                { value: 'user' as const, label: 'User' },
-              ]}
-              value={scopeType}
-              onChange={setScopeType}
-              size="sm"
-              ariaLabel="New memory scope"
-            />
-          </div>
-          <p style={{ fontSize: 12, opacity: 0.75 }}>
-            {scopeType === 'user'
-              ? 'User memories resolve per account at run time — visible only to that account.'
-              : 'Organization memories are retrievable by every run in the org.'}{' '}
-            Writes are scrubbed then embedded, TTL-defaulted, and audited.
-          </p>
-        </>
-      )}
-    </Modal>
   );
 }
 

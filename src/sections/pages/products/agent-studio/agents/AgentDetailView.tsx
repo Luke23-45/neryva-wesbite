@@ -23,8 +23,6 @@ import {
 } from '@hooks/studio/useAgentAuthoring';
 import { TestRunPanel } from './detail/TestRunPanel';
 import { TemplateDetailOrigin } from '../templates/TemplateDetailOrigin';
-import { ClonePicker } from './ClonePicker';
-import { buildAgentBuildPath } from '../builder/lib/slot-model';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { EvaluatePanel } from './detail/EvaluatePanel';
@@ -122,7 +120,6 @@ export function AgentDetailView() {
   const versions = useAssistantVersions(params.agentId);
   const deleteAssistant = useDeleteAssistant();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [cloneOpen, setCloneOpen] = useState(false);
   // Post-import landing (C12): the new draft row pulses + scrolls into
   // view with a banner — imports are never left silent. Session state,
   // never cached.
@@ -215,7 +212,7 @@ export function AgentDetailView() {
                       size="sm"
                       disabled={!canAuthorClone}
                       title={canAuthorClone ? 'Pick a source, name the copy' : cloneDenied}
-                      onClick={() => setCloneOpen(true)}
+                      onClick={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: agent.id, returnTo: `/agent-studio/agents/${agent.id}` } })}
                     >
                       <CopyIcon size={13} strokeWidth={1.7} />
                       Clone
@@ -234,17 +231,6 @@ export function AgentDetailView() {
                 </ActionCluster>
               </HeaderRow>
               <TemplateDetailOrigin assistantId={agent.id} activeVersionId={agent.activeVersionId} />
-              {cloneOpen && (
-                <ClonePicker
-                  open
-                  onClose={() => setCloneOpen(false)}
-                  initialSourceId={agent.id}
-                  onCloned={(id) => {
-                    setCloneOpen(false);
-                    navigate({ to: buildAgentBuildPath(id) });
-                  }}
-                />
-              )}
             </motion.div>
 
             <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>

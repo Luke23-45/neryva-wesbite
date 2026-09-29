@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 import { Plus, Trash2, RefreshCw, Send, Pencil, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
-import { TextInput } from '@components/common/ui/TextInput';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -25,19 +25,33 @@ import {
 import { pageItem } from '@styles/motion';
 import { ApiError } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
+import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
+import { useOrg } from '@/Context/OrgContext';
 import {
   useWebhookEvents,
   useWebhooks,
   useWebhookDeliveries,
-  useCreateWebhook,
-  useUpdateWebhook,
   useDeleteWebhook,
   useRotateWebhookSecret,
   useTestWebhook,
   secretFromRotateResponse,
   type WebhookSummary,
-  type WebhookEventCatalogEntry,
 } from '@hooks/studio/useWebhooks';
+import { Stack, RotateNote, SecretBox, EventGrid } from './webhook-section-shared';
+
+// Twin of the create-flow marker in WebhookNewSection: a rotate's shown-once
+// secret is memory-only, so a refresh-during-reveal would silently lose it.
+// The marker records the webhook id; the list then shows an honest
+// "already revealed — rotate again for a new one" banner instead of nothing.
+const PENDING_ROTATE_KEY = 'neryva:webhook-pending-rotate-reveal';
+
+function readPendingRotate(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_ROTATE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 import {
   EndpointCard,
@@ -58,16 +72,43 @@ import {
  */
 
 export function WebhooksView() {
+  const navigate = useNavigate();
+  const { role } = useOrg();
+  // Webhook writes (create/edit/delete/rotate/test) require
+  // owner/admin/developer — setup:author matches the engine @Roles exactly.
+  // Readers and billing keep full read access; write controls render
+  // disabled with the reason (capabilities.ts UI convention).
+  const canWrite = canSetup(role, 'setup:author');
+  const writeDenied = setupDeniedCopy(role, 'setup:author');
   const webhooks = useWebhooks();
   const remove = useDeleteWebhook();
   const rotate = useRotateWebhookSecret();
   const test = useTestWebhook();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<WebhookSummary | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WebhookSummary | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
+  // Refresh-during-rotate-reveal: the secret is gone (memory-only) but the
+  // marker survives, so the list shows an honest banner instead of silence.
+  const [interruptedRotateId, setInterruptedRotateId] = useState<string | null>(() => readPendingRotate());
+
+  const closeRotateReveal = () => {
+    try {
+      sessionStorage.removeItem(PENDING_ROTATE_KEY);
+    } catch {
+      // Storage blocked — the in-memory reveal already happened.
+    }
+    setRotatedSecret(null);
+  };
+
+  const dismissInterruptedRotate = () => {
+    try {
+      sessionStorage.removeItem(PENDING_ROTATE_KEY);
+    } catch {
+      // Storage blocked — nothing to clear.
+    }
+    setInterruptedRotateId(null);
+  };
 
   // J1-04 twin: a 404 on the webhooks read means the engine's webhooks
   // module is disabled in this deployment — not a failure. The honest
@@ -81,6 +122,11 @@ export function WebhooksView() {
       onSuccess: (raw) => {
         const secret = secretFromRotateResponse(raw);
         if (secret) {
+          try {
+            sessionStorage.setItem(PENDING_ROTATE_KEY, webhook.id);
+          } catch {
+            // Storage blocked — the in-memory secret still renders once.
+          }
           setRotatedSecret(secret);
         } else {
           toast.success('Signing secret rotated');
@@ -97,13 +143,33 @@ export function WebhooksView() {
         <ViewSubtitle>Send signed agent events to your own HTTP endpoints.</ViewSubtitle>
       </ViewHeader>
 
+      {interruptedRotateId && !rotatedSecret && (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
+          <Panel
+            title="Signing secret already revealed"
+            subtitle="A new signing secret was issued just before the page reloaded. It was shown exactly once and can't be displayed again — rotate once more to issue a fresh one."
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <ActionButton variant="secondary" onClick={dismissInterruptedRotate}>
+                Dismiss
+              </ActionButton>
+            </div>
+          </Panel>
+        </motion.div>
+      )}
+
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel
           title="Endpoints"
           subtitle="Each webhook delivers HMAC-signed POST requests to its destination."
           action={
             !webhooksDisabled ? (
-              <ActionButton size="sm" onClick={() => setCreateOpen(true)}>
+              <ActionButton
+                size="sm"
+                disabled={!canWrite}
+                title={canWrite ? undefined : writeDenied}
+                onClick={() => navigate({ to: '/agent-studio/integrations/webhooks/new' })}
+              >
                 <Plus size={14} strokeWidth={2} />
                 New webhook
               </ActionButton>
@@ -149,9 +215,9 @@ export function WebhooksView() {
                       <CardActions onClick={(e) => e.stopPropagation()}>
                         <CopyButton value={webhook.url} label="Copy URL" />
                         <IconAction
-                          title="Send test delivery"
+                          title={canWrite ? 'Send test delivery' : writeDenied}
                           aria-label={`Test ${webhook.url}`}
-                          disabled={test.isPending}
+                          disabled={test.isPending || !canWrite}
                           onClick={() => test.mutate(webhook.id, {
                             onSuccess: () => {
                               toast.success('Test event sent — it appears in the delivery log below');
@@ -162,13 +228,13 @@ export function WebhooksView() {
                         >
                           <Send size={13} strokeWidth={1.7} />
                         </IconAction>
-                        <IconAction title="Rotate secret" aria-label={`Rotate secret for ${webhook.url}`} disabled={rotate.isPending} onClick={() => startRotate(webhook)}>
+                        <IconAction title={canWrite ? 'Rotate secret' : writeDenied} aria-label={`Rotate secret for ${webhook.url}`} disabled={rotate.isPending || !canWrite} onClick={() => startRotate(webhook)}>
                           <RefreshCw size={13} strokeWidth={1.7} />
                         </IconAction>
-                        <IconAction title="Edit webhook" aria-label={`Edit ${webhook.url}`} onClick={() => setEditTarget(webhook)}>
+                        <IconAction title={canWrite ? 'Edit webhook' : writeDenied} aria-label={`Edit ${webhook.url}`} disabled={!canWrite} onClick={() => navigate({ to: '/agent-studio/integrations/webhooks/$webhookId/edit', params: { webhookId: webhook.id } })}>
                           <Pencil size={13} strokeWidth={1.7} />
                         </IconAction>
-                        <IconAction title="Delete webhook" aria-label={`Delete ${webhook.url}`} onClick={() => setDeleteTarget(webhook)}>
+                        <IconAction title={canWrite ? 'Delete webhook' : writeDenied} aria-label={`Delete ${webhook.url}`} disabled={!canWrite} onClick={() => setDeleteTarget(webhook)}>
                           <Trash2 size={13} strokeWidth={1.7} />
                         </IconAction>
                       </CardActions>
@@ -235,17 +301,13 @@ export function WebhooksView() {
         </motion.div>
       )}
 
-      <CreateModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(id) => setSelectedId(id)} />
-
-      <EditModal target={editTarget} onClose={() => setEditTarget(null)} />
-
       <Modal
         open={!!rotatedSecret}
-        onClose={() => setRotatedSecret(null)}
+        onClose={closeRotateReveal}
         title="New signing secret"
         width={520}
         footer={
-          <ActionButton onClick={() => setRotatedSecret(null)}>Done</ActionButton>
+          <ActionButton onClick={closeRotateReveal}>Done</ActionButton>
         }
       >
         <Stack>
@@ -392,295 +454,13 @@ function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
-/** Multi-select event picker shared by the create and edit modals. */
-function EventSelector({
-  catalog,
-  selected,
-  onChange,
-}: {
-  catalog: WebhookEventCatalogEntry[];
-  selected: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const allSelected = selected.includes('*');
-  const toggle = (type: string) => {
-    if (type === '*') {
-      onChange(allSelected ? [] : ['*']);
-      return;
-    }
-    const without = selected.filter((t) => t !== '*' && t !== type);
-    onChange(selected.includes(type) ? without : [...without, type]);
-  };
-  return (
-    <div>
-      <FieldLabel>Subscribed events</FieldLabel>
-      <EventGrid style={{ padding: 0 }}>
-        <ToggleChip $active={allSelected} onClick={() => toggle('*')} title="Receive every event type">
-          All events (*)
-        </ToggleChip>
-        {catalog.map((e) => (
-          <ToggleChip
-            key={e.type}
-            $active={!allSelected && selected.includes(e.type)}
-            onClick={() => toggle(e.type)}
-            title={e.description}
-          >
-            {e.type}
-          </ToggleChip>
-        ))}
-      </EventGrid>
-      <HintText>
-        {allSelected
-          ? 'This webhook receives every event type.'
-          : selected.length === 0
-            ? 'Select at least one event type — a webhook with no subscriptions never fires.'
-            : `${selected.length} event type${selected.length === 1 ? '' : 's'} selected.`}
-      </HintText>
-    </div>
-  );
-}
-
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value.trim());
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
-function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
-  const create = useCreateWebhook();
-  const catalog = useWebhookEvents();
-  const [step, setStep] = useState<'form' | 'done'>('form');
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [events, setEvents] = useState<string[]>(['*']);
-  const [secret, setSecret] = useState<string | null>(null);
-  const [createdId, setCreatedId] = useState('');
-  // One idempotency key per create-intent (minted when the modal state
-  // initializes, renewed on close). Double-submits of the same form replay
-  // the stored response instead of minting a second webhook. A failed
-  // submit keeps the key: the engine never caches failures, so a retry is
-  // safe and a lost response replays instead of duplicating.
-  const [idemKey, setIdemKey] = useState<string>(() => crypto.randomUUID());
-
-  const reset = () => {
-    setStep('form');
-    setUrl('');
-    setDescription('');
-    setEvents(['*']);
-    setSecret(null);
-    setCreatedId('');
-    setIdemKey(crypto.randomUUID());
-    create.reset();
-  };
-
-  const close = () => {
-    reset();
-    onClose();
-  };
-
-  const valid = isValidUrl(url) && events.length > 0;
-
-  const submit = () => {
-    create.mutate(
-      { url: url.trim(), events, description: description.trim() || undefined, idempotencyKey: idemKey },
-      {
-        onSuccess: (result) => {
-          setCreatedId(result.id);
-          setSecret(result.secret);
-          setStep('done');
-        },
-        onError: (err) => toastEngineError(err, 'Could not create the webhook.'),
-      },
-    );
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={close}
-      title={step === 'form' ? 'New webhook' : 'Webhook created'}
-      width={520}
-      footer={
-        step === 'form' ? (
-          <>
-            <ActionButton variant="secondary" onClick={close}>Cancel</ActionButton>
-            <ActionButton disabled={!valid || create.isPending} onClick={submit}>
-              Create webhook
-            </ActionButton>
-          </>
-        ) : (
-          <ActionButton
-            onClick={() => { onCreated(createdId); close(); }}
-          >
-            I&apos;ve saved the secret — done
-          </ActionButton>
-        )
-      }
-    >
-      {step === 'form' ? (
-        <Stack>
-          <TextInput
-            label="Destination URL"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://hooks.example.com/neryva"
-            hint="The engine validates the host server-side and blocks private/internal targets. HTTPS is required in production; HTTP is accepted in local dev only."
-            autoFocus
-          />
-          <TextInput
-            label="Description (optional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. Order events for the fulfillment service"
-          />
-          <EventSelector catalog={catalog.data ?? []} selected={events} onChange={setEvents} />
-        </Stack>
-      ) : (
-        <Stack>
-          <RotateNote>
-            Your webhook is ready. Copy the signing secret now — it is shown
-            exactly once and can never be retrieved again. Use it to verify
-            the <code>HMAC-SHA256</code> signature on every delivery.
-          </RotateNote>
-          {secret ? (
-            <SecretBox>
-              <code>{secret}</code>
-              <CopyButton value={secret} label="Copy secret" />
-            </SecretBox>
-          ) : (
-            <RotateNote>
-              The engine did not return a secret for this webhook. Rotate the
-              secret from the endpoint list to issue one.
-            </RotateNote>
-          )}
-        </Stack>
-      )}
-    </Modal>
-  );
-}
-
-function EditModal({ target, onClose }: { target: WebhookSummary | null; onClose: () => void }) {
-  const update = useUpdateWebhook();
-  const catalog = useWebhookEvents();
-  const [url, setUrl] = useState('');
-  const [description, setDescription] = useState('');
-  const [events, setEvents] = useState<string[]>([]);
-  const [status, setStatus] = useState<'active' | 'disabled'>('active');
-
-  useEffect(() => {
-    if (target) {
-      setUrl(target.url);
-      setDescription(target.description ?? '');
-      setEvents(target.events.length > 0 ? target.events : ['*']);
-      setStatus(target.status === 'disabled' ? 'disabled' : 'active');
-      update.reset();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target?.id]);
-
-  const valid = isValidUrl(url) && events.length > 0;
-
-  return (
-    <Modal
-      open={!!target}
-      onClose={onClose}
-      title="Edit webhook"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
-          <ActionButton
-            disabled={!valid || update.isPending}
-            onClick={() => target && update.mutate(
-              {
-                webhookId: target.id,
-                url: url.trim(),
-                events,
-                description: description.trim() ? description.trim() : null,
-                status,
-              },
-              {
-                onSuccess: () => { toast.success('Webhook updated'); onClose(); },
-                onError: (err) => toastEngineError(err, 'Could not update the webhook.'),
-              },
-            )}
-          >
-            Save changes
-          </ActionButton>
-        </>
-      }
-    >
-      <Stack>
-        <TextInput
-          label="Destination URL"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://hooks.example.com/neryva"
-          autoFocus
-        />
-        <TextInput
-          label="Description (optional)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. Order events for the fulfillment service"
-        />
-        <EventSelector catalog={catalog.data ?? []} selected={events} onChange={setEvents} />
-        <div>
-          <FieldLabel>Status</FieldLabel>
-          <StatusToggle>
-            <ToggleChip $active={status === 'active'} onClick={() => setStatus('active')}>Active</ToggleChip>
-            <ToggleChip $active={status === 'disabled'} onClick={() => setStatus('disabled')}>Disabled</ToggleChip>
-          </StatusToggle>
-          <HintText>
-            {status === 'active'
-              ? 'The webhook receives deliveries.'
-              : 'Disabled webhooks keep their history but receive nothing.'}
-          </HintText>
-        </div>
-      </Stack>
-    </Modal>
-  );
-}
-
 // ─── local styled additions ──────────────────────────────────────────
+// (The create/edit event picker and form primitives moved to
+// webhook-section-shared.tsx when the modals became routed sections;
+// only the rotate-secret reveal modal remains here.)
 
-const Stack = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
 
-const RotateNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
 
-  code {
-    font-family: ${({ theme }) => theme.typography.fonts.mono};
-  }
-`;
-
-const SecretBox = styled.div`
-  display: flex;
-  align-items: stretch;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.30);
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-
-  code {
-    flex: 1;
-    font-family: ${({ theme }) => theme.typography.fonts.mono};
-    font-size: ${({ theme }) => theme.app.type.caption};
-    color: ${({ theme }) => theme.app.text.primary};
-    word-break: break-all;
-    line-height: 1.5;
-  }
-`;
 
 const CardActions = styled.div`
   display: flex;
@@ -719,12 +499,6 @@ const IconAction = styled.button`
   }
 `;
 
-const EventGrid = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 14px 22px;
-`;
 
 const EventChip = styled.span`
   display: inline-flex;
@@ -741,45 +515,8 @@ const EventName = styled.span`
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
-const ToggleChip = styled.button<{ $active?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 11px;
-  border-radius: 6px;
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.app.type.micro};
-  cursor: pointer;
-  background: ${({ $active, theme }) => ($active ? theme.app.status.lilac.bg : 'transparent')};
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.app.status.lilac.border : theme.app.border.default)};
-  color: ${({ $active, theme }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
-  transition: background ${({ theme }) => theme.transitions.fast},
-    border-color ${({ theme }) => theme.transitions.fast},
-    color ${({ theme }) => theme.transitions.fast};
 
-  &:hover {
-    border-color: ${({ theme }) => theme.app.border.strong};
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
-
-const FieldLabel = styled.div`
-  font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.secondary};
-  margin-bottom: 8px;
-`;
-
-const HintText = styled.div`
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.muted};
-  margin-top: 8px;
-  line-height: 1.5;
-`;
 
 const VerifyBody = styled.div`
   padding: 16px 22px 20px;
@@ -815,7 +552,3 @@ const VerifyList = styled.ul`
   }
 `;
 
-const StatusToggle = styled.div`
-  display: flex;
-  gap: 8px;
-`;

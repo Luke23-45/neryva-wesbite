@@ -9,12 +9,12 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
 import { MemoryView } from './MemoryView';
 
 let mockRole: string | null = 'owner';
-const createMutate = vi.fn();
 const deleteMutate = vi.fn();
 const purgeMutate = vi.fn();
 
@@ -39,7 +39,7 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
       error: null,
       refetch: vi.fn(),
     }),
-    useCreateMemory: () => ({ mutate: createMutate, isPending: false }),
+    useCreateMemory: () => ({ mutate: vi.fn(), isPending: false }),
     useDeleteMemory: () => ({ mutate: deleteMutate, isPending: false }),
     usePurgeMemories: () => ({ mutate: purgeMutate, isPending: false }),
     useOrgMemoryPolicy: () => ({ policy: { scrub: 'redact', ttlSeconds: 2_592_000 }, isPending: false, isError: false }),
@@ -48,8 +48,13 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
 
 async function shell() {
   const rootRoute = createRootRoute();
-  const indexRoute = createRoute({
+  const librariesRoute = createRoute({
     getParentRoute: () => rootRoute,
+    path: '/agent-studio/memory',
+    component: () => <Outlet />,
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => librariesRoute,
     path: '/',
     component: () => (
       <ThemeProvider theme={theme}>
@@ -59,18 +64,34 @@ async function shell() {
       </ThemeProvider>
     ),
   });
+  // Stubs for the Phase 3 section routes (wired by the coordinator at review).
+  const newRoute = createRoute({
+    getParentRoute: () => librariesRoute,
+    path: '/new',
+    component: () => <div>new memory section</div>,
+  });
+  const detailRoute = createRoute({
+    getParentRoute: () => librariesRoute,
+    path: '/$memoryId',
+    component: () => <div>memory detail section</div>,
+  });
+  const editRoute = createRoute({
+    getParentRoute: () => librariesRoute,
+    path: '/$memoryId/edit',
+    component: () => <div>memory edit section</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    routeTree: rootRoute.addChildren([librariesRoute.addChildren([indexRoute, newRoute, detailRoute, editRoute])]),
+    history: createMemoryHistory({ initialEntries: ['/agent-studio/memory'] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
   mockRole = 'owner';
-  createMutate.mockReset();
   deleteMutate.mockReset();
   purgeMutate.mockReset();
   window.history.replaceState(null, '', '/');
@@ -87,7 +108,7 @@ describe('MemoryView library page (C08)', () => {
     expect(screen.queryByText(/morning standup/)).toBeNull();
   });
 
-  it('searches content and opens the detail drawer with provenance', async () => {
+  it('searches content with an empty-state on no match', async () => {
     await shell();
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText(/Search content/), { target: { value: 'fridays' } });
@@ -97,12 +118,24 @@ describe('MemoryView library page (C08)', () => {
       fireEvent.change(screen.getByPlaceholderText(/Search content/), { target: { value: 'zzz-no-match' } });
     });
     expect(screen.getByText(/No memories match this search/)).toBeTruthy();
+  });
+
+  it('Detail navigates to the dedicated section (no modal)', async () => {
+    const router = await shell();
     await act(async () => {
-      fireEvent.change(screen.getByPlaceholderText(/Search content/), { target: { value: '' } });
       fireEvent.click(screen.getByRole('button', { name: 'Detail' }));
     });
-    expect(screen.getByText('Memory detail')).toBeTruthy();
-    expect(screen.getByText(/granted-embed-3/)).toBeTruthy();
+    expect(router.state.location.pathname).toBe('/agent-studio/memory/m1');
+    expect(screen.getByText('memory detail section')).toBeTruthy();
+  });
+
+  it('New memory navigates to the composer section (no modal)', async () => {
+    const router = await shell();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'New memory' }));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/memory/new');
+    expect(screen.getByText('new memory section')).toBeTruthy();
   });
 
   it('shows scope ids behind the assistant filter, narrowable by deep-link', async () => {
@@ -124,29 +157,6 @@ describe('MemoryView library page (C08)', () => {
     });
     expect(deleteMutate).toHaveBeenCalledTimes(1);
     expect(vi.mocked(deleteMutate).mock.calls[0]?.[0]).toBe('m1');
-  });
-
-  it('composes memories with scope choice and an 8192 cap (migrated from Knowledge)', async () => {
-    createMutate.mockImplementation((_input, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.());
-    await shell();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'New memory' }));
-    });
-    const dialog = screen.getByRole('dialog');
-    await act(async () => {
-      fireEvent.change(within(dialog).getByLabelText('Memory content'), { target: { value: 'x'.repeat(9000) } });
-    });
-    expect(screen.getByText(/9,?000/)).toBeTruthy();
-    expect(within(dialog).getByRole('button', { name: 'Save memory' })).toHaveProperty('disabled', true);
-    await act(async () => {
-      fireEvent.change(within(dialog).getByLabelText('Memory content'), { target: { value: 'User fact' } });
-      fireEvent.click(within(dialog).getByRole('tab', { name: 'User' }));
-    });
-    await act(async () => {
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Save memory' }));
-    });
-    expect(createMutate).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(createMutate).mock.calls[0]?.[0]).toMatchObject({ content: 'User fact', scopeType: 'user' });
   });
 
   it('purges by text with bounds, then reports the tombstoned count', async () => {

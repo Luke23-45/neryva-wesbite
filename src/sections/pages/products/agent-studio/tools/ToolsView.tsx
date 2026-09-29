@@ -7,7 +7,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { Panel } from '@components/common/ui/Panel';
-import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { QueryView } from '@components/common/ui/AsyncStates';
@@ -21,8 +20,6 @@ import {
 import { pageItem } from '@styles/motion';
 import {
   useToolCatalog,
-  useToolTemplates,
-  useToolFromTemplate,
   useSetToolEnabled,
   TOOL_EFFECT_CLASSES,
   TOOL_APPROVAL_REQUIREMENTS,
@@ -85,7 +82,6 @@ export function ToolsView() {
   const catalog = useToolCatalog({ includeDisabled: showDisabled });
   const setEnabled = useSetToolEnabled();
 
-  const [fromTemplateOpen, setFromTemplateOpen] = useState(false);
   // C06: filters, expanded drawer row, edit target, per-row pending (one
   // toggle must never freeze the whole column).
   const [nameFilter, setNameFilter] = useState('');
@@ -104,7 +100,7 @@ export function ToolsView() {
           </ViewSubtitle>
         </ViewHeader>
         <div style={{ display: 'flex', gap: 8 }}>
-          <ActionButton variant="secondary" size="sm" disabled={!canWrite} title={canWrite ? 'Instantiate a prebuilt tool' : writeDenied} onClick={() => setFromTemplateOpen(true)}>
+          <ActionButton variant="secondary" size="sm" disabled={!canWrite} title={canWrite ? 'Instantiate a prebuilt tool' : writeDenied} onClick={() => navigate({ to: '/agent-studio/tools/instantiate' })}>
             <Zap size={13} strokeWidth={1.8} />
             From template
           </ActionButton>
@@ -280,11 +276,6 @@ export function ToolsView() {
         </SectionGap>
       </motion.div>
 
-      <FromTemplateModal
-        open={fromTemplateOpen}
-        onClose={() => setFromTemplateOpen(false)}
-        existingNames={(catalog.data ?? []).map((t) => t.name)}
-      />
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <SectionGap>
           <Panel title="Pin discipline" subtitle="How versions stay reproducible.">
@@ -318,96 +309,5 @@ function CopyPinButton({ hash }: { hash: string | null }) {
     >
       Copy pin
     </ActionButton>
-  );
-}
-
-function FromTemplateModal({ open, onClose, existingNames }: { open: boolean; onClose: () => void; existingNames: string[] }) {
-  const templates = useToolTemplates();
-  const instantiate = useToolFromTemplate();
-  const [templateId, setTemplateId] = useState('');
-  const [url, setUrl] = useState('');
-  const [credential, setCredential] = useState('');
-  const [rateLimit, setRateLimit] = useState('');
-
-  const urlProblem = !url.trim() ? 'An https URL is required.' : !/^https:\/\//.test(url.trim()) ? 'Must be an https URL.' : null;
-  const rateTrimmed = rateLimit.trim();
-  const rateProblem = rateTrimmed === '' ? null : !Number.isFinite(Number(rateTrimmed)) || Number(rateTrimmed) < 1 ? 'Must be a number ≥ 1.' : null;
-  const valid = templateId !== '' && !urlProblem && !rateProblem;
-  // A4-66 — instantiation upserts by template name: warn before overwriting.
-  const templateName = (templates.data ?? []).find((t) => t.id === templateId)?.name ?? null;
-  const collides = templateName !== null && existingNames.includes(templateName);
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Instantiate from template"
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!valid || instantiate.isPending}
-            onClick={() => {
-              const rate = rateLimit.trim() === '' ? undefined : Number(rateLimit);
-              instantiate.mutate(
-                {
-                  templateId,
-                  url: url.trim(),
-                  ...(credential.trim() ? { credential: credential.trim() } : {}),
-                  ...(rate !== undefined && Number.isFinite(rate) ? { rateLimitPerRun: Math.max(1, Math.round(rate)) } : {}),
-                },
-                { onSuccess: () => onClose() },
-              );
-            }}
-          >
-            <Zap size={13} strokeWidth={1.8} />
-            Instantiate
-          </ActionButton>
-        </>
-      }
-    >
-      {templates.isPending ? (
-        <Muted>Loading templates…</Muted>
-      ) : (templates.data ?? []).length === 0 ? (
-        <Muted>No prebuilt tool templates published.</Muted>
-      ) : (
-        <label style={{ fontSize: 13 }}>
-          Template
-          <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            <option value="">Pick a template…</option>
-            {(templates.data ?? []).map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} — {t.effectClass} / {t.approvalRequirement}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {collides && (
-        <p style={{ fontSize: 12, color: '#fbbf24', marginTop: 12 }} role="alert">
-          A tool named “{templateName}” already exists — instantiating replaces its schema, binding, and hash in
-          place (re-enables it too). Pinned versions on the old schema drift until re-pinned.
-        </p>
-      )}
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Endpoint URL (https)" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" error={url.trim() ? (urlProblem ?? undefined) : undefined} />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput
-          label="Credential (optional — sealed per-tool, never in the manifest)"
-          type="password"
-          value={credential}
-          onChange={(e) => setCredential(e.target.value)}
-          placeholder="…"
-          autoComplete="off"
-        />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Rate limit per run (optional)" type="number" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} placeholder="unset = platform cap" error={rateTrimmed ? (rateProblem ?? undefined) : undefined} />
-      </div>
-    </Modal>
   );
 }

@@ -9,7 +9,6 @@ import { ApiError } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import type { OrgRole } from '@/Context/OrgContext';
 import { useCreateAssistant, useUpdateAssistantIdentity } from '@hooks/studio/useAgentAuthoring';
-import { ClonePicker } from '../../agents/ClonePicker';
 import { buildAgentBuildPath, buildAgentEditPath } from '../lib/slot-model';
 import { DESCRIPTION_MAX, isDescriptionValid, isNameValid, NAME_MAX, NAME_MIN, suggestRename } from './purpose-model';
 import {
@@ -65,7 +64,6 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [taken, setTaken] = useState(false);
-  const [cloneOpen, setCloneOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const create = useCreateAssistant();
   const updateIdentity = useUpdateAssistantIdentity();
@@ -261,7 +259,7 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
             <ActionButton
               size="sm"
               variant="secondary"
-              onClick={() => setCloneOpen(true)}
+              onClick={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: agentId, returnTo: buildAgentBuildPath(agentId) } })}
             >
               Clone agent
             </ActionButton>
@@ -276,21 +274,6 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
             </ActionButton>
           )}
         </RowActions>
-        {cloneOpen && (
-          <ClonePicker
-            open
-            onClose={() => setCloneOpen(false)}
-            initialSourceId={agentId}
-            onCloned={(id) => {
-              setCloneOpen(false);
-              if (onCreated) {
-                onCreated(id);
-              } else {
-                navigate({ to: buildAgentBuildPath(id) });
-              }
-            }}
-          />
-        )}
       </div>
     );
   }

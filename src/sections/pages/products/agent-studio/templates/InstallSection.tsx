@@ -211,12 +211,19 @@ function InstallForm({ entry, returnTo, autoLandBuilder }: { entry: TemplateList
     if (nameProblem || create.isPending) {
       return;
     }
+    // Commit-time disarm: the install is handed to the engine here, so the
+    // async success navigation must not trip the leave dialog. Re-armed on
+    // failure so a failed install keeps protecting the typed name.
+    setSubmitted(true);
     create.mutate(
       { name: name.trim(), template: { slug: entry.template.slug, version: entry.template.version } },
       {
+        onError: () => setSubmitted(false),
         onSuccess: (result) => {
           if (!result.assistantId) {
             toast.error('Install returned no assistant — try again.');
+            // Nothing was created; the typed name is still unsent input.
+            setSubmitted(false);
             return;
           }
           toast.success(`Installed ${entry.template.slug}@${entry.template.version} as a draft — never live`);
@@ -227,9 +234,8 @@ function InstallForm({ entry, returnTo, autoLandBuilder }: { entry: TemplateList
             // the old onInstalled contract — auto-land in the builder
             // instead of showing the post-install checklist. No completion
             // marker is written, so a back-navigation lands on a clean form
-            // rather than a stale success. The submitted flag releases the
-            // dirty guard for this navigation.
-            setSubmitted(true);
+            // rather than a stale success. The guard was already disarmed at
+            // commit time above.
             navigate({ to: buildAgentBuildPath(result.assistantId) });
             return;
           }

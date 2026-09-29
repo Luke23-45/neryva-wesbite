@@ -71,8 +71,9 @@ async function shell() {
   });
   const newRoute = createRoute({ getParentRoute: () => toolsRoute, path: '/new', component: () => <div>new stub</div> });
   const editRoute = createRoute({ getParentRoute: () => toolsRoute, path: '/$toolId/edit', component: () => <div>edit stub</div> });
+  const instantiateProbe = createRoute({ getParentRoute: () => toolsRoute, path: '/instantiate', component: () => <div>instantiate stub</div> });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([toolsRoute.addChildren([newRoute, editRoute])]),
+    routeTree: rootRoute.addChildren([toolsRoute.addChildren([newRoute, editRoute, instantiateProbe])]),
     history: createMemoryHistory({ initialEntries: ['/agent-studio/tools'] }),
   });
   await act(async () => {
@@ -127,12 +128,14 @@ describe('ToolsView catalog (C06)', () => {
     expect(router.state.location.pathname).toBe('/agent-studio/tools/lookup_ticket/edit');
   });
 
-  it('validates the template rate limit with a named message', async () => {
-    await shell();
-    fireEvent.click(screen.getByText('From template'));
-    fireEvent.change(screen.getByPlaceholderText('unset = platform cap'), { target: { value: '0' } });
-    expect(screen.getByText('Must be a number ≥ 1.')).toBeTruthy();
-    expect(screen.getByText('Instantiate').closest('button')?.disabled).toBe(true);
+  it('navigates to the instantiate section from "From template"', async () => {
+    // The rate-limit validation itself now lives on the dedicated page and
+    // is covered by ToolInstantiateSection.test.tsx.
+    const router = await shell();
+    await act(async () => {
+      fireEvent.click(screen.getByText('From template'));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/tools/instantiate');
   });
 
   it('toggles "Show disabled tools" exactly once per label click', async () => {

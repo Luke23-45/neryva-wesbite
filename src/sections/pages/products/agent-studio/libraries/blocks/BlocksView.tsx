@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { ShieldAlert } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
-import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import {
   ViewShell,
@@ -26,11 +26,11 @@ import {
   useClearControlBlock,
   useControlBlocks,
   useMemberNameMap,
-  useSetControlBlock,
   type BlockStatusFilter,
   type BlockTargetFilter,
   type ControlBlock,
 } from '@hooks/studio/useSetupOperate';
+import { LIBRARIES_BLOCKS_NEW_ROUTE_ID } from './BlockNewSection';
 
 const FilterBar = styled.div`
   display: flex;
@@ -51,18 +51,6 @@ const FilterBar = styled.div`
     display: block;
     min-width: 140px;
   }
-`;
-
-const FieldProblem = styled.p`
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.status.error.fg};
-  margin: 4px 0 0;
-`;
-
-const FieldNote = styled.p`
-  font-size: 12px;
-  opacity: 0.75;
-  margin: 4px 0 0;
 `;
 
 const EmptyNote = styled.div`
@@ -107,12 +95,12 @@ function shortDate(iso: string | null): string {
  */
 export function BlocksView() {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canGovern = canSetup(role, 'setup:govern');
   const governDenied = setupDeniedCopy(role, 'setup:govern');
   const blocks = useControlBlocks({ enabled: canGovern });
   const clearBlock = useClearControlBlock();
   const members = useMemberNameMap({ enabled: canGovern });
-  const [createOpen, setCreateOpen] = useState(false);
   const [clearTarget, setClearTarget] = useState<{ id: string; name: string } | null>(null);
   const [clearingId, setClearingId] = useState<string | null>(null);
   const [targetFilter, setTargetFilter] = useState<BlockTargetFilter>('all');
@@ -150,7 +138,7 @@ export function BlocksView() {
       </ViewHeader>
 
       <div style={{ margin: '12px 0' }}>
-        <ActionButton onClick={() => setCreateOpen(true)}>
+        <ActionButton onClick={() => navigate({ to: LIBRARIES_BLOCKS_NEW_ROUTE_ID })}>
           <ShieldAlert size={13} strokeWidth={1.8} />
           Set block
         </ActionButton>
@@ -252,8 +240,6 @@ export function BlocksView() {
         }}
       </QueryView>
 
-      <BlockCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
-
       <ConfirmDialog
         open={clearTarget !== null}
         title="Clear this block?"
@@ -284,156 +270,3 @@ export function BlocksView() {
   );
 }
 
-function BlockCreateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const setBlock = useSetControlBlock();
-  const [targetType, setTargetType] = useState<string>('assistant');
-  const [targetName, setTargetName] = useState('');
-  const [reason, setReason] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [permanentArmed, setPermanentArmed] = useState(false);
-  // Modal-open clock for the futurity check (stable per mount; the check
-  // re-runs on every keystroke against this fixed "now").
-  const [nowMs] = useState(() => Date.now());
-  // datetime-local is timezone-naive: the min hint must be local wall-clock,
-  // not the UTC slice, or non-UTC operators see a wrong earliest time.
-  const [minExpiry] = useState(() =>
-    new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16),
-  );
-
-  const nameProblem =
-    targetName.trim().length >= 1 && targetName.trim().length <= 128
-      ? null
-      : 'Target names are 1–128 chars.';
-  const reasonProblem =
-    reason.trim().length >= 1 && reason.trim().length <= 512
-      ? null
-      : 'Operator justification is mandatory (1–512 chars).';
-  const expiryText = expiresAt.trim();
-  const expiryMs = expiryText === '' ? null : new Date(expiryText).getTime();
-  const expiryProblem =
-    expiryText === ''
-      ? null
-      : expiryMs === null || Number.isNaN(expiryMs)
-        ? 'Expiry must be a real date and time.'
-        : expiryMs <= nowMs
-          ? 'Expiry must be in the future.'
-          : null;
-  const valid = !nameProblem && !reasonProblem && !expiryProblem;
-  const permanent = expiryText === '';
-
-  // The modal stays mounted while hidden — reset every submit/close so a
-  // previous session's values never leak into a fresh one.
-  const reset = () => {
-    setTargetType('assistant');
-    setTargetName('');
-    setReason('');
-    setExpiresAt('');
-    setPermanentArmed(false);
-  };
-  const close = () => {
-    reset();
-    onClose();
-  };
-
-  const submit = () => {
-    setBlock.mutate(
-      {
-        targetType,
-        targetName: targetName.trim(),
-        reason: reason.trim(),
-        ...(permanent ? {} : { expiresAt: new Date(expiryText).toISOString() }),
-      },
-      {
-        onSuccess: () => {
-          close();
-        },
-      },
-    );
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={close}
-      title="Set control block"
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={close}>
-            Cancel
-          </ActionButton>
-          {permanentArmed ? (
-            <ActionButton
-              variant="danger"
-              disabled={!valid || setBlock.isPending}
-              onClick={submit}
-            >
-              <ShieldAlert size={13} strokeWidth={1.8} />
-              Yes — block with no expiry
-            </ActionButton>
-          ) : (
-            <ActionButton
-              variant="danger"
-              disabled={!valid || setBlock.isPending}
-              onClick={() => {
-                if (permanent) {
-                  setPermanentArmed(true);
-                  return;
-                }
-                submit();
-              }}
-            >
-              <ShieldAlert size={13} strokeWidth={1.8} />
-              Set block
-            </ActionButton>
-          )}
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.8 }}>
-        Governance kill switch — refuses acceptance, assignment, tool calls, credentials,
-        and installs. Expiry needs no worker; terminal runs never strand. There is no edit:
-        to change a block, clear it and set it again.
-      </p>
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Target type
-        <select value={targetType} onChange={(e) => setTargetType(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          {BLOCK_TARGETS.map((target) => (
-            <option key={target} value={target}>{target}</option>
-          ))}
-        </select>
-      </label>
-      <div style={{ marginTop: 12 }}>
-        <TextInput id="block-target-name" label="Target name (id or slug)" value={targetName} onChange={(e) => setTargetName(e.target.value)} error={nameProblem ?? undefined} />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput id="block-reason" label="Reason (mandatory, audited)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this block exists" error={reason.trim() ? (reasonProblem ?? undefined) : undefined} />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <label style={{ fontSize: 13, display: 'block' }}>
-          Expires at (optional)
-          <input
-            type="datetime-local"
-            aria-label="Block expiry"
-            value={expiresAt}
-            min={minExpiry}
-            onChange={(e) => {
-              setExpiresAt(e.target.value);
-              setPermanentArmed(false);
-            }}
-            style={{ display: 'block', width: '100%', marginTop: 4 }}
-          />
-        </label>
-        {expiryProblem ? (
-          <FieldProblem>{expiryProblem}</FieldProblem>
-        ) : (
-          <FieldNote>
-            {permanent
-              ? 'No expiry = permanent. Setting it asks for a second confirmation.'
-              : `Lifts automatically ${describeBlockExpiry(new Date(expiryText).toISOString())} — no worker needed.`}
-          </FieldNote>
-        )}
-      </div>
-    </Modal>
-  );
-}

@@ -94,6 +94,7 @@ async function shell(onInstall: (entry: TemplateListEntry) => void = () => undef
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
@@ -136,17 +137,11 @@ describe('TemplateGallery (shared origin truth)', () => {
     expect(screen.getByText(/major update — Install v3\.0\.0 as new/)).toBeTruthy();
   });
 
-  it('opens detail with untruncated eval cases and object-safe release rows', async () => {
-    await shell();
+  it('routes Details to the template detail section (no modal)', async () => {
+    const router = await shell();
     fireEvent.click(screen.getByText('Details'));
-    fireEvent.click(screen.getByText('Tools (1)', { selector: 'button' }));
-    expect(screen.getByText(/Find orders first/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Evaluation', { selector: 'button' }));
-    expect(screen.getByText('case 0')).toBeTruthy();
-    expect(screen.queryByText('case 6')).toBeNull();
-    fireEvent.click(screen.getByText('Show all'));
-    expect(screen.getByText('case 6')).toBeTruthy();
-    fireEvent.click(screen.getByText('Release', { selector: 'button' }));
-    expect(screen.getByText(/regression_no_worse_than/)).toBeTruthy();
+    expect(router.state.location.pathname).toBe('/agent-studio/templates/support-concierge');
+    // The modal is gone — no dialog chrome renders in the gallery.
+    expect(screen.queryByText('Close')).toBeNull();
   });
 });

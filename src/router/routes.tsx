@@ -48,16 +48,20 @@ import AgentStudioAgentBuilderPage from '@pages/products/agent_studio/AgentStudi
 import AgentStudioAgentsBlockNewPage from '@pages/products/agent_studio/AgentStudioAgentsBlockNewPage';
 import AgentStudioAgentsVersionImportPage from '@pages/products/agent_studio/AgentStudioAgentsVersionImportPage';
 import AgentStudioAgentsRollbackPage from '@pages/products/agent_studio/AgentStudioAgentsRollbackPage';
+import AgentStudioAgentsClonePage from '@pages/products/agent_studio/AgentStudioAgentsClonePage';
 import AgentStudioComplianceExportsNewPage from '@pages/products/agent_studio/AgentStudioComplianceExportsNewPage';
 import AgentStudioComplianceHoldsNewPage from '@pages/products/agent_studio/AgentStudioComplianceHoldsNewPage';
 import AgentStudioCompliancePurgesNewPage from '@pages/products/agent_studio/AgentStudioCompliancePurgesNewPage';
 import AgentStudioTemplatesInstallPage from '@pages/products/agent_studio/AgentStudioTemplatesInstallPage';
+import AgentStudioTemplatesDetailPage from '@pages/products/agent_studio/AgentStudioTemplatesDetailPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage, { AgentStudioIntegrationsLayout } from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
 import AgentStudioIntegrationsLinkPage from '@pages/products/agent_studio/AgentStudioIntegrationsLinkPage';
 import AgentStudioIntegrationsOAuthAppNewPage from '@pages/products/agent_studio/AgentStudioIntegrationsOAuthAppNewPage';
-import AgentStudioWebhooksPage from '@pages/products/agent_studio/AgentStudioWebhooksPage';
+import AgentStudioWebhooksPage, { AgentStudioWebhooksLayout } from '@pages/products/agent_studio/AgentStudioWebhooksPage';
+import AgentStudioWebhooksNewPage from '@pages/products/agent_studio/AgentStudioWebhooksNewPage';
+import AgentStudioWebhooksEditPage from '@pages/products/agent_studio/AgentStudioWebhooksEditPage';
 import AgentStudioSettingsIndexPage from '@pages/products/agent_studio/AgentStudioSettingsIndexPage';
 import AgentStudioSettingsProfilePage from '@pages/products/agent_studio/AgentStudioSettingsProfilePage';
 import AgentStudioSettingsWorkspacePage from '@pages/products/agent_studio/AgentStudioSettingsWorkspacePage';
@@ -71,15 +75,22 @@ import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKn
 import AgentStudioKnowledgeUploadPage, {
   AgentStudioKnowledgeLayout,
 } from '@pages/products/agent_studio/AgentStudioKnowledgeUploadPage';
+import AgentStudioKnowledgeVersionUploadPage from '@pages/products/agent_studio/AgentStudioKnowledgeVersionUploadPage';
+import AgentStudioKnowledgePreviewPage from '@pages/products/agent_studio/AgentStudioKnowledgePreviewPage';
 import AgentStudioModelsPage, { AgentStudioModelsLayout } from '@pages/products/agent_studio/AgentStudioModelsPage';
 import AgentStudioModelsCredentialsNewPage from '@pages/products/agent_studio/AgentStudioModelsCredentialsNewPage';
 import AgentStudioModelsCredentialsRotatePage from '@pages/products/agent_studio/AgentStudioModelsCredentialsRotatePage';
 import AgentStudioToolsPage, { AgentStudioToolsLayout } from '@pages/products/agent_studio/AgentStudioToolsPage';
 import AgentStudioToolsNewPage from '@pages/products/agent_studio/AgentStudioToolsNewPage';
 import AgentStudioToolsEditPage from '@pages/products/agent_studio/AgentStudioToolsEditPage';
-import AgentStudioMemoryPage from '@pages/products/agent_studio/AgentStudioMemoryPage';
+import AgentStudioToolsInstantiatePage from '@pages/products/agent_studio/AgentStudioToolsInstantiatePage';
+import AgentStudioMemoryPage, { AgentStudioMemoryLayout } from '@pages/products/agent_studio/AgentStudioMemoryPage';
 import AgentStudioDatasetsPage from '@pages/products/agent_studio/AgentStudioDatasetsPage';
-import AgentStudioBlocksPage from '@pages/products/agent_studio/AgentStudioBlocksPage';
+import AgentStudioBlocksPage, { AgentStudioBlocksLayout } from '@pages/products/agent_studio/AgentStudioBlocksPage';
+import AgentStudioLibrariesBlocksNewPage from '@pages/products/agent_studio/AgentStudioLibrariesBlocksNewPage';
+import AgentStudioLibrariesMemoryNewPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryNewPage';
+import AgentStudioLibrariesMemoryDetailPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryDetailPage';
+import AgentStudioLibrariesMemoryEditPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryEditPage';
 import AgentStudioChannelsPage, { AgentStudioChannelsLayout } from '@pages/products/agent_studio/AgentStudioChannelsPage';
 import AgentStudioChannelsConnectPage from '@pages/products/agent_studio/AgentStudioChannelsConnectPage';
 import AgentStudioChannelsDetailPage from '@pages/products/agent_studio/AgentStudioChannelsDetailPage';
@@ -100,6 +111,9 @@ import AgentStudioTeamsServiceAccountNewPage from '@pages/products/agent_studio/
 import AgentStudioUsagePage from '@pages/products/agent_studio/AgentStudioUsagePage';
 import AgentStudioEvaluationsPage, { AgentStudioEvaluationsLayout } from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
 import AgentStudioEvaluationsCasesNewPage from '@pages/products/agent_studio/AgentStudioEvaluationsCasesNewPage';
+import AgentStudioEvaluationsDatasetNewPage from '@pages/products/agent_studio/AgentStudioEvaluationsDatasetNewPage';
+import AgentStudioEvaluationsRunNewPage from '@pages/products/agent_studio/AgentStudioEvaluationsRunNewPage';
+import AgentStudioEvaluationsDatasetCasesPage from '@pages/products/agent_studio/AgentStudioEvaluationsDatasetCasesPage';
 
 // NOTE (parked): the /deployment app shell lives unrouted under
 // `src/future/deployment/` — reference template, no approved architecture
@@ -445,6 +459,19 @@ export const agentStudioAgentsOverviewRoute = createRoute({
   component: AgentStudioAgentsOverviewPage,
 });
 
+// Clone an agent from the list, detail, or builder origin (Phase 3
+// zero-content-modals). Static /clone wins over the `/$agentId` dynamic
+// sibling, so /clone never resolves as an id.
+export const agentStudioAgentsCloneRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/clone',
+  validateSearch: (search: Record<string, unknown>) => ({
+    sourceId: typeof search.sourceId === 'string' ? search.sourceId : undefined,
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+  }),
+  component: AgentStudioAgentsClonePage,
+});
+
 export const agentStudioConversationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/conversations',
@@ -484,7 +511,26 @@ export const agentStudioIntegrationsOAuthAppNewRoute = createRoute({
 export const agentStudioWebhooksRoute = createRoute({
   getParentRoute: () => agentStudioIntegrationsRoute,
   path: '/webhooks',
+  component: AgentStudioWebhooksLayout,
+});
+
+export const agentStudioWebhooksIndexRoute = createRoute({
+  getParentRoute: () => agentStudioWebhooksRoute,
+  path: '/',
   component: AgentStudioWebhooksPage,
+});
+
+// Webhook create/edit as dedicated sections (Phase 3 zero-content-modals).
+export const agentStudioWebhooksNewRoute = createRoute({
+  getParentRoute: () => agentStudioWebhooksRoute,
+  path: '/new',
+  component: AgentStudioWebhooksNewPage,
+});
+
+export const agentStudioWebhooksEditRoute = createRoute({
+  getParentRoute: () => agentStudioWebhooksRoute,
+  path: '/$webhookId/edit',
+  component: AgentStudioWebhooksEditPage,
 });
 
 export const agentStudioSettingsRoute = createRoute({
@@ -568,6 +614,21 @@ export const agentStudioKnowledgeUploadRoute = createRoute({
   component: AgentStudioKnowledgeUploadPage,
 });
 
+// Document version upload as a dedicated section (Phase 3
+// zero-content-modals).
+export const agentStudioKnowledgeVersionUploadRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/$docId/versions/upload',
+  component: AgentStudioKnowledgeVersionUploadPage,
+});
+
+// Document preview as a dedicated section (Phase 3 zero-content-modals).
+export const agentStudioKnowledgePreviewRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/$docId/preview',
+  component: AgentStudioKnowledgePreviewPage,
+});
+
 export const agentStudioModelsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models',
@@ -616,11 +677,46 @@ export const agentStudioToolsEditRoute = createRoute({
   component: AgentStudioToolsEditPage,
 });
 
+// Instantiate a tool from a template as a dedicated section (Phase 3
+// zero-content-modals). Static /instantiate is unambiguous against the
+// `/$toolId/edit` sibling.
+export const agentStudioToolsInstantiateRoute = createRoute({
+  getParentRoute: () => agentStudioToolsRoute,
+  path: '/instantiate',
+  component: AgentStudioToolsInstantiatePage,
+});
+
 // Libraries additions (SIDEBAR_LEDGER.md P3): additive leaf routes, no moves.
 export const agentStudioMemoryRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/memory',
+  component: AgentStudioMemoryLayout,
+});
+
+export const agentStudioMemoryIndexRoute = createRoute({
+  getParentRoute: () => agentStudioMemoryRoute,
+  path: '/',
   component: AgentStudioMemoryPage,
+});
+
+// Memory create/detail/edit as dedicated sections (Phase 3
+// zero-content-modals), registered as children of the existing /memory route.
+export const agentStudioMemoryNewRoute = createRoute({
+  getParentRoute: () => agentStudioMemoryRoute,
+  path: '/new',
+  component: AgentStudioLibrariesMemoryNewPage,
+});
+
+export const agentStudioMemoryDetailRoute = createRoute({
+  getParentRoute: () => agentStudioMemoryRoute,
+  path: '/$memoryId',
+  component: AgentStudioLibrariesMemoryDetailPage,
+});
+
+export const agentStudioMemoryEditRoute = createRoute({
+  getParentRoute: () => agentStudioMemoryRoute,
+  path: '/$memoryId/edit',
+  component: AgentStudioLibrariesMemoryEditPage,
 });
 
 export const agentStudioDatasetsRoute = createRoute({
@@ -632,7 +728,21 @@ export const agentStudioDatasetsRoute = createRoute({
 export const agentStudioBlocksRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/blocks',
+  component: AgentStudioBlocksLayout,
+});
+
+export const agentStudioBlocksIndexRoute = createRoute({
+  getParentRoute: () => agentStudioBlocksRoute,
+  path: '/',
   component: AgentStudioBlocksPage,
+});
+
+// Set a control block as a dedicated section (Phase 3 zero-content-modals),
+// registered as a child of the existing /blocks route.
+export const agentStudioBlocksNewRoute = createRoute({
+  getParentRoute: () => agentStudioBlocksRoute,
+  path: '/new',
+  component: AgentStudioLibrariesBlocksNewPage,
 });
 
 export const agentStudioChannelsRoute = createRoute({
@@ -737,6 +847,19 @@ export const agentStudioTemplatesInstallRoute = createRoute({
   component: AgentStudioTemplatesInstallPage,
 });
 
+// Template gallery detail as a dedicated section (Phase 3
+// zero-content-modals). `/$templateId` sits beside `/$templateId/install`
+// with no collision (static tail segment).
+export const agentStudioTemplatesDetailRoute = createRoute({
+  getParentRoute: () => agentStudioTemplatesRoute,
+  path: '/$templateId',
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+    autoLand: typeof search.autoLand === 'string' ? search.autoLand : undefined,
+  }),
+  component: AgentStudioTemplatesDetailPage,
+});
+
 export const agentStudioApiRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/api',
@@ -803,6 +926,28 @@ export const agentStudioEvaluationsDatasetCasesNewRoute = createRoute({
   component: AgentStudioEvaluationsCasesNewPage,
 });
 
+// Dataset create, run start, and cases manager as dedicated sections
+// (Phase 3 zero-content-modals). ?returnTo is validated on the evaluations
+// layout above (C14 pattern). /datasets/new and /datasets/$datasetId/cases
+// cannot collide (different segment counts).
+export const agentStudioEvaluationsDatasetNewRoute = createRoute({
+  getParentRoute: () => agentStudioEvaluationsRoute,
+  path: '/datasets/new',
+  component: AgentStudioEvaluationsDatasetNewPage,
+});
+
+export const agentStudioEvaluationsRunNewRoute = createRoute({
+  getParentRoute: () => agentStudioEvaluationsRoute,
+  path: '/runs/new',
+  component: AgentStudioEvaluationsRunNewPage,
+});
+
+export const agentStudioEvaluationsDatasetCasesRoute = createRoute({
+  getParentRoute: () => agentStudioEvaluationsRoute,
+  path: '/datasets/$datasetId/cases',
+  component: AgentStudioEvaluationsDatasetCasesPage,
+});
+
 // ─── Deployment (PARKED — see note at the imports above) ────────────────
 // The /deployment shell (dashboard, pipelines, deployments, settings, …)
 // lives unrouted under src/future/deployment/. Nothing below this line may
@@ -860,10 +1005,13 @@ export const routeDefinitions = [
       agentStudioAgentBlockNewRoute,
       agentStudioAgentVersionImportRoute,
       agentStudioAgentRollbackRoute,
+      agentStudioAgentsCloneRoute,
     ]),
     agentStudioKnowledgeRoute.addChildren([
       agentStudioKnowledgeIndexRoute,
       agentStudioKnowledgeUploadRoute,
+      agentStudioKnowledgeVersionUploadRoute,
+      agentStudioKnowledgePreviewRoute,
     ]),
     agentStudioModelsRoute.addChildren([
       agentStudioModelsIndexRoute,
@@ -874,8 +1022,14 @@ export const routeDefinitions = [
       agentStudioToolsIndexRoute,
       agentStudioToolsNewRoute,
       agentStudioToolsEditRoute,
+      agentStudioToolsInstantiateRoute,
     ]),
-    agentStudioMemoryRoute,
+    agentStudioMemoryRoute.addChildren([
+      agentStudioMemoryIndexRoute,
+      agentStudioMemoryNewRoute,
+      agentStudioMemoryDetailRoute,
+      agentStudioMemoryEditRoute,
+    ]),
     agentStudioDatasetsRoute,
     agentStudioChannelsRoute.addChildren([
       agentStudioChannelsIndexRoute,
@@ -891,11 +1045,16 @@ export const routeDefinitions = [
       agentStudioIntegrationsIndexRoute,
       agentStudioIntegrationsLinkRoute,
       agentStudioIntegrationsOAuthAppNewRoute,
-      agentStudioWebhooksRoute,
+      agentStudioWebhooksRoute.addChildren([
+        agentStudioWebhooksIndexRoute,
+        agentStudioWebhooksNewRoute,
+        agentStudioWebhooksEditRoute,
+      ]),
     ]),
     agentStudioTemplatesRoute.addChildren([
       agentStudioTemplatesIndexRoute,
       agentStudioTemplatesInstallRoute,
+      agentStudioTemplatesDetailRoute,
     ]),
     agentStudioApiRoute,
     agentStudioTeamsRoute.addChildren([
@@ -908,6 +1067,9 @@ export const routeDefinitions = [
     agentStudioEvaluationsRoute.addChildren([
       agentStudioEvaluationsIndexRoute,
       agentStudioEvaluationsDatasetCasesNewRoute,
+      agentStudioEvaluationsDatasetNewRoute,
+      agentStudioEvaluationsRunNewRoute,
+      agentStudioEvaluationsDatasetCasesRoute,
     ]),
     agentStudioComplianceRoute.addChildren([
       agentStudioComplianceIndexRoute,
@@ -915,7 +1077,10 @@ export const routeDefinitions = [
       agentStudioComplianceHoldsNewRoute,
       agentStudioCompliancePurgesNewRoute,
     ]),
-    agentStudioBlocksRoute,
+    agentStudioBlocksRoute.addChildren([
+      agentStudioBlocksIndexRoute,
+      agentStudioBlocksNewRoute,
+    ]),
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,
       agentStudioSettingsProfileRoute,

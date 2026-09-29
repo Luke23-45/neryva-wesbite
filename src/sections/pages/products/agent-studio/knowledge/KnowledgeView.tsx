@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Upload, Pencil, Search, Database, Plug, Eye, Trash2, X, History } from 'lucide-react';
+import { Plus, Pencil, Search, Database, Plug, Eye, Trash2, X, History } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -20,20 +20,18 @@ import {
   DataCell,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
-import { KNOWLEDGE_MEDIA_TYPES, type AttachmentStatus } from '@hooks/studio/useAttachmentUpload';
+import { type AttachmentStatus } from '@hooks/studio/useAttachmentUpload';
 import { RETENTION_NOTE } from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
 import {
   useDocuments,
   useRenameDocumentSlug,
   useDeleteDocument,
-  useDocumentPreview,
   useKnowledgeSearch,
 } from '@hooks/studio/useSetupKnowledge';
-import { formatValidationDetails } from '@lib/engine/errors';
-import { ApiError } from '@lib/engine/client';
 import { checkSourceSlug } from '@lib/engine/setup-caps';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
+import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { useKnowledgeUploads } from './KnowledgeUploads';
 
 // Document states (engine knowledge schema): processing|ready|failed|retired.
@@ -161,15 +159,6 @@ const DOCUMENTS_CAP = 200;
 
 const TERMINAL_UPLOAD = new Set<AttachmentStatus>(['ready', 'failed', 'quarantined']);
 
-/** A4-04 — validation refusals carry the actionable reason in `details`
- *  (e.g. byte_length: exceeds KNOWLEDGE_MAX_UPLOAD_BYTES (1024)); the
- *  toast must name it, not just "Request validation failed". */
-function uploadErrorCopy(name: string, error: unknown): string {
-  const base = error instanceof Error ? error.message : 'upload failed';
-  const details = error instanceof ApiError ? formatValidationDetails(error.details) : null;
-  return details ? `${name}: ${base} — ${details}` : `${name}: ${base}`;
-}
-
 export function KnowledgeView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
@@ -178,18 +167,56 @@ export function KnowledgeView() {
   // A4-06: load the full 200-document window the engine serves (default 50
   // silently hid older documents); the cap is disclosed under the table.
   const documents = useDocuments(DOCUMENTS_CAP);
-  const { uploads, attach, dismiss } = useKnowledgeUploads();
+  const { uploads, dismiss } = useKnowledgeUploads();
   const rename = useRenameDocumentSlug();
   const remove = useDeleteDocument();
 
   const [filter, setFilter] = useState('');
   const [renameTarget, setRenameTarget] = useState<{ id: string; slug: string } | null>(null);
-  const [previewTarget, setPreviewTarget] = useState<{ id: string; slug: string } | null>(null);
+  const [renameSlug, setRenameSlug] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; slug: string } | null>(null);
-  // A4-11 — version upload target: the document a new version is appended to.
-  const [versionTarget, setVersionTarget] = useState<{ id: string; slug: string; latestVersion: number | null } | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Inline rename: a typed-but-unsaved slug is unsent content — leaving
+  // the page discards it.
+  const renameDirty = renameTarget !== null && renameSlug !== renameTarget.slug;
+  const { dialog: renameDirtyDialog } = useDirtyGuard(
+    renameDirty,
+    'You have an unsaved pin address rename. Leaving now discards it.',
+  );
+
+  // Same rules as the old RenameModal, byte-identical: kebab-case via the
+  // shared checkSourceSlug, empty input asks for an address, an unchanged
+  // slug is a no-op (Save stays disabled).
+  const renameProblem = renameSlug.trim() ? checkSourceSlug(renameSlug) : 'Enter the new pin address.';
+  const renameUnchanged = renameTarget !== null && renameSlug.trim().toLowerCase() === renameTarget.slug;
+  const renameInvalid = checkSourceSlug(renameSlug) !== null;
+
+  const startRename = (id: string, slug: string) => {
+    if (renameTarget?.id === id) {
+      setRenameTarget(null);
+      setRenameSlug('');
+      return;
+    }
+    setRenameTarget({ id, slug });
+    setRenameSlug(slug);
+  };
+
+  const cancelRename = () => {
+    setRenameTarget(null);
+    setRenameSlug('');
+  };
+
+  const saveRename = () => {
+    if (!renameTarget || renameInvalid || renameUnchanged || rename.isPending) {
+      return;
+    }
+    rename.mutate(
+      { documentId: renameTarget.id, sourceSlug: renameSlug.trim().toLowerCase() },
+      { onSuccess: () => cancelRename() },
+    );
+  };
 
   const search = useKnowledgeSearch(searchQuery, 5, { enabled: searchQuery.trim().length > 0 });
 
@@ -217,6 +244,7 @@ export function KnowledgeView() {
 
   return (
     <ViewShell>
+      {renameDirtyDialog}
       <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewHeader>
           <ViewTitle>Knowledge base</ViewTitle>
@@ -345,7 +373,47 @@ export function KnowledgeView() {
                     {rows.map((doc, i) => (
                       <DataRow key={doc.id} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 3} $interactive={false}>
                         <DataCell $w="24%">
-                          <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
+                          {renameTarget?.id === doc.id ? (
+                            <div>
+                              <div style={{ fontSize: 12, opacity: 0.65, marginBottom: 6 }}>
+                                <Mono>{renameTarget.slug}</Mono> → <Mono>{renameSlug.trim().toLowerCase() || '…'}</Mono>
+                              </div>
+                              <TextInput
+                                aria-label={`New pin address for ${renameTarget.slug}`}
+                                value={renameSlug}
+                                onChange={(e) => setRenameSlug(e.target.value)}
+                                placeholder="kebab-case, 3–64 chars"
+                                autoFocus
+                                error={renameSlug.trim() && !renameUnchanged ? (renameProblem ?? undefined) : undefined}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveRename();
+                                  } else if (e.key === 'Escape') {
+                                    cancelRename();
+                                  }
+                                }}
+                              />
+                              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                <ActionButton
+                                  size="sm"
+                                  disabled={renameInvalid || renameUnchanged || rename.isPending}
+                                  title="Rename the pin address — history is never rewritten"
+                                  onClick={saveRename}
+                                >
+                                  Save
+                                </ActionButton>
+                                <ActionButton variant="ghost" size="sm" onClick={cancelRename}>
+                                  Cancel
+                                </ActionButton>
+                              </div>
+                              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, lineHeight: 1.5 }}>
+                                Existing pins referencing the old slug resolve visibly unresolved at next publish —
+                                history is never rewritten. A collision refuses (409), never silent-renames.
+                              </div>
+                            </div>
+                          ) : (
+                            <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
+                          )}
                         </DataCell>
                         <DataCell $w="24%">{doc.title ?? <Muted>—</Muted>}</DataCell>
                         <DataCell $w="12%">
@@ -361,7 +429,7 @@ export function KnowledgeView() {
                               type="button"
                               aria-label={`Preview ${doc.sourceSlug}`}
                               title="Preview the stored text agents retrieve"
-                              onClick={() => setPreviewTarget({ id: doc.id, slug: doc.sourceSlug })}
+                              onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/preview` })}
                             >
                               <Eye size={13} strokeWidth={1.7} />
                             </IconBtn>
@@ -371,7 +439,7 @@ export function KnowledgeView() {
                               aria-label={`Rename pin address of ${doc.sourceSlug}`}
                               title={canWrite ? 'Rename pin address' : writeDenied}
                               disabled={!canWrite || rename.isPending}
-                              onClick={() => setRenameTarget({ id: doc.id, slug: doc.sourceSlug })}
+                              onClick={() => startRename(doc.id, doc.sourceSlug)}
                             >
                               <Pencil size={13} strokeWidth={1.7} />
                             </IconBtn>
@@ -385,7 +453,7 @@ export function KnowledgeView() {
                                     : writeDenied
                                 }
                                 disabled={!canWrite}
-                                onClick={() => setVersionTarget({ id: doc.id, slug: doc.sourceSlug, latestVersion: doc.latestVersion ?? null })}
+                                onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/versions/upload` })}
                               >
                                 <History size={13} strokeWidth={1.7} />
                               </IconBtn>
@@ -488,14 +556,6 @@ export function KnowledgeView() {
         </SectionGap>
       </motion.div>
 
-      <VersionUploadModal
-        target={versionTarget}
-        onClose={() => setVersionTarget(null)}
-        onAttach={attach}
-        canWrite={canWrite}
-        writeDenied={writeDenied}
-      />
-      <PreviewModal target={previewTarget} onClose={() => setPreviewTarget(null)} />
       <DeleteModal
         target={deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -509,219 +569,7 @@ export function KnowledgeView() {
           });
         }}
       />
-      <RenameModal
-        target={renameTarget}
-        onClose={() => setRenameTarget(null)}
-        onRename={(slug) => {
-          if (!renameTarget) {
-            return;
-          }
-          rename.mutate(
-            { documentId: renameTarget.id, sourceSlug: slug },
-            { onSuccess: () => setRenameTarget(null) },
-          );
-        }}
-        pending={rename.isPending}
-      />
     </ViewShell>
-  );
-}
-
-/**
- * A4-11 — upload a new version of an existing manual document. Single file
- * picker only: no slug field (the pin address is immutable on versions) and
- * no title field (the document keeps its title). The tracker row labels the
- * target ("new version of <slug>"); on authorize refusal the modal stays
- * open with the selection intact (A4-09).
- */
-function VersionUploadModal({
-  target,
-  onClose,
-  onAttach,
-  canWrite,
-  writeDenied,
-}: {
-  target: { id: string; slug: string; latestVersion: number | null } | null;
-  onClose: () => void;
-  onAttach: (input: { file: File; targetDocumentId: string; versionOfSlug: string | null }) => Promise<string | null>;
-  canWrite: boolean;
-  writeDenied: string;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  // Reset per target so reopening the modal never shows a stale file
-  // (render-time adjustment, not an effect — react-hooks/set-state-in-effect).
-  const [lastTargetId, setLastTargetId] = useState<string | null>(null);
-  if ((target?.id ?? null) !== lastTargetId) {
-    setLastTargetId(target?.id ?? null);
-    setFile(null);
-    setBusy(false);
-  }
-
-  const submit = () => {
-    if (!target || !file || busy) {
-      return;
-    }
-    setBusy(true);
-    void (async () => {
-      try {
-        const sessionId = await onAttach({ file, targetDocumentId: target.id, versionOfSlug: target.slug });
-        if (sessionId === null) {
-          toast.error(`'${file.name}' is not a supported type (${KNOWLEDGE_MEDIA_TYPES.join(', ')})`);
-          setBusy(false);
-        } else {
-          toast.success('New version authorized — tracking ingestion to READY');
-          setFile(null);
-          setBusy(false);
-          onClose();
-        }
-      } catch (error) {
-        // A4-09 — authorize refusal: keep the selection and the modal open
-        // so the user can address the refusal and retry without reselecting.
-        toast.error(uploadErrorCopy(file.name, error));
-        setBusy(false);
-      }
-    })();
-  };
-
-  return (
-    <Modal
-      open={target !== null}
-      onClose={onClose}
-      title={
-        target ? (
-          <>
-            Upload new version — <Mono>{target.slug}</Mono>
-          </>
-        ) : (
-          'Upload new version'
-        )
-      }
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!canWrite || !file || busy}
-            title={canWrite ? 'Authorize a version-upload session for this file' : writeDenied}
-            onClick={submit}
-          >
-            <Upload size={13} strokeWidth={1.8} />
-            Upload new version
-          </ActionButton>
-        </>
-      }
-    >
-      {target && (
-        <>
-          <p style={{ fontSize: 13, margin: '0 0 4px' }}>
-            Current version: <strong>{target.latestVersion ?? '—'}</strong>
-            {target.latestVersion === null && ' — this upload becomes version 1'}
-          </p>
-          <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 12px' }}>
-            {/* K12 (console field audit): pins resolve to the latest READY
-                version at publish-snapshot time — a version reaching READY
-                does NOT re-point already-published snapshots. The old copy
-                ("becomes the served version once ingestion reaches READY")
-                contradicted the row tooltip ("agents resolve the latest
-                version at next publish"). */}
-            The pin address does not change. The new version becomes the served version at the next publish, once
-            ingestion reaches READY; the previous version stays in history.
-          </p>
-          <input
-            ref={fileRef}
-            type="file"
-            style={{ display: 'none' }}
-            accept={KNOWLEDGE_MEDIA_TYPES.join(',')}
-            onChange={(e) => {
-              setFile(e.target.files?.[0] ?? null);
-              e.target.value = '';
-            }}
-          />
-          <ActionButton variant="secondary" onClick={() => fileRef.current?.click()}>
-            Choose file (pdf, markdown, text, csv, json, image)
-          </ActionButton>
-          {file && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginTop: 12 }}>
-              <strong style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</strong>
-              <Muted>{(file.size / 1024).toFixed(1)} KB</Muted>
-              <ActionButton variant="ghost" size="sm" onClick={() => setFile(null)}>
-                Remove
-              </ActionButton>
-            </div>
-          )}
-        </>
-      )}
-    </Modal>
-  );
-}
-
-/** A4-01 — the stored text agents retrieve, inspectable. Latest-version
- *  chunks in sequence order; the server caps the window and says when the
- *  tail is cut (truncated). */
-function PreviewModal({ target, onClose }: { target: { id: string; slug: string } | null; onClose: () => void }) {
-  const preview = useDocumentPreview(target?.id ?? null, { enabled: target !== null });
-
-  return (
-    <Modal
-      open={target !== null}
-      onClose={onClose}
-      title="Document preview"
-      width={720}
-      footer={
-        <ActionButton variant="secondary" onClick={onClose}>
-          Close
-        </ActionButton>
-      }
-    >
-      <QueryView
-        query={preview}
-        isEmpty={(p) => p === null}
-        empty={{ title: 'Preview unavailable', description: 'The stored text could not be read.' }}
-      >
-        {(doc) => {
-          // Type guard only: isEmpty already renders the empty state for
-          // null, so children never receives it at runtime.
-          if (!doc) return null;
-          return (
-          <div>
-            <HitMeta>
-              <Mono>{doc.title ?? doc.sourceSlug}</Mono>
-              <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
-              <Muted>
-                version {doc.latestVersion ?? '—'} · {doc.totalChunks} chunk{doc.totalChunks === 1 ? '' : 's'}
-              </Muted>
-            </HitMeta>
-            {doc.chunks.length === 0 ? (
-              <Muted>No stored text yet — chunks appear once ingestion reaches READY.</Muted>
-            ) : (
-              <>
-                {doc.truncated && (
-                  <p style={{ fontSize: 12, opacity: 0.65 }}>
-                    Showing the first {doc.chunks.length} of {doc.totalChunks} chunks — the stored text continues.
-                  </p>
-                )}
-                {doc.chunks.map((chunk) => (
-                  <HitCard key={chunk.sequence}>
-                    <HitMeta>
-                      <Muted>
-                        chunk #{chunk.sequence}
-                        {chunk.byteStart !== null && chunk.byteEnd !== null ? ` · bytes ${chunk.byteStart}–${chunk.byteEnd}` : ''}
-                      </Muted>
-                    </HitMeta>
-                    <HitText>{chunk.text}</HitText>
-                  </HitCard>
-                ))}
-              </>
-            )}
-          </div>
-          );
-        }}
-      </QueryView>
-    </Modal>
   );
 }
 
@@ -759,56 +607,6 @@ function DeleteModal({
         Retire <Mono>{target?.slug}</Mono>? It leaves retrieval immediately — no agent can pull its chunks again. The
         mapping stays as a tombstone so history and existing pins stay answerable; this cannot be undone from the console.
       </p>
-    </Modal>
-  );
-}
-
-function RenameModal({
-  target,
-  onClose,
-  onRename,
-  pending,
-}: {
-  target: { id: string; slug: string } | null;
-  onClose: () => void;
-  onRename: (slug: string) => void;
-  pending: boolean;
-}) {
-  const [slug, setSlug] = useState('');
-  const problem = slug.trim() ? checkSourceSlug(slug) : 'Enter the new pin address.';
-  const unchanged = target !== null && slug.trim().toLowerCase() === target.slug;
-
-  return (
-    <Modal
-      open={target !== null}
-      onClose={onClose}
-      title="Rename pin address"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton disabled={target === null || !!checkSourceSlug(slug) || unchanged || pending} onClick={() => onRename(slug.trim().toLowerCase())}>
-            Rename
-          </ActionButton>
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.75 }}>
-        <Mono>{target?.slug}</Mono> → <Mono>{slug.trim().toLowerCase() || '…'}</Mono>. Existing pins referencing the old slug resolve
-        visibly unresolved at next publish — history is never rewritten. A collision refuses (409), never silent-renames.
-      </p>
-      <div style={{ marginTop: 12 }}>
-        <TextInput
-          label="New pin address"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="kebab-case, 3–64 chars"
-          autoFocus
-          error={slug.trim() && !unchanged ? (problem ?? undefined) : undefined}
-        />
-      </div>
     </Modal>
   );
 }

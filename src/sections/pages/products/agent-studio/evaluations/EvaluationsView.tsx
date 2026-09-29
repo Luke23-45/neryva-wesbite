@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { Plus, FlaskConical } from 'lucide-react';
@@ -7,8 +6,6 @@ import { useNavigate } from '@tanstack/react-router';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { Drawer } from '@components/common/ui/Drawer';
-import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -23,26 +20,13 @@ import {
 import { pageItem } from '@styles/motion';
 import {
   useEvalDatasets,
-  useCreateEvalDataset,
   useEvalRuns,
   useStartEvalRun,
   useDatasetRecall,
-  useEvalCases,
-  useUpdateEvalCase,
-  useDeleteEvalCase,
   useDeleteEvalDataset,
-  useExportEvalDataset,
-  useImportEvalCases,
-  downloadExportedFile,
-  EVAL_DATASET_NAME_MAX,
-  EVAL_DATASET_DESC_MAX,
   type EvalRun,
-  type EvalCase,
 } from '@hooks/studio/useSetupEval';
-import { useAssistants } from '@hooks/studio/useAssistants';
-import { useAssistantVersions } from '@hooks/studio/useAgentAuthoring';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
-import { buildCase, draftFromCase, type CaseDraft } from '@lib/engine/eval-cases';
 import { describeDatasetOrigin } from '../builder/lib/eval-model';
 import { EvalResults } from '../builder/inspector/EvalResults';
 import { useOrg } from '@/Context/OrgContext';
@@ -96,10 +80,7 @@ export function EvaluationsView() {
   const datasets = useEvalDatasets();
   const runs = useEvalRuns();
   const startRun = useStartEvalRun();
-  const [datasetOpen, setDatasetOpen] = useState(false);
-  const [manageTarget, setManageTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [runOpen, setRunOpen] = useState(false);
   const [recallDatasetId, setRecallDatasetId] = useState('');
   const [recallK, setRecallK] = useState('5');
   const [resultsRunId, setResultsRunId] = useState<string | null>(null);
@@ -136,11 +117,11 @@ export function EvaluationsView() {
           </ViewSubtitle>
         </ViewHeader>
         <div style={{ display: 'flex', gap: 8 }}>
-          <ActionButton variant="secondary" size="sm" disabled={!canWrite} title={canWrite ? 'Start an eval run' : writeDenied} onClick={() => setRunOpen(true)}>
+          <ActionButton variant="secondary" size="sm" disabled={!canWrite} title={canWrite ? 'Start an eval run' : writeDenied} onClick={() => navigate({ to: '/agent-studio/evaluations/runs/new', search: { returnTo: undefined } })}>
             <FlaskConical size={13} strokeWidth={1.8} />
             Start run
           </ActionButton>
-          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Create a dataset' : writeDenied} onClick={() => setDatasetOpen(true)}>
+          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Create a dataset' : writeDenied} onClick={() => navigate({ to: '/agent-studio/evaluations/datasets/new', search: { returnTo: undefined } })}>
             <Plus size={14} strokeWidth={2} />
             New dataset
           </ActionButton>
@@ -173,7 +154,18 @@ export function EvaluationsView() {
                     <DataCell $w="12%">{dataset.createdAt ? dataset.createdAt.slice(0, 10) : <Muted>—</Muted>}</DataCell>
                     <DataCell $w="16%" $align="right">
                       <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <ActionButton variant="ghost" size="sm" title="List, edit, delete, import, export cases" onClick={() => setManageTarget({ id: dataset.id, name: dataset.name })}>
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          title="List, edit, delete, import, export cases"
+                          onClick={() =>
+                            navigate({
+                              to: '/agent-studio/evaluations/datasets/$datasetId/cases',
+                              params: { datasetId: dataset.id },
+                              search: { returnTo: undefined },
+                            })
+                          }
+                        >
                           Cases
                         </ActionButton>
                         <ActionButton
@@ -326,16 +318,6 @@ export function EvaluationsView() {
         </SectionGap>
       </motion.div>
 
-      <DatasetModal open={datasetOpen} onClose={() => setDatasetOpen(false)} />
-      {manageTarget && (
-        <CasesManagerModal
-          datasetId={manageTarget.id}
-          name={manageTarget.name}
-          canWrite={canWrite}
-          writeDenied={writeDenied}
-          onClose={() => setManageTarget(null)}
-        />
-      )}
       {deleteTarget && (
         <DeleteDatasetModal
           datasetId={deleteTarget.id}
@@ -343,7 +325,6 @@ export function EvaluationsView() {
           onClose={() => setDeleteTarget(null)}
         />
       )}
-      <StartRunModal open={runOpen} onClose={() => setRunOpen(false)} />
       <Drawer
         open={resultsRun !== null}
         onClose={() => setResultsRunId(null)}
@@ -414,255 +395,6 @@ function RecallView({ datasetId, k }: { datasetId: string; k: number }) {
   );
 }
 
-/**
- * A4-41/A4-43/A4-44 — full case management for one dataset: list (with
- * exact total), per-case edit + delete, JSON/CSV export, JSON/CSV import.
- */
-function CasesManagerModal({
-  datasetId,
-  name,
-  canWrite,
-  writeDenied,
-  onClose,
-}: {
-  datasetId: string;
-  name: string;
-  canWrite: boolean;
-  writeDenied: string;
-  onClose: () => void;
-}) {
-  const cases = useEvalCases(datasetId, { limit: 100 });
-  const updateCase = useUpdateEvalCase();
-  const deleteCase = useDeleteEvalCase();
-  const exportDataset = useExportEvalDataset();
-  const importCases = useImportEvalCases();
-  const [editing, setEditing] = useState<EvalCase | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  const doExport = (format: 'json' | 'csv') => {
-    exportDataset.mutate(
-      { datasetId, format },
-      { onSuccess: (exp) => downloadExportedFile(exp) },
-    );
-  };
-
-  const onImportFile = (file: File | undefined) => {
-    if (!file) return;
-    const format = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'json';
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === 'string' ? reader.result : '';
-      if (format === 'json') {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-          // A4-44 — a file that is not JSON must fail visibly; silently
-          // doing nothing reads as a broken Import button.
-          toast.error('Could not import: the file is not valid JSON.');
-          return;
-        }
-        importCases.mutate({ datasetId, format: 'json', payload: parsed });
-      } else {
-        importCases.mutate({ datasetId, format: 'csv', payload: text });
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const total = cases.data?.total ?? 0;
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Cases — ${name}`}
-      width={760}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Close
-          </ActionButton>
-          <ActionButton variant="ghost" size="sm" disabled={exportDataset.isPending} onClick={() => doExport('json')}>
-            Export JSON
-          </ActionButton>
-          <ActionButton variant="ghost" size="sm" disabled={exportDataset.isPending} onClick={() => doExport('csv')}>
-            Export CSV
-          </ActionButton>
-          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json,.csv"
-              style={{ display: 'none' }}
-              disabled={!canWrite || importCases.isPending}
-              onChange={(e) => {
-                onImportFile(e.target.files?.[0]);
-                e.target.value = '';
-              }}
-            />
-            <ActionButton
-              variant="ghost"
-              size="sm"
-              disabled={!canWrite || importCases.isPending}
-              title={canWrite ? 'Import cases from JSON (export shape) or CSV' : writeDenied}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Import…
-            </ActionButton>
-          </span>
-        </>
-      }
-    >
-      {editing ? (
-        <CaseEditForm
-          caseRow={editing}
-          saving={updateCase.isPending}
-          onCancel={() => setEditing(null)}
-          onSave={(body) =>
-            updateCase.mutate(
-              { datasetId, caseId: editing.id, body },
-              { onSuccess: () => setEditing(null) },
-            )
-          }
-        />
-      ) : (
-        <QueryView
-          query={cases}
-          isEmpty={(d) => d.total === 0}
-          empty={{ title: 'No cases yet', description: 'Add cases from the datasets table, or import a JSON/CSV file below.' }}
-        >
-          {(list) => (
-            <>
-              <p style={{ fontSize: 12, opacity: 0.7 }}>
-                {total} case{total === 1 ? '' : 's'} total
-                {total > list.cases.length ? ` — showing first ${list.cases.length}` : ''}.
-              </p>
-              <DataTable>
-                <DataHead>
-                  <DataCell $w="8%">#</DataCell>
-                  <DataCell $w="52%">Input</DataCell>
-                  <DataCell $w="40%" $align="right">Actions</DataCell>
-                </DataHead>
-                {list.cases.map((c) => (
-                  <DataRow key={c.id} $interactive={false}>
-                    <DataCell $w="8%">
-                      <Mono>{c.sequence}</Mono>
-                    </DataCell>
-                    <DataCell $w="52%">
-                      <span style={{ fontSize: 13 }}>
-                        {typeof c.input.text === 'string' && c.input.text.length > 120
-                          ? `${c.input.text.slice(0, 120)}…`
-                          : String(c.input.text ?? '—')}
-                      </span>
-                    </DataCell>
-                    <DataCell $w="40%" $align="right">
-                      {confirmDeleteId === c.id ? (
-                        <span style={{ display: 'inline-flex', gap: 4 }}>
-                          <ActionButton
-                            variant="ghost"
-                            size="sm"
-                            disabled={deleteCase.isPending}
-                            onClick={() =>
-                              deleteCase.mutate(
-                                { datasetId, caseId: c.id },
-                                { onSuccess: () => setConfirmDeleteId(null) },
-                              )
-                            }
-                          >
-                            Confirm delete
-                          </ActionButton>
-                          <ActionButton variant="secondary" size="sm" onClick={() => setConfirmDeleteId(null)}>
-                            Cancel
-                          </ActionButton>
-                        </span>
-                      ) : (
-                        <span style={{ display: 'inline-flex', gap: 4 }}>
-                          <ActionButton
-                            variant="ghost"
-                            size="sm"
-                            disabled={!canWrite}
-                            title={canWrite ? 'Edit this case' : writeDenied}
-                            onClick={() => setEditing(c)}
-                          >
-                            Edit
-                          </ActionButton>
-                          <ActionButton
-                            variant="ghost"
-                            size="sm"
-                            disabled={!canWrite}
-                            title={canWrite ? 'Delete this case' : writeDenied}
-                            onClick={() => setConfirmDeleteId(c.id)}
-                          >
-                            Delete
-                          </ActionButton>
-                        </span>
-                      )}
-                    </DataCell>
-                  </DataRow>
-                ))}
-              </DataTable>
-            </>
-          )}
-        </QueryView>
-      )}
-    </Modal>
-  );
-}
-
-/** A4-41 — edit one case through the same strict case vocabulary as add. */
-function CaseEditForm({
-  caseRow,
-  saving,
-  onCancel,
-  onSave,
-}: {
-  caseRow: EvalCase;
-  saving: boolean;
-  onCancel: () => void;
-  onSave: (body: Record<string, unknown>) => void;
-}) {
-  const [draft, setDraft] = useState<CaseDraft>(() => draftFromCase(caseRow));
-  const built = buildCase(draft);
-  const set = (patch: Partial<CaseDraft>) => setDraft((prev) => ({ ...prev, ...patch }));
-
-  return (
-    <div>
-      <p style={{ fontSize: 12, opacity: 0.7 }}>
-        Editing case <Mono>#{caseRow.sequence}</Mono> — the full body is re-validated; identity and sequence are preserved.
-      </p>
-      <TextArea label="Input text (required)" value={draft.text} onChange={(e) => set({ text: e.target.value })} rows={2} />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-        <TextArea label="Must contain (one per line)" value={draft.contains} onChange={(e) => set({ contains: e.target.value })} rows={2} />
-        <TextArea label="Must not contain (one per line)" value={draft.notContains} onChange={(e) => set({ notContains: e.target.value })} rows={2} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-        <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set({ stateAssertions: e.target.value })} placeholder="tool.ticket_lookup=called" />
-        <TextInput label="Expected document ids, uuid (one per line, drives recall)" value={draft.documentIds} onChange={(e) => set({ documentIds: e.target.value })} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginTop: 8 }}>
-        <TextInput label="Rubric instructions (optional)" value={draft.rubricInstructions} onChange={(e) => set({ rubricInstructions: e.target.value })} />
-        <TextInput label="Min score" value={draft.minScore} onChange={(e) => set({ minScore: e.target.value })} />
-      </div>
-      {built.problem && <p style={{ fontSize: 12, color: '#f87171' }}>{built.problem}</p>}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-        <ActionButton variant="secondary" size="sm" onClick={onCancel}>
-          Back to list
-        </ActionButton>
-        <ActionButton
-          size="sm"
-          disabled={!built.body || saving}
-          title={built.problem ?? 'Save the corrected case'}
-          onClick={() => built.body && onSave(built.body)}
-        >
-          Save changes
-        </ActionButton>
-      </div>
-    </div>
-  );
-}
-
 /** A4-42 — delete a dataset with an honest warning; the engine 409s while runs reference it. */
 function DeleteDatasetModal({
   datasetId,
@@ -697,133 +429,6 @@ function DeleteDatasetModal({
       <p style={{ fontSize: 13 }}>
         This permanently deletes the dataset and all of its cases. Datasets with eval runs cannot be
         deleted — runs are append-only publish evidence, and the engine will refuse with the run count.
-      </p>
-    </Modal>
-  );
-}
-
-function DatasetModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const create = useCreateEvalDataset();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="New dataset"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!name.trim() || create.isPending}
-            onClick={() => create.mutate({ name: name.trim(), ...(description.trim() ? { description: description.trim() } : {}) }, { onSuccess: () => { setName(''); setDescription(''); onClose(); } })}
-          >
-            Create
-          </ActionButton>
-        </>
-      }
-    >
-      {/* E-02: the engine silently truncates names >128 and descriptions >2048
-          — cap the inputs and show the count so nothing is lost silently. */}
-      <TextInput
-        label={`Name${name ? ` — ${name.length}/${EVAL_DATASET_NAME_MAX}` : ''}`}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. refund-regressions"
-        maxLength={EVAL_DATASET_NAME_MAX}
-        autoFocus
-      />
-      <div style={{ marginTop: 12 }}>
-        <TextInput
-          label={`Description (optional)${description ? ` — ${description.length}/${EVAL_DATASET_DESC_MAX}` : ''}`}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="What this suite guards"
-          maxLength={EVAL_DATASET_DESC_MAX}
-        />
-      </div>
-    </Modal>
-  );
-}
-
-function StartRunModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const start = useStartEvalRun();
-  const datasets = useEvalDatasets();
-  const assistants = useAssistants();
-  const [datasetId, setDatasetId] = useState('');
-  const [assistantId, setAssistantId] = useState('');
-  const [versionId, setVersionId] = useState('');
-  const [attempts, setAttempts] = useState('1');
-  const versions = useAssistantVersions(assistantId || null);
-  const publishedVersions = (versions.data ?? []).filter((v) => v.status === 'PUBLISHED');
-
-  // Published versions only for ad-hoc runs from here (drafts evaluate from
-  // their agent page, where the snapshot synthesis context lives).
-  const valid = datasetId !== '' && versionId !== '';
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Start eval run"
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!valid || start.isPending}
-            onClick={() =>
-              start.mutate(
-                { datasetId, assistantVersionId: versionId.trim(), attemptsPerCase: Math.min(Math.max(1, Math.round(Number(attempts) || 1)), 5) },
-                { onSuccess: () => onClose() },
-              )
-            }
-          >
-            Start run
-          </ActionButton>
-        </>
-      }
-    >
-      <label style={{ fontSize: 13, display: 'block' }}>
-        Dataset
-        <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          <option value="">Pick a dataset…</option>
-          {(datasets.data ?? []).map((dataset) => (
-            <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
-          ))}
-        </select>
-      </label>
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Assistant (to locate published versions)
-        <select value={assistantId} onChange={(e) => { setAssistantId(e.target.value); setVersionId(''); }} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          <option value="">Pick an assistant…</option>
-          {(assistants.data ?? []).map((assistant) => (
-            <option key={assistant.id} value={assistant.id}>{assistant.name}</option>
-          ))}
-        </select>
-      </label>
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Published version
-        <select value={versionId} onChange={(e) => setVersionId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          <option value="">{assistantId ? 'Pick a PUBLISHED version…' : 'Pick an assistant first…'}</option>
-          {publishedVersions.map((v) => (
-            <option key={v.id} value={v.id}>
-              v{v.version}{v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div style={{ marginTop: 12, maxWidth: 200 }}>
-        <TextInput label="Attempts per case (1–5)" type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
-      </div>
-      <p style={{ fontSize: 12, opacity: 0.65 }}>
-        Generic runs execute PUBLISHED versions. Draft evaluation (with snapshot synthesis) runs from the version&apos;s agent page.
       </p>
     </Modal>
   );

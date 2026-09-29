@@ -31,8 +31,6 @@ import { useAssistants, type AssistantSummary } from '@hooks/studio/useAssistant
 import { useFleetKnowledgeHealth } from '@hooks/studio/useFleetHealth';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
-import { ClonePicker } from './ClonePicker';
-import { buildAgentBuildPath } from '../builder/lib/slot-model';
 
 import {
   AgentMain,
@@ -60,7 +58,6 @@ const sortOptions: { value: Sort; label: string }[] = [
 export function AgentsView() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
-  const [cloneSourceId, setCloneSourceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { role } = useOrg();
   const canClone = canSetup(role, 'setup:author');
@@ -162,7 +159,7 @@ export function AgentsView() {
                     onOpen={() => openAgent(a.id)}
                     canClone={canClone}
                     cloneDenied={cloneDenied}
-                    onClone={() => setCloneSourceId(a.id)}
+                    onClone={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: a.id, returnTo: '/agent-studio/agents' } })}
                   />
                 ))}
               </DataTable>
@@ -171,17 +168,6 @@ export function AgentsView() {
           </QueryView>
         </Panel>
       </motion.div>
-      {cloneSourceId && (
-        <ClonePicker
-          open
-          onClose={() => setCloneSourceId(null)}
-          initialSourceId={cloneSourceId}
-          onCloned={(id) => {
-            setCloneSourceId(null);
-            navigate({ to: buildAgentBuildPath(id) });
-          }}
-        />
-      )}
     </ViewShell>
   );
 }

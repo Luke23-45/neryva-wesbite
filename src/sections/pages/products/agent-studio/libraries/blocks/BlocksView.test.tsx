@@ -3,10 +3,17 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { theme } from '@styles/theme';
 import { BlocksView } from './BlocksView';
 
-const setMutate = vi.fn();
 const clearMutate = vi.fn();
 
 vi.mock('@/Context/OrgContext', () => ({
@@ -24,30 +31,52 @@ vi.mock('@hooks/studio/useSetupOperate', async (importOriginal) => {
   return {
     ...actual,
     useControlBlocks: () => ({ data: BLOCKS, isPending: false, isError: false, error: null, refetch: vi.fn() }),
-    useSetControlBlock: () => ({ mutate: setMutate, isPending: false }),
     useClearControlBlock: () => ({ mutate: clearMutate, isPending: false }),
     useMemberNameMap: () => ({ nameOf: (id: string) => ({ 'ava@acme.co': 'Ava', 'li@acme.co': 'Li' })[id] ?? null }),
   };
 });
 
-function shell() {
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <BlocksView />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
+async function shell() {
+  const rootRoute = createRootRoute();
+  const librariesRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/blocks',
+    component: () => <Outlet />,
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => librariesRoute,
+    path: '/',
+    component: () => (
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <BlocksView />
+        </QueryClientProvider>
+      </ThemeProvider>
+    ),
+  });
+  // Stub for the Phase 3 section route (wired by the coordinator at review).
+  const newRoute = createRoute({
+    getParentRoute: () => librariesRoute,
+    path: '/new',
+    component: () => <div>new block section</div>,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([librariesRoute.addChildren([indexRoute, newRoute])]),
+    history: createMemoryHistory({ initialEntries: ['/agent-studio/blocks'] }),
+  });
+  await act(async () => {
+    render(<RouterProvider router={router} />);
+  });
+  return router;
 }
 
 beforeEach(() => {
-  setMutate.mockReset();
   clearMutate.mockReset();
 });
 
 describe('BlocksView', () => {
-  it('renders active rows with Expires-in-N pills and provenance columns; expired hidden by default', () => {
-    shell();
+  it('renders active rows with Expires-in-N pills and provenance columns; expired hidden by default', async () => {
+    await shell();
     expect(screen.getByText('refund-payment')).toBeTruthy();
     expect(screen.getByText('support-starter')).toBeTruthy();
     expect(screen.getByText(/Expires in 3 days/)).toBeTruthy();
@@ -57,7 +86,7 @@ describe('BlocksView', () => {
   });
 
   it('status filter surfaces expired rows with the Expired pill', async () => {
-    shell();
+    await shell();
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Filter by status'), { target: { value: 'expired' } });
     });
@@ -67,17 +96,16 @@ describe('BlocksView', () => {
   });
 
   it('search narrows by name and reason', async () => {
-    const view = shell();
+    await shell();
     await act(async () => {
       fireEvent.change(screen.getByPlaceholderText(/Name or reason/), { target: { value: 'legal' } });
     });
     expect(screen.getByText('support-starter')).toBeTruthy();
     expect(screen.queryByText('refund-payment')).toBeNull();
-    view.unmount();
   });
 
   it('clear asks first and clears only the confirmed row', async () => {
-    shell();
+    await shell();
     const row = screen.getByText('refund-payment').closest('tr') ?? screen.getByText('refund-payment').parentElement;
     const clearButton = within(row as HTMLElement).getByRole('button', { name: 'Clear' });
     await act(async () => {
@@ -91,55 +119,17 @@ describe('BlocksView', () => {
     expect(vi.mocked(clearMutate).mock.calls[0]?.[0]).toBe('b1');
   });
 
-  it('rejects past expiry and confirms permanent blocks twice', async () => {
-    shell();
+  it('Set block navigates to the dedicated section (no modal)', async () => {
+    const router = await shell();
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /set block/i })[0]);
+      fireEvent.click(screen.getByRole('button', { name: /^Set block$/ }));
     });
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText(/Target name/), { target: { value: 'x-tool' } });
-      fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'why, audited' } });
-      fireEvent.change(screen.getByLabelText('Block expiry'), { target: { value: '2020-01-01T00:00' } });
-    });
-    expect(screen.getByText(/must be in the future/)).toBeTruthy();
-    // Back to permanent: first click arms, second click commits without expiresAt.
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Block expiry'), { target: { value: '' } });
-    });
-    const footerButtons = screen.getAllByRole('button', { name: /set block/i });
-    await act(async () => {
-      fireEvent.click(footerButtons[footerButtons.length - 1]);
-    });
-    expect(screen.getByRole('button', { name: /no expiry/ })).toBeTruthy();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /no expiry/ }));
-    });
-    expect(setMutate).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(setMutate).mock.calls[0]?.[0]).toMatchObject({ targetName: 'x-tool', reason: 'why, audited' });
-    expect(vi.mocked(setMutate).mock.calls[0]?.[0]).not.toHaveProperty('expiresAt');
-  });
-
-  it('resets the create modal between sessions', async () => {
-    shell();
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /set block/i })[0]);
-    });
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText(/Target name/), { target: { value: 'stale-tool' } });
-      fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'stale reason' } });
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /set block/i })[0]);
-    });
-    expect((screen.getByLabelText(/Target name/) as HTMLInputElement).value).toBe('');
-    expect((screen.getByLabelText(/Reason/) as HTMLInputElement).value).toBe('');
+    expect(router.state.location.pathname).toBe('/agent-studio/blocks/new');
+    expect(screen.getByText('new block section')).toBeTruthy();
   });
 
   it('discloses the 200-row server cap when the list is full', async () => {
-    shell();
+    await shell();
     // Fixture has 3 rows — the cap note must NOT render for a short list.
     expect(screen.queryByText(/at most 200 rows/)).toBeNull();
   });

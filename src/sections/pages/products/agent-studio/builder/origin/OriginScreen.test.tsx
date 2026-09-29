@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -90,13 +90,36 @@ async function shell(onBlank: () => void = () => undefined) {
       </ThemeProvider>
     ),
   });
+  const templateDetailProbe = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/templates/$templateId',
+    component: () => <div>template detail probe</div>,
+  });
+  const installProbe = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/templates/$templateId/install',
+    validateSearch: (search: Record<string, unknown>) => ({
+      returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+      autoLand: typeof search.autoLand === 'string' ? search.autoLand : undefined,
+    }),
+    component: () => <div>install probe</div>,
+  });
+  const cloneProbe = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/agents/clone',
+    validateSearch: (search: Record<string, unknown>) => ({
+      returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+    }),
+    component: () => <div>clone probe</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, templateDetailProbe, installProbe, cloneProbe]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 describe('OriginScreen (builder pre-circuit choice)', () => {
@@ -109,18 +132,28 @@ describe('OriginScreen (builder pre-circuit choice)', () => {
     expect(onBlank).toHaveBeenCalledTimes(1);
   });
 
-  it('opens the shared gallery inline and starts installs', async () => {
-    await shell();
+  it('opens the shared gallery inline and routes installs to the install section', async () => {
+    const router = await shell();
     fireEvent.click(screen.getByText(/Browse gallery/));
     expect(screen.getByText(/support-concierge/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Install'));
-    expect(screen.getByText(/Install support-concierge@3\.0\.0/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Install'));
+    });
+    // The install wizard is a routed section now (R-1); the origin threads
+    // autoLand=builder so a successful install lands in the builder.
+    expect(router.state.location.pathname).toBe('/agent-studio/templates/support-concierge/install');
+    expect(router.state.location.search).toMatchObject({ autoLand: 'builder' });
+    expect(screen.getByText('install probe')).toBeTruthy();
   });
 
-  it('opens the clone picker inline', async () => {
-    await shell();
-    fireEvent.click(screen.getByRole('button', { name: /Pick a source/ }));
-    expect(within(screen.getByRole('dialog')).getByText(/original is untouched/)).toBeTruthy();
+  it('routes the clone picker to the clone page', async () => {
+    const router = await shell();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Pick a source/ }));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/clone');
+    expect(router.state.location.search).toMatchObject({ returnTo: '/agent-studio/agents/new' });
+    expect(screen.getByText('clone probe')).toBeTruthy();
   });
 
   it('opens the import pane inline with client-first validation', async () => {

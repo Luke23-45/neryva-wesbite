@@ -7,7 +7,6 @@ import { useOrg } from '@/Context/OrgContext';
 import { buildAgentBuildPath } from '../lib/slot-model';
 import { TemplateGallery } from '../../templates/TemplateGallery';
 import { InstallWizard } from '../../templates/InstallWizard';
-import { ClonePicker } from '../../agents/ClonePicker';
 import { ImportPane } from '../../agents/ImportPane';
 import type { TemplateListEntry } from '@hooks/studio/useSetupTemplates';
 
@@ -81,10 +80,10 @@ export function OriginScreen({ onBlank }: { onBlank: () => void }) {
   const { role } = useOrg();
   const canAuthor = canSetup(role, 'setup:author');
   const authorDenied = setupDeniedCopy(role, 'setup:author');
-  const [path, setPath] = useState<'template' | 'clone' | 'import' | null>(null);
+  const [path, setPath] = useState<'template' | 'import' | null>(null);
   const [installing, setInstalling] = useState<TemplateListEntry | null>(null);
 
-  const toggle = (next: 'template' | 'clone' | 'import') => setPath((current) => (current === next ? null : next));
+  const toggle = (next: 'template' | 'import') => setPath((current) => (current === next ? null : next));
 
   return (
     <OriginWrap>
@@ -103,8 +102,8 @@ export function OriginScreen({ onBlank }: { onBlank: () => void }) {
         <PathCard>
           <PathTitle>Clone an agent</PathTitle>
           <PathBody>Search this org, pick a source, name the copy. The original is untouched.</PathBody>
-          <ActionButton size="sm" variant="secondary" disabled={!canAuthor} title={canAuthor ? 'Pick a source, name the copy' : authorDenied} onClick={() => toggle('clone')}>
-            {path === 'clone' ? 'Hide picker' : 'Pick a source →'}
+          <ActionButton size="sm" variant="secondary" disabled={!canAuthor} title={canAuthor ? 'Pick a source, name the copy' : authorDenied} onClick={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: undefined, returnTo: '/agent-studio/agents/new' } })}>
+            Pick a source →
           </ActionButton>
         </PathCard>
         <PathCard>
@@ -122,13 +121,11 @@ export function OriginScreen({ onBlank }: { onBlank: () => void }) {
           </ActionButton>
         </PathCard>
       </PathGrid>
-      {path === 'template' && <TemplateGallery onInstall={setInstalling} />}
-      {path === 'clone' && canAuthor && (
-        <ClonePicker
-          open
-          onClose={() => setPath(null)}
-          initialSourceId={null}
-          onCloned={(id) => navigate({ to: buildAgentBuildPath(id) })}
+      {path === 'template' && (
+        <TemplateGallery
+          onInstall={setInstalling}
+          detailReturnTo="/agent-studio/agents/new"
+          detailAutoLandBuilder
         />
       )}
       {path === 'import' && canAuthor && (
