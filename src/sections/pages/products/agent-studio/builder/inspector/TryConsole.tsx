@@ -10,9 +10,24 @@ import { TRY_COPY, describeTryPrereqs } from '../lib/try-model';
 import { readTryParam, writeTryParam } from '../lib/try-thread-param';
 import { TraceDrawer, type TraceEditTarget } from './TraceDrawer';
 import { StreamingBubble, Note } from './TraceDrawer.styles';
-import { EmptyState, SectionLabel, Wrap } from './InstructionsSection.styles';
+import { EmptyState, Wrap } from './InstructionsSection.styles';
 import { TextButton } from './ToolsSection.styles';
-import { Bubble, BubbleMeta, DockRow, Muted, NoticePill, PrereqBlock, PrereqDetail, PrereqHeadline, Thread } from './TrySection.styles';
+import {
+  Bubble,
+  BubbleMeta,
+  DockRow,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  Muted,
+  NoticePill,
+  PrereqBlock,
+  PrereqDetail,
+  PrereqHeadline,
+  Thread,
+  TurnGroup,
+} from './TrySection.styles';
 
 export interface TryConsoleProps {
   assistantId: string;
@@ -115,8 +130,14 @@ export function TryConsole({
   return (
     <Wrap>
       {header}
-      <SectionLabel>Runs against</SectionLabel>
-      <Muted>{runnable ? `${versionLabel} — draft-pinned, never billable.` : 'No runnable version open — save a draft first.'}</Muted>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Runs against</FieldTitle>
+        </FieldHead>
+        <FieldHelper>
+          {runnable ? `${versionLabel} — draft-pinned, never billable.` : 'No runnable version open — save a draft first.'}
+        </FieldHelper>
+      </FieldBlock>
 
       {modelsLoading && <Muted>Checking usable models…</Muted>}
       {prereqs.map((prereq) => (
@@ -136,7 +157,7 @@ export function TryConsole({
             const reply = turn.agentText !== '' ? turn.agentText : turn.liveText;
             const streaming = turn.status === 'streaming' || turn.status === 'accepted' || turn.status === 'sending';
             return (
-              <div key={turn.key} style={{ display: 'contents' }}>
+              <TurnGroup key={turn.key}>
                 <Bubble $role="user">
                   <BubbleMeta>You</BubbleMeta>
                   {turn.prompt !== '' ? turn.prompt : <Muted>…</Muted>}
@@ -161,7 +182,7 @@ export function TryConsole({
                 {(turn.status === 'done' || turn.status === 'error') && (
                   <TextButton onClick={() => setTraceKey(turn.key)}>Open trace ›</TextButton>
                 )}
-              </div>
+              </TurnGroup>
             );
           })}
         </Thread>

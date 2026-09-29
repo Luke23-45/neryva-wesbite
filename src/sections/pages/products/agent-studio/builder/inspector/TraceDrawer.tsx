@@ -8,10 +8,21 @@ import {
   extractReportedVerdicts,
   type TryStop,
 } from '../lib/try-model';
-import { EmptyState, SectionLabel } from './InstructionsSection.styles';
-import { PreviewItem, PreviewList, PreviewMeta } from './MemorySection.styles';
+import { EmptyState } from './InstructionsSection.styles';
 import { TextButton } from './ToolsSection.styles';
-import { Chip, ChipRow, Note, StopBlock, StopDetail, StopHeadline } from './TraceDrawer.styles';
+import {
+  Chip,
+  ChipRow,
+  Note,
+  StopBlock,
+  StopDetail,
+  StopHeadline,
+  TraceActions,
+  TraceItem,
+  TraceList,
+  TraceMeta,
+  TraceSection,
+} from './TraceDrawer.styles';
 
 export type TraceEditTarget = 'purpose' | 'brain' | 'model' | 'knowledge' | 'tools' | 'guardrails' | 'budget';
 
@@ -108,7 +119,7 @@ export function TraceDrawer({
         <EmptyState>No turn selected.</EmptyState>
       ) : (
         <>
-          <SectionLabel>Retrieved · reported only</SectionLabel>
+          <TraceSection>Retrieved · reported only</TraceSection>
           {hits.length === 0 ? (
             <Note>No retrieval hits were reported for this run.</Note>
           ) : (
@@ -122,46 +133,46 @@ export function TraceDrawer({
           )}
           <Note>{TRY_COPY.reportedOnly}</Note>
 
-          <SectionLabel>Directive · from the draft</SectionLabel>
+          <TraceSection>Directive · from the draft</TraceSection>
           {directiveText ? (
             <>
-              <PreviewList>
-                <PreviewItem>“{directiveText.length > 280 ? `${directiveText.slice(0, 280)}…` : directiveText}”</PreviewItem>
-              </PreviewList>
+              <TraceList>
+                <TraceItem>“{directiveText.length > 280 ? `${directiveText.slice(0, 280)}…` : directiveText}”</TraceItem>
+              </TraceList>
               <EditLink target="purpose" label="Edit in Purpose ›" onEditJump={onEditJump} builderHref={builderHref} />
             </>
           ) : (
             <Note>This version has no instructions — the run executed without a system prompt.</Note>
           )}
 
-          <SectionLabel>Tool calls</SectionLabel>
+          <TraceSection>Tool calls</TraceSection>
           {toolNotices.length === 0 ? (
             <Note>No tool calls were reported.</Note>
           ) : (
-            <PreviewList>
+            <TraceList>
               {toolNotices.map((notice) => (
-                <PreviewItem key={notice.id}>{notice.text}</PreviewItem>
+                <TraceItem key={notice.id}>{notice.text}</TraceItem>
               ))}
-            </PreviewList>
+            </TraceList>
           )}
           {shadowReported && <Note>A shadow-mode call ran simulated — it gated nothing.</Note>}
           {toolNotices.length > 0 && (
             <EditLink target="tools" label="Review in Tools ›" onEditJump={onEditJump} builderHref={builderHref} />
           )}
 
-          <SectionLabel>Guardrails</SectionLabel>
+          <TraceSection>Guardrails</TraceSection>
           {guardrailPolicy ? (
-            <PreviewList>
-              <PreviewItem>
+            <TraceList>
+              <TraceItem>
                 {guardrailPolicy.input} · {guardrailPolicy.output} · {guardrailPolicy.mode}
-                <PreviewMeta>Policy from the draft — verdicts below are Studio-reported.</PreviewMeta>
-              </PreviewItem>
+                <TraceMeta>Policy from the draft — verdicts below are Studio-reported.</TraceMeta>
+              </TraceItem>
               {verdicts.map((verdict) => (
-                <PreviewItem key={verdict.policy}>
+                <TraceItem key={verdict.policy}>
                   {describeGuardrailRow({ policy: verdict.policy, mode: guardrailPolicy.mode, verdict: verdict.verdict })}
-                </PreviewItem>
+                </TraceItem>
               ))}
-            </PreviewList>
+            </TraceList>
           ) : (
             <Note>No guardrail policy on this version.</Note>
           )}
@@ -169,24 +180,24 @@ export function TraceDrawer({
             <Note>No per-run verdicts were reported — the mode above still applies.</Note>
           )}
 
-          <SectionLabel>Model · tokens · cost</SectionLabel>
+          <TraceSection>Model · tokens · cost</TraceSection>
           {usageNotices.length === 0 ? (
             <Note>No usage was reported for this run.</Note>
           ) : (
-            <PreviewList>
+            <TraceList>
               {usageNotices.map((notice) => (
-                <PreviewItem key={notice.id}>
+                <TraceItem key={notice.id}>
                   {notice.text}
-                  <PreviewMeta>Reported by Studio for this run.</PreviewMeta>
-                </PreviewItem>
+                  <TraceMeta>Reported by Studio for this run.</TraceMeta>
+                </TraceItem>
               ))}
-            </PreviewList>
+            </TraceList>
           )}
           <Note>{TRY_COPY.noBillRow}</Note>
 
           {turn.stop && turn.stop.kind !== 'none' && (
             <>
-              <SectionLabel>Stop lines</SectionLabel>
+              <TraceSection>Stop lines</TraceSection>
               <StopBlock $tone={turn.stop.kind === 'reported' ? 'warning' : 'error'}>
                 <StopHeadline $tone={turn.stop.kind === 'reported' ? 'warning' : 'error'}>{turn.stop.headline}</StopHeadline>
                 <StopDetail>{turn.stop.detail}</StopDetail>
@@ -194,10 +205,10 @@ export function TraceDrawer({
             </>
           )}
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 16 }}>
+          <TraceActions>
             {onReask && <TextButton onClick={onReask}>Re-ask ↻</TextButton>}
             <EditLink target="purpose" label="Adjust in builder →" onEditJump={onEditJump} builderHref={builderHref} />
-          </div>
+          </TraceActions>
           <Note>{TRY_COPY.draftIntact}</Note>
         </>
       )}
