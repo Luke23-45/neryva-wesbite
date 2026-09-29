@@ -26,12 +26,26 @@ import {
   type MemoryScope,
 } from '../lib/memory-model';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
-import { ToolMeta } from './ToolsSection.styles';
-import { PresetPill, PresetRow } from './GuardrailsSection.styles';
-import { PreviewItem, PreviewList, PreviewMeta } from './MemorySection.styles';
-import { StepButton, StepperRow, StepValue } from './ContextSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import {
+  ChoicePill,
+  ChoiceRow,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  PinMeta,
+  SourceItem,
+  SourceList,
+  StepButton,
+  StepperRow,
+  StepValue,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
+} from './ContextSection.styles';
+import { Minus, Plus } from 'lucide-react';
 
 export interface ContextSectionProps {
   assistantId: string;
@@ -239,23 +253,34 @@ export function ContextSection({
   if (!canAuthor) {
     return (
       <Wrap>
-        <StaticRow>
-          <StaticLabel>Scope</StaticLabel>
-          <span>
-            {scopeLabel(engineScope)} — {SCOPE_CONSEQUENCES[engineScope]}
-          </span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>History</StaticLabel>
-          <span>
-            {policy.history_limit} messages. {COMPACTION_COPY}
-          </span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Summary</StaticLabel>
-          <span>{policy.summary_enabled ? 'On' : 'Off'}</span>
-        </StaticRow>
-        <ToolMeta>Context needs an owner, admin, or developer — {denied}</ToolMeta>
+        <FieldBlock>
+          <FieldHead>
+            <FieldTitle>Context</FieldTitle>
+          </FieldHead>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Scope</SwitchTitle>
+              <SwitchSub>
+                {scopeLabel(engineScope)} — {SCOPE_CONSEQUENCES[engineScope]}
+              </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>History</SwitchTitle>
+              <SwitchSub>
+                {policy.history_limit} messages. {COMPACTION_COPY}
+              </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Summary</SwitchTitle>
+              <SwitchSub>{policy.summary_enabled ? 'On' : 'Off'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <PinMeta>Context needs an owner, admin, or developer — {denied}</PinMeta>
+        </FieldBlock>
       </Wrap>
     );
   }
@@ -269,8 +294,11 @@ export function ContextSection({
       }}
     >
       {/* History */}
-      <div>
-        <SectionLabel>HISTORY · PER-AGENT</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>History</FieldTitle>
+          <FieldHelper>{SERVED_20_COPY}</FieldHelper>
+        </FieldHead>
         <StepperRow>
           <StepButton
             type="button"
@@ -278,7 +306,7 @@ export function ContextSection({
             disabled={policy.history_limit <= HISTORY_MIN}
             onClick={() => clampHistory(policy.history_limit - 1)}
           >
-            −
+            <Minus size={15} strokeWidth={2} />
           </StepButton>
           <StepValue
             type="number"
@@ -294,19 +322,20 @@ export function ContextSection({
             disabled={policy.history_limit >= HISTORY_SERVED_MAX}
             onClick={() => clampHistory(policy.history_limit + 1)}
           >
-            ＋
+            <Plus size={15} strokeWidth={2} />
           </StepButton>
         </StepperRow>
-        <ToolMeta>{SERVED_20_COPY}</ToolMeta>
-        <ToolMeta>{COMPACTION_COPY}</ToolMeta>
-      </div>
+        <FieldHelper>{COMPACTION_COPY}</FieldHelper>
+      </FieldBlock>
 
       {/* Scope */}
-      <div>
-        <SectionLabel>SCOPE · PER-AGENT</SectionLabel>
-        <PresetRow role="group" aria-label="Context scope">
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Scope</FieldTitle>
+        </FieldHead>
+        <ChoiceRow role="group" aria-label="Context scope">
           {MEMORY_SCOPE_ORDER.map((scope) => (
-            <PresetPill
+            <ChoicePill
               key={scope}
               type="button"
               $active={engineScope === scope}
@@ -314,57 +343,58 @@ export function ContextSection({
               onClick={() => patch({ memory_scope: toConsumerScope(scope) })}
             >
               {scopeLabel(scope)}
-            </PresetPill>
+            </ChoicePill>
           ))}
-        </PresetRow>
-        <ToolMeta>{SCOPE_CONSEQUENCES[engineScope]}</ToolMeta>
-      </div>
+        </ChoiceRow>
+        <FieldHelper>{SCOPE_CONSEQUENCES[engineScope]}</FieldHelper>
+      </FieldBlock>
 
       {/* Summary */}
-      <div>
-        <SectionLabel>SUMMARY</SectionLabel>
-        <PresetRow role="group" aria-label="Conversation summary">
-          <PresetPill
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Summary</FieldTitle>
+        </FieldHead>
+        <ChoiceRow role="group" aria-label="Conversation summary">
+          <ChoicePill
             type="button"
             $active={policy.summary_enabled}
             aria-pressed={policy.summary_enabled}
             onClick={() => patch({ summary_enabled: true })}
           >
             On
-          </PresetPill>
-          <PresetPill
+          </ChoicePill>
+          <ChoicePill
             type="button"
             $active={!policy.summary_enabled}
             aria-pressed={!policy.summary_enabled}
             onClick={() => patch({ summary_enabled: false })}
           >
             Off
-          </PresetPill>
-        </PresetRow>
-        <ToolMeta>
+          </ChoicePill>
+        </ChoiceRow>
+        <FieldHelper>
           {policy.summary_enabled
             ? 'Summaries refresh when un-summarized history passes the limit above.'
             : 'No automatic summaries — runs always read the raw window.'}
-        </ToolMeta>
-      </div>
+        </FieldHelper>
+      </FieldBlock>
 
       {/* Knowledge sources — read-only; the Knowledge node owns the pins */}
-      <div>
-        <SectionLabel>KNOWLEDGE SOURCES · READ-ONLY</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Knowledge sources</FieldTitle>
+          <FieldHelper>Read-only — pin sources in the Knowledge section.</FieldHelper>
+        </FieldHead>
         {sources.length === 0 ? (
-          <ToolMeta>No sources pinned — runs use the Knowledge library as configured.</ToolMeta>
+          <PinMeta>No sources pinned — runs use the Knowledge library as configured.</PinMeta>
         ) : (
-          <PreviewList>
+          <SourceList>
             {sources.map((slug) => (
-              <PreviewItem key={slug}>
-                {slug}
-                <PreviewMeta>pinned source</PreviewMeta>
-              </PreviewItem>
+              <SourceItem key={slug}>{slug}</SourceItem>
             ))}
-          </PreviewList>
+          </SourceList>
         )}
-        <ToolMeta>Pin sources in the Knowledge node — this list only reports what it set.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
