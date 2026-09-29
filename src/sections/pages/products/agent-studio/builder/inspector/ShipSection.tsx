@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import styled from 'styled-components';
 import { Rocket } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -18,90 +16,23 @@ import {
 import { buildAgentDetailPath } from '../lib/slot-model';
 import { PublishSuccess, type PublishReceipt } from './PublishSuccess';
 import { ReadinessRows } from './ReadinessRows';
-
-/**
- * Ship section (C14 builder quick path) — readiness, rail, degraded ack,
- * confirm-gated publish, inline success. Reads the shared
- * `usePublishReadiness` derivation (never its own); refusals render typed
- * branches with verbatim messages, never paraphrase.
- */
-
-const Verdict = styled.div<{ $tone: 'success' | 'warning' | 'error' | 'neutral' }>`
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: ${({ $tone, theme }) =>
-    $tone === 'success'
-      ? theme.app.status.success.fg
-      : $tone === 'warning'
-        ? theme.app.status.warning.fg
-        : $tone === 'error'
-          ? theme.app.status.error.fg
-          : theme.app.text.primary};
-`;
-
-const Dot = styled.span<{ $tone: 'success' | 'warning' | 'error' | 'neutral' }>`
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex: none;
-  align-self: center;
-  background: ${({ $tone, theme }) =>
-    $tone === 'success'
-      ? theme.app.status.success.fg
-      : $tone === 'warning'
-        ? theme.app.status.warning.fg
-        : $tone === 'error'
-          ? theme.app.status.error.fg
-          : theme.app.text.muted};
-`;
-
-const Sub = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.text.secondary};
-  margin-bottom: 8px;
-`;
-
-const FixLink = styled.button`
-  background: none;
-  border: 0;
-  padding: 0;
-  font-size: 12px;
-  cursor: pointer;
-  color: ${({ theme }) => theme.app.text.primary};
-  text-decoration: underline;
-  text-underline-offset: 2px;
-`;
-
-const Muted = styled.div`
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.text.muted};
-  margin-top: 8px;
-`;
-
-const Mono = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-`;
-
-const Refusal = styled.div`
-  margin-top: 12px;
-  border: 1px solid ${({ theme }) => theme.app.status.error.border};
-  background: ${({ theme }) => theme.app.status.error.bg};
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 13px;
-  line-height: 1.55;
-`;
-
-const Notice = styled.div`
-  font-size: 12px;
-  margin-top: 8px;
-  color: ${({ theme }) => theme.app.status.warning.fg};
-`;
+import {
+  AckCheckbox,
+  AckLabel,
+  Dot,
+  FixLink,
+  Mono,
+  Muted,
+  Notice,
+  PublishBlock,
+  Refusal,
+  RefusalFix,
+  RefusalLink,
+  RefusalMessage,
+  RefusalTitle,
+  Sub,
+  Verdict,
+} from './ShipSection.styles';
 
 export function ShipSection({
   assistantId,
@@ -293,18 +224,18 @@ export function ShipSection({
       {readiness.evalRunning && <Muted>An evaluation is running — the gates re-read when it lands.</Muted>}
 
       {readiness.needsAcknowledge && (
-        <label id="ship-degraded-ack" tabIndex={-1} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, marginTop: 10 }}>
-          <input type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} style={{ marginTop: 3 }} />
+        <AckLabel id="ship-degraded-ack" tabIndex={-1}>
+          <AckCheckbox type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} />
           <span>
             {PUBLISH_COPY.degradedAck} <Mono>assistant.publish_degraded_acknowledged</Mono>. {PUBLISH_COPY.degradedLifecycle}
           </span>
-        </label>
+        </AckLabel>
       )}
 
       {!canPublish ? (
         <Muted>{publishDenied} {PUBLISH_COPY.requestPublish}</Muted>
       ) : (
-        <div style={{ marginTop: 12 }}>
+        <PublishBlock>
           <ActionButton
             size="sm"
             disabled={!canPublish || publish.isPending}
@@ -329,18 +260,18 @@ export function ShipSection({
               {notice}
             </Notice>
           )}
-        </div>
+        </PublishBlock>
       )}
 
       {refusal && (
         <Refusal role="alert">
-          <strong>{refusal.kind === 'no-op' ? 'No changes to publish' : 'Publish refused'}</strong>
-          <div style={{ marginTop: 4 }}>{refusal.message}</div>
-          <div style={{ marginTop: 8 }}>
+          <RefusalTitle>{refusal.kind === 'no-op' ? 'No changes to publish' : 'Publish refused'}</RefusalTitle>
+          <RefusalMessage>{refusal.message}</RefusalMessage>
+          <RefusalFix>
             {refusal.kind === 'no-op' ? (
-              <Link to={buildAgentDetailPath(assistantId)} style={{ fontSize: 12 }}>
+              <RefusalLink to={buildAgentDetailPath(assistantId)}>
                 View the live version →
-              </Link>
+              </RefusalLink>
             ) : refusal.kind === 'degraded' ? (
               <FixLink
                 type="button"
@@ -356,7 +287,7 @@ export function ShipSection({
             ) : (
               <RefusalFixLinks kind={refusal.kind} agentId={assistantId} onEditJump={onEditJump} />
             )}
-          </div>
+          </RefusalFix>
         </Refusal>
       )}
 
@@ -393,13 +324,13 @@ function RefusalFixLinks({
           {fix.fixLabel} →
         </FixLink>
       ) : fix.fixRoute ? (
-        <Link to={fix.fixRoute} style={{ fontSize: 12 }}>
+        <RefusalLink to={fix.fixRoute}>
           {fix.fixLabel} →
-        </Link>
+        </RefusalLink>
       ) : (
-        <Link to={buildAgentDetailPath(agentId)} style={{ fontSize: 12 }}>
+        <RefusalLink to={buildAgentDetailPath(agentId)}>
           {fix.fixLabel} →
-        </Link>
+        </RefusalLink>
       )}
     </>
   );

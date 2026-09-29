@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Check, Radio } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { PUBLISH_COPY, PUBLISH_FIX_ROUTES } from '../lib/publish-model';
+import { Exits, Footer, Headline, Lines, Mono, Receipt } from './PublishSuccess.styles';
 
 /**
  * Shared publish success receipt (C14 — the ship section and the detail
@@ -22,46 +23,10 @@ export interface PublishReceipt {
   degradedSlugs: string[];
 }
 
-const Receipt = styled.div`
-  border: 1px solid ${({ theme }) => theme.app.status.success.border};
-  background: ${({ theme }) => theme.app.status.success.bg};
-  border-radius: 12px;
-  padding: 16px;
-  margin-top: 12px;
-`;
-
-const Headline = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.status.success.fg};
-`;
-
-const Lines = styled.div`
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.7;
-  color: ${({ theme }) => theme.app.text.secondary};
-`;
-
-const Mono = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-`;
-
-const Exits = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-`;
-
-const Footer = styled.div`
-  margin-top: 10px;
-  font-size: 11px;
-  color: ${({ theme }) => theme.app.text.muted};
+const ConnectIcon = styled.span`
+  display: inline-flex;
+  vertical-align: -2px;
+  margin-right: 6px;
 `;
 
 function short(iso: string | null): string {
@@ -118,7 +83,9 @@ export function PublishSuccess({
           title="Connect a platform with this agent preselected, then return here"
           onClick={() => navigate({ to: PUBLISH_FIX_ROUTES.channels, search: { returnTo, assistantId: agentId } })}
         >
-          <Radio size={13} strokeWidth={1.8} aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 6 }} />
+          <ConnectIcon aria-hidden="true">
+            <Radio size={13} strokeWidth={1.8} />
+          </ConnectIcon>
           Connect a channel →
         </ActionButton>
         <ActionButton
