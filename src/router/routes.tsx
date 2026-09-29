@@ -67,6 +67,7 @@ import AgentStudioSettingsProfilePage from '@pages/products/agent_studio/AgentSt
 import AgentStudioSettingsWorkspacePage from '@pages/products/agent_studio/AgentStudioSettingsWorkspacePage';
 import AgentStudioSettingsTeamPage from '@pages/products/agent_studio/AgentStudioSettingsTeamPage';
 import AgentStudioSettingsBillingPage from '@pages/products/agent_studio/AgentStudioSettingsBillingPage';
+import AgentStudioSettingsPricingPage from '@pages/products/agent_studio/AgentStudioSettingsPricingPage';
 import AgentStudioSettingsSecurityPage from '@pages/products/agent_studio/AgentStudioSettingsSecurityPage';
 import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeysPage';
 import AgentStudioSettingsApiKeyNewPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeyNewPage';
@@ -570,6 +571,12 @@ export const agentStudioSettingsBillingRoute = createRoute({
   getParentRoute: () => agentStudioSettingsRoute,
   path: '/billing',
   component: AgentStudioSettingsBillingPage,
+});
+
+export const agentStudioSettingsPricingRoute = createRoute({
+  getParentRoute: () => agentStudioSettingsRoute,
+  path: '/pricing',
+  component: AgentStudioSettingsPricingPage,
 });
 
 export const agentStudioSettingsSecurityRoute = createRoute({
@@ -1087,6 +1094,7 @@ export const routeDefinitions = [
       agentStudioSettingsWorkspaceRoute,
       agentStudioSettingsTeamRoute,
       agentStudioSettingsBillingRoute,
+      agentStudioSettingsPricingRoute,
       agentStudioSettingsSecurityRoute,
       agentStudioSettingsApiKeysRoute,
       agentStudioSettingsApiKeyNewRoute,

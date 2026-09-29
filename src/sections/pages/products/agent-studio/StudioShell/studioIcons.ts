@@ -17,6 +17,7 @@ import {
   FlaskConical,
   Wrench,
   Ban,
+  Tag,
 } from 'lucide-react';
 
 /**
@@ -45,6 +46,7 @@ export const iconMap = {
   usage: Activity,
   evaluations: FlaskConical,
   blocks: Ban,
+  pricing: Tag,
 } as const;
 
 export type StudioIconKey = keyof typeof iconMap;

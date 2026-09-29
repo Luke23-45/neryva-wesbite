@@ -21,7 +21,6 @@ import { useCan } from '@lib/engine/capabilities';
 import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type EntitlementRow } from '@hooks/engine/queries';
 import { useEnterpriseStatus } from '@hooks/engine/billing';
 import { useCreditWallet } from '@hooks/engine/credits';
-import { UpgradeModal } from '../../UpgradeModal';
 import { deriveSubscriptionKind, SUBSCRIPTION_COPY, type SubscriptionKind } from './subscriptionKind';
 
 /**
@@ -31,7 +30,7 @@ import { deriveSubscriptionKind, SUBSCRIPTION_COPY, type SubscriptionKind } from
  * D-1 update (2026-09-28, explicit user direction): the CURRENT subscription
  * is shown here, derived from real entitlement data (enterprise commitment
  * boolean, the engine's single 'payg' plan identifier, else the free monthly
- * grant). The pricing sheet (UpgradeModal) owns how plans and prices display;
+ * grant). The Settings → Pricing page owns how plans and prices display;
  * this section never invents tiers or prices.
  * PDF downloads are ⛔ E-13 — no fake download buttons.
  * BUG-2: the fabricated UpgradeModal plan picker (invented tiers/prices,
@@ -93,12 +92,17 @@ export function SettingsBilling() {
     <>
       {/* Subscriptions — the deep-link target for locked models in the
           builder (id="subscriptions"). Current state only, from real
-          entitlement data; the UpgradeModal action owns pricing display. */}
+          entitlement data; the Settings → Pricing page owns how plans and
+          prices display. */}
       <motion.div id="subscriptions" initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <Panel
           title="Subscriptions"
           subtitle="Your current plan, from your live entitlement."
-          action={<UpgradeModal />}
+          action={
+            <InvoiceLink to="/agent-studio/settings/pricing">
+              View pricing <ArrowRight size={12} strokeWidth={1.8} />
+            </InvoiceLink>
+          }
         >
           <PlanCard>
             <PlanName>{copy ? copy.name : 'Subscription'}</PlanName>

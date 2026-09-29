@@ -86,6 +86,7 @@
         { "label": "Workspace", "to": "/agent-studio/settings/workspace", "icon": "settings" },
         { "label": "Team", "to": "/agent-studio/settings/team", "icon": "teams" },
         { "label": "Billing", "to": "/agent-studio/settings/billing", "icon": "usage" },
+        { "label": "Pricing", "to": "/agent-studio/settings/pricing", "icon": "pricing" },
         { "label": "Security", "to": "/agent-studio/settings/security", "icon": "approvals" },
         { "label": "API keys", "to": "/agent-studio/settings/api-keys", "icon": "api" }
       ]
