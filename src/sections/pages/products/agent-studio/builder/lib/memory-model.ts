@@ -144,7 +144,7 @@ export function parseOrgMemoryPolicy(preferences: Record<string, unknown> | null
 export const SCRUB_COPY: Record<MemoryScrub, string> = {
   off: 'Off — memories store verbatim.',
   redact: 'Redact — PII scrubbed before embedding.',
-  block: 'Block — writes with PII refused (422).',
+  block: 'Block — writes with PII refused (400).',
 };
 
 export function describeTtl(ttlSeconds: number | null): string {

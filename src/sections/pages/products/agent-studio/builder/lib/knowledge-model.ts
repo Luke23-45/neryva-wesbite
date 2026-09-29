@@ -3,7 +3,7 @@
  *
  * Engine bounds encoded (re-verify if the engine moves):
  * - pins: `context_policy.knowledge_sources`, engine publish max 16 kebab slugs
- *   (validation.ts K-03 — 422s >16 or non-slug; the console enforces the same
+ *   (validation.ts K-03 — 400s >16 or non-slug; the console enforces the same
  *   16 via PINS_MAX below). NOTE: the runtime agent-definition schema
  *   (v1.schema.json knowledge_sources maxItems=20) accepts up to 20 — that is
  *   the contract ceiling for the engine-emitted knowledge_refs allowlist
