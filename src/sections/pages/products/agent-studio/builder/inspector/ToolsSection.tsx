@@ -40,19 +40,28 @@ import {
 } from '../lib/tools-model';
 import { ConflictDialog } from './ConflictDialog';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import {
   ControlLabel,
   ControlRow,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
   FilterRow,
   MutedButton,
+  PinMeta,
   RowGrid,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
   TextButton,
   ToolActions,
   ToolCard,
   ToolFix,
   ToolHead,
+  ToolList,
   ToolMeta,
   ToolState,
   ToolTitle,
@@ -302,14 +311,18 @@ export function ToolsSection({
       }}
     >
       {/* Block A · bound entries */}
-      <div>
-        <SectionLabel>
-          BOUND · {entries.length} / {TOOLS_MAX}
-        </SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Bound tools</FieldTitle>
+          <FieldHelper>
+            {entries.length} of {TOOLS_MAX} bound.
+          </FieldHelper>
+        </FieldHead>
         {entries.length === 0 ? (
-          <ToolMeta>{SKIP_COPY}</ToolMeta>
+          <PinMeta>{SKIP_COPY}</PinMeta>
         ) : (
-          entries.map((entry) => {
+          <ToolList>
+            {entries.map((entry) => {
             const builtin = isBuiltinTool(entry.name, BUILT_IN_TOOLS);
             const row = rows.byName.get(entry.name) ?? null;
             const pin = pinState(entry.schema_hash, row ? { hash: row.hash, version: row.version, enabled: row.enabled } : null, builtin);
@@ -322,7 +335,7 @@ export function ToolsSection({
                   <StatusDot $status={tone === 'ok' ? 'ready' : tone} aria-hidden="true" />
                   <ToolTitle>{entry.name}</ToolTitle>
                   <ToolState>
-                    {pin.kind === 'builtin' ? 'built-in' : pin.kind === 'ready' ? `${pin.version ?? '?'} ✓` : pin.kind === 'stale' ? 'stale' : pin.kind}
+                    {pin.kind === 'builtin' ? 'built-in' : pin.kind === 'ready' ? (pin.version ?? 'pinned') : pin.kind === 'stale' ? 'stale' : pin.kind}
                   </ToolState>
                 </ToolHead>
                 <ToolMeta>
@@ -401,14 +414,18 @@ export function ToolsSection({
                 )}
               </ToolCard>
             );
-          })
+            })}
+          </ToolList>
         )}
         <ToolMeta>{UNBIND_COPY}</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {/* Block B · bind from catalog */}
-      <div>
-        <SectionLabel>BIND FROM CATALOG</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Bind from catalog</FieldTitle>
+          <FieldHelper>Catalog authoring lives in the Tools library — here you bind and flip entry-local switches.</FieldHelper>
+        </FieldHead>
         {canAuthor ? (
           <>
             <FilterRow>
@@ -469,20 +486,26 @@ export function ToolsSection({
             <ToolMeta>Entry names: 2–64, lowercase/digits/underscores — no leading-letter rule. Catalog names keep their own rule.</ToolMeta>
           </>
         ) : (
-          <StaticRow>
-            <StaticLabel>Catalog</StaticLabel>
-            <span>Binding needs an owner, admin, or developer — {denied}</span>
-          </StaticRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Catalog</SwitchTitle>
+              <SwitchSub>Binding needs an owner, admin, or developer — {denied}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
         )}
-      </div>
+      </FieldBlock>
 
       {/* Block C · perimeter */}
-      <div>
-        <SectionLabel>PERIMETER · PINNED AT PUBLISH</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Perimeter</FieldTitle>
+          <FieldHelper>Pinned at publish.</FieldHelper>
+        </FieldHead>
         {entries.length === 0 ? (
           <ToolMeta>Nothing bound — nothing to perimeter.</ToolMeta>
         ) : (
-          entries.map((entry) => {
+          <ToolList>
+            {entries.map((entry) => {
             const builtin = isBuiltinTool(entry.name, BUILT_IN_TOOLS);
             const row = rows.byName.get(entry.name) ?? null;
             const view = perimeterView(
@@ -507,33 +530,38 @@ export function ToolsSection({
                       {row?.executionEnvironment == null ? ' (catalog default — historical posture, not in_process)' : ''} · egress:{' '}
                       {view.domains.length === 0 ? (view.bindingCovered === null ? 'resolving…' : 'none declared') : view.domains.join(', ')}
                     </ToolMeta>
-                    {view.bindingCovered === true && <ToolFix>Binding host covered ✓ · authorize denies on drift.</ToolFix>}
+                    {view.bindingCovered === true && <ToolFix>Binding host covered — authorize denies on drift.</ToolFix>}
                     {view.bindingCovered === false && <ToolFix>Binding host NOT covered — the catalog row is invalid; fix it in the Tools library.</ToolFix>}
                   </>
                 )}
               </ToolCard>
             );
-          })
+            })}
+          </ToolList>
         )}
         <ToolMeta>Environments, egress, and enablement are catalog writes — owner/admin in the Tools library. Authorize denies on drift.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {/* Block D · approvals consequence */}
-      <div>
-        <SectionLabel>APPROVALS</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Approvals</FieldTitle>
+        </FieldHead>
         {approvalRequired.length === 0 ? (
           <ToolMeta>No entry requires approval — calls run without pausing. Effectful-without-approval rows are legal but linted: every call runs ungated.</ToolMeta>
         ) : (
           <>
-            {approvalRequired.map((entry) => (
-              <ToolCard key={entry.name} $tone="info">
-                <ToolHead>
-                  <ToolTitle>{entry.name}</ToolTitle>
-                  <ToolState>approval required</ToolState>
-                </ToolHead>
-                <ToolFix>{APPROVAL_PREVIEW_COPY}</ToolFix>
-              </ToolCard>
-            ))}
+            <ToolList>
+              {approvalRequired.map((entry) => (
+                <ToolCard key={entry.name} $tone="info">
+                  <ToolHead>
+                    <ToolTitle>{entry.name}</ToolTitle>
+                    <ToolState>approval required</ToolState>
+                  </ToolHead>
+                  <ToolFix>{APPROVAL_PREVIEW_COPY}</ToolFix>
+                </ToolCard>
+              ))}
+            </ToolList>
             <ToolActions>
               <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/approvals' })}>
                 Open Approvals →
@@ -545,7 +573,7 @@ export function ToolsSection({
           const row = rows.byName.get(entry.name) ?? null;
           return !isBuiltinTool(entry.name, BUILT_IN_TOOLS) && row && row.effectClass !== null && row.effectClass !== 'READ_ONLY' && approvalMode(entry.approval, row.approvalRequirement).mode !== 'required';
         }) && <Whisper $tone="amber">{LINT_EFFECTFUL_COPY}</Whisper>}
-      </div>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
