@@ -252,4 +252,20 @@ describe('CasesNewSection validation parity with the old modal', () => {
     });
     expect(document.querySelector('pre')).toBeNull();
   });
+
+  it('Remove drops the draft and its validation state', async () => {
+    await routerAt(NEW_PATH);
+    fillValidDraft('Keep me');
+    fireEvent.click(screen.getByRole('button', { name: 'Another case' }));
+    expect(screen.getByText('Case 2')).toBeTruthy();
+    // Two drafts: the Remove buttons appear. Remove the second one.
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    expect(removeButtons).toHaveLength(2);
+    fireEvent.click(removeButtons[1]);
+    expect(screen.queryByText('Case 2')).toBeNull();
+    expect(screen.getByText('Case 1')).toBeTruthy();
+    // The surviving draft keeps its content; Remove hides again on one draft.
+    expect(screen.getByLabelText('Input text (required)')).toHaveValue('Keep me');
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+  });
 });

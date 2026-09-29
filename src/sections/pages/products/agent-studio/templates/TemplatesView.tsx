@@ -1,22 +1,25 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from '@tanstack/react-router';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
 import { type TemplateListEntry } from '@hooks/studio/useSetupTemplates';
-import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
-import { useOrg } from '@/Context/OrgContext';
 import { TemplateGallery } from './TemplateGallery';
-import { InstallWizard } from './InstallWizard';
 
 /**
- * Templates library — page shell over the shared gallery + install wizard
- * (C11 owns both; the builder origin reuses them, never forks them).
+ * Templates library — page shell over the shared gallery (C11 owns it;
+ * the builder origin reuses it, never forks it). "Install" routes to the
+ * dedicated install section (R-1), threading the gallery as returnTo so
+ * Cancel/Close land back here.
  */
 export function TemplatesView() {
-  const { role } = useOrg();
-  const canInstall = canSetup(role, 'setup:author');
-  const installDenied = setupDeniedCopy(role, 'setup:author');
-  const [installing, setInstalling] = useState<TemplateListEntry | null>(null);
+  const navigate = useNavigate();
+
+  const onInstall = (entry: TemplateListEntry) => {
+    void navigate({
+      to: `/agent-studio/templates/${entry.template.slug}/install`,
+      search: { returnTo: '/agent-studio/templates' },
+    });
+  };
 
   return (
     <ViewShell>
@@ -30,17 +33,8 @@ export function TemplatesView() {
       </ViewHeaderRow>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <TemplateGallery onInstall={setInstalling} />
+        <TemplateGallery onInstall={onInstall} />
       </motion.div>
-
-      {installing && (
-        <InstallWizard
-          entry={installing}
-          onClose={() => setInstalling(null)}
-          canInstall={canInstall}
-          installDenied={installDenied}
-        />
-      )}
     </ViewShell>
   );
 }

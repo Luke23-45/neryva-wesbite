@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate, useRouter } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { ArrowRight } from 'lucide-react';
 import { Modal } from '@components/common/ui/Modal';
@@ -18,7 +18,6 @@ import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { checkTemplateDrift, describeUpdateAction } from '../builder/lib/template-model';
 import { PostInstallChecklist } from './PostInstallChecklist';
-import { InstallWizard } from './InstallWizard';
 
 const Banner = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.strong};
@@ -96,11 +95,12 @@ export interface TemplateBannerProps {
  */
 export function TemplateBanner({ assistantId, versionId }: TemplateBannerProps) {
   const { role } = useOrg();
+  const navigate = useNavigate();
+  const router = useRouter();
   const canInstall = canSetup(role, 'setup:author');
   const installDenied = setupDeniedCopy(role, 'setup:author');
   const provenance = useVersionProvenance(assistantId, versionId);
   const templates = useAssistantTemplates();
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
 
@@ -126,6 +126,20 @@ export function TemplateBanner({ assistantId, versionId }: TemplateBannerProps) 
   // to the live row while it loads.
   const checklistTemplate = checklistOpen ? (installedDetail.data ?? live.data ?? null) : null;
 
+  // R-1: the update CTA routes to the dedicated install section instead of
+  // the old wizard modal, threading this page as returnTo so Cancel/Close
+  // land back in the builder.
+  const openInstallSection = () => {
+    if (!liveRow) {
+      return;
+    }
+    const back = router.state.location.pathname;
+    void navigate({
+      to: `/agent-studio/templates/${liveRow.template.slug}/install`,
+      search: { returnTo: back.startsWith('/agent-studio/') ? back : undefined },
+    });
+  };
+
   return (
     <Banner aria-label="Template origin">
       <div>
@@ -143,7 +157,7 @@ export function TemplateBanner({ assistantId, versionId }: TemplateBannerProps) 
         <div>
           <UpdateBadge $tone={update.action === 'major' ? 'warning' : 'info'}>{update.badge}</UpdateBadge>
           <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-            <ActionButton size="sm" disabled={!canInstall} title={canInstall ? update.cta : installDenied} onClick={() => setWizardOpen(true)}>
+            <ActionButton size="sm" disabled={!canInstall} title={canInstall ? update.cta : installDenied} onClick={openInstallSection}>
               {update.cta}
               <ArrowRight size={11} strokeWidth={1.8} />
             </ActionButton>
@@ -173,14 +187,6 @@ export function TemplateBanner({ assistantId, versionId }: TemplateBannerProps) 
         </div>
       )}
 
-      {wizardOpen && liveRow && (
-        <InstallWizard
-          entry={liveRow}
-          onClose={() => setWizardOpen(false)}
-          canInstall={canInstall}
-          installDenied={installDenied}
-        />
-      )}
       {diffOpen && (
         <TemplateDiffModal
           assistantId={assistantId}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
 import { Pause, Play, ShieldAlert, Power, PowerOff } from 'lucide-react';
@@ -23,10 +23,8 @@ import {
   useMoveRelease,
   useReleasePointer,
   useControlBlocks,
-  useSetControlBlock,
   useClearControlBlock,
   useMemberNameMap,
-  BLOCK_TARGETS,
   isBlockActive,
   type ControlBlock,
 } from '@hooks/studio/useSetupOperate';
@@ -108,6 +106,7 @@ function formatBlockInstant(iso: string): string {
 
 export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: { agentId: string; versions: AgentVersion[]; disabledAt: string | null; disabledReason: string | null }) {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canOperate = canSetup(role, 'setup:govern');
   const operateDenied = setupDeniedCopy(role, 'setup:govern');
   const rollout = useRollout(agentId);
@@ -157,7 +156,6 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
       return next;
     });
   };
-  const [blockOpen, setBlockOpen] = useState(false);
   const [clearTarget, setClearTarget] = useState<ControlBlock | null>(null);
   const [disableOpen, setDisableOpen] = useState(false);
   const [disableReason, setDisableReason] = useState('');
@@ -452,7 +450,11 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
                   </div>
                 ))}
                 <div style={{ marginTop: 8 }}>
-                  <ActionButton variant="secondary" size="sm" onClick={() => setBlockOpen(true)}>
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate({ to: '/agent-studio/agents/$agentId/block/new', params: { agentId } })}
+                  >
                     <ShieldAlert size={13} strokeWidth={1.8} />
                     Set block
                   </ActionButton>
@@ -543,9 +545,8 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
           });
         }}
       />
-      {/* Keyed by open state: the modal remounts on every open, so a previous
-          session's form values can never leak into a fresh one. */}
-      <BlockModal key={blockOpen ? 'open' : 'closed'} open={blockOpen} onClose={() => setBlockOpen(false)} agentId={agentId} />
+      {/* Set block is a routed section now (A-11): /agent-studio/agents/$agentId/block/new.
+          A route mount is fresh by construction — no keyed-remount trick needed. */}
       <Muted>
         {OPERATE_COPY.stickyConversation} Every operate write lands in <Link to="/platform/audit">Audit →</Link>
       </Muted>
@@ -591,130 +592,6 @@ function DisableModal({
       <div style={{ marginTop: 12 }}>
         <TextInput label="Reason (optional, audited)" value={reason} onChange={(e) => onReason(e.target.value)} placeholder="e.g. incident-4821 — bad grounding" autoFocus />
       </div>
-    </Modal>
-  );
-}
-
-function BlockModal({ open, onClose, agentId }: { open: boolean; onClose: () => void; agentId: string }) {
-  const setBlock = useSetControlBlock();
-  const [targetType, setTargetType] = useState<string>('assistant');
-  const [targetName, setTargetName] = useState(agentId);
-  const [reason, setReason] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [permanentArmed, setPermanentArmed] = useState(false);
-  // Clock captured once per mount (render must stay pure — no Date.now() inline).
-  const [nowMs] = useState(() => Date.now());
-  const [minExpiry] = useState(() =>
-    new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16),
-  );
-
-  // The parent remounts this modal on every open (keyed by open state), so
-  // form state is always fresh — a previous session's values can never leak
-  // into a new one.
-
-  const nameProblem = targetName.trim().length >= 1 && targetName.trim().length <= 128 ? null : 'Target names are 1–128 chars.';
-  const reasonProblem = reason.trim().length >= 1 && reason.trim().length <= 512 ? null : 'Operator justification is mandatory (1–512 chars).';
-  const expiryProblem =
-    expiresAt.trim() === ''
-      ? null
-      : (() => {
-          const parsed = Date.parse(expiresAt);
-          if (!Number.isFinite(parsed)) return 'Expiry must be a real timestamp.';
-          return parsed > nowMs ? null : 'Expiry must be in the future.';
-        })();
-  const permanent = expiresAt.trim() === '';
-  const valid = !nameProblem && !reasonProblem && !expiryProblem;
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Set control block"
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          {permanentArmed ? (
-            <ActionButton
-              variant="danger"
-              disabled={!valid || setBlock.isPending}
-              onClick={() => {
-                setBlock.mutate(
-                  {
-                    targetType,
-                    targetName: targetName.trim(),
-                    reason: reason.trim(),
-                  },
-                  { onSuccess: () => onClose() },
-                );
-              }}
-            >
-              <ShieldAlert size={13} strokeWidth={1.8} />
-              Yes — block with no expiry
-            </ActionButton>
-          ) : (
-            <ActionButton
-              variant="danger"
-              disabled={!valid || setBlock.isPending}
-              onClick={() => {
-                // Permanent blocks never lift — require the same two-step
-                // arming the Libraries page uses before committing.
-                if (permanent) {
-                  setPermanentArmed(true);
-                  return;
-                }
-                setBlock.mutate(
-                  {
-                    targetType,
-                    targetName: targetName.trim(),
-                    reason: reason.trim(),
-                    expiresAt: new Date(expiresAt).toISOString(),
-                  },
-                  { onSuccess: () => onClose() },
-                );
-              }}
-            >
-              <ShieldAlert size={13} strokeWidth={1.8} />
-              Set block
-            </ActionButton>
-          )}
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.8 }}>
-        Governance kill switch — refuses acceptance, assignment, tool calls, credentials, and installs. Expiry needs no
-        worker; terminal runs never strand.
-      </p>
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Target type
-        <select value={targetType} onChange={(e) => setTargetType(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          {BLOCK_TARGETS.map((target) => (
-            <option key={target} value={target}>{target}</option>
-          ))}
-        </select>
-      </label>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Target name (id or slug)" value={targetName} onChange={(e) => setTargetName(e.target.value)} error={nameProblem ?? undefined} />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Reason (mandatory, audited)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this block exists" error={reason.trim() ? (reasonProblem ?? undefined) : undefined} />
-      </div>
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Expires at (optional — lifts automatically, no worker; empty = permanent)
-        <input
-          type="datetime-local"
-          value={expiresAt}
-          min={minExpiry}
-          onChange={(e) => {
-            setExpiresAt(e.target.value);
-            setPermanentArmed(false);
-          }}
-          style={{ display: 'block', width: '100%', marginTop: 4 }}
-        />
-      </label>
-      {expiryProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{expiryProblem}</p>}
     </Modal>
   );
 }

@@ -190,6 +190,26 @@ describe('ToolNewSection authorized render', () => {
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.getByText(/already exists — saving replaces its schema/)).toBeTruthy();
   });
+
+  it('names the re-enable when the colliding tool is disabled', async () => {
+    mockCatalog = [toolEntry({ enabled: false })];
+    await routerAt('/agent-studio/tools/new');
+    fireEvent.change(screen.getByPlaceholderText('lookup_ticket'), { target: { value: 'lookup_ticket' } });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    // The advisory must say saving re-enables the disabled row — the
+    // collision is not a rename prompt.
+    expect(screen.getByText(/re-enables it too/)).toBeTruthy();
+  });
+
+  it('Cancel returns to the tools list without saving', async () => {
+    const router = await routerAt('/agent-studio/tools/new');
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cancel'));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/tools');
+    expect(upsertMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('tools list')).toBeTruthy();
+  });
 });
 
 describe('ToolEditSection authorized render', () => {
@@ -215,6 +235,16 @@ describe('ToolEditSection authorized render', () => {
     expect(router.state.location.pathname).toBe('/agent-studio/tools');
     expect(screen.queryByText(/Edit tool/)).toBeNull();
     expect(screen.queryByLabelText(NAME_LABEL)).toBeNull();
+  });
+
+  it('Cancel returns to the tools list without saving', async () => {
+    const router = await routerAt('/agent-studio/tools/lookup_ticket/edit');
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cancel'));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/tools');
+    expect(upsertMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('tools list')).toBeTruthy();
   });
 });
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styled from 'styled-components';
+import { useNavigate, useRouter } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { useAssistantVersions, useVersionProvenance } from '@hooks/studio/useAgentAuthoring';
@@ -7,7 +8,6 @@ import { useAssistantTemplates } from '@hooks/studio/useSetupTemplates';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { describeUpdateAction } from '../builder/lib/template-model';
-import { InstallWizard } from './InstallWizard';
 import { TemplateDiffModal } from './TemplateBanner';
 
 const OriginRow = styled.div`
@@ -48,10 +48,11 @@ const UpdateBadge = styled.span<{ $tone: 'info' | 'warning' }>`
  */
 export function TemplateDetailOrigin({ assistantId, activeVersionId }: { assistantId: string; activeVersionId: string | null }) {
   const { role } = useOrg();
+  const navigate = useNavigate();
+  const router = useRouter();
   const canInstall = canSetup(role, 'setup:author');
   const installDenied = setupDeniedCopy(role, 'setup:author');
   const versions = useAssistantVersions(assistantId);
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
 
   const rows = versions.data ?? [];
@@ -67,6 +68,20 @@ export function TemplateDetailOrigin({ assistantId, activeVersionId }: { assista
   const liveVersion = liveRow?.template.version ?? null;
   const update = describeUpdateAction(provenance.data?.updateAvailable ?? 'none', liveVersion ?? installed.version);
 
+  // R-1: the update CTA routes to the dedicated install section instead of
+  // the old wizard modal, threading this page as returnTo so Cancel/Close
+  // land back on the agent detail page.
+  const openInstallSection = () => {
+    if (!liveRow) {
+      return;
+    }
+    const back = router.state.location.pathname;
+    void navigate({
+      to: `/agent-studio/templates/${liveRow.template.slug}/install`,
+      search: { returnTo: back.startsWith('/agent-studio/') ? back : undefined },
+    });
+  };
+
   return (
     <OriginRow aria-label="Template origin">
       <OriginBadge>{installed.slug}@{installed.version}</OriginBadge>
@@ -74,7 +89,7 @@ export function TemplateDetailOrigin({ assistantId, activeVersionId }: { assista
       {update.action !== 'silent' && update.badge && update.cta && (
         <>
           <UpdateBadge $tone={update.action === 'major' ? 'warning' : 'info'}>{update.badge}</UpdateBadge>
-          <ActionButton size="sm" disabled={!canInstall} title={canInstall ? update.cta : installDenied} onClick={() => setWizardOpen(true)}>
+          <ActionButton size="sm" disabled={!canInstall} title={canInstall ? update.cta : installDenied} onClick={openInstallSection}>
             {update.cta}
             <ArrowRight size={11} strokeWidth={1.8} />
           </ActionButton>
@@ -82,14 +97,6 @@ export function TemplateDetailOrigin({ assistantId, activeVersionId }: { assista
             View changes
           </ActionButton>
         </>
-      )}
-      {wizardOpen && liveRow && (
-        <InstallWizard
-          entry={liveRow}
-          onClose={() => setWizardOpen(false)}
-          canInstall={canInstall}
-          installDenied={installDenied}
-        />
       )}
       {diffOpen && (
         <TemplateDiffModal

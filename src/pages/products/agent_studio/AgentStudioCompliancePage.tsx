@@ -1,3 +1,4 @@
+import { Outlet } from '@tanstack/react-router';
 import { PageHead } from '@components/common/PageHead';
 import { ComplianceView } from '@/sections/pages/products/agent-studio/compliance';
 
@@ -12,4 +13,14 @@ export default function AgentStudioCompliancePage() {
       <ComplianceView />
     </>
   );
+}
+
+/**
+ * Layout for /agent-studio/compliance — renders child routes
+ * (exports/new, holds/new, purges/new) via the outlet.
+ * Without this, TanStack Router drops every child route's component
+ * (same class as A2-20).
+ */
+export function AgentStudioComplianceLayout() {
+  return <Outlet />;
 }

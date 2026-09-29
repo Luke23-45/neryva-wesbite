@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import toast from 'react-hot-toast';
 
@@ -63,31 +63,17 @@ import {
 
   useLegalHolds,
 
-  useRequestExport,
-
   useDownloadExport,
-
-  usePlaceLegalHold,
 
   useReleaseLegalHold,
 
   useUpsertRetentionPolicy,
 
-  useEnqueuePurge,
-
   usePurgeTask,
 
   fetchTombstone,
 
-  buildHoldBody,
-
-  buildPurgeBody,
-
   buildRetentionPolicyBody,
-
-  HOLD_SCOPE_TYPES,
-
-  PURGE_REASONS,
 
   type TombstoneResult,
 
@@ -124,8 +110,6 @@ import {
   type PublishableConfigScope,
 
 } from '@hooks/studio/useConfigLifecycle';
-
-import { useConversations } from '@hooks/studio/useStudioConversations';
 
 
 
@@ -200,24 +184,17 @@ export function ComplianceView() {
 
   const legalHolds = useLegalHolds();
 
-  const requestExport = useRequestExport();
-
   const downloadExport = useDownloadExport();
 
-  const [exportConfirm, setExportConfirm] = useState(false);
-  const [exportSelection, setExportSelection] = useState<string[]>([]);
   // C-05: the download needs the one-time token issued at creation — the
   // table opens a token prompt instead of downloading blind.
   const [downloadPrompt, setDownloadPrompt] = useState<string | null>(null);
 
-  // C-05: the token is returned exactly once, in the POST /exports
-  // response. It is shown here immediately and never persisted.
-  const [tokenReveal, setTokenReveal] = useState<{ exportId: string | null; token: string } | null>(null);
-
-  // C-08: hold management (place/release) — owner/admin gated by the engine.
-  const placeHold = usePlaceLegalHold();
+  // C-08: hold management (release) — owner/admin gated by the engine.
+  // Placing a hold moved to the dedicated /agent-studio/compliance/holds/new
+  // section (X-4 migration); the one-time download token reveal moved with
+  // the export request into /agent-studio/compliance/exports/new (X-1/X-2).
   const releaseHold = useReleaseLegalHold();
-  const [holdDialog, setHoldDialog] = useState(false);
   const [releaseTarget, setReleaseTarget] = useState<string | null>(null);
 
 
@@ -326,9 +303,7 @@ export function ComplianceView() {
 
               size="sm"
 
-              disabled={requestExport.isPending}
-
-              onClick={() => setExportConfirm(true)}
+              onClick={() => navigate({ to: '/agent-studio/compliance/exports/new' })}
 
             >
 
@@ -472,7 +447,7 @@ export function ComplianceView() {
             <ActionButton
               variant="secondary"
               size="sm"
-              onClick={() => setHoldDialog(true)}
+              onClick={() => navigate({ to: '/agent-studio/compliance/holds/new' })}
             >
               Place hold
             </ActionButton>
@@ -676,33 +651,6 @@ export function ComplianceView() {
 
 
 
-      <ExportDialog
-        open={exportConfirm}
-        selection={exportSelection}
-        onSelectionChange={setExportSelection}
-        pending={requestExport.isPending}
-        onClose={() => setExportConfirm(false)}
-        onConfirm={(ids) => {
-          requestExport.mutate({ conversationIds: ids }, {
-            onSuccess: (data) => {
-              toast.success(ids.length === 0 ? 'Empty export requested' : `Export requested — ${ids.length} conversation${ids.length === 1 ? '' : 's'}`);
-              setExportConfirm(false);
-              setExportSelection([]);
-              // C-05: surface the one-time download token immediately — the
-              // engine returns it exactly once and never shows it again.
-              if (data.downloadToken) {
-                setTokenReveal({ exportId: data.id, token: data.downloadToken });
-              }
-            },
-          });
-        }}
-      />
-
-      <TokenRevealDialog
-        reveal={tokenReveal}
-        onClose={() => setTokenReveal(null)}
-      />
-
       <DownloadPromptDialog
         exportId={downloadPrompt}
         pending={downloadExport.isPending}
@@ -713,20 +661,6 @@ export function ComplianceView() {
             { exportId: downloadPrompt, token },
             { onSuccess: () => setDownloadPrompt(null) },
           );
-        }}
-      />
-
-      <PlaceHoldDialog
-        open={holdDialog}
-        pending={placeHold.isPending}
-        onClose={() => setHoldDialog(false)}
-        onConfirm={(input) => {
-          placeHold.mutate(input, {
-            onSuccess: () => {
-              toast.success('Legal hold placed');
-              setHoldDialog(false);
-            },
-          });
         }}
       />
 
@@ -755,141 +689,6 @@ export function ComplianceView() {
 
 }
 
-/** DSR export dialog: pick up to 20 conversations — the engine builds the
- * manifest from exactly these IDs, so an unscoped request can never silently
- * produce an empty archive. */
-const MAX_EXPORT_CONVERSATIONS = 20;
-
-function ExportDialog({ open, selection, onSelectionChange, pending, onClose, onConfirm }: {
-  open: boolean;
-  selection: string[];
-  onSelectionChange: (ids: string[]) => void;
-  pending: boolean;
-  onClose: () => void;
-  onConfirm: (ids: string[]) => void;
-}) {
-  const conversations = useConversations({ enabled: open });
-  const rows = conversations.data ?? [];
-
-  const toggle = (id: string) => {
-    if (selection.includes(id)) {
-      onSelectionChange(selection.filter((s) => s !== id));
-    } else if (selection.length < MAX_EXPORT_CONVERSATIONS) {
-      onSelectionChange([...selection, id]);
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Request a data export"
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
-          <ActionButton
-            disabled={pending || rows.length === 0}
-            onClick={() => onConfirm(selection)}
-          >
-            {selection.length === 0 ? 'Request empty export' : `Request export (${selection.length})`}
-          </ActionButton>
-        </>
-      }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-          Select up to {MAX_EXPORT_CONVERSATIONS} conversations to include. The export compiles
-          transcripts and run records into a downloadable archive, ready immediately.
-          Downloads are one-time and require the token shown after requesting.
-        </p>
-        {/* C-02: the archive is bounded — disclose the caps up front instead
-            of letting the export look silently complete. */}
-        <p style={{ margin: 0, fontSize: 12, opacity: 0.55, lineHeight: 1.5 }}>
-          Each conversation contributes up to 200 messages and 50 runs; conversations that
-          reach a cap are flagged inside the archive. Conversations you cannot access are
-          skipped, not failed.
-          {/* OBS-1: the picker lists the 50 most recent conversations (the
-              engine's default list window) — older threads are not offered
-              here, so say so instead of implying the list is complete. */}
-          The list below shows the 50 most recent conversations; older ones are not included.
-        </p>
-        {conversations.isLoading ? (
-          <Skeleton $h="120px" $r="12px" />
-        ) : rows.length === 0 ? (
-          <p style={{ margin: 0, fontSize: 13, opacity: 0.6 }}>No conversations in this organization yet.</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 280, overflowY: 'auto' }}>
-            {rows.map((c) => {
-              const checked = selection.includes(c.id);
-              return (
-                <label
-                  key={c.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer', background: checked ? 'rgba(139,143,248,0.10)' : 'transparent' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggle(c.id)}
-                    disabled={!checked && selection.length >= MAX_EXPORT_CONVERSATIONS}
-                    aria-label={`Include ${c.title}`}
-                  />
-                  <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
-                  <span style={{ fontSize: 11, opacity: 0.5 }}>{c.updatedAt?.slice(0, 10) ?? ''}</span>
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * C-05: the one-time download token is issued exactly once, in the POST
- * /exports response. This dialog shows it immediately — the console never
- * persists it, and the engine never shows it again.
- */
-function TokenRevealDialog({ reveal, onClose }: {
-  reveal: { exportId: string | null; token: string } | null;
-  onClose: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  if (!reveal) return null;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(reveal.token);
-      setCopied(true);
-    } catch {
-      /* clipboard unavailable — the token is still visible to copy manually */
-    }
-  };
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title="Download token — copy it now"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={copy}>{copied ? 'Copied' : 'Copy token'}</ActionButton>
-          <ActionButton onClick={onClose}>Done</ActionButton>
-        </>
-      }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-          This token is shown <strong>once</strong>. Downloading the export requires it —
-          without it the archive cannot be retrieved, even by an admin.
-        </p>
-        <CellMono>{reveal.token}</CellMono>
-      </div>
-    </Modal>
-  );
-}
-
-/** C-05: the download prompt — the engine rejects token-less downloads. */
 function DownloadPromptDialog({ exportId, pending, onClose, onConfirm }: {
   exportId: string | null;
   pending: boolean;
@@ -930,70 +729,6 @@ function DownloadPromptDialog({ exportId, pending, onClose, onConfirm }: {
   );
 }
 
-/** C-08: place a legal hold — owner/admin gated by the engine. */
-function PlaceHoldDialog({ open, pending, onClose, onConfirm }: {
-  open: boolean;
-  pending: boolean;
-  onClose: () => void;
-  onConfirm: (input: { scopeType: string; scopeId: string; reason: string }) => void;
-}) {
-  const [scopeType, setScopeType] = useState('conversation');
-  const [scopeId, setScopeId] = useState('');
-  const [reason, setReason] = useState('');
-  const { error } = buildHoldBody({ scopeType, scopeId, reason });
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Place a legal hold"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
-          <ActionButton disabled={pending || !!error} onClick={() => onConfirm({ scopeType, scopeId, reason })}>
-            Place hold
-          </ActionButton>
-        </>
-      }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-          Active holds block purges for their scope. Placing a hold is a privileged act —
-          owner or admin only.
-        </p>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-          Scope
-          <ScopeSelect value={scopeType} onChange={(e) => setScopeType(e.target.value)} aria-label="Hold scope">
-            {HOLD_SCOPE_TYPES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </ScopeSelect>
-        </label>
-        <TextInput
-          label={scopeType === 'organization' ? 'Scope id (optional, UUID)' : 'Conversation id (UUID)'}
-          value={scopeId}
-          onChange={(e) => setScopeId(e.target.value)}
-          placeholder={scopeType === 'organization' ? 'Leave empty for the whole organization' : 'Conversation UUID'}
-        />
-        <TextArea
-          label="Reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Why this hold exists — it becomes the audit record"
-          maxLength={512}
-          rows={3}
-        />
-        {error && <ValidationError>{error}</ValidationError>}
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * C-08: the retention/purge plane the console could not manage at all.
- * Purge enqueue + task status, retention-policy upsert, tombstone lookup —
- * all against the live engine endpoints (owner/admin where privileged).
- */
 function GovernanceSection() {
   return (
     <>
@@ -1019,14 +754,17 @@ function GovernanceSection() {
 }
 
 function PurgePanel() {
-  const enqueue = useEnqueuePurge();
-  const [dialog, setDialog] = useState(false);
-  const [scopeId, setScopeId] = useState('');
-  const [reason, setReason] = useState<'user_request' | 'retention_expiry' | 'org_deletion'>('user_request');
-  const [taskId, setTaskId] = useState<string | null>(null);
+  // X-6 migration: the request form moved to the dedicated
+  // /agent-studio/compliance/purges/new section. The section navigates back
+  // here with ?purgeTask=<id> after a successful enqueue, so the panel
+  // shows the just-enqueued task's status — exactly what the dialog-era
+  // onSuccess did via panel state.
+  const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { purgeTask?: string };
+  const initialTask = typeof search.purgeTask === 'string' && search.purgeTask !== '' ? search.purgeTask : null;
+  const [taskId, setTaskId] = useState<string | null>(initialTask);
   const [lookupId, setLookupId] = useState('');
   const task = usePurgeTask(taskId);
-  const { error } = buildPurgeBody({ scopeType: 'conversation', scopeId, reason });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
@@ -1035,7 +773,7 @@ function PurgePanel() {
         hold-check, and deletion steps. Active legal holds block it. Owner/admin only.
       </p>
       <div>
-        <ActionButton variant="secondary" size="sm" onClick={() => setDialog(true)}>
+        <ActionButton variant="secondary" size="sm" onClick={() => navigate({ to: '/agent-studio/compliance/purges/new' })}>
           Request purge
         </ActionButton>
       </div>
@@ -1071,55 +809,6 @@ function PurgePanel() {
           )}
         </QueryView>
       )}
-      <Modal
-        open={dialog}
-        onClose={() => setDialog(false)}
-        title="Request a purge"
-        width={520}
-        footer={
-          <>
-            <ActionButton variant="secondary" onClick={() => setDialog(false)}>Cancel</ActionButton>
-            <ActionButton
-              disabled={enqueue.isPending || !!error}
-              onClick={() => enqueue.mutate(
-                { scopeType: 'conversation', scopeId, reason },
-                {
-                  onSuccess: (data) => {
-                    toast.success('Purge enqueued');
-                    setDialog(false);
-                    setScopeId('');
-                    if (data.task) setTaskId(data.task.id);
-                  },
-                },
-              )}
-            >
-              Enqueue purge
-            </ActionButton>
-          </>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-            This starts the multi-step purge worker. It is not instant and not silent —
-            the task id tracks every step, and legal holds block it.
-          </p>
-          <TextInput
-            label="Conversation id (UUID)"
-            value={scopeId}
-            onChange={(e) => setScopeId(e.target.value)}
-            placeholder="Conversation UUID to purge"
-          />
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
-            Reason
-            <ScopeSelect value={reason} onChange={(e) => setReason(e.target.value as typeof reason)} aria-label="Purge reason">
-              {PURGE_REASONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </ScopeSelect>
-          </label>
-          {error && <ValidationError>{error}</ValidationError>}
-        </div>
-      </Modal>
     </div>
   );
 }

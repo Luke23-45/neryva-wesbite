@@ -51,11 +51,11 @@ vi.mock('@hooks/studio/useSetupOperate', async (importOriginal) => {
   return { ...actual, useControlBlocks: () => ({ data: [] }) };
 });
 
-async function shell() {
+async function shell(initialPath = '/agent-studio/agents/agent-1') {
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/',
+    path: '/agent-studio/agents/agent-1',
     component: () => (
       <ThemeProvider theme={theme}>
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -64,13 +64,19 @@ async function shell() {
       </ThemeProvider>
     ),
   });
+  const installRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/templates/$templateId/install',
+    component: () => <div>install section</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    routeTree: rootRoute.addChildren([indexRoute, installRoute]),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
@@ -96,9 +102,13 @@ describe('TemplateDetailOrigin (detail provenance + adoption)', () => {
     expect(screen.getByText(/Install v3\.1\.0 as new assistant/)).toBeTruthy();
   });
 
-  it('opens the wizard from the detail banner', async () => {
-    await shell();
-    fireEvent.click(screen.getByText(/Install v3\.1\.0 as new assistant/));
-    expect(screen.getByText(/Install support-concierge@3\.1\.0/)).toBeTruthy();
+  it('routes to the install section from the detail banner, threading returnTo', async () => {
+    const router = await shell();
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Install v3\.1\.0 as new assistant/));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/templates/support-concierge/install');
+    expect(router.state.location.search).toMatchObject({ returnTo: '/agent-studio/agents/agent-1' });
+    expect(screen.getByText('install section')).toBeTruthy();
   });
 });

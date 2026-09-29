@@ -70,7 +70,6 @@ vi.mock('@hooks/studio/useSetupOperate', async (importOriginal) => {
 
 async function shell(
   highlightVersionId: string | null = null,
-  onImported: (id: string | null) => void = () => undefined,
   onReviewPublish: (id: string) => void = () => undefined,
 ) {
   const rootRoute = createRootRoute();
@@ -80,7 +79,7 @@ async function shell(
     component: () => (
       <ThemeProvider theme={theme}>
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <VersionsPanelActions agentId="agent-1" activeVersionId="v2" onImported={onImported} />
+          <VersionsPanelActions agentId="agent-1" activeVersionId="v2" />
           <VersionsPanel
             agentId="agent-1"
             activeVersionId="v2"
@@ -99,6 +98,7 @@ async function shell(
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
@@ -106,35 +106,17 @@ beforeEach(() => {
   rollbackMutate.mockReset();
 });
 
-describe('VersionsPanel (import pane + highlight landing)', () => {
-  it('opens the import pane with Files|Paste tabs and schema honesty', async () => {
-    await shell();
+describe('VersionsPanel (import + rollback navigate to sections)', () => {
+  it('navigates to the import section when Import is clicked', async () => {
+    const router = await shell();
     fireEvent.click(screen.getByText('Import'));
-    expect(screen.getByText('Paste', { selector: 'button' })).toBeTruthy();
-    expect(screen.getByText('File', { selector: 'button' })).toBeTruthy();
-    fireEvent.change(screen.getByLabelText(/Exported definition JSON/), {
-      target: { value: JSON.stringify({ schema_version: 2, instructions: 'Hi', model_policy: { allowed_models: ['a/good'], fallback_enabled: false } }) },
-    });
-    expect(screen.getByText(/schema_version 2/)).toBeTruthy();
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1/versions/import');
   });
 
-  it('unwraps .export files instead of 400ing on them', async () => {
-    const onImported = vi.fn();
-    await shell(null, onImported);
-    fireEvent.click(screen.getByText('Import'));
-    fireEvent.change(screen.getByLabelText(/Exported definition JSON/), {
-      target: {
-        value: JSON.stringify({
-          export: { schema_version: 2, instructions: 'Hi', model_policy: { allowed_models: ['a/good'], fallback_enabled: false } },
-          provenance: { seed: 1 },
-        }),
-      },
-    });
-    expect(screen.getByText(/Unwrapped .export/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Import as draft'));
-    const sent = importMutate.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(sent).not.toHaveProperty('export');
-    expect(sent).not.toHaveProperty('provenance');
+  it('navigates to the rollback section when Rollback is clicked', async () => {
+    const router = await shell();
+    fireEvent.click(screen.getByText('Rollback'));
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1/versions/rollback');
   });
 
   it('highlights the imported draft row with a banner, never silently', async () => {
@@ -147,31 +129,9 @@ describe('VersionsPanel (import pane + highlight landing)', () => {
 describe('VersionsPanel (C14 publish alignment)', () => {
   it('routes draft publish through the gate instead of direct-mutating', async () => {
     const onReviewPublish = vi.fn();
-    await shell(null, () => undefined, onReviewPublish);
+    await shell(null, onReviewPublish);
     fireEvent.click(screen.getByText('Review & publish'));
     expect(onReviewPublish).toHaveBeenCalledWith('v0');
   });
 
-  it('opens a rollback picker with every non-live published version', async () => {
-    await shell();
-    fireEvent.click(screen.getByText('Rollback'));
-    expect(screen.getByText('Roll back to a prior version')).toBeTruthy();
-    // v1 is the only PUBLISHED ≠ live candidate (v2 is live).
-    expect(screen.getByDisplayValue(/v1/)).toBeTruthy();
-    expect(screen.getByText(/history is kept, nothing is renamed/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Roll back to v1'));
-    expect(rollbackMutate).toHaveBeenCalledWith({ toVersionId: 'v1' }, expect.anything());
-  });
-
-  it('names the new live version after rollback, unambiguously', async () => {
-    await shell();
-    fireEvent.click(screen.getByText('Rollback'));
-    fireEvent.click(screen.getByText('Roll back to v1'));
-    const onSuccess = rollbackMutate.mock.calls[0]?.[1]?.onSuccess as ((r: unknown) => void) | undefined;
-    act(() => {
-      onSuccess?.({ id: 'v3', version: 3, hash: 'd44e' });
-    });
-    expect(screen.getByText(/Live is now v3/)).toBeTruthy();
-    expect(screen.getByText(/Recorded in Audit/)).toBeTruthy();
-  });
 });

@@ -153,6 +153,15 @@ describe('upload tab: per-file rows', () => {
     expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
   });
 
+  it('Cancel returns to the knowledge library without authorizing', async () => {
+    const router = await routerAt('/agent-studio/knowledge/upload');
+    await act(async () => {
+      fireEvent.click(screen.getByText('Cancel'));
+    });
+    expect(router.state.location.pathname).toBe('/agent-studio/knowledge');
+    expect(screen.getByText('knowledge list')).toBeTruthy();
+  });
+
   it('adds a file row with slugified pin intent and prefilled title', async () => {
     await routerAt('/agent-studio/knowledge/upload');
     chooseFiles([new File(['data'], 'Refund Policy.pdf', { type: 'application/pdf' })]);

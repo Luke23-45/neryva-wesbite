@@ -144,37 +144,6 @@ describe('OperatePanel (C15)', () => {
     expect(screen.getByText(/Every operate write lands in/)).toBeTruthy();
   });
 
-  it('validates block expiry for the future via datetime-local', async () => {
-    await shell();
-    fireEvent.click(screen.getByText('Set block'));
-    fireEvent.change(screen.getByPlaceholderText('Why this block exists'), { target: { value: 'holiday freeze' } });
-    const expiry = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
-    expect(expiry).toBeTruthy();
-    fireEvent.change(expiry, { target: { value: '2020-01-01T00:00' } });
-    expect(screen.getByText(/must be in the future/)).toBeTruthy();
-    fireEvent.change(expiry, { target: { value: '2030-01-01T00:00' } });
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Set block'));
-    const sent = setBlockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(sent.reason).toBe('holiday freeze');
-    expect(typeof sent.expiresAt).toBe('string');
-    // datetime-local ships local wall time; the panel normalizes to UTC ISO.
-    expect((sent.expiresAt as string).endsWith('Z')).toBe(true);
-    expect(Date.parse(sent.expiresAt as string)).toBeGreaterThan(Date.now());
-  });
-
-  it('arms permanent blocks in two steps before committing', async () => {
-    await shell();
-    fireEvent.click(screen.getByText('Set block'));
-    fireEvent.change(screen.getByPlaceholderText('Why this block exists'), { target: { value: 'incident containment' } });
-    // No expiry entered: first click arms, second commits without expiresAt.
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Set block'));
-    expect(within(screen.getByRole('dialog')).getByText('Yes — block with no expiry')).toBeTruthy();
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Yes — block with no expiry'));
-    const sent = setBlockMutate.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(sent.reason).toBe('incident containment');
-    expect('expiresAt' in sent).toBe(false);
-  });
-
   it('asks before clearing a block and clears only the confirmed row', async () => {
     await shell();
     const row = screen.getByText(/refunds/).closest('div') as HTMLElement;
@@ -183,17 +152,6 @@ describe('OperatePanel (C15)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear block' }));
     expect(clearBlockMutate).toHaveBeenCalledTimes(1);
     expect(clearBlockMutate.mock.calls[0]?.[0]).toBe('b1');
-  });
-
-  it('resets the block modal between sessions', async () => {
-    await shell();
-    const openModal = () => fireEvent.click(screen.getAllByText('Set block')[0]);
-    openModal();
-    fireEvent.change(screen.getByPlaceholderText('Why this block exists'), { target: { value: 'stale reason' } });
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Cancel'));
-    openModal();
-    const reason = screen.getByPlaceholderText('Why this block exists') as HTMLInputElement;
-    expect(reason.value).toBe('');
   });
 
   it('renders expired blocks in a neutral tone with an expired label and full timestamp', async () => {

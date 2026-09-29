@@ -45,6 +45,13 @@ import AgentStudioAgentDetailPage from '@pages/products/agent_studio/AgentStudio
 import AgentStudioAgentEditPage from '@pages/products/agent_studio/AgentStudioAgentEditPage';
 import AgentStudioAgentBuilderNewPage from '@pages/products/agent_studio/AgentStudioAgentBuilderNewPage';
 import AgentStudioAgentBuilderPage from '@pages/products/agent_studio/AgentStudioAgentBuilderPage';
+import AgentStudioAgentsBlockNewPage from '@pages/products/agent_studio/AgentStudioAgentsBlockNewPage';
+import AgentStudioAgentsVersionImportPage from '@pages/products/agent_studio/AgentStudioAgentsVersionImportPage';
+import AgentStudioAgentsRollbackPage from '@pages/products/agent_studio/AgentStudioAgentsRollbackPage';
+import AgentStudioComplianceExportsNewPage from '@pages/products/agent_studio/AgentStudioComplianceExportsNewPage';
+import AgentStudioComplianceHoldsNewPage from '@pages/products/agent_studio/AgentStudioComplianceHoldsNewPage';
+import AgentStudioCompliancePurgesNewPage from '@pages/products/agent_studio/AgentStudioCompliancePurgesNewPage';
+import AgentStudioTemplatesInstallPage from '@pages/products/agent_studio/AgentStudioTemplatesInstallPage';
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage, { AgentStudioIntegrationsLayout } from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
@@ -79,8 +86,12 @@ import AgentStudioChannelsDetailPage from '@pages/products/agent_studio/AgentStu
 import AgentStudioChannelsWebhookSetupPage from '@pages/products/agent_studio/AgentStudioChannelsWebhookSetupPage';
 import AgentStudioApprovalsPage from '@pages/products/agent_studio/AgentStudioApprovalsPage';
 import AgentStudioAnalyticsPage from '@pages/products/agent_studio/AgentStudioAnalyticsPage';
-import AgentStudioCompliancePage from '@pages/products/agent_studio/AgentStudioCompliancePage';
-import AgentStudioTemplatesPage from '@pages/products/agent_studio/AgentStudioTemplatesPage';
+import AgentStudioCompliancePage, {
+  AgentStudioComplianceLayout,
+} from '@pages/products/agent_studio/AgentStudioCompliancePage';
+import AgentStudioTemplatesPage, {
+  AgentStudioTemplatesLayout,
+} from '@pages/products/agent_studio/AgentStudioTemplatesPage';
 import AgentStudioApiPage from '@pages/products/agent_studio/AgentStudioApiPage';
 import AgentStudioTeamsPage, { AgentStudioTeamsLayout } from '@pages/products/agent_studio/AgentStudioTeamsPage';
 import AgentStudioTeamsInvitePage from '@pages/products/agent_studio/AgentStudioTeamsInvitePage';
@@ -384,6 +395,29 @@ export const agentStudioAgentEditRoute = createRoute({
   component: AgentStudioAgentEditPage,
 });
 
+// Governance: set a control block on an agent (A-11). Static tail segments
+// win over the `/$agentId` dynamic sibling, so /block/new never resolves
+// as an agent id.
+export const agentStudioAgentBlockNewRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId/block/new',
+  component: AgentStudioAgentsBlockNewPage,
+});
+
+// Governance: import an agent definition (A-13).
+export const agentStudioAgentVersionImportRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId/versions/import',
+  component: AgentStudioAgentsVersionImportPage,
+});
+
+// Governance: roll back to a prior agent version (A-14).
+export const agentStudioAgentRollbackRoute = createRoute({
+  getParentRoute: () => agentStudioAgentsRoute,
+  path: '/$agentId/versions/rollback',
+  component: AgentStudioAgentsRollbackPage,
+});
+
 // Builder entry (BUILD_PLAN.md §B): static segment wins over the
 // `/$agentId` dynamic sibling, so /new never resolves as an id.
 export const agentStudioAgentsNewRoute = createRoute({
@@ -654,13 +688,53 @@ export const agentStudioAnalyticsRoute = createRoute({
 export const agentStudioComplianceRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/compliance',
+  component: AgentStudioComplianceLayout,
+});
+
+export const agentStudioComplianceIndexRoute = createRoute({
+  getParentRoute: () => agentStudioComplianceRoute,
+  path: '/',
   component: AgentStudioCompliancePage,
+});
+
+// DSR export request (X-1).
+export const agentStudioComplianceExportsNewRoute = createRoute({
+  getParentRoute: () => agentStudioComplianceRoute,
+  path: '/exports/new',
+  component: AgentStudioComplianceExportsNewPage,
+});
+
+// Place a legal hold (X-4).
+export const agentStudioComplianceHoldsNewRoute = createRoute({
+  getParentRoute: () => agentStudioComplianceRoute,
+  path: '/holds/new',
+  component: AgentStudioComplianceHoldsNewPage,
+});
+
+// Request a data purge (X-6).
+export const agentStudioCompliancePurgesNewRoute = createRoute({
+  getParentRoute: () => agentStudioComplianceRoute,
+  path: '/purges/new',
+  component: AgentStudioCompliancePurgesNewPage,
 });
 
 export const agentStudioTemplatesRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/templates',
+  component: AgentStudioTemplatesLayout,
+});
+
+export const agentStudioTemplatesIndexRoute = createRoute({
+  getParentRoute: () => agentStudioTemplatesRoute,
+  path: '/',
   component: AgentStudioTemplatesPage,
+});
+
+// Template install wizard (R-1).
+export const agentStudioTemplatesInstallRoute = createRoute({
+  getParentRoute: () => agentStudioTemplatesRoute,
+  path: '/$templateId/install',
+  component: AgentStudioTemplatesInstallPage,
 });
 
 export const agentStudioApiRoute = createRoute({
@@ -783,6 +857,9 @@ export const routeDefinitions = [
       agentStudioAgentDetailRoute,
       agentStudioAgentBuildRoute,
       agentStudioAgentEditRoute,
+      agentStudioAgentBlockNewRoute,
+      agentStudioAgentVersionImportRoute,
+      agentStudioAgentRollbackRoute,
     ]),
     agentStudioKnowledgeRoute.addChildren([
       agentStudioKnowledgeIndexRoute,
@@ -816,7 +893,10 @@ export const routeDefinitions = [
       agentStudioIntegrationsOAuthAppNewRoute,
       agentStudioWebhooksRoute,
     ]),
-    agentStudioTemplatesRoute,
+    agentStudioTemplatesRoute.addChildren([
+      agentStudioTemplatesIndexRoute,
+      agentStudioTemplatesInstallRoute,
+    ]),
     agentStudioApiRoute,
     agentStudioTeamsRoute.addChildren([
       agentStudioTeamsIndexRoute,
@@ -829,7 +909,12 @@ export const routeDefinitions = [
       agentStudioEvaluationsIndexRoute,
       agentStudioEvaluationsDatasetCasesNewRoute,
     ]),
-    agentStudioComplianceRoute,
+    agentStudioComplianceRoute.addChildren([
+      agentStudioComplianceIndexRoute,
+      agentStudioComplianceExportsNewRoute,
+      agentStudioComplianceHoldsNewRoute,
+      agentStudioCompliancePurgesNewRoute,
+    ]),
     agentStudioBlocksRoute,
     agentStudioSettingsRoute.addChildren([
       agentStudioSettingsIndexRoute,

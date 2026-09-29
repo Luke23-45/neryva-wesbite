@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { Archive, Download, GitCompare, History, Rocket, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,9 +13,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import {
   useAssistantVersions,
   useExportVersion,
-  usePublishReadiness,
   useRetireVersion,
-  useRollbackAssistant,
   useVersionSnapshot,
   diffDefinitions,
   type AgentVersion,
@@ -24,12 +22,8 @@ import { useMemberNameMap } from '@hooks/studio/useSetupOperate';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import {
-  PUBLISH_COPY,
-  classifyPublishRefusal,
   isPublishableStatus,
-  type PublishRefusalKind,
 } from '../../builder/lib/publish-model';
-import { ImportPane } from '../ImportPane';
 import {
   ActionCluster,
   EmptyNote,
@@ -57,170 +51,56 @@ const statusTone: Record<string, 'success' | 'warning' | 'neutral'> = {
   disabled: 'warning',
 };
 
-// ─── Versions panel (moved verbatim from AgentDetailView in C12) ───
+// ─── Versions panel actions (import + rollback are routed sections now) ───
 
-export function VersionsPanelActions({ agentId, activeVersionId, onImported }: { agentId: string; activeVersionId: string | null; onImported: (versionId: string | null) => void }) {
+export function VersionsPanelActions({ agentId, activeVersionId }: { agentId: string; activeVersionId: string | null }) {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canGovern = canSetup(role, 'setup:govern');
   const governDenied = setupDeniedCopy(role, 'setup:govern');
-  const [importOpen, setImportOpen] = useState(false);
-  const [rollbackOpen, setRollbackOpen] = useState(false);
-  const [targetId, setTargetId] = useState<string | null>(null);
-  const [acknowledge, setAcknowledge] = useState(false);
-  const [refusal, setRefusal] = useState<{ kind: PublishRefusalKind; message: string } | null>(null);
-  const [rolledBackTo, setRolledBackTo] = useState<number | null>(null);
   const versions = useAssistantVersions(agentId);
-  const rollback = useRollbackAssistant(agentId);
 
   // Rollback targets: every PUBLISHED version but the live one, newest
   // first — the old newest-only silent target is gone (PLAN §9).
+  // (kept for the entry-button gate: the section re-derives them)
   const candidates =
     versions.data
       ?.filter((v) => v.status === 'PUBLISHED' && v.id !== activeVersionId)
       .sort((a, b) => b.version - a.version) ?? [];
-  const target = candidates.find((c) => c.id === targetId) ?? candidates[0] ?? null;
-  const readiness = usePublishReadiness(agentId, rollbackOpen ? (target?.id ?? null) : null, {
-    acknowledged: acknowledge,
-    enabled: rollbackOpen,
-  });
-
-  function openRollback() {
-    setTargetId(null);
-    setAcknowledge(false);
-    setRefusal(null);
-    setRolledBackTo(null);
-    setRollbackOpen(true);
-  }
 
   return (
-    <>
-      <ActionCluster>
-        <Tooltip
-          label={
-            !canGovern
-              ? governDenied
-              : candidates.length > 0
-                ? 'Pick a prior published version to restore as a new version'
-                : 'Nothing to roll back to — publish at least two versions first'
-          }
+    <ActionCluster>
+      <Tooltip
+        label={
+          !canGovern
+            ? governDenied
+            : candidates.length > 0
+              ? 'Pick a prior published version to restore as a new version'
+              : 'Nothing to roll back to — publish at least two versions first'
+        }
+      >
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          disabled={!canGovern || candidates.length === 0}
+          title={!canGovern ? governDenied : undefined}
+          onClick={() => navigate({ to: '/agent-studio/agents/$agentId/versions/rollback', params: { agentId } })}
         >
-          <ActionButton
-            variant="secondary"
-            size="sm"
-            disabled={!canGovern || rollback.isPending || candidates.length === 0}
-            title={!canGovern ? governDenied : undefined}
-            onClick={openRollback}
-          >
-            <History size={13} strokeWidth={1.7} />
-            Rollback
-          </ActionButton>
-        </Tooltip>
-        <Tooltip label="Import a definition from an export file">
-          <ActionButton variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
-            <Upload size={13} strokeWidth={1.7} />
-            Import
-          </ActionButton>
-        </Tooltip>
-      </ActionCluster>
-
-      <Modal
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        title="Import a definition"
-        width={640}
-        footer={
-          <ActionButton variant="secondary" onClick={() => setImportOpen(false)}>Close</ActionButton>
-        }
-      >
-        <ImportPane
-          assistantId={agentId}
-          onImported={({ versionId }) => {
-            setImportOpen(false);
-            onImported(versionId);
-          }}
-        />
-      </Modal>
-
-      <Modal
-        open={rollbackOpen}
-        onClose={() => setRollbackOpen(false)}
-        title="Roll back to a prior version"
-        width={560}
-        footer={
-          <>
-            <ActionButton variant="secondary" onClick={() => setRollbackOpen(false)}>Close</ActionButton>
-            <ActionButton
-              variant="danger"
-              disabled={!target || rollback.isPending}
-              onClick={() => {
-                if (!target) return;
-                rollback.mutate(
-                  { toVersionId: target.id, ...(acknowledge ? { acknowledgeDegradedKnowledge: true } : {}) },
-                  {
-                    onSuccess: (ref) => {
-                      setRefusal(null);
-                      setRolledBackTo(ref.version);
-                    },
-                    onError: (error) => {
-                      setRolledBackTo(null);
-                      setRefusal({ kind: classifyPublishRefusal(error), message: error instanceof Error ? error.message : 'Rollback refused.' });
-                    },
-                  },
-                );
-              }}
-            >
-              {rollback.isPending ? 'Rolling back…' : target ? `Roll back to v${target.version}` : 'Roll back'}
-            </ActionButton>
-          </>
-        }
-      >
-        {candidates.length === 0 ? (
-          <EmptyNote>Nothing to roll back to — publish at least two versions first.</EmptyNote>
-        ) : (
-          <>
-            <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
-              Restore
-              <select
-                value={target?.id ?? ''}
-                onChange={(e) => { setTargetId(e.target.value); setAcknowledge(false); setRefusal(null); setRolledBackTo(null); }}
-                style={{ display: 'block', width: '100%', marginTop: 4 }}
-              >
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    v{c.version}{c.publishedAt ? ` · ${c.publishedAt.slice(0, 16).replace('T', ' ')}` : ''}{c.hash ? ` · ${c.hash.slice(0, 12)}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div style={{ fontSize: 12, color: 'inherit', opacity: 0.8, lineHeight: 1.6 }}>
-              {PUBLISH_COPY.rollbackCreatesNew} {PUBLISH_COPY.rollbackNoTouch}
-            </div>
-            {readiness.needsAcknowledge && (
-              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, marginTop: 10 }}>
-                <input type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} style={{ marginTop: 3 }} />
-                <span>
-                  {PUBLISH_COPY.degradedAck} Restoring pins that no longer resolve ships them anyway, explicitly.
-                </span>
-              </label>
-            )}
-            {refusal && (
-              <div role="alert" style={{ marginTop: 10, fontSize: 13, lineHeight: 1.55 }}>
-                <strong>Rollback refused</strong>
-                <div style={{ marginTop: 4 }}>{refusal.message}</div>
-                {refusal.kind === 'degraded' && (
-                  <div style={{ marginTop: 4, fontSize: 12 }}>Arm the acknowledge box above, then roll back again.</div>
-                )}
-              </div>
-            )}
-            {rolledBackTo !== null && (
-              <div role="status" style={{ marginTop: 10, fontSize: 13 }}>
-                Live is now v{rolledBackTo}. {PUBLISH_COPY.auditPromise} <Link to="/platform/audit">Open Audit →</Link>
-              </div>
-            )}
-          </>
-        )}
-      </Modal>
-    </>
+          <History size={13} strokeWidth={1.7} />
+          Rollback
+        </ActionButton>
+      </Tooltip>
+      <Tooltip label="Import a definition from an export file">
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate({ to: '/agent-studio/agents/$agentId/versions/import', params: { agentId } })}
+        >
+          <Upload size={13} strokeWidth={1.7} />
+          Import
+        </ActionButton>
+      </Tooltip>
+    </ActionCluster>
   );
 }
 

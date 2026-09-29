@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
 import { ArrowLeft, Copy as CopyIcon, MessageSquare, Pencil, Trash2 } from 'lucide-react';
@@ -87,6 +87,31 @@ const statusTone: Record<string, 'success' | 'warning' | 'neutral'> = {
   disabled: 'warning',
 };
 
+/**
+ * Consumes the one-shot post-import highlight marker written by the
+ * import section (`agents:import:highlighted:<agentId>`) before it
+ * navigates back here. Consumed exactly once — the marker is removed on
+ * read so a refresh never replays the landing.
+ */
+function ConsumeImportHighlight({ agentId, onHighlight }: { agentId: string; onHighlight: (versionId: string) => void }) {
+  useEffect(() => {
+    let pending: string | null = null;
+    try {
+      const key = `agents:import:highlighted:${agentId}`;
+      pending = window.sessionStorage.getItem(key);
+      if (pending) {
+        window.sessionStorage.removeItem(key);
+      }
+    } catch {
+      // Private mode etc. — the landing banner is a convenience, never load-bearing.
+    }
+    if (pending) {
+      onHighlight(pending);
+    }
+  }, [agentId, onHighlight]);
+  return null;
+}
+
 export function AgentDetailView() {
   const params = useParams({ from: '/agent-studio/agents/$agentId' });
   const navigate = useNavigate();
@@ -101,8 +126,7 @@ export function AgentDetailView() {
   // Post-import landing (C12): the new draft row pulses + scrolls into
   // view with a banner — imports are never left silent. Session state,
   // never cached.
-  const [highlightVersionId, setHighlightVersionId] = useState<string | null>(null);
-  // Publish-gate landing (C14): version-row "Review & publish" selects the
+  const [highlightVersionId, setHighlightVersionId] = useState<string | null>(null);  // Publish-gate landing (C14): version-row "Review & publish" selects the
   // draft in the gate panel below and scrolls to it — one publish path.
   const [publishFocus, setPublishFocus] = useState<{ versionId: string; nonce: number } | null>(null);
   const { role } = useOrg();
@@ -126,6 +150,7 @@ export function AgentDetailView() {
       >
         {(agent) => agent && (
           <>
+            <ConsumeImportHighlight agentId={agent.id} onHighlight={setHighlightVersionId} />
             {(() => {
               const definition = form.data?.definition ?? defaultDefinition();
               const lifecycle = agent.disabledAt ? 'disabled' : agent.activeVersionId ? 'live' : 'new';
@@ -297,7 +322,7 @@ export function AgentDetailView() {
                 title="Versions"
                 subtitle="Immutable drafts and published versions — publish to serve, rollback to recover."
                 flush
-                action={<VersionsPanelActions agentId={agent.id} activeVersionId={agent.activeVersionId} onImported={(versionId) => setHighlightVersionId(versionId)} />}
+                action={<VersionsPanelActions agentId={agent.id} activeVersionId={agent.activeVersionId} />}
               >
                 <VersionsPanel
                   agentId={agent.id}
