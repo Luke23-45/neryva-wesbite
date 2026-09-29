@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
@@ -8,8 +8,6 @@ import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
-import { Segmented } from '@components/common/ui/Segmented';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -22,13 +20,8 @@ import {
   DataCell,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
-import { useAttachmentUpload, KNOWLEDGE_MEDIA_TYPES, type AttachmentStatus, type PasteUploadType } from '@hooks/studio/useAttachmentUpload';
-import {
-  slugifyFilename,
-  validatePaste,
-  PASTE_MEDIA_TYPES,
-  RETENTION_NOTE,
-} from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
+import { KNOWLEDGE_MEDIA_TYPES, type AttachmentStatus } from '@hooks/studio/useAttachmentUpload';
+import { RETENTION_NOTE } from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
 import {
   useDocuments,
   useRenameDocumentSlug,
@@ -41,6 +34,7 @@ import { ApiError } from '@lib/engine/client';
 import { checkSourceSlug } from '@lib/engine/setup-caps';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
+import { useKnowledgeUploads } from './KnowledgeUploads';
 
 // Document states (engine knowledge schema): processing|ready|failed|retired.
 // Retired = source-deleted tombstone (mapping kept for resurrection,
@@ -180,15 +174,15 @@ export function KnowledgeView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
   const writeDenied = setupDeniedCopy(role, 'setup:author');
+  const navigate = useNavigate();
   // A4-06: load the full 200-document window the engine serves (default 50
   // silently hid older documents); the cap is disclosed under the table.
   const documents = useDocuments(DOCUMENTS_CAP);
-  const { uploads, attach, attachText, dismiss } = useAttachmentUpload();
+  const { uploads, attach, dismiss } = useKnowledgeUploads();
   const rename = useRenameDocumentSlug();
   const remove = useDeleteDocument();
 
   const [filter, setFilter] = useState('');
-  const [uploadOpen, setUploadOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<{ id: string; slug: string } | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{ id: string; slug: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; slug: string } | null>(null);
@@ -237,7 +231,11 @@ export function KnowledgeView() {
               Connectors
             </ActionButton>
           </Link>
-          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Upload a document' : writeDenied} onClick={() => setUploadOpen(true)}>
+          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Upload a document' : writeDenied} onClick={() => {
+            if (canWrite) {
+              navigate({ to: '/agent-studio/knowledge/upload' });
+            }
+          }}>
             <Plus size={14} strokeWidth={2} />
             Upload
           </ActionButton>
@@ -490,7 +488,6 @@ export function KnowledgeView() {
         </SectionGap>
       </motion.div>
 
-      <UploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} onAttach={attach} onAttachText={attachText} canWrite={canWrite} writeDenied={writeDenied} />
       <VersionUploadModal
         target={versionTarget}
         onClose={() => setVersionTarget(null)}
@@ -527,273 +524,6 @@ export function KnowledgeView() {
         pending={rename.isPending}
       />
     </ViewShell>
-  );
-}
-
-interface UploadRow {
-  key: number;
-  file: File;
-  slug: string;
-  title: string;
-}
-
-/* Slug intent + paste validation live in the shared knowledge model (C05) —
-   one rule, builder and library. */
-
-/** Paste-tab formats (labels for the shared allowlist subset). */
-const PASTE_LABELS: Record<PasteUploadType, string> = {
-  'text/plain': 'Text',
-  'text/markdown': 'Markdown',
-  'text/csv': 'CSV',
-  'application/json': 'JSON',
-};
-
-function UploadModal({
-  open,
-  onClose,
-  onAttach,
-  onAttachText,
-  canWrite,
-  writeDenied,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onAttach: (input: { file: File; sourceSlug?: string; title?: string }) => Promise<string | null>;
-  onAttachText: (input: { text: string; slug: string; mediaType: PasteUploadType; title?: string }) => Promise<string | null>;
-  canWrite: boolean;
-  writeDenied: string;
-}) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<'upload' | 'paste'>('upload');
-  const [rows, setRows] = useState<UploadRow[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [pasteText, setPasteText] = useState('');
-  const [pasteMedia, setPasteMedia] = useState<PasteUploadType>('text/markdown');
-  const [pasteSlug, setPasteSlug] = useState('');
-  const [pasteTitle, setPasteTitle] = useState('');
-  const keyRef = useRef(0);
-
-  const addFiles = (files: FileList | null) => {
-    if (!files) {
-      return;
-    }
-    const next: UploadRow[] = [];
-    for (const file of Array.from(files)) {
-      keyRef.current += 1;
-      next.push({ key: keyRef.current, file, slug: slugifyFilename(file.name), title: file.name.replace(/\.[a-z0-9]+$/i, '') });
-    }
-    setRows((prev) => [...prev, ...next]);
-  };
-
-  const setRow = (key: number, patch: Partial<UploadRow>) => {
-    setRows((prev) => prev.map((row) => (row.key === key ? { ...row, ...patch } : row)));
-  };
-
-  const problems = rows.map((row) => (row.slug.trim() ? checkSourceSlug(row.slug) : null));
-  const blocked = problems.some((problem) => problem !== null);
-
-  const submit = () => {
-    if (rows.length === 0 || blocked || busy) {
-      return;
-    }
-    setBusy(true);
-    void (async () => {
-      let authorized = 0;
-      let unsupported = 0;
-      for (const row of rows) {
-        try {
-          const sessionId = await onAttach({
-            file: row.file,
-            ...(row.slug.trim() ? { sourceSlug: row.slug.trim().toLowerCase() } : {}),
-            ...(row.title.trim() ? { title: row.title.trim() } : {}),
-          });
-          if (sessionId === null) {
-            unsupported += 1;
-          } else {
-            authorized += 1;
-          }
-        } catch (error) {
-          toast.error(uploadErrorCopy(row.file.name, error));
-        }
-      }
-      if (unsupported > 0) {
-        toast.error(`${unsupported} file${unsupported === 1 ? '' : 's'} not a supported type (${KNOWLEDGE_MEDIA_TYPES.join(', ')})`);
-      }
-      if (authorized > 0) {
-        toast.success(`${authorized} upload${authorized === 1 ? '' : 's'} authorized — tracking ingestion to READY`);
-        setRows([]);
-        setBusy(false);
-        onClose();
-      } else {
-        // A4-09 — nothing was authorized: keep the selection and the modal
-        // open so the user can address the refusal (e.g. shrink the file)
-        // and retry without reselecting everything.
-        setBusy(false);
-      }
-    })();
-  };
-
-  const submitPaste = () => {
-    if (busy) return;
-    const pasteCheck = validatePaste(pasteText, pasteMedia);
-    if (!pasteCheck.ok) {
-      toast.error(pasteCheck.message);
-      return;
-    }
-    const slugProblem = pasteSlug.trim() ? checkSourceSlug(pasteSlug) : 'A pin address is required for pastes.';
-    if (slugProblem) {
-      toast.error(slugProblem);
-      return;
-    }
-    setBusy(true);
-    void (async () => {
-      try {
-        const sessionId = await onAttachText({
-          text: pasteText,
-          slug: pasteSlug.trim().toLowerCase(),
-          mediaType: pasteCheck.mediaType,
-          ...(pasteTitle.trim() ? { title: pasteTitle.trim() } : {}),
-        });
-        if (sessionId === null) {
-          toast.error('Paste could not start — try again.');
-        } else {
-          toast.success('Paste authorized — tracking ingestion to READY');
-        }
-        setPasteText('');
-        setPasteSlug('');
-        setPasteTitle('');
-        setBusy(false);
-        onClose();
-      } catch (error) {
-        toast.error(uploadErrorCopy('Paste', error));
-        setBusy(false);
-      }
-    })();
-  };
-
-  const pasteBlocked = pasteText.trim() === '' || pasteSlug.trim() === '' || busy;
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Upload documents"
-      width={640}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          {tab === 'upload' ? (
-            <ActionButton disabled={!canWrite || rows.length === 0 || blocked || busy} title={canWrite ? 'Authorize an upload session per file' : writeDenied} onClick={submit}>
-              <Upload size={13} strokeWidth={1.8} />
-              Upload {rows.length > 0 ? `${rows.length} file${rows.length === 1 ? '' : 's'}` : ''}
-            </ActionButton>
-          ) : (
-            <ActionButton disabled={!canWrite || pasteBlocked} title={canWrite ? 'Authorize an upload session for the paste' : writeDenied} onClick={submitPaste}>
-              <Upload size={13} strokeWidth={1.8} />
-              Ingest paste
-            </ActionButton>
-          )}
-        </>
-      }
-    >
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <ActionButton variant={tab === 'upload' ? 'primary' : 'secondary'} size="sm" onClick={() => setTab('upload')}>
-          Files
-        </ActionButton>
-        <ActionButton variant={tab === 'paste' ? 'primary' : 'secondary'} size="sm" onClick={() => setTab('paste')}>
-          Paste text
-        </ActionButton>
-      </div>
-      {tab === 'upload' ? (
-        <>
-          <input
-            ref={fileRef}
-            type="file"
-            multiple
-            style={{ display: 'none' }}
-            accept={KNOWLEDGE_MEDIA_TYPES.join(',')}
-            onChange={(e) => {
-              addFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-          <ActionButton variant="secondary" onClick={() => fileRef.current?.click()}>
-            Choose files (pdf, markdown, text, csv, json, image)
-          </ActionButton>
-          {rows.map((row) => (
-            <div key={row.key} style={{ borderTop: '1px solid var(--neryva-border, #222)', marginTop: 12, paddingTop: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <strong style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.file.name}</strong>
-                <Muted>{(row.file.size / 1024).toFixed(1)} KB</Muted>
-                <ActionButton variant="ghost" size="sm" onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}>
-                  Remove
-                </ActionButton>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-                <TextInput
-                  label="Pin address intent"
-                  value={row.slug}
-                  onChange={(e) => setRow(row.key, { slug: e.target.value })}
-                  placeholder="omit to derive"
-                  hint="Kebab 3–64, reserved now — 409 on collision."
-                  error={(row.slug.trim() ? checkSourceSlug(row.slug) : null) ?? undefined}
-                />
-                <TextInput
-                  label="Display title"
-                  value={row.title}
-                  onChange={(e) => setRow(row.key, { title: e.target.value })}
-                  placeholder="Defaults to the slug, else auto"
-                  maxLength={256}
-                  hint="≤256 characters — the engine rejects longer titles (400)."
-                />
-              </div>
-            </div>
-          ))}
-          {rows.length === 0 && <p style={{ fontSize: 13, opacity: 0.7 }}>No files yet — each file gets its own presigned session and ingestion tracker row.</p>}
-        </>
-      ) : (
-        <>
-          <Segmented
-            options={PASTE_MEDIA_TYPES.map((mediaType) => ({ value: mediaType, label: PASTE_LABELS[mediaType as PasteUploadType] }))}
-            value={pasteMedia}
-            onChange={(value) => setPasteMedia(value as PasteUploadType)}
-            size="sm"
-            ariaLabel="Paste format"
-          />
-          <div style={{ marginTop: 12 }}>
-            <TextArea
-              label="Content"
-              value={pasteText}
-              onChange={(e) => setPasteText(e.target.value)}
-              rows={5}
-              placeholder={pasteMedia === 'application/json' ? '{"policy": "refunds within 30 days…"}' : 'Paste the source text…'}
-            />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <TextInput
-              label="Pin address (required)"
-              value={pasteSlug}
-              onChange={(e) => setPasteSlug(e.target.value)}
-              placeholder="kebab-case, 3–64 chars"
-              error={(pasteSlug.trim() ? checkSourceSlug(pasteSlug) : null) ?? undefined}
-            />
-            <TextInput
-              label="Display title"
-              value={pasteTitle}
-              onChange={(e) => setPasteTitle(e.target.value)}
-              placeholder="Defaults to the slug, else auto"
-              maxLength={256}
-              hint="≤256 characters — the engine rejects longer titles (400)."
-            />
-          </div>
-          <p style={{ fontSize: 12, opacity: 0.65, marginTop: 8 }}>
-            Pasted bytes ride the same verified session flow as files — pin the slug from an agent once READY.
-          </p>
-        </>
-      )}
-    </Modal>
   );
 }
 

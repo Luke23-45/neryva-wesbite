@@ -179,12 +179,12 @@ export function EvaluatePanel({ agentId, versions }: { agentId: string; versions
                         required={required}
                         onReRun={canEvaluate && !running && latest.datasetId ? reRun : null}
                         onAddCases={null}
-                        addCasesAction={<Link to="/agent-studio/evaluations">Add a covering case →</Link>}
+                        addCasesAction={<Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Add a covering case →</Link>}
                       />
                     )}
                     {versionRuns.length > 1 && (
                       <p style={{ fontSize: 12, opacity: 0.65 }}>
-                        +{versionRuns.length - 1} older run{versionRuns.length - 1 === 1 ? '' : 's'} — latest wins for every gate. Full history lives in <Link to="/agent-studio/evaluations">Evaluations</Link>.
+                        +{versionRuns.length - 1} older run{versionRuns.length - 1 === 1 ? '' : 's'} — latest wins for every gate. Full history lives in <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Evaluations</Link>.
                       </p>
                     )}
                     <Note>

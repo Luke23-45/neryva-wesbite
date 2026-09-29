@@ -3,6 +3,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { theme } from '@styles/theme';
 import toast from 'react-hot-toast';
 import { ToolsView } from './ToolsView';
@@ -49,14 +56,29 @@ vi.mock('@hooks/studio/useSetupTools', async (importOriginal) => {
   };
 });
 
-function shell() {
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <ToolsView />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
+async function shell() {
+  const rootRoute = createRootRoute();
+  const toolsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/tools',
+    component: () => (
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <ToolsView />
+        </QueryClientProvider>
+      </ThemeProvider>
+    ),
+  });
+  const newRoute = createRoute({ getParentRoute: () => toolsRoute, path: '/new', component: () => <div>new stub</div> });
+  const editRoute = createRoute({ getParentRoute: () => toolsRoute, path: '/$toolId/edit', component: () => <div>edit stub</div> });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([toolsRoute.addChildren([newRoute, editRoute])]),
+    history: createMemoryHistory({ initialEntries: ['/agent-studio/tools'] }),
+  });
+  await act(async () => {
+    render(<RouterProvider router={router} />);
+  });
+  return router;
 }
 
 beforeEach(() => {
@@ -69,9 +91,7 @@ beforeEach(() => {
 
 describe('ToolsView catalog (C06)', () => {
   it('filters by name and effect, and shows the perimeter cell', async () => {
-    await act(async () => {
-      shell();
-    });
+    await shell();
     expect(screen.getByText('lookup_ticket')).toBeTruthy();
     expect(screen.getByText('microvm')).toBeTruthy();
     fireEvent.change(screen.getByPlaceholderText('Filter by name…'), { target: { value: 'refund' } });
@@ -80,18 +100,14 @@ describe('ToolsView catalog (C06)', () => {
   });
 
   it('expands a row drawer with full hash and perimeter truth', async () => {
-    await act(async () => {
-      shell();
-    });
+    await shell();
     fireEvent.click(screen.getAllByText('Detail')[0]);
     expect(screen.getByText('a'.repeat(64))).toBeTruthy();
     expect(screen.getByText(/binding host api.crm.example/)).toBeTruthy();
   });
 
   it('toggles enable per row without freezing the column', async () => {
-    await act(async () => {
-      shell();
-    });
+    await shell();
     fireEvent.click(screen.getByLabelText('Enable lookup_ticket'));
     expect(setEnabledMutate).toHaveBeenCalledWith(
       { name: 'lookup_ticket', enabled: false },
@@ -99,21 +115,20 @@ describe('ToolsView catalog (C06)', () => {
     );
   });
 
-  it('opens edit prefilled with the name locked', async () => {
-    await act(async () => {
-      shell();
-    });
+  it('navigates to the register section from "New tool"', async () => {
+    const router = await shell();
+    fireEvent.click(screen.getByText('New tool'));
+    expect(router.state.location.pathname).toBe('/agent-studio/tools/new');
+  });
+
+  it('navigates to the edit section from a row "Edit"', async () => {
+    const router = await shell();
     fireEvent.click(screen.getAllByText('Edit')[0]);
-    expect(screen.getByText('Edit tool lookup_ticket')).toBeTruthy();
-    const nameInput = screen.getByPlaceholderText('lookup_ticket') as HTMLInputElement;
-    expect(nameInput.disabled).toBe(true);
-    expect((screen.getByPlaceholderText('1.0.0') as HTMLInputElement).value).toBe('v3');
+    expect(router.state.location.pathname).toBe('/agent-studio/tools/lookup_ticket/edit');
   });
 
   it('validates the template rate limit with a named message', async () => {
-    await act(async () => {
-      shell();
-    });
+    await shell();
     fireEvent.click(screen.getByText('From template'));
     fireEvent.change(screen.getByPlaceholderText('unset = platform cap'), { target: { value: '0' } });
     expect(screen.getByText('Must be a number ≥ 1.')).toBeTruthy();
@@ -121,9 +136,7 @@ describe('ToolsView catalog (C06)', () => {
   });
 
   it('toggles "Show disabled tools" exactly once per label click', async () => {
-    await act(async () => {
-      shell();
-    });
+    await shell();
     // The switch renders its own label; there must be no wrapping <label>
     // that could double-activate the toggle in real browsers.
     const toggle = screen.getByRole('switch', { name: 'Show disabled tools' });

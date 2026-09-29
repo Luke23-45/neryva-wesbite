@@ -61,10 +61,15 @@ import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentSt
 import AgentStudioSettingsApiKeyNewPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeyNewPage';
 import AgentStudioSettingsTwoFactorSetupPage from '@pages/products/agent_studio/AgentStudioSettingsTwoFactorSetupPage';
 import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKnowledgePage';
+import AgentStudioKnowledgeUploadPage, {
+  AgentStudioKnowledgeLayout,
+} from '@pages/products/agent_studio/AgentStudioKnowledgeUploadPage';
 import AgentStudioModelsPage, { AgentStudioModelsLayout } from '@pages/products/agent_studio/AgentStudioModelsPage';
 import AgentStudioModelsCredentialsNewPage from '@pages/products/agent_studio/AgentStudioModelsCredentialsNewPage';
 import AgentStudioModelsCredentialsRotatePage from '@pages/products/agent_studio/AgentStudioModelsCredentialsRotatePage';
-import AgentStudioToolsPage from '@pages/products/agent_studio/AgentStudioToolsPage';
+import AgentStudioToolsPage, { AgentStudioToolsLayout } from '@pages/products/agent_studio/AgentStudioToolsPage';
+import AgentStudioToolsNewPage from '@pages/products/agent_studio/AgentStudioToolsNewPage';
+import AgentStudioToolsEditPage from '@pages/products/agent_studio/AgentStudioToolsEditPage';
 import AgentStudioMemoryPage from '@pages/products/agent_studio/AgentStudioMemoryPage';
 import AgentStudioDatasetsPage from '@pages/products/agent_studio/AgentStudioDatasetsPage';
 import AgentStudioBlocksPage from '@pages/products/agent_studio/AgentStudioBlocksPage';
@@ -82,7 +87,8 @@ import AgentStudioTeamsInvitePage from '@pages/products/agent_studio/AgentStudio
 import AgentStudioTeamsGroupNewPage from '@pages/products/agent_studio/AgentStudioTeamsGroupNewPage';
 import AgentStudioTeamsServiceAccountNewPage from '@pages/products/agent_studio/AgentStudioTeamsServiceAccountNewPage';
 import AgentStudioUsagePage from '@pages/products/agent_studio/AgentStudioUsagePage';
-import AgentStudioEvaluationsPage from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
+import AgentStudioEvaluationsPage, { AgentStudioEvaluationsLayout } from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
+import AgentStudioEvaluationsCasesNewPage from '@pages/products/agent_studio/AgentStudioEvaluationsCasesNewPage';
 
 // NOTE (parked): the /deployment app shell lives unrouted under
 // `src/future/deployment/` — reference template, no approved architecture
@@ -513,7 +519,19 @@ export const agentStudioSettingsTwoFactorSetupRoute = createRoute({
 export const agentStudioKnowledgeRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/knowledge',
+  component: AgentStudioKnowledgeLayout,
+});
+
+export const agentStudioKnowledgeIndexRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/',
   component: AgentStudioKnowledgePage,
+});
+
+export const agentStudioKnowledgeUploadRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/upload',
+  component: AgentStudioKnowledgeUploadPage,
 });
 
 export const agentStudioModelsRoute = createRoute({
@@ -543,7 +561,25 @@ export const agentStudioModelsCredentialsRotateRoute = createRoute({
 export const agentStudioToolsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/tools',
+  component: AgentStudioToolsLayout,
+});
+
+export const agentStudioToolsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioToolsRoute,
+  path: '/',
   component: AgentStudioToolsPage,
+});
+
+export const agentStudioToolsNewRoute = createRoute({
+  getParentRoute: () => agentStudioToolsRoute,
+  path: '/new',
+  component: AgentStudioToolsNewPage,
+});
+
+export const agentStudioToolsEditRoute = createRoute({
+  getParentRoute: () => agentStudioToolsRoute,
+  path: '/$toolId/edit',
+  component: AgentStudioToolsEditPage,
 });
 
 // Libraries additions (SIDEBAR_LEDGER.md P3): additive leaf routes, no moves.
@@ -672,7 +708,25 @@ export const agentStudioUsageRoute = createRoute({
 export const agentStudioEvaluationsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/evaluations',
+  // E-2 return contract: the per-dataset and results-drawer "Add cases"
+  // entries thread ?returnTo=<originating context>; validated on the layout
+  // so the cases-new child inherits the contract (C14 pattern).
+  validateSearch: (search: Record<string, unknown>) => ({
+    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+  }),
+  component: AgentStudioEvaluationsLayout,
+});
+
+export const agentStudioEvaluationsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioEvaluationsRoute,
+  path: '/',
   component: AgentStudioEvaluationsPage,
+});
+
+export const agentStudioEvaluationsDatasetCasesNewRoute = createRoute({
+  getParentRoute: () => agentStudioEvaluationsRoute,
+  path: '/datasets/$datasetId/cases/new',
+  component: AgentStudioEvaluationsCasesNewPage,
 });
 
 // ─── Deployment (PARKED — see note at the imports above) ────────────────
@@ -730,13 +784,20 @@ export const routeDefinitions = [
       agentStudioAgentBuildRoute,
       agentStudioAgentEditRoute,
     ]),
-    agentStudioKnowledgeRoute,
+    agentStudioKnowledgeRoute.addChildren([
+      agentStudioKnowledgeIndexRoute,
+      agentStudioKnowledgeUploadRoute,
+    ]),
     agentStudioModelsRoute.addChildren([
       agentStudioModelsIndexRoute,
       agentStudioModelsCredentialsNewRoute,
       agentStudioModelsCredentialsRotateRoute,
     ]),
-    agentStudioToolsRoute,
+    agentStudioToolsRoute.addChildren([
+      agentStudioToolsIndexRoute,
+      agentStudioToolsNewRoute,
+      agentStudioToolsEditRoute,
+    ]),
     agentStudioMemoryRoute,
     agentStudioDatasetsRoute,
     agentStudioChannelsRoute.addChildren([
@@ -764,7 +825,10 @@ export const routeDefinitions = [
       agentStudioTeamsServiceAccountNewRoute,
     ]),
     agentStudioUsageRoute,
-    agentStudioEvaluationsRoute,
+    agentStudioEvaluationsRoute.addChildren([
+      agentStudioEvaluationsIndexRoute,
+      agentStudioEvaluationsDatasetCasesNewRoute,
+    ]),
     agentStudioComplianceRoute,
     agentStudioBlocksRoute,
     agentStudioSettingsRoute.addChildren([

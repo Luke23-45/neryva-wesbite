@@ -9,6 +9,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
@@ -35,7 +36,13 @@ vi.mock('@hooks/studio/useAttachmentUpload', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAttachmentUpload')>();
   return {
     ...actual,
-    useAttachmentUpload: () => ({ uploads: [], attach: attachMock, attachText: attachTextMock, reset: vi.fn() }),
+    useAttachmentUpload: () => ({
+      uploads: [],
+      attach: attachMock,
+      attachText: attachTextMock,
+      reset: vi.fn(),
+      dismiss: vi.fn(),
+    }),
   };
 });
 
@@ -55,8 +62,13 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
 
 async function shell() {
   const rootRoute = createRootRoute();
-  const indexRoute = createRoute({
+  const layoutRoute = createRoute({
     getParentRoute: () => rootRoute,
+    path: '/agent-studio/knowledge',
+    component: () => <Outlet />,
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => layoutRoute,
     path: '/',
     component: () => (
       <ThemeProvider theme={theme}>
@@ -66,13 +78,19 @@ async function shell() {
       </ThemeProvider>
     ),
   });
+  const uploadRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: '/upload',
+    component: () => <div>upload section</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([indexRoute]),
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    routeTree: rootRoute.addChildren([layoutRoute.addChildren([indexRoute, uploadRoute])]),
+    history: createMemoryHistory({ initialEntries: ['/agent-studio/knowledge'] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
   });
+  return router;
 }
 
 beforeEach(() => {
@@ -82,15 +100,17 @@ beforeEach(() => {
   vi.mocked(toast.error).mockReset();
 });
 
-async function openPasteTab() {
-  await act(async () => {
-    shell();
-  });
-  fireEvent.click(screen.getByText('Upload', { selector: 'button' }));
-  fireEvent.click(screen.getByText('Paste text'));
-}
-
 describe('KnowledgeView library page (C05)', () => {
+  it('routes the Upload header button to the upload section', async () => {
+    let router: Awaited<ReturnType<typeof shell>> | undefined;
+    await act(async () => {
+      router = await shell();
+    });
+    fireEvent.click(screen.getByText('Upload', { selector: 'button' }));
+    expect(router?.state.location.pathname).toBe('/agent-studio/knowledge/upload');
+    expect(await screen.findByText('upload section')).toBeTruthy();
+  });
+
   it('states the retention truth — no delete verb, coverage is per-agent', async () => {
     await act(async () => {
       shell();
@@ -106,28 +126,5 @@ describe('KnowledgeView library page (C05)', () => {
     expect(screen.getByText(/moved there from this page, not copied/)).toBeTruthy();
     expect(screen.getByText(/Memory library/).getAttribute('href')).toMatch(/memory/);
     expect(screen.queryByLabelText(/New memory/)).toBeNull();
-  });
-
-  it('guards pasted JSON with a named error and never starts a session', async () => {
-    await openPasteTab();
-    fireEvent.click(screen.getByText('JSON'));
-    fireEvent.change(screen.getByPlaceholderText(/refunds within 30 days/), { target: { value: '{broken' } });
-    fireEvent.change(screen.getByPlaceholderText('kebab-case, 3–64 chars'), { target: { value: 'pasted-policy' } });
-    fireEvent.click(screen.getByText('Ingest paste'));
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/valid JSON/i));
-    expect(attachTextMock).not.toHaveBeenCalled();
-  });
-
-  it('ingests valid paste through the shared session flow', async () => {
-    attachTextMock.mockResolvedValueOnce('session-9');
-    await openPasteTab();
-    fireEvent.change(screen.getByPlaceholderText('Paste the source text…'), { target: { value: 'Refunds within 30 days.' } });
-    fireEvent.change(screen.getByPlaceholderText('kebab-case, 3–64 chars'), { target: { value: 'pasted-policy' } });
-    fireEvent.click(screen.getByText('Ingest paste'));
-    await act(async () => undefined);
-    expect(attachTextMock).toHaveBeenCalledWith(
-      expect.objectContaining({ slug: 'pasted-policy', mediaType: 'text/markdown' }),
-    );
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith(expect.stringMatching(/tracking ingestion/i));
   });
 });

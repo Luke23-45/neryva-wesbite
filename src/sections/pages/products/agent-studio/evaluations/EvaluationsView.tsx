@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { Plus, FlaskConical } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { Drawer } from '@components/common/ui/Drawer';
@@ -23,7 +24,6 @@ import { pageItem } from '@styles/motion';
 import {
   useEvalDatasets,
   useCreateEvalDataset,
-  useAddEvalCases,
   useEvalRuns,
   useStartEvalRun,
   useDatasetRecall,
@@ -42,7 +42,7 @@ import {
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantVersions } from '@hooks/studio/useAgentAuthoring';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
-import { buildCase, draftFromCase, EMPTY_CASE, type CaseDraft } from '@lib/engine/eval-cases';
+import { buildCase, draftFromCase, type CaseDraft } from '@lib/engine/eval-cases';
 import { describeDatasetOrigin } from '../builder/lib/eval-model';
 import { EvalResults } from '../builder/inspector/EvalResults';
 import { useOrg } from '@/Context/OrgContext';
@@ -90,13 +90,13 @@ const SectionGap = styled.div`
 
 export function EvaluationsView() {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canWrite = canSetup(role, 'setup:author');
   const writeDenied = setupDeniedCopy(role, 'setup:author');
   const datasets = useEvalDatasets();
   const runs = useEvalRuns();
   const startRun = useStartEvalRun();
   const [datasetOpen, setDatasetOpen] = useState(false);
-  const [casesTarget, setCasesTarget] = useState<{ id: string; name: string } | null>(null);
   const [manageTarget, setManageTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [runOpen, setRunOpen] = useState(false);
@@ -176,7 +176,22 @@ export function EvaluationsView() {
                         <ActionButton variant="ghost" size="sm" title="List, edit, delete, import, export cases" onClick={() => setManageTarget({ id: dataset.id, name: dataset.name })}>
                           Cases
                         </ActionButton>
-                        <ActionButton variant="ghost" size="sm" disabled={!canWrite} title={canWrite ? 'Append cases (non-empty array)' : writeDenied} onClick={() => setCasesTarget({ id: dataset.id, name: dataset.name })}>
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          disabled={!canWrite}
+                          title={canWrite ? 'Append cases (non-empty array)' : writeDenied}
+                          onClick={() =>
+                            navigate({
+                              to: '/agent-studio/evaluations/datasets/$datasetId/cases/new',
+                              params: { datasetId: dataset.id },
+                              // E-2 entry: the originating context is this datasets panel —
+                              // there is no per-dataset detail route, so returnTo is the
+                              // evaluations list (guarded to /agent-studio/* in the section).
+                              search: { returnTo: '/agent-studio/evaluations' },
+                            })
+                          }
+                        >
                           Add cases
                         </ActionButton>
                         <ActionButton variant="ghost" size="sm" disabled={!canWrite} title={canWrite ? 'Delete dataset and its cases' : writeDenied} onClick={() => setDeleteTarget({ id: dataset.id, name: dataset.name })}>
@@ -312,7 +327,6 @@ export function EvaluationsView() {
       </motion.div>
 
       <DatasetModal open={datasetOpen} onClose={() => setDatasetOpen(false)} />
-      {casesTarget && <CasesModal datasetId={casesTarget.id} name={casesTarget.name} onClose={() => setCasesTarget(null)} />}
       {manageTarget && (
         <CasesManagerModal
           datasetId={manageTarget.id}
@@ -355,7 +369,14 @@ export function EvaluationsView() {
                     const dataset = resultsRun.datasetId ? datasetById.get(resultsRun.datasetId) : undefined;
                     if (dataset) {
                       setResultsRunId(null);
-                      setCasesTarget({ id: dataset.id, name: dataset.name });
+                      // E-2 entry from the results drawer: the originating context is
+                      // the results view over the runs table (the drawer is not
+                      // URL-addressable) — returnTo is the evaluations list.
+                      navigate({
+                        to: '/agent-studio/evaluations/datasets/$datasetId/cases/new',
+                        params: { datasetId: dataset.id },
+                        search: { returnTo: '/agent-studio/evaluations' },
+                      });
                     }
                   }
                 : null
@@ -725,95 +746,6 @@ function DatasetModal({ open, onClose }: { open: boolean; onClose: () => void })
           maxLength={EVAL_DATASET_DESC_MAX}
         />
       </div>
-    </Modal>
-  );
-}
-
-function CasesModal({ datasetId, name, onClose }: { datasetId: string; name: string; onClose: () => void }) {
-  const addCases = useAddEvalCases();
-  // Form-first builder over the HTTP case vocabulary (evalCaseSchema —
-  // strict). The richer template vocabulary (expected_behavior/must_not/
-  // tools_expected) is translated at seed time by provisioning — it does
-  // NOT post here. Listing/editing/deleting cases lives in the cases
-  // manager (A4-41/A4-43); this modal is append-only by design.
-  const [drafts, setDrafts] = useState<CaseDraft[]>([{ ...EMPTY_CASE }]);
-  const [showJson, setShowJson] = useState(false);
-
-  const built = drafts.map(buildCase);
-  const firstProblem = built.find((b) => b.problem)?.problem ?? null;
-  const bodies = built.map((b) => b.body).filter((b): b is Record<string, unknown> => b !== undefined);
-
-  const set = (index: number, patch: Partial<CaseDraft>) => {
-    setDrafts((prev) => prev.map((draft, i) => (i === index ? { ...draft, ...patch } : draft)));
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Add cases — ${name}`}
-      width={680}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton variant="ghost" size="sm" onClick={() => setShowJson((v) => !v)}>
-            {showJson ? 'Hide JSON' : 'Preview JSON'}
-          </ActionButton>
-          <ActionButton
-            disabled={bodies.length !== drafts.length || addCases.isPending}
-            title={firstProblem ?? `Append ${drafts.length} case${drafts.length === 1 ? '' : 's'}`}
-            onClick={() => addCases.mutate({ datasetId, cases: bodies }, { onSuccess: () => onClose() })}
-          >
-            Add {drafts.length} case{drafts.length === 1 ? '' : 's'}
-          </ActionButton>
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.75 }}>
-        Scored by the engine harness on three components: lexical <Mono>contains</Mono>/<Mono>not_contains</Mono> hit fractions;
-        state assertions of the form <Mono>tool.&lt;name&gt;=called|not_called</Mono> checked against the run's tool-call log;
-        rubric cases sent to the engine's configured LLM-judge endpoint (<Mono>HARNESS__LLM_JUDGE_URL</Mono>) and passed at
-        min score — rubric cases fail closed when no judge is configured. Empty assertions pass vacuously and say so.
-        Unknown keys refuse — violations return per-index 400s, never silent drops.
-      </p>
-      {drafts.map((draft, index) => (
-        <div key={index} style={{ borderTop: index === 0 ? 0 : '1px solid var(--neryva-border, #222)', paddingTop: index === 0 ? 0 : 12, marginTop: index === 0 ? 0 : 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <strong style={{ fontSize: 13 }}>Case {index + 1}</strong>
-            {drafts.length > 1 && (
-              <ActionButton variant="ghost" size="sm" onClick={() => setDrafts((prev) => prev.filter((_, i) => i !== index))}>
-                Remove
-              </ActionButton>
-            )}
-          </div>
-          <TextArea label="Input text (required)" value={draft.text} onChange={(e) => set(index, { text: e.target.value })} rows={2} placeholder="What the user asks…" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-            <TextArea label="Must contain (one per line)" value={draft.contains} onChange={(e) => set(index, { contains: e.target.value })} rows={2} placeholder="30 days" />
-            <TextArea label="Must not contain (one per line)" value={draft.notContains} onChange={(e) => set(index, { notContains: e.target.value })} rows={2} placeholder="lifetime" />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-            <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set(index, { stateAssertions: e.target.value })} placeholder="tool.ticket_lookup=called" />
-            <TextInput label="Expected document ids, uuid (one per line, drives recall)" value={draft.documentIds} onChange={(e) => set(index, { documentIds: e.target.value })} placeholder="…" />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginTop: 8 }}>
-            <TextInput label="Rubric instructions (optional)" value={draft.rubricInstructions} onChange={(e) => set(index, { rubricInstructions: e.target.value })} placeholder="Judge tone…" />
-            <TextInput label="Min score" value={draft.minScore} onChange={(e) => set(index, { minScore: e.target.value })} placeholder="0.7" />
-          </div>
-          {built[index]?.problem && <p style={{ fontSize: 12, color: '#f87171' }}>{built[index]?.problem}</p>}
-        </div>
-      ))}
-      <div style={{ marginTop: 12 }}>
-        <ActionButton variant="secondary" size="sm" onClick={() => setDrafts((prev) => [...prev, { ...EMPTY_CASE }])}>
-          Another case
-        </ActionButton>
-      </div>
-      {showJson && (
-        <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 12 }}>
-          {JSON.stringify({ cases: bodies }, null, 2)}
-        </pre>
-      )}
     </Modal>
   );
 }

@@ -199,7 +199,7 @@ export function EvaluationSection({
           datasetName={datasetNameFor(latest)}
           required={required}
           onReRun={mayRun && !running && latest.datasetId ? reRun : null}
-          addCasesAction={<Link to="/agent-studio/evaluations">Add a covering case →</Link>}
+          addCasesAction={<Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Add a covering case →</Link>}
         />
       ) : (
         <EmptyState icon={<FlaskConical size={18} opacity={0.5} />} title="No eval runs yet" description="Evaluate this version — the decision lands here with its provenance." />
@@ -226,7 +226,7 @@ export function EvaluationSection({
       )}
 
       <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
-        <Link to="/agent-studio/evaluations">{EVAL_COPY.evaluationsLink}</Link>
+        <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>{EVAL_COPY.evaluationsLink}</Link>
         <Link to={buildAgentDetailPath(assistantId)}>Open publish gates ›</Link>
       </div>
       <Note>{EVAL_COPY.latestWins} Test runs are recorded in audit. <Link to="/platform/audit">Open Audit →</Link></Note>

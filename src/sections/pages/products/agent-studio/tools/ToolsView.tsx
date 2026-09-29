@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Wrench, Zap } from 'lucide-react';
+import { Plus, Zap } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -22,12 +22,10 @@ import { pageItem } from '@styles/motion';
 import {
   useToolCatalog,
   useToolTemplates,
-  useUpsertTool,
   useToolFromTemplate,
   useSetToolEnabled,
   TOOL_EFFECT_CLASSES,
   TOOL_APPROVAL_REQUIREMENTS,
-  TOOL_NAME_PATTERN,
   BUILT_IN_TOOLS,
 } from '@hooks/studio/useSetupTools';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
@@ -76,6 +74,7 @@ function PerimeterCell({ tool }: { tool: { executionEnvironment: string | null; 
 
 export function ToolsView() {
   const { role } = useOrg();
+  const navigate = useNavigate();
   const canWrite = canSetup(role, 'setup:author');
   const writeDenied = setupDeniedCopy(role, 'setup:author');
   const canGovern = canSetup(role, 'setup:govern');
@@ -86,7 +85,6 @@ export function ToolsView() {
   const catalog = useToolCatalog({ includeDisabled: showDisabled });
   const setEnabled = useSetToolEnabled();
 
-  const [upsertOpen, setUpsertOpen] = useState(false);
   const [fromTemplateOpen, setFromTemplateOpen] = useState(false);
   // C06: filters, expanded drawer row, edit target, per-row pending (one
   // toggle must never freeze the whole column).
@@ -94,7 +92,6 @@ export function ToolsView() {
   const [effectFilter, setEffectFilter] = useState('');
   const [approvalFilter, setApprovalFilter] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [editTarget, setEditTarget] = useState<string | null>(null);
   const [pendingName, setPendingName] = useState<string | null>(null);
 
   return (
@@ -111,7 +108,7 @@ export function ToolsView() {
             <Zap size={13} strokeWidth={1.8} />
             From template
           </ActionButton>
-          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Register a custom tool' : writeDenied} onClick={() => setUpsertOpen(true)}>
+          <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Register a custom tool' : writeDenied} onClick={() => navigate({ to: '/agent-studio/tools/new' })}>
             <Plus size={14} strokeWidth={2} />
             New tool
           </ActionButton>
@@ -206,7 +203,7 @@ export function ToolsView() {
                           <ActionButton variant="ghost" size="sm" onClick={() => setExpanded((prev) => (prev === tool.name ? null : tool.name))}>
                             {expanded === tool.name ? 'Hide' : 'Detail'}
                           </ActionButton>
-                          <ActionButton variant="ghost" size="sm" disabled={!canWrite} title={canWrite ? `Edit ${tool.name}` : writeDenied} onClick={() => { setEditTarget(tool.name); setUpsertOpen(true); }}>
+                          <ActionButton variant="ghost" size="sm" disabled={!canWrite} title={canWrite ? `Edit ${tool.name}` : writeDenied} onClick={() => navigate({ to: '/agent-studio/tools/$toolId/edit', params: { toolId: tool.name } })}>
                             Edit
                           </ActionButton>
                         </div>
@@ -283,13 +280,6 @@ export function ToolsView() {
         </SectionGap>
       </motion.div>
 
-      <UpsertModal
-        key={editTarget ?? 'new'}
-        open={upsertOpen}
-        onClose={() => { setUpsertOpen(false); setEditTarget(null); }}
-        initial={(catalog.data ?? []).find((t) => t.name === editTarget) ?? null}
-        existingNames={(catalog.data ?? []).map((t) => t.name)}
-      />
       <FromTemplateModal
         open={fromTemplateOpen}
         onClose={() => setFromTemplateOpen(false)}
@@ -328,249 +318,6 @@ function CopyPinButton({ hash }: { hash: string | null }) {
     >
       Copy pin
     </ActionButton>
-  );
-}
-
-function UpsertModal({
-  open,
-  onClose,
-  initial,
-  existingNames,
-}: {
-  open: boolean;
-  onClose: () => void;
-  initial?: {
-    name: string;
-    version: string | null;
-    description: string | null;
-    effectClass: string | null;
-    approvalRequirement: string | null;
-    inputSchema: Record<string, unknown> | null;
-    /** A4-60 — fields the modal does not render; round-tripped on save. */
-    outputSchema?: Record<string, unknown> | null;
-    executionEnvironment?: string | null;
-    allowedEgressDomains?: string[] | null;
-    annotations?: Record<string, unknown> | null;
-    /** NG-MT-1 — the modal now renders this; prefilled on edit. */
-    rateLimitPerRun?: number | null;
-  } | null;
-  existingNames: string[];
-}) {
-  const upsert = useUpsertTool();
-  const editing = initial !== null && initial !== undefined;
-  const [name, setName] = useState(initial?.name ?? '');
-  const [version, setVersion] = useState(initial?.version ?? '');
-  const [description, setDescription] = useState(initial?.description ?? '');
-  const [effectClass, setEffectClass] = useState<string>(initial?.effectClass ?? 'READ_ONLY');
-  const [approval, setApproval] = useState<string>(initial?.approvalRequirement ?? 'NONE');
-  const [inputSchema, setInputSchema] = useState(
-    initial?.inputSchema ? JSON.stringify(initial.inputSchema, null, 2) : '{\n  "type": "object",\n  "properties": {},\n  "additionalProperties": false\n}',
-  );
-  // A4-69 — custom tools need an endpoint to be invocable. Without a URL the
-  // row is registered schema-only (external_gateway, no endpoint, no egress).
-  const [endpointUrl, setEndpointUrl] = useState('');
-  const [credential, setCredential] = useState('');
-  const urlTrimmed = endpointUrl.trim();
-  const urlProblem = !editing && urlTrimmed !== '' && !/^https:\/\//.test(urlTrimmed) ? 'Must be an https URL.' : null;
-  // NG-MT-1 — rate limit per run: mirrors the From-template modal input
-  // (same bounds, same copy). Optional; blank omits it (create → platform
-  // cap; edit → the engine preserves the stored value when omitted).
-  const [rateLimit, setRateLimit] = useState(initial?.rateLimitPerRun != null ? String(initial.rateLimitPerRun) : '');
-  const rateTrimmed = rateLimit.trim();
-  const rateProblem = rateTrimmed === '' ? null : !Number.isFinite(Number(rateTrimmed)) || Number(rateTrimmed) < 1 ? 'Must be a number ≥ 1.' : null;
-
-  const normalized = name.trim().toLowerCase();
-  const nameProblem = !normalized ? 'Name is required.' : !TOOL_NAME_PATTERN.test(normalized) ? 'Must match ^[a-z][a-z0-9_]{1,63}$ (letter first, 2–64 chars).' : null;
-  // A4-66 — the engine PUT is an upsert: a colliding name replaces the row
-  // in place (schema, version, hash) with no conflict error. Say so.
-  const collides = !editing && !nameProblem && existingNames.includes(normalized);
-  let schemaProblem: string | null = null;
-  let schemaParsed: Record<string, unknown> | null = null;
-  try {
-    const parsed: unknown = JSON.parse(inputSchema);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      schemaProblem = 'Must be a JSON Schema object.';
-    } else {
-      schemaParsed = parsed as Record<string, unknown>;
-    }
-  } catch {
-    schemaProblem = 'Must be valid JSON.';
-  }
-
-  const valid = !nameProblem && !schemaProblem && !urlProblem && !rateProblem;
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={editing ? `Edit tool ${initial?.name ?? ''}` : 'Register a tool'}
-      width={600}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!valid || upsert.isPending}
-            onClick={() => {
-              if (!schemaParsed) {
-                return;
-              }
-              const rate = rateLimit.trim() === '' ? undefined : Number(rateLimit);
-              upsert.mutate(
-                {
-                  name: normalized,
-                  effectClass,
-                  approvalRequirement: approval,
-                  inputSchema: schemaParsed,
-                  // A4-60 — clearing Version while editing keeps the current
-                  // version; omitting it would let the server reset to 1.0.0.
-                  version: version.trim() ? version.trim() : (editing ? (initial?.version ?? undefined) : undefined),
-                  ...(description.trim() ? { description: description.trim() } : {}),
-                  // A4-60 — fields the modal does not render round-trip
-                  // unchanged so an edit only changes what was edited.
-                  ...(editing && initial?.outputSchema ? { outputSchema: initial.outputSchema } : {}),
-                  ...(editing && initial?.executionEnvironment ? { executionEnvironment: initial.executionEnvironment } : {}),
-                  ...(editing && initial?.allowedEgressDomains ? { allowedEgressDomains: initial.allowedEgressDomains } : {}),
-                  ...(editing && initial?.annotations ? { annotations: initial.annotations } : {}),
-                  // A4-69 — create-only: endpoint binding + credential so a
-                  // custom tool can actually be invoked. Edits omit both; the
-                  // engine preserves the existing binding and sealed
-                  // credential when absent.
-                  ...(!editing && urlTrimmed ? { httpBindingUrl: urlTrimmed } : {}),
-                  ...(!editing && credential.trim() ? { credential: credential.trim() } : {}),
-                  // NG-MT-1 — mirrors the From-template modal input: bounded
-                  // int ≥ 1; omitted when blank (create → platform cap, edit
-                  // → the engine preserves the stored value).
-                  ...(rate !== undefined && Number.isFinite(rate) ? { rateLimitPerRun: Math.max(1, Math.round(rate)) } : {}),
-                },
-                { onSuccess: () => onClose() },
-              );
-            }}
-          >
-            <Wrench size={13} strokeWidth={1.8} />
-            Save tool
-          </ActionButton>
-        </>
-      }
-    >
-      {editing && (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>
-          Saving updates the row in place, re-enables it, and re-hashes — pinned versions drift until re-pinned.
-          Only the fields shown here change; the perimeter (execution environment, egress allowlist), endpoint
-          binding, annotations, and output schema are preserved as-is.
-        </p>
-      )}
-      {collides && (
-        <p style={{ fontSize: 12, color: '#fbbf24', marginBottom: 8 }} role="alert">
-          A tool named “{normalized}” already exists — saving replaces its schema, version, and hash in place
-          (re-enables it too). Pinned versions on the old schema drift until re-pinned.
-        </p>
-      )}
-      <TextInput label="Name (path-authoritative, lowercased)" value={name} onChange={(e) => setName(e.target.value)} placeholder="lookup_ticket" autoFocus={!editing} disabled={editing} error={nameProblem ?? undefined} />
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Version (bump on breaking schema changes)" value={version} onChange={(e) => setVersion(e.target.value)} placeholder="1.0.0" />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Description (optional, ≤2048)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this tool does" />
-      </div>
-      {!editing && (
-        <>
-          <div style={{ marginTop: 12 }}>
-            <TextInput
-              label="Endpoint URL (optional — https)"
-              value={endpointUrl}
-              onChange={(e) => setEndpointUrl(e.target.value)}
-              placeholder="https://…"
-              error={urlTrimmed ? (urlProblem ?? undefined) : undefined}
-            />
-            <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-              Without an endpoint the tool registers schema-only (external_gateway, no egress) and can never be
-              invoked — versions can pin it, but no run can call it. With an endpoint it binds like a template tool.
-            </p>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <TextInput
-              label="Credential (optional — sealed per-tool, never returned)"
-              type="password"
-              value={credential}
-              onChange={(e) => setCredential(e.target.value)}
-              placeholder="…"
-              autoComplete="off"
-            />
-          </div>
-        </>
-      )}
-      {editing && (
-        <p style={{ fontSize: 12, opacity: 0.7, marginTop: 12 }}>
-          The endpoint binding and credential are preserved as-is — this form cannot change them. To rotate the
-          credential or re-point the endpoint, re-instantiate from a template (or re-register with the same name).
-        </p>
-      )}
-      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-        <label style={{ flex: 1, fontSize: 13 }}>
-          Effect class
-          <select value={effectClass} onChange={(e) => setEffectClass(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            {TOOL_EFFECT_CLASSES.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </label>
-        <label style={{ flex: 1, fontSize: 13 }}>
-          Approval requirement
-          <select value={approval} onChange={(e) => setApproval(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            {TOOL_APPROVAL_REQUIREMENTS.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div style={{ marginTop: 12 }}>
-        {/*
-          NG-MT-1 (console field audit): the engine validates, stores, and
-          enforces rate_limit_per_run, but this modal never exposed it — only
-          the From-template modal did. Same bounds and copy as that input.
-          On edit the stored value prefills; clearing the field leaves the
-          stored limit unchanged (the engine preserves it when omitted).
-        */}
-        <TextInput label="Rate limit per run (optional)" type="number" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} placeholder="unset = platform cap" error={rateTrimmed ? (rateProblem ?? undefined) : undefined} />
-        {editing && initial?.rateLimitPerRun != null && (
-          <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
-            Currently {initial.rateLimitPerRun}/run — clearing the field leaves the stored limit unchanged.
-          </p>
-        )}
-      </div>
-      <div style={{ marginTop: 12 }}>
-        {/*
-          Gap #21 (console field audit): the engine enforces a 16 KiB
-          serialized-size limit and a 32-level nesting limit on input_schema
-          (`assertInputSchemaShape` → 400). Disclose them here so an oversized
-          schema fails client-side expectations, not server-side surprise.
-        */}
-        <TextArea
-          label="Input schema (JSON Schema object)"
-          value={inputSchema}
-          onChange={(e) => setInputSchema(e.target.value)}
-          rows={8}
-          hint="The engine enforces a 16 KiB serialized-size limit and a 32-level nesting limit (400 beyond)."
-        />
-        {schemaProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{schemaProblem}</p>}
-      </div>
-      {/*
-        Gaps #24/#25 (console field audit): execution_environment and
-        allowed_egress_domains are API-managed — the console cannot author
-        them. New tools default to external_gateway with egress limited to the
-        binding host (schema-only tools get no egress); edits round-trip the
-        stored values. The effective perimeter is shown in the tool's detail
-        drawer. State this so the absence of fields reads as deliberate, not
-        missing.
-      */}
-      <p style={{ fontSize: 12, opacity: 0.65, marginTop: 12 }}>
-        Execution environment and egress allowlist are set via the API: new tools run as{' '}
-        <Mono>external_gateway</Mono> with egress limited to the binding host (schema-only tools get no egress).
-        The effective perimeter is shown in the tool&apos;s detail drawer.
-      </p>
-    </Modal>
   );
 }
 

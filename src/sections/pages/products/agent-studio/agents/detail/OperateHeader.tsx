@@ -221,7 +221,7 @@ export function OperateHeader({
                 Open Operate below →
               </RowLink>
             ) : banner.id === 'shadow' ? (
-              <Link to="/agent-studio/evaluations">Open Evaluations →</Link>
+              <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Open Evaluations →</Link>
             ) : null}{' '}
             <Link to="/platform/audit">Recorded in Audit ›</Link>
           </div>

@@ -101,7 +101,7 @@ export function DatasetsView() {
       </QueryView>
 
       <p style={{ fontSize: 12, opacity: 0.65, marginTop: 12 }}>
-        Running an evaluation? <Link to="/agent-studio/evaluations">Use in evaluation →</Link> — runs
+        Running an evaluation? <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Use in evaluation →</Link> — runs
         reference these datasets by id. Open a dataset&apos;s <strong>Cases</strong> there to see its case count,
         or export it as JSON/CSV.
       </p>
