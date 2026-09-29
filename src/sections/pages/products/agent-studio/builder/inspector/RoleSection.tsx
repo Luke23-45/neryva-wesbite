@@ -14,12 +14,31 @@ import { ROLE_LIMITS, type RolePolicy } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
-import { TextButton, ToolMeta } from './ToolsSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { TextButton } from './ToolsSection.styles';
 import { TextArea } from '@components/common/ui/TextArea';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TagAddRow, TagChip, TagCount, TagRemove, TagRow, TagText } from './RoleSection.styles';
+import {
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  PersonaCard,
+  PersonaChip,
+  PersonaChips,
+  PersonaGoal,
+  PersonaGroup,
+  PersonaLabel,
+  PersonaName,
+  PersonaNote,
+  PersonaText,
+  TagAddRow,
+  TagChip,
+  TagCount,
+  TagRemove,
+  TagRow,
+  TagText,
+} from './RoleSection.styles';
 
 export interface RoleSectionProps {
   assistantId: string;
@@ -316,48 +335,50 @@ export function RoleSection({
     return (
       <Wrap>
         {hasAny ? (
-          <>
-            {policy.role.trim() && (
-              <StaticRow>
-                <StaticLabel>Role</StaticLabel>
-                <span>{policy.role}</span>
-              </StaticRow>
-            )}
-            {policy.goal.trim() && (
-              <StaticRow>
-                <StaticLabel>Goal</StaticLabel>
-                <span>{policy.goal}</span>
-              </StaticRow>
-            )}
+          <PersonaCard>
+            {policy.role.trim() && <PersonaName>{policy.role}</PersonaName>}
+            {policy.goal.trim() && <PersonaGoal>{policy.goal}</PersonaGoal>}
             {policy.traits.length > 0 && (
-              <StaticRow>
-                <StaticLabel>Traits</StaticLabel>
-                <span>{policy.traits.join(', ')}</span>
-              </StaticRow>
+              <PersonaGroup>
+                <PersonaLabel>Traits</PersonaLabel>
+                <PersonaChips>
+                  {policy.traits.map((trait) => (
+                    <PersonaChip key={trait}>{trait}</PersonaChip>
+                  ))}
+                </PersonaChips>
+              </PersonaGroup>
             )}
             {policy.communication_style.trim() && (
-              <StaticRow>
-                <StaticLabel>Communication style</StaticLabel>
-                <span>{policy.communication_style}</span>
-              </StaticRow>
+              <PersonaGroup>
+                <PersonaLabel>Communication style</PersonaLabel>
+                <PersonaText>{policy.communication_style}</PersonaText>
+              </PersonaGroup>
             )}
             {policy.knowledge_areas.length > 0 && (
-              <StaticRow>
-                <StaticLabel>Knowledge areas</StaticLabel>
-                <span>{policy.knowledge_areas.join(', ')}</span>
-              </StaticRow>
+              <PersonaGroup>
+                <PersonaLabel>Knowledge areas</PersonaLabel>
+                <PersonaChips>
+                  {policy.knowledge_areas.map((area) => (
+                    <PersonaChip key={area}>{area}</PersonaChip>
+                  ))}
+                </PersonaChips>
+              </PersonaGroup>
             )}
             {policy.prohibited_topics.length > 0 && (
-              <StaticRow>
-                <StaticLabel>Prohibited topics</StaticLabel>
-                <span>{policy.prohibited_topics.join(', ')}</span>
-              </StaticRow>
+              <PersonaGroup>
+                <PersonaLabel>Prohibited topics</PersonaLabel>
+                <PersonaChips>
+                  {policy.prohibited_topics.map((topic) => (
+                    <PersonaChip key={topic}>{topic}</PersonaChip>
+                  ))}
+                </PersonaChips>
+              </PersonaGroup>
             )}
-          </>
+          </PersonaCard>
         ) : (
           <EmptyState>No persona configured — this agent runs without a role.</EmptyState>
         )}
-        <ToolMeta>Role needs an owner, admin, or developer — {denied}</ToolMeta>
+        <PersonaNote>Role needs an owner, admin, or developer — {denied}</PersonaNote>
       </Wrap>
     );
   }
@@ -371,8 +392,13 @@ export function RoleSection({
       }}
     >
       {/* Role name */}
-      <div>
-        <SectionLabel>ROLE · PER-AGENT</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Role</FieldTitle>
+          <FieldHelper>
+            The persona this agent plays — composed into its system prompt. All fields are optional.
+          </FieldHelper>
+        </FieldHead>
         <TextInput
           aria-label="Role"
           value={policy.role}
@@ -380,12 +406,14 @@ export function RoleSection({
           onChange={(event) => patch({ role: event.target.value })}
           placeholder="e.g. Senior support engineer"
         />
-        <ToolMeta>The persona this agent plays — composed into its system prompt. All fields are optional.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {/* Goal */}
-      <div>
-        <SectionLabel>GOAL</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Goal</FieldTitle>
+          <FieldHelper>What this agent is here to achieve.</FieldHelper>
+        </FieldHead>
         <TextArea
           aria-label="Goal"
           value={policy.goal}
@@ -394,11 +422,14 @@ export function RoleSection({
           onChange={(event) => patch({ goal: event.target.value })}
           placeholder="What this agent is here to achieve"
         />
-      </div>
+      </FieldBlock>
 
       {/* Traits */}
-      <div>
-        <SectionLabel>TRAITS</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Traits</FieldTitle>
+          <FieldHelper>How the agent carries itself — up to {ROLE_LIMITS.traits.max}.</FieldHelper>
+        </FieldHead>
         <TagEditor
           label="trait"
           values={policy.traits}
@@ -406,12 +437,14 @@ export function RoleSection({
           maxItem={ROLE_LIMITS.traits.item}
           onChange={(traits) => patch({ traits })}
         />
-        <ToolMeta>Up to {ROLE_LIMITS.traits.max} traits — how the agent carries itself.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {/* Communication style */}
-      <div>
-        <SectionLabel>COMMUNICATION STYLE</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Communication style</FieldTitle>
+          <FieldHelper>Tone, format, language — how the agent speaks.</FieldHelper>
+        </FieldHead>
         <TextArea
           aria-label="Communication style"
           value={policy.communication_style}
@@ -420,11 +453,14 @@ export function RoleSection({
           onChange={(event) => patch({ communication_style: event.target.value })}
           placeholder="Tone, format, language — how the agent speaks"
         />
-      </div>
+      </FieldBlock>
 
       {/* Knowledge areas */}
-      <div>
-        <SectionLabel>KNOWLEDGE AREAS</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Knowledge areas</FieldTitle>
+          <FieldHelper>Domains the agent leans into — up to {ROLE_LIMITS.knowledge_areas.max}.</FieldHelper>
+        </FieldHead>
         <TagEditor
           label="knowledge area"
           values={policy.knowledge_areas}
@@ -432,12 +468,14 @@ export function RoleSection({
           maxItem={ROLE_LIMITS.knowledge_areas.item}
           onChange={(knowledge_areas) => patch({ knowledge_areas })}
         />
-        <ToolMeta>Domains the agent leans into — up to {ROLE_LIMITS.knowledge_areas.max}.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {/* Prohibited topics */}
-      <div>
-        <SectionLabel>PROHIBITED TOPICS</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Prohibited topics</FieldTitle>
+          <FieldHelper>Topics the agent stays away from — up to {ROLE_LIMITS.prohibited_topics.max}.</FieldHelper>
+        </FieldHead>
         <TagEditor
           label="prohibited topic"
           values={policy.prohibited_topics}
@@ -445,8 +483,7 @@ export function RoleSection({
           maxItem={ROLE_LIMITS.prohibited_topics.item}
           onChange={(prohibited_topics) => patch({ prohibited_topics })}
         />
-        <ToolMeta>Topics the agent stays away from — up to {ROLE_LIMITS.prohibited_topics.max}.</ToolMeta>
-      </div>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">

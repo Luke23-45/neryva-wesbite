@@ -1,24 +1,60 @@
 import styled from 'styled-components';
 
-/** Tag-list editor (Role node): chips with remove buttons + an inline adder. */
+/**
+ * Role section — redesigned.
+ *
+ * Six persona fields in a natural top-down order (who → why → how →
+ * boundaries), each with a real title and helper microcopy instead of
+ * micro-caps labels. Tag editors get tactile chips; viewers get a persona
+ * card instead of a definition list.
+ */
+
+export const FieldBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+export const FieldTitle = styled.h3`
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+export const FieldHelper = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.5;
+`;
+
+export const FieldHead = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+/* ── Tag-list editor ───────────────────────────────────────────── */
+
 export const TagRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
 `;
 
 export const TagChip = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   max-width: 100%;
-  padding: 4px 6px 4px 10px;
+  padding: 6px 8px 6px 14px;
   border-radius: 999px;
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
   color: ${({ theme }) => theme.app.text.primary};
-  font-size: ${({ theme }) => theme.app.type.caption};
+  font-size: ${({ theme }) => theme.app.type.body};
   line-height: 1.4;
 `;
 
@@ -32,14 +68,14 @@ export const TagRemove = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: ${({ theme }) => theme.app.text.secondary};
-  font-size: 13px;
+  color: ${({ theme }) => theme.app.text.muted};
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
 
@@ -56,8 +92,7 @@ export const TagRemove = styled.button`
 
 export const TagAddRow = styled.div`
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 10px;
   align-items: center;
 `;
 
@@ -66,4 +101,78 @@ export const TagCount = styled.span`
   flex-shrink: 0;
   color: ${({ theme }) => theme.app.text.muted};
   font-size: ${({ theme }) => theme.app.type.caption};
+  font-variant-numeric: tabular-nums;
+`;
+
+/* ── Viewer: the persona card ──────────────────────────────────── */
+
+export const PersonaCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 16px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const PersonaName = styled.div`
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow-wrap: anywhere;
+`;
+
+export const PersonaGoal = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.bodyLg};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+`;
+
+export const PersonaGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const PersonaLabel = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+export const PersonaText = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+`;
+
+export const PersonaChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+export const PersonaChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.bg.base};
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: 1.4;
+`;
+
+export const PersonaNote = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.55;
 `;
