@@ -18,7 +18,7 @@ export default function ConnectorsOAuthPage() {
         <meta name="description" content="Connector OAuth result for a Neryva workspace." />
         <meta name="referrer" content="no-referrer" />
       </Helmet>
-      <ConnectorOAuthSection status={search.oauth} />
+      <ConnectorOAuthSection status={search.oauth} accountId={search.account} />
     </>
   );
 }

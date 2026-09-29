@@ -51,6 +51,7 @@ export type InstallOutcomeKind =
   | 'platform-blocked'
   | 'org-blocked'
   | 'tool-unresolvable'
+  | 'engine-too-old'
   | 'registry-bug'
   | 'unknown';
 
@@ -126,6 +127,20 @@ export function describeInstallOutcome(error: unknown): InstallOutcome {
     // engine's wording — older shapes used details.tool / 'unknown' /
     // 'disabled' and are still honored below.
     if (error.status === 400) {
+      // T-06: a template newer than the engine is version skew, not a
+      // registry bug. The engine 400s "template requires engine schema N —
+      // this engine serves M" (templates.service.ts) — labeling that "a
+      // registry bug, not your input" misdirects the user away from the
+      // real fix (upgrade the engine).
+      const schemaMatch = message.match(/requires engine schema (\d+).*this engine serves (\d+)/);
+      if (schemaMatch) {
+        return {
+          kind: 'engine-too-old',
+          headline: `This template needs engine schema ${schemaMatch[1]} — this engine serves ${schemaMatch[2]}.`,
+          detail: 'Ask an admin to upgrade the engine, then retry. Nothing was created.',
+          retryable: false,
+        };
+      }
       const toolPolicy =
         typeof details.tool_policy === 'string' && details.tool_policy.trim() !== ''
           ? details.tool_policy

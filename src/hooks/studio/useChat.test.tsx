@@ -5,6 +5,12 @@ import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { parseRunEvent, useChatSession, useTrySession } from './useChat';
+import {
+  parseMessageFeedback,
+  mergeFeedback,
+  describeRunsCount,
+  useUpdateConversationStatus,
+} from './useChat';
 import type { SseMessage } from '@lib/engine/sse';
 
 vi.mock('react-hot-toast', () => {
@@ -435,5 +441,148 @@ describe('useRenameConversation (A3-05)', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'chat-conversation'] });
     invalidateSpy.mockRestore();
+  });
+});
+
+describe('useUpdateConversationStatus (C5 restore)', () => {
+  it("POSTs { status: 'active' } to the status route and invalidates both list caches", async () => {
+    engineMock.mockResolvedValue({ conversation: { id: 'conv-9' } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const wrapper = (function () {
+      return function Wrapper({ children }: { children: React.ReactNode }) {
+        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+      };
+    })();
+    const { result } = renderHook(() => useUpdateConversationStatus(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ conversationId: 'conv-9', status: 'active' });
+    });
+    expect(engineMock).toHaveBeenCalledTimes(1);
+    const [url, options] = engineMock.mock.calls[0] as [string, { method?: string; body?: unknown }];
+    expect(url).toBe('/console/org/org-test/conversations/conv-9/status');
+    expect(options.method).toBe('POST');
+    expect(options.body).toEqual({ status: 'active' });
+    // The paged list key must be invalidated too — ConversationsView pages
+    // through it now; without this the restored row stays invisible.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations-paged'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'chat-conversation'] });
+    invalidateSpy.mockRestore();
+  });
+});
+
+describe('useCreateConversation invalidates the paged list too (GAP-1)', () => {
+  it('invalidates both the legacy and the paged conversation list keys', async () => {
+    engineMock.mockResolvedValue({ conversation: { id: 'conv-new' } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const wrapper = (function () {
+      return function Wrapper({ children }: { children: React.ReactNode }) {
+        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+      };
+    })();
+    const { useCreateConversation } = await import('./useChat');
+    const { result } = renderHook(() => useCreateConversation(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ agentId: 'agent-1' });
+    });
+    expect(engineMock).toHaveBeenCalledTimes(1);
+    // The live list pages through ['studio','conversations-paged', orgId] —
+    // without this the new conversation stays absent until refetch.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations-paged'] });
+    invalidateSpy.mockRestore();
+  });
+});
+
+describe('useSendChatMessage invalidates both list caches (OBS-2)', () => {
+  it('invalidates the legacy and paged list keys so ordering updates immediately', async () => {
+    engineMock.mockResolvedValue({ message: { id: 'm-1' } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const wrapper = (function () {
+      return function Wrapper({ children }: { children: React.ReactNode }) {
+        return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+      };
+    })();
+    const { useSendChatMessage } = await import('./useChat');
+    const { result } = renderHook(() => useSendChatMessage(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ conversationId: 'conv-9', text: 'hello' });
+    });
+    expect(engineMock).toHaveBeenCalledTimes(1);
+    // Sending moves the conversation to the top server-side (updatedAt) —
+    // both list keys must refresh or the ordering goes stale.
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['studio', 'conversations-paged'] });
+    invalidateSpy.mockRestore();
+  });
+});
+
+describe('parseMessageFeedback — H9-display persisted thumbs', () => {
+  it('parses the engine feedback envelope', () => {
+    expect(
+      parseMessageFeedback({
+        feedback: [
+          { message_id: 'm-1', rating: 'up' },
+          { message_id: 'm-2', rating: 'down' },
+        ],
+      }),
+    ).toEqual({ 'm-1': 'up', 'm-2': 'down' });
+  });
+
+  it('accepts camelCase keys and a bare array', () => {
+    expect(parseMessageFeedback({ feedback: [{ messageId: 'm-1', rating: 'up' }] })).toEqual({
+      'm-1': 'up',
+    });
+    expect(parseMessageFeedback([{ message_id: 'm-9', rating: 'down' }])).toEqual({ 'm-9': 'down' });
+  });
+
+  it('drops malformed entries and invalid ratings', () => {
+    expect(
+      parseMessageFeedback({
+        feedback: [
+          { message_id: 'm-1', rating: 'up' },
+          { message_id: 'm-2', rating: 'meh' },
+          { rating: 'up' },
+          null,
+          'junk',
+        ],
+      }),
+    ).toEqual({ 'm-1': 'up' });
+  });
+
+  it('survives garbage', () => {
+    expect(parseMessageFeedback(null)).toEqual({});
+    expect(parseMessageFeedback({ feedback: 'x' })).toEqual({});
+  });
+});
+
+describe('mergeFeedback — H9-display optimistic-over-persisted', () => {
+  it('prefers the optimistic rating on conflict, keeps persisted others', () => {
+    expect(mergeFeedback({ 'm-1': 'up', 'm-2': 'down' }, { 'm-1': 'down' })).toEqual({
+      'm-1': 'down',
+      'm-2': 'down',
+    });
+  });
+
+  it('works when nothing is persisted yet', () => {
+    expect(mergeFeedback(undefined, { 'm-1': 'up' })).toEqual({ 'm-1': 'up' });
+    expect(mergeFeedback({}, {})).toEqual({});
+  });
+});
+
+describe('describeRunsCount — C10 honest cap label', () => {
+  it('renders exact counts below the engine page cap', () => {
+    expect(describeRunsCount(0)).toBe('0 runs');
+    expect(describeRunsCount(1)).toBe('1 run');
+    expect(describeRunsCount(42)).toBe('42 runs');
+    expect(describeRunsCount(99)).toBe('99 runs');
+  });
+
+  it('labels a full page as 100+, never an exact 100', () => {
+    expect(describeRunsCount(100)).toBe('100+ runs');
+    expect(describeRunsCount(250)).toBe('100+ runs');
   });
 });

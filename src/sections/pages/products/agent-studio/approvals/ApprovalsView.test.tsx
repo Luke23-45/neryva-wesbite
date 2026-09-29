@@ -19,9 +19,9 @@ vi.mock('@/Context/OrgContext', () => ({
 }));
 
 const ITEMS: ApprovalItem[] = [
-  { id: 'a1', runId: 'run-aaa', approvalRef: 'ORD-8814', summary: 'Refund $1,240.00', actionType: 'process_refund', policyVersion: 'v3', state: 'PENDING', expiresAt: new Date(Date.now() + 42 * 60_000).toISOString(), decidedAt: null, decisionActorId: null, createdAt: new Date(Date.now() - 12 * 60_000).toISOString(), expired: false },
-  { id: 'a2', runId: null, approvalRef: null, summary: 'Orphaned approval', actionType: 'crm.delete', policyVersion: 'v3', state: 'PENDING', expiresAt: null, decidedAt: null, decisionActorId: null, createdAt: new Date(Date.now() - 60_000).toISOString(), expired: false },
-  { id: 'a3', runId: 'run-ccc', approvalRef: null, summary: 'Closed refund', actionType: 'process_refund', policyVersion: 'v2', state: 'APPROVED', expiresAt: null, decidedAt: '2026-09-17T11:58:00Z', decisionActorId: 'u1', createdAt: '2026-09-17T11:40:00Z', expired: false },
+  { id: 'a1', runId: 'run-aaa', approvalRef: 'ORD-8814', summary: 'Refund $1,240.00', actionType: 'process_refund', policyVersion: 'v3', state: 'PENDING', expiresAt: new Date(Date.now() + 42 * 60_000).toISOString(), decidedAt: null, decisionActorId: null, createdAt: new Date(Date.now() - 12 * 60_000).toISOString(), expired: false, requiredApprovals: 1, approvalsReceived: [] },
+  { id: 'a2', runId: null, approvalRef: null, summary: 'Orphaned approval', actionType: 'crm.delete', policyVersion: 'v3', state: 'PENDING', expiresAt: null, decidedAt: null, decisionActorId: null, createdAt: new Date(Date.now() - 60_000).toISOString(), expired: false, requiredApprovals: 1, approvalsReceived: [] },
+  { id: 'a3', runId: 'run-ccc', approvalRef: null, summary: 'Closed refund', actionType: 'process_refund', policyVersion: 'v2', state: 'APPROVED', expiresAt: null, decidedAt: '2026-09-17T11:58:00Z', decisionActorId: 'u1', createdAt: '2026-09-17T11:40:00Z', expired: false, requiredApprovals: 1, approvalsReceived: [] },
 ];
 
 const decideMutate = vi.fn();

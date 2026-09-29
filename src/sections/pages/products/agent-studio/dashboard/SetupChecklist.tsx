@@ -12,6 +12,8 @@ import { useModelAvailability } from '@hooks/studio/useSetupModels';
 import { useChannels } from '@hooks/studio/useSetupChannels';
 import { useApprovals } from '@hooks/studio/useSetupApprovals';
 import { ApiError } from '@lib/engine/client';
+import { canSetup } from '@lib/engine/capabilities';
+import { useOrg } from '@/Context/OrgContext';
 import {
   OnboardList,
   OnboardRow,
@@ -40,11 +42,19 @@ interface ChecklistRow {
 }
 
 export function SetupChecklist() {
+  const { role } = useOrg();
   const assistants = useAssistants();
   const documents = useDocuments();
   const models = useModelAvailability();
   const channels = useChannels();
-  const approvals = useApprovals('PENDING');
+  // D-09 (console field audit): the approvals list is engine-gated to
+  // owner/admin/developer (`@Roles` on approvals.controller). reader/billing
+  // would 403 here and — since approvals sits in the panel-level `failed`
+  // list — kill the entire setup panel with a retry that can never succeed.
+  // Skip the read for roles the engine refuses; the approvals attention row
+  // simply stays hidden for them.
+  const canReadApprovals = canSetup(role, 'setup:author');
+  const approvals = useApprovals('PENDING', { enabled: canReadApprovals });
 
   const loading =
     assistants.isPending || documents.isPending || models.isPending || channels.isPending || approvals.isPending;

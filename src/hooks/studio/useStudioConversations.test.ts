@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseAssistants } from './useAssistants';
-import { parseConversations } from './useStudioConversations';
+import { parseConversations, parseConversationsPage } from './useStudioConversations';
 
 describe('parseConversations', () => {
   it('sorts by recency and falls back to a title', () => {
@@ -51,5 +51,44 @@ describe('parseAssistants', () => {
   it('survives garbage', () => {
     expect(parseAssistants(42)).toEqual([]);
     expect(parseAssistants({ assistants: [null, 'x'] })).toEqual([]);
+  });
+});
+
+describe('parseConversationsPage — C1 cursor pagination', () => {
+  const page = (nextCursor: unknown) => ({
+    conversations: [
+      { id: 'c1', title: 'Newest', updated_at: '2026-09-05T10:00:00Z' },
+      { id: 'c2', title: 'Older', updated_at: '2026-09-01T10:00:00Z' },
+    ],
+    next_cursor: nextCursor,
+  });
+
+  it('parses items and the snake_case next_cursor', () => {
+    const parsed = parseConversationsPage(
+      page({ before: '2026-09-01T10:00:00Z', before_id: 'c2' }),
+    );
+    expect(parsed.items.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(parsed.nextCursor).toEqual({ before: '2026-09-01T10:00:00Z', beforeId: 'c2' });
+  });
+
+  it('accepts a camelCase beforeId cursor', () => {
+    const parsed = parseConversationsPage(page({ before: '2026-09-01T10:00:00Z', beforeId: 'c2' }));
+    expect(parsed.nextCursor).toEqual({ before: '2026-09-01T10:00:00Z', beforeId: 'c2' });
+  });
+
+  it('yields a null cursor when the list is exhausted', () => {
+    expect(parseConversationsPage(page(null)).nextCursor).toBeNull();
+    expect(parseConversationsPage({ conversations: [{ id: 'c1' }] }).nextCursor).toBeNull();
+  });
+
+  it('yields a null cursor for half or malformed cursors', () => {
+    expect(parseConversationsPage(page({ before: '2026-09-01T10:00:00Z' })).nextCursor).toBeNull();
+    expect(parseConversationsPage(page({ before_id: 'c2' })).nextCursor).toBeNull();
+    expect(parseConversationsPage(page('junk')).nextCursor).toBeNull();
+  });
+
+  it('survives garbage', () => {
+    expect(parseConversationsPage(null)).toEqual({ items: [], nextCursor: null });
+    expect(parseConversationsPage({ conversations: 'x' })).toEqual({ items: [], nextCursor: null });
   });
 });

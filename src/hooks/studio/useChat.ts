@@ -345,11 +345,26 @@ export function useConversationRuns(conversationId: string | null, options?: { e
   const { orgId } = useOrg();
   return useQuery({
     queryKey: ['studio', 'chat-runs', orgId, conversationId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/runs`),
+    // C10 — the engine clamps the runs page to 100; ask for the max page so
+    // the count is exact for every conversation under it. Past 100 the true
+    // total is unknowable from this endpoint — describeRunsCount labels a
+    // full page honestly as "100+" instead of a wrong exact number.
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/runs?limit=100`),
     enabled: (options?.enabled ?? true) && !!orgId && !!conversationId,
     staleTime: 15_000,
     select: parseRuns,
   });
+}
+
+/**
+ * C10 — honest runs-count label. The engine caps the page at 100 with no
+ * count endpoint, so a full page means "100 or more", never exactly 100.
+ */
+export function describeRunsCount(loaded: number): string {
+  if (loaded >= 100) {
+    return '100+ runs';
+  }
+  return `${loaded} run${loaded === 1 ? '' : 's'}`;
 }
 
 export function useConversationStatus(conversationId: string | null, options?: { enabled?: boolean }) {
@@ -377,13 +392,21 @@ export function useCreateConversation() {
         },
         idempotent: true,
       }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] }),
+    // GAP-1: the live conversation list is the paged key
+    // (['studio','conversations-paged', orgId]); invalidating only the
+    // obsolete nonpaged key left the new conversation absent until
+    // stale-time/focus refetch. Invalidate both.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations-paged'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not start the conversation'),
   });
 }
 
 export function useSendChatMessage() {
   const { orgId } = useOrg();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { conversationId: string; text: string; attachmentIds?: string[] }) =>
       engine<unknown>(`/console/org/${orgId}/conversations/${input.conversationId}/messages`, {
@@ -395,6 +418,13 @@ export function useSendChatMessage() {
           ...(input.attachmentIds?.length ? { attachments: input.attachmentIds } : {}),
         },
       }),
+    // OBS-2: sending updates server-side ordering (updatedAt) — invalidate
+    // both conversation list keys so recent/newest ordering updates
+    // immediately instead of waiting for stale-time/focus refetch.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] });
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations-paged'] });
+    },
     onError: (error) => toastEngineError(error, 'Could not send the message'),
   });
 }
@@ -424,6 +454,9 @@ export function useUpdateConversationStatus() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] });
+      // C1 — the list view now pages through ['studio', 'conversations-paged'];
+      // archiving or restoring must refresh it too, or the row goes stale.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations-paged'] });
       void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-conversation'] });
     },
     onError: (error) => toastEngineError(error, 'Could not update the conversation'),
@@ -443,6 +476,8 @@ export function useRenameConversation() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations'] });
+      // C1 — titles render in the paged list too.
+      void queryClient.invalidateQueries({ queryKey: ['studio', 'conversations-paged'] });
       void queryClient.invalidateQueries({ queryKey: ['studio', 'chat-conversation'] });
     },
     onError: (error) => toastEngineError(error, 'Could not rename the conversation'),
@@ -458,6 +493,7 @@ export function useRenameConversation() {
  */
 export function useRecordFeedback() {
   const { orgId } = useOrg();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { conversationId: string; messageId: string; rating: 'up' | 'down' }) =>
       engine(`/console/org/${orgId}/conversations/${input.conversationId}/messages/${input.messageId}/feedback`, {
@@ -465,8 +501,61 @@ export function useRecordFeedback() {
         body: { rating: input.rating },
         idempotent: true,
       }),
+    // H9-display — the persisted read feeds the thumbs on reload; a fresh
+    // rating must replace it, never fight it.
+    onSuccess: (_data, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['studio', 'message-feedback', orgId, input.conversationId],
+      });
+    },
     onError: (error) => toastEngineError(error, 'Could not record feedback'),
   });
+}
+
+// ─── H9-display — persisted thumbs read ───────────────────────────────────
+// The engine owns feedback persistence (`GET …/feedback` → this principal's
+// latest rating per message). The console merges it under the optimistic
+// local state, so thumbs survive reloads and a user can't unknowingly
+// re-rate — the gap this audit flagged.
+
+export type MessageFeedbackRating = 'up' | 'down';
+
+export function parseMessageFeedback(raw: unknown): Record<string, MessageFeedbackRating> {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const list = Array.isArray(raw) ? raw : Array.isArray(record.feedback) ? record.feedback : [];
+  const out: Record<string, MessageFeedbackRating> = {};
+  for (const entry of list) {
+    if (typeof entry !== 'object' || entry === null) {
+      continue;
+    }
+    const item = entry as Record<string, unknown>;
+    const id = str(item.message_id) ?? str(item.messageId);
+    const rating = str(item.rating);
+    if (id && (rating === 'up' || rating === 'down')) {
+      out[id] = rating;
+    }
+  }
+  return out;
+}
+
+export function useMessageFeedback(conversationId: string | null, options?: { enabled?: boolean }) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: ['studio', 'message-feedback', orgId, conversationId],
+    queryFn: () =>
+      engine<unknown>(`/console/org/${orgId}/conversations/${conversationId}/feedback`),
+    enabled: (options?.enabled ?? true) && !!orgId && !!conversationId,
+    staleTime: 30_000,
+    select: parseMessageFeedback,
+  });
+}
+
+/** H9-display — persisted ratings merged under the optimistic local ones. */
+export function mergeFeedback(
+  persisted: Record<string, MessageFeedbackRating> | undefined,
+  optimistic: Record<string, MessageFeedbackRating>,
+): Record<string, MessageFeedbackRating> {
+  return { ...(persisted ?? {}), ...optimistic };
 }
 
 export type RunPhase = 'idle' | 'creating' | 'sending' | 'streaming' | 'accepted' | 'done' | 'error';

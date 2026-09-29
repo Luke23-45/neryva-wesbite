@@ -11,6 +11,15 @@ import { spring, pageItem } from '@styles/motion';
 import { useOrgProfile, useProjects } from '@hooks/engine/queries';
 import { useUpdateOrgSettings } from '@hooks/engine/mutations';
 import { useOrg } from '@/Context/OrgContext';
+import {
+  LOGO_FILE_MAX_BYTES,
+  buildBrandingPayload,
+  clearLegacyLogo,
+  isLogoDataUrl,
+  readLegacyLogo,
+  resolveBrandColor,
+  resolveWorkspaceLogo,
+} from './workspaceBranding';
 import { SaveRow } from './shared';
 
 /**
@@ -23,9 +32,11 @@ import { SaveRow } from './shared';
  *   (A4-80: the "Default model" preference was removed — the engine accepted
  *   the key but nothing consumed it, so the field was write-only theater.
  *   It returns if a real consumer lands; until then the UI says so plainly.)
- * - Brand color seeds from the org's saved branding; the logo is
- *   localStorage-backed until server-side asset storage lands (⛔ E-14),
- *   but it now rehydrates on mount (the old write-without-read bug).
+ * - Branding round-trips the engine's `branding` map (`logo_dataurl` +
+ *   `brand_color`; P2-13: the logo is no longer localStorage-only — it syncs
+ *   to org settings and rehydrates from the server. Brand color has no
+ *   studio-wide consumer yet (P2-14), so the UI says so plainly instead of
+ *   claiming it styles the studio.)
  * - Saves are admin-gated per the access model.
  */
 
@@ -63,7 +74,9 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
   const branding = data.settings.branding ?? {};
   // P7-WS-05: the engine's BrandingDto keeps only `brand_color` — reading
   // `color` never rehydrates (the picker fell back to the default forever).
-  const brandingColor = typeof branding.brand_color === 'string' && /^#[0-9a-fA-F]{6}$/.test(branding.brand_color) ? branding.brand_color : null;
+  // P2-14: brand color has no studio-wide consumer; the only genuine one is
+  // the preview on this page, so the copy below says exactly that.
+  const brandingColor = resolveBrandColor(branding);
 
   const [name, setName] = useState(data.org.name);
   const [region, setRegion] = useState(data.org.region ?? '');
@@ -71,15 +84,11 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
   const [defaultProjectId, setDefaultProjectId] = useState(data.settings.defaultProjectId ?? '');
   const [retention, setRetention] = useState(String(data.org.retentionDays ?? 30));
 
-  // Logo: rehydrated on mount (the old code wrote but never read back).
-  const [logo, setLogo] = useState<string | null>(() => {
-    try {
-      const stored = localStorage.getItem(LOGO_KEY);
-      return stored && stored !== '' ? stored : null;
-    } catch {
-      return null;
-    }
-  });
+  // Logo: server is the source of truth (`branding.logo_dataurl`); a legacy
+  // localStorage entry migrates in and is cleared from local storage on save.
+  const [logo, setLogo] = useState<string | null>(() =>
+    resolveWorkspaceLogo(branding, readLegacyLogo(LOGO_KEY)),
+  );
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -94,30 +103,27 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
       toast.error('Logo must be an image');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Logo must be under 2 MB');
+    if (file.size > LOGO_FILE_MAX_BYTES) {
+      toast.error('Logo must be under 700 KB so it fits the workspace sync');
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : null;
-      setLogo(result);
-      try {
-        localStorage.setItem(LOGO_KEY, result ?? '');
-      } catch {
-        /* localStorage quota — E-14 replaces this with server storage */
+      // The engine only accepts png/jpeg/webp/svg data URLs for
+      // branding.logo_dataurl — a GIF would 400 on save otherwise.
+      if (!isLogoDataUrl(result)) {
+        toast.error('Logo must be a PNG, JPEG, WebP, or SVG image');
+        return;
       }
+      setLogo(result);
     };
     reader.readAsDataURL(file);
   };
 
   const removeLogo = () => {
+    // Sending logo_dataurl: null on save deletes the engine key.
     setLogo(null);
-    try {
-      localStorage.removeItem(LOGO_KEY);
-    } catch {
-      /* ignore */
-    }
   };
 
   const onDropKey = (e: React.KeyboardEvent) => {
@@ -144,9 +150,17 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
         support_email: supportEmail.trim() || undefined,
         default_project_id: defaultProjectId || undefined,
         retention_days: Math.round(retentionDays),
-        branding: { brand_color: color },
+        // P2-13: the logo syncs to the engine's `branding.logo_dataurl`
+        // (merge-on-write; null clears it). The legacy localStorage entry is
+        // dead weight once the server copy exists — remove it.
+        branding: buildBrandingPayload(color, logo),
       },
-      { onSuccess: () => toast.success('Workspace settings saved') },
+      {
+        onSuccess: () => {
+          clearLegacyLogo(LOGO_KEY);
+          toast.success('Workspace settings saved');
+        },
+      },
     );
   };
 
@@ -167,7 +181,7 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
           {/* ─── Logo ─── */}
           <FieldGroup>
             <FieldLabel>Logo</FieldLabel>
-            <FieldHint>Shown in the studio sidebar and shared embeds. PNG / SVG / WebP, up to 2 MB.</FieldHint>
+            <FieldHint>Synced with your workspace. PNG / JPEG / WebP / SVG, up to 700 KB. Not shown in the studio sidebar or shared embeds yet.</FieldHint>
             <DropZone
               $drag={drag}
               role="button"
@@ -229,7 +243,10 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
           {/* ─── Brand color ─── */}
           <FieldGroup>
             <FieldLabel>Brand color</FieldLabel>
-            <FieldHint>Used for the brand mark and accents.</FieldHint>
+            {/* P2-14: no studio-wide consumer exists yet — the copy claims
+                only the genuine consumer (the preview below), not "the
+                brand mark and accents" across the studio. */}
+            <FieldHint>Stored with your workspace. Previewed below — not yet applied across the studio.</FieldHint>
             <SwatchRow>
               {PRESETS.map((hex) => (
                 <SwatchBtn

@@ -191,6 +191,7 @@ export const connectorsOAuthRoute = createRoute({
   path: '/platform/org/$orgId/connectors',
   validateSearch: (search: Record<string, unknown>) => ({
     oauth: typeof search.oauth === 'string' ? search.oauth : undefined,
+    account: typeof search.account === 'string' ? search.account : undefined,
   }),
   component: ConnectorsOAuthPage,
 });

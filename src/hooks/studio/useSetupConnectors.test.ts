@@ -5,6 +5,7 @@ import {
   parseSyncResult,
   buildConnectorConfig,
   singleFieldOverflowNote,
+  validateCredentialShape,
   PROVIDER_LINK_SPECS,
   CONNECTOR_PROVIDERS,
 } from './useSetupConnectors';
@@ -124,5 +125,51 @@ describe('parseOAuthApps', () => {
   it('reads apps without secrets', () => {
     const apps = parseOAuthApps({ apps: [{ provider: 'google_drive', client_id: 'cid' }] });
     expect(apps).toEqual([{ provider: 'google_drive', clientId: 'cid', createdAt: null, updatedAt: null }]);
+  });
+});
+
+describe('validateCredentialShape (I14/I15)', () => {
+  const confluence = PROVIDER_LINK_SPECS.find((s) => s.provider === 'confluence');
+  const zendesk = PROVIDER_LINK_SPECS.find((s) => s.provider === 'zendesk');
+  if (!confluence || !zendesk) {
+    throw new Error('connector specs missing');
+  }
+
+  it('documents the engine credential format in the hint', () => {
+    expect(confluence.credentialsHint).toContain('email:api_token');
+    expect(zendesk.credentialsHint).toContain('email/api_token');
+  });
+
+  it('accepts a properly formatted confluence secret', () => {
+    expect(validateCredentialShape(confluence, 'you@company.com:ATATT3xFf...token')).toBeNull();
+  });
+
+  it('blocks a token-only confluence paste (guaranteed 401 at sync)', () => {
+    const problem = validateCredentialShape(confluence, 'ATATT3xFf...token');
+    expect(problem).toContain('email:api_token');
+    expect(problem).toContain('401');
+  });
+
+  it('accepts a properly formatted zendesk secret', () => {
+    expect(validateCredentialShape(zendesk, 'you@company.com/zd_api_token')).toBeNull();
+  });
+
+  it('blocks a token-only zendesk paste (guaranteed 401 at sync)', () => {
+    const problem = validateCredentialShape(zendesk, 'zd_api_token');
+    expect(problem).toContain('email/api_token');
+    expect(problem).toContain('401');
+  });
+
+  it('does not flag blank input (requiredness is checked separately)', () => {
+    expect(validateCredentialShape(confluence, '   ')).toBeNull();
+  });
+
+  it('is a no-op for providers without a documented shape', () => {
+    const notion = PROVIDER_LINK_SPECS.find((s) => s.provider === 'notion');
+    if (!notion) {
+      throw new Error('notion spec missing');
+    }
+    expect(notion.credentialShape).toBeUndefined();
+    expect(validateCredentialShape(notion, 'anything')).toBeNull();
   });
 });

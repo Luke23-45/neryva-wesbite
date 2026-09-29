@@ -493,7 +493,13 @@ function MemoryComposerModal({
         placeholder="The org ships on Fridays; freeze Thursdays…"
       />
       <p style={{ fontSize: 12, opacity: 0.75 }}>
-        {content.length.toLocaleString()} / {MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the cap.
+        {/* M2 (console field audit): the engine truncates at 8192 AFTER PII
+            scrubbing (`memory.service` scrubs → slices the scrubbed text), so
+            redaction markers can shift the final boundary a few characters
+            from this pre-scrub count. Say so — the old copy implied this
+            counter was the exact cut point. */}
+        {content.length.toLocaleString()} / {MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the
+        cap. The cap applies after PII redaction, so the stored text can land a few characters short of this count.
       </p>
       {editing ? (
         <p style={{ fontSize: 12, opacity: 0.75 }}>

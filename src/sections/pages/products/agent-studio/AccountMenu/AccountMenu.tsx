@@ -16,8 +16,8 @@ import {
 import { Popover, PopoverPanel, MenuItem, MenuIcon, MenuLabel, MenuHint, Divider } from '../Popover/Popover.styles';
 
 type Props = {
-  user: { initials: string; name: string; tier: string; email: string };
-  workspace: { name: string; plan: string };
+  user: { initials: string; name: string; email: string };
+  workspace: { name: string; plan: string | null };
   onOpenShortcuts?: () => void;
 };
 

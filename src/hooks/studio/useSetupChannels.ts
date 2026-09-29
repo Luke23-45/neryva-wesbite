@@ -55,11 +55,164 @@ export const CHANNEL_PLATFORMS = ['whatsapp', 'messenger', 'telegram', 'web', 'i
 export const CONNECTABLE_PLATFORMS = ['whatsapp', 'messenger', 'telegram', 'web'] as const;
 export type ConnectablePlatform = (typeof CONNECTABLE_PLATFORMS)[number];
 
+export interface PlatformCredentialField {
+  key: string;
+  label: string;
+  placeholder: string;
+  hint: string;
+  secret?: boolean;
+  /**
+   * H3: client-side pre-validation mirroring the engine's
+   * `assertCredentialsShape` (dto.ts). A malformed value used to round-trip
+   * to the server before failing with a toast — now it is blocked at the
+   * modal with the same message the server would send.
+   */
+  format?: { pattern: RegExp; message: string };
+}
+
 export interface PlatformCredentialSpec {
   platform: ConnectablePlatform;
   label: string;
   blurb: string;
-  fields: Array<{ key: string; label: string; placeholder: string; hint: string; secret?: boolean }>;
+  fields: PlatformCredentialField[];
+}
+
+/**
+ * H3: runs one field's `format` check. Returns the problem string, or null
+ * when the value passes. Blank input is not a format problem — requiredness
+ * is checked separately by the modal.
+ */
+export function validateCredentialField(field: PlatformCredentialField, raw: string): string | null {
+  const value = raw.trim();
+  if (!value || !field.format) {
+    return null;
+  }
+  return field.format.pattern.test(value) ? null : field.format.message;
+}
+
+/**
+ * H5: normalizes one allowed-origin entry to the engine's
+ * `assertAllowedDomainFormat` shape (scheme://host[:port]). Paths, queries
+ * and fragments are dropped — `https://acme.com/docs` becomes
+ * `https://acme.com` instead of failing server-side with a toast. Entries
+ * that are not parseable http(s) URLs pass through untouched so the engine
+ * still fails closed with its own validation toast (never a silent drop).
+ */
+export function normalizeOriginEntry(raw: string): string {
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed) {
+    return '';
+  }
+  try {
+    const url = new URL(trimmed);
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin !== 'null') {
+      return url.origin;
+    }
+  } catch {
+    // Not a parseable URL — passthrough below.
+  }
+  return trimmed;
+}
+
+/**
+ * H13: builds the merge-patch for the engine-consumed channel config keys
+ * the EditModal exposes (escalation notes, voice replies, out-of-window
+ * template/note). Only changed keys are included, so untouched values are
+ * never rewritten. Clearing a text field sends `null`, which the engine's
+ * `sanitizeConfigForUpdate` merge drops from the stored config — restoring
+ * the engine's default line instead of persisting an empty string (the
+ * outbound pipeline's `??` fallback does not catch `''`).
+ *
+ * Per-key platform availability (verified against the engine):
+ * - escalation notes pass through `sanitizeConfig` with no platform gate and
+ *   are consumed platform-agnostically by the outbound pipeline
+ *   (`outbound.service.ts handleEscalationNote`) — offered on every platform;
+ * - voice replies are consumed whatsapp-only (`outbound.service.ts`
+ *   `platform === 'whatsapp'` check) — offered on whatsapp only;
+ * - the out-of-window template is persisted whatsapp-only (`sanitizeConfig`
+ *   gates on `platform === 'whatsapp'`) — offered on whatsapp only;
+ * - the out-of-window note is persisted messenger-only — offered on
+ *   messenger only.
+ */
+export interface ChannelExtrasInput {
+  escalationNote: string;
+  escalationResolvedNote: string;
+  voiceRepliesEnabled: boolean;
+  outOfWindowTemplateName: string;
+  outOfWindowTemplateLanguage: string;
+  outOfWindowNote: string;
+}
+
+export function buildChannelExtrasPatch(
+  platform: string,
+  current: Record<string, unknown>,
+  input: ChannelExtrasInput,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  const cur = (key: string): string => (typeof current[key] === 'string' ? (current[key] as string) : '');
+  const setNote = (key: string, raw: string): void => {
+    const next = raw.trim().slice(0, 500);
+    if (next !== cur(key)) {
+      patch[key] = next === '' ? null : next;
+    }
+  };
+
+  // G2: escalation notes are engine-persisted and consumed on EVERY platform
+  // (sanitizeConfig has no platform gate; handleEscalationNote reads them
+  // platform-agnostically) — the old `platform !== 'web'` gate made them
+  // console-unsettable on web for no engine reason. Voice/template/note
+  // keep their consumption-matched gates below.
+  setNote('escalation_note', input.escalationNote);
+  setNote('escalation_resolved_note', input.escalationResolvedNote);
+  if (platform === 'whatsapp') {
+    if (input.voiceRepliesEnabled !== (current.voice_replies_enabled === true)) {
+      patch.voice_replies_enabled = input.voiceRepliesEnabled;
+    }
+    const curTemplate =
+      typeof current.out_of_window_template === 'object' && current.out_of_window_template !== null
+        ? (current.out_of_window_template as { name?: unknown; language?: unknown })
+        : null;
+    const curName = typeof curTemplate?.name === 'string' ? curTemplate.name : '';
+    const curLang = typeof curTemplate?.language === 'string' ? curTemplate.language : '';
+    const nextName = input.outOfWindowTemplateName.trim().slice(0, 128);
+    const nextLang = input.outOfWindowTemplateLanguage.trim().slice(0, 16);
+    if (nextName === '' && nextLang === '') {
+      // Both empty clears the template (null → the engine drops the key).
+      if (curName !== '' || curLang !== '') {
+        patch.out_of_window_template = null;
+      }
+    } else if (nextName !== '' && nextLang !== '') {
+      if (nextName !== curName || nextLang !== curLang) {
+        patch.out_of_window_template = { name: nextName, language: nextLang };
+      }
+    }
+    // G3: a half-filled template is never emitted — the engine persists any
+    // truthy object and Meta rejects the send when the window closes. The
+    // modal blocks save on this state via `outOfWindowTemplateProblem`.
+  }
+  if (platform === 'messenger') {
+    setNote('out_of_window_note', input.outOfWindowNote);
+  }
+  return patch;
+}
+
+/**
+ * G3: a half-filled out-of-window template (name without language, or
+ * language without name) is a broken persisted state — the engine stores any
+ * truthy object and the runtime would hand the half-template to Meta, which
+ * rejects the send when the 24h window closes. The caller blocks save on
+ * this and shows the returned message; `buildChannelExtrasPatch` also never
+ * emits a half-template as a backstop.
+ */
+export function outOfWindowTemplateProblem(
+  input: Pick<ChannelExtrasInput, 'outOfWindowTemplateName' | 'outOfWindowTemplateLanguage'>,
+): string | null {
+  const nameFilled = input.outOfWindowTemplateName.trim() !== '';
+  const langFilled = input.outOfWindowTemplateLanguage.trim() !== '';
+  if (nameFilled === langFilled) {
+    return null;
+  }
+  return 'Out-of-window template needs both a name and a language — or leave both empty to clear it.';
 }
 
 export const PLATFORM_CREDENTIAL_SPECS: readonly PlatformCredentialSpec[] = [
@@ -68,7 +221,15 @@ export const PLATFORM_CREDENTIAL_SPECS: readonly PlatformCredentialSpec[] = [
     label: 'WhatsApp',
     blurb: 'Meta Graph number. Verify checks the number live; webhook-setup returns the callback URL + once-shown verify token.',
     fields: [
-      { key: 'app_secret', label: 'App secret (64 hex)', placeholder: '…', hint: 'Meta app secret, 64 hex chars.' },
+      {
+        key: 'app_secret',
+        label: 'App secret (64 hex)',
+        placeholder: '…',
+        hint: 'Meta app secret, 64 hex chars.',
+        // H3: mirrors the engine's assertCredentialsShape — malformed
+        // values are blocked here instead of round-tripping to a toast.
+        format: { pattern: /^[0-9a-f]{64}$/i, message: 'App secret must be exactly 64 hex characters — Meta rejects anything else at verify.' },
+      },
       { key: 'access_token', label: 'Access token', placeholder: '…', hint: 'System-user or page token with whatsapp_business_messaging.', secret: true },
       { key: 'phone_number_id', label: 'Phone number ID', placeholder: '…' , hint: 'The WhatsApp Business number id from Meta.' },
     ],
@@ -78,7 +239,13 @@ export const PLATFORM_CREDENTIAL_SPECS: readonly PlatformCredentialSpec[] = [
     label: 'Messenger',
     blurb: 'Meta Page inbox. Verify checks the page live; webhook-setup returns the callback URL + once-shown verify token.',
     fields: [
-      { key: 'app_secret', label: 'App secret (64 hex)', placeholder: '…', hint: 'Meta app secret, 64 hex chars.' },
+      {
+        key: 'app_secret',
+        label: 'App secret (64 hex)',
+        placeholder: '…',
+        hint: 'Meta app secret, 64 hex chars.',
+        format: { pattern: /^[0-9a-f]{64}$/i, message: 'App secret must be exactly 64 hex characters — Meta rejects anything else at verify.' },
+      },
       { key: 'access_token', label: 'Page access token', placeholder: '…', hint: 'Page token with pages_messaging.', secret: true },
     ],
   },
@@ -87,7 +254,15 @@ export const PLATFORM_CREDENTIAL_SPECS: readonly PlatformCredentialSpec[] = [
     label: 'Telegram',
     blurb: 'Bot token; webhook-setup registers the webhook server-side (no manual callback step).',
     fields: [
-      { key: 'bot_token', label: 'Bot token (123456:token)', placeholder: '…', hint: 'From @BotFather, 123456:token format.', secret: true },
+      {
+        key: 'bot_token',
+        label: 'Bot token (123456:token)',
+        placeholder: '…',
+        hint: 'From @BotFather, 123456:token format.',
+        secret: true,
+        // H3: mirrors the engine's assertCredentialsShape.
+        format: { pattern: /^\d+:[\w-]+$/, message: 'Bot token must look like 123456:token — digits, a colon, then the token from @BotFather.' },
+      },
     ],
   },
   {

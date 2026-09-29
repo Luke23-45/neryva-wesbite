@@ -20,6 +20,7 @@ import { Link } from '@tanstack/react-router';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { parseOverviewKpis, parseSeries, rangeDates, useUsageOverview, useUsageSeries } from '@hooks/engine/usage';
 import { useUrlState } from '@lib/useUrlState';
+import { useCan } from '@lib/engine/capabilities';
 
 import { ChartWrap, LegendRow, LegendItem, LegendSwatch } from './AnalyticsView.styles';
 
@@ -45,8 +46,16 @@ export function AnalyticsView() {
   const range: Range = rangeParam === '7d' || rangeParam === '90d' ? rangeParam : '30d';
   const dates = rangeDates(range);
 
-  const overview = useUsageOverview('agent_studio', dates);
-  const series = useUsageSeries('agent_studio', dates);
+  const can = useCan('agent_studio');
+  // P2-3 (AN-07): the overview/series endpoints are owner/admin/billing only
+  // (`usage.controller.ts`) — developer/reader got 403 error states on the
+  // KPIs and chart while the agent table loaded fine (mixed broken state).
+  // Don't fire the guaranteed-403 queries; say so honestly instead. The
+  // agent roster below stays visible to every role.
+  const canViewUsage = can('billing:view');
+
+  const overview = useUsageOverview('agent_studio', dates, { enabled: canViewUsage });
+  const series = useUsageSeries('agent_studio', dates, { enabled: canViewUsage });
   const assistants = useAssistants();
 
   const kpis = parseOverviewKpis(overview.data, 4);
@@ -71,23 +80,32 @@ export function AnalyticsView() {
       </ViewHeader>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <QueryView query={overview} skeleton={<Skeleton $h="120px" $r="12px" />}>
-          {() => (
-            <KpiGrid>
-              {kpis.length > 0 ? (
-                kpis.map((kpi) => (
-                  <Panel key={kpi.key} title={kpi.label}>
-                    <div style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</div>
+        {canViewUsage ? (
+          <QueryView query={overview} skeleton={<Skeleton $h="120px" $r="12px" />}>
+            {() => (
+              <KpiGrid>
+                {kpis.length > 0 ? (
+                  kpis.map((kpi) => (
+                    <Panel key={kpi.key} title={kpi.label}>
+                      <div style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</div>
+                    </Panel>
+                  ))
+                ) : (
+                  <Panel title="Usage">
+                    <div style={{ fontSize: 14, opacity: 0.55 }}>No usage recorded in this period yet.</div>
                   </Panel>
-                ))
-              ) : (
-                <Panel title="Usage">
-                  <div style={{ fontSize: 14, opacity: 0.55 }}>No usage recorded in this period yet.</div>
-                </Panel>
-              )}
-            </KpiGrid>
-          )}
-        </QueryView>
+                )}
+              </KpiGrid>
+            )}
+          </QueryView>
+        ) : (
+          <Panel>
+            <ErrorState
+              title="Usage analytics need the billing role"
+              message="Metered usage is a finance surface — your role doesn't include billing visibility. Owners, admins, and billing managers can view it."
+            />
+          </Panel>
+        )}
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
@@ -98,6 +116,12 @@ export function AnalyticsView() {
             <Segmented options={rangeOptions} value={range} onChange={setRange} ariaLabel="Analytics range" />
           }
         >
+          {!canViewUsage ? (
+            <ErrorState
+              title="Usage analytics need the billing role"
+              message="The usage chart is a finance surface — your role doesn't include billing visibility. Owners, admins, and billing managers can view it."
+            />
+          ) : (
           <ChartWrap>
             {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
               <>
@@ -127,6 +151,7 @@ export function AnalyticsView() {
               <ChartEmpty>No series in this window yet — the chart fills as events flow through the engine.</ChartEmpty>
             )}
           </ChartWrap>
+          )}
         </Panel>
       </motion.div>
 

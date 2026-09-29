@@ -105,8 +105,11 @@ async function postPublic(path: string, body: Record<string, unknown>): Promise<
             'Something went wrong on our side — please try again in a moment.',
         );
     }
-    // The 12–512 password rule surfaces as a raw server error (the engine
-    // throws outside its ApiError shape); normalize it for the UI.
+    // The 12–512 password rule used to surface as a raw server error (the
+    // engine threw outside its ApiError shape); the engine now throws a
+    // structured ApiError.validation (400), which lands in the
+    // `validation_error` branch below. Keep the message-match as a
+    // defensive fallback for older engine builds.
     if (/password must be between 12 and 512 characters/i.test(message)) {
         throw new PublicAuthError(response.status, 'bad_password', 'Password must be at least 12 characters.');
     }

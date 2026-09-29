@@ -31,6 +31,10 @@ import {
   useWebhookSetup,
   widgetSnippet,
   widgetSnippetOrigin,
+  normalizeOriginEntry,
+  validateCredentialField,
+  buildChannelExtrasPatch,
+  outOfWindowTemplateProblem,
   PLATFORM_CREDENTIAL_SPECS,
   type ChannelAccount,
   type ConnectablePlatform,
@@ -430,13 +434,24 @@ function ConnectModal({
 
   const spec = PLATFORM_CREDENTIAL_SPECS.find((s) => s.platform === platform) ?? PLATFORM_CREDENTIAL_SPECS[3];
 
-  const originsList = origins.split(',').map((s) => s.trim().replace(/\/$/, '').toLowerCase()).filter(Boolean);
+  // H5: entries are normalized to scheme://host[:port] — a pasted path
+  // (https://acme.com/docs) is stripped client-side instead of failing the
+  // engine's assertAllowedDomainFormat with a toast.
+  const originsList = origins.split(',').map(normalizeOriginEntry).filter(Boolean);
   const originsProblem = platform === 'web' && originsList.length === 0 ? 'Web channels require at least one origin (scheme://host).' : null;
   const nameProblem = !displayName.trim() ? 'Display name is required.' : null;
   const assistantProblem = !assistantId ? 'Binding is required — channel conversations pin this assistant (routability-checked).' : null;
+  // H3: non-empty is not enough — app_secret must be 64 hex and bot_token
+  // must match 123456:token, mirroring the engine's assertCredentialsShape.
   const credentialProblems = spec.fields
-    .filter((field) => !(credentialValues[field.key]?.trim()))
-    .map((field) => `${field.label} is required.`);
+    .map((field) => {
+      const value = credentialValues[field.key]?.trim() ?? '';
+      if (!value) {
+        return `${field.label} is required.`;
+      }
+      return validateCredentialField(field, value);
+    })
+    .filter((p): p is string => p !== null);
 
   const problems = [nameProblem, assistantProblem, originsProblem, ...credentialProblems].filter((p): p is string => p !== null);
 
@@ -565,8 +580,34 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
   const [assistantId, setAssistantId] = useState(currentBinding);
   const [origins, setOrigins] = useState(Array.isArray(account.config.allowed_domains) ? (account.config.allowed_domains as string[]).join(', ') : '');
   const [greeting, setGreeting] = useState(typeof account.config.greeting === 'string' ? account.config.greeting : '');
+  // H13: the engine consumes these config keys (escalation notes in the
+  // outbound pipeline; voice + out-of-window template/note on Meta
+  // platforms) — they get real fields here instead of the old
+  // "ask for the fields you need" copy.
+  const [escalationNote, setEscalationNote] = useState(typeof account.config.escalation_note === 'string' ? account.config.escalation_note : '');
+  const [escalationResolvedNote, setEscalationResolvedNote] = useState(
+    typeof account.config.escalation_resolved_note === 'string' ? account.config.escalation_resolved_note : '',
+  );
+  const [voiceReplies, setVoiceReplies] = useState(account.config.voice_replies_enabled === true);
+  const oowTemplate = typeof account.config.out_of_window_template === 'object' && account.config.out_of_window_template !== null
+    ? (account.config.out_of_window_template as { name?: unknown; language?: unknown })
+    : null;
+  const [oowTemplateName, setOowTemplateName] = useState(typeof oowTemplate?.name === 'string' ? oowTemplate.name : '');
+  const [oowTemplateLanguage, setOowTemplateLanguage] = useState(typeof oowTemplate?.language === 'string' ? oowTemplate.language : '');
+  const [oowNote, setOowNote] = useState(typeof account.config.out_of_window_note === 'string' ? account.config.out_of_window_note : '');
 
-  const originsList = origins.split(',').map((s) => s.trim().replace(/\/$/, '').toLowerCase()).filter(Boolean);
+  // H5: same origin normalization as the connect modal.
+  const originsList = origins.split(',').map(normalizeOriginEntry).filter(Boolean);
+
+  // G3: a half-filled out-of-window template is never persisted — block save
+  // and say so, instead of silently storing a state Meta would reject.
+  const extrasProblem =
+    account.platform === 'whatsapp'
+      ? outOfWindowTemplateProblem({
+          outOfWindowTemplateName: oowTemplateName,
+          outOfWindowTemplateLanguage: oowTemplateLanguage,
+        })
+      : null;
 
   const submit = () => {
     const config: Record<string, unknown> = {};
@@ -577,6 +618,18 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
       config.allowed_domains = originsList;
       config.greeting = greeting.trim().slice(0, 500);
     }
+    // H13: only changed extras keys are sent (null clears a text key).
+    Object.assign(
+      config,
+      buildChannelExtrasPatch(account.platform, account.config, {
+        escalationNote,
+        escalationResolvedNote,
+        voiceRepliesEnabled: voiceReplies,
+        outOfWindowTemplateName: oowTemplateName,
+        outOfWindowTemplateLanguage: oowTemplateLanguage,
+        outOfWindowNote: oowNote,
+      }),
+    );
     update.mutate(
       {
         channelId: account.id,
@@ -599,12 +652,17 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
           <ActionButton variant="secondary" onClick={onClose}>
             Cancel
           </ActionButton>
-          <ActionButton disabled={update.isPending} onClick={submit}>
+          <ActionButton disabled={update.isPending || extrasProblem !== null} onClick={submit}>
             Save
           </ActionButton>
         </>
       }
     >
+      {extrasProblem && (
+        <p role="alert" style={{ color: '#f87171', fontSize: 12, marginBottom: 8 }}>
+          {extrasProblem}
+        </p>
+      )}
       <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
       <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
         <label style={{ fontSize: 13, flex: 1 }}>
@@ -635,12 +693,66 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
           </div>
         </>
       )}
-      {account.platform !== 'web' && (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>
-          Platform extras (templates, notes, voice) edit through the same merge-patch config — ask for the fields you need; only
-          known keys are shown here to avoid silent drops.
-        </p>
-      )}
+      {/* G2: escalation notes are offered on every platform (the engine
+          persists and consumes them with no platform gate); voice/template
+          stay whatsapp-only, the out-of-window note messenger-only. */}
+      <>
+        <div style={{ marginTop: 16, fontSize: 13, fontWeight: 600 }}>Messaging extras</div>
+          <div style={{ marginTop: 12 }}>
+            <TextInput
+              label="Escalation note (≤500)"
+              value={escalationNote}
+              onChange={(e) => setEscalationNote(e.target.value)}
+              placeholder="Connecting you with a human teammate…"
+              hint="Sent to the end user when the conversation is handed to a human. Empty clears it — the engine then uses its default line."
+            />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <TextInput
+              label="Escalation resolved note (≤500)"
+              value={escalationResolvedNote}
+              onChange={(e) => setEscalationResolvedNote(e.target.value)}
+              placeholder="A human teammate helped — the assistant is back."
+              hint="Sent when the human hands the conversation back. Empty clears it — the engine then uses its default line."
+            />
+          </div>
+          {account.platform === 'whatsapp' && (
+            <>
+              <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
+                <input type="checkbox" checked={voiceReplies} onChange={(e) => setVoiceReplies(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>
+                  Voice replies
+                  <span style={{ display: 'block', fontSize: 12, opacity: 0.7, fontWeight: 400 }}>
+                    Also deliver assistant replies as a synthesized voice note. Best-effort — TTS must be configured, and a TTS failure never fails the text delivery.
+                  </span>
+                </span>
+              </label>
+              <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600 }}>Out-of-window template</div>
+              <p style={{ fontSize: 12, opacity: 0.7 }}>
+                WhatsApp template used when the 24h messaging window is closed. Fill in both fields, or leave both empty to clear.
+              </p>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 2 }}>
+                  <TextInput label="Template name" value={oowTemplateName} onChange={(e) => setOowTemplateName(e.target.value)} placeholder="hello_world" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <TextInput label="Language" value={oowTemplateLanguage} onChange={(e) => setOowTemplateLanguage(e.target.value)} placeholder="en_US" />
+                </div>
+              </div>
+            </>
+          )}
+          {account.platform === 'messenger' && (
+            <div style={{ marginTop: 12 }}>
+              <TextInput
+                label="Out-of-window note (≤500)"
+                value={oowNote}
+                onChange={(e) => setOowNote(e.target.value)}
+                placeholder="Our team replies within a day…"
+                hint="Sent as the reply when the 24h window is closed (Messenger has no template mechanism). Empty clears it."
+              />
+            </div>
+          )}
+      </>
       {account.publicKey && (
         <div style={{ marginTop: 12, fontSize: 13 }}>
           Public key: <Mono>{account.publicKey}</Mono> <CopyButton value={account.publicKey} label="Copy public key" />
@@ -665,6 +777,11 @@ function RotateModal({ account, onClose }: { account: ChannelAccount; onClose: (
   }
 
   const missing = spec.fields.filter((field) => !(values[field.key]?.trim()));
+  // H3: same pre-validation as the connect modal — a malformed secret is
+  // blocked here instead of failing the server-side shape check.
+  const formatProblems = spec.fields
+    .map((field) => validateCredentialField(field, values[field.key] ?? ''))
+    .filter((p): p is string => p !== null);
 
   return (
     <Modal
@@ -678,7 +795,7 @@ function RotateModal({ account, onClose }: { account: ChannelAccount; onClose: (
             Cancel
           </ActionButton>
           <ActionButton
-            disabled={missing.length > 0 || rotate.isPending}
+            disabled={missing.length > 0 || formatProblems.length > 0 || rotate.isPending}
             onClick={() => {
               const credentials: Record<string, unknown> = {};
               for (const field of spec.fields) {
@@ -707,6 +824,13 @@ function RotateModal({ account, onClose }: { account: ChannelAccount; onClose: (
         </div>
       ))}
       {missing.length > 0 && <p style={{ fontSize: 12, color: '#f87171' }}>All credential fields are required for rotation.</p>}
+      {formatProblems.length > 0 && (
+        <ul style={{ fontSize: 12, color: '#f87171', paddingLeft: 18 }}>
+          {formatProblems.map((problem, i) => (
+            <li key={i}>{problem}</li>
+          ))}
+        </ul>
+      )}
     </Modal>
   );
 }

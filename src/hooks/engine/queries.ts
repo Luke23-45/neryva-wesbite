@@ -40,13 +40,19 @@ export interface MemberRow {
   groups?: Array<{ id: string; name: string }>;
 }
 
-export function useMembers(params: { q?: string; status?: string; limit?: number; offset?: number } = {}, options?: { enabled?: boolean }) {
+export function useMembers(
+  params: { q?: string; status?: string; limit?: number; offset?: number } = {},
+  options?: { enabled?: boolean }
+) {
   // Null-safe (vs useOrgRequired): palette/search consumers render during
   // org resolution and must not crash — the query simply stays disabled.
   const { orgId } = useOrg();
   return useQuery({
     queryKey: ['engine', 'members', orgId, params],
-    queryFn: () => engine<{ members: MemberRow[]; total: number }>(`/console/org/${orgId}/members`, { query: { ...params } }),
+    queryFn: () =>
+      engine<{ members: MemberRow[]; total: number }>(`/console/org/${orgId}/members`, {
+        query: { ...params },
+      }),
     enabled: (options?.enabled ?? true) && !!orgId,
   });
 }
@@ -62,7 +68,14 @@ export function useOrgSummary() {
         serviceAccounts: { total: number; active: number };
         groups: number;
         maxMembers: number;
-        seats: Array<{ product: string; plan: string; seats: number | null; activeMembers: number; utilization: number | null; state: string }>;
+        seats: Array<{
+          product: string;
+          plan: string;
+          seats: number | null;
+          activeMembers: number;
+          utilization: number | null;
+          state: string;
+        }>;
       }>(`/console/org/${orgId}/summary`),
     staleTime: 15_000,
   });
@@ -116,7 +129,10 @@ export function useProjects(includeArchived = false) {
   const { orgId } = useOrg();
   return useQuery({
     queryKey: ['engine', 'projects', orgId, includeArchived],
-    queryFn: () => engine<{ projects: ProjectRow[] }>(`/console/org/${orgId}/projects`, { query: { include_archived: includeArchived } }),
+    queryFn: () =>
+      engine<{ projects: ProjectRow[] }>(`/console/org/${orgId}/projects`, {
+        query: { include_archived: includeArchived },
+      }),
     enabled: !!orgId,
   });
 }
@@ -170,7 +186,8 @@ export function useGroupMembers(groupId: string | null) {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'group-members', orgId, groupId],
-    queryFn: () => engine<{ members: GroupMemberRow[] }>(`/console/org/${orgId}/groups/${groupId}/members`),
+    queryFn: () =>
+      engine<{ members: GroupMemberRow[] }>(`/console/org/${orgId}/groups/${groupId}/members`),
     enabled: !!orgId && !!groupId,
   });
 }
@@ -192,7 +209,8 @@ export function useServiceAccounts() {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'service-accounts', orgId],
-    queryFn: () => engine<{ serviceAccounts: ServiceAccountRow[] }>(`/console/org/${orgId}/service-accounts`),
+    queryFn: () =>
+      engine<{ serviceAccounts: ServiceAccountRow[] }>(`/console/org/${orgId}/service-accounts`),
   });
 }
 
@@ -220,8 +238,20 @@ export function useOrgProfile() {
     queryKey: ['engine', 'org-profile', orgId],
     queryFn: () =>
       engine<{
-        org: { id: string; name: string; slug: string; region: string | null; retentionDays: number | null; createdAt: string | null };
-        settings: { supportEmail: string | null; defaultProjectId: string | null; branding: Record<string, unknown>; preferences: Record<string, unknown> };
+        org: {
+          id: string;
+          name: string;
+          slug: string;
+          region: string | null;
+          retentionDays: number | null;
+          createdAt: string | null;
+        };
+        settings: {
+          supportEmail: string | null;
+          defaultProjectId: string | null;
+          branding: Record<string, unknown>;
+          preferences: Record<string, unknown>;
+        };
       }>(`/console/org/${orgId}`),
   });
 }
@@ -230,7 +260,10 @@ export function useDeletionStatus() {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'deletion-status', orgId],
-    queryFn: () => engine<{ deletion: { status: string; scheduled_purge_at: string | null } | null }>(`/console/org/${orgId}/deletion-status`),
+    queryFn: () =>
+      engine<{ deletion: { status: string; scheduled_purge_at: string | null } | null }>(
+        `/console/org/${orgId}/deletion-status`
+      ),
   });
 }
 
@@ -254,11 +287,23 @@ export interface AuditEventRow {
  * There is no offset/total/resource_type filter server-side; callers that
  * need deeper traversal page with `before: <nextCursor>`.
  */
-export function useAudit(filters: { actor?: string; action?: string; from?: string; to?: string; limit?: number; before?: string }) {
+export function useAudit(filters: {
+  actor?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  before?: string;
+}, options?: { enabled?: boolean }) {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'audit', orgId, filters],
-    queryFn: () => engine<{ events: AuditEventRow[]; nextCursor: string | null }>(`/console/org/${orgId}/audit`, { query: { ...filters } }),
+    queryFn: () =>
+      engine<{ events: AuditEventRow[]; nextCursor: string | null }>(
+        `/console/org/${orgId}/audit`,
+        { query: { ...filters } }
+      ),
+    enabled: (options?.enabled ?? true) && !!orgId,
     refetchInterval: 30_000,
   });
 }
@@ -267,8 +312,36 @@ export function useAuditFacets() {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'audit-facets', orgId],
-    queryFn: () => engine<{ actions: string[]; resourceTypes: string[] }>(`/console/org/${orgId}/audit/facets`),
+    queryFn: () =>
+      engine<{ actions: string[]; resourceTypes: string[] }>(`/console/org/${orgId}/audit/facets`),
     staleTime: 5 * 60_000,
+  });
+}
+
+export interface AuditVerifyResult {
+  ok: boolean;
+  checked: number;
+  first_break: string | null;
+}
+
+/**
+ * Hash-chain verification — `GET /console/org/:orgId/audit/verify` →
+ * `ConsoleAuditQueryService.verify()` → `AuditService.verifyChain(500)`,
+ * returning `{ ok, checked, first_break }`.
+ *
+ * Disabled by default: the view refetches on demand (button click) so a
+ * developer/reader never fires a guaranteed-403 request — the endpoint is
+ * owner/admin/billing only (`console-platform.controller.ts`). Callers gate
+ * the button on the `billing:view` capability; the engine stays the backstop.
+ */
+export function useAuditVerify(options?: { enabled?: boolean }) {
+  const orgId = useOrgRequired();
+  return useQuery({
+    queryKey: ['engine', 'audit-verify', orgId],
+    queryFn: () => engine<AuditVerifyResult>(`/console/org/${orgId}/audit/verify`),
+    enabled: options?.enabled ?? false,
+    staleTime: 0,
+    retry: false,
   });
 }
 
@@ -303,7 +376,12 @@ export function usePlatformStatus() {
       engine<{
         overall: 'operational' | 'degraded' | 'outage';
         components: Array<{ name: string; ok: boolean }>;
-        satellites: Array<{ key: string; status: string; liveness: string; heartbeat_age_seconds: number | null }>;
+        satellites: Array<{
+          key: string;
+          status: string;
+          liveness: string;
+          heartbeat_age_seconds: number | null;
+        }>;
         announcements: Array<Record<string, unknown>>;
       }>('/console/status'),
     staleTime: 30_000,
@@ -333,17 +411,57 @@ export interface QuotaMeter {
   limit: number | null;
 }
 
+export interface QuotaSignal {
+  /**
+   * Per-product `entitlement_state` from `/limits`
+   * (none/trial/active/past_due/suspended/expired) — null when the payload
+   * shape carries none.
+   */
+  entitlementState: string | null;
+  /**
+   * `QuotaDecision.allowed` as reported by the engine. Note: the read path
+   * (`QuotaService.usageSnapshot`) always reports `allowed: true` — it never
+   * evaluates limits; `overQuota` is the signal the console derives itself.
+   */
+  allowed: boolean | null;
+  /** `QuotaDecision.reason` as reported by the engine (null on the snapshot path). */
+  reason: string | null;
+  /**
+   * Derived: any meter with a finite limit whose `used` exceeds it. This is
+   * the real over-quota signal — the engine only evaluates `allowed` on the
+   * reserve path, not on the snapshot these pages read.
+   */
+  overQuota: boolean;
+}
+
+export interface QuotaStatus {
+  meters: QuotaMeter[];
+  signal: QuotaSignal;
+}
+
+const EMPTY_QUOTA_SIGNAL: QuotaSignal = {
+  entitlementState: null,
+  allowed: null,
+  reason: null,
+  overQuota: false,
+};
+
 function meterLabelFromKey(key: string): string {
   return key
     .replace(/_/g, ' ')
-    .replace(/\b(monthly|events|spend|usd)\b/gi, (m) => m.toUpperCase() === 'USD' ? 'USD' : m)
+    .replace(/\b(monthly|events|spend|usd)\b/gi, m => (m.toUpperCase() === 'USD' ? 'USD' : m))
     .trim();
 }
 
-/** Defensive walk: any `{used|spent|current, limit|max}` pair becomes a meter. */
-export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
+/**
+ * Defensive walk: any `{used|spent|current, limit|max}` pair becomes a meter,
+ * plus the quota signal the engine returns alongside the numbers
+ * (`entitlement_state`, `allowed`, `reason`) so pages can surface over-quota
+ * and read-only plan states instead of dropping them (US-07).
+ */
+export function parseQuotaStatus(raw: unknown, product: string): QuotaStatus {
   if (typeof raw !== 'object' || raw === null) {
-    return [];
+    return { meters: [], signal: EMPTY_QUOTA_SIGNAL };
   }
   const record = raw as Record<string, unknown>;
   // BUG-1: the engine's real shape is
@@ -352,24 +470,44 @@ export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
   // (quota.service.ts). The old code expected a flat quota:{used_usd,…} and
   // could never parse the real wire shape — meters never rendered.
   let scope: unknown;
+  let signal: QuotaSignal = EMPTY_QUOTA_SIGNAL;
   if (Array.isArray(record.products)) {
     const match = (record.products as Array<Record<string, unknown>>).find(
-      (p) => p.product === product
+      p => p.product === product
     );
     const quota = (match?.quota ?? match) as Record<string, unknown> | undefined;
+    if (match && typeof match === 'object') {
+      const entitlementState = match.entitlement_state;
+      const allowed = quota && typeof quota === 'object' ? quota.allowed : undefined;
+      const reason = quota && typeof quota === 'object' ? quota.reason : undefined;
+      signal = {
+        entitlementState: typeof entitlementState === 'string' ? entitlementState : null,
+        allowed: typeof allowed === 'boolean' ? allowed : null,
+        reason: typeof reason === 'string' ? reason : null,
+        overQuota: false,
+      };
+    }
     // QuotaDecision nests the numbers under quota.product / quota.project.
-    scope = quota && typeof quota === 'object' && typeof quota.product === 'object' && quota.product !== null
-      ? quota.product
-      : (quota ?? match);
-  } else {
     scope =
-      (typeof record.products === 'object' && record.products !== null && (record.products as Record<string, unknown>)[product]) ??
-      (typeof record.quotas === 'object' && record.quotas !== null ? (record.quotas as Record<string, unknown>)[product] : undefined) ??
-      record[product] ??
-      record;
+      quota &&
+      typeof quota === 'object' &&
+      typeof quota.product === 'object' &&
+      quota.product !== null
+        ? quota.product
+        : (quota ?? match);
+  } else {
+    const products =
+      typeof record.products === 'object' && record.products !== null
+        ? (record.products as Record<string, unknown>)[product]
+        : undefined;
+    const quotas =
+      typeof record.quotas === 'object' && record.quotas !== null
+        ? (record.quotas as Record<string, unknown>)[product]
+        : undefined;
+    scope = products ?? quotas ?? record[product] ?? record;
   }
   if (typeof scope !== 'object' || scope === null) {
-    return [];
+    return { meters: [], signal };
   }
   const meters: QuotaMeter[] = [];
   for (const [key, value] of Object.entries(scope as Record<string, unknown>)) {
@@ -406,7 +544,18 @@ export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
       });
     }
   }
-  return meters;
+  return {
+    meters,
+    signal: {
+      ...signal,
+      overQuota: meters.some(m => m.limit !== null && m.used > m.limit),
+    },
+  };
+}
+
+/** Defensive walk: any `{used|spent|current, limit|max}` pair becomes a meter. */
+export function parseQuotaMeters(raw: unknown, product: string): QuotaMeter[] {
+  return parseQuotaStatus(raw, product).meters;
 }
 
 export function useOrgLimits(options?: { enabled?: boolean }) {

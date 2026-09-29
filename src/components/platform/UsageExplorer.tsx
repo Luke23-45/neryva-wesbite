@@ -19,6 +19,7 @@ import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { engineDownload } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
+import { useCan } from '@lib/engine/capabilities';
 import {
   parseOverviewKpis,
   parseSeries,
@@ -146,7 +147,13 @@ const LegendSwatch = styled.span<{ $color: string }>`
 `;
 
 export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: string }) {
-  const { orgId } = useOrg();
+  const { orgId, role } = useOrg();
+  // P2-3 (US-05 role note): the usage export endpoint is owner/admin/billing
+  // only (`billing-extension.controller.ts`) — don't invite developer/reader
+  // into a guaranteed 403. Disabled with a reason, per the UI convention
+  // (discoverability beats blankness).
+  const can = useCan('agent_studio');
+  const canExportUsage = can('billing:view');
   // URL-synced filters (F-9) — shareable views, back/forward friendly.
   const params = useUrlSearchParams();
   const [, setProductParam] = useUrlState('product', { default: 'all' });
@@ -205,7 +212,17 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
         </ProductSelect>
         <Segmented options={RANGE_OPTIONS} value={rangeValue} onChange={setRange} ariaLabel="Usage range" />
         <Spacer />
-        <ActionButton variant="secondary" size="sm" onClick={exportCsv}>
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          onClick={exportCsv}
+          disabled={!canExportUsage}
+          title={
+            canExportUsage
+              ? 'Download usage rows as NDJSON'
+              : `Exporting usage requires the billing role or above — your role is ${role ?? 'unknown'}.`
+          }
+        >
           <Download size={13} strokeWidth={1.8} />
           Export NDJSON
         </ActionButton>

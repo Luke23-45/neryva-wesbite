@@ -63,6 +63,24 @@ describe('normalizeNotification', () => {
     expect(item?.title).toBe('Only a message');
     expect(item?.message).toBeNull();
   });
+
+  it('reads the engine camelCase readAt wire field (C6)', () => {
+    // The engine serializes the domain Notification with camelCase `readAt`
+    // on both lanes (pg + mongo map to the shared domain shape); there is no
+    // `read_at` key on the wire.
+    const item = normalizeNotification({ id: 'n6', title: 'T', readAt: '2026-09-28T10:00:00.000Z' });
+    expect(item?.read).toBe(true);
+  });
+
+  it('keeps the snake_case read_at alias as a defensive fallback', () => {
+    const item = normalizeNotification({ id: 'n7', title: 'T', read_at: '2026-09-28T10:00:00.000Z' });
+    expect(item?.read).toBe(true);
+  });
+
+  it('marks unread when neither readAt nor read_at is present', () => {
+    const item = normalizeNotification({ id: 'n8', title: 'T' });
+    expect(item?.read).toBe(false);
+  });
 });
 
 describe('parseNotifications', () => {

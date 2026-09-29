@@ -41,6 +41,26 @@ function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
+/**
+ * K16 (console field audit): the engine emits `latest_version: 0` (not null)
+ * for versionless documents — on BOTH lanes (pg/mongo-document.repository
+ * listInventory). 0 is never a real version (versioning starts at 1), so the
+ * console normalizes it to null: the "becomes version 1" hint and the "—"
+ * version cell both key off null.
+ */
+export function normalizeLatestVersion(value: unknown): number | null {
+  const num =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : null;
+  if (num === null || Number.isNaN(num) || num <= 0) {
+    return null;
+  }
+  return num;
+}
+
 export type DocumentState = 'processing' | 'ready' | 'failed' | 'retired' | string;
 
 export interface KnowledgeDocument {
@@ -72,7 +92,7 @@ export function parseDocuments(raw: unknown): KnowledgeDocument[] {
         title: str(item.title),
         state: str(item.state) ?? 'processing',
         updatedAt: str(item.updated_at),
-        latestVersion: typeof latest === 'number' ? latest : typeof latest === 'string' && latest.trim() !== '' ? Number(latest) : null,
+        latestVersion: normalizeLatestVersion(latest),
       };
     })
     .filter((d): d is KnowledgeDocument => d !== null);
@@ -174,12 +194,7 @@ export function parseDocumentPreview(raw: unknown): DocumentPreview | null {
     sourceSlug: str(doc.source_slug) ?? '',
     title: str(doc.title),
     state: str(doc.state) ?? 'processing',
-    latestVersion:
-      typeof doc.latest_version === 'number'
-        ? doc.latest_version
-        : typeof doc.latest_version === 'string' && doc.latest_version.trim() !== ''
-          ? Number(doc.latest_version)
-          : null,
+    latestVersion: normalizeLatestVersion(doc.latest_version),
     totalChunks: num(record.total_chunks) ?? chunks.length,
     truncated: record.truncated === true,
     chunks: chunks

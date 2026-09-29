@@ -194,7 +194,13 @@ export function relativeTime(iso: string | null | undefined, nowMs = Date.now())
   return `${prefix}${days} day${days === 1 ? '' : 's'}${suffix}`;
 }
 
-/** Composer cap: the engine silent-truncates at 8192 (memory.service create). */
+/**
+ * Composer cap: the engine truncates at 8192 AFTER scrubbing (memory.service
+ * create: scrub → embed → slice the SCRUBBED text). The console counts and
+ * slices pre-scrub characters, so redaction markers can shift the final
+ * boundary a few chars from the counter's promise — the composer copy says
+ * so. Embed-before-store is deliberate (retrieval quality), not a bug.
+ */
 export const MEMORY_CONTENT_MAX = 8192;
 
 /** Purge bounds: the engine refuses substrings outside 3–128 (purgeByContent). */

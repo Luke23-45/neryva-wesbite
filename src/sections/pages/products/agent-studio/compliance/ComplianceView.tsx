@@ -23,6 +23,10 @@ import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 
 import { Modal } from '@components/common/ui/Modal';
+
+import { TextInput } from '@components/common/ui/TextInput';
+
+import { TextArea } from '@components/common/ui/TextArea';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle, SectionTitle } from '@components/common/ui/ViewLayout';
 
 import {
@@ -49,6 +53,10 @@ import { useOrgProfile } from '@hooks/engine/queries';
 
 import { useAudit } from '@hooks/engine/queries';
 
+import { useOrg } from '@/Context/OrgContext';
+
+import { toastEngineError } from '@lib/engine/errors';
+
 import {
 
   useExports,
@@ -58,6 +66,30 @@ import {
   useRequestExport,
 
   useDownloadExport,
+
+  usePlaceLegalHold,
+
+  useReleaseLegalHold,
+
+  useUpsertRetentionPolicy,
+
+  useEnqueuePurge,
+
+  usePurgeTask,
+
+  fetchTombstone,
+
+  buildHoldBody,
+
+  buildPurgeBody,
+
+  buildRetentionPolicyBody,
+
+  HOLD_SCOPE_TYPES,
+
+  PURGE_REASONS,
+
+  type TombstoneResult,
 
 } from '@hooks/studio/useLifecycle';
 
@@ -78,6 +110,12 @@ import {
   useRollbackConfig,
 
   useDeleteConfigDraft,
+
+  useRenotifyConfig,
+
+  normalizeProduct,
+
+  productError,
 
   PUBLISHABLE_SCOPES,
 
@@ -168,6 +206,19 @@ export function ComplianceView() {
 
   const [exportConfirm, setExportConfirm] = useState(false);
   const [exportSelection, setExportSelection] = useState<string[]>([]);
+  // C-05: the download needs the one-time token issued at creation — the
+  // table opens a token prompt instead of downloading blind.
+  const [downloadPrompt, setDownloadPrompt] = useState<string | null>(null);
+
+  // C-05: the token is returned exactly once, in the POST /exports
+  // response. It is shown here immediately and never persisted.
+  const [tokenReveal, setTokenReveal] = useState<{ exportId: string | null; token: string } | null>(null);
+
+  // C-08: hold management (place/release) — owner/admin gated by the engine.
+  const placeHold = usePlaceLegalHold();
+  const releaseHold = useReleaseLegalHold();
+  const [holdDialog, setHoldDialog] = useState(false);
+  const [releaseTarget, setReleaseTarget] = useState<string | null>(null);
 
 
 
@@ -309,15 +360,20 @@ export function ComplianceView() {
 
                 <DataHead>
 
-                  <DataCell $w="28%">Export</DataCell>
+                  <DataCell $w="24%">Export</DataCell>
 
-                  <DataCell $w="18%">Scope</DataCell>
+                  <DataCell $w="12%">Scope</DataCell>
 
-                  <DataCell $w="20%">Requested</DataCell>
+                  <DataCell $w="14%">Requested</DataCell>
 
-                  <DataCell $w="16%">Status</DataCell>
+                  {/* C-04: expiry was parsed but never rendered — the UI
+                      could not tell the user an export was expired before
+                      they clicked Download. */}
+                  <DataCell $w="12%">Expires</DataCell>
 
-                  <DataCell $w="18%" />
+                  <DataCell $w="12%">Status</DataCell>
+
+                  <DataCell $w="26%" />
 
                 </DataHead>
 
@@ -325,25 +381,31 @@ export function ComplianceView() {
 
                   <DataRow key={e.id} $interactive={false}>
 
-                    <DataCell $w="28%">
+                    <DataCell $w="24%">
 
                       <CellMono>{e.id.slice(0, 14)}</CellMono>
 
                     </DataCell>
 
-                    <DataCell $w="18%">
+                    <DataCell $w="12%">
 
                       <CellMeta>{e.conversationCount !== null ? `${e.conversationCount} conversation${e.conversationCount === 1 ? '' : 's'}` : '—'}</CellMeta>
 
                     </DataCell>
 
-                    <DataCell $w="20%">
+                    <DataCell $w="14%">
 
                       <CellMeta>{e.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
 
                     </DataCell>
 
-                    <DataCell $w="16%">
+                    <DataCell $w="12%">
+
+                      <CellMeta>{e.expiresAt?.slice(0, 10) ?? '—'}</CellMeta>
+
+                    </DataCell>
+
+                    <DataCell $w="12%">
 
                       <StatusPill tone={e.state === 'ready' ? 'success' : e.state === 'expired' ? 'error' : 'warning'} dot={false}>
 
@@ -353,10 +415,9 @@ export function ComplianceView() {
 
                     </DataCell>
 
-                    <DataCell $w="18%">
+                    <DataCell $w="26%">
 
-                      {e.state === 'ready' && (e.downloadCount ?? 0) < 1 && (
-
+                      {e.state === 'ready' && (e.downloadCount ?? 0) < 1 ? (
                         <ActionButton
 
                           variant="secondary"
@@ -365,7 +426,7 @@ export function ComplianceView() {
 
                           disabled={downloadExport.isPending}
 
-                          onClick={() => downloadExport.mutate(e.id)}
+                          onClick={() => setDownloadPrompt(e.id)}
 
                         >
 
@@ -374,7 +435,11 @@ export function ComplianceView() {
                           Download
 
                         </ActionButton>
-
+                      ) : (
+                        /* C-04: downloadCount was parsed but invisible — a
+                           consumed export now says so instead of silently
+                           dropping its Download button. */
+                        e.state === 'ready' && <CellMeta>downloaded</CellMeta>
                       )}
 
                     </DataCell>
@@ -401,7 +466,18 @@ export function ComplianceView() {
 
         <SectionTitle>Legal holds</SectionTitle>
 
-        <Panel flush>
+        <Panel
+          flush
+          action={
+            <ActionButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setHoldDialog(true)}
+            >
+              Place hold
+            </ActionButton>
+          }
+        >
 
           <QueryView
 
@@ -421,15 +497,24 @@ export function ComplianceView() {
 
                 <DataHead>
 
-                  <DataCell $w="20%">Hold</DataCell>
+                  <DataCell $w="14%">Hold</DataCell>
 
-                  <DataCell $w="14%">Scope</DataCell>
+                  {/* C-07: the scope id is the operative identifier for
+                      conversation-scoped holds — it was invisible. */}
+                  <DataCell $w="18%">Scope</DataCell>
 
-                  <DataCell $w="14%">Since</DataCell>
+                  {/* C-06: the wire field is placedAt, not createdAt —
+                      reading createdAt rendered this column as '—' forever. */}
+                  <DataCell $w="12%">Since</DataCell>
 
-                  <DataCell $w="12%">Status</DataCell>
+                  {/* C-07: placedBy was not even parsed before. */}
+                  <DataCell $w="12%">Placed by</DataCell>
 
-                  <DataCell $w="40%">Reason</DataCell>
+                  <DataCell $w="10%">Status</DataCell>
+
+                  <DataCell $w="26%">Reason</DataCell>
+
+                  <DataCell $w="8%" />
 
                 </DataHead>
 
@@ -437,27 +522,35 @@ export function ComplianceView() {
 
                   <DataRow key={h.id} $interactive={false}>
 
-                    <DataCell $w="20%">
+                    <DataCell $w="14%">
 
                       <CellMono>{h.id.slice(0, 14)}</CellMono>
 
                     </DataCell>
 
-                    <DataCell $w="14%">
+                    <DataCell $w="18%">
 
                       <CellMeta>{h.scopeType ?? '—'}</CellMeta>
 
+                      {h.scopeId && <CellMono>{h.scopeId.slice(0, 14)}</CellMono>}
+
                     </DataCell>
 
-                    <DataCell $w="14%">
+                    <DataCell $w="12%">
 
-                      <CellMeta>{h.createdAt?.slice(0, 10) ?? '—'}</CellMeta>
+                      <CellMeta>{h.placedAt?.slice(0, 10) ?? '—'}</CellMeta>
+
+                    </DataCell>
+
+                    <DataCell $w="12%">
+
+                      <CellMeta>{h.placedBy?.slice(0, 8) ?? '—'}</CellMeta>
 
                     </DataCell>
 
                     {/* P5-C17: the engine lists released holds too — show the status so a released hold is never mistaken for an active one. */}
 
-                    <DataCell $w="12%">
+                    <DataCell $w="10%">
 
                       <StatusPill tone={h.status === 'released' ? 'neutral' : 'warning'} dot={false}>
 
@@ -465,11 +558,31 @@ export function ComplianceView() {
 
                       </StatusPill>
 
+                      {h.status === 'released' && h.releasedAt && (
+                        <CellMeta>{h.releasedAt.slice(0, 10)}</CellMeta>
+                      )}
+
                     </DataCell>
 
-                    <DataCell $w="40%">
+                    <DataCell $w="26%">
 
                       <CellMeta>{h.reason ?? '—'}</CellMeta>
+
+                    </DataCell>
+
+                    <DataCell $w="8%">
+
+                      {/* C-08: release is owner/admin-gated by the engine. */}
+                      {h.status !== 'released' && (
+                        <ActionButton
+                          variant="secondary"
+                          size="sm"
+                          disabled={releaseHold.isPending}
+                          onClick={() => setReleaseTarget(h.id)}
+                        >
+                          Release
+                        </ActionButton>
+                      )}
 
                     </DataCell>
 
@@ -571,14 +684,70 @@ export function ComplianceView() {
         onClose={() => setExportConfirm(false)}
         onConfirm={(ids) => {
           requestExport.mutate({ conversationIds: ids }, {
-            onSuccess: () => {
+            onSuccess: (data) => {
               toast.success(ids.length === 0 ? 'Empty export requested' : `Export requested — ${ids.length} conversation${ids.length === 1 ? '' : 's'}`);
               setExportConfirm(false);
               setExportSelection([]);
+              // C-05: surface the one-time download token immediately — the
+              // engine returns it exactly once and never shows it again.
+              if (data.downloadToken) {
+                setTokenReveal({ exportId: data.id, token: data.downloadToken });
+              }
             },
           });
         }}
       />
+
+      <TokenRevealDialog
+        reveal={tokenReveal}
+        onClose={() => setTokenReveal(null)}
+      />
+
+      <DownloadPromptDialog
+        exportId={downloadPrompt}
+        pending={downloadExport.isPending}
+        onClose={() => setDownloadPrompt(null)}
+        onConfirm={(token) => {
+          if (!downloadPrompt) return;
+          downloadExport.mutate(
+            { exportId: downloadPrompt, token },
+            { onSuccess: () => setDownloadPrompt(null) },
+          );
+        }}
+      />
+
+      <PlaceHoldDialog
+        open={holdDialog}
+        pending={placeHold.isPending}
+        onClose={() => setHoldDialog(false)}
+        onConfirm={(input) => {
+          placeHold.mutate(input, {
+            onSuccess: () => {
+              toast.success('Legal hold placed');
+              setHoldDialog(false);
+            },
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={releaseTarget !== null}
+        title="Release this legal hold?"
+        message="Released holds stay listed for the audit trail, but stop blocking purges for their scope."
+        confirmLabel="Release hold"
+        onConfirm={() => {
+          if (releaseTarget === null) return;
+          releaseHold.mutate(releaseTarget, {
+            onSuccess: () => {
+              toast.success('Legal hold released');
+              setReleaseTarget(null);
+            },
+          });
+        }}
+        onCancel={() => setReleaseTarget(null)}
+      />
+
+      <GovernanceSection />
 
     </ViewShell>
 
@@ -632,7 +801,18 @@ function ExportDialog({ open, selection, onSelectionChange, pending, onClose, on
         <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
           Select up to {MAX_EXPORT_CONVERSATIONS} conversations to include. The export compiles
           transcripts and run records into a downloadable archive, ready immediately.
-          Downloads are one-time.
+          Downloads are one-time and require the token shown after requesting.
+        </p>
+        {/* C-02: the archive is bounded — disclose the caps up front instead
+            of letting the export look silently complete. */}
+        <p style={{ margin: 0, fontSize: 12, opacity: 0.55, lineHeight: 1.5 }}>
+          Each conversation contributes up to 200 messages and 50 runs; conversations that
+          reach a cap are flagged inside the archive. Conversations you cannot access are
+          skipped, not failed.
+          {/* OBS-1: the picker lists the 50 most recent conversations (the
+              engine's default list window) — older threads are not offered
+              here, so say so instead of implying the list is complete. */}
+          The list below shows the 50 most recent conversations; older ones are not included.
         </p>
         {conversations.isLoading ? (
           <Skeleton $h="120px" $r="12px" />
@@ -666,6 +846,377 @@ function ExportDialog({ open, selection, onSelectionChange, pending, onClose, on
   );
 }
 
+/**
+ * C-05: the one-time download token is issued exactly once, in the POST
+ * /exports response. This dialog shows it immediately — the console never
+ * persists it, and the engine never shows it again.
+ */
+function TokenRevealDialog({ reveal, onClose }: {
+  reveal: { exportId: string | null; token: string } | null;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  if (!reveal) return null;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(reveal.token);
+      setCopied(true);
+    } catch {
+      /* clipboard unavailable — the token is still visible to copy manually */
+    }
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Download token — copy it now"
+      width={520}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={copy}>{copied ? 'Copied' : 'Copy token'}</ActionButton>
+          <ActionButton onClick={onClose}>Done</ActionButton>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          This token is shown <strong>once</strong>. Downloading the export requires it —
+          without it the archive cannot be retrieved, even by an admin.
+        </p>
+        <CellMono>{reveal.token}</CellMono>
+      </div>
+    </Modal>
+  );
+}
+
+/** C-05: the download prompt — the engine rejects token-less downloads. */
+function DownloadPromptDialog({ exportId, pending, onClose, onConfirm }: {
+  exportId: string | null;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (token: string) => void;
+}) {
+  const [token, setToken] = useState('');
+  if (!exportId) return null;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Download export"
+      width={480}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
+          <ActionButton disabled={pending || token.trim() === ''} onClick={() => onConfirm(token.trim())}>
+            Download
+          </ActionButton>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          Enter the one-time download token shown when this export was requested.
+          Downloads are one-time per export.
+        </p>
+        <TextInput
+          label="Download token"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="Paste the token from the request step"
+          autoComplete="off"
+        />
+      </div>
+    </Modal>
+  );
+}
+
+/** C-08: place a legal hold — owner/admin gated by the engine. */
+function PlaceHoldDialog({ open, pending, onClose, onConfirm }: {
+  open: boolean;
+  pending: boolean;
+  onClose: () => void;
+  onConfirm: (input: { scopeType: string; scopeId: string; reason: string }) => void;
+}) {
+  const [scopeType, setScopeType] = useState('conversation');
+  const [scopeId, setScopeId] = useState('');
+  const [reason, setReason] = useState('');
+  const { error } = buildHoldBody({ scopeType, scopeId, reason });
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Place a legal hold"
+      width={520}
+      footer={
+        <>
+          <ActionButton variant="secondary" onClick={onClose}>Cancel</ActionButton>
+          <ActionButton disabled={pending || !!error} onClick={() => onConfirm({ scopeType, scopeId, reason })}>
+            Place hold
+          </ActionButton>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          Active holds block purges for their scope. Placing a hold is a privileged act —
+          owner or admin only.
+        </p>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+          Scope
+          <ScopeSelect value={scopeType} onChange={(e) => setScopeType(e.target.value)} aria-label="Hold scope">
+            {HOLD_SCOPE_TYPES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </ScopeSelect>
+        </label>
+        <TextInput
+          label={scopeType === 'organization' ? 'Scope id (optional, UUID)' : 'Conversation id (UUID)'}
+          value={scopeId}
+          onChange={(e) => setScopeId(e.target.value)}
+          placeholder={scopeType === 'organization' ? 'Leave empty for the whole organization' : 'Conversation UUID'}
+        />
+        <TextArea
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Why this hold exists — it becomes the audit record"
+          maxLength={512}
+          rows={3}
+        />
+        {error && <ValidationError>{error}</ValidationError>}
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * C-08: the retention/purge plane the console could not manage at all.
+ * Purge enqueue + task status, retention-policy upsert, tombstone lookup —
+ * all against the live engine endpoints (owner/admin where privileged).
+ */
+function GovernanceSection() {
+  return (
+    <>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
+        <SectionTitle>Retention & purge</SectionTitle>
+        <TwoColGrid>
+          <Panel title="Purge tasks" flush>
+            <PurgePanel />
+          </Panel>
+          <Panel title="Retention policies" flush>
+            <RetentionPanel />
+          </Panel>
+        </TwoColGrid>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={6}>
+        <Panel title="Tombstone lookup" flush>
+          <TombstonePanel />
+        </Panel>
+      </motion.div>
+    </>
+  );
+}
+
+function PurgePanel() {
+  const enqueue = useEnqueuePurge();
+  const [dialog, setDialog] = useState(false);
+  const [scopeId, setScopeId] = useState('');
+  const [reason, setReason] = useState<'user_request' | 'retention_expiry' | 'org_deletion'>('user_request');
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [lookupId, setLookupId] = useState('');
+  const task = usePurgeTask(taskId);
+  const { error } = buildPurgeBody({ scopeType: 'conversation', scopeId, reason });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+      <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+        Enqueue a purge for a conversation — the worker advances it through authorize,
+        hold-check, and deletion steps. Active legal holds block it. Owner/admin only.
+      </p>
+      <div>
+        <ActionButton variant="secondary" size="sm" onClick={() => setDialog(true)}>
+          Request purge
+        </ActionButton>
+      </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <TextInput
+            label="Task status lookup"
+            value={lookupId}
+            onChange={(e) => setLookupId(e.target.value)}
+            placeholder="Purge task id"
+          />
+        </div>
+        <ActionButton variant="secondary" size="sm" onClick={() => setTaskId(lookupId.trim() || null)}>
+          Check
+        </ActionButton>
+      </div>
+      {taskId && (
+        <QueryView
+          query={task}
+          skeleton={<Skeleton $h="60px" $r="10px" />}
+          isEmpty={() => false}
+          empty={{ title: '', description: '' }}
+        >
+          {(t) => t ? (
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+              <CellMono>{t.id.slice(0, 14)}</CellMono>
+              <div><CellMeta>state: {t.state ?? '—'} · step: {t.step ?? '—'}</CellMeta></div>
+              {t.lastError && <ValidationError>{t.lastError}</ValidationError>}
+              {t.finishedAt && <CellMeta>finished {t.finishedAt.slice(0, 10)}</CellMeta>}
+            </div>
+          ) : (
+            <CellMeta>No purge task with that id.</CellMeta>
+          )}
+        </QueryView>
+      )}
+      <Modal
+        open={dialog}
+        onClose={() => setDialog(false)}
+        title="Request a purge"
+        width={520}
+        footer={
+          <>
+            <ActionButton variant="secondary" onClick={() => setDialog(false)}>Cancel</ActionButton>
+            <ActionButton
+              disabled={enqueue.isPending || !!error}
+              onClick={() => enqueue.mutate(
+                { scopeType: 'conversation', scopeId, reason },
+                {
+                  onSuccess: (data) => {
+                    toast.success('Purge enqueued');
+                    setDialog(false);
+                    setScopeId('');
+                    if (data.task) setTaskId(data.task.id);
+                  },
+                },
+              )}
+            >
+              Enqueue purge
+            </ActionButton>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+            This starts the multi-step purge worker. It is not instant and not silent —
+            the task id tracks every step, and legal holds block it.
+          </p>
+          <TextInput
+            label="Conversation id (UUID)"
+            value={scopeId}
+            onChange={(e) => setScopeId(e.target.value)}
+            placeholder="Conversation UUID to purge"
+          />
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+            Reason
+            <ScopeSelect value={reason} onChange={(e) => setReason(e.target.value as typeof reason)} aria-label="Purge reason">
+              {PURGE_REASONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </ScopeSelect>
+          </label>
+          {error && <ValidationError>{error}</ValidationError>}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function RetentionPanel() {
+  const upsert = useUpsertRetentionPolicy();
+  const [resourceType, setResourceType] = useState('');
+  const [retentionClass, setRetentionClass] = useState('');
+  const [keepDays, setKeepDays] = useState('');
+  const { body, error } = buildRetentionPolicyBody({ resourceType, retentionClass, keepDays });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+      <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+        Upsert a retention policy — the hourly sweep enqueues purges for artifacts past
+        their keep window. Owner/admin only. Policies are keyed by resource type +
+        retention class; saving overwrites the previous policy for that key.
+      </p>
+      <TextInput label="Resource type" value={resourceType} onChange={(e) => setResourceType(e.target.value)} placeholder="e.g. conversation, artifact" />
+      <TextInput label="Retention class" value={retentionClass} onChange={(e) => setRetentionClass(e.target.value)} placeholder="e.g. standard, extended" />
+      <TextInput label="Keep days" value={keepDays} onChange={(e) => setKeepDays(e.target.value)} placeholder="e.g. 365" inputMode="numeric" />
+      {error && <ValidationError>{error}</ValidationError>}
+      <div>
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          disabled={upsert.isPending || !body}
+          onClick={() => body && upsert.mutate(
+            { resourceType, retentionClass, keepDays },
+            {
+              onSuccess: () => {
+                toast.success('Retention policy saved');
+                setResourceType('');
+                setRetentionClass('');
+                setKeepDays('');
+              },
+            },
+          )}
+        >
+          Save policy
+        </ActionButton>
+      </div>
+    </div>
+  );
+}
+
+function TombstonePanel() {
+  const { orgId } = useOrg();
+  const [resourceType, setResourceType] = useState('');
+  const [resourceId, setResourceId] = useState('');
+  const [result, setResult] = useState<TombstoneResult | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const check = async () => {
+    if (!orgId || resourceType.trim() === '' || resourceId.trim() === '') return;
+    setChecking(true);
+    try {
+      setResult(await fetchTombstone(orgId, resourceType.trim(), resourceId.trim()));
+    } catch (error) {
+      toastEngineError(error, 'Tombstone lookup failed');
+      setResult(null);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16 }}>
+      <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+        Check whether a purged resource left a tombstone — tombstones record that the
+        data was deleted and why.
+      </p>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1 }}>
+          <TextInput label="Resource type" value={resourceType} onChange={(e) => setResourceType(e.target.value)} placeholder="e.g. conversation" />
+        </div>
+        <div style={{ flex: 2 }}>
+          <TextInput label="Resource id" value={resourceId} onChange={(e) => setResourceId(e.target.value)} placeholder="Resource UUID" />
+        </div>
+        <ActionButton variant="secondary" size="sm" disabled={checking} onClick={() => void check()}>
+          Check
+        </ActionButton>
+      </div>
+      {result && (
+        <div style={{ fontSize: 13 }}>
+          {result.tombstoned ? (
+            <StatusPill tone="neutral" dot={false}>tombstoned</StatusPill>
+          ) : (
+            <StatusPill tone="success" dot={false}>not tombstoned</StatusPill>
+          )}
+          {result.reason && <CellMeta> — {result.reason}</CellMeta>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 
 // ─── Config lifecycle (G-7) ──────────────────────────────────────────
@@ -688,14 +1239,20 @@ function ExportDialog({ open, selection, onSelectionChange, pending, onClose, on
  */
 function ConfigLifecycleSection() {
   const [scope, setScope] = useState<PublishableConfigScope>('model_catalog');
-  const draft = useConfigDraft(scope);
-  const history = useConfigHistory(scope);
-  const delivery = useConfigDelivery(scope);
+  // C-16: the engine keys publishes on (org, scope, product). Empty = the
+  // org-level config; every read and write below carries the same product.
+  const [product, setProduct] = useState('');
+  const productBlocker = productError(product);
+  const draft = useConfigDraft(scope, product);
+  const history = useConfigHistory(scope, product);
+  const delivery = useConfigDelivery(scope, product);
   const validate = useValidateConfigDraft();
   const saveDraft = useSaveConfigDraft();
   const deleteDraft = useDeleteConfigDraft();
   const publish = usePublishConfig();
   const rollback = useRollbackConfig();
+  // C-18: re-run fanout for stalled pullers / late-activated satellites.
+  const renotify = useRenotifyConfig();
 
   const [json, setJson] = useState<Record<string, unknown> | null>(null);
   // P5-C18: the textarea is a controlled input — its raw text must live in
@@ -706,6 +1263,12 @@ function ConfigLifecycleSection() {
   const [textError, setTextError] = useState<string | null>(null);
   const [publishConfirm, setPublishConfirm] = useState(false);
   const [rollbackVersion, setRollbackVersion] = useState<number | null>(null);
+  // C-13: the audit rationale the engine records on draft/publish/rollback
+  // (≤512 chars). The hooks accepted notes all along; the console never
+  // offered an input.
+  const [draftNotes, setDraftNotes] = useState('');
+  const [publishNotes, setPublishNotes] = useState('');
+  const [rollbackNotes, setRollbackNotes] = useState('');
 
   // Switching scope resets the local editor to that scope's draft.
   const effective = json ?? draft.data?.payload ?? null;
@@ -746,8 +1309,9 @@ function ConfigLifecycleSection() {
         toast.error(`Validation failed: ${(issues.length > 0 ? issues : ['unknown']).join('; ')}`);
         return;
       }
-      await saveDraft.mutateAsync({ scope, payload: json });
+      await saveDraft.mutateAsync({ scope, product, payload: json, notes: draftNotes.trim() || undefined });
       resetEditor();
+      setDraftNotes('');
       toast.success('Draft validated and saved');
     } catch {
       /* the hook surfaced the error */
@@ -766,6 +1330,15 @@ function ConfigLifecycleSection() {
           subtitle="Edit, validate, and publish org config. The engine validates each scope against its own schema."
           action={
             <ActionCluster>
+              {/* C-16: the engine keys publishes on (org, scope, product).
+                  Empty = org-level config; every read/write carries it. */}
+              <ProductInput
+                value={product}
+                onChange={(e) => setProduct(e.target.value)}
+                placeholder="product (optional)"
+                aria-label="Product scope"
+                title="Product tag — lowercase letters, digits, underscores. Empty = org-level config."
+              />
               <ScopeSelect value={scope} onChange={(e) => selectScope(e.target.value as PublishableConfigScope)} aria-label="Config scope">
                 {PUBLISHABLE_SCOPES.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -774,7 +1347,7 @@ function ConfigLifecycleSection() {
               <ActionButton
                 variant="secondary"
                 size="sm"
-                disabled={!!textError || !json || validate.isPending}
+                disabled={!!textError || !json || !!productBlocker || validate.isPending}
                 onClick={() => void validateAndSave()}
               >
                 Validate & save
@@ -783,13 +1356,13 @@ function ConfigLifecycleSection() {
                 variant="secondary"
                 size="sm"
                 disabled={deleteDraft.isPending || !draft.data?.payload}
-                onClick={() => deleteDraft.mutate({ scope }, { onSuccess: () => { resetEditor(); toast.success('Draft discarded'); } })}
+                onClick={() => deleteDraft.mutate({ scope, product }, { onSuccess: () => { resetEditor(); toast.success('Draft discarded'); } })}
               >
                 Discard
               </ActionButton>
               <ActionButton
                 size="sm"
-                disabled={!draft.data?.payload || publish.isPending}
+                disabled={!draft.data?.payload || !!productBlocker || publish.isPending}
                 onClick={() => setPublishConfirm(true)}
               >
                 Publish
@@ -810,6 +1383,7 @@ function ConfigLifecycleSection() {
                   guardrail_profile, and quota_profile — but nothing consumes them yet, so publishing them
                   here would be a no-op.
                 </DraftNote>
+                {productBlocker && <ValidationError>{productBlocker}</ValidationError>}
                 {/* P5-C15: the editor must render even when no draft exists —
                     gating it behind the empty state made the first draft
                     impossible to create ("edit the JSON below" with no JSON
@@ -823,6 +1397,17 @@ function ConfigLifecycleSection() {
                   rows={Math.min(14, Math.max(6, jsonText.split('\n').length))}
                   spellCheck={false}
                   aria-label="Config draft JSON"
+                />
+                {/* C-13: the audit rationale the engine records with the draft. */}
+                {draft.data?.notes && (
+                  <DraftNote>Saved with this draft: {draft.data.notes}</DraftNote>
+                )}
+                <TextInput
+                  label={`Change notes (optional)${draftNotes ? ` — ${draftNotes.length}/512` : ''}`}
+                  value={draftNotes}
+                  onChange={(e) => setDraftNotes(e.target.value)}
+                  placeholder="Why this draft changes — recorded in the audit trail"
+                  maxLength={512}
                 />
                 {(textError || (draft.data?.validationIssues && draft.data.validationIssues.length > 0)) && (
                   <ValidationErrors>
@@ -850,23 +1435,28 @@ function ConfigLifecycleSection() {
               {(rows) => (
                 <DataTable>
                   <DataHead>
-                    <DataCell $w="24%">Version</DataCell>
-                    <DataCell $w="30%">Published</DataCell>
-                    <DataCell $w="24%">By</DataCell>
-                    <DataCell $w="22%" />
+                    <DataCell $w="16%">Version</DataCell>
+                    <DataCell $w="22%">Published</DataCell>
+                    <DataCell $w="16%">By</DataCell>
+                    {/* C-13: the audit rationale recorded at publish/rollback. */}
+                    <DataCell $w="30%">Notes</DataCell>
+                    <DataCell $w="16%" />
                   </DataHead>
                   {rows.slice(0, 6).map((v: ConfigVersion) => (
                     <DataRow key={v.version} $interactive={false}>
-                      <DataCell $w="24%">
+                      <DataCell $w="16%">
                         <CellMono>v{v.version}</CellMono>
                       </DataCell>
-                      <DataCell $w="30%">
+                      <DataCell $w="22%">
                         <CellMeta>{v.publishedAt?.slice(0, 10) ?? '—'}</CellMeta>
                       </DataCell>
-                      <DataCell $w="24%">
+                      <DataCell $w="16%">
                         <CellMeta>{v.publishedBy?.slice(0, 8) ?? '—'}</CellMeta>
                       </DataCell>
-                      <DataCell $w="22%">
+                      <DataCell $w="30%">
+                        <CellMeta title={v.notes ?? undefined}>{v.notes ? (v.notes.length > 60 ? `${v.notes.slice(0, 60)}…` : v.notes) : '—'}</CellMeta>
+                      </DataCell>
+                      <DataCell $w="16%">
                         <ActionButton
                           variant="secondary"
                           size="sm"
@@ -884,7 +1474,24 @@ function ConfigLifecycleSection() {
             </QueryView>
           </Panel>
 
-          <Panel title="Delivery" flush>
+          <Panel
+            title="Delivery"
+            flush
+            action={
+              /* C-18: re-run fanout for stalled pullers / late-activated
+                 satellites — owner/admin only, engine-enforced. */
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                disabled={renotify.isPending}
+                onClick={() => renotify.mutate({ scope, product }, {
+                  onSuccess: () => toast.success('Re-notify sent — stalled satellites will be nudged'),
+                })}
+              >
+                Re-notify
+              </ActionButton>
+            }
+          >
             <QueryView
               query={delivery}
               skeleton={<Skeleton $h="120px" $r="12px" />}
@@ -938,8 +1545,8 @@ function ConfigLifecycleSection() {
               disabled={publish.isPending}
               onClick={() => {
                 publish.mutate(
-                  { scope },
-                  { onSuccess: () => { toast.success('Config published'); setPublishConfirm(false); } },
+                  { scope, product, notes: publishNotes.trim() || undefined },
+                  { onSuccess: () => { toast.success('Config published'); setPublishConfirm(false); setPublishNotes(''); } },
                 );
               }}
             >
@@ -949,24 +1556,61 @@ function ConfigLifecycleSection() {
         }
       >
         <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
-          Publishes the saved <CellMono>{scope}</CellMono> draft as a new immutable version and
+          Publishes the saved <CellMono>{scope}</CellMono>{normalizeProduct(product) ? <> for product <CellMono>{normalizeProduct(product)}</CellMono></> : null} draft as a new immutable version and
           fans it out to all satellites. This is a privileged act — you will be asked for MFA.
         </p>
+        {/* C-13: the audit rationale the engine records with the publish. */}
+        <div style={{ marginTop: 12 }}>
+          <TextArea
+            label={`Change notes (optional)${publishNotes ? ` — ${publishNotes.length}/512` : ''}`}
+            value={publishNotes}
+            onChange={(e) => setPublishNotes(e.target.value)}
+            placeholder="Why this publish — recorded in the audit trail"
+            maxLength={512}
+            rows={3}
+          />
+        </div>
       </Modal>
 
-      <ConfirmDialog
+      <Modal
         open={rollbackVersion !== null}
+        onClose={() => { setRollbackVersion(null); setRollbackNotes(''); }}
         title={`Roll back ${scope} to v${rollbackTarget}?`}
-        message="The engine creates a new version with that version's content — history is never rewritten. This is a privileged act — you will be asked for MFA."
-        confirmLabel="Roll back"
-        onConfirm={() => {
-          if (rollbackTarget === null) return;
-          rollback.mutate({ scope, toVersion: rollbackTarget }, {
-            onSuccess: () => { toast.success(`Config rolled back to v${rollbackTarget}`); setRollbackVersion(null); },
-          });
-        }}
-        onCancel={() => setRollbackVersion(null)}
-      />
+        width={480}
+        footer={
+          <>
+            <ActionButton variant="secondary" onClick={() => { setRollbackVersion(null); setRollbackNotes(''); }}>Cancel</ActionButton>
+            <ActionButton
+              disabled={rollback.isPending}
+              onClick={() => {
+                if (rollbackTarget === null) return;
+                rollback.mutate(
+                  { scope, product, toVersion: rollbackTarget, notes: rollbackNotes.trim() || undefined },
+                  { onSuccess: () => { toast.success(`Config rolled back to v${rollbackTarget}`); setRollbackVersion(null); setRollbackNotes(''); } },
+                );
+              }}
+            >
+              Roll back
+            </ActionButton>
+          </>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 13, opacity: 0.7, lineHeight: 1.5 }}>
+          The engine creates a new version with that version&apos;s content — history is never
+          rewritten. This is a privileged act — you will be asked for MFA.
+        </p>
+        {/* C-13: the audit rationale the engine records with the rollback. */}
+        <div style={{ marginTop: 12 }}>
+          <TextArea
+            label={`Change notes (optional)${rollbackNotes ? ` — ${rollbackNotes.length}/512` : ''}`}
+            value={rollbackNotes}
+            onChange={(e) => setRollbackNotes(e.target.value)}
+            placeholder="Why this rollback — recorded in the audit trail"
+            maxLength={512}
+            rows={3}
+          />
+        </div>
+      </Modal>
     </>
   );
 }
@@ -980,6 +1624,23 @@ const ScopeSelect = styled.select`
   color: inherit;
   font-family: inherit;
   cursor: pointer;
+`;
+
+/* C-16: the product tag the engine keys (org, scope, product) on. */
+const ProductInput = styled.input`
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.30);
+  color: inherit;
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  width: 150px;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.app.text.muted};
+    opacity: 0.6;
+  }
 `;
 
 

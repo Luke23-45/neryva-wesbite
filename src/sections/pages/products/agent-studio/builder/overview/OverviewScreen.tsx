@@ -42,6 +42,18 @@ export interface OverviewScreenProps {
 const RANK: Record<string, number> = { error: 0, attention: 1, untouched: 2, locked: 3, info: 4, skipped: 5, ready: 6 };
 
 /**
+ * B-03 (console field audit): the "next" version number is a client-side
+ * PREDICTION — the server assigns the real number under an advisory lock at
+ * publish time, so concurrent publishes can make this wrong. Pure so the
+ * derivation is pinnable by tests; the UI labels it "Expected vN · assigned
+ * at publish" so it reads as an expectation, not a promise.
+ */
+export function predictNextVersionNumber(versions: readonly AgentVersion[]): number {
+  const published = versions.filter((v) => v.status === 'PUBLISHED' && typeof v.version === 'number');
+  return published.length === 0 ? 1 : Math.max(...published.map((v) => v.version)) + 1;
+}
+
+/**
  * Overview — the configure-first landing.
  *
  * Three honest cards, no invented metrics:
@@ -92,10 +104,7 @@ export function OverviewScreen({
     () => versions.find((v) => v.id === activeVersionId && v.status === 'PUBLISHED') ?? null,
     [versions, activeVersionId],
   );
-  const nextVersionNumber = useMemo(() => {
-    const published = versions.filter((v) => v.status === 'PUBLISHED' && typeof v.version === 'number');
-    return published.length === 0 ? 1 : Math.max(...published.map((v) => v.version)) + 1;
-  }, [versions]);
+  const nextVersionNumber = useMemo(() => predictNextVersionNumber(versions), [versions]);
   const changedSections = useMemo(
     () => diffChangedSections(draftDefinition, liveVersion?.definition ?? null),
     [draftDefinition, liveVersion],
@@ -170,7 +179,15 @@ export function OverviewScreen({
               {liveVersion ? `v${liveVersion.version}` : 'Not published yet'}
             </VersionValue>
             <VersionTerm>Next</VersionTerm>
-            <VersionValue>Publishes as v{nextVersionNumber}</VersionValue>
+            {/*
+              B-03 (console field audit): this is a client-side prediction —
+              the server assigns the real number under an advisory lock at
+              publish time, so under concurrent publishes this can be wrong.
+              Label it as an expectation, not a promise.
+            */}
+            <VersionValue>
+              Expected v{nextVersionNumber} · assigned at publish
+            </VersionValue>
             {liveVersion && draftDefinition && (
               <>
                 <VersionTerm>Changed</VersionTerm>

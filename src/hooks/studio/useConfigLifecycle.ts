@@ -5,12 +5,18 @@
  *
  * The engine's contract (config-publish.controller.ts):
  * - Every call carries `scope` ∈ CONFIG_SCOPES; reads 400 without it.
- * - Draft:    PUT /config/draft {scope, payload, notes?} → {draft}
+ * - Draft:    PUT /config/draft {scope, product?, payload, notes?} → {draft}
  * - Validate: POST /config/draft/validate {scope, payload} → {ok, issues[]}
- * - Publish:  POST /config/publish {scope, from_draft|payload, notes?} → {config} (step-up MFA)
- * - Rollback: POST /config/rollback {scope, to_version, notes?} → {config} (step-up MFA)
- * - History:  GET /config/history?scope= → {versions[], total}
- * - Delivery: GET /config/delivery?scope= → {config, targets[]} (404 when nothing published)
+ * - Publish:  POST /config/publish {scope, product?, from_draft|payload, notes?} → {config} (step-up MFA)
+ * - Rollback: POST /config/rollback {scope, product?, to_version, notes?} → {config} (step-up MFA)
+ * - History:  GET /config/history?scope=&product= → {versions[], total}
+ * - Delivery: GET /config/delivery?scope=&product= → {config, targets[]} (404 when nothing published)
+ * - Re-notify: POST /config/delivery/re-notify {scope, product?} → re-fanout (owner/admin)
+ *
+ * `product` (C-16) keys the (org, scope, product) triple the engine
+ * publishes under. Empty means the org-level config. Reads and writes
+ * carry it identically — a product-scoped draft never leaks into the
+ * org-level view.
  *
  * There is no canary concept in the config-publish plane — the engine ships
  * every publish to all satellites at once. The console does not invent one.
@@ -52,12 +58,16 @@ export interface ConfigVersion {
   publishedAt: string | null;
   publishedBy: string | null;
   status: string | null;
+  /** C-13: the audit rationale recorded at publish/rollback time (≤512). */
+  notes: string | null;
 }
 
 export interface ConfigDraft {
   payload: Record<string, unknown> | null;
   validationStatus: string | null;
   validationIssues: string[] | null;
+  /** C-13: the audit rationale stored with the draft (≤512). */
+  notes: string | null;
 }
 
 export interface ConfigDeliveryTarget {
@@ -98,6 +108,7 @@ export function parseConfigVersions(raw: unknown): ConfigVersion[] {
         publishedAt: str(item.publishedAt),
         publishedBy: str(item.publishedBy),
         status: str(item.status),
+        notes: str(item.notes),
       } satisfies ConfigVersion;
     })
     .filter((v): v is ConfigVersion => v !== null);
@@ -115,6 +126,7 @@ export function parseDraft(raw: unknown): ConfigDraft {
     payload: draft && typeof draft.payload === 'object' && draft.payload !== null ? (draft.payload as Record<string, unknown>) : null,
     validationStatus: draft ? str(draft.validationStatus) : null,
     validationIssues: issues,
+    notes: draft ? str(draft.notes) : null,
   };
 }
 
@@ -142,24 +154,52 @@ export function parseDelivery(raw: unknown): ConfigDeliveryTarget[] {
     .filter((d): d is ConfigDeliveryTarget => d !== null);
 }
 
-const CONFIG_KEY = (orgId: string | null, scope: string | null) => ['studio', 'config', orgId, scope] as const;
+/**
+ * C-16: the engine keys publishes on (org, scope, product); product tags are
+ * validated against `^[a-z0-9_]{1,64}$` (config-publish.controller.ts).
+ * Empty means the org-level config. Every read and write carries the same
+ * product so a product-scoped draft never leaks into the org-level view.
+ */
+export const PRODUCT_RE = /^[a-z0-9_]{1,64}$/;
 
-export function useConfigDraft(scope: ConfigScope | null) {
+export function normalizeProduct(product: string | null | undefined): string | null {
+  const p = (product ?? '').trim();
+  return p === '' ? null : p;
+}
+
+/** Human-readable blocker for the product input; null when valid/empty. */
+export function productError(product: string | null | undefined): string | null {
+  const p = normalizeProduct(product);
+  if (p === null) return null;
+  return PRODUCT_RE.test(p) ? null : 'Product allows lowercase letters, digits, underscores (max 64)';
+}
+
+function productParam(product: string | null | undefined): Record<string, string> {
+  const p = normalizeProduct(product);
+  return p === null ? {} : { product: p };
+}
+
+const CONFIG_KEY = (orgId: string | null, scope: string | null, product: string | null) =>
+  ['studio', 'config', orgId, scope, product] as const;
+
+export function useConfigDraft(scope: ConfigScope | null, product?: string | null) {
   const { orgId } = useOrg();
+  const p = normalizeProduct(product);
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId, scope), 'draft'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/draft`, { query: { scope: scope ?? '' } }),
+    queryKey: [...CONFIG_KEY(orgId, scope, p), 'draft'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/draft`, { query: { scope: scope ?? '', ...productParam(p) } }),
     enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseDraft,
   });
 }
 
-export function useConfigHistory(scope: ConfigScope | null) {
+export function useConfigHistory(scope: ConfigScope | null, product?: string | null) {
   const { orgId } = useOrg();
+  const p = normalizeProduct(product);
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId, scope), 'history'],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/history`, { query: { scope: scope ?? '' } }),
+    queryKey: [...CONFIG_KEY(orgId, scope, p), 'history'],
+    queryFn: () => engine<unknown>(`/console/org/${orgId}/config/history`, { query: { scope: scope ?? '', ...productParam(p) } }),
     enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseConfigVersions,
@@ -169,9 +209,9 @@ export function useConfigHistory(scope: ConfigScope | null) {
 /** P5-C16: fetch delivery targets; a 404 (nothing published yet for this
  * scope) maps to the empty shape so the UI shows "No deliveries" instead of
  * an error. Extracted for unit testing. */
-export async function fetchConfigDelivery(orgId: string, scope: string): Promise<unknown> {
+export async function fetchConfigDelivery(orgId: string, scope: string, product?: string | null): Promise<unknown> {
   try {
-    return await engine<unknown>(`/console/org/${orgId}/config/delivery`, { query: { scope } });
+    return await engine<unknown>(`/console/org/${orgId}/config/delivery`, { query: { scope, ...productParam(product) } });
   } catch (error) {
     if (error instanceof Error && 'status' in error && (error as { status?: number }).status === 404) {
       return { targets: [] };
@@ -180,11 +220,12 @@ export async function fetchConfigDelivery(orgId: string, scope: string): Promise
   }
 }
 
-export function useConfigDelivery(scope: ConfigScope | null) {
+export function useConfigDelivery(scope: ConfigScope | null, product?: string | null) {
   const { orgId } = useOrg();
+  const p = normalizeProduct(product);
   return useQuery({
-    queryKey: [...CONFIG_KEY(orgId, scope), 'delivery'],
-    queryFn: () => fetchConfigDelivery(orgId ?? '', scope ?? ''),
+    queryKey: [...CONFIG_KEY(orgId, scope, p), 'delivery'],
+    queryFn: () => fetchConfigDelivery(orgId ?? '', scope ?? '', p),
     enabled: !!orgId && !!scope,
     staleTime: 30_000,
     select: parseDelivery,
@@ -207,12 +248,12 @@ export function useSaveConfigDraft() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { scope: ConfigScope; payload: Record<string, unknown>; notes?: string }) =>
+    mutationFn: async (input: { scope: ConfigScope; product?: string | null; payload: Record<string, unknown>; notes?: string }) =>
       engine(`/console/org/${orgId}/config/draft`, {
         method: 'PUT',
-        body: { scope: input.scope, payload: input.payload, ...(input.notes ? { notes: input.notes } : {}) },
+        body: { scope: input.scope, ...productParam(input.product), payload: input.payload, ...(input.notes ? { notes: input.notes } : {}) },
       }),
-    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope), 'draft'] }),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope, normalizeProduct(input.product)), 'draft'] }),
     onError: (error) => toastEngineError(error, 'Could not save the draft'),
   });
 }
@@ -221,9 +262,9 @@ export function useDeleteConfigDraft() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { scope: ConfigScope }) =>
-      engine(`/console/org/${orgId}/config/draft`, { method: 'DELETE', query: { scope: input.scope } }),
-    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope), 'draft'] }),
+    mutationFn: async (input: { scope: ConfigScope; product?: string | null }) =>
+      engine(`/console/org/${orgId}/config/draft`, { method: 'DELETE', query: { scope: input.scope, ...productParam(input.product) } }),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope, normalizeProduct(input.product)), 'draft'] }),
     onError: (error) => toastEngineError(error, 'Could not discard the draft'),
   });
 }
@@ -233,17 +274,17 @@ export function usePublishConfig() {
   const queryClient = useQueryClient();
   return useMutation({
     // Publish is a live-effect act: the engine requires a step-up MFA proof.
-    mutationFn: async (input: { scope: ConfigScope; notes?: string }) =>
+    mutationFn: async (input: { scope: ConfigScope; product?: string | null; notes?: string }) =>
       runWithStepUp('Publish config', (proof) =>
         engine(`/console/org/${orgId}/config/publish`, {
           method: 'POST',
-          body: { scope: input.scope, from_draft: true, ...(input.notes ? { notes: input.notes } : {}) },
+          body: { scope: input.scope, ...productParam(input.product), from_draft: true, ...(input.notes ? { notes: input.notes } : {}) },
           mfaProof: proof,
           idempotent: true,
         }),
       ),
     onSuccess: (_data, input) => {
-      void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope)] });
+      void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope, normalizeProduct(input.product))] });
     },
     onError: (error) => toastEngineError(error, 'Could not publish the config'),
   });
@@ -254,15 +295,43 @@ export function useRollbackConfig() {
   const queryClient = useQueryClient();
   return useMutation({
     // Rollback is a live-effect act: the engine requires a step-up MFA proof.
-    mutationFn: async (input: { scope: ConfigScope; toVersion: number; notes?: string }) =>
+    mutationFn: async (input: { scope: ConfigScope; product?: string | null; toVersion: number; notes?: string }) =>
       runWithStepUp('Roll back config', (proof) =>
         engine(`/console/org/${orgId}/config/rollback`, {
           method: 'POST',
-          body: { scope: input.scope, to_version: input.toVersion, ...(input.notes ? { notes: input.notes } : {}) },
+          body: { scope: input.scope, ...productParam(input.product), to_version: input.toVersion, ...(input.notes ? { notes: input.notes } : {}) },
           mfaProof: proof,
         }),
       ),
-    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope)] }),
+    onSuccess: (_data, input) => void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope, normalizeProduct(input.product))] }),
     onError: (error) => toastEngineError(error, 'Could not roll back the config'),
+  });
+}
+
+/**
+ * C-18: re-run fanout for the latest version of (scope, product) — catches
+ * satellites activated after publish and nudges stalled pullers.
+ * Owner/admin only; the engine 403s everyone else.
+ *
+ * `buildRenotifyRequest` is the pure, unit-testable core: path + body.
+ */
+export function buildRenotifyRequest(orgId: string, scope: ConfigScope, product?: string | null) {
+  return {
+    path: `/console/org/${orgId}/config/delivery/re-notify`,
+    body: { scope, ...productParam(product) },
+  };
+}
+
+export function useRenotifyConfig() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { scope: ConfigScope; product?: string | null }) => {
+      const { path, body } = buildRenotifyRequest(orgId ?? '', input.scope, input.product);
+      return engine(path, { method: 'POST', body });
+    },
+    onSuccess: (_data, input) =>
+      void queryClient.invalidateQueries({ queryKey: [...CONFIG_KEY(orgId, input.scope, normalizeProduct(input.product)), 'delivery'] }),
+    onError: (error) => toastEngineError(error, 'Could not re-notify satellites'),
   });
 }

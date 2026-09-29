@@ -35,6 +35,7 @@ import { useEntitlements, useAudit, useOrgLimits, parseQuotaMeters } from '@hook
 import { parseSeries, rangeDates, useUsageSeries } from '@hooks/engine/usage';
 import { useStudioStatus } from '@hooks/studio/useStudioStatus';
 import { useOrg } from '@/Context/OrgContext';
+import { useCan } from '@lib/engine/capabilities';
 import { SetupChecklist } from './SetupChecklist';
 
 import {
@@ -143,14 +144,30 @@ function DashboardContent() {
   const dates = rangeDates(range);
 
   const assistants = useAssistants();
-  const conversations = useConversations();
+  // OBS-1: the engine clamps the list to 100 and defaults to 50 — a bare
+  // `data.length` would silently undercount large orgs. Request the max
+  // window and label a full page as a floor ("100+"), not a count.
+  const conversations = useConversations({ limit: 100 });
   const entitlements = useEntitlements();
-  const limits = useOrgLimits();
+  const can = useCan('agent_studio');
+  // NG-1/NG-2: `/limits` and `/audit` are engine-gated to
+  // owner/admin/billing/developer — a reader would otherwise sit on a
+  // permanent 403 + retry loop that can never succeed. `audit:view` is
+  // exactly "everyone but reader", matching the engine's `@Roles`.
+  // Gate the queries and render honest "not visible to your role" copy.
+  const canViewAudit = can('audit:view');
+  const limits = useOrgLimits({ enabled: canViewAudit });
   const status = useStudioStatus();
-  const audit = useAudit({ limit: 6 });
+  const audit = useAudit({ limit: 6 }, { enabled: canViewAudit });
   const onboarding = useOnboarding();
-  const series = useUsageSeries('agent_studio', dates);
-  const { name: orgName } = useOrg();
+  // D-01 (console field audit): the usage series endpoint is billing-gated
+  // (engine `@Roles('owner','admin','billing')`) — developer/reader would
+  // otherwise sit on a permanent error+retry panel that can never succeed.
+  // Gate the query on the matching console capability and render honest
+  // "not visible to your role" copy instead of firing a doomed request.
+  const canViewUsage = can('billing:view');
+  const series = useUsageSeries('agent_studio', dates, { enabled: canViewUsage });
+  const { name: orgName, role } = useOrg();
 
   const meters = parseQuotaMeters(limits.data, 'agent_studio');
   const spendMeter = meters.find((m) => m.label.toLowerCase().includes('spend') || m.label.toLowerCase().includes('usd'));
@@ -258,8 +275,10 @@ function DashboardContent() {
             {(data) => (
               <KpiCardWrap>
                 <KpiCardLabel>Conversations</KpiCardLabel>
-                {/* D1-10: "0 conversations" implies measurement; "None yet" is honest. */}
-                <KpiCardValue>{data.length === 0 ? 'None yet' : data.length}</KpiCardValue>
+                {/* D1-10: "0 conversations" implies measurement; "None yet" is honest.
+                    OBS-1: a full 100-row page means "100 or more" — the engine
+                    caps the list, so a bare length would undercount. */}
+                <KpiCardValue>{data.length === 0 ? 'None yet' : data.length >= 100 ? '100+' : data.length}</KpiCardValue>
                 <KpiCardMeta><Link to="/agent-studio/conversations">Review →</Link></KpiCardMeta>
               </KpiCardWrap>
             )}
@@ -284,6 +303,12 @@ function DashboardContent() {
               );
             }}
           </QueryView>
+          {/*
+            NG-1: `/limits` is engine-gated to owner/admin/billing/developer.
+            A reader gets a doomed 403 + retry loop without the gate — say so
+            instead, exactly like the D-01 usage panel below.
+          */}
+          {canViewAudit ? (
           <QueryView query={limits} skeleton={<Skeleton $h="88px" $r="12px" />}>
             {() => {
               const meter = spendMeter ?? meters[0];
@@ -304,6 +329,13 @@ function DashboardContent() {
               );
             }}
           </QueryView>
+          ) : (
+            <KpiCardWrap>
+              <KpiCardLabel>Quota</KpiCardLabel>
+              <KpiCardValue><span style={{ opacity: 0.4 }}>—</span></KpiCardValue>
+              <KpiCardMeta>Visible to owner, admin, billing, and developer roles</KpiCardMeta>
+            </KpiCardWrap>
+          )}
         </KpiGrid>
       </motion.div>
 
@@ -311,57 +343,82 @@ function DashboardContent() {
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
           <Panel
             title="Usage"
-            subtitle={`Metered events · last ${range === '7d' ? '7' : '30'} days`}
+            subtitle={
+              canViewUsage
+                ? `Metered events · last ${range === '7d' ? '7' : '30'} days`
+                : 'Metered events'
+            }
             action={
-              <Segmented
-                options={rangeOptions}
-                value={range}
-                onChange={setRange}
-                ariaLabel="Time range"
-              />
+              canViewUsage ? (
+                <Segmented
+                  options={rangeOptions}
+                  value={range}
+                  onChange={setRange}
+                  ariaLabel="Time range"
+                />
+              ) : undefined
             }
           >
             <ChartWrap>
-              {/*
-                D1-07: the chart is a QueryView like every sibling panel —
-                skeleton while loading, error + retry on failure, and the
-                "no usage" copy ONLY when the backend genuinely returns an
-                empty series. Rendering ChartEmpty on `series.data === undefined`
-                made a 500 indistinguishable from "no usage yet".
-              */}
-              <QueryView
-                query={series}
-                skeleton={<Skeleton $h="260px" $r="12px" />}
-                isEmpty={(d) => {
-                  const c = parseSeries(d);
-                  return c.valueKeys.length === 0 || c.points.length === 0;
-                }}
-                empty={{
-                  title: 'No usage yet',
-                  description: 'Usage fills in as your agents run — see the Usage page for the full explorer.',
-                }}
-              >
-                {(data) => {
-                  const c = parseSeries(data);
-                  return (
-                    <StudioAreaChart
-                      data={c.points}
-                      series={c.valueKeys.map((key, i) => ({
-                        dataKey: key,
-                        name: key.replace(/_/g, ' '),
-                        color: ['#8b8ff8', '#05e3a4', '#f5b942'][i % 3],
-                      }))}
-                      height={260}
-                    />
-                  );
-                }}
-              </QueryView>
+              {canViewUsage ? (
+                <>
+                  {/*
+                    D1-07: the chart is a QueryView like every sibling panel —
+                    skeleton while loading, error + retry on failure, and the
+                    "no usage" copy ONLY when the backend genuinely returns an
+                    empty series. Rendering ChartEmpty on `series.data === undefined`
+                    made a 500 indistinguishable from "no usage yet".
+                  */}
+                  <QueryView
+                    query={series}
+                    skeleton={<Skeleton $h="260px" $r="12px" />}
+                    isEmpty={(d) => {
+                      const c = parseSeries(d);
+                      return c.valueKeys.length === 0 || c.points.length === 0;
+                    }}
+                    empty={{
+                      title: 'No usage yet',
+                      description: 'Usage fills in as your agents run — see the Usage page for the full explorer.',
+                    }}
+                  >
+                    {(data) => {
+                      const c = parseSeries(data);
+                      return (
+                        <StudioAreaChart
+                          data={c.points}
+                          series={c.valueKeys.map((key, i) => ({
+                            dataKey: key,
+                            name: key.replace(/_/g, ' '),
+                            color: ['#8b8ff8', '#05e3a4', '#f5b942'][i % 3],
+                          }))}
+                          height={260}
+                        />
+                      );
+                    }}
+                  </QueryView>
+                </>
+              ) : (
+                // D-01: the usage series is billing-sensitive — the engine
+                // 403s developer/reader outright. Say so instead of showing
+                // a retry panel that can never succeed.
+                <p style={{ fontSize: 13, opacity: 0.7, margin: 0, padding: '24px 0' }}>
+                  Usage data is visible to owner, admin, and billing roles. Your
+                  role ({role ?? 'unknown'}) doesn&apos;t include it — ask an
+                  admin if you need access.
+                </p>
+              )}
             </ChartWrap>
           </Panel>
         </motion.div>
 
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
           <Panel title="Recent activity" subtitle="From the organization's audit trail" flush action={<LinkAction to="/agent-studio/activity">View all</LinkAction>}>
+            {/*
+              NG-2: `/audit` is engine-gated to owner/admin/billing/developer.
+              Without the gate a reader fires a doomed 403 + retry loop —
+              render the honest role copy instead, like the D-01 usage panel.
+            */}
+            {canViewAudit ? (
             <QueryView
               query={audit}
               skeleton={<Skeleton $h="200px" $r="12px" />}
@@ -383,6 +440,12 @@ function DashboardContent() {
                 </ActivityList>
               )}
             </QueryView>
+            ) : (
+              <p style={{ fontSize: 13, opacity: 0.7, margin: 0, padding: '24px 0' }}>
+                Recent activity is visible to owner, admin, billing, and developer roles. Your
+                role ({role ?? 'unknown'}) doesn&apos;t include it — ask an admin if you need access.
+              </p>
+            )}
           </Panel>
         </motion.div>
       </TwoColumn>

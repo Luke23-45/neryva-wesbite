@@ -40,7 +40,9 @@ export function normalizeNotification(raw: unknown): NotificationItem | null {
   const message = title !== (str(record.message) ?? str(record.body))
     ? str(record.message) ?? str(record.body) ?? str(record.detail) ?? str(record.description)
     : str(record.detail) ?? str(record.description);
-  const readAt = str(record.read_at);
+  // Engine wire emits camelCase `readAt` (both PG and Mongo lanes map to the
+  // shared domain shape); keep the snake_case alias as a defensive fallback.
+  const readAt = str(record.read_at) ?? str(record.readAt);
   return {
     id,
     title,

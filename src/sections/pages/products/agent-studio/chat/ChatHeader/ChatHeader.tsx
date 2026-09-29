@@ -100,7 +100,12 @@ type Props = {
   onNewThread: () => void;
   /** Rename the thread; rejects on failure (the caller toasts). */
   onRename: (title: string) => Promise<void>;
-  onDelete: () => void;
+  /**
+   * C6 — optional so non owner/admin callers can omit it: deleting is
+   * owner/admin-only server-side, and the button doesn't render without a
+   * handler instead of failing loudly on click.
+   */
+  onDelete?: () => void;
 };
 
 export function ChatHeader({
@@ -223,7 +228,7 @@ export function ChatHeader({
       </LeftCluster>
 
       <RightCluster>
-        {conversationId && (
+        {conversationId && onDelete && (
           <IconButton
             type="button"
             onClick={onDelete}

@@ -112,6 +112,52 @@ const IconBtn = styled.button`
 
 type Tab = 'catalog' | 'providers';
 
+/**
+ * Gap #7 (console field audit): the engine sends `required_product(_label)` on
+ * every catalog row "so the UI can name the tier that unlocks the model" —
+ * render it on `subscription_required` rows instead of a bare "unusable" pill.
+ * Pure so the fallback chain (label → product → generic) is pinnable.
+ */
+export function subscriptionRequirementCopy(
+  requiredProductLabel: string | null,
+  requiredProduct: string | null,
+): string {
+  return ` — requires ${requiredProductLabel ?? requiredProduct ?? 'a higher-tier'} subscription.`;
+}
+
+/**
+ * Gap #10 (console field audit): the engine rejects secrets outside 8..4096
+ * chars AFTER the MFA proof (`provider-credentials.service` `assertSecret`).
+ * Validate against what we send (the trimmed value) before the proof so the
+ * refusal happens client-side. Returns the blocking message, or null when the
+ * value is fine — empty is reported as null because the modal's required
+ * check owns the empty case.
+ */
+export function validateCredentialSecret(secret: string): string | null {
+  const trimmed = secret.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length < 8 || trimmed.length > 4096) return 'Secret must be 8–4096 characters.';
+  return null;
+}
+
+/**
+ * Gap #13 (console field audit): builds the revoke mutation input — the
+ * optional incident `reason` (≤512) is recorded on the credential row and
+ * `compromised: true` pages owner/admin. Never sends empty or omitted keys.
+ */
+export function buildRevokeInput(
+  credentialId: string,
+  reason: string,
+  compromised: boolean,
+): { credentialId: string; reason?: string; compromised?: true } {
+  const trimmed = reason.trim();
+  return {
+    credentialId,
+    ...(trimmed ? { reason: trimmed } : {}),
+    ...(compromised ? { compromised: true as const } : {}),
+  };
+}
+
 export function ModelsView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
@@ -219,6 +265,14 @@ export function ModelsView() {
                                     ))}
                                   {reason === 'provider_not_enabled' && ' — enable the provider below.'}
                                   {reason === 'residency_incompatible' && ' — outside the org residency pin.'}
+                                  {/*
+                                    Gap #7 (console field audit): the engine sends
+                                    required_product(_label) on every row and the hook
+                                    parses it "so the UI can name the tier that unlocks
+                                    the model" — but the UI never rendered it. Name it.
+                                  */}
+                                  {reason === 'subscription_required' &&
+                                    subscriptionRequirementCopy(model.requiredProductLabel, model.requiredProduct)}
                                 </li>
                               ))}
                               {model.reasons.length === 0 && <li><Muted>no reason given</Muted></li>}
@@ -262,6 +316,17 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
   const [credOpen, setCredOpen] = useState(false);
   const [rotateTarget, setRotateTarget] = useState<{ id: string; label: string } | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; label: string } | null>(null);
+  // Gap #13 (console field audit): the revoke endpoint accepts an optional
+  // incident `reason` (≤512, documented on the row) and an explicit
+  // `compromised: true` (pages owner/admin). The dialog collected neither,
+  // so the console could never trigger the compromised-incident path.
+  const [revokeReason, setRevokeReason] = useState('');
+  const [revokeCompromised, setRevokeCompromised] = useState(false);
+  const closeRevoke = () => {
+    setRevokeTarget(null);
+    setRevokeReason('');
+    setRevokeCompromised(false);
+  };
 
   const enabledByProvider = useMemo(() => {
     const map = new Map<string, boolean>();
@@ -451,12 +516,31 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
         confirmLabel="Revoke now"
         onConfirm={() => {
           if (revokeTarget) {
-            revokeCredential.mutate({ credentialId: revokeTarget.id });
+            revokeCredential.mutate(buildRevokeInput(revokeTarget.id, revokeReason, revokeCompromised));
           }
-          setRevokeTarget(null);
+          closeRevoke();
         }}
-        onCancel={() => setRevokeTarget(null)}
-      />
+        onCancel={closeRevoke}
+      >
+        <div style={{ marginTop: 12 }}>
+          <TextInput
+            label="Reason (optional)"
+            value={revokeReason}
+            onChange={(e) => setRevokeReason(e.target.value)}
+            placeholder="e.g. key leaked in a log"
+            maxLength={512}
+            hint="≤512 characters — recorded on the credential row."
+          />
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={revokeCompromised}
+            onChange={(e) => setRevokeCompromised(e.target.checked)}
+          />
+          Mark as compromised — pages owner/admin
+        </label>
+      </ConfirmDialog>
     </>
   );
 }
@@ -482,7 +566,12 @@ function CredentialModal({
   const [label, setLabel] = useState('');
   const [secret, setSecret] = useState('');
 
-  const valid = provider.trim() !== '' && secret.trim() !== '' && (withLabel ? label.trim() !== '' : true);
+  // Gap #10 (console field audit): the engine rejects secrets outside 8..4096
+  // chars AFTER the MFA proof (`assertSecret`). Validate against what we send
+  // (the trimmed value) before the proof so the refusal happens client-side.
+  const secretProblem = validateCredentialSecret(secret);
+
+  const valid = !secretProblem && secret.trim() !== '' && (withLabel ? label.trim() !== '' : true);
 
   return (
     <Modal
@@ -508,7 +597,27 @@ function CredentialModal({
         </>
       }
     >
-      <TextInput label="Provider" value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="anthropic" hint={`One of: ${MODEL_PROVIDERS.join(', ')}`} />
+      {/*
+        Gap #8 (console field audit): the engine enforces a CLOSED provider
+        vocabulary (`isModelProvider` → 422 otherwise). A free-text input let
+        a typo ride all the way through a fresh MFA step-up to a guaranteed
+        422. A select over the same vocabulary makes the typo unrepresentable.
+      */}
+      <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
+        Provider
+        <select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value)}
+          style={{ display: 'block', width: '100%', marginTop: 4 }}
+          aria-label="Provider"
+        >
+          {MODEL_PROVIDERS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </label>
       {withLabel && (
         <div style={{ marginTop: 12 }}>
           <TextInput label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. prod-anthropic" />
@@ -522,6 +631,9 @@ function CredentialModal({
           onChange={(e) => setSecret(e.target.value)}
           placeholder="…"
           autoComplete="off"
+          maxLength={4096}
+          hint="8–4096 characters — the engine rejects shorter secrets."
+          error={secretProblem ?? undefined}
         />
       </div>
     </Modal>

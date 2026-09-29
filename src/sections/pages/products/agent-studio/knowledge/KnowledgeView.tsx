@@ -745,6 +745,8 @@ function UploadModal({
                   value={row.title}
                   onChange={(e) => setRow(row.key, { title: e.target.value })}
                   placeholder="Defaults to the slug, else auto"
+                  maxLength={256}
+                  hint="≤256 characters — the engine rejects longer titles (422)."
                 />
               </div>
             </div>
@@ -782,6 +784,8 @@ function UploadModal({
               value={pasteTitle}
               onChange={(e) => setPasteTitle(e.target.value)}
               placeholder="Defaults to the slug, else auto"
+              maxLength={256}
+              hint="≤256 characters — the engine rejects longer titles (422)."
             />
           </div>
           <p style={{ fontSize: 12, opacity: 0.65, marginTop: 8 }}>
@@ -888,8 +892,14 @@ function VersionUploadModal({
             {target.latestVersion === null && ' — this upload becomes version 1'}
           </p>
           <p style={{ fontSize: 12, opacity: 0.65, margin: '0 0 12px' }}>
-            The pin address does not change. The new version becomes the served version once ingestion reaches READY; the
-            previous version stays in history.
+            {/* K12 (console field audit): pins resolve to the latest READY
+                version at publish-snapshot time — a version reaching READY
+                does NOT re-point already-published snapshots. The old copy
+                ("becomes the served version once ingestion reaches READY")
+                contradicted the row tooltip ("agents resolve the latest
+                version at next publish"). */}
+            The pin address does not change. The new version becomes the served version at the next publish, once
+            ingestion reaches READY; the previous version stays in history.
           </p>
           <input
             ref={fileRef}

@@ -37,7 +37,7 @@ import {
   CellMeta,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
-import { useOrgLimits, parseQuotaMeters } from '@hooks/engine/queries';
+import { useOrgLimits, parseQuotaStatus } from '@hooks/engine/queries';
 import { useOrg } from '@/Context/OrgContext';
 import { useLedgers } from '@hooks/engine/queries';
 import { useFurnitureProjects } from '@hooks/engine/usage';
@@ -66,13 +66,27 @@ import { CapSettingsPanel } from '@components/platform/credits/CapSettingsPanel'
 // ─── Usage page ──────────────────────────────────────────────────────
 
 export function UsagePage() {
+  const can = useCan('agent_studio');
+  // P2-3: the explorer's overview/series/export endpoints are
+  // owner/admin/billing only — developer/reader got 403 error states. The
+  // file's own header says "View = owner/admin/billing"; enforce it here
+  // instead of walking those roles into the 403s.
+  const canView = can('billing:view');
+
   return (
     <ViewShell>
       <ViewHeader>
         <ViewTitle>Usage</ViewTitle>
         <ViewSubtitle>Consumption across products and projects for this organization.</ViewSubtitle>
       </ViewHeader>
-      <UsageExplorer />
+      {!canView ? (
+        <ErrorState
+          title="Usage is a finance surface"
+          message="Your role doesn't include billing visibility. Owners, admins, and billing managers can view it."
+        />
+      ) : (
+        <UsageExplorer />
+      )}
     </ViewShell>
   );
 }
@@ -122,7 +136,11 @@ export function BillingPage() {
 function QuotaPanel() {
   const limits = useOrgLimits();
   const projects = useFurnitureProjects('agent_studio');
-  const meters = parseQuotaMeters(limits.data, 'agent_studio');
+  // P2-5: keep the quota signal (entitlement_state/allowed/reason) the
+  // parser used to drop — the panel can now name the over-quota state.
+  const status = parseQuotaStatus(limits.data, 'agent_studio');
+  const meters = status.meters;
+  const overMeters = meters.filter((m) => m.limit !== null && m.used > m.limit);
 
   return (
     <motion.div initial="hidden" animate="visible" variants={pageItem} custom={0}>
@@ -132,23 +150,35 @@ function QuotaPanel() {
       >
         <QueryView query={limits} skeleton={<Skeleton $h="120px" $r="12px" />} isEmpty={() => meters.length === 0} empty={{ title: 'No quota snapshot', description: 'Limits appear once this organization carries an active plan.' }}>
           {() => (
-            <MeterList>
-              {meters.map((meter) => {
-                const pct = meter.limit !== null && meter.limit > 0 ? (meter.used / meter.limit) * 100 : 0;
-                return (
-                  <div key={meter.label}>
-                    <MeterRow>
-                      <span>{meter.label}</span>
-                      <MeterValue>
-                        {meter.used.toLocaleString()}
-                        {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
-                      </MeterValue>
-                    </MeterRow>
-                    <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
-                  </div>
-                );
-              })}
-            </MeterList>
+            <>
+              {status.signal.overQuota && (
+                <QuotaOverBanner role="alert">
+                  Over quota —{' '}
+                  {overMeters
+                    .map((m) => `${m.label} ${m.used.toLocaleString()} / ${m.limit!.toLocaleString()}`)
+                    .join('; ')}
+                  . New runs are refused until the counters reset or the plan changes.
+                </QuotaOverBanner>
+              )}
+              <MeterList>
+                {meters.map((meter) => {
+                  const pct = meter.limit !== null && meter.limit > 0 ? (meter.used / meter.limit) * 100 : 0;
+                  const over = meter.limit !== null && meter.used > meter.limit;
+                  return (
+                    <div key={meter.label}>
+                      <MeterRow>
+                        <span>{meter.label}</span>
+                        <MeterValue>
+                          {meter.used.toLocaleString()}
+                          {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
+                        </MeterValue>
+                      </MeterRow>
+                      <ProgressBar value={pct} tone={over ? 'rose' : pct > 80 ? 'amber' : 'azure'} />
+                    </div>
+                  );
+                })}
+              </MeterList>
+            </>
           )}
         </QueryView>
 
@@ -722,6 +752,17 @@ const MeterRow = styled.div`
 const MeterValue = styled.span`
   font-variant-numeric: tabular-nums;
   color: ${({ theme }) => theme.app.text.primary};
+`;
+
+// P2-5 — the over-quota signal the quota parser used to drop.
+const QuotaOverBanner = styled.div`
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: #fda4af;
+  background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 const ProjectTitle = styled.div`

@@ -204,6 +204,11 @@ export function ApprovalsView() {
                         <StatusPill tone={stateTone[item.state] ?? 'neutral'} dot={false}>
                           {item.expired ? 'EXPIRED' : item.state}
                         </StatusPill>
+                        {item.requiredApprovals > 1 && item.state === 'PENDING' && (
+                          <Muted title={`${item.approvalsReceived.length} of ${item.requiredApprovals} required approvals recorded`}>
+                            {item.approvalsReceived.length} of {item.requiredApprovals} votes
+                          </Muted>
+                        )}
                       </DataCell>
                       <DataCell $w="14%">
                         {item.actionType ? <Mono>{item.actionType}</Mono> : <Muted>—</Muted>}
@@ -252,7 +257,7 @@ export function ApprovalsView() {
                             <ActionButton
                               size="sm"
                               disabled={!canDecide}
-                              title={canDecide ? 'Approve — re-drives the run' : decideDenied}
+                              title={canDecide ? (item.requiredApprovals > 1 ? `Approve — records your vote (${item.approvalsReceived.length + 1} of ${item.requiredApprovals})` : 'Approve — re-drives the run') : decideDenied}
                               onClick={() => setDeciding({ item, decision: 'APPROVED' })}
                               aria-label={`Approve approval ${item.id.slice(0, 8)}`}
                             >
@@ -280,6 +285,7 @@ export function ApprovalsView() {
               <li>Version tools marked approval required (or catalog REQUIRED rows) park the run and open an approval.</li>
               <li>Owners/admins are notified in-app; the queue above is the decision surface.</li>
               <li>APPROVED re-drives the run where it parked; DENIED cancels it — deny requires a reason, both audited with actor.</li>
+              <li>Multi-approver chains (when required): each approval records one vote and the run re-drives only once all required votes are in — any deny cancels the run immediately.</li>
               <li>Windows expire at read time (flagged EXPIRED) — extend re-targets a pending window before it lapses.</li>
               <li>{OPERATE_COPY.queuesSeparateNote}</li>
             </ol>
@@ -387,6 +393,18 @@ function DecideModal({
   // (verified `conversations.controller.ts:384,396`). Approve keeps it optional.
   const reasonProblem = decision === 'DENIED' && reason.trim() === '' ? 'Deny requires a reason — it is stored with the decision.' : null;
 
+  // A17 — multi-approver chain: an APPROVED records one vote and the run
+  // only re-drives at the threshold; a DENIED short-circuits the chain.
+  const isChain = item.requiredApprovals > 1;
+  const votesAfter = item.approvalsReceived.length + (decision === 'APPROVED' ? 1 : 0);
+  const approveLabel = isChain ? 'Record approval vote' : 'Approve and re-drive';
+  const approveTitle = isChain
+    ? `Record your approval (${votesAfter} of ${item.requiredApprovals} votes) — the run re-drives at ${item.requiredApprovals}`
+    : 'Approve and re-drive';
+  const approveBody = isChain
+    ? `Records your approval (${votesAfter} of ${item.requiredApprovals} votes, audited with you as actor). The run resumes once all ${item.requiredApprovals} approvals are recorded.`
+    : 'The run resumes where it parked (audited with you as actor).';
+
   if (!item.runId) {
     // Loud, never a silent null: deciding blind is worse than not deciding.
     return (
@@ -413,7 +431,7 @@ function DecideModal({
           <ActionButton
             variant={decision === 'DENIED' ? 'danger' : undefined}
             disabled={decide.isPending || reasonProblem !== null}
-            title={reasonProblem ?? (decision === 'APPROVED' ? 'Approve and re-drive' : 'Deny and cancel')}
+            title={reasonProblem ?? (decision === 'APPROVED' ? approveTitle : 'Deny and cancel')}
             onClick={() => {
               decide.mutate(
                 { runId: item.runId as string, approvalId: item.id, decision, ...(reason.trim() ? { reason: reason.trim() } : {}) },
@@ -422,15 +440,13 @@ function DecideModal({
             }}
           >
             {decision === 'APPROVED' ? <Check size={13} strokeWidth={1.8} /> : <X size={13} strokeWidth={1.8} />}
-            {decision === 'APPROVED' ? 'Approve and re-drive' : 'Deny and cancel'}
+            {decision === 'APPROVED' ? approveLabel : 'Deny and cancel'}
           </ActionButton>
         </>
       }
     >
       <p style={{ fontSize: 13, opacity: 0.8 }}>
-        {decision === 'APPROVED'
-          ? 'The run resumes where it parked (audited with you as actor).'
-          : 'The run is cancelled (audited with you as actor).'}
+        {decision === 'APPROVED' ? approveBody : 'The run is cancelled (audited with you as actor).'}
         {item.actionType ? <> Action: <Mono>{item.actionType}</Mono>.</> : null}
       </p>
       <div style={{ marginTop: 12 }}>

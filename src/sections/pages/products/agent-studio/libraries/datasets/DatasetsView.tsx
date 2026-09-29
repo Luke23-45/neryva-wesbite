@@ -20,6 +20,30 @@ import { describeDatasetOrigin } from '../../builder/lib/eval-model';
  * the Evaluations page deep-links back with returnTo.
  */
 
+/**
+ * D3 (console field audit): the Created cell rendered the raw ISO string
+ * (`2026-09-29T…`), unlike the relative/short treatment elsewhere (blocks,
+ * memory). Short local date — the year survives a glance, the time-of-day
+ * doesn't matter for a dataset list.
+ */
+export function shortDate(iso: string | null): string {
+  if (!iso) return '—';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * D4 (console field audit): the list endpoint caps at 100 server-side
+ * (`eval.service.listDatasets` fixed LIMIT 100, no param). Documents, blocks,
+ * and memory all disclose their caps — the footnote states this page's too.
+ */
+export function datasetsListFootnote(count: number): string {
+  return count >= 100
+    ? 'Showing the first 100 datasets — the list endpoint caps at 100.'
+    : `Showing all ${count} dataset${count === 1 ? '' : 's'}.`;
+}
+
 export function DatasetsView() {
   const datasets = useEvalDatasets();
 
@@ -43,6 +67,7 @@ export function DatasetsView() {
         }}
       >
         {(list) => (
+        <>
           <DataTable>
             <DataHead>
               <DataCell $w="28%">Dataset</DataCell>
@@ -59,11 +84,20 @@ export function DatasetsView() {
                 </DataCell>
                 <DataCell $w="26%">{describeDatasetOrigin(d.name)}</DataCell>
                 <DataCell $w="32%">{d.description ?? '—'}</DataCell>
-                <DataCell $w="14%">{d.createdAt ?? '—'}</DataCell>
+                <DataCell $w="14%">{shortDate(d.createdAt)}</DataCell>
               </DataRow>
             ))}
           </DataTable>
-        )}
+          {/*
+            D4 (console field audit): the list endpoint caps at 100 server-side
+            (`eval.service.listDatasets` fixed LIMIT 100, no param). Documents,
+            blocks, and memory all disclose their caps — this page didn't.
+          */}
+          <p style={{ fontSize: 12, opacity: 0.65, marginTop: 8 }}>
+            {datasetsListFootnote(list.length)}
+          </p>
+        </>
+      )}
       </QueryView>
 
       <p style={{ fontSize: 12, opacity: 0.65, marginTop: 12 }}>

@@ -34,6 +34,8 @@ import {
   useExportEvalDataset,
   useImportEvalCases,
   downloadExportedFile,
+  EVAL_DATASET_NAME_MAX,
+  EVAL_DATASET_DESC_MAX,
   type EvalRun,
   type EvalCase,
 } from '@hooks/studio/useSetupEval';
@@ -704,9 +706,24 @@ function DatasetModal({ open, onClose }: { open: boolean; onClose: () => void })
         </>
       }
     >
-      <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. refund-regressions" autoFocus />
+      {/* E-02: the engine silently truncates names >128 and descriptions >2048
+          — cap the inputs and show the count so nothing is lost silently. */}
+      <TextInput
+        label={`Name${name ? ` — ${name.length}/${EVAL_DATASET_NAME_MAX}` : ''}`}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="e.g. refund-regressions"
+        maxLength={EVAL_DATASET_NAME_MAX}
+        autoFocus
+      />
       <div style={{ marginTop: 12 }}>
-        <TextInput label="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this suite guards" />
+        <TextInput
+          label={`Description (optional)${description ? ` — ${description.length}/${EVAL_DATASET_DESC_MAX}` : ''}`}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What this suite guards"
+          maxLength={EVAL_DATASET_DESC_MAX}
+        />
       </div>
     </Modal>
   );

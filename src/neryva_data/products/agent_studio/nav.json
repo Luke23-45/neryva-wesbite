@@ -94,12 +94,10 @@
   "user": {
     "initials": "NV",
     "name": "Neryva Studio",
-    "tier": "Pro",
     "email": "you@neryva.studio"
   },
   "workspace": {
-    "name": "Aurora Labs",
-    "plan": "Pro"
+    "name": "Aurora Labs"
   },
   "searchPlaceholder": "Search Studio…"
 }

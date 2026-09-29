@@ -28,7 +28,7 @@ import {
   SuggestionChip,
 } from './ChatMessages.styles';
 import { MarkdownText } from './MarkdownText';
-import { useRecordFeedback } from '@hooks/studio/useChat';
+import { useRecordFeedback, useMessageFeedback, mergeFeedback } from '@hooks/studio/useChat';
 
 export type Message = {
   id: string;
@@ -313,6 +313,11 @@ export function ChatMessages({
   const [showJump, setShowJump] = useState(false);
   const [feedbackById, setFeedbackById] = useState<Record<string, 'up' | 'down'>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
+  // H9-display — persisted thumbs from the engine, merged UNDER the
+  // optimistic local state: a just-clicked thumb wins immediately, and a
+  // reload restores what the server already knows (no silent re-rate).
+  const persistedFeedback = useMessageFeedback(conversationId ?? null);
+  const mergedFeedback = mergeFeedback(persistedFeedback.data, feedbackById);
 
   const scrollToBottom = useCallback(
     (smooth = true) => {
@@ -424,7 +429,7 @@ export function ChatMessages({
             role={m.role}
             text={m.text}
             conversationId={conversationId}
-            feedback={feedbackById[m.id] ?? null}
+            feedback={mergedFeedback[m.id] ?? null}
             onFeedback={handleFeedback}
             editing={editingId === m.id}
             onEditStart={setEditingId}

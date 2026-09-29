@@ -32,6 +32,11 @@ function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
+export interface ApprovalVote {
+  actor: string;
+  decision: string;
+}
+
 export interface ApprovalItem {
   id: string;
   runId: string | null;
@@ -45,6 +50,23 @@ export interface ApprovalItem {
   decisionActorId: string | null;
   createdAt: string | null;
   expired: boolean;
+  /**
+   * A17 — multi-approver chain (engine REL-11.4). `requiredApprovals > 1`
+   * means the approval stays PENDING until that many distinct actors vote;
+   * `approvalsReceived` holds the votes recorded so far.
+   */
+  requiredApprovals: number;
+  approvalsReceived: ApprovalVote[];
+}
+
+function parseVotes(value: unknown): ApprovalVote[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((v) => {
+    if (typeof v !== 'object' || v === null) return [];
+    const actor = str((v as Record<string, unknown>).actor);
+    const decision = str((v as Record<string, unknown>).decision);
+    return actor && decision ? [{ actor, decision }] : [];
+  });
 }
 
 export function parseApprovals(raw: unknown): ApprovalItem[] {
@@ -76,6 +98,13 @@ export function parseApprovals(raw: unknown): ApprovalItem[] {
         decisionActorId: str(item.decisionActorId) ?? str(item.decision_actor_id),
         createdAt: str(item.createdAt) ?? str(item.created_at),
         expired: item.expired === true,
+        requiredApprovals:
+          typeof item.requiredApprovals === 'number' && Number.isFinite(item.requiredApprovals) && item.requiredApprovals >= 1
+            ? Math.floor(item.requiredApprovals)
+            : typeof item.required_approvals === 'number' && Number.isFinite(item.required_approvals) && item.required_approvals >= 1
+              ? Math.floor(item.required_approvals)
+              : 1,
+        approvalsReceived: parseVotes(item.approvalsReceived ?? item.approvals_received),
       };
     })
     .filter((a): a is ApprovalItem => a !== null);

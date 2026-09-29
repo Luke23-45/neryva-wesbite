@@ -4,8 +4,10 @@
  * real OP session (name/email via userinfo), the workspace title is the
  * active organization, recent chats are real conversations, and the shell
  * carries the platform-status strip, the entitlement banner, and the
- * step-up modal. The plan/tier labels stay static by design — how plans
- * render is a deferred decision (ledger D-1).
+ * step-up modal. The footer line under the workspace name is the real
+ * entitlement state from /console/home (ledger D-1: a plan-name label is
+ * still deferred — the entitlement state does not carry the plan name, and
+ * we show the honest state rather than a fictional tier).
  */
 import { Outlet } from '@tanstack/react-router';
 import { StudioShell, type NavConfig } from '@/sections/pages/products/agent-studio/StudioShell';
@@ -17,14 +19,15 @@ import { StepUpModal } from '@components/platform/StepUpModal';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { useSessionStore } from '@lib/engine/auth';
 import { useOrg } from '@/Context/OrgContext';
+import { planLabelForEntitlement } from './entitlementPlanLabel';
 import { useConversations } from '@hooks/studio/useStudioConversations';
 import { StatusBanner } from '@/sections/pages/products/agent-studio/StatusBanner';
 import navData from '@neryva_data/products/agent_studio/nav.json';
 
 type NavJson = {
   domains: NavConfig['domains'];
-  user: { initials: string; name: string; tier: string; email: string };
-  workspace: { name: string; plan: string };
+  user: { initials: string; name: string; email: string };
+  workspace: { name: string };
   searchPlaceholder: string;
 };
 
@@ -46,7 +49,7 @@ function initialsOf(name: string | null, email: string | null, fallback: string)
 export default function AgentStudioShellPage() {
   const status = useSessionStore((s) => s.status);
   const account = useSessionStore((s) => s.account);
-  const { orgId, name: orgName } = useOrg();
+  const { orgId, name: orgName, entitlementState } = useOrg();
 
   // Recent chats (S-4): real conversations, newest first, sliced in the shell.
   // null keeps the sidebar quiet until the list resolves.
@@ -63,12 +66,13 @@ export default function AgentStudioShellPage() {
   const user = {
     initials: initialsOf(account?.name ?? null, account?.email ?? null, data.user.initials),
     name: account?.name ?? data.user.name,
-    tier: data.user.tier, // D-1: plan display rendering is deferred
     email: account?.email ?? data.user.email,
   };
   const workspace = {
     name: orgName ?? data.workspace.name,
-    plan: data.workspace.plan, // D-1: plan display rendering is deferred
+    // Real entitlement state from /console/home. null until the org (and
+    // its products) resolves — never a fictional tier in the meantime.
+    plan: orgId ? planLabelForEntitlement(entitlementState('agent_studio')) : null,
   };
 
   if (status === 'authenticated' && !orgId) {

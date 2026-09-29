@@ -71,6 +71,20 @@ describe('describeInstallOutcome (I2–I5, fixes never codes)', () => {
     const outcome = describeInstallOutcome(new ApiError(400, 'validation_failed', 'registry definition invalid'));
     expect(outcome).toMatchObject({ kind: 'registry-bug', retryable: false });
   });
+  it('labels a schema-too-new template as engine-too-old, not a registry bug (T-06)', () => {
+    // The engine's real 400: BadRequestException({ template: 'template
+    // requires engine schema 3 — this engine serves 2' }).
+    const outcome = describeInstallOutcome(
+      new ApiError(400, 'validation_failed', 'Request validation failed', {
+        template: 'template requires engine schema 3 — this engine serves 2',
+      }),
+    );
+    expect(outcome).toMatchObject({ kind: 'engine-too-old', retryable: false });
+    expect(outcome.headline).toContain('3');
+    expect(outcome.headline).toContain('2');
+    expect(outcome.detail).toMatch(/upgrade the engine/i);
+    expect(outcome.detail).toMatch(/nothing was created/i);
+  });
 });
 
 describe('describeUpdateAction (adoption is always re-install-as-new)', () => {

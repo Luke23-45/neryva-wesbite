@@ -48,6 +48,19 @@ export interface ProviderConfigField {
   single?: boolean;
 }
 
+/**
+ * The exact secret shape the engine splits at sync time. A paste that lacks
+ * the separator links fine but every sync fails with a 401 — so the console
+ * documents the format in the hint AND blocks the link client-side when the
+ * separator is missing. `format` mirrors the engine's auth split verbatim
+ * (confluence: `secret.indexOf(':')`, zendesk: `secret.indexOf('/')`).
+ */
+export interface ProviderCredentialShape {
+  separator: ':' | '/';
+  /** Link-blocking error shown when the pasted secret lacks the separator. */
+  missingMessage: string;
+}
+
 export interface ProviderLinkSpec {
   provider: ConnectorProvider;
   label: string;
@@ -55,6 +68,21 @@ export interface ProviderLinkSpec {
   configFields: ProviderConfigField[];
   credentials: 'none' | 'dance-only' | 'msal-cc' | 'secret-required';
   credentialsHint: string;
+  credentialShape?: ProviderCredentialShape;
+}
+
+/**
+ * Client-side pre-validation for static secrets with a documented shape
+ * (confluence / zendesk). Returns the link-blocking problem, or null when
+ * the paste carries the required separator. Blank input is not a shape
+ * problem — requiredness is checked separately.
+ */
+export function validateCredentialShape(spec: ProviderLinkSpec, raw: string): string | null {
+  const shape = spec.credentialShape;
+  if (!shape || !raw.trim()) {
+    return null;
+  }
+  return raw.includes(shape.separator) ? null : shape.missingMessage;
 }
 
 export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
@@ -91,7 +119,16 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
       { key: 'spaces', label: 'Spaces (comma-separated keys, optional)', required: false, placeholder: 'ENG, DOCS', hint: 'Omit to sync all visible spaces.' },
     ],
     credentials: 'secret-required',
-    credentialsHint: 'Static credential (API token) — sealed on arrival, never shown again.',
+    credentialsHint:
+      'Paste as email:api_token — e.g. you@company.com:api_token. Sealed on arrival, never shown again. A bare token links fine but every sync fails with a 401.',
+    // I14: the engine splits the stored secret on the first ':' —
+    // token-only pastes degrade to Basic base64(':token'), which Confluence
+    // rejects. Block at link time with the format guidance.
+    credentialShape: {
+      separator: ':',
+      missingMessage:
+        'Confluence expects "email:api_token" — your Atlassian email, a colon, then the API token. A bare token links fine but every sync fails with a 401.',
+    },
   },
   {
     provider: 'notion',
@@ -113,7 +150,16 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
       { key: 'locales', label: 'Locale (optional)', required: false, placeholder: 'en-us', hint: 'Zendesk syncs a single locale — omit for all locales.', single: true },
     ],
     credentials: 'secret-required',
-    credentialsHint: 'Static credential (API token) — sealed on arrival, never shown again.',
+    credentialsHint:
+      'Paste as email/api_token — e.g. you@company.com/api_token. Sealed on arrival, never shown again. A bare token links fine but every sync fails with a 401.',
+    // I15: the engine splits the stored secret on the first '/' —
+    // token-only pastes degrade to Basic base64('/token:secret'), which
+    // Zendesk rejects. Block at link time with the format guidance.
+    credentialShape: {
+      separator: '/',
+      missingMessage:
+        'Zendesk expects "email/api_token" — your email, a slash, then the API token. A bare token links fine but every sync fails with a 401.',
+    },
   },
   {
     provider: 'slack',
@@ -376,8 +422,7 @@ export function useDeleteOAuthApp() {
 }
 
 /** Starts the dance: returns the provider authorize URL — the frontend redirects the full page there. */
-export function useOAuthAuthorize() {
-  const { orgId } = useOrg();
+export function useOAuthAuthorize() {  const { orgId } = useOrg();
   return useMutation({
     mutationFn: async (accountId: string) =>
       engine<Record<string, unknown>>(`/console/org/${orgId}/connectors/${accountId}/oauth/authorize`, { method: 'POST' }),

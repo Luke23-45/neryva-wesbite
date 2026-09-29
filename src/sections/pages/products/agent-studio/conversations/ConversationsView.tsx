@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { X, MessagesSquare, Archive } from 'lucide-react';
+import type { UseQueryResult } from '@tanstack/react-query';
+import { X, MessagesSquare, Archive, RotateCcw } from 'lucide-react';
+import { useOrg } from '@/Context/OrgContext';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -13,11 +15,12 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
-import { useConversations, type ConversationSummary } from '@hooks/studio/useStudioConversations';
+import { useConversationsPaged, type ConversationSummary } from '@hooks/studio/useStudioConversations';
 import {
   useConversationMessages,
   useConversationRuns,
   useUpdateConversationStatus,
+  describeRunsCount,
 } from '@hooks/studio/useChat';
 
 import {
@@ -59,20 +62,34 @@ export function ConversationsView() {
   const search = useSearch({ strict: false }) as { chat?: string };
   const activeId = search.chat ?? null;
 
-  const conversations = useConversations();
+  // C1 — cursor-paginated list ("load more", newest first): the old silent
+  // 50-cap with no way to reach older threads is gone.
+  const paged = useConversationsPaged();
+  // C6 — archiving is owner/admin-only server-side; the buttons don't render
+  // for other roles instead of failing loudly on click.
+  const { canManageMembers } = useOrg();
   const updateStatus = useUpdateConversationStatus();
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [archiveConfirm, setArchiveConfirm] = useState(false);
+  // C5 — the engine supports restore (status='active'); this is its surface.
+  const [restoreConfirm, setRestoreConfirm] = useState(false);
+
+  // Flattened across loaded pages, newest first (each page arrives ordered).
+  const serverRows = useMemo(
+    () => (paged.data?.pages ?? []).flatMap((page) => page.items),
+    [paged.data],
+  );
+  const hasMore = paged.hasNextPage ?? false;
 
   const statuses = useMemo(() => {
-    const present = new Set((conversations.data ?? []).map((c) => c.status).filter((s): s is string => !!s));
+    const present = new Set(serverRows.map((c) => c.status).filter((s): s is string => !!s));
     return ['All', ...[...present].sort()];
-  }, [conversations.data]);
+  }, [serverRows]);
 
   const list = useMemo(() => {
-    return (conversations.data ?? []).filter((c) => {
+    return serverRows.filter((c) => {
       if (statusFilter !== 'All' && c.status !== statusFilter) return false;
       if (query.trim()) {
         const q = query.toLowerCase();
@@ -80,15 +97,19 @@ export function ConversationsView() {
       }
       return true;
     });
-  }, [conversations.data, statusFilter, query]);
+  }, [serverRows, statusFilter, query]);
 
   const active: ConversationSummary | null =
-    activeId ? (conversations.data ?? []).find((c) => c.id === activeId) ?? null : null;
+    activeId ? serverRows.find((c) => c.id === activeId) ?? null : null;
 
   const openConversation = (id: string | null) => {
     // Route search schemas aren't declared per-route — contained cast (see useUrlState).
     navigate({ search: (() => ({ chat: id })) as never, replace: true });
   };
+
+  // QueryView only reads isPending/isError/data/refetch — flatten the
+  // infinite pages into the shape it expects.
+  const flatQuery = { ...paged, data: serverRows } as unknown as UseQueryResult<ConversationSummary[]>;
 
   return (
     <ViewShell>
@@ -117,45 +138,69 @@ export function ConversationsView() {
             </Filters>
 
             <QueryView
-              query={conversations}
+              query={flatQuery}
               skeleton={<Skeleton $h="320px" $r="12px" />}
               isEmpty={(d) => d.length === 0}
               empty={{ title: 'No conversations', description: 'Threads appear here as your agents carry conversations.' }}
             >
-              {(serverRows) => (list.length === 0 ? (
-                <EmptyState title="No conversations match" description={`${serverRows.length} conversation${serverRows.length === 1 ? '' : 's'} loaded — adjust your filters to see more.`} />
+              {(rows) => (list.length === 0 ? (
+                <EmptyState
+                  title="No conversations match"
+                  description={
+                    hasMore
+                      ? `No matches in the ${rows.length} loaded — load more below or adjust your filters.`
+                      : 'No conversations match these filters.'
+                  }
+                />
               ) : (
-                <List>
-                  {list.map((c, i) => (
-                    <Row
-                      key={c.id}
-                      type="button"
-                      $active={c.id === activeId}
-                      aria-current={c.id === activeId ? 'true' : undefined}
-                      onClick={() => openConversation(c.id)}
-                      as={motion.button}
-                      initial="hidden"
-                      animate="visible"
-                      variants={pageItem}
-                      custom={i}
-                    >
-                      <RowMain>
-                        <RowTop>
-                          <RowUser>{c.title}</RowUser>
-                          <RowTime>{c.updatedAt ? relativeDay(c.updatedAt) : ''}</RowTime>
-                        </RowTop>
-                        <RowPreview>{c.agentName ?? 'Unassigned agent'}</RowPreview>
-                        <RowMeta>
-                          {c.status && (
-                            <StatusPill tone={c.status === 'active' ? 'info' : c.status === 'archived' ? 'neutral' : 'warning'} dot={false}>
-                              {c.status}
-                            </StatusPill>
-                          )}
-                        </RowMeta>
-                      </RowMain>
-                    </Row>
-                  ))}
-                </List>
+                <>
+                  <ListCaption>
+                    {rows.length} loaded{hasMore ? ' — showing most recent first' : ''}
+                  </ListCaption>
+                  <List>
+                    {list.map((c, i) => (
+                      <Row
+                        key={c.id}
+                        type="button"
+                        $active={c.id === activeId}
+                        aria-current={c.id === activeId ? 'true' : undefined}
+                        onClick={() => openConversation(c.id)}
+                        as={motion.button}
+                        initial="hidden"
+                        animate="visible"
+                        variants={pageItem}
+                        custom={i}
+                      >
+                        <RowMain>
+                          <RowTop>
+                            <RowUser>{c.title}</RowUser>
+                            <RowTime>{c.updatedAt ? relativeDay(c.updatedAt) : ''}</RowTime>
+                          </RowTop>
+                          <RowPreview>{c.agentName ?? 'Unassigned agent'}</RowPreview>
+                          <RowMeta>
+                            {c.status && (
+                              <StatusPill tone={c.status === 'active' ? 'info' : c.status === 'archived' ? 'neutral' : 'warning'} dot={false}>
+                                {c.status}
+                              </StatusPill>
+                            )}
+                          </RowMeta>
+                        </RowMain>
+                      </Row>
+                    ))}
+                  </List>
+                  {hasMore && (
+                    <LoadMoreWrap>
+                      <ActionButton
+                        variant="secondary"
+                        size="sm"
+                        disabled={paged.isFetchingNextPage}
+                        onClick={() => void paged.fetchNextPage()}
+                      >
+                        {paged.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                      </ActionButton>
+                    </LoadMoreWrap>
+                  )}
+                </>
               ))}
             </QueryView>
           </ListPane>
@@ -164,9 +209,11 @@ export function ConversationsView() {
             {active ? (
               <ConversationDetail
                 conversation={active}
+                canManage={canManageMembers}
                 onArchive={() => setArchiveConfirm(true)}
+                onRestore={() => setRestoreConfirm(true)}
                 onClose={() => openConversation(null)}
-                archivePending={updateStatus.isPending}
+                statusPending={updateStatus.isPending}
               />
             ) : (
               <Panel>
@@ -197,20 +244,41 @@ export function ConversationsView() {
         }}
         onCancel={() => setArchiveConfirm(false)}
       />
+      <ConfirmDialog
+        open={restoreConfirm}
+        title="Restore this conversation?"
+        message={active ? `"${active.title}" moves back to the active list.` : ''}
+        confirmLabel="Restore"
+        onConfirm={() => {
+          if (active) {
+            updateStatus.mutate(
+              { conversationId: active.id, status: 'active' },
+              { onSuccess: () => openConversation(null) },
+            );
+          }
+          setRestoreConfirm(false);
+        }}
+        onCancel={() => setRestoreConfirm(false)}
+      />
     </ViewShell>
   );
 }
 
 function ConversationDetail({
   conversation,
+  canManage,
   onArchive,
+  onRestore,
   onClose,
-  archivePending,
+  statusPending,
 }: {
   conversation: ConversationSummary;
+  /** C6 — archive/restore/delete are owner/admin-only; buttons hidden otherwise. */
+  canManage: boolean;
   onArchive: () => void;
+  onRestore: () => void;
   onClose: () => void;
-  archivePending: boolean;
+  statusPending: boolean;
 }) {
   const messages = useConversationMessages(conversation.id);
   const runs = useConversationRuns(conversation.id);
@@ -231,11 +299,17 @@ function ConversationDetail({
                 {conversation.status}
               </StatusPill>
             )}
-            {runs.data && runs.data.length > 0 && <span>{runs.data.length} run{runs.data.length === 1 ? '' : 's'}</span>}
+            {runs.data && runs.data.length > 0 && <span>{describeRunsCount(runs.data.length)}</span>}
           </DetailMeta>
           <DetailCloseWrap>
-            {conversation.status !== 'archived' && (
-              <ActionButton variant="secondary" size="sm" disabled={archivePending} onClick={onArchive}>
+            {canManage && conversation.status === 'archived' && (
+              <ActionButton variant="secondary" size="sm" disabled={statusPending} onClick={onRestore}>
+                <RotateCcw size={12} strokeWidth={1.8} />
+                Restore
+              </ActionButton>
+            )}
+            {canManage && conversation.status !== 'archived' && (
+              <ActionButton variant="secondary" size="sm" disabled={statusPending} onClick={onArchive}>
                 <Archive size={12} strokeWidth={1.8} />
                 Archive
               </ActionButton>
@@ -282,6 +356,20 @@ const DetailCloseWrap = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+`;
+
+// C1 — honest list accounting: how many threads are loaded, and whether
+// older ones are still behind "Load more".
+const ListCaption = styled.div`
+  font-size: 12px;
+  opacity: 0.6;
+  padding: 4px 2px 8px;
+`;
+
+const LoadMoreWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
 `;
 
 function relativeDay(iso: string): string {

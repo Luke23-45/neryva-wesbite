@@ -513,9 +513,35 @@ function UpsertModal({
         </label>
       </div>
       <div style={{ marginTop: 12 }}>
-        <TextArea label="Input schema (JSON Schema object)" value={inputSchema} onChange={(e) => setInputSchema(e.target.value)} rows={8} />
+        {/*
+          Gap #21 (console field audit): the engine enforces a 16 KiB
+          serialized-size limit and a 32-level nesting limit on input_schema
+          (`assertInputSchemaShape` → 422). Disclose them here so an oversized
+          schema fails client-side expectations, not server-side surprise.
+        */}
+        <TextArea
+          label="Input schema (JSON Schema object)"
+          value={inputSchema}
+          onChange={(e) => setInputSchema(e.target.value)}
+          rows={8}
+          hint="The engine enforces a 16 KiB serialized-size limit and a 32-level nesting limit (422 beyond)."
+        />
         {schemaProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{schemaProblem}</p>}
       </div>
+      {/*
+        Gaps #24/#25 (console field audit): execution_environment and
+        allowed_egress_domains are API-managed — the console cannot author
+        them. New tools default to external_gateway with egress limited to the
+        binding host (schema-only tools get no egress); edits round-trip the
+        stored values. The effective perimeter is shown in the tool's detail
+        drawer. State this so the absence of fields reads as deliberate, not
+        missing.
+      */}
+      <p style={{ fontSize: 12, opacity: 0.65, marginTop: 12 }}>
+        Execution environment and egress allowlist are set via the API: new tools run as{' '}
+        <Mono>external_gateway</Mono> with egress limited to the binding host (schema-only tools get no egress).
+        The effective perimeter is shown in the tool&apos;s detail drawer.
+      </p>
     </Modal>
   );
 }

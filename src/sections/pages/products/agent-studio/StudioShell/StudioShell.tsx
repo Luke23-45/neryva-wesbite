@@ -123,8 +123,9 @@ const formatRelativeDate = (isoDate: string): string => {
 type Props = {
   /** v2 domain config (SIDEBAR_LEDGER.md §2 — single source of truth). */
   nav: NavConfig;
-  user: { initials: string; name: string; tier: string; email: string };
-  workspace: { name: string; plan: string };
+  user: { initials: string; name: string; email: string };
+  /** `plan` is the real entitlement-state label; null while the org has not resolved. */
+  workspace: { name: string; plan: string | null };
   searchPlaceholder: string;
   /** Real recent conversations; null while the list is still loading. */
   recentChats: RecentChat[] | null;
@@ -465,7 +466,7 @@ export function StudioShell({
               <UserAvatar aria-hidden="true">{user.initials}</UserAvatar>
               <UserMeta>
                 <UserName>{workspace.name}</UserName>
-                <UserTier>{workspace.plan}</UserTier>
+                {workspace.plan ? <UserTier>{workspace.plan}</UserTier> : null}
               </UserMeta>
             </UserCard>
           </SidebarFooter>

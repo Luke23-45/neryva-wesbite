@@ -31,6 +31,7 @@ import {
   useOAuthAuthorize,
   buildConnectorConfig,
   singleFieldOverflowNote,
+  validateCredentialShape,
   PROVIDER_LINK_SPECS,
   type ConnectorProvider,
   type SyncResult,
@@ -441,7 +442,10 @@ function LinkModal({
         ? 'A credential is required here: this provider has no dance, and linked-without-credential accounts cannot sync or be repaired (no credential-update endpoint exists).'
         : spec.credentials === 'msal-cc' && credentials.trim()
           ? validateMsalCc(credentials)
-          : null;
+          : // I14/I15: confluence/zendesk pastes must carry the engine's
+            // separator (email:api_token / email/api_token) — a bare token
+            // links fine but every sync fails with a 401.
+            validateCredentialShape(spec, credentials);
 
   const valid = displayName.trim() !== '' && missingConfig.length === 0 && !credentialsProblem;
 

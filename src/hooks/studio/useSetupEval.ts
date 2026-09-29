@@ -34,6 +34,15 @@ import { useOrg } from '@/Context/OrgContext';
 
 const EVAL_KEY = ['studio', 'setup', 'eval'] as const;
 
+/**
+ * E-02: the engine silently truncates over-long dataset names/descriptions
+ * (`eval.service.ts` — `name.trim().slice(0, 128)`,
+ * `description?.slice(0, 2048)`). The console caps its inputs at these exact
+ * bounds and shows a live count so nothing is ever lost silently.
+ */
+export const EVAL_DATASET_NAME_MAX = 128;
+export const EVAL_DATASET_DESC_MAX = 2048;
+
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }

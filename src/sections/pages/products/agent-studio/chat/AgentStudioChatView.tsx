@@ -19,6 +19,7 @@ import { useDecideApproval } from '@hooks/studio/useSetupApprovals';
 import { useAttachmentUpload } from '@hooks/studio/useAttachmentUpload';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
+import { useOrg } from '@/Context/OrgContext';
 import { Skeleton } from '@components/common/ui/Skeleton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 
@@ -114,6 +115,9 @@ export function AgentStudioChatView() {
 
   const [bannerVisible, setBannerVisible] = useState(true);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // C6 — deleting is owner/admin-only server-side; the trash button doesn't
+  // render for other roles instead of failing loudly on click.
+  const { canManageMembers } = useOrg();
   // A3-48 — the composer is a textarea now.
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // A3-45 — ChatMessages pins this imperatively (near-bottom stick).
@@ -316,7 +320,7 @@ export function AgentStudioChatView() {
         onBack={() => navigate({ to: '/agent-studio/conversations' })}
         onNewThread={startNewThread}
         onRename={handleRename}
-        onDelete={() => setConfirmDeleteOpen(true)}
+        onDelete={canManageMembers ? () => setConfirmDeleteOpen(true) : undefined}
       />
       <ChatArea>
         <ScrollRegion ref={scrollRegionRef}>
