@@ -10,68 +10,66 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { theme } from '@styles/theme';
-import { BuilderInspector, type InspectorContext } from './BuilderInspector';
-import type { BuilderNode } from '../lib/projector';
-import { laneOf, type LaneNodeId } from '../lib/lane-model';
-import type { PurposeNodeDatum } from './PurposeExtras';
+import { SectionBody, type InspectorContext } from './SectionBody';
+import type { PurposeNodeDatum } from '../inspector/PurposeExtras';
 
 /**
- * Mapping tests (LEDGER.md §4 I1–I7): the 17 fixed node ids each mount
- * their section. Sections are stubbed — the mapping is the unit under test;
+ * Mapping tests: the 18 section ids each mount their section in the main
+ * pane. Sections are stubbed — the mapping is the unit under test;
  * PurposeExtras stays REAL (its copy is asserted here).
  */
-vi.mock('./PurposeInspector', () => ({
+vi.mock('../inspector/PurposeInspector', () => ({
   PurposeInspector: () => <div data-testid="section-purpose" />,
 }));
-vi.mock('./InstructionsSection', () => ({
+vi.mock('../inspector/InstructionsSection', () => ({
   InstructionsSection: () => <div data-testid="section-instructions" />,
 }));
-vi.mock('./BrainSection', () => ({
+vi.mock('../inspector/BrainSection', () => ({
   BrainSection: () => <div data-testid="section-brain" />,
 }));
-vi.mock('./ModelSection', () => ({
+vi.mock('../inspector/ModelSection', () => ({
   ModelSection: () => <div data-testid="section-model" />,
 }));
-vi.mock('./KnowledgeSection', () => ({
+vi.mock('../inspector/KnowledgeSection', () => ({
   KnowledgeSection: () => <div data-testid="section-knowledge" />,
 }));
-vi.mock('./ToolsSection', () => ({
+vi.mock('../inspector/ToolsSection', () => ({
   ToolsSection: () => <div data-testid="section-tools" />,
 }));
-vi.mock('./GuardrailsSection', () => ({
+vi.mock('../inspector/GuardrailsSection', () => ({
   GuardrailsSection: () => <div data-testid="section-guardrails" />,
 }));
-vi.mock('./MemorySection', () => ({
+vi.mock('../inspector/MemorySection', () => ({
   MemorySection: () => <div data-testid="section-memory" />,
 }));
-vi.mock('./ContextSection', () => ({
+vi.mock('../inspector/ContextSection', () => ({
   ContextSection: () => <div data-testid="section-context" />,
 }));
-vi.mock('./ResponseSection', () => ({
+vi.mock('../inspector/ResponseSection', () => ({
   ResponseSection: () => <div data-testid="section-response" />,
 }));
-vi.mock('./RoleSection', () => ({
+vi.mock('../inspector/RoleSection', () => ({
   RoleSection: () => <div data-testid="section-role" />,
 }));
-vi.mock('./BudgetSection', () => ({
+vi.mock('../inspector/BudgetSection', () => ({
   BudgetSection: () => <div data-testid="section-budget" />,
 }));
-vi.mock('./TrySection', () => ({
+vi.mock('../inspector/TrySection', () => ({
   TrySection: () => <div data-testid="section-try" />,
 }));
-vi.mock('./EvaluationSection', () => ({
+vi.mock('../inspector/EvaluationSection', () => ({
   EvaluationSection: () => <div data-testid="section-evaluation" />,
 }));
-vi.mock('./ShipSection', () => ({
+vi.mock('../inspector/ShipSection', () => ({
   ShipSection: () => <div data-testid="section-ship" />,
 }));
-vi.mock('./BrandSection', () => ({
+vi.mock('../inspector/BrandSection', () => ({
   BrandSection: () => <div data-testid="section-brand" />,
 }));
-vi.mock('./CredentialsPanel', () => ({
+vi.mock('../inspector/CredentialsPanel', () => ({
   CredentialsPanel: () => <div data-testid="section-credentials" />,
 }));
-vi.mock('./SamplesSection', () => ({
+vi.mock('../inspector/SamplesSection', () => ({
   SamplesSection: () => <div data-testid="section-samples" />,
 }));
 
@@ -79,27 +77,6 @@ let templateSlug: string | null = null;
 vi.mock('@hooks/studio/useAgentAuthoring', () => ({
   usePublishReadiness: () => ({ templateSlug }),
 }));
-
-const node = (id: string, status: BuilderNode['data']['status'] = 'untouched'): BuilderNode =>
-  ({
-    id,
-    type: 'slot',
-    position: { x: 0, y: 0 },
-    data: {
-      slotKey: id,
-      nodeType: 'spine',
-      kind: null,
-      title: id,
-      subtitle: null,
-      hint: null,
-      status,
-      selected: true,
-      lock: false,
-      color: '#2F7FE0',
-      portColor: null,
-      lane: laneOf(id as LaneNodeId),
-    },
-  }) as BuilderNode;
 
 const buildContext = (overrides: Partial<InspectorContext> = {}): InspectorContext => ({
   mode: 'build',
@@ -126,23 +103,23 @@ const buildContext = (overrides: Partial<InspectorContext> = {}): InspectorConte
 });
 
 async function shell(opts: {
-  selected: BuilderNode | null;
+  sectionId: string;
   context?: InspectorContext;
-  nodes?: PurposeNodeDatum[];
-  onSelectNode?: (id: string) => void;
+  purposeNodes?: PurposeNodeDatum[];
+  onPurposeSelect?: (id: string) => void;
 }) {
-  const onSelectNode = opts.onSelectNode ?? vi.fn();
+  const onPurposeSelect = opts.onPurposeSelect ?? vi.fn();
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
     component: () => (
       <ThemeProvider theme={theme}>
-        <BuilderInspector
-          selected={opts.selected}
+        <SectionBody
+          sectionId={opts.sectionId}
           context={opts.context ?? buildContext()}
-          nodes={opts.nodes}
-          onSelectNode={onSelectNode}
+          purposeNodes={opts.purposeNodes}
+          onPurposeSelect={onPurposeSelect}
         />
       </ThemeProvider>
     ),
@@ -155,14 +132,14 @@ async function shell(opts: {
   await act(async () => {
     rendered = render(<RouterProvider router={router} />);
   });
-  return { onSelectNode, container: rendered.container, unmount: rendered.unmount };
+  return { onPurposeSelect, container: rendered.container, unmount: rendered.unmount };
 }
 
 beforeEach(() => {
   templateSlug = null;
 });
 
-describe('BuilderInspector node mapping', () => {
+describe('SectionBody section mapping', () => {
   const cases: Array<[string, string]> = [
     ['purpose', 'section-purpose'],
     ['instructions', 'section-instructions'],
@@ -184,34 +161,39 @@ describe('BuilderInspector node mapping', () => {
     ['try', 'section-try'],
   ];
 
-  it.each(cases)('mounts the right section for node %s', async (id, testId) => {
-    await shell({ selected: node(id) });
+  it.each(cases)('mounts the right section for id %s', async (id, testId) => {
+    await shell({ sectionId: id });
     expect(screen.getByTestId(testId)).toBeTruthy();
   });
 
-  it('renders the header with icon and title only — no meta line, no chip', async () => {
-    await shell({ selected: node('brain', 'ready') });
-    expect(screen.getByText('brain')).toBeTruthy();
+  it('renders the section title in the pane header — no canvas chrome', async () => {
+    await shell({ sectionId: 'brain' });
+    expect(screen.getByRole('heading', { name: 'brain' })).toBeTruthy();
     expect(screen.queryByText(/Node ID · brain ·/)).toBeNull();
     expect(screen.queryByText('READY')).toBeNull();
   });
 
+  it('reads purpose as Identity in the header', async () => {
+    await shell({ sectionId: 'purpose' });
+    expect(screen.getByRole('heading', { name: 'Identity' })).toBeTruthy();
+  });
+
   it('keeps purpose identity-only: no instructions section under purpose', async () => {
-    await shell({ selected: node('purpose') });
+    await shell({ sectionId: 'purpose' });
     expect(screen.getByTestId('section-purpose')).toBeTruthy();
     expect(screen.queryByTestId('section-instructions')).toBeNull();
   });
 
-  it('shows the locked message in new mode for functional nodes', async () => {
-    await shell({ selected: node('brain'), context: buildContext({ mode: 'new', agentId: null }) });
+  it('shows the locked message in new mode for functional sections', async () => {
+    await shell({ sectionId: 'brain', context: buildContext({ mode: 'new', agentId: null }) });
     expect(screen.getByText(/Name the agent first/)).toBeTruthy();
     expect(screen.queryByTestId('section-brain')).toBeNull();
   });
 
-  it('locks context, response, and role in new mode — the guard pattern holds for the new sections', async () => {
+  it('locks context, response, and role in new mode', async () => {
     for (const id of ['context', 'response', 'role']) {
       const { unmount } = await shell({
-        selected: node(id),
+        sectionId: id,
         context: buildContext({ mode: 'new', agentId: null }),
       });
       expect(screen.getByText(/Name the agent first/)).toBeTruthy();
@@ -220,9 +202,9 @@ describe('BuilderInspector node mapping', () => {
     }
   });
 
-  it('shows an empty-state when nothing is selected', async () => {
-    await shell({ selected: null });
-    expect(screen.getByText(/Click any node on the circuit/)).toBeTruthy();
+  it('shows an honest message for an unknown section id', async () => {
+    await shell({ sectionId: 'nope' });
+    expect(screen.getByText(/Unknown section/)).toBeTruthy();
   });
 });
 
@@ -238,7 +220,7 @@ describe('Purpose extras (blueprint, next steps, CTA)', () => {
   ];
 
   it('orders next steps attention/error first, then untouched, excluding context/response/brain, max 3', async () => {
-    await shell({ selected: node('purpose'), nodes });
+    await shell({ sectionId: 'purpose', purposeNodes: nodes });
     const region = screen.getByLabelText('Next steps');
     const rows = within(region).getAllByRole('button');
     expect(rows.map((r) => r.textContent)).toEqual([
@@ -249,43 +231,43 @@ describe('Purpose extras (blueprint, next steps, CTA)', () => {
     expect(within(region).queryByText(/Context|Response/)).toBeNull();
   });
 
-  it('chevron rows and the CTA call onSelectNode with the real next step', async () => {
-    const { onSelectNode } = await shell({ selected: node('purpose'), nodes });
+  it('chevron rows and the CTA call onPurposeSelect with the real next step', async () => {
+    const { onPurposeSelect } = await shell({ sectionId: 'purpose', purposeNodes: nodes });
     const region = screen.getByLabelText('Next steps');
     fireEvent.click(within(region).getAllByRole('button')[0]);
-    expect(onSelectNode).toHaveBeenCalledWith('tools');
+    expect(onPurposeSelect).toHaveBeenCalledWith('tools');
     fireEvent.click(screen.getByText(/Continue setup — Tools/));
-    expect(onSelectNode).toHaveBeenCalledWith('tools');
+    expect(onPurposeSelect).toHaveBeenCalledWith('tools');
   });
 
   it('shows the ship review row when nothing is left to configure', async () => {
-    const { onSelectNode } = await shell({
-      selected: node('purpose'),
-      nodes: [{ id: 'purpose', label: 'Purpose', status: 'ready' }],
+    const { onPurposeSelect } = await shell({
+      sectionId: 'purpose',
+      purposeNodes: [{ id: 'purpose', label: 'Purpose', status: 'ready' }],
     });
     expect(screen.getByText(/Ready to publish — review the Ship node/)).toBeTruthy();
     fireEvent.click(screen.getByText(/Review publish readiness/));
-    expect(onSelectNode).toHaveBeenCalledWith('ship');
+    expect(onPurposeSelect).toHaveBeenCalledWith('ship');
   });
 
   it('renders the linked blueprint card only when templateSlug exists', async () => {
     templateSlug = 'support-copilot';
-    await shell({ selected: node('purpose'), nodes: [] });
+    await shell({ sectionId: 'purpose', purposeNodes: [] });
     expect(screen.getByText('support-copilot')).toBeTruthy();
     const link = screen.getByText(/Browse the template gallery/).closest('a');
     expect(link?.getAttribute('href')).toBe('/agent-studio/templates');
   });
 
   it('omits the blueprint card when there is no templateSlug', async () => {
-    await shell({ selected: node('purpose'), nodes: [] });
+    await shell({ sectionId: 'purpose', purposeNodes: [] });
     expect(screen.queryByText(/Browse the template gallery/)).toBeNull();
   });
 
   it('hides the extras entirely in new mode', async () => {
     await shell({
-      selected: node('purpose'),
+      sectionId: 'purpose',
       context: buildContext({ mode: 'new', agentId: null }),
-      nodes,
+      purposeNodes: nodes,
     });
     expect(screen.queryByLabelText('Next steps')).toBeNull();
     expect(screen.queryByText(/Browse the template gallery/)).toBeNull();

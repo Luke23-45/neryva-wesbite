@@ -16,7 +16,7 @@ export const Main = styled.div`
   min-height: 0;
   display: flex;
   align-items: stretch;
-  /* The three columns (palette / canvas / inspector) own their scroll;
+  /* The two columns (section nav / main pane) own their scroll;
      the page never does. */
   overflow: hidden;
 

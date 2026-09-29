@@ -3,6 +3,7 @@ import {
   BookOpen,
   Brain,
   Component,
+  Cpu,
   FlaskConical,
   History,
   KeyRound,
@@ -15,6 +16,7 @@ import {
   Rocket,
   ShieldCheck,
   Target,
+  UserRound,
   Wallet,
   Wrench,
 } from 'lucide-react';
@@ -31,6 +33,8 @@ import { StatusIconWrap } from '../canvas/nodes/SlotNode.styles';
 export const SLOT_GLYPHS: Record<string, ReactNode> = {
   purpose: <Target size={16} strokeWidth={1.8} />,
   instructions: <ListOrdered size={16} strokeWidth={1.8} />,
+  role: <UserRound size={16} strokeWidth={1.8} />,
+  model: <Cpu size={16} strokeWidth={1.8} />,
   knowledge: <BookOpen size={16} strokeWidth={1.8} />,
   tools: <Wrench size={16} strokeWidth={1.8} />,
   memory: <MemoryStick size={16} strokeWidth={1.8} />,

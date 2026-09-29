@@ -1,44 +1,32 @@
 import { useMemo, useState, type ReactNode, type RefObject } from 'react';
-import { PanelRightClose } from 'lucide-react';
 import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
 import { canSetup } from '@lib/engine/capabilities';
-import type { BuilderNode } from '../lib/projector';
-import { PurposeInspector, type PurposeFormState, type PurposeHandle } from './PurposeInspector';
-import { InstructionsSection } from './InstructionsSection';
-import { BrandSection } from './BrandSection';
-import { BrainSection } from './BrainSection';
-import { ModelSection } from './ModelSection';
-import { KnowledgeSection } from './KnowledgeSection';
-import { ToolsSection } from './ToolsSection';
-import { GuardrailsSection } from './GuardrailsSection';
-import { ContextSection } from './ContextSection';
-import { ResponseSection } from './ResponseSection';
-import { RoleSection } from './RoleSection';
-import { MemorySection } from './MemorySection';
-import { BudgetSection } from './BudgetSection';
-import { TrySection } from './TrySection';
-import { EvaluationSection } from './EvaluationSection';
-import { ShipSection } from './ShipSection';
-import { CredentialsPanel } from './CredentialsPanel';
-import { SamplesSection } from './SamplesSection';
-import { PurposeExtras, type PurposeNodeDatum } from './PurposeExtras';
+import { PurposeInspector, type PurposeFormState, type PurposeHandle } from '../inspector/PurposeInspector';
+import { InstructionsSection } from '../inspector/InstructionsSection';
+import { BrandSection } from '../inspector/BrandSection';
+import { BrainSection } from '../inspector/BrainSection';
+import { ModelSection } from '../inspector/ModelSection';
+import { KnowledgeSection } from '../inspector/KnowledgeSection';
+import { ToolsSection } from '../inspector/ToolsSection';
+import { GuardrailsSection } from '../inspector/GuardrailsSection';
+import { ContextSection } from '../inspector/ContextSection';
+import { ResponseSection } from '../inspector/ResponseSection';
+import { RoleSection } from '../inspector/RoleSection';
+import { MemorySection } from '../inspector/MemorySection';
+import { BudgetSection } from '../inspector/BudgetSection';
+import { TrySection } from '../inspector/TrySection';
+import { EvaluationSection } from '../inspector/EvaluationSection';
+import { ShipSection } from '../inspector/ShipSection';
+import { CredentialsPanel } from '../inspector/CredentialsPanel';
+import { SamplesSection } from '../inspector/SamplesSection';
+import { PurposeExtras, type PurposeNodeDatum } from '../inspector/PurposeExtras';
+import { LockedWrap } from '../inspector/BuilderInspector.styles';
 import type { PublishEditTarget } from '../lib/publish-model';
-import type { TraceEditTarget } from './TraceDrawer';
-import {
-  Body,
-  CollapseButton,
-  EmptySelect,
-  HeadRow,
-  HeadText,
-  HeadTitle,
-  InspectorHead,
-  LockedWrap,
-  MetaLine,
-  Panel,
-} from './BuilderInspector.styles';
-import { ResizeHandle } from '../ResizeHandle';
+import type { TraceEditTarget } from '../inspector/TraceDrawer';
+import { sectionLabel, type SectionEntry } from '../nav/section-groups';
+import { SectionHead, SectionPane, SectionSub, SectionTitle, SectionWrap } from './SectionBody.styles';
 
 export interface InspectorContext {
   mode: 'new' | 'build';
@@ -81,20 +69,18 @@ export interface InspectorContext {
   publishSignal: number;
 }
 
-interface BuilderInspectorProps {
-  selected: BuilderNode | null;
+interface SectionBodyProps {
+  sectionId: string;
+  /** Projector entry for the header label + honest status line. */
+  entry?: SectionEntry;
   context: InspectorContext;
   /**
-   * Projector nodes (id/label/status) for the purpose NEXT STEPS + CTA
-   * (LEDGER.md I6/I7). Wired by the coordinator: nodes={paletteNodes}.
-   * Absent → the extras stay hidden (never invented).
+   * Projector entries (id/label/status) for the Identity next-steps + CTA
+   * (LEDGER.md I6/I7). Absent → the extras stay hidden (never invented).
    */
-  nodes?: PurposeNodeDatum[];
-  /**
-   * Node selection for next-step chevrons + CTA (LEDGER.md I6/I7).
-   * Wired by the coordinator: onSelectNode={select}.
-   */
-  onSelectNode?: (id: string) => void;
+  purposeNodes?: PurposeNodeDatum[];
+  /** Section selection for the Identity next-step chevrons + CTA. */
+  onPurposeSelect?: (id: string) => void;
   purposeRef?: RefObject<PurposeHandle | null>;
   onFormState?: (state: PurposeFormState) => void;
   onComposerDirty?: (dirty: boolean) => void;
@@ -110,29 +96,14 @@ interface BuilderInspectorProps {
   onRoleDirty?: (dirty: boolean) => void;
   onBudgetDirty?: (dirty: boolean) => void;
   onCreated?: (assistantId: string) => void;
-  /**
-   * T15 — resizable/collapsible sidebar. Controlled width in px; the parent
-   * mutates the aside's style.width directly mid-drag (via asideRef) and
-   * commits on pointer-up. Inspector never goes below 300px (its forms are
-   * the densest surface in the builder).
-   */
-  width?: number;
-  /** Ref to the Panel aside for direct width mutation during drags. */
-  asideRef?: RefObject<HTMLElement | null>;
-  /** Live drag deltas (px, positive = pointer moved right). */
-  onResizeDelta?: (dx: number) => void;
-  /** Drag/keyboard resize finished — commit + persist. */
-  onResizeEnd?: () => void;
-  /** Hide the inspector; a restore button appears in the topbar (width kept). */
-  onCollapse?: () => void;
 }
 
 /**
- * Credentials node mount (v10 §8.7): the panel's own home with the same
- * wiring ModelSection gives its embedded instance — pinned providers from
- * the saved draft's allowed models, role-derived read/govern gates, and
- * local dialog state. ModelSection keeps its embedded instance (its model
- * fix actions open the inline forms there) — both read the same cache.
+ * Credentials section mount: the panel's own home with the same wiring
+ * ModelSection gives its embedded instance — pinned providers from the
+ * saved draft's allowed models, role-derived read/govern gates, and local
+ * dialog state. ModelSection keeps its embedded instance (its model fix
+ * actions open the inline forms there) — both read the same cache.
  */
 function CredentialsNode({ context }: { context: InspectorContext }) {
   const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
@@ -156,24 +127,24 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
 }
 
 /**
- * Right inspector mount (v10 §4): exactly one selection at a time. Header is
- * the v10 chrome — kind icon tile, title, shared status chip, and the
- * "Node ID · {slotKey} · {lane}" meta line. No overflow menu: no section
- * exposes header actions, and C5 forbids rendering dead ones.
+ * Main-pane section mount (configure-first redesign).
  *
- * Node → section mapping (§6, all 17 functional sections keep working with
- * zero behavior change inside the sections — only re-homed):
+ * This is the section switch from the old right inspector, re-homed into
+ * the primary content pane. Every section keeps its own real implementation
+ * with zero behavior change inside the sections — only the chrome around
+ * them changed. Section → component mapping:
  * purpose → PurposeInspector (+ build-mode extras); instructions →
  * InstructionsSection; model → ModelSection; brain/knowledge/tools/memory/
- * guardrails/brand/budget/context/response → their sections; credentials →
- * CredentialsPanel; samples → SamplesSection; evaluation → EvaluationSection;
- * ship → ShipSection; try → TrySection.
+ * guardrails/brand/budget/context/response/role → their sections;
+ * credentials → CredentialsPanel; samples → SamplesSection; evaluation →
+ * EvaluationSection; ship → ShipSection; try → TrySection.
  */
-export function BuilderInspector({
-  selected,
+export function SectionBody({
+  sectionId,
+  entry,
   context,
-  nodes,
-  onSelectNode,
+  purposeNodes,
+  onPurposeSelect,
   purposeRef,
   onFormState,
   onComposerDirty,
@@ -189,56 +160,13 @@ export function BuilderInspector({
   onRoleDirty,
   onBudgetDirty,
   onCreated,
-  width,
-  asideRef,
-  onResizeDelta,
-  onResizeEnd,
-  onCollapse,
-}: BuilderInspectorProps) {
-  const collapseButton = onCollapse ? (
-    <CollapseButton
-      type="button"
-      onClick={onCollapse}
-      title="Hide inspector"
-      aria-label="Hide inspector"
-    >
-      <PanelRightClose size={14} aria-hidden="true" />
-    </CollapseButton>
-  ) : null;
-  if (!selected) {
-    return (
-      <Panel aria-label="Inspector" ref={asideRef} style={width != null ? { width } : undefined}>
-        <InspectorHead>
-          <HeadRow>
-            <HeadText>
-              <HeadTitle>Inspector</HeadTitle>
-              <MetaLine>Select a component on the circuit</MetaLine>
-            </HeadText>
-            {collapseButton}
-          </HeadRow>
-        </InspectorHead>
-        <Body>
-          <EmptySelect>Click any node on the circuit to configure it here.</EmptySelect>
-        </Body>
-        <ResizeHandle
-          side="right"
-          label="Resize inspector"
-          onDelta={(dx) => onResizeDelta?.(dx)}
-          onResizeEnd={() => onResizeEnd?.()}
-          onCollapse={() => onCollapse?.()}
-        />
-      </Panel>
-    );
-  }
-
-  const { data } = selected;
-  const slotKey = data.slotKey;
+}: SectionBodyProps) {
   const agentId = context.agentId;
 
   let body: ReactNode;
-  if (slotKey === 'purpose') {
+  if (sectionId === 'purpose') {
     // Purpose keeps identity only (v10 §8.5) — the composer moved to the
-    // Instructions node. Build mode adds the linked-blueprint card, next
+    // Instructions section. Build mode adds the linked-blueprint card, next
     // steps, and CTA (I5/I6/I7), all data-driven.
     body = (
       <>
@@ -253,23 +181,23 @@ export function BuilderInspector({
           onFormState={onFormState}
           onCreated={onCreated}
         />
-        {context.mode === 'build' && context.agentId && nodes && onSelectNode && (
+        {context.mode === 'build' && context.agentId && purposeNodes && onPurposeSelect && (
           <PurposeExtras
             assistantId={context.agentId}
             versionId={context.versionId}
-            nodes={nodes}
-            onSelectNode={onSelectNode}
+            nodes={purposeNodes}
+            onSelectNode={onPurposeSelect}
           />
         )}
       </>
     );
   } else if (context.mode === 'new' || agentId === null) {
     body = (
-      <LockedWrap>Name the agent first — this node wakes up on the circuit once the agent exists.</LockedWrap>
+      <LockedWrap>Name the agent first — this section wakes up once the agent exists.</LockedWrap>
     );
   } else {
     const id: string = agentId;
-    switch (slotKey) {
+    switch (sectionId) {
       case 'instructions':
         body = (
           <InstructionsSection
@@ -443,8 +371,8 @@ export function BuilderInspector({
         break;
       case 'samples':
         // Browse-only gallery: the composer's own gallery (Instructions
-        // node) keeps the working insert — a cross-node insert would be new
-        // functionality. Inserting stays available in the Instructions node.
+        // section) keeps the working insert — a cross-section insert would
+        // be new functionality. Inserting stays available in Instructions.
         body = <SamplesSection assistantId={id} canAuthor={false} startOpen={false} onInsert={() => undefined} />;
         break;
       case 'evaluation':
@@ -498,29 +426,21 @@ export function BuilderInspector({
         );
         break;
       default:
-        body = <LockedWrap>Unknown node &ldquo;{slotKey}&rdquo; — nothing to configure.</LockedWrap>;
+        body = <LockedWrap>Unknown section &ldquo;{sectionId}&rdquo; — nothing to configure.</LockedWrap>;
         break;
     }
   }
 
+  const title = sectionLabel(sectionId, entry?.label ?? sectionId);
+  const statusLine = entry?.statusText?.trim() ? entry.statusText : null;
+
   return (
-    <Panel aria-label={`${data.title} inspector`} ref={asideRef} style={width != null ? { width } : undefined}>
-      <InspectorHead>
-        <HeadRow>
-          <HeadText>
-            <HeadTitle>{data.title}</HeadTitle>
-          </HeadText>
-          {collapseButton}
-        </HeadRow>
-      </InspectorHead>
-      <Body>{body}</Body>
-      <ResizeHandle
-        side="right"
-        label="Resize inspector"
-        onDelta={(dx) => onResizeDelta?.(dx)}
-        onResizeEnd={() => onResizeEnd?.()}
-        onCollapse={() => onCollapse?.()}
-      />
-    </Panel>
+    <SectionWrap aria-label={`${title} section`}>
+      <SectionHead>
+        <SectionTitle>{title}</SectionTitle>
+        {statusLine ? <SectionSub>{statusLine}</SectionSub> : null}
+      </SectionHead>
+      <SectionPane>{body}</SectionPane>
+    </SectionWrap>
   );
 }

@@ -1,7 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -15,16 +14,11 @@ import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { BuilderTopbarActions, BuilderTopbarIdentity } from './topbar/BuilderTopBar';
 import { usePublishBuilderTopbarSlots, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
-import {
-  clampWidth,
-  loadPanelLayout,
-  savePanelLayout,
-  PALETTE_LIMITS,
-  INSPECTOR_LIMITS,
-  type PanelLayout,
-} from './panels';
-import { ComponentPalette, type PaletteHealth, type PaletteNodeEntry } from './palette/ComponentPalette';
-import { BuilderInspector, type InspectorContext } from './inspector/BuilderInspector';
+import { SectionNav } from './nav/SectionNav';
+import { OVERVIEW_ID, type SectionEntry } from './nav/section-groups';
+import { OverviewScreen } from './overview/OverviewScreen';
+import { SectionBody, type InspectorContext } from './sections/SectionBody';
+import type { PurposeNodeDatum } from './inspector/PurposeExtras';
 import type { TraceEditTarget } from './inspector/TraceDrawer';
 import { OriginScreen } from './origin/OriginScreen';
 import { TemplateBanner } from '../templates/TemplateBanner';
@@ -40,22 +34,21 @@ import {
   buildAgentBuildPath,
   buildAgentEditPath,
   resolveInitialSlot,
-  type SlotKind,
 } from './lib/slot-model';
 import { LoadingVeil, Main, NotFound, NotFoundBody, NotFoundTitle, Shell } from './AgentBuilder.styles';
 
-// Lazy chunk: @xyflow/react code + CSS load only with builder routes
-// (BUILD_PLAN.md §13 — list/detail bundles never pay for the circuit).
-const AgentCanvas = lazy(() => import('./canvas/AgentCanvas').then((module) => ({ default: module.AgentCanvas })));
+// Configure-first builder (redesign): the v10 canvas is soft-deleted from
+// frontend access (builder/canvas/** is preserved for a future Workflow
+// Studio). The builder is now: SectionNav (left) + Overview/SectionBody
+// (main pane). Every section keeps its real implementation — only re-homed.
 
 export interface AgentBuilderProps {
   mode: 'new' | 'build';
   /** Build mode only (route param, passed by the page — never read here). */
   agentId?: string | null;
   /**
-   * C15 re-entry (?slot=): resume on a spine id or satellite kind once.
-   * Unknown values and unbound kinds fall through to default selection —
-   * never an error, never a surprise card.
+   * C15 re-entry (?slot=): resume on a section id once. Unknown values
+   * fall through to default selection — never an error, never a surprise.
    */
   initialSlot?: string | null;
 }
@@ -68,7 +61,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
   const models = useModelAvailability({ enabled: mode === 'build' });
-  // ACTIVE-version pin health (C05) — grades the knowledge satellite and the
+  // ACTIVE-version pin health (C05) — grades the knowledge section and the
   // bottom hint. Disabled in new mode: no assistant exists to read.
   const health = useKnowledgeHealth(mode === 'build' ? (agentId ?? null) : null);
   // Unconditional by design: one cached library read that warms the cache for
@@ -79,40 +72,28 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     [documents.data],
   );
   // Unconditional by design: one cached catalog read shared with the Tools
-  // library (30s stale) that grades the tools satellite in both modes.
+  // library (30s stale) that grades the tools section in both modes.
   const toolCatalog = useToolCatalog();
   // C10: shared-cache eval reads (same EVAL_KEY family the libraries use)
-  // that grade the evaluation satellite. Disabled in new mode.
+  // that grade the evaluation section. Disabled in new mode.
   const evalRuns = useEvalRuns(undefined, { enabled: mode === 'build' });
   const allVersions = useAssistantVersions(mode === 'build' ? (agentId ?? null) : null);
   // C14: shared publish-readiness derivation (same cache the Ship section
-  // reads) that grades the ship spine for the working draft. Disabled in
-  // new mode — locked there.
+  // reads) for the working draft. Disabled in new mode — locked there.
   const shipReadiness = usePublishReadiness(mode === 'build' ? (agentId ?? null) : null, form.data?.versionId ?? null, {
     enabled: mode === 'build',
   });
 
   const agentKey = mode === 'build' ? agentId : null;
-  const {
-    positions,
-    selectedId,
-    paletteFilter,
-    hydrate,
-    select,
-    setPosition,
-    persistPositions,
-    tidy,
-    setPaletteFilter,
-  } = useBuilderUI();
+  const { selectedId, hydrate, select } = useBuilderUI();
 
   useEffect(() => {
     hydrate(agentKey);
   }, [agentKey, hydrate]);
 
-  const [layoutRev, setLayoutRev] = useState(0);
-  // Origin choice (C11, new mode only): the pre-circuit start screen.
-  // 'choose' shows the origin paths; 'blank' restores the locked circuit
-  // with the Purpose form. Template installs navigate away (build mode).
+  // Origin choice (C11, new mode only): the pre-builder start screen.
+  // 'choose' shows the origin paths; 'blank' restores the locked builder
+  // with the Identity form. Template installs navigate away (build mode).
   const [origin, setOrigin] = useState<'choose' | 'blank'>('choose');
   const [formState, setFormState] = useState<PurposeFormState>({ dirty: false, valid: false });
   const [composerDirty, setComposerDirty] = useState(false);
@@ -121,7 +102,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const [modelDirty, setModelDirty] = useState(false);
   const [knowledgeDirty, setKnowledgeDirty] = useState(false);
   const purposeRef = useRef<PurposeHandle | null>(null);
-  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const definition = form.data?.definition ?? null;
   const hasDraft = form.data?.isDraft ?? false;
@@ -191,16 +171,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     setBudgetDirty(dirty);
   }, []);
 
-  // Canvas try state for this load (C13): terminal turns report up from the
-  // Try console; the response-spine grade reflects them, nothing else reads this.
+  // Try state for this load (C13): terminal turns report up from the Try
+  // console; the response section grade reflects them, nothing else reads this.
   const [lastTry, setLastTry] = useState<{ at: string; failed: boolean } | null>(null);
 
   const onTryEvent = useCallback((event: { at: string; failed: boolean }) => {
     setLastTry(event);
   }, []);
 
-  // Trace Edit jumps land on builder slots (C13): fixed 18-node ids —
-  // every TraceEditTarget IS a node id, so jumps select directly.
+  // Trace Edit jumps land on builder sections: every TraceEditTarget IS a
+  // section id, so jumps select directly.
   const onEditJump = useCallback(
     (target: TraceEditTarget) => {
       select(target);
@@ -208,8 +188,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     [select],
   );
 
-  // Ship fix jumps (C14): every PublishEditTarget IS a fixed node id.
-  // Disabled in new mode — the Ship slot is locked there.
+  // Ship fix jumps: every PublishEditTarget IS a section id.
+  // Disabled in new mode — the Ship section is locked there.
   const onShipJump = useCallback(
     (target: PublishEditTarget) => {
       if (mode === 'new') return;
@@ -218,12 +198,21 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     [mode, select],
   );
 
+  // Section selection with the new-mode lock (Identity only until created).
+  const handleSelectSection = useCallback(
+    (id: string) => {
+      if (mode === 'new' && id !== 'purpose') return;
+      select(id);
+    },
+    [mode, select],
+  );
+
   const onBrandDirty = useCallback((dirty: boolean) => {
     setBrandDirty(dirty);
   }, []);
 
-  // Dirty guard: new-mode Purpose form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + role + budget.
-  // (Selection, drags, and skips are UI state — rebuilding them is free.)
+  // Dirty guard: new-mode Identity form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + role + budget.
+  // (Selection is UI state — rebuilding it is free.)
   const { dialog: guardDialog } = useDirtyGuard(
     (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
   );
@@ -232,9 +221,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const draftWritesInFlight = useIsMutating({ mutationKey: [...DRAFT_WRITE_MUTATION_KEY] });
 
   /**
-   * Provider-credential count for the credentials node (v10 §8.3). Same
+   * Provider-credential count for the credentials section (v10 §8.3). Same
    * cached read the CredentialsPanel owns — React Query dedupes, so this is
-   * no extra network. Disabled in new mode (node is locked there anyway).
+   * no extra network. Disabled in new mode (section is locked there anyway).
    * ProviderCredential exposes no expiry field — expired stays 0 ("none
    * reported"), never invented.
    */
@@ -253,7 +242,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         hasDraft,
         definition,
         librarySlugs,
-        positions,
+        // No canvas in this shell — positions only feed the projector's
+        // status grades, which don't depend on coordinates.
+        positions: {},
         selectedId,
         modelLabel,
         models: models.data,
@@ -284,15 +275,42 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
               ? { verdict: 'unknown' as const, blockers: 0, checking: true }
               : undefined,
       }),
-    [mode, agentName, hasDraft, definition, librarySlugs, positions, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data],
+    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data],
   );
 
-  const selectedNode = projected.nodes.find((n) => n.id === selectedId) ?? null;
+  // The main pane's view: 'overview' or a section id. New mode is locked to
+  // Identity until the agent is created.
+  const view = mode === 'new' ? 'purpose' : (selectedId ?? OVERVIEW_ID);
 
-  // Default selection = next-best-action (BUILD_PLAN.md §3): purpose at
-  // origin, model while model-less, knowledge once the scaffold stands.
+  // Section navigation entries — the projector's honest per-section state.
+  const sectionEntries = useMemo<SectionEntry[]>(
+    () =>
+      projected.nodes.map((node) => ({
+        id: node.id,
+        label: node.data.title,
+        status: node.data.status,
+        statusText: node.data.subtitle ?? node.data.hint ?? '',
+      })),
+    [projected.nodes],
+  );
+
+  const selectedEntry = sectionEntries.find((entry) => entry.id === view) ?? undefined;
+
+  // Identity next-steps data (I6/I7): id/label/status for the extras.
+  const purposeNodeData = useMemo<PurposeNodeDatum[]>(
+    () =>
+      projected.nodes.map((node) => ({
+        id: node.id,
+        label: node.data.title,
+        status: node.data.status,
+      })),
+    [projected.nodes],
+  );
+
+  // Default view: the Overview in build mode (the readiness + config
+  // summary is the honest landing), Identity at origin in new mode.
   // C15 ?slot= re-entry wins over all of it, once per scope. Once per
-  // scope — an explicit deselect (Esc) must stick, never reselect.
+  // scope — an explicit move to Overview (Esc) must stick, never reselect.
   const scopeKey = mode === 'new' ? 'new' : (agentId ?? 'none');
   const defaultedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -314,34 +332,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       }
     }
     defaultedFor.current = scopeKey;
-    const modelReady = !!definition && definition.model_policy.allowed_models.length > 0;
-    if (!modelReady) {
-      select('model');
-      return;
-    }
-    select('knowledge');
-  }, [mode, scopeKey, selectedId, form.data, definition, select, initialSlot]);
+    select(OVERVIEW_ID);
+  }, [mode, scopeKey, selectedId, form.data, select, initialSlot]);
 
-  // ── v10 palette mapping (WS-A) ─────────────────────────────────────
-  // The 17 fixed lane nodes — lane assignment, per-node colors, and
-  // readiness-derived health, all projected from contract truth. Nothing
-  // is invented: every row rides the node's own grade.
-  const paletteNodes = useMemo<PaletteNodeEntry[]>(() => {
-    return projected.nodes.map((node) => ({
-      id: node.id,
-      label: node.data.title,
-      color: node.data.color,
-      statusText: node.data.subtitle ?? node.data.hint ?? '',
-      status: node.data.status,
-      lane: node.data.lane,
-    }));
-  }, [projected.nodes]);
-
-  // Palette health (v10 §8.10): the 14 functional ids (everything except
+  // Section health (v10 §8.10): the 14 functional ids (everything except
   // context/response — excluded from readiness math). configured = 'ready'
-  // nodes among them; nextStep = first attention/error, else first untouched,
-  // else null.
-  const paletteHealth = useMemo<PaletteHealth>(() => {
+  // sections among them; nextStep = first attention/error, else first
+  // untouched, else null.
+  const sectionHealth = useMemo(() => {
     const functional = projected.nodes.filter((n) => (FUNCTIONAL_NODE_IDS as readonly string[]).includes(n.id));
     const configured = functional.filter((n) => n.data.status === 'ready').length;
     const next =
@@ -359,21 +357,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     };
   }, [projected.nodes, shipReadiness.rows, mode]);
 
-  const handlePaletteFilterChange = useCallback(
-    (filter: string | null) => setPaletteFilter(filter as SlotKind | null),
-    [setPaletteFilter],
-  );
-
   const bottomAction = useMemo(() => {
-    // Knowledge attention (C05): the graded satellite's own verdict, computed
-    // once — the bar never re-derives what canvas already decided.
+    // Knowledge attention (C05): the graded section's own verdict, computed
+    // once — the bar never re-derives what the projector already decided.
     const grade = mode === 'build' && definition ? knowledgeSlot(definition, librarySlugs, health.data ?? undefined) : null;
     return deriveBottomAction({
       mode,
       purposeValid: mode === 'new' ? formState.valid : true,
       hasDraft,
       // Usability, not presence (C04): a loading catalog is not-ready-yet
-      // (neutral copy downstream), an all-unusable set selects the model node.
+      // (neutral copy downstream), an all-unusable set selects the model section.
       modelReady: usableRefs(definition?.model_policy.allowed_models ?? [], models.data).length > 0,
       instructionsEmpty:
         mode === 'build' && hasDraft && (definition?.instructions.trim() ?? '') === '',
@@ -394,27 +387,14 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         return;
       }
       if (primary.action === 'select') {
-        // Fixed 18-node ids — bottom-action targets select directly.
-        select(primary.target);
+        // Section ids — bottom-action targets select directly.
+        handleSelectSection(primary.target);
         return;
       }
       if (agentId) navigate({ to: buildAgentEditPath(agentId) });
     },
-    [agentId, navigate, select],
+    [agentId, navigate, handleSelectSection],
   );
-
-  const handlePortClick = useCallback(
-    (kind: SlotKind) => {
-      setPaletteFilter(kind);
-      searchRef.current?.focus();
-    },
-    [setPaletteFilter],
-  );
-
-  const handleTidy = useCallback(() => {
-    tidy();
-    setLayoutRev((rev) => rev + 1);
-  }, [tidy]);
 
   // A2-23: honest save readout — a draft write in flight must never display as "Saved".
   // Computed here (above the keyboard map) so the manual-save trigger can
@@ -431,82 +411,23 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const [saveSignal, setSaveSignal] = useState(0);
   const requestSave = useCallback(() => {
     if (mode === 'new' || !canAuthor || !anySectionDirty) return;
-    // No section mounted to hear the signal (e.g. explicit deselect) — no-op.
-    if (selectedId === null) return;
+    // No editable section mounted (Overview) — no-op.
+    if (view === OVERVIEW_ID) return;
     setSaveSignal((s) => s + 1);
-  }, [mode, canAuthor, anySectionDirty, selectedId]);
+  }, [mode, canAuthor, anySectionDirty, view]);
 
   // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
-  // on the ship node (the gate truth lives there); unblocked clicks
+  // on the ship section (the gate truth lives there); unblocked clicks
   // increment the counter and the Ship section fires its publish flow.
   const [publishSignal, setPublishSignal] = useState(0);
   const handlePublish = useCallback(() => {
     if (mode === 'new' || !canAuthor) return;
-    if (paletteHealth.blockers > 0) {
+    if (sectionHealth.blockers > 0) {
       select('ship');
       return;
     }
     setPublishSignal((s) => s + 1);
-  }, [mode, canAuthor, paletteHealth.blockers, select]);
-
-  /**
-   * T15 — resizable + collapsible sidebars. Widths persist to localStorage.
-   * During a drag the aside's style.width is mutated directly (no setState —
-   * this is what keeps the drag at 60fps); the width commits on pointer-up.
-   * `layoutRef` mirrors state so drag handlers never read stale closures,
-   * and persisting happens outside setState updaters.
-   */
-  const [panelLayout, setPanelLayout] = useState<PanelLayout>(loadPanelLayout);
-  const layoutRef = useRef(panelLayout);
-  const paletteAsideRef = useRef<HTMLElement | null>(null);
-  const inspectorAsideRef = useRef<HTMLElement | null>(null);
-  const liveWidthRef = useRef<{ palette?: number; inspector?: number }>({});
-
-  const updatePanelLayout = useCallback((patch: Partial<PanelLayout>) => {
-    layoutRef.current = { ...layoutRef.current, ...patch };
-    setPanelLayout(layoutRef.current);
-    savePanelLayout(layoutRef.current);
-  }, []);
-
-  const handlePanelDelta = useCallback((side: 'palette' | 'inspector', dx: number) => {
-    const limits = side === 'palette' ? PALETTE_LIMITS : INSPECTOR_LIMITS;
-    const key = side === 'palette' ? 'paletteWidth' : 'inspectorWidth';
-    const base = liveWidthRef.current[side] ?? layoutRef.current[key];
-    // Right panel: its inner (resize) edge is on the left, so a rightward
-    // pointer move narrows it — invert the delta.
-    const next = clampWidth(base + (side === 'palette' ? dx : -dx), limits);
-    liveWidthRef.current[side] = next;
-    const aside = side === 'palette' ? paletteAsideRef.current : inspectorAsideRef.current;
-    if (aside) aside.style.width = `${next}px`;
-  }, []);
-
-  const handlePanelEnd = useCallback(
-    (side: 'palette' | 'inspector') => {
-      const w = liveWidthRef.current[side];
-      liveWidthRef.current[side] = undefined;
-      if (w == null) return;
-      if (side === 'palette') updatePanelLayout({ paletteWidth: w });
-      else updatePanelLayout({ inspectorWidth: w });
-    },
-    [updatePanelLayout],
-  );
-
-  const collapsePanel = useCallback(
-    (side: 'palette' | 'inspector') => {
-      // A mid-drag collapse must not resurrect a stale live width on expand.
-      liveWidthRef.current[side] = undefined;
-      updatePanelLayout(side === 'palette' ? { paletteCollapsed: true } : { inspectorCollapsed: true });
-    },
-    [updatePanelLayout],
-  );
-
-  const expandPanel = useCallback(
-    (side: 'palette' | 'inspector') => {
-      liveWidthRef.current[side] = undefined;
-      updatePanelLayout(side === 'palette' ? { paletteCollapsed: false } : { inspectorCollapsed: false });
-    },
-    [updatePanelLayout],
-  );
+  }, [mode, canAuthor, sectionHealth.blockers, select]);
 
   /**
    * Merged builder topbar (ledger T13): instead of a stacked 56px row,
@@ -526,8 +447,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           orgName={orgName}
           hasDraft={hasDraft}
           hasLive={hasLive}
-          paletteCollapsed={panelLayout.paletteCollapsed}
-          onRestorePalette={() => expandPanel('palette')}
         />
       ),
       actions: (
@@ -536,11 +455,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           saveState={saveState}
           onSave={requestSave}
           canAuthor={canAuthor}
-          onTestRun={() => select('try')}
+          onTestRun={() => handleSelectSection('try')}
           onPublish={handlePublish}
-          blockingCount={paletteHealth.blockers}
-          inspectorCollapsed={panelLayout.inspectorCollapsed}
-          onRestoreInspector={() => expandPanel('inspector')}
+          blockingCount={sectionHealth.blockers}
         />
       ),
     };
@@ -554,12 +471,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     saveState,
     requestSave,
     canAuthor,
-    select,
+    handleSelectSection,
     handlePublish,
-    paletteHealth.blockers,
-    panelLayout.paletteCollapsed,
-    panelLayout.inspectorCollapsed,
-    expandPanel,
+    sectionHealth.blockers,
   ]);
 
   // Publish the merged topbar slots to the layout-level provider above
@@ -568,24 +482,22 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   // renders). Cleared on unmount so no stale chrome lingers.
   usePublishBuilderTopbarSlots(topbarSlots);
 
-  // Closed keyboard map, v10 (BUILD_PLAN.md §7b): Esc, N, node keys.
-  // Never fires from inputs (except Escape, which only ever deselects, and
-  // Ctrl/⌘+S, the standard save shortcut — preventDefault stops the browser's
-  // own save dialog).
-  // Node keys select the fixed node id directly — the footer promises them.
+  // Closed keyboard map (redesign): Esc, section keys, Ctrl/⌘+S.
+  // Never fires from inputs (except Escape, which only ever returns to the
+  // Overview, and Ctrl/⌘+S, the standard save shortcut — preventDefault
+  // stops the browser's own save dialog).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const inField =
         !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
       if (event.key === 'Escape') {
-        // Never strand unsaved input: Escape must not unmount the Purpose
+        // Never strand unsaved input: Escape must not unmount the Identity
         // form (new mode), the composer, the voice, brain, model, knowledge, tools,
         // guardrails, memory, context, response, role, or budget while any is dirty.
-        // Dirty surfaces blur instead (their own Esc handlers); selection stays.
+        // Dirty surfaces blur instead (their own Esc handlers); the view stays.
         if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
-        select(null);
-        setPaletteFilter(null);
+        handleSelectSection(OVERVIEW_ID);
         return;
       }
       if ((event.ctrlKey || event.metaKey) && (event.key === 's' || event.key === 'S')) {
@@ -594,34 +506,29 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
         return;
       }
       if (inField || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (event.key === 'n' || event.key === 'N') {
-        event.preventDefault();
-        searchRef.current?.focus();
-        return;
-      }
       if (mode === 'new' || !canAuthor) return;
       // ⇧K selects knowledge (PLAN v2: bare K navigates to the Knowledge
       // library page studio-wide — the builder must not steal it).
       if (event.shiftKey && (event.key === 'K' || event.key === 'k')) {
         event.preventDefault();
-        select('knowledge');
+        handleSelectSection('knowledge');
         return;
       }
-      const nodeKey: Record<string, string> = { t: 'tools', g: 'guardrails', b: 'brand', e: 'evaluation', s: 'budget' };
+      const sectionKey: Record<string, string> = { t: 'tools', g: 'guardrails', b: 'brand', e: 'evaluation', s: 'budget' };
       const lower = event.key.toLowerCase();
-      if (!event.shiftKey && nodeKey[lower] !== undefined) {
+      if (!event.shiftKey && sectionKey[lower] !== undefined) {
         event.preventDefault();
-        select(nodeKey[lower]);
+        handleSelectSection(sectionKey[lower]);
         return;
       }
       if (event.shiftKey && (event.key === 'M' || event.key === 'm')) {
         event.preventDefault();
-        select('memory');
+        handleSelectSection('memory');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [select, setPaletteFilter, mode, formState.dirty, composerDirty, brandDirty, brainDirty, modelDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, contextDirty, responseDirty, roleDirty, budgetDirty, canAuthor, requestSave]);
+  }, [handleSelectSection, mode, formState.dirty, composerDirty, brandDirty, brainDirty, modelDirty, knowledgeDirty, toolsDirty, guardrailsDirty, memoryDirty, contextDirty, responseDirty, roleDirty, budgetDirty, canAuthor, requestSave]);
 
   const inspectorContext: InspectorContext = useMemo(
     () => ({
@@ -655,7 +562,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       /**
        * Manual publish counter (v10 §8.12 — topbar Publish). The Ship
        * section fires its publish flow when this increments; blocked
-       * clicks never reach it — they select the ship node instead.
+       * clicks never reach it — they select the ship section instead.
        */
       publishSignal,
     }),
@@ -667,7 +574,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   if (mode === 'build' && assistant.data === undefined) {
     return (
       <Shell>
-        <LoadingVeil>Loading the circuit…</LoadingVeil>
+        <LoadingVeil>Loading the agent…</LoadingVeil>
       </Shell>
     );
   }
@@ -694,113 +601,71 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           <TemplateBanner assistantId={agentId} versionId={form.data.versionId} />
         </div>
       )}
-    <Main>
-      {!panelLayout.paletteCollapsed && (
-        <ComponentPalette
-          ref={searchRef}
-          asideRef={paletteAsideRef}
-          // Intentional ref read during render (T15): the drag mutates the
-          // aside width directly in the DOM; if an unrelated re-render lands
-          // mid-drag, the prop must reflect the live width or React snaps it
-          // back to the stale committed width. Read-only — never written here.
-          // eslint-disable-next-line react-hooks/refs
-          width={liveWidthRef.current.palette ?? panelLayout.paletteWidth}
-          onResizeDelta={(dx) => handlePanelDelta('palette', dx)}
-          onResizeEnd={() => handlePanelEnd('palette')}
-          onCollapse={() => collapsePanel('palette')}
-          nodes={paletteNodes}
-          selectedId={selectedId}
-          filter={paletteFilter}
-          onFilterChange={handlePaletteFilterChange}
-          onSelectNode={select}
+      <Main>
+        <SectionNav
+          entries={sectionEntries}
+          selectedId={view}
+          onSelect={handleSelectSection}
           locked={mode === 'new'}
-          canAuthor={canAuthor}
-          health={paletteHealth}
-          onHealthReview={() => select('ship')}
-          onHealthNext={(nodeId) => select(nodeId)}
         />
-      )}
-      <Suspense
-        fallback={
-          <LoadingVeil>
-            <Skeleton $h="240px" $r="12px" />
-          </LoadingVeil>
-        }
-      >
         {mode === 'new' && origin === 'choose' ? (
           <OriginScreen onBlank={() => setOrigin('blank')} />
-        ) : (
-          <AgentCanvas
-            nodes={projected.nodes}
-            edges={projected.edges}
-            layoutRev={layoutRev}
-            locked={mode === 'new'}
-            onSelectNode={select}
-            onNodePosition={setPosition}
-            onPositionsCommitted={persistPositions}
-            onPortClick={handlePortClick}
-            onTidy={handleTidy}
-            blockers={paletteHealth.blockers}
-            suggestions={paletteHealth.suggestions}
-            onValidate={() => {
-              shipReadiness.retry();
-              select('ship');
+        ) : view === OVERVIEW_ID ? (
+          <OverviewScreen
+            readiness={shipReadiness}
+            entries={sectionEntries}
+            versions={allVersions.data ?? []}
+            workingVersion={{
+              versionId: form.data?.versionId ?? null,
+              status: form.data?.status ?? null,
+              isDraft: hasDraft,
             }}
-            onReviewIssues={() => select('ship')}
-            onEngineRoom={
-              mode === 'build' && agentId ? () => navigate({ to: buildAgentEditPath(agentId) }) : undefined
-            }
+            activeVersionId={assistant.data?.activeVersionId ?? null}
+            draftDefinition={definition}
+            buildHref={agentId ? buildAgentEditPath(agentId) : '/agent-studio/agents'}
+            onSelectSection={handleSelectSection}
+          />
+        ) : (
+          <SectionBody
+            sectionId={view}
+            entry={selectedEntry}
+            context={inspectorContext}
+            purposeNodes={purposeNodeData}
+            onPurposeSelect={handleSelectSection}
+            purposeRef={purposeRef}
+            onFormState={onFormState}
+            onComposerDirty={onComposerDirty}
+            onBrandDirty={onBrandDirty}
+            onBrainDirty={onBrainDirty}
+            onModelDirty={onModelDirty}
+            onKnowledgeDirty={onKnowledgeDirty}
+            onToolsDirty={onToolsDirty}
+            onGuardrailsDirty={onGuardrailsDirty}
+            onMemoryDirty={onMemoryDirty}
+            onContextDirty={onContextDirty}
+            onResponseDirty={onResponseDirty}
+            onRoleDirty={onRoleDirty}
+            onBudgetDirty={onBudgetDirty}
+            onCreated={(id) => {
+              // A2-02: creation consumed the Identity form — it is not "unsaved
+              // changes". Clear it synchronously (flushSync) so the dirty
+              // guard's shouldBlockFn sees clean state before we navigate.
+              flushSync(() => {
+                setFormState({ dirty: false, valid: false });
+              });
+              navigate({ to: buildAgentBuildPath(id) });
+            }}
           />
         )}
-      </Suspense>
-      {!panelLayout.inspectorCollapsed && (
-        <BuilderInspector
-          selected={selectedNode}
-        context={inspectorContext}
-        nodes={paletteNodes}
-        onSelectNode={select}
-        purposeRef={purposeRef}
-        onFormState={onFormState}
-        onComposerDirty={onComposerDirty}
-        onBrandDirty={onBrandDirty}
-        onBrainDirty={onBrainDirty}
-        onModelDirty={onModelDirty}
-        onKnowledgeDirty={onKnowledgeDirty}
-        onToolsDirty={onToolsDirty}
-        onGuardrailsDirty={onGuardrailsDirty}
-        onMemoryDirty={onMemoryDirty}
-        onContextDirty={onContextDirty}
-        onResponseDirty={onResponseDirty}
-        onRoleDirty={onRoleDirty}
-        onBudgetDirty={onBudgetDirty}
-        asideRef={inspectorAsideRef}
-        // Intentional ref read during render (T15): same as the palette —
-        // keeps the live drag width stable across unrelated re-renders.
-        // eslint-disable-next-line react-hooks/refs
-        width={liveWidthRef.current.inspector ?? panelLayout.inspectorWidth}
-        onResizeDelta={(dx) => handlePanelDelta('inspector', dx)}
-        onResizeEnd={() => handlePanelEnd('inspector')}
-        onCollapse={() => collapsePanel('inspector')}
-        onCreated={(id) => {
-          // A2-02: creation consumed the Purpose form — it is not "unsaved
-          // changes". Clear it synchronously (flushSync) so the dirty
-          // guard's shouldBlockFn sees clean state before we navigate.
-          flushSync(() => {
-            setFormState({ dirty: false, valid: false });
-          });
-          navigate({ to: buildAgentBuildPath(id) });
-        }}
-      />
+      </Main>
+      {mode === 'new' && (
+        <BuilderBottomBar
+          action={bottomAction}
+          createReady={formState.valid}
+          busy={false}
+          onPrimary={handlePrimary}
+        />
       )}
-    </Main>
-    {mode === 'new' && (
-      <BuilderBottomBar
-        action={bottomAction}
-        createReady={formState.valid}
-        busy={false}
-        onPrimary={handlePrimary}
-      />
-    )}
-      </Shell>
+    </Shell>
   );
 }
