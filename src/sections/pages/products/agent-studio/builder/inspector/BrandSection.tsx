@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChevronDown } from 'lucide-react';
 import { TextArea } from '@components/common/ui/TextArea';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { ApiError } from '@lib/engine/client';
@@ -25,7 +26,12 @@ import {
   DefaultNote,
   GuideBody,
   GuideBox,
+  GuideChevron,
   GuideToggle,
+  VoiceCard,
+  VoiceEmpty,
+  VoiceLabel,
+  VoiceText,
 } from './BrandSection.styles';
 import {
   BudgetBar,
@@ -215,11 +221,14 @@ export function BrandSection({
   if (!canAuthor) {
     return (
       <Wrap>
-        {isBrandEmpty(text) ? (
-          <DefaultNote>Platform default voice — nothing set.</DefaultNote>
-        ) : (
-          <DefaultNote>{text}</DefaultNote>
-        )}
+        <VoiceCard>
+          <VoiceLabel>Brand voice</VoiceLabel>
+          {isBrandEmpty(text) ? (
+            <VoiceEmpty>Platform default voice — nothing set.</VoiceEmpty>
+          ) : (
+            <VoiceText>{text}</VoiceText>
+          )}
+        </VoiceCard>
         <CounterRow>
           <span>
             {chars.toLocaleString()} / {BRAND_LIMIT.toLocaleString()} chars
@@ -247,14 +256,17 @@ export function BrandSection({
         label="Brand voice"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        rows={4}
+        rows={6}
         placeholder="Short sentences. Contractions always. Never say “leverage”."
         hint="Composed into every reply, ahead of instructions."
       />
 
       <GuideBox>
         <GuideToggle type="button" onClick={() => setGuideOpen((o) => !o)} aria-expanded={guideOpen}>
-          <span>How to write it {guideOpen ? '▾' : '▸'}</span>
+          <span>How to write it</span>
+          <GuideChevron $open={guideOpen} aria-hidden="true">
+            <ChevronDown size={16} strokeWidth={2} />
+          </GuideChevron>
         </GuideToggle>
         {guideOpen && (
           <GuideBody>
@@ -291,7 +303,7 @@ export function BrandSection({
           </span>
           <span>~{estimateBrandTokens(chars).toLocaleString()} tokens (est.)</span>
         </CounterRow>
-        <BudgetBar style={{ marginTop: 6 }}>
+        <BudgetBar>
           <BudgetFill $ratio={ratio} />
         </BudgetBar>
       </div>
