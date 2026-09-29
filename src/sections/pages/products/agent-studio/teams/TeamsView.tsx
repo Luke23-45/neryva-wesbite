@@ -457,8 +457,28 @@ function ServiceAccountsSection() {
   const enable = useEnableServiceAccount();
   const del = useDeleteServiceAccount();
 
-  const [rotateTarget, setRotateTarget] = useState<{ id: string; name: string } | null>(null);
+  // Shown-once restore, computed lazily at mount (not in an effect): a
+  // rotated token that was revealed but never acknowledged (e.g. refresh
+  // mid-reveal) reopens the panel in the explicit "already revealed" state
+  // instead of silently losing the token — the same sessionStorage marker
+  // pattern the create route uses.
+  const [rotateRestore] = useState<{ id: string; name: string } | null>(() => {
+    try {
+      const prefix = 'teams:service-account:rotate:revealed:';
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith(prefix)) {
+          return { id: key.slice(prefix.length), name: sessionStorage.getItem(key) || 'service account' };
+        }
+      }
+    } catch {
+      // Storage blocked — nothing to restore.
+    }
+    return null;
+  });
+  const [rotateTarget, setRotateTarget] = useState<{ id: string; name: string } | null>(rotateRestore);
   const [issuedToken, setIssuedToken] = useState<string | null>(null);
+  const [rotateAlreadyRevealed, setRotateAlreadyRevealed] = useState<boolean>(rotateRestore !== null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
@@ -515,7 +535,7 @@ function ServiceAccountsSection() {
                         aria-label={`Rotate token for ${s.name}`}
                         title="Rotate token"
                         disabled={rotate.isPending}
-                        onClick={() => { setRotateTarget({ id: s.id, name: s.name }); setIssuedToken(null); }}
+                        onClick={() => { setRotateTarget({ id: s.id, name: s.name }); setIssuedToken(null); setRotateAlreadyRevealed(false); }}
                       >
                         <RefreshCw size={13} strokeWidth={1.7} />
                       </IconGhostBtn>
@@ -562,9 +582,23 @@ function ServiceAccountsSection() {
                   <CopyButton value={issuedToken} label="Copy token" />
                 </TokenBox>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-                  <ActionButton onClick={() => { setRotateTarget(null); setIssuedToken(null); }}>Done</ActionButton>
+                  <ActionButton onClick={() => { try { sessionStorage.removeItem(`teams:service-account:rotate:revealed:${rotateTarget.id}`); } catch { /* storage blocked */ } setRotateTarget(null); setIssuedToken(null); }}>Done</ActionButton>
                 </div>
               </TokenReveal>
+            ) : rotateAlreadyRevealed ? (
+              <>
+                <TokenRevealTitle>Token already shown</TokenRevealTitle>
+                <TokenRevealText>
+                  A rotated token for &ldquo;{rotateTarget.name}&rdquo; was already generated and shown once.
+                  It cannot be displayed again — rotating again issues a fresh token and invalidates the old one.
+                </TokenRevealText>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <ActionButton variant="secondary" onClick={() => { try { sessionStorage.removeItem(`teams:service-account:rotate:revealed:${rotateTarget.id}`); } catch { /* storage blocked */ } setRotateTarget(null); setRotateAlreadyRevealed(false); }}>Dismiss</ActionButton>
+                  <ActionButton onClick={() => setRotateAlreadyRevealed(false)}>
+                    Rotate again
+                  </ActionButton>
+                </div>
+              </>
             ) : (
               <>
                 <TokenRevealTitle>Rotate token for &ldquo;{rotateTarget.name}&rdquo;?</TokenRevealTitle>
@@ -572,12 +606,12 @@ function ServiceAccountsSection() {
                   Rotation issues a new token and invalidates the old one immediately. Services using it must be updated.
                 </TokenRevealText>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <ActionButton variant="secondary" onClick={() => setRotateTarget(null)}>Cancel</ActionButton>
+                  <ActionButton variant="secondary" onClick={() => { setRotateTarget(null); setRotateAlreadyRevealed(false); }}>Cancel</ActionButton>
                   <ActionButton
                     disabled={rotate.isPending}
                     onClick={() => rotate.mutate(
                       { id: rotateTarget.id },
-                      { onSuccess: (result) => { setIssuedToken(result.token); toast.success('Token rotated'); } },
+                      { onSuccess: (result) => { setIssuedToken(result.token); try { sessionStorage.setItem(`teams:service-account:rotate:revealed:${rotateTarget.id}`, rotateTarget.name); } catch { /* storage blocked — in-memory reveal still renders once */ } toast.success('Token rotated'); } },
                     )}
                   >
                     Rotate

@@ -166,25 +166,20 @@ export function ChannelsView() {
             Where published agents meet customers — connect a platform, bind its assistant, verify, then set up the webhook.
           </ViewSubtitle>
         </ViewHeader>
-        {canGovern ? (
-          <ActionButton
-            size="sm"
-            onClick={() =>
-              navigate({
-                to: '/agent-studio/channels/connect',
-                search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
-              })
-            }
-          >
-            <Plus size={14} strokeWidth={2} />
-            Connect
-          </ActionButton>
-        ) : (
-          <ActionButton size="sm" disabled title={governDenied}>
-            <Plus size={14} strokeWidth={2} />
-            Connect
-          </ActionButton>
-        )}
+        <ActionButton
+          size="sm"
+          disabled={!canGovern}
+          title={canGovern ? 'Connect a platform' : governDenied}
+          onClick={() =>
+            navigate({
+              to: '/agent-studio/channels/connect',
+              search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
+            })
+          }
+        >
+          <Plus size={14} strokeWidth={2} />
+          Connect
+        </ActionButton>
       </ViewHeaderRow>
 
       {returnTo && (
@@ -270,7 +265,7 @@ export function ChannelsView() {
                                 navigate({
                                   to: '/agent-studio/channels/$accountId/webhook-setup',
                                   params: { accountId: account.id },
-                                  search: { returnTo: undefined, assistantId: undefined },
+                                  search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
                                 })
                               }
                             >
@@ -293,12 +288,13 @@ export function ChannelsView() {
                             <IconBtn
                               type="button"
                               aria-label={`Rotate credentials for ${account.displayName}`}
-                              title="Rotate sealed credentials (credentials section)"
+                              title="Rotate sealed credentials"
+                              disabled={account.platform === 'web'}
                               onClick={() =>
                                 navigate({
                                   to: '/agent-studio/channels/$accountId',
                                   params: { accountId: account.id },
-                                  search: { returnTo: undefined, assistantId: undefined },
+                                  search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
                                 })
                               }
                             >
@@ -323,7 +319,7 @@ export function ChannelsView() {
                                 navigate({
                                   to: '/agent-studio/channels/$accountId',
                                   params: { accountId: account.id },
-                                  search: { returnTo: undefined, assistantId: undefined },
+                                  search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
                                 })
                               }
                             >

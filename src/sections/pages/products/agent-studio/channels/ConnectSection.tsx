@@ -17,7 +17,7 @@ import {
   type ConnectablePlatform,
 } from '@hooks/studio/useSetupChannels';
 import { useAssistants } from '@hooks/studio/useAssistants';
-import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
+import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
@@ -91,7 +91,6 @@ export function ConnectSection() {
   const returnTo = typeof search.returnTo === 'string' && search.returnTo.startsWith('/agent-studio/') ? search.returnTo : null;
   const incomingAssistantId = typeof search.assistantId === 'string' && search.assistantId !== '' ? search.assistantId : null;
   const canGovern = canSetup(role, 'setup:govern');
-  const governDenied = setupDeniedCopy(role, 'setup:govern');
 
   const create = useCreateChannel();
   const assistants = useAssistants();
@@ -119,17 +118,15 @@ export function ConnectSection() {
     greeting.trim() !== '';
   const { dialog: dirtyDialog } = useDirtyGuard(dirty, 'You have an unsent channel connection. Leaving now discards it.');
 
+  // Non-govern users land here directly — bounce to the list (server gates too).
+  useEffect(() => {
+    if (!canGovern) {
+      navigate({ to: '/agent-studio/channels', search: { returnTo: undefined, assistantId: undefined } });
+    }
+  }, [canGovern, navigate]);
+
   if (!canGovern) {
-    return (
-      <ViewShell>
-        <SectionBackRow to="/agent-studio/channels">
-          <span aria-hidden="true">‹</span> Channels
-        </SectionBackRow>
-        <Panel title="Not permitted" subtitle="Connecting channels requires the govern capability.">
-          <p style={{ fontSize: 13 }}>{governDenied}</p>
-        </Panel>
-      </ViewShell>
-    );
+    return null;
   }
 
   // H5: entries are normalized to scheme://host[:port] — a pasted path

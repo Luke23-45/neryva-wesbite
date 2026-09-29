@@ -52,10 +52,12 @@ All are decorative (`aria-hidden="true"`).
 - **Telegram** uses `Logo.svg` from the official Telegram press kit archive
   linked on telegram.org/press — full-color gradient mark, not the
   single-color redraw.
-- **Messenger** is unresolvable: Meta bot-gates every official brand-resource
-  surface (brand.meta.com, meta.com/brand, messenger.com, m.me,
-  developers.facebook.com). The existing component is left untouched rather
-  than substituted with another approximation.
+- **Messenger** is the one acknowledged approximation: Meta bot-gates every
+  official brand-resource surface (brand.meta.com, meta.com/brand,
+  messenger.com, m.me, developers.facebook.com), so no official source was
+  obtainable. The component is new in this migration, built from the verbatim
+  Simple Icons paths and labeled as such — it is the single exception to the
+  no-approximations rule below.
 - **Google Drive** uses the official 2020 tri-color mark from Wikimedia Commons
   (Simple Icons only carries the monochrome version, which would violate the
   correct-colors requirement).
@@ -63,8 +65,10 @@ All are decorative (`aria-hidden="true"`).
   (Simple Icons only carries the monochrome version).
 - **Sitemap** and **Web widget** have no brand; the marks are original neutral
   designs that adapt to the theme via `currentColor`.
-- No Lucide fallbacks. No approximations. If a brand mark cannot be sourced
-  officially, the slot stays empty.
+- No Lucide fallbacks. Official marks everywhere except Messenger, which is a
+  verbatim-Simple-Icons labeled approximation (see sourcing note — Meta
+  publishes no obtainable official asset). If a brand mark cannot be sourced
+  officially and no honest labeled fallback exists, the slot stays empty.
 
 ## Trademark notice
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { Webhook } from 'lucide-react';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Panel } from '@components/common/ui/Panel';
@@ -17,7 +17,7 @@ import {
   type ChannelAccount,
   type WebhookSetupResult,
 } from '@hooks/studio/useSetupChannels';
-import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
+import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { SectionBackRow } from './SectionBackRow';
 import { PlatformIcon } from './platformIcons';
@@ -73,7 +73,21 @@ const revealedKey = (accountId: string) => `channels:webhook-setup:revealed:${ac
 export function WebhookSetupSection() {
   const params = useParams({ from: '/agent-studio/channels/$accountId/webhook-setup' });
   const navigate = useNavigate();
+  const { role } = useOrg();
+  const canGovern = canSetup(role, 'setup:govern');
   const channel = useChannel(params.accountId);
+
+  // C14: search is validated on the parent layout route and inherited here.
+  const search = useSearch({ from: '/agent-studio/channels/$accountId/webhook-setup' });
+  const returnTo = typeof search.returnTo === 'string' && search.returnTo.startsWith('/agent-studio/') ? search.returnTo : null;
+
+  // Non-govern users bounce to the list (server gates setup too) — the
+  // account display name and setup surface never render before the gate.
+  useEffect(() => {
+    if (!canGovern) {
+      navigate({ to: '/agent-studio/channels', search: { returnTo: undefined, assistantId: undefined } });
+    }
+  }, [canGovern, navigate]);
 
   useEffect(() => {
     if (!channel.isPending && !channel.isError && !channel.data) {
@@ -81,9 +95,17 @@ export function WebhookSetupSection() {
     }
   }, [channel.isPending, channel.isError, channel.data, navigate]);
 
+  if (!canGovern) {
+    return null;
+  }
+
+  // The styled back row erases TanStack's per-route param/search inference,
+  // so the account id is interpolated into the path (same pattern as
+  // AgentEditor's BackLink). It lands on the natural parent; the C14
+  // contract params are threaded through the entry links and done().
   return (
     <ViewShell>
-      <SectionBackRow to="/agent-studio/channels">
+      <SectionBackRow to={`/agent-studio/channels/${params.accountId}`}>
         <span aria-hidden="true">‹</span> Channels
       </SectionBackRow>
       <QueryView
@@ -91,17 +113,14 @@ export function WebhookSetupSection() {
         isEmpty={(d) => d === null}
         empty={{ title: 'Channel not found', description: 'This channel account does not exist in your organization.' }}
       >
-        {(account) => (account ? <WebhookSetupForm key={account.id} account={account} /> : null)}
+        {(account) => (account ? <WebhookSetupForm key={account.id} account={account} returnTo={returnTo} /> : null)}
       </QueryView>
     </ViewShell>
   );
 }
 
-function WebhookSetupForm({ account }: { account: ChannelAccount }) {
-  const { role } = useOrg();
+function WebhookSetupForm({ account, returnTo }: { account: ChannelAccount; returnTo: string | null }) {
   const navigate = useNavigate();
-  const canGovern = canSetup(role, 'setup:govern');
-  const governDenied = setupDeniedCopy(role, 'setup:govern');
   const webhookSetup = useWebhookSetup();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -136,22 +155,20 @@ function WebhookSetupForm({ account }: { account: ChannelAccount }) {
   };
 
   const done = () => {
-    navigate({ to: '/agent-studio/channels/$accountId', params: { accountId: account.id }, search: { returnTo: undefined, assistantId: undefined } });
+    // C14 publish exit: honor the return contract — back to the agent when
+    // this page was entered with ?returnTo=, otherwise the channel detail.
+    if (returnTo) {
+      navigate({ to: returnTo });
+    } else {
+      navigate({ to: '/agent-studio/channels/$accountId', params: { accountId: account.id }, search: { returnTo: undefined, assistantId: undefined } });
+    }
   };
-
-  if (!canGovern) {
-    return (
-      <Panel title="Not permitted" subtitle="Webhook setup requires the govern capability.">
-        <p style={{ fontSize: 13 }}>{governDenied}</p>
-      </Panel>
-    );
-  }
 
   return (
     <>
       <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewHeader>
-          <ViewTitle ref={headingRef} tabIndex={-1}>Webhook setup — {account.displayName}</ViewTitle>
+          <ViewTitle ref={headingRef} tabIndex={-1}>Webhook — {account.displayName}</ViewTitle>
           <ViewSubtitle>
             Get the callback URL and the once-shown verify token for <Mono>{account.platform}</Mono>.
           </ViewSubtitle>

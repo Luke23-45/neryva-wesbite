@@ -20,8 +20,11 @@ vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
 
+import { WebhookSetupSection } from './WebhookSetupSection';
+
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
+const webhookSetupMutate = vi.fn();
 let mockChannelsData: unknown[] = [];
 let mockChannelData: unknown = null;
 
@@ -42,7 +45,13 @@ vi.mock('@hooks/studio/useSetupChannels', async (importOriginal) => {
     useDeactivateChannel: () => ({ mutate: vi.fn(), isPending: false }),
     useRotateChannelCredentials: () => ({ mutate: vi.fn(), isPending: false }),
     useVerifyChannel: () => ({ mutate: vi.fn(), isPending: false }),
-    useWebhookSetup: () => ({ mutate: vi.fn(), isPending: false }),
+    useWebhookSetup: () => ({
+      mutate: (accountId: unknown, opts?: { onSuccess?: (r: unknown) => void }) => {
+        webhookSetupMutate(accountId, opts);
+        opts?.onSuccess?.({ verifyToken: 'whsec_test_token', webhookUrl: 'https://console.example/wh/ch-web-1' });
+      },
+      isPending: false,
+    }),
     widgetSnippet: () => '<script></script>',
     widgetSnippetOrigin: () => 'https://console.example',
     PLATFORM_CREDENTIAL_SPECS: [
@@ -96,8 +105,13 @@ async function routerAt(initialPath: string) {
     path: '/$accountId',
     component: () => shell(<ChannelDetailSection />),
   });
+  const webhookRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: '/$accountId/webhook-setup',
+    component: () => shell(<WebhookSetupSection />),
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([layoutRoute.addChildren([indexRoute, connectRoute, detailRoute])]),
+    routeTree: rootRoute.addChildren([layoutRoute.addChildren([indexRoute, connectRoute, detailRoute, webhookRoute])]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   await act(async () => {
@@ -109,8 +123,10 @@ async function routerAt(initialPath: string) {
 beforeEach(() => {
   createMutate.mockReset();
   updateMutate.mockReset();
+  webhookSetupMutate.mockReset();
   mockChannelsData = [];
   mockChannelData = null;
+  sessionStorage.clear();
 });
 
 describe('ChannelsView (C14 returnTo exit)', () => {
@@ -213,5 +229,56 @@ describe('ChannelDetailSection (C-2, H12 widget extras)', () => {
     mockChannelData = null;
     const router = await routerAt('/agent-studio/channels/nope');
     expect(router.state.location.pathname).toBe('/agent-studio/channels');
+  });
+});
+
+describe('WebhookSetupSection (C-3 shown-once)', () => {
+  const webAccount = {
+    id: 'ch-web-1',
+    platform: 'web',
+    displayName: 'Web Widget',
+    publicKey: 'nk_live_test',
+    status: 'active',
+    health: null,
+    config: {},
+    webhookUrl: null,
+    createdAt: null,
+    updatedAt: null,
+  };
+
+  it('writes the reveal marker when the verify token is issued', async () => {
+    mockChannelData = webAccount;
+    await routerAt('/agent-studio/channels/ch-web-1/webhook-setup');
+    fireEvent.click(screen.getByText('Run webhook setup'));
+    expect(webhookSetupMutate).toHaveBeenCalledWith('ch-web-1', expect.anything());
+    expect(sessionStorage.getItem('channels:webhook-setup:revealed:ch-web-1')).toBe('1');
+    expect(screen.getByText('whsec_test_token')).toBeTruthy();
+  });
+
+  it('shows the already-revealed state on refresh instead of the token', async () => {
+    mockChannelData = webAccount;
+    sessionStorage.setItem('channels:webhook-setup:revealed:ch-web-1', '1');
+    await routerAt('/agent-studio/channels/ch-web-1/webhook-setup');
+    expect(screen.getByText(/never rendered twice/)).toBeTruthy();
+    expect(screen.queryByText('whsec_test_token')).toBeNull();
+    expect(screen.queryByText('Run webhook setup')).toBeNull();
+  });
+
+  it('done() returns to the guarded returnTo when the publish contract is present', async () => {
+    mockChannelData = webAccount;
+    const router = await routerAt(
+      '/agent-studio/channels/ch-web-1/webhook-setup?returnTo=/agent-studio/agents/agent-1&assistantId=agent-1',
+    );
+    fireEvent.click(screen.getByText('Run webhook setup'));
+    fireEvent.click(screen.getByText('Done'));
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1');
+  });
+
+  it('done() falls back to channel detail without a returnTo', async () => {
+    mockChannelData = webAccount;
+    const router = await routerAt('/agent-studio/channels/ch-web-1/webhook-setup');
+    fireEvent.click(screen.getByText('Run webhook setup'));
+    fireEvent.click(screen.getByText('Done'));
+    expect(router.state.location.pathname).toBe('/agent-studio/channels/ch-web-1');
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Panel } from '@components/common/ui/Panel';
@@ -150,7 +150,18 @@ function healthTitle(health: Record<string, unknown>): string {
 export function ChannelDetailSection() {
   const params = useParams({ from: '/agent-studio/channels/$accountId' });
   const navigate = useNavigate();
+  const { role } = useOrg();
+  const canGovern = canSetup(role, 'setup:govern');
   const channel = useChannel(params.accountId);
+
+  // Non-govern users bounce to the list (server gates the mutations too) —
+  // account names, URLs, and config are a govern surface; nothing renders
+  // before the gate.
+  useEffect(() => {
+    if (!canGovern) {
+      navigate({ to: '/agent-studio/channels', search: { returnTo: undefined, assistantId: undefined } });
+    }
+  }, [canGovern, navigate]);
 
   // Unknown account id → back to the list (same rule as integrations'
   // unknown provider).
@@ -159,6 +170,10 @@ export function ChannelDetailSection() {
       navigate({ to: '/agent-studio/channels', search: { returnTo: undefined, assistantId: undefined } });
     }
   }, [channel.isPending, channel.isError, channel.data, navigate]);
+
+  if (!canGovern) {
+    return null;
+  }
 
   return (
     <ViewShell>
@@ -179,6 +194,11 @@ export function ChannelDetailSection() {
 function ChannelDetailForm({ account }: { account: ChannelAccount }) {
   const { role } = useOrg();
   const navigate = useNavigate();
+  // C14: search is validated on the parent layout route and inherited here —
+  // thread it onward so detail → webhook-setup keeps the publish exit alive.
+  const detailSearch = useSearch({ from: '/agent-studio/channels/$accountId' });
+  const returnTo = typeof detailSearch.returnTo === 'string' && detailSearch.returnTo.startsWith('/agent-studio/') ? detailSearch.returnTo : null;
+  const incomingAssistantId = typeof detailSearch.assistantId === 'string' && detailSearch.assistantId !== '' ? detailSearch.assistantId : null;
   const canGovern = canSetup(role, 'setup:govern');
   const governDenied = setupDeniedCopy(role, 'setup:govern');
   const update = useUpdateChannel();
@@ -330,7 +350,7 @@ function ChannelDetailForm({ account }: { account: ChannelAccount }) {
               <Link
                 to="/agent-studio/channels/$accountId/webhook-setup"
                 params={{ accountId: account.id }}
-                search={{ returnTo: undefined, assistantId: undefined }}
+                search={{ returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined }}
                 style={{ fontSize: 13 }}
               >
                 Webhook setup →
