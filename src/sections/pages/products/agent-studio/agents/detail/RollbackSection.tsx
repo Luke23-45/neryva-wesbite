@@ -91,7 +91,10 @@ export function RollbackSection() {
   // Don't fire the agent/version reads for users who are about to bounce (server gates too).
   const assistant = useAssistant(canGovern ? agentId : null);
   // Governance gate + unknown-agent bounce. Nothing renders before the gates.
-  // (computed before useAssistantVersions so the versions read never fires for bounced users)
+  // (agentUnknown is computed before useAssistantVersions so the versions
+  // read is suppressed once the agent read settles — one server-gated,
+  // unrendered versions request can still fire on the first render while
+  // the agent read is pending.)
   const agentUnknown = canGovern && !assistant.isPending && (assistant.isError || assistant.data === null);
   const versions = useAssistantVersions(canGovern && !agentUnknown ? agentId : null);
   const rollback = useRollbackAssistant(agentId);

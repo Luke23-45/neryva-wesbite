@@ -118,8 +118,14 @@ async function routerAt(initialPath: string) {
       </ThemeProvider>
     ),
   });
+  // Probe for the origin auto-land target (?autoLand=builder).
+  const buildProbe = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/agent-studio/agents/$agentId/build',
+    component: () => <div>builder</div>,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([templatesRoute.addChildren([galleryRoute, installRoute])]),
+    routeTree: rootRoute.addChildren([templatesRoute.addChildren([galleryRoute, installRoute]), buildProbe]),
     history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   await act(async () => {
@@ -237,6 +243,19 @@ describe('InstallSection (R-1 — the wizard as a routed section)', () => {
     const router = await routerAt('/agent-studio/templates/nope-missing/install');
     await act(async () => {});
     expect(router.state.location.pathname).toBe(GALLERY);
+  });
+
+  it('auto-lands in the builder on success when ?autoLand=builder (origin onInstalled contract)', async () => {
+    const router = await routerAt(`${INSTALL}?autoLand=builder`);
+    fireEvent.click(screen.getByRole('button', { name: 'Install as draft' }));
+    await act(async () => {
+      createOpts?.onSuccess?.({ assistantId: 'a-9' });
+    });
+    // The old onInstalled contract: straight into the builder — no
+    // checklist, no completion marker left behind.
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/a-9/build');
+    expect(screen.queryByText(/Recorded in Audit/)).toBeNull();
+    expect(sessionStorage.length).toBe(0);
   });
 
   it('bounces roles without setup:author before rendering', async () => {

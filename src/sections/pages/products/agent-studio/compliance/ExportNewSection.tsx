@@ -85,8 +85,9 @@ export const MAX_EXPORT_CONVERSATIONS = 20;
 export function ExportNewSection() {
   const navigate = useNavigate();
   // The engine's default list window is the 50 most recent conversations
-  // (limit clamped 1..100) — the dialog called useConversations() bare and
-  // this section does the same, so the "50 most recent" copy stays true.
+  // (limit clamped 1..100). The dialog called useConversations({ enabled: open });
+  // the section calls it bare — the default 50-most-recent window is
+  // unchanged, so the "50 most recent" copy stays true.
   const conversations = useConversations();
   const rows = conversations.data ?? [];
   const requestExport = useRequestExport();

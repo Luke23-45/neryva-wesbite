@@ -16,10 +16,13 @@ export interface InstallWizardProps {
  * Modal is gone. This component keeps the old prop contract so the builder
  * origin screen keeps working untouched — it redirects to the section,
  * threading the current location as returnTo so Cancel/Close return here.
- * (The gallery, builder banner, and agent-detail origin navigate to the
- * section directly instead of rendering this shim.)
+ * The origin's onInstalled (auto-land in the builder on success) is
+ * threaded as ?autoLand=builder, which the section honors on install
+ * success instead of showing the post-install checklist. (The gallery,
+ * builder banner, and agent-detail origin navigate to the section directly
+ * instead of rendering this shim.)
  */
-export function InstallWizard({ entry }: InstallWizardProps) {
+export function InstallWizard({ entry, onInstalled }: InstallWizardProps) {
   const navigate = useNavigate();
   const router = useRouter();
 
@@ -27,10 +30,13 @@ export function InstallWizard({ entry }: InstallWizardProps) {
     const back = router.state.location.pathname;
     void navigate({
       to: `/agent-studio/templates/${entry.template.slug}/install`,
-      search: { returnTo: back.startsWith('/agent-studio/') ? back : undefined },
+      search: {
+        returnTo: back.startsWith('/agent-studio/') ? back : undefined,
+        ...(onInstalled ? { autoLand: 'builder' as const } : {}),
+      },
       replace: true,
     });
-  }, [entry.template.slug, navigate, router]);
+  }, [entry.template.slug, navigate, router, onInstalled]);
 
   return null;
 }

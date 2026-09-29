@@ -15,6 +15,7 @@ import { useCreateAssistant } from '@hooks/studio/useAgentAuthoring';
 import { TEMPLATES_QUERY_KEY, useAssistantTemplates, type TemplateListEntry } from '@hooks/studio/useSetupTemplates';
 import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
+import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { describeBlockExpiry, matchTemplateBlock, useControlBlocks } from '@hooks/studio/useSetupOperate';
 import { TEMPLATE_COPY, describeInstallOutcome, validateTemplateName } from '../builder/lib/template-model';
 import { buildAgentBuildPath } from '../builder/lib/slot-model';
@@ -123,11 +124,15 @@ export function InstallSection() {
   const canWrite = canSetup(role, 'setup:author');
   // Strict-from now that the route is registered in routes.tsx.
   const params = useParams({ from: TEMPLATE_INSTALL_ROUTE_ID });
-  const search = useSearch({ strict: false }) as { returnTo?: unknown };
+  const search = useSearch({ strict: false }) as { returnTo?: unknown; autoLand?: unknown };
   const returnTo =
     typeof search.returnTo === 'string' && search.returnTo.startsWith('/agent-studio/')
       ? search.returnTo
       : null;
+  // Builder-origin installs arrive via the R-1 shim with ?autoLand=builder:
+  // the origin's onInstalled auto-lands in the builder on success instead
+  // of showing the post-install checklist.
+  const autoLandBuilder = search.autoLand === 'builder';
 
   const templates = useAssistantTemplates({ enabled: canWrite });
   const templateId = params.templateId ?? '';
@@ -160,7 +165,7 @@ export function InstallSection() {
         {(rows) => {
           const current = rows.find((e) => e.template.slug === templateId);
           return current ? (
-            <InstallForm key={`${current.template.slug}@${current.template.version}`} entry={current} returnTo={returnTo} />
+            <InstallForm key={`${current.template.slug}@${current.template.version}`} entry={current} returnTo={returnTo} autoLandBuilder={autoLandBuilder} />
           ) : null;
         }}
       </QueryView>
@@ -168,7 +173,7 @@ export function InstallSection() {
   );
 }
 
-function InstallForm({ entry, returnTo }: { entry: TemplateListEntry; returnTo: string | null }) {
+function InstallForm({ entry, returnTo, autoLandBuilder }: { entry: TemplateListEntry; returnTo: string | null; autoLandBuilder: boolean }) {
   const { orgId, role } = useOrg();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -178,6 +183,11 @@ function InstallForm({ entry, returnTo }: { entry: TemplateListEntry; returnTo: 
   const [name, setName] = useState(entry.template.slug);
   const [assistantId, setAssistantId] = useState<string | null>(null);
   const [confirmedReinstall, setConfirmedReinstall] = useState(false);
+  // Dirty guard: a renamed agent name is unsent content. Released on submit
+  // (submitted flag) and once the install succeeds (assistantId set).
+  const [submitted, setSubmitted] = useState(false);
+  const dirty = !submitted && !assistantId && name.trim() !== entry.template.slug;
+  const { dialog: dirtyDialog } = useDirtyGuard(dirty, 'You renamed the agent but did not install it. Leaving now discards the name.');
   // A refresh after a completed install lands here: the in-memory
   // assistantId is gone but the marker survives — explicit notice, never a
   // stale silent success.
@@ -210,10 +220,21 @@ function InstallForm({ entry, returnTo }: { entry: TemplateListEntry; returnTo: 
             return;
           }
           toast.success(`Installed ${entry.template.slug}@${entry.template.version} as a draft — never live`);
-          writeInstalled(entry.template.slug, result.assistantId);
-          setAssistantId(result.assistantId);
           // Installed flags live on the templates list — refresh them.
           void queryClient.invalidateQueries({ queryKey: [...TEMPLATES_QUERY_KEY, orgId, 'list'] });
+          if (autoLandBuilder) {
+            // Builder-origin installs (R-1 shim, ?autoLand=builder): honor
+            // the old onInstalled contract — auto-land in the builder
+            // instead of showing the post-install checklist. No completion
+            // marker is written, so a back-navigation lands on a clean form
+            // rather than a stale success. The submitted flag releases the
+            // dirty guard for this navigation.
+            setSubmitted(true);
+            navigate({ to: buildAgentBuildPath(result.assistantId) });
+            return;
+          }
+          writeInstalled(entry.template.slug, result.assistantId);
+          setAssistantId(result.assistantId);
         },
       },
     );
@@ -264,6 +285,7 @@ function InstallForm({ entry, returnTo }: { entry: TemplateListEntry; returnTo: 
 
   return (
     <>
+      {dirtyDialog}
       <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewHeader>
           <ViewTitle>Install {entry.template.slug}@{entry.template.version}</ViewTitle>
