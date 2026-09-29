@@ -746,7 +746,7 @@ function UploadModal({
                   onChange={(e) => setRow(row.key, { title: e.target.value })}
                   placeholder="Defaults to the slug, else auto"
                   maxLength={256}
-                  hint="≤256 characters — the engine rejects longer titles (422)."
+                  hint="≤256 characters — the engine rejects longer titles (400)."
                 />
               </div>
             </div>
@@ -785,7 +785,7 @@ function UploadModal({
               onChange={(e) => setPasteTitle(e.target.value)}
               placeholder="Defaults to the slug, else auto"
               maxLength={256}
-              hint="≤256 characters — the engine rejects longer titles (422)."
+              hint="≤256 characters — the engine rejects longer titles (400)."
             />
           </div>
           <p style={{ fontSize: 12, opacity: 0.65, marginTop: 8 }}>

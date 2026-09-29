@@ -172,7 +172,14 @@ export function ModelsView() {
   // toward the legacy copy: the engine stays the backstop, and a
   // transient status read never locks an enterprise org out of its
   // own credentials.
-  const enterprise = useEnterpriseStatus();
+  // NG-MT-2: gate the read on the credential-read capability (the same
+  // owner/admin/developer set CredentialsPanel uses for this exact hook —
+  // here that's `canWrite`, also used for useProviderCredentials below).
+  // The engine 403s enterprise/status for every other role, so readers
+  // fired a doomed 403 (+3 retries) on this page before this gate. Roles
+  // without the capability fall back to the legacy copy, exactly like an
+  // unknown read — the engine stays the backstop.
+  const enterprise = useEnterpriseStatus({ enabled: canWrite });
   const byokBlocked = enterprise.data === false;
   const [tab, setTab] = useState<Tab>('catalog');
   const models = useModelAvailability();

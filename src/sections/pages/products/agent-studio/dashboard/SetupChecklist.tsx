@@ -56,8 +56,18 @@ export function SetupChecklist() {
   const canReadApprovals = canSetup(role, 'setup:author');
   const approvals = useApprovals('PENDING', { enabled: canReadApprovals });
 
+  // D-09-FOLLOWUP: in TanStack v5 a disabled query never leaves `pending`,
+  // so the bare `approvals.isPending` below held the panel on an eternal
+  // skeleton for reader/billing (the query is only enabled when
+  // `canReadApprovals`). Gate the pending flag on the same capability the
+  // query is enabled with: for roles the engine refuses, the approvals
+  // read simply doesn't contribute to the loading state.
   const loading =
-    assistants.isPending || documents.isPending || models.isPending || channels.isPending || approvals.isPending;
+    assistants.isPending ||
+    documents.isPending ||
+    models.isPending ||
+    channels.isPending ||
+    (approvals.isPending && canReadApprovals);
 
   if (loading) {
     return <Skeleton $h="180px" $r="12px" />;
@@ -81,7 +91,9 @@ export function SetupChecklist() {
       void documents.refetch();
       void models.refetch();
       void channels.refetch();
-      void approvals.refetch();
+      // v5 refetch() bypasses `enabled` — only refetch the maker-gated
+      // query when the viewer is allowed to read it.
+      if (canReadApprovals) void approvals.refetch();
     };
     return (
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>

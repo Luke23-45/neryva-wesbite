@@ -26,9 +26,18 @@ vi.mock('@/Context/OrgContext', () => ({
 // true = active enterprise commitment, false = none, undefined = unknown
 // (loading/error; the UI fails open toward the legacy copy).
 let enterpriseState: boolean | undefined = true;
+// NG-MT-2: capture the options the view passes so a test can assert the
+// read is disabled for roles the engine would 403.
+let capturedEnterpriseOptions: { enabled?: boolean } | undefined;
 vi.mock('@hooks/engine/billing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/engine/billing')>();
-  return { ...actual, useEnterpriseStatus: () => ({ data: enterpriseState }) };
+  return {
+    ...actual,
+    useEnterpriseStatus: (options?: { enabled?: boolean }) => {
+      capturedEnterpriseOptions = options;
+      return { data: enterpriseState };
+    },
+  };
 });
 
 const credentialMissingRow = {
@@ -68,8 +77,10 @@ vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
   };
 });
 
+// canSetup is controllable per test (NG-MT-2 needs a reader scenario).
+const mockCanSetup = vi.fn((_role: string | null, _act: string) => true);
 vi.mock('@lib/engine/capabilities', () => ({
-  canSetup: () => true,
+  canSetup: (role: string | null, act: string) => mockCanSetup(role, act),
   setupDeniedCopy: () => '',
 }));
 
@@ -99,6 +110,8 @@ function billingLink() {
 describe('ModelsView BYOK enterprise gate (P1-5)', () => {
   beforeEach(() => {
     enterpriseState = true;
+    mockCanSetup.mockReturnValue(true);
+    capturedEnterpriseOptions = undefined;
   });
 
   it('directs non-enterprise orgs to billing instead of the add flow (catalog hint)', async () => {
@@ -140,5 +153,29 @@ describe('ModelsView BYOK enterprise gate (P1-5)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Providers' }));
     expect(screen.getByRole('button', { name: /add credential/i })).toBeTruthy();
     expect(screen.queryByText(/BYOK requires an Enterprise subscription/)).toBeNull();
+  });
+});
+
+describe('ModelsView enterprise-status gating (NG-MT-2)', () => {
+  beforeEach(() => {
+    enterpriseState = true;
+    capturedEnterpriseOptions = undefined;
+  });
+
+  it('enables the enterprise-status read for the credential reader set', async () => {
+    mockCanSetup.mockReturnValue(true); // owner/admin/developer
+    await renderRouted();
+    // The hook's `enabled` flag is what keeps the query from firing —
+    // `false` means no request is ever issued.
+    expect(capturedEnterpriseOptions?.enabled).toBe(true);
+  });
+
+  it('disables the enterprise-status read for readers — no doomed 403', async () => {
+    mockCanSetup.mockReturnValue(false); // reader: no setup:author
+    await renderRouted();
+    expect(capturedEnterpriseOptions?.enabled).toBe(false);
+    // With the read disabled, the view fails open toward the legacy
+    // catalog copy instead of consuming a failed entitlement read.
+    expect(screen.getByText(/add BYOK in Providers/)).toBeTruthy();
   });
 });
