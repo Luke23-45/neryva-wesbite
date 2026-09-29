@@ -31,10 +31,23 @@ import {
 } from '../lib/guardrails-model';
 import { ConflictDialog } from './ConflictDialog';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
-import { ControlLabel, ControlRow, TextButton, ToolFix, ToolMeta } from './ToolsSection.styles';
-import { ModeLine, PresetPill, PresetRow } from './GuardrailsSection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import {
+  DirectionGroup,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  ModeLine,
+  PinMeta,
+  PresetPill,
+  PresetRow,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
+} from './GuardrailsSection.styles';
+import { TextButton, ToolFix } from './ToolsSection.styles';
 
 export interface GuardrailsSectionProps {
   assistantId: string;
@@ -245,23 +258,40 @@ export function GuardrailsSection({
     const outputResolved = resolvePolicyBehavior(policy.output_policy, policy.execution_mode);
     return (
       <Wrap>
-        <StaticRow>
-          <StaticLabel>Mode</StaticLabel>
-          <span>{policy.execution_mode === 'logging' ? MODE_COPY.logging : MODE_COPY.blocking}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Input</StaticLabel>
-          <span>{displayPolicyName(policy.input_policy, 'input')} — {inputResolved.consequence}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Output</StaticLabel>
-          <span>{displayPolicyName(policy.output_policy, 'output')} — {outputResolved.consequence}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>PII</StaticLabel>
-          <span>{policy.pii_redaction ? 'redaction on' : 'redaction off — identifiers reach storage, logs, and the provider'}</span>
-        </StaticRow>
-        <ToolMeta>{grade.subtitle}. Guardrails need an owner, admin, or developer — {denied}</ToolMeta>
+        <FieldBlock>
+          <FieldHead>
+            <FieldTitle>Guardrails</FieldTitle>
+          </FieldHead>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Mode</SwitchTitle>
+              <SwitchSub>{policy.execution_mode === 'logging' ? MODE_COPY.logging : MODE_COPY.blocking}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Input</SwitchTitle>
+              <SwitchSub>
+                {displayPolicyName(policy.input_policy, 'input')} — {inputResolved.consequence}
+              </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Output</SwitchTitle>
+              <SwitchSub>
+                {displayPolicyName(policy.output_policy, 'output')} — {outputResolved.consequence}
+              </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>PII</SwitchTitle>
+              <SwitchSub>{policy.pii_redaction ? 'redaction on' : 'redaction off — identifiers reach storage, logs, and the provider'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <PinMeta>{grade.subtitle}. Guardrails need an owner, admin, or developer — {denied}</PinMeta>
+        </FieldBlock>
       </Wrap>
     );
   }
@@ -278,18 +308,18 @@ export function GuardrailsSection({
       }}
     >
       {/* Block A · protection */}
-      <div>
-        <SectionLabel>PROTECTION</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Protection</FieldTitle>
+        </FieldHead>
         {directions.map((direction) => {
           const raw = direction === 'input' ? policy.input_policy : policy.output_policy;
           const matched = matchPreset(raw, direction);
           const resolved = resolvePolicyBehavior(raw, policy.execution_mode);
           const presets: readonly string[] = direction === 'input' ? INPUT_PRESETS : OUTPUT_PRESETS;
           return (
-            <div key={direction}>
-              <ControlRow>
-                <ControlLabel>{direction === 'input' ? 'Input screening' : 'Output screening'}</ControlLabel>
-              </ControlRow>
+            <DirectionGroup key={direction}>
+              <FieldHelper>{direction === 'input' ? 'Input screening' : 'Output screening'}</FieldHelper>
               <PresetRow role="group" aria-label={`${direction} screening preset`}>
                 {presets.map((preset) => (
                   <PresetPill
@@ -314,31 +344,35 @@ export function GuardrailsSection({
                   {direction === 'input' ? 'Input' : 'Output'} screening is off — {resolved.consequence}
                 </Whisper>
               ) : (
-                <ToolMeta>{resolved.consequence}</ToolMeta>
+                <FieldHelper>{resolved.consequence}</FieldHelper>
               )}
-            </div>
+            </DirectionGroup>
           );
         })}
-        <ControlRow>
-          <ControlLabel>PII redaction</ControlLabel>
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>PII redaction</SwitchTitle>
+            <SwitchSub>
+              Identifiers are redacted before storage and logging. {PII_NON_RETRO_COPY}
+            </SwitchSub>
+          </SwitchText>
           <Switch
             checked={policy.pii_redaction}
             onChange={(next) => patch({ pii_redaction: next })}
             label="PII redaction"
             id="guardrails-pii"
           />
-        </ControlRow>
-        <ToolMeta>
-          Identifiers are redacted before storage and logging. {PII_NON_RETRO_COPY}
-        </ToolMeta>
+        </SwitchRow>
         {!policy.pii_redaction && (
           <Whisper $tone="amber">PII off — identifiers reach storage, logs, and the provider.</Whisper>
         )}
-      </div>
+      </FieldBlock>
 
       {/* Block B · execution mode */}
-      <div>
-        <SectionLabel>EXECUTION MODE</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Execution mode</FieldTitle>
+        </FieldHead>
         <Segmented
           options={[
             { value: 'blocking', label: 'Blocking' },
@@ -353,19 +387,23 @@ export function GuardrailsSection({
           <StatusDot $status={policy.execution_mode === 'logging' ? 'attention' : 'ready'} aria-hidden="true" />
           <span>{policy.execution_mode === 'logging' ? MODE_COPY.logging : MODE_COPY.blocking}</span>
         </ModeLine>
-        {policy.execution_mode === 'logging' ? (
-          <ToolFix>Measure first: watch what WOULD have been refused, then flip. {FLIP_COPY}</ToolFix>
-        ) : (
-          <ToolMeta>{FLIP_COPY}</ToolMeta>
-        )}
+        <FieldHelper>
+          {policy.execution_mode === 'logging' ? (
+            <>Measure first: watch what WOULD have been refused, then flip. {FLIP_COPY}</>
+          ) : (
+            FLIP_COPY
+          )}
+        </FieldHelper>
         {grade.status === 'attention' && grade.hint !== '' && policy.execution_mode !== 'logging' && (
           <Whisper $tone="amber">{grade.hint}</Whisper>
         )}
-      </div>
+      </FieldBlock>
 
       {/* Block C · advanced */}
-      <div>
-        <SectionLabel>ADVANCED</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Advanced</FieldTitle>
+        </FieldHead>
         {!advanced ? (
           <TextButton type="button" onClick={() => setAdvanced(true)}>
             Custom policy names · resolved behavior shown →
@@ -379,7 +417,7 @@ export function GuardrailsSection({
               const raw = direction === 'input' ? policy.input_policy : policy.output_policy;
               const resolved = resolvePolicyBehavior(raw, policy.execution_mode);
               return (
-                <div key={direction} style={{ marginTop: 8 }}>
+                <DirectionGroup key={direction}>
                   <TextInput
                     label={`Custom ${direction} policy name`}
                     id={`guardrails-custom-${direction}`}
@@ -389,16 +427,16 @@ export function GuardrailsSection({
                     }
                     placeholder={direction === 'input' ? 'default' : 'brand-safe'}
                   />
-                  <ToolMeta>
+                  <FieldHelper>
                     {displayPolicyName(raw, direction)} — {resolved.consequence}
-                  </ToolMeta>
-                </div>
+                  </FieldHelper>
+                </DirectionGroup>
               );
             })}
-            <ToolMeta>{CUSTOM_NAME_COPY}</ToolMeta>
+            <FieldHelper>{CUSTOM_NAME_COPY}</FieldHelper>
           </>
         )}
-      </div>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
