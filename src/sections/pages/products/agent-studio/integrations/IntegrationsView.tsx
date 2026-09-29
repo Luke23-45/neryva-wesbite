@@ -444,7 +444,7 @@ function LinkModal({
           ? validateMsalCc(credentials)
           : // I14/I15: confluence/zendesk pastes must carry the engine's
             // separator (email:api_token / email/api_token) — a bare token
-            // links fine but every sync fails with a 401.
+            // is blocked here; it would fail every sync with a 401 if it ever linked.
             validateCredentialShape(spec, credentials);
 
   const valid = displayName.trim() !== '' && missingConfig.length === 0 && !credentialsProblem;

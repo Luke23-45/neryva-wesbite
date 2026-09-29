@@ -18,14 +18,16 @@ vi.mock('@/Context/OrgContext', () => ({
 }));
 
 const createMutate = vi.fn();
+const updateMutate = vi.fn();
+let mockChannelsData: unknown[] = [];
 
 vi.mock('@hooks/studio/useSetupChannels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupChannels')>();
   return {
     ...actual,
-    useChannels: () => ({ data: [], isPending: false, isError: false, refetch: vi.fn() }),
+    useChannels: () => ({ data: mockChannelsData, isPending: false, isError: false, refetch: vi.fn() }),
     useCreateChannel: () => ({ mutate: createMutate, isPending: false }),
-    useUpdateChannel: () => ({ mutate: vi.fn(), isPending: false }),
+    useUpdateChannel: () => ({ mutate: updateMutate, isPending: false }),
     useDeactivateChannel: () => ({ mutate: vi.fn(), isPending: false }),
     useRotateChannelCredentials: () => ({ mutate: vi.fn(), isPending: false }),
     useVerifyChannel: () => ({ mutate: vi.fn(), isPending: false }),
@@ -80,6 +82,8 @@ async function shell(search: Record<string, string> = {}) {
 
 beforeEach(() => {
   createMutate.mockReset();
+  updateMutate.mockReset();
+  mockChannelsData = [];
 });
 
 describe('ChannelsView (C14 returnTo exit)', () => {
@@ -108,5 +112,53 @@ describe('ChannelsView (C14 returnTo exit)', () => {
     fireEvent.click(screen.getByText('Connect (starts pending)'));
     const sent = createMutate.mock.calls[0]?.[0] as { config: Record<string, unknown> };
     expect(sent.config.default_assistant_id).toBe('agent-1');
+  });
+});
+
+describe('ChannelsView EditModal (H12 widget extras)', () => {
+  const webAccount = {
+    id: 'ch-web-1',
+    platform: 'web',
+    displayName: 'Web Widget',
+    publicKey: 'nk_live_test',
+    status: 'active',
+    health: null,
+    config: { quick_replies: ['Book a demo'], csat_enabled: false },
+    webhookUrl: null,
+    createdAt: null,
+    updatedAt: null,
+  };
+
+  it('renders the web-only quick replies + CSAT fields and PATCHes the exact engine-consumed keys', async () => {
+    mockChannelsData = [webAccount];
+    await shell();
+    fireEvent.click(screen.getByLabelText('Edit Web Widget'));
+    // The modal exposes the engine-consumed config keys, pre-filled.
+    const replies = screen.getByLabelText('Quick replies (one per line)') as HTMLTextAreaElement;
+    expect(replies.value).toBe('Book a demo');
+    const csat = screen.getByLabelText(/CSAT feedback/) as HTMLInputElement;
+    expect(csat.checked).toBe(false);
+    // Editing wires through the existing PATCH path with exactly the keys
+    // the engine's widgetSessionBootstrap + feedback gate read.
+    fireEvent.change(replies, { target: { value: 'Book a demo\nSee pricing' } });
+    fireEvent.click(csat);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    const sent = updateMutate.mock.calls[0]?.[0] as { channelId: string; config: Record<string, unknown> };
+    expect(sent.channelId).toBe('ch-web-1');
+    // Exactly the keys the engine's widgetSessionBootstrap + feedback gate
+    // read (allowed_domains/greeting also ride along from the pre-existing
+    // web block — asserted separately from this gap's keys).
+    expect(sent.config.quick_replies).toEqual(['Book a demo', 'See pricing']);
+    expect(sent.config.csat_enabled).toBe(true);
+  });
+
+  it('hides the widget extras on non-web platforms', async () => {
+    mockChannelsData = [
+      { ...webAccount, id: 'ch-wa-1', platform: 'whatsapp', displayName: 'WA Line', publicKey: null, config: {} },
+    ];
+    await shell();
+    fireEvent.click(screen.getByLabelText('Edit WA Line'));
+    expect(screen.queryByLabelText('Quick replies (one per line)')).toBeNull();
+    expect(screen.queryByLabelText(/CSAT feedback/)).toBeNull();
   });
 });

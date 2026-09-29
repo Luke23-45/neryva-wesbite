@@ -117,11 +117,12 @@ export function normalizeOriginEntry(raw: string): string {
 /**
  * H13: builds the merge-patch for the engine-consumed channel config keys
  * the EditModal exposes (escalation notes, voice replies, out-of-window
- * template/note). Only changed keys are included, so untouched values are
- * never rewritten. Clearing a text field sends `null`, which the engine's
- * `sanitizeConfigForUpdate` merge drops from the stored config — restoring
- * the engine's default line instead of persisting an empty string (the
- * outbound pipeline's `??` fallback does not catch `''`).
+ * template/note, widget quick replies + CSAT). Only changed keys are
+ * included, so untouched values are never rewritten. Clearing a text field
+ * sends `null`, which the engine's `sanitizeConfigForUpdate` merge drops from
+ * the stored config — restoring the engine's default line instead of
+ * persisting an empty string (the outbound pipeline's `??` fallback does not
+ * catch `''`).
  *
  * Per-key platform availability (verified against the engine):
  * - escalation notes pass through `sanitizeConfig` with no platform gate and
@@ -132,7 +133,11 @@ export function normalizeOriginEntry(raw: string): string {
  * - the out-of-window template is persisted whatsapp-only (`sanitizeConfig`
  *   gates on `platform === 'whatsapp'`) — offered on whatsapp only;
  * - the out-of-window note is persisted messenger-only — offered on
- *   messenger only.
+ *   messenger only;
+ * - quick replies + CSAT are consumed web-only by the widget plane
+ *   (`widget.controller.ts widgetSessionBootstrap`: the session bootstrap +
+ *   the served embed client render them, and the `:publicKey/feedback`
+ *   endpoint refuses writes unless `csat_enabled`) — offered on web only.
  */
 export interface ChannelExtrasInput {
   escalationNote: string;
@@ -141,6 +146,10 @@ export interface ChannelExtrasInput {
   outOfWindowTemplateName: string;
   outOfWindowTemplateLanguage: string;
   outOfWindowNote: string;
+  /** H12: web-only — quick-reply chips, one per line (engine bounds: ≤6 replies, ≤64 chars each). */
+  quickReplies: string;
+  /** H12: web-only — opt-in thumbs CSAT widget bound to message_feedback. */
+  csatEnabled: boolean;
 }
 
 export function buildChannelExtrasPatch(
@@ -192,6 +201,28 @@ export function buildChannelExtrasPatch(
   }
   if (platform === 'messenger') {
     setNote('out_of_window_note', input.outOfWindowNote);
+  }
+  if (platform === 'web') {
+    // H12: quick replies + CSAT are consumed by the widget plane only
+    // (widget.controller.ts widgetSessionBootstrap; the :publicKey/feedback
+    // endpoint refuses writes unless csat_enabled). Bounds mirror the
+    // engine's sanitizeConfig exactly: non-empty strings, ≤6 replies,
+    // ≤64 chars each. Clearing every line sends [] (the engine stores it;
+    // the bootstrap treats [] as no chips) — never an invented shape.
+    const curQuick = Array.isArray(current.quick_replies)
+      ? (current.quick_replies as unknown[]).filter((r): r is string => typeof r === 'string')
+      : [];
+    const nextQuick = input.quickReplies
+      .split('\n')
+      .map((r) => r.trim().slice(0, 64))
+      .filter((r) => r.length > 0)
+      .slice(0, 6);
+    if (nextQuick.length !== curQuick.length || nextQuick.some((r, i) => r !== curQuick[i])) {
+      patch.quick_replies = nextQuick;
+    }
+    if (input.csatEnabled !== (current.csat_enabled === true)) {
+      patch.csat_enabled = input.csatEnabled;
+    }
   }
   return patch;
 }

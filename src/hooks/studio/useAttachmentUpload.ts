@@ -191,7 +191,7 @@ export function useAttachmentUpload() {
         byte_length: file.size,
         sha256,
         // A4-11: version uploads carry the target only — no slug/title
-        // intents (the engine 422s a slug alongside a target).
+        // intents (the engine 400s a slug alongside a target).
         ...(input.targetDocumentId
           ? { target_document_id: input.targetDocumentId }
           : {

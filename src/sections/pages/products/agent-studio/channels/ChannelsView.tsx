@@ -8,6 +8,7 @@ import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
+import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { CopyButton } from '@components/common/ui/CopyButton';
@@ -595,6 +596,16 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
   const [oowTemplateName, setOowTemplateName] = useState(typeof oowTemplate?.name === 'string' ? oowTemplate.name : '');
   const [oowTemplateLanguage, setOowTemplateLanguage] = useState(typeof oowTemplate?.language === 'string' ? oowTemplate.language : '');
   const [oowNote, setOowNote] = useState(typeof account.config.out_of_window_note === 'string' ? account.config.out_of_window_note : '');
+  // H12: the engine consumes quick_replies (string[], ≤6 × ≤64) and
+  // csat_enabled (boolean) on web channel configs — the widget plane
+  // renders the chips + thumbs control from the session bootstrap, and
+  // the :publicKey/feedback endpoint refuses writes unless csat_enabled.
+  const [quickReplies, setQuickReplies] = useState(
+    Array.isArray(account.config.quick_replies)
+      ? (account.config.quick_replies as unknown[]).filter((r): r is string => typeof r === 'string').join('\n')
+      : '',
+  );
+  const [csatEnabled, setCsatEnabled] = useState(account.config.csat_enabled === true);
 
   // H5: same origin normalization as the connect modal.
   const originsList = origins.split(',').map(normalizeOriginEntry).filter(Boolean);
@@ -628,6 +639,8 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
         outOfWindowTemplateName: oowTemplateName,
         outOfWindowTemplateLanguage: oowTemplateLanguage,
         outOfWindowNote: oowNote,
+        quickReplies,
+        csatEnabled,
       }),
     );
     update.mutate(
@@ -695,7 +708,9 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
       )}
       {/* G2: escalation notes are offered on every platform (the engine
           persists and consumes them with no platform gate); voice/template
-          stay whatsapp-only, the out-of-window note messenger-only. */}
+          stay whatsapp-only, the out-of-window note messenger-only, and the
+          widget quick replies + CSAT control web-only (the widget plane
+          consumes them from the session bootstrap). */}
       <>
         <div style={{ marginTop: 16, fontSize: 13, fontWeight: 600 }}>Messaging extras</div>
           <div style={{ marginTop: 12 }}>
@@ -751,6 +766,30 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
                 hint="Sent as the reply when the 24h window is closed (Messenger has no template mechanism). Empty clears it."
               />
             </div>
+          )}
+          {account.platform === 'web' && (
+            <>
+              <div style={{ marginTop: 12 }}>
+                <TextArea
+                  label="Quick replies (one per line)"
+                  name="quickReplies"
+                  value={quickReplies}
+                  onChange={(e) => setQuickReplies(e.target.value)}
+                  rows={3}
+                  placeholder={'Book a demo\nSee pricing'}
+                  hint="Up to 6 chips, 64 chars each — rendered beside the widget composer. Empty clears them."
+                />
+              </div>
+              <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
+                <input type="checkbox" checked={csatEnabled} onChange={(e) => setCsatEnabled(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>
+                  CSAT feedback
+                  <span style={{ display: 'block', fontSize: 12, opacity: 0.7, fontWeight: 400 }}>
+                    Show the thumbs up/down control in the widget and collect reply ratings. Feedback is never collected unless this is on.
+                  </span>
+                </span>
+              </label>
+            </>
           )}
       </>
       {account.publicKey && (

@@ -469,7 +469,7 @@ export function downloadExportedFile(exp: EvalExport): void {
 
 /**
  * A4-44 — import cases. JSON takes the export shape ({cases:[...]}) or a
- * bare array; CSV takes the export header. Per-row typed 422s on violations.
+ * bare array; CSV takes the export header. Per-row typed 400s on violations.
  */
 export function useImportEvalCases() {
   const { orgId } = useOrg();

@@ -153,6 +153,8 @@ describe('buildChannelExtrasPatch (H13)', () => {
     outOfWindowTemplateName: '',
     outOfWindowTemplateLanguage: '',
     outOfWindowNote: '',
+    quickReplies: '',
+    csatEnabled: false,
   };
 
   it('sends nothing when nothing changed', () => {
@@ -234,6 +236,58 @@ describe('buildChannelExtrasPatch (H13)', () => {
     );
     expect(patch.voice_replies_enabled).toBeUndefined();
     expect(patch.out_of_window_template).toBeUndefined();
+  });
+
+  it('sends the engine-consumed quick_replies key (string array) on web only', () => {
+    // H12: the engine reads quick_replies as string[] in
+    // widgetSessionBootstrap (widget.controller.ts) — the patch must carry
+    // the exact key the engine consumes, never an invented shape.
+    const patch = buildChannelExtrasPatch('web', {}, { ...empty, quickReplies: 'Book a demo\nSee pricing' });
+    expect(patch.quick_replies).toEqual(['Book a demo', 'See pricing']);
+    for (const platform of ['whatsapp', 'messenger', 'telegram']) {
+      expect(
+        buildChannelExtrasPatch(platform, {}, { ...empty, quickReplies: 'Book a demo' }).quick_replies,
+      ).toBeUndefined();
+    }
+  });
+
+  it('clamps quick replies exactly like the engine (non-empty, ≤6, ≤64 chars each)', () => {
+    // Bounds mirror the engine's sanitizeConfig (channels.service.ts):
+    // filter non-empty strings, take 6, slice each to 64 chars.
+    const long = 'x'.repeat(100);
+    const patch = buildChannelExtrasPatch('web', {}, {
+      ...empty,
+      quickReplies: ['keep', '', '   ', long, 'b', 'c', 'd', 'e', 'f', 'g'].join('\n'),
+    });
+    expect(patch.quick_replies).toEqual(['keep', 'x'.repeat(64), 'b', 'c', 'd', 'e']);
+  });
+
+  it('sends quick_replies only when changed; clearing sends the empty array', () => {
+    const current = { quick_replies: ['Book a demo'] };
+    expect(buildChannelExtrasPatch('web', current, { ...empty, quickReplies: 'Book a demo' })).toEqual({});
+    expect(
+      buildChannelExtrasPatch('web', current, { ...empty, quickReplies: '' }).quick_replies,
+    ).toEqual([]);
+  });
+
+  it('sends the engine-consumed csat_enabled boolean on web only, on change', () => {
+    // H12: the exact key the feedback gate reads
+    // (widget.controller.ts assertCsatEnabled refuses writes unless
+    // csat_enabled === true).
+    expect(
+      buildChannelExtrasPatch('web', {}, { ...empty, csatEnabled: true }).csat_enabled,
+    ).toBe(true);
+    expect(
+      buildChannelExtrasPatch('web', { csat_enabled: true }, { ...empty, csatEnabled: true }),
+    ).toEqual({});
+    expect(
+      buildChannelExtrasPatch('web', { csat_enabled: true }, { ...empty, csatEnabled: false }).csat_enabled,
+    ).toBe(false);
+    for (const platform of ['whatsapp', 'messenger', 'telegram']) {
+      expect(
+        buildChannelExtrasPatch(platform, {}, { ...empty, csatEnabled: true }).csat_enabled,
+      ).toBeUndefined();
+    }
   });
 
   it('never persists a half-filled out-of-window template (G3)', () => {

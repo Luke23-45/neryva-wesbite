@@ -1,7 +1,7 @@
 /**
  * Setup caps pre-checks (team_setup_ledger.md F-D2) — client-side enforcement
  * of the authoring contract BEFORE any write. Guidance, not authority: the
- * engine still validates (422/409 verbatim). Every bound mirrors
+ * engine still validates (400/409 verbatim). Every bound mirrors
  * `engine/src/modules/assistants/validation.ts` (+ spec §5/§6 where the spec
  * is tighter and says so); re-verify if either moves.
  *

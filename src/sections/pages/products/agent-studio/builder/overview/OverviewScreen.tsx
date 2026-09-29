@@ -47,10 +47,15 @@ const RANK: Record<string, number> = { error: 0, attention: 1, untouched: 2, loc
  * publish time, so concurrent publishes can make this wrong. Pure so the
  * derivation is pinnable by tests; the UI labels it "Expected vN · assigned
  * at publish" so it reads as an expectation, not a promise.
+ *
+ * Mirrors the engine's exact rule (`pg-assistant-version.repository.ts`
+ * publishVersion: max(version) WHERE version > 0 over ALL rows for the
+ * assistant, no status filter). The server never filters by status when
+ * assigning numbers, so neither does this prediction.
  */
 export function predictNextVersionNumber(versions: readonly AgentVersion[]): number {
-  const published = versions.filter((v) => v.status === 'PUBLISHED' && typeof v.version === 'number');
-  return published.length === 0 ? 1 : Math.max(...published.map((v) => v.version)) + 1;
+  const candidates = versions.filter((v) => typeof v.version === 'number' && v.version > 0);
+  return candidates.length === 0 ? 1 : Math.max(...candidates.map((v) => v.version)) + 1;
 }
 
 /**

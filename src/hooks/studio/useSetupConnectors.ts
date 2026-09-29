@@ -50,10 +50,11 @@ export interface ProviderConfigField {
 
 /**
  * The exact secret shape the engine splits at sync time. A paste that lacks
- * the separator links fine but every sync fails with a 401 — so the console
- * documents the format in the hint AND blocks the link client-side when the
- * separator is missing. `format` mirrors the engine's auth split verbatim
- * (confluence: `secret.indexOf(':')`, zendesk: `secret.indexOf('/')`).
+ * the separator is blocked here — it would fail every sync with a 401 if it
+ * ever linked — so the console documents the format in the hint AND blocks
+ * the link client-side when the separator is missing. `format` mirrors the
+ * engine's auth split verbatim (confluence: `secret.indexOf(':')`,
+ * zendesk: `secret.indexOf('/')`).
  */
 export interface ProviderCredentialShape {
   separator: ':' | '/';
@@ -120,14 +121,14 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
     ],
     credentials: 'secret-required',
     credentialsHint:
-      'Paste as email:api_token — e.g. you@company.com:api_token. Sealed on arrival, never shown again. A bare token links fine but every sync fails with a 401.',
+      'Paste as email:api_token — e.g. you@company.com:api_token. Sealed on arrival, never shown again. A bare token is blocked here — every sync would fail with a 401.',
     // I14: the engine splits the stored secret on the first ':' —
     // token-only pastes degrade to Basic base64(':token'), which Confluence
     // rejects. Block at link time with the format guidance.
     credentialShape: {
       separator: ':',
       missingMessage:
-        'Confluence expects "email:api_token" — your Atlassian email, a colon, then the API token. A bare token links fine but every sync fails with a 401.',
+        'Confluence expects "email:api_token" — your Atlassian email, a colon, then the API token. A bare token is blocked here — every sync would fail with a 401.',
     },
   },
   {
@@ -151,14 +152,14 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
     ],
     credentials: 'secret-required',
     credentialsHint:
-      'Paste as email/api_token — e.g. you@company.com/api_token. Sealed on arrival, never shown again. A bare token links fine but every sync fails with a 401.',
+      'Paste as email/api_token — e.g. you@company.com/api_token. Sealed on arrival, never shown again. A bare token is blocked here — every sync would fail with a 401.',
     // I15: the engine splits the stored secret on the first '/' —
     // token-only pastes degrade to Basic base64('/token:secret'), which
     // Zendesk rejects. Block at link time with the format guidance.
     credentialShape: {
       separator: '/',
       missingMessage:
-        'Zendesk expects "email/api_token" — your email, a slash, then the API token. A bare token links fine but every sync fails with a 401.',
+        'Zendesk expects "email/api_token" — your email, a slash, then the API token. A bare token is blocked here — every sync would fail with a 401.',
     },
   },
   {
