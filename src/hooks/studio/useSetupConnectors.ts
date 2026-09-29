@@ -27,12 +27,32 @@ export type ConnectorProvider = (typeof CONNECTOR_PROVIDERS)[number];
  * (connector-adapters.ts / connector.port.ts — verbatim keys) + how auth
  * binds. `credentials` describes the link-time secret shape; `dance` means
  * tokens bind exclusively via OAuth after linking.
+ *
+ * One config input on the link sheet. `key` is the verbatim engine config
+ * key (`connector-adapters.ts` / `connector.port.ts`).
  */
+export interface ProviderConfigField {
+  key: string;
+  label: string;
+  required: boolean;
+  placeholder: string;
+  hint: string;
+  /**
+   * Single-value field (P1-decision): the provider API takes one value, so
+   * only the first comma-separated entry is kept at submit. The modal shows
+   * an honest note when the field holds multiples — extras are disclosed as
+   * discarded, never silently kept as a list the engine narrows to `[0]`
+   * anyway. The wire key/shape is unchanged (e.g. `locales: string[]`,
+   * which `asConfigStrings` requires to be an array).
+   */
+  single?: boolean;
+}
+
 export interface ProviderLinkSpec {
   provider: ConnectorProvider;
   label: string;
   blurb: string;
-  configFields: Array<{ key: string; label: string; required: boolean; placeholder: string; hint: string }>;
+  configFields: ProviderConfigField[];
   credentials: 'none' | 'dance-only' | 'msal-cc' | 'secret-required';
   credentialsHint: string;
 }
@@ -87,7 +107,10 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
     blurb: 'Help-center sync with segment capture.',
     configFields: [
       { key: 'subdomain', label: 'Subdomain', required: true, placeholder: 'company', hint: 'Required at sync (config.subdomain).' },
-      { key: 'locales', label: 'Locales (comma-separated, optional)', required: false, placeholder: 'en-us', hint: 'Omit for all locales.' },
+      // P1-decision: singular and honest — Zendesk's API takes a single
+      // locale (engine uses locales[0]); the wire key stays `locales` as a
+      // one-entry array because asConfigStrings requires an array.
+      { key: 'locales', label: 'Locale (optional)', required: false, placeholder: 'en-us', hint: 'Zendesk syncs a single locale — omit for all locales.', single: true },
     ],
     credentials: 'secret-required',
     credentialsHint: 'Static credential (API token) — sealed on arrival, never shown again.',
@@ -101,6 +124,58 @@ export const PROVIDER_LINK_SPECS: readonly ProviderLinkSpec[] = [
     credentialsHint: 'Bot token (xoxb-…) — sealed on arrival, never shown again.',
   },
 ];
+
+/**
+ * Builds the link-body config from the modal's string values (pure, so the
+ * mapping is unit-testable and never hand-waved in JSX).
+ * - `single` fields keep only the first comma-separated entry (Zendesk's API
+ *   takes one locale). Extras are disclosed by `singleFieldOverflowNote`,
+ *   never silently kept as a list the engine narrows to `[0]` anyway. The
+ *   wire key/shape is unchanged (e.g. `locales: ['en-us']`).
+ * - list fields (`spaces`) split on commas, as before.
+ * - blank values are omitted (absent = provider default).
+ */
+export function buildConnectorConfig(spec: ProviderLinkSpec, values: Record<string, string>): Record<string, unknown> {
+  const config: Record<string, unknown> = {};
+  for (const field of spec.configFields) {
+    const value = values[field.key]?.trim();
+    if (!value) {
+      continue;
+    }
+    if (field.single) {
+      const first = value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)[0];
+      if (first) {
+        config[field.key] = [first];
+      }
+      continue;
+    }
+    config[field.key] = field.key === 'spaces' ? value.split(',').map((s) => s.trim()).filter(Boolean) : value;
+  }
+  return config;
+}
+
+/**
+ * Honest note when a `single` field holds multiple comma-separated values —
+ * the extras are discarded at submit (P1-decision), so the UI states it up
+ * front instead of silently dropping them. Returns null otherwise.
+ */
+export function singleFieldOverflowNote(field: Pick<ProviderConfigField, 'label' | 'single'>, value: string): string | null {
+  if (!field.single) {
+    return null;
+  }
+  const parts = value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (parts.length < 2) {
+    return null;
+  }
+  const noun = field.label.replace(/\s*\([^)]*\)\s*$/, '').toLowerCase();
+  return `Only the first ${noun} is used ("${parts[0]}") — the rest are discarded.`;
+}
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;

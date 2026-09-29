@@ -151,6 +151,11 @@ export function ShipSection({
   }
 
   function handlePublishClick() {
+    // P1-1 (T-01): the topbar publishSignal lands here too — a non-governor
+    // must never reach the confirm dialog, because the engine's publish
+    // endpoint (owner/admin only) would 403. The section's own button is
+    // already gated; this closes the signal path.
+    if (!canPublish) return;
     if (!readiness.publishable) {
       const first = blockers[0] ?? null;
       if (first) {
@@ -213,6 +218,13 @@ export function ShipSection({
           : PUBLISH_COPY.verdictUnknown;
 
   function handleConfirm() {
+    // P1-1 (T-01): last line of defense — even if the confirm dialog were
+    // opened by a non-governor (it can't be via the gated paths above), the
+    // mutation must not fire; the server would 403.
+    if (!canPublish) {
+      setConfirmOpen(false);
+      return;
+    }
     setConfirmOpen(false);
     publish.mutate(
       { versionId: draftId, ...(acknowledge ? { acknowledgeDegradedKnowledge: true } : {}) },

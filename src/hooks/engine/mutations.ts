@@ -218,7 +218,9 @@ export function useUnarchiveProject() {
 // ── API keys ────────────────────────────────────────────────────────────────
 
 export function useIssueKey() {
-  return useEngineMutation<{ name: string; role: string; scopes: string[]; expires_at?: string; mfaProof?: string }, { id: string; key: string }>(
+  // `project_id` binds the key at issue time (engine K-2) — the workspace's
+  // default project is pre-filled by the caller (P1-8); omitted when unset.
+  return useEngineMutation<{ name: string; role: string; scopes: string[]; expires_at?: string; project_id?: string; mfaProof?: string }, { id: string; key: string }>(
     (orgId, input) => {
       const { mfaProof, ...body } = input;
       return { path: `/console/org/${orgId}/keys`, init: { method: 'POST', body, idempotent: true, ...(mfaProof ? { mfaProof } : {}) } };

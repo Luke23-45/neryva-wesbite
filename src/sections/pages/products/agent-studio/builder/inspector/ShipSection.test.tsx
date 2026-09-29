@@ -90,7 +90,7 @@ beforeEach(() => {
 });
 
 /** Signal-driven shell: publishSignal is local state inside the route component, so bumps re-render ShipSection. */
-async function shellWithSignal() {
+async function shellWithSignal(role: 'owner' | 'developer' = 'owner') {
   let setSignal!: (n: number) => void;
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
@@ -102,7 +102,7 @@ async function shellWithSignal() {
       return (
         <ThemeProvider theme={theme}>
           <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-            <ShipSection assistantId="agent-1" versionId="v7" role="owner" onEditJump={() => undefined} publishSignal={signal} />
+            <ShipSection assistantId="agent-1" versionId="v7" role={role} onEditJump={() => undefined} publishSignal={signal} />
           </QueryClientProvider>
         </ThemeProvider>
       );
@@ -233,6 +233,23 @@ describe('ShipSection', () => {
     // Blocked: no confirm dialog, blocker notice instead, no mutation.
     expect(screen.queryByText('Publish', { selector: 'button' })).toBeNull();
     expect(screen.getByText(/Models in catalog \+ residency served — open the row to fix it/)).toBeTruthy();
+    expect(publishMutate).not.toHaveBeenCalled();
+  });
+
+  it('P1-1 (T-01): a topbar publishSignal from a developer never reaches the confirm dialog or the mutation', async () => {
+    const { bump } = await shellWithSignal('developer');
+    // The section itself shows the honest denied copy instead of a button.
+    expect(screen.getByText(/Publish needs owner or admin/)).toBeTruthy();
+    expect(screen.queryByText('Publish this draft')).toBeNull();
+
+    await bump(1);
+    // Signal lands in handlePublishClick, which refuses before readiness,
+    // ack, and confirm — no dialog, no mutation, no doomed 403.
+    expect(screen.queryByText('Publish this draft?')).toBeNull();
+    expect(publishMutate).not.toHaveBeenCalled();
+
+    await bump(2);
+    expect(screen.queryByText('Publish this draft?')).toBeNull();
     expect(publishMutate).not.toHaveBeenCalled();
   });
 });

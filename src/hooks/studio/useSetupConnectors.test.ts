@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { parseConnectors, parseOAuthApps, parseSyncResult, PROVIDER_LINK_SPECS, CONNECTOR_PROVIDERS } from './useSetupConnectors';
+import {
+  parseConnectors,
+  parseOAuthApps,
+  parseSyncResult,
+  buildConnectorConfig,
+  singleFieldOverflowNote,
+  PROVIDER_LINK_SPECS,
+  CONNECTOR_PROVIDERS,
+} from './useSetupConnectors';
 
 describe('connector provider specs', () => {
   it('covers exactly the engine provider ids', () => {
@@ -19,6 +27,67 @@ describe('connector provider specs', () => {
 
   it('binds Drive via dance only (pasted secrets refused server-side)', () => {
     expect(PROVIDER_LINK_SPECS.find((s) => s.provider === 'google_drive')?.credentials).toBe('dance-only');
+  });
+
+  it('keeps the Zendesk locale field singular and honest (P1-decision)', () => {
+    const fields = PROVIDER_LINK_SPECS.find((s) => s.provider === 'zendesk')?.configFields ?? [];
+    const locale = fields.find((f) => f.key === 'locales');
+    expect(locale).toMatchObject({ label: 'Locale (optional)', single: true });
+    // The wire key stays `locales` (engine's asConfigStrings requires an
+    // array under that key); only the input is singular.
+    expect(locale?.key).toBe('locales');
+  });
+});
+
+describe('buildConnectorConfig', () => {
+  const zendesk = PROVIDER_LINK_SPECS.find((s) => s.provider === 'zendesk');
+  const confluence = PROVIDER_LINK_SPECS.find((s) => s.provider === 'confluence');
+  if (!zendesk || !confluence) {
+    throw new Error('connector specs missing');
+  }
+
+  it('keeps only the first locale for Zendesk (engine narrows to locales[0])', () => {
+    expect(buildConnectorConfig(zendesk, { subdomain: 'acme', locales: 'en-us, fr' })).toEqual({
+      subdomain: 'acme',
+      locales: ['en-us'],
+    });
+  });
+
+  it('sends a single locale as a one-entry array (engine shape)', () => {
+    expect(buildConnectorConfig(zendesk, { subdomain: 'acme', locales: 'en-us' })).toEqual({
+      subdomain: 'acme',
+      locales: ['en-us'],
+    });
+  });
+
+  it('omits a blank locale (absent = all locales)', () => {
+    expect(buildConnectorConfig(zendesk, { subdomain: 'acme', locales: '  ' })).toEqual({ subdomain: 'acme' });
+  });
+
+  it('keeps Confluence spaces as a real list (plural input is honest there)', () => {
+    expect(buildConnectorConfig(confluence, { base_url: 'https://x.atlassian.net/wiki', spaces: 'ENG, DOCS' })).toEqual({
+      base_url: 'https://x.atlassian.net/wiki',
+      spaces: ['ENG', 'DOCS'],
+    });
+  });
+});
+
+describe('singleFieldOverflowNote', () => {
+  const localeField = { label: 'Locale (optional)', single: true } as const;
+
+  it('discloses the discarded extras when the field held multiples', () => {
+    expect(singleFieldOverflowNote(localeField, 'en-us, fr, de')).toBe(
+      'Only the first locale is used ("en-us") — the rest are discarded.',
+    );
+  });
+
+  it('stays silent for a single value or blank input', () => {
+    expect(singleFieldOverflowNote(localeField, 'en-us')).toBeNull();
+    expect(singleFieldOverflowNote(localeField, '  ')).toBeNull();
+  });
+
+  it('stays silent for non-single fields even with commas', () => {
+    expect(singleFieldOverflowNote({ label: 'Spaces (comma-separated keys, optional)' }, 'ENG, DOCS')).toBeNull();
   });
 });
 

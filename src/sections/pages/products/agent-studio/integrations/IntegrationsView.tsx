@@ -29,6 +29,8 @@ import {
   useCreateOAuthApp,
   useDeleteOAuthApp,
   useOAuthAuthorize,
+  buildConnectorConfig,
+  singleFieldOverflowNote,
   PROVIDER_LINK_SPECS,
   type ConnectorProvider,
   type SyncResult,
@@ -447,17 +449,12 @@ function LinkModal({
     if (!valid || pending) {
       return;
     }
-    const config: Record<string, unknown> = {};
-    for (const field of spec.configFields) {
-      const value = configValues[field.key]?.trim();
-      if (value) {
-        config[field.key] = field.key === 'spaces' || field.key === 'locales' ? value.split(',').map((s) => s.trim()).filter(Boolean) : value;
-      }
-    }
     onLink({
       provider: spec.provider,
       displayName: displayName.trim(),
-      config,
+      // P1-decision: singular `single` fields keep only the first value
+      // (Zendesk locale); extras are disclosed, never silently kept.
+      config: buildConnectorConfig(spec, configValues),
       ...(spec.credentials !== 'none' && spec.credentials !== 'dance-only' && credentials.trim() ? { credentials: credentials.trim() } : {}),
     });
   };
@@ -508,18 +505,24 @@ function LinkModal({
           )}
         </div>
       )}
-      {spec.configFields.map((field) => (
-        <div key={field.key} style={{ marginTop: 12 }}>
-          <TextInput
-            label={`${field.label}${field.required ? ' (required)' : ''}`}
-            value={configValues[field.key] ?? ''}
-            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-            placeholder={field.placeholder}
-            hint={field.hint}
-            error={field.required && !configValues[field.key]?.trim() ? 'Required for sync.' : undefined}
-          />
-        </div>
-      ))}
+      {spec.configFields.map((field) => {
+        // P1-decision: if a single-value field ever held multiples, say so —
+        // the extras are discarded at submit, not silently kept.
+        const overflowNote = singleFieldOverflowNote(field, configValues[field.key] ?? '');
+        return (
+          <div key={field.key} style={{ marginTop: 12 }}>
+            <TextInput
+              label={`${field.label}${field.required ? ' (required)' : ''}`}
+              value={configValues[field.key] ?? ''}
+              onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+              placeholder={field.placeholder}
+              hint={field.hint}
+              error={field.required && !configValues[field.key]?.trim() ? 'Required for sync.' : undefined}
+            />
+            {overflowNote && <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{overflowNote}</p>}
+          </div>
+        );
+      })}
       {spec.credentials !== 'none' && spec.credentials !== 'dance-only' && (
         <div style={{ marginTop: 12 }}>
           <TextArea

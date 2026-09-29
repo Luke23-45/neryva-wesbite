@@ -57,6 +57,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   const navigate = useNavigate();
   const { role, name: orgName } = useOrg();
   const canAuthor = canSetup(role, 'setup:author');
+  // P1-1 (T-01): publish is a setup:govern act (owner/admin only —
+  // assistants.controller.ts:198-201). The topbar Publish must mirror the
+  // Ship section's gate, never the broader setup:author tier.
+  const canPublish = canSetup(role, 'setup:govern');
 
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
@@ -419,15 +423,20 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
   // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
   // on the ship section (the gate truth lives there); unblocked clicks
   // increment the counter and the Ship section fires its publish flow.
+  // P1-1 (T-01): gated on setup:govern, not setup:author — the engine's
+  // publish endpoint requires owner/admin, so a developer must never bump
+  // this signal into a confirm dialog that can only 403. The topbar button
+  // is disabled with the honest copy for non-governors; this guard is
+  // defense-in-depth for any other caller of handlePublish.
   const [publishSignal, setPublishSignal] = useState(0);
   const handlePublish = useCallback(() => {
-    if (mode === 'new' || !canAuthor) return;
+    if (mode === 'new' || !canAuthor || !canPublish) return;
     if (sectionHealth.blockers > 0) {
       select('ship');
       return;
     }
     setPublishSignal((s) => s + 1);
-  }, [mode, canAuthor, sectionHealth.blockers, select]);
+  }, [mode, canAuthor, canPublish, sectionHealth.blockers, select]);
 
   /**
    * Merged builder topbar (ledger T13): instead of a stacked 56px row,
@@ -455,6 +464,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           saveState={saveState}
           onSave={requestSave}
           canAuthor={canAuthor}
+          canPublish={canPublish}
           onTestRun={() => handleSelectSection('try')}
           onPublish={handlePublish}
           blockingCount={sectionHealth.blockers}
@@ -471,6 +481,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     saveState,
     requestSave,
     canAuthor,
+    canPublish,
     handleSelectSection,
     handlePublish,
     sectionHealth.blockers,

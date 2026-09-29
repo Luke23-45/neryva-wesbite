@@ -632,18 +632,49 @@ function DangerZone() {
   const deletion = useDeletionStatus({ pollWhilePending: true });
   const requestDeletion = useRequestAccountDeletion();
   const cancelDeletion = useCancelAccountDeletion();
+  const mfa = useMfa();
+  const twoFa = mfa.data?.enabled ?? false;
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteCode, setDeleteCode] = useState('');
 
-  const pending = deletion.data && deletion.data.status !== 'none' ? deletion.data : null;
+  // P1-10: the engine answers `{ deletion: { scheduled_purge_at } | null }` —
+  // pending iff a deletion object is present.
+  const pending = deletion.data?.status === 'scheduled' ? deletion.data : null;
+
+  const closeDeleteDialog = () => {
+    setConfirmDelete(false);
+    setDeletePassword('');
+    setDeleteCode('');
+  };
+
+  const scheduleDeletion = () => {
+    requestDeletion.mutate(
+      { currentPassword: deletePassword, code: deleteCode },
+      {
+        onSuccess: (res) => {
+          const when = res?.scheduled_purge_at ? new Date(Date.parse(res.scheduled_purge_at)).toLocaleDateString() : null;
+          toast.success(when ? `Deletion scheduled — purge runs ${when}` : 'Deletion scheduled — you can cancel until the purge runs');
+          closeDeleteDialog();
+        },
+        onSettled: () => {
+          // Credentials never linger: the password and MFA code are wiped
+          // the moment the request settles (same posture as email change).
+          setDeletePassword('');
+          setDeleteCode('');
+        },
+      },
+    );
+  };
 
   return (
     <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
       <Panel title="Danger zone" subtitle="Irreversible account actions.">
-        {pending && pending.status !== 'none' ? (
+        {pending ? (
           <PendingDelete>
             <AlertTriangle size={15} strokeWidth={1.8} aria-hidden="true" />
             <div>
-              <PendingTitle>Deletion {pending.status === 'scheduled' ? 'scheduled' : 'requested'}</PendingTitle>
+              <PendingTitle>Deletion scheduled</PendingTitle>
               <PendingMeta>
                 {pending.scheduledPurgeAt
                   ? `Purge runs ${new Date(Date.parse(pending.scheduledPurgeAt)).toLocaleString()}. Sign in before then to cancel.`
@@ -669,18 +700,58 @@ function DangerZone() {
         )}
       </Panel>
 
-      <ConfirmDialog
+      {/* P1-9: the engine re-authenticates deletion (password when one is set,
+          live TOTP/recovery code when 2FA is enrolled) — the old dialog sent
+          a junk `confirmation` field and always 403'd. */}
+      <Modal
         open={confirmDelete}
+        onClose={closeDeleteDialog}
+        width={440}
         title="Delete your account?"
-        message="This schedules your account for deletion. You lose access everywhere, and the purge is irreversible once it runs. Organizations you own should be transferred first."
-        destructive
-        confirmLabel="Schedule deletion"
-        onConfirm={() => {
-          requestDeletion.mutate(undefined, { onSuccess: () => toast.success('Deletion scheduled — you can cancel until the purge runs') });
-          setConfirmDelete(false);
-        }}
-        onCancel={() => setConfirmDelete(false)}
-      />
+        footer={
+          <>
+            <GhostBtn type="button" onClick={closeDeleteDialog}>
+              Cancel
+            </GhostBtn>
+            <DangerButton
+              type="button"
+              $destructive
+              disabled={requestDeletion.isPending}
+              onClick={scheduleDeletion}
+              style={requestDeletion.isPending ? { opacity: 0.5, cursor: 'default' } : undefined}
+            >
+              Schedule deletion
+            </DangerButton>
+          </>
+        }
+      >
+        <DialogCopy>
+          This re-authenticates you first: your current password is required when your
+          account has one, and a live authenticator or recovery code when two-factor
+          authentication is on. Scheduling signs out <strong>every session</strong> immediately —
+          the purge itself runs after the grace period, and you can cancel until then.
+          Organizations you own should be transferred first.
+        </DialogCopy>
+        <TextInput
+          label="Current password"
+          type="password"
+          value={deletePassword}
+          onChange={(e) => setDeletePassword(e.target.value)}
+          autoComplete="current-password"
+          hint="Required if your account has a password."
+          autoFocus
+        />
+        {twoFa && (
+          <TextInput
+            label="Authenticator or recovery code"
+            value={deleteCode}
+            onChange={(e) => setDeleteCode(e.target.value)}
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            hint="Required while two-factor authentication is on."
+          />
+        )}
+      </Modal>
     </motion.div>
   );
 }

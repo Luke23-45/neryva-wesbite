@@ -8,6 +8,7 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
 import catalogJson from '@neryva_data/products/agent_studio/api-catalog.json';
+import { ENGINE_BASE } from '@lib/engine/client';
 import {
   TwoColumn,
   Sidebar,
@@ -37,14 +38,26 @@ import {
 } from './ApiView.styles';
 
 /**
- * API explorer (ledger I-4/I-5) — generated from the runtime's pinned
- * OpenAPI contract (regenerate: `node scripts/generate-api-catalog.mjs`).
+ * API explorer (ledger I-4/I-5) — a static endpoint catalog shipped at
+ * `src/neryva_data/products/agent_studio/api-catalog.json`, hand-maintained:
+ * the pinned OpenAPI contract it claimed to be generated from
+ * (`neryva-product/agent-studio/contracts/openapi/openapi.v1.json`) exists
+ * in no repo, so the generator (`scripts/generate-api-catalog.mjs`) was
+ * removed rather than left pointing at a nonexistent file (P1-4). The
+ * engine's committed L2 spec is
+ * `neryva-engine/docs/public/openapi.l2.yaml` (the conversation plane);
+ * reconciling the catalog against it is a product decision, still open.
  *
- * The request builder composes real calls from the endpoint's parameters;
- * GET requests execute live through the runtime proxy with the key you
- * paste (kept in memory for this tab only — never persisted). Mutating
- * methods show the exact curl instead of firing. The fake sample key,
- * hand-written examples, and the single fake response are gone.
+ * The request builder composes real calls from the endpoint's parameters.
+ * GET try-it fires live against the ENGINE API with the pasted org key,
+ * sent the way the engine consumes it — the `X-API-Key` header, resolved
+ * as an L2 `nrv_live_` principal by `engine/src/common/auth/auth.guard.ts`
+ * (P1-3: the explorer used to send the key to the `/runtime` agent-studio
+ * runtime, which has no org-key consumer at all). The copyable curl uses
+ * the same header against the engine's public host, so scheme and target
+ * agree. Key stays in memory for this tab only — never persisted.
+ * Mutating methods show the exact curl instead of firing. The fake sample
+ * key, hand-written examples, and the single fake response are gone.
  */
 
 interface CatalogParam {
@@ -75,8 +88,15 @@ interface Catalog {
 
 const catalog = catalogJson as unknown as Catalog;
 
-/** Dev: the Vite proxy forwards /runtime → the local runtime. Prod: the edge routes it. */
-const RUNTIME_BASE = (import.meta.env.VITE_RUNTIME_BASE as string | undefined) ?? '/runtime';
+/**
+ * The try-it and the copyable curl both target the engine API: the explorer
+ * documents L2 (`nrv_live_`) key usage, and the engine is the only plane
+ * that consumes org keys (`X-API-Key` → `auth.guard.ts` resolveL2). Dev
+ * routes `/engine` through the Vite proxy to the local engine; production
+ * is same-origin via the edge (see `src/lib/engine/client.ts`). This is the
+ * same ENGINE_BASE every other engine call uses — the old `/runtime`
+ * target had no org-key consumer at all (P1-3).
+ */
 
 type Tab = 'request' | 'response';
 const tabOptions: { value: Tab; label: string }[] = [
@@ -156,7 +176,9 @@ export function ApiView() {
   const setBody = (next: string) => setBodyText((m) => ({ ...m, [active?.id ?? '']: next }));
 
   const curl = useMemo(() => {
-    const lines = [`curl -X ${(active?.method ?? 'get').toUpperCase()} "https://api.neryva.ai${builtPath}" \\`, `  -H "Authorization: Bearer nrv_live_..."`];
+    // P1-3: same scheme + target as the live try-it — X-API-Key against the
+    // engine's public host (per engine/docs/public/openapi.l2.yaml `servers`).
+    const lines = [`curl -X ${(active?.method ?? 'get').toUpperCase()} "https://engine.neryva.com${builtPath}" \\`, `  -H "X-API-Key: nrv_live_..."`];
     if (active?.body) {
       lines.push(`  -H "Content-Type: application/json" \\`);
       lines.push(`  -d '${bodyTextFor ?? '{}'}'`);
@@ -174,7 +196,11 @@ export function ApiView() {
     setTab('response');
     const started = performance.now();
     try {
-      const response = await fetch(`${RUNTIME_BASE}${builtPath}`, {
+      // P1-3: the pasted org key is an L2 credential — it belongs on the
+      // engine, sent as `X-API-Key` (the only header auth.guard.ts resolves
+      // `nrv_live_` keys from), not `Authorization: Bearer` and not to the
+      // runtime (which has no org-key consumer).
+      const response = await fetch(`${ENGINE_BASE}${builtPath}`, {
         headers: {
           accept: 'application/json',
           ...(apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : {}),
@@ -188,7 +214,7 @@ export function ApiView() {
         body: pretty(text),
       });
     } catch {
-      setResult({ status: 0, statusText: 'network error', ms: Math.round(performance.now() - started), body: 'The request could not reach the runtime.' });
+      setResult({ status: 0, statusText: 'network error', ms: Math.round(performance.now() - started), body: 'The request could not reach the engine.' });
     } finally {
       setSending(false);
     }
@@ -218,8 +244,9 @@ export function ApiView() {
           <ViewTitle>API explorer</ViewTitle>
           <ViewSubtitle>
             Static endpoint catalog — {visibleEndpoints.length} endpoints. Build a request
-            or copy the curl. Live try-it targets the local runtime and may 404
-            for endpoints not implemented there.
+            or copy the curl. Live try-it sends your pasted org key
+            (`X-API-Key`) to the engine API — endpoints outside the engine's
+            L2 surface will 404.
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>
@@ -355,7 +382,7 @@ export function ApiView() {
                 />
               </TryKeyWrap>
               <TryNote>
-                <TryNoteStrong>Try it</TryNoteStrong> — {active.method === 'get' ? 'GET requests fire live through the runtime proxy.' : 'Mutating calls show the exact curl — fire it from your terminal.'}
+                <TryNoteStrong>Try it</TryNoteStrong> — {active.method === 'get' ? 'GET requests fire live against the engine API with your key.' : 'Mutating calls show the exact curl — fire it from your terminal.'}
               </TryNote>
               <ActionButton
                 disabled={active.method !== 'get' || sending}

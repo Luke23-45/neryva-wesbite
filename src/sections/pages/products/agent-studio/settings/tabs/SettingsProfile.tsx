@@ -250,13 +250,8 @@ function ProfileForm({ info }: { info: AccountInfo }) {
             </EmailActions>
           </EmailRow>
 
-          {(changeEmailOpen || info.pendingEmail) && (
+          {changeEmailOpen && (
             <EmailChangeBox>
-              {info.pendingEmail && !changeRequested && (
-                <PendingNote>
-                  A change to <strong>{info.pendingEmail}</strong> is awaiting confirmation — check that inbox for the code.
-                </PendingNote>
-              )}
               {!changeRequested ? (
                 <>
                   <TheaterNote>
@@ -655,15 +650,6 @@ const EmailChangeRow = styled.div`
     flex-direction: column;
     align-items: stretch;
   }
-`;
-
-const PendingNote = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.5;
 `;
 
 const IdentityList = styled.div`

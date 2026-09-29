@@ -35,6 +35,8 @@ function renderActions(overrides: Partial<BuilderTopbarActionsProps> = {}) {
     saveState: 'unsaved',
     onSave,
     canAuthor: true,
+    // P1-1: publish is a setup:govern act; governors pass canPublish=true.
+    canPublish: true,
     onTestRun,
     onPublish,
     blockingCount: 0,
@@ -221,6 +223,29 @@ describe('BuilderTopbarActions Publish (T10)', () => {
   it('renders no Engine Room link — it moved to the builder status bar (T13)', () => {
     renderActions();
     expect(screen.queryByText(/engine room/i)).toBeNull();
+  });
+
+  it('P1-1 (T-01): disables Publish with the honest owner-or-admin copy for non-governors', () => {
+    const { onPublish } = renderActions({ canPublish: false, blockingCount: 0 });
+    const btn = publishButton();
+    expect(btn).toBeDisabled();
+    expect(btn.getAttribute('title')).toBe(
+      'Publish needs owner or admin — you can draft, test and evaluate. Ask an owner to publish.',
+    );
+    fireEvent.click(btn);
+    expect(onPublish).not.toHaveBeenCalled();
+  });
+
+  it('P1-1 (T-01): a developer stays disabled even with blocking issues — the badge never re-enables the gate', () => {
+    renderActions({ canPublish: false, blockingCount: 2 });
+    expect(publishButton()).toBeDisabled();
+    expect(screen.getByTestId('publish-badge').textContent).toBe('2');
+  });
+
+  it('P1-1 (T-01): keeps Publish enabled for governors', () => {
+    renderActions({ canPublish: true, blockingCount: 0 });
+    expect(publishButton()).toBeEnabled();
+    expect(publishButton().getAttribute('title')).toBe('Publish this version');
   });
 });
 

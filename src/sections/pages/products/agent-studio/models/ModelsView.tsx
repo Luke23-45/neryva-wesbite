@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from '@tanstack/react-router';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
 import { KeyRound, ShieldCheck, Trash2, RefreshCw } from 'lucide-react';
@@ -31,6 +32,7 @@ import {
   MODEL_PROVIDERS,
 } from '@hooks/studio/useSetupProviders';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
+import { useEnterpriseStatus } from '@hooks/engine/billing';
 import { useOrg } from '@/Context/OrgContext';
 
 const Mono = styled.span`
@@ -116,6 +118,16 @@ export function ModelsView() {
   const writeDenied = setupDeniedCopy(role, 'setup:author');
   const canGovern = canSetup(role, 'setup:govern');
   const governDenied = setupDeniedCopy(role, 'setup:govern');
+  // BYOK enterprise gate (P1-5): the engine 403s provider-credential
+  // create() for orgs without an active enterprise commitment
+  // (BYOK_ENTERPRISE_ONLY), so the console gates the add flow here —
+  // BEFORE the MFA step-up — instead of directing users into a flow
+  // that can only end in 403. Unknown state (loading/error) fails open
+  // toward the legacy copy: the engine stays the backstop, and a
+  // transient status read never locks an enterprise org out of its
+  // own credentials.
+  const enterprise = useEnterpriseStatus();
+  const byokBlocked = enterprise.data === false;
   const [tab, setTab] = useState<Tab>('catalog');
   const models = useModelAvailability();
   const costs = useModelCosts();
@@ -196,7 +208,15 @@ export function ModelsView() {
                               {model.reasons.map((reason) => (
                                 <li key={reason}>
                                   <Mono>{reason}</Mono>
-                                  {reason === 'provider_credential_missing' && ' — add BYOK in Providers.'}
+                                  {reason === 'provider_credential_missing' &&
+                                    (byokBlocked ? (
+                                      <>
+                                        {' — BYOK is an Enterprise feature. '}
+                                        <Link to="/agent-studio/settings/billing">View subscription options →</Link>
+                                      </>
+                                    ) : (
+                                      ' — add BYOK in Providers.'
+                                    ))}
                                   {reason === 'provider_not_enabled' && ' — enable the provider below.'}
                                   {reason === 'residency_incompatible' && ' — outside the org residency pin.'}
                                 </li>
@@ -223,13 +243,13 @@ export function ModelsView() {
           </SectionGap>
         </motion.div>
       ) : (
-        <ProvidersTab canWrite={canWrite} writeDenied={writeDenied} canGovern={canGovern} governDenied={governDenied} />
+        <ProvidersTab canWrite={canWrite} writeDenied={writeDenied} canGovern={canGovern} governDenied={governDenied} byokBlocked={byokBlocked} />
       )}
     </ViewShell>
   );
 }
 
-function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied }: { canWrite: boolean; writeDenied: string; canGovern: boolean; governDenied: string }) {
+function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBlocked }: { canWrite: boolean; writeDenied: string; canGovern: boolean; governDenied: string; byokBlocked: boolean }) {
   // Credential reads are owner/admin/developer — readers/billing get the
   // denied panel, never a 403 flash (the server enforces regardless).
   const credentials = useProviderCredentials({ enabled: canWrite });
@@ -268,16 +288,32 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied }: { canW
           title="Provider credentials (BYOK)"
           subtitle="Fingerprint-only list. Create/rotate demand a fresh MFA proof; revoke stays proof-free so incident response never waits. There is no connection test — a mistyped or revoked key is discovered at run time when an agent tries to call the model."
           action={
-            <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => setCredOpen(true)}>
-              <KeyRound size={13} strokeWidth={1.8} />
-              Add credential
-            </ActionButton>
+            byokBlocked ? undefined : (
+              <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => setCredOpen(true)}>
+                <KeyRound size={13} strokeWidth={1.8} />
+                Add credential
+              </ActionButton>
+            )
           }
         >
+          {/* P1-5: the gate is visible before any MFA step-up — the engine
+              403s BYOK create() for non-enterprise orgs regardless, so the
+              add flow is hidden and the billing path is stated. */}
+          {byokBlocked && (
+            <Note style={{ marginBottom: 12 }}>
+              BYOK requires an Enterprise subscription — this org has no active enterprise commitment, so the
+              add-credential flow is hidden instead of failing after an MFA step-up.
+              {' '}<Link to="/agent-studio/settings/billing">View subscription options →</Link>
+            </Note>
+          )}
           <QueryView
             query={credentials}
             isEmpty={(d) => d.length === 0}
-            empty={{ title: 'No BYOK credentials', description: 'Models without provider keys surface provider_credential_missing in the catalog.' }}
+            empty={
+              byokBlocked
+                ? { title: 'No BYOK credentials', description: 'BYOK is an Enterprise feature — see Settings → Billing.' }
+                : { title: 'No BYOK credentials', description: 'Models without provider keys surface provider_credential_missing in the catalog.' }
+            }
           >
             {(rows) => (
               <DataTable>

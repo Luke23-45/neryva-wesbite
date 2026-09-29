@@ -16,7 +16,6 @@ export interface AccountInfo {
   email: string | null;
   name: string | null;
   emailVerified: boolean | null;
-  pendingEmail: string | null;
   timezone: string | null;
   locale: string | null;
 }
@@ -36,12 +35,14 @@ export function parseAccount(raw: unknown): AccountInfo | null {
     return null;
   }
   const verifiedRaw = nested.email_verified ?? nested.emailVerified;
+  // P1-7: the engine never returns a pending email (repo-wide grep finds no
+  // `pending_email` field; the change code is keyed per account, not per
+  // address) — no pendingEmail field is parsed, and no banner can render.
   return {
     id,
     email: str(nested.email),
     name: str(nested.name) ?? str(nested.display_name),
     emailVerified: typeof verifiedRaw === 'boolean' ? verifiedRaw : null,
-    pendingEmail: str(nested.pending_email) ?? str(nested.pendingEmail),
     timezone: str(nested.timezone) ?? str(nested.time_zone),
     locale: str(nested.locale) ?? str(nested.language),
   };
@@ -217,16 +218,26 @@ export function useUnlinkIdentity() {
 }
 
 export interface DeletionStatus {
-  status: 'none' | 'pending' | 'scheduled' | string;
+  status: 'none' | 'scheduled';
   scheduledPurgeAt: string | null;
 }
 
+/**
+ * GET /auth/me/deletion-status returns `{ deletion: { scheduled_purge_at } | null }`
+ * (`account.controller.ts`) — the engine never emits a `status` field. The
+ * account has a pending deletion iff a deletion object is present (P1-10);
+ * the old parser read `deletion.status`, always fell back to `'none'`, and
+ * hid scheduled deletions from the Danger zone.
+ */
 export function parseDeletionStatus(raw: unknown): DeletionStatus {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const deletion = typeof record.deletion === 'object' && record.deletion !== null ? (record.deletion as Record<string, unknown>) : record;
+  const deletion =
+    typeof record.deletion === 'object' && record.deletion !== null
+      ? (record.deletion as Record<string, unknown>)
+      : null;
   return {
-    status: str(deletion.status) ?? 'none',
-    scheduledPurgeAt: str(deletion.scheduled_purge_at) ?? str(deletion.scheduledPurgeAt),
+    status: deletion ? 'scheduled' : 'none',
+    scheduledPurgeAt: deletion ? (str(deletion.scheduled_purge_at) ?? str(deletion.scheduledPurgeAt)) : null,
   };
 }
 
@@ -241,10 +252,40 @@ export function useDeletionStatus(options?: { enabled?: boolean; pollWhilePendin
   });
 }
 
+/**
+ * Account deletion, step 1 — POST /auth/me/delete.
+ *
+ * Mirrors the email-change request pattern: the engine re-authenticates here
+ * (`account-deletion.service.ts` requires the current password when one is
+ * set and a live TOTP/recovery `code` when two-factor is enrolled, 403ing
+ * otherwise), so the form collects both and we send exactly the non-empty
+ * ones — sending an empty string would trip verification, not be ignored.
+ * Scheduling revokes every session immediately; the engine answers
+ * `{ scheduled_purge_at }` and the purge itself runs at that timestamp.
+ */
+export interface DeletionRequest {
+  currentPassword?: string;
+  code?: string;
+}
+
+export function buildDeletionBody(input: DeletionRequest): Record<string, string> {
+  const body: Record<string, string> = {};
+  const password = input.currentPassword?.trim();
+  const code = input.code?.trim();
+  if (password) {
+    body.password = password;
+  }
+  if (code) {
+    body.code = code;
+  }
+  return body;
+}
+
 export function useRequestAccountDeletion() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => engine('/auth/me/delete', { method: 'POST', body: { confirmation: 'delete' } }),
+    mutationFn: async (input: DeletionRequest) =>
+      engine<{ scheduled_purge_at: string }>('/auth/me/delete', { method: 'POST', body: buildDeletionBody(input) }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...ACCOUNT_KEY, 'deletion-status'] }),
     onError: (error) => toastEngineError(error, 'Could not schedule account deletion'),
   });

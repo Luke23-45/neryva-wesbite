@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import { FileText, Square } from 'lucide-react';
+import { FileText, Square, X } from 'lucide-react';
 import { ease } from '@styles/motion';
 import type { AttachmentUpload } from '@hooks/studio/useAttachmentUpload';
 import {
@@ -37,6 +37,13 @@ type Props = {
   disabled?: boolean;
   attachments?: AttachmentUpload[];
   onAttach?: (file: File | null | undefined) => void;
+  /**
+   * H3 — removes one pending attachment from the set (wired to the
+   * upload hook's dismiss). Rendered as a per-chip remove button so a
+   * user at the attachment cap can drop one and retry in the same thread.
+   * Omit to render chips without removal.
+   */
+  onRemoveAttachment?: (sessionId: string) => void;
 };
 
 /**
@@ -45,7 +52,7 @@ type Props = {
  * A3-49 — Escape stops a running turn.
  */
 export const ChatComposer = forwardRef<HTMLTextAreaElement, Props>(
-  ({ placeholder, hint, onSend, streaming = false, onStop, stopping = false, disabled = false, attachments = [], onAttach }, ref) => {
+  ({ placeholder, hint, onSend, streaming = false, onStop, stopping = false, disabled = false, attachments = [], onAttach, onRemoveAttachment }, ref) => {
     const [value, setValue] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
     const areaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -96,6 +103,16 @@ export const ChatComposer = forwardRef<HTMLTextAreaElement, Props>(
                   <FileText size={11} strokeWidth={1.8} aria-hidden="true" />
                   <span>{a.filename}</span>
                   <AttachmentState title={a.lastError ?? undefined}>{statusLabel[a.status]}</AttachmentState>
+                  {onRemoveAttachment && (
+                    <RemoveButton
+                      type="button"
+                      onClick={() => onRemoveAttachment(a.sessionId)}
+                      aria-label={`Remove ${a.filename}`}
+                      title={`Remove ${a.filename}`}
+                    >
+                      <X size={11} strokeWidth={2} aria-hidden="true" />
+                    </RemoveButton>
+                  )}
                 </AttachmentChip>
             ))}
           </AttachmentStrip>
@@ -209,4 +226,29 @@ const AttachmentState = styled.span`
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.ghost};
+`;
+
+/** H3 — per-chip removal: plain hit target, ghost until hover (quiet by default). */
+const RemoveButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.ghost};
+  cursor: pointer;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+    background: ${({ theme }) => theme.app.surface.tint};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.text.primary};
+    outline-offset: 1px;
+  }
 `;

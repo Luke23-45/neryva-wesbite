@@ -317,7 +317,10 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </WorkspaceSelect>
-            <FieldHint>New keys and agents default to this project.</FieldHint>
+            {/* P1-8: agent creation cannot consume this — the engine's
+                CreateAssistantDto rejects unknown top-level keys, so the
+                copy claims only what key issuance actually does. */}
+            <FieldHint>New API keys are bound to this project when issued.</FieldHint>
           </SelectField>
           <TextInput
             label="Default model"

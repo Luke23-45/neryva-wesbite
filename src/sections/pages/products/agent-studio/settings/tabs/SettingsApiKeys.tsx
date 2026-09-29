@@ -18,6 +18,7 @@ import styled from 'styled-components';
 import { useKeys, useProjects, type KeyRow } from '@hooks/engine/queries';
 import { useIssueKey, useRevokeKey } from '@hooks/engine/mutations';
 import { useKeyDetail, useRotateKey, useUpdateKey, useBindKey, useUnbindKey, expiresAtFromChoice } from '@hooks/studio/useStudioKeys';
+import { useDefaultProject } from '@hooks/studio/useDefaultProject';
 import { useOrg } from '@/Context/OrgContext';
 
 /**
@@ -110,6 +111,8 @@ export function SettingsApiKeys() {
   const [expiry, setExpiry] = useState<Expiry>('90d');
   const [generated, setGenerated] = useState<string | null>(null);
   const issue = useIssueKey();
+  // P1-8: the workspace's default project pre-fills the issue-time binding.
+  const defaultProject = useDefaultProject();
 
   const [revokeTarget, setRevokeTarget] = useState<KeyRow | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -152,13 +155,16 @@ export function SettingsApiKeys() {
       setStep('expiry');
     } else if (step === 'expiry') {
       // The engine mints the key — step-up is handled by the mutation
-      // (auto-retry with a fresh proof on step_up_required).
+      // (auto-retry with a fresh proof on step_up_required). P1-8: the
+      // workspace default project binds the key at issue time (engine K-2);
+      // a stale default resolves to null and is simply not sent.
       try {
         const created = await issue.mutateAsync({
           name: name.trim(),
           role,
           scopes: Object.entries(scopes).filter(([, on]) => on).map(([key]) => key),
           expires_at: expiresAtFromChoice(expiry),
+          ...(defaultProject.project ? { project_id: defaultProject.project.id } : {}),
         });
         setGenerated(created.key);
         setStep('reveal');
@@ -382,6 +388,12 @@ export function SettingsApiKeys() {
           {step === 'expiry' && (
             <FieldStack>
               <ExpiryLabel>When should this key expire?</ExpiryLabel>
+              {defaultProject.project && (
+                <Helper>
+                  <FolderInput size={13} strokeWidth={1.8} />
+                  Bound to project “{defaultProject.project.name}” — your workspace default (Settings → Workspace).
+                </Helper>
+              )}
               <ExpiryGrid>
                 {EXPIRY_OPTIONS.map((opt) => (
                   <ExpiryCard

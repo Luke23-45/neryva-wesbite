@@ -96,6 +96,8 @@ function isNotFoundError(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 404 || error.code === 'not_found');
 }
 
+import { MAX_MESSAGE_ATTACHMENTS, sendableAttachmentIds } from './messageAttachments';
+
 export function AgentStudioChatView() {
   const { setHeaderTheme } = useUiStore();
   const navigate = useNavigate();
@@ -237,7 +239,9 @@ export function AgentStudioChatView() {
   };
 
   const send = (text: string) => {
-    const readyIds = attachments.uploads.filter((u) => u.status === 'ready').map((u) => u.sessionId);
+    // H3 — capped at MAX_MESSAGE_ATTACHMENTS so the send can never 422 on
+    // attachment count; failed/quarantined rows are never sent.
+    const readyIds = sendableAttachmentIds(attachments.uploads);
     void session.send(text, readyIds.length > 0 ? readyIds : undefined);
     attachments.reset();
   };
@@ -268,6 +272,17 @@ export function AgentStudioChatView() {
 
   const onAttach = (file: File | null | undefined) => {
     if (!file) return;
+    // H3 — cap the pending set at the engine limit BEFORE the upload
+    // starts: with ≥5 pending attachments every send would 422, and the
+    // only recovery used to be a new thread. The chip strip's remove
+    // buttons (wired to attachments.dismiss below) let the user drop one
+    // and retry in the same thread — no dead ends.
+    if (attachments.uploads.length >= MAX_MESSAGE_ATTACHMENTS) {
+      toast.error(
+        `Messages carry up to ${MAX_MESSAGE_ATTACHMENTS} attachments — remove one to attach another.`,
+      );
+      return;
+    }
     void attachments
       .attach({ file, purpose: 'MESSAGE_ATTACHMENT' })
       .then((sessionId) => {
@@ -493,6 +508,7 @@ export function AgentStudioChatView() {
           disabled={needsAgent || session.phase === 'creating'}
           attachments={attachments.uploads}
           onAttach={onAttach}
+          onRemoveAttachment={attachments.dismiss}
         />
       </ChatArea>
 

@@ -1,6 +1,7 @@
 import { PanelLeftOpen, PanelRightOpen, Play, Upload, Waypoints } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { PUBLISH_COPY } from '../lib/publish-model';
 import {
   ActionsGroup,
   AgentName,
@@ -47,6 +48,13 @@ export interface BuilderTopbarActionsProps {
   canAuthor: boolean;
   /** Selects the Try node — the same try-run flow, no duplicate (T9). */
   onTestRun: () => void;
+  /**
+   * P1-1 (T-01): setup:govern (owner/admin) — publish is NOT a
+   * setup:author act. False → the Publish button is disabled with the same
+   * honest "Publish needs owner or admin" copy the Ship section uses, so a
+   * developer is never walked into a confirm dialog that can only 403.
+   */
+  canPublish: boolean;
   /** Triggers the Ship publish flow, or opens the issues surface when blocked (T10). */
   onPublish: () => void;
   /** Live blocking-issue count; 0 → no badge rendered. */
@@ -128,6 +136,7 @@ export function BuilderTopbarActions({
   saveState,
   onSave,
   canAuthor,
+  canPublish,
   onTestRun,
   onPublish,
   blockingCount,
@@ -154,9 +163,13 @@ export function BuilderTopbarActions({
     ? 'Testing requires an author role'
     : 'Run a test conversation (opens the Try node)';
   const publishTitle =
-    blockingCount > 0
-      ? `Publish — ${blockingCount} blocking issue${blockingCount === 1 ? '' : 's'} to review first`
-      : 'Publish this version';
+    !canPublish
+      ? // P1-1: same honest copy the Ship section shows non-governors —
+        // the button is disabled, never a dead click into a doomed dialog.
+        PUBLISH_COPY.requestPublish
+      : blockingCount > 0
+        ? `Publish — ${blockingCount} blocking issue${blockingCount === 1 ? '' : 's'} to review first`
+        : 'Publish this version';
   return (
     <ActionsGroup>
       <SaveState aria-live="polite">
@@ -173,7 +186,7 @@ export function BuilderTopbarActions({
       )}
       {mode === 'build' && (
         <PublishWrap>
-          <PublishButton type="button" onClick={onPublish} title={publishTitle}>
+          <PublishButton type="button" onClick={onPublish} disabled={!canPublish} title={publishTitle}>
             <Upload size={14} aria-hidden="true" />
             Publish
           </PublishButton>
