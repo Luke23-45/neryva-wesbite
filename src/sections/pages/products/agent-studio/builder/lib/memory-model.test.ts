@@ -78,7 +78,7 @@ describe('parseOrgMemoryPolicy (fail-open mirror)', () => {
   });
   it('describes scrub and TTL in plain words', () => {
     expect(SCRUB_COPY.redact).toMatch(/before embedding/);
-    expect(SCRUB_COPY.block).toMatch(/422/);
+    expect(SCRUB_COPY.block).toMatch(/400/);
     expect(describeTtl(null)).toMatch(/kept until deleted/);
     expect(describeTtl(2_592_000)).toBe('30 days');
     expect(describeTtl(3600)).toBe('1 hour');
