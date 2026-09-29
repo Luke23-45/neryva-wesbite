@@ -1,16 +1,27 @@
 import styled from 'styled-components';
 
+/**
+ * Instructions section — redesigned.
+ *
+ * This module also owns the shared section primitives (Wrap, SectionLabel,
+ * EmptyState, Whisper, CounterRow) consumed across the builder: they carry
+ * the new design language so every section inherits it.
+ */
+
 export const Wrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 28px;
+  max-width: 720px;
+  padding-top: 8px;
 `;
 
+/** Shared label — sentence case, 600 weight. Micro-caps read as admin UI. */
 export const SectionLabel = styled.div`
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.app.text.muted};
+  letter-spacing: -0.005em;
+  color: ${({ theme }) => theme.app.text.secondary};
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -20,28 +31,104 @@ export const SectionLabel = styled.div`
 export const MicroCount = styled.span`
   font-weight: 400;
   letter-spacing: 0;
-  color: ${({ theme }) => theme.app.text.ghost};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
+`;
+
+/* ── Composer block groups ─────────────────────────────────────── */
+
+export const BlockGroup = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+export const BlockHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+export const BlockNumber = styled.span`
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 650;
+  color: ${({ theme }) => theme.app.text.muted};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const BlockTitle = styled.h3`
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+export const BlockSub = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 400;
+  color: ${({ theme }) => theme.app.text.muted};
+  letter-spacing: 0;
+`;
+
+export const BlockCount = styled.span`
+  margin-left: auto;
+  flex: none;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: tabular-nums;
 `;
 
 export const BlockCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: 14px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+
+  &:focus-within {
+    border-color: ${({ theme }) => theme.app.border.strong};
+  }
 `;
 
 export const CustomCard = styled(BlockCard)`
   border-left: 3px solid ${({ theme }) => theme.app.status.warning.fg};
 `;
 
+export const RuleList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
 export const RuleRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 6px 8px 6px 4px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.subtle};
+    border-color: ${({ theme }) => theme.app.border.default};
+  }
+
+  &:focus-within {
+    background: ${({ theme }) => theme.app.surface.subtle};
+    border-color: ${({ theme }) => theme.app.border.strong};
+  }
 `;
 
 export const RuleInputWrap = styled.div`
@@ -53,11 +140,11 @@ export const IconButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   flex: none;
   border: 0;
-  border-radius: 7px;
+  border-radius: 9px;
   background: transparent;
   color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
@@ -80,18 +167,24 @@ export const IconButton = styled.button`
 
 export const AddRow = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 16px;
+  align-items: center;
+  padding-top: 4px;
 `;
 
 export const AddButton = styled.button`
   border: 0;
   background: transparent;
   color: ${({ theme }) => theme.app.status.info.fg};
-  font-size: ${({ theme }) => theme.app.type.caption};
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  padding: 4px 2px;
-  border-radius: 6px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
   &:hover {
     text-decoration: underline;
@@ -103,10 +196,16 @@ export const AddButton = styled.button`
   }
 `;
 
-export const Whisper = styled.div<{ $tone: 'amber' | 'red' }>`
-  border-radius: 10px;
-  padding: 10px 12px;
+export const AddHint = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.5;
+`;
+
+export const Whisper = styled.div<{ $tone: 'amber' | 'red' }>`
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: ${({ theme }) => theme.app.type.body};
   line-height: 1.55;
   border: 1px solid
     ${({ theme, $tone }) =>
@@ -128,16 +227,17 @@ export const CounterRow = styled.div`
 `;
 
 export const BudgetBar = styled.div`
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   background: ${({ theme }) => theme.app.surface.active};
   overflow: hidden;
+  margin-top: 8px;
 `;
 
 export const BudgetFill = styled.div<{ $ratio: number }>`
   height: 100%;
   width: ${({ $ratio }) => Math.min(100, Math.max(0, $ratio * 100))}%;
-  border-radius: 2px;
+  border-radius: 3px;
   background: ${({ theme, $ratio }) =>
     $ratio > 1
       ? theme.app.status.error.fg
@@ -148,18 +248,19 @@ export const BudgetFill = styled.div<{ $ratio: number }>`
 
 export const Goldilocks = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.55;
+  margin-top: 10px;
 `;
 
 export const PreviewCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.bg.base};
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 14px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 `;
 
 export const PreviewBlock = styled.button`
@@ -177,40 +278,41 @@ export const PreviewBlock = styled.button`
 `;
 
 export const PreviewHeader = styled.div`
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 650;
   color: ${({ theme }) => theme.app.status.info.fg};
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 `;
 
 export const PreviewText = styled.pre`
   margin: 0;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11.5px;
-  line-height: 1.6;
+  font-size: 12.5px;
+  line-height: 1.65;
   color: ${({ theme }) => theme.app.text.body};
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 `;
 
 export const OverrideBanner = styled.div`
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: ${({ theme }) => theme.app.type.caption};
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: ${({ theme }) => theme.app.type.body};
   line-height: 1.55;
   border: 1px solid ${({ theme }) => theme.app.status.info.border};
   background: ${({ theme }) => theme.app.status.info.bg};
   color: ${({ theme }) => theme.app.text.secondary};
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
 export const EmptyState = styled.div`
   border: 1px dashed ${({ theme }) => theme.app.border.strong};
-  border-radius: 12px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 20px 22px;
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
   line-height: 1.6;
@@ -235,9 +337,8 @@ export const ConflictPane = styled.div`
 `;
 
 export const ConflictLabel = styled.div`
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: 650;
   color: ${({ theme }) => theme.app.text.muted};
   margin-bottom: 4px;
 `;

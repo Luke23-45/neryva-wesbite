@@ -31,8 +31,15 @@ import { ConflictDialog } from './ConflictDialog';
 import { SamplesSection } from './SamplesSection';
 import {
   AddButton,
+  AddHint,
   AddRow,
   BlockCard,
+  BlockCount,
+  BlockGroup,
+  BlockHeader,
+  BlockNumber,
+  BlockSub,
+  BlockTitle,
   BudgetBar,
   BudgetFill,
   CounterRow,
@@ -40,15 +47,14 @@ import {
   EmptyState,
   Goldilocks,
   IconButton,
-  MicroCount,
   OverrideBanner,
   PreviewBlock,
   PreviewCard,
   PreviewHeader,
   PreviewText,
   RuleInputWrap,
+  RuleList,
   RuleRow,
-  SectionLabel,
   Whisper,
   Wrap,
 } from './InstructionsSection.styles';
@@ -437,7 +443,7 @@ export function InstructionsSection({
               .filter((b) => b.body.trim() !== '' || b.title.trim() !== '')
               .map((b) => (
                 <PreviewBlock key={b.id} type="button" onClick={() => focusBlock(b.id)} title="Jump to this block">
-                  <PreviewHeader>{b.type.toUpperCase()}</PreviewHeader>
+                  <PreviewHeader>{b.type.charAt(0).toUpperCase() + b.type.slice(1)}</PreviewHeader>
                   <PreviewText>{b.title ? `${b.title}\n${b.body}` : b.body}</PreviewText>
                 </PreviewBlock>
               ))
@@ -472,40 +478,50 @@ export function InstructionsSection({
 
       {tab === 'compose' && (
         <>
-          {singletons.map((block) => (
-            <div key={block.id}>
-              <SectionLabel>
-                {SINGLETON_LABEL[block.type] ?? block.type}
-                <MicroCount>{block.body.length.toLocaleString()}</MicroCount>
-              </SectionLabel>
-              <BlockCard style={{ marginTop: 6 }}>
-                <TextArea
-                  ref={registerField(block.id)}
-                  label={undefined}
-                  aria-label={SINGLETON_LABEL[block.type] ?? block.type}
-                  value={block.body}
-                  onChange={(event) => patchBlock(block.id, { body: event.target.value })}
-                  rows={block.type === 'role' ? 3 : 2}
-                  placeholder={
-                    block.type === 'role'
-                      ? 'You are…'
-                      : block.type === 'output'
-                        ? 'Verdict + section cite · max 3 exchanges'
-                        : block.type === 'refusal'
-                          ? 'Over $500 or off-policy → escalate to a human'
-                          : 'One breath.'
-                  }
-                />
-              </BlockCard>
-            </div>
-          ))}
+          {singletons.map((block, index) => {
+            const [title, sub] = (SINGLETON_LABEL[block.type] ?? block.type).split(' — ');
+            return (
+              <BlockGroup key={block.id}>
+                <BlockHeader>
+                  <BlockNumber aria-hidden="true">{index + 1}</BlockNumber>
+                  <BlockTitle>
+                    {title} {sub ? <BlockSub>{sub}</BlockSub> : null}
+                  </BlockTitle>
+                  <BlockCount>{block.body.length.toLocaleString()} chars</BlockCount>
+                </BlockHeader>
+                <BlockCard>
+                  <TextArea
+                    ref={registerField(block.id)}
+                    label={undefined}
+                    aria-label={SINGLETON_LABEL[block.type] ?? block.type}
+                    value={block.body}
+                    onChange={(event) => patchBlock(block.id, { body: event.target.value })}
+                    rows={block.type === 'role' ? 3 : 2}
+                    placeholder={
+                      block.type === 'role'
+                        ? 'You are…'
+                        : block.type === 'output'
+                          ? 'Verdict + section cite · max 3 exchanges'
+                          : block.type === 'refusal'
+                            ? 'Over $500 or off-policy → escalate to a human'
+                            : 'One breath.'
+                    }
+                  />
+                </BlockCard>
+              </BlockGroup>
+            );
+          })}
 
-          <div>
-            <SectionLabel>
-              RULES · {rules.length}
-              <MicroCount>one rule per line works best</MicroCount>
-            </SectionLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+          <BlockGroup>
+            <BlockHeader>
+              <BlockTitle>
+                Rules <BlockSub>one rule per line works best</BlockSub>
+              </BlockTitle>
+              <BlockCount>
+                {rules.length} {rules.length === 1 ? 'rule' : 'rules'}
+              </BlockCount>
+            </BlockHeader>
+            <RuleList>
               {rules.map((block, index) => (
                 <RuleRow key={block.id} data-rule-row={block.id}>
                   <IconButton
@@ -543,37 +559,37 @@ export function InstructionsSection({
                   </IconButton>
                 </RuleRow>
               ))}
-              {rules.length === 0 && (
-                <EmptyState>No rules yet — one rule per line works best.</EmptyState>
-              )}
-              <AddRow>
-                <AddButton type="button" onClick={() => addRule()}>
-                  <Plus size={12} strokeWidth={2} style={{ verticalAlign: -1 }} /> Add rule
+            </RuleList>
+            {rules.length === 0 && (
+              <EmptyState>No rules yet — one rule per line works best.</EmptyState>
+            )}
+            <AddRow>
+              <AddButton type="button" onClick={() => addRule()}>
+                <Plus size={13} strokeWidth={2} /> Add rule
+              </AddButton>
+              {examples.length < MAX_EXAMPLES ? (
+                <AddButton type="button" onClick={addExample}>
+                  <Plus size={13} strokeWidth={2} /> Add example
                 </AddButton>
-                {examples.length < MAX_EXAMPLES ? (
-                  <AddButton type="button" onClick={addExample}>
-                    <Plus size={12} strokeWidth={2} style={{ verticalAlign: -1 }} /> Add example
-                  </AddButton>
-                ) : (
-                  <span style={{ fontSize: 12, opacity: 0.6 }}>
-                    {MAX_EXAMPLES} examples is plenty — 2–3 canonical beats 10 mediocre.
-                  </span>
-                )}
-              </AddRow>
-            </div>
-          </div>
+              ) : (
+                <AddHint>
+                  {MAX_EXAMPLES} examples is plenty — 2–3 canonical beats 10 mediocre.
+                </AddHint>
+              )}
+            </AddRow>
+          </BlockGroup>
 
           {examples.map((block, index) => (
-            <div key={block.id}>
-              <SectionLabel>
-                EXAMPLE {index + 1}
-                <MicroCount>
+            <BlockGroup key={block.id}>
+              <BlockHeader>
+                <BlockTitle>Example {index + 1}</BlockTitle>
+                <BlockCount>
                   <AddButton type="button" onClick={() => removeBlock(block.id)}>
                     Remove
                   </AddButton>
-                </MicroCount>
-              </SectionLabel>
-              <BlockCard style={{ marginTop: 6 }}>
+                </BlockCount>
+              </BlockHeader>
+              <BlockCard>
                 <TextInput
                   ref={registerField(block.id)}
                   aria-label={`Example ${index + 1} title`}
@@ -589,20 +605,22 @@ export function InstructionsSection({
                   placeholder={'User: …\nAssistant: …'}
                 />
               </BlockCard>
-            </div>
+            </BlockGroup>
           ))}
 
           {customs.map((block) => (
-            <div key={block.id}>
-              <SectionLabel>
-                CUSTOM TEXT — PRESERVED VERBATIM
-                <MicroCount>
+            <BlockGroup key={block.id}>
+              <BlockHeader>
+                <BlockTitle>
+                  Custom text <BlockSub>preserved verbatim</BlockSub>
+                </BlockTitle>
+                <BlockCount>
                   <AddButton type="button" onClick={() => removeBlock(block.id)}>
                     Delete
                   </AddButton>
-                </MicroCount>
-              </SectionLabel>
-              <CustomCard style={{ marginTop: 6 }}>
+                </BlockCount>
+              </BlockHeader>
+              <CustomCard>
                 <TextArea
                   ref={registerField(block.id)}
                   aria-label="Custom text (preserved verbatim)"
@@ -611,7 +629,7 @@ export function InstructionsSection({
                   rows={6}
                 />
               </CustomCard>
-            </div>
+            </BlockGroup>
           ))}
 
           {emptyDoc && (
@@ -648,11 +666,11 @@ export function InstructionsSection({
           </span>
           <span>~{estimateTokens(chars).toLocaleString()} tokens (est.)</span>
         </CounterRow>
-        <BudgetBar style={{ marginTop: 6 }}>
+        <BudgetBar>
           <BudgetFill $ratio={ratio} />
         </BudgetBar>
         {chars < 500 && chars > 0 && (
-          <Goldilocks style={{ marginTop: 8 }}>
+          <Goldilocks>
             Short prompts hold shape better — cut a paragraph, re-run evals, keep what scores.
           </Goldilocks>
         )}
