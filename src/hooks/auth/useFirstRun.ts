@@ -151,7 +151,7 @@ export interface WelcomeWrites {
 }
 
 export interface WelcomeWriteResult {
-  /** Verbatim server 422 copy per field; null when that write is fine/skipped. */
+  /** Verbatim server validation_failed (400) copy per field; null when that write is fine/skipped. */
   nameError: string | null;
   workspaceError: string | null;
   /** A non-validation failure happened (toast + advance anyway). */
@@ -164,9 +164,10 @@ export interface WelcomeWriteResult {
 }
 
 export function useSaveWelcomeNames() {
-  // The mutation never rejects for ApiErrors: 422s and transport failures are
-  // DATA (the section decides hold-vs-advance), not exceptions. Only truly
-  // unexpected throws escape — the section still advances on those.
+  // The mutation never rejects for ApiErrors: validation_failed (400)
+  // responses and transport failures are DATA (the section decides
+  // hold-vs-advance), not exceptions. Only truly unexpected throws
+  // escape — the section still advances on those.
   return useMutation({
     mutationFn: async (input: WelcomeWrites): Promise<WelcomeWriteResult> => {
       const tasks: Array<{ key: 'name' | 'workspace'; run: () => Promise<unknown> }> = [];
@@ -210,7 +211,12 @@ export function useSaveWelcomeNames() {
           return;
         }
         const reason = outcome.reason as unknown;
-        if (reason instanceof ApiError && reason.status === 422) {
+        // Both welcome-write server paths emit validation failures as 400
+        // `validation_failed` (PATCH /auth/me throws ApiError.validation;
+        // PATCH /console/org/:orgId/settings via the global ValidationPipe +
+        // org-settings service — never 422), so match the engine envelope
+        // code, not the status.
+        if (reason instanceof ApiError && reason.code === 'validation_failed') {
           if (key === 'name') {
             nameError = reason.message;
           } else {

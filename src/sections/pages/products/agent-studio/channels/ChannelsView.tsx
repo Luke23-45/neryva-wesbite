@@ -36,6 +36,7 @@ import {
   validateCredentialField,
   buildChannelExtrasPatch,
   outOfWindowTemplateProblem,
+  quickRepliesFieldValue,
   PLATFORM_CREDENTIAL_SPECS,
   type ChannelAccount,
   type ConnectablePlatform,
@@ -600,11 +601,9 @@ function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () 
   // csat_enabled (boolean) on web channel configs — the widget plane
   // renders the chips + thumbs control from the session bootstrap, and
   // the :publicKey/feedback endpoint refuses writes unless csat_enabled.
-  const [quickReplies, setQuickReplies] = useState(
-    Array.isArray(account.config.quick_replies)
-      ? (account.config.quick_replies as unknown[]).filter((r): r is string => typeof r === 'string').join('\n')
-      : '',
-  );
+  // G2: the field initializer lives in quickRepliesFieldValue so the
+  // load→save separator is unit-tested (real newline, never '\n' literal).
+  const [quickReplies, setQuickReplies] = useState(() => quickRepliesFieldValue(account.config));
   const [csatEnabled, setCsatEnabled] = useState(account.config.csat_enabled === true);
 
   // H5: same origin normalization as the connect modal.

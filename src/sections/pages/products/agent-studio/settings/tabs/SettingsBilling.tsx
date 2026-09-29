@@ -16,6 +16,8 @@ import {
   CellMeta,
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
+import { useOrg } from '@/Context/OrgContext';
+import { useCan } from '@lib/engine/capabilities';
 import { useEntitlements, useInvoices, useOrgLimits, parseQuotaMeters, type EntitlementRow } from '@hooks/engine/queries';
 import { useEnterpriseStatus } from '@hooks/engine/billing';
 import { useCreditWallet } from '@hooks/engine/credits';
@@ -52,15 +54,36 @@ function displayStatus(status: string): string {
 }
 
 export function SettingsBilling() {
+  const { role } = useOrg();
+  const can = useCan('agent_studio');
+  // Wave-7 gap 6 (NG-MT-2 pattern): every data read here is engine role-gated.
+  //   - wallet + invoices: @Roles('owner','admin','billing') — readers AND
+  //     developers fired doomed 403s before the gate (`billing:view` is
+  //     exactly that set).
+  //   - enterprise/status + /limits: @Roles(...+ 'developer') — readers fired
+  //     doomed 403s; `audit:view` is exactly "everyone but reader", as used
+  //     for /limits on the dashboard (NG-1).
+  //   - entitlements: every role incl. reader — no gate.
+  // Roles without the capability get the dashboard's honest "not visible to
+  // your role" copy instead of a doomed request; the engine stays the
+  // backstop. A null role also disables the queries (canPerform fails
+  // closed) and the copy names the role "unknown".
+  const canViewBilling = can('billing:view');
+  const canReadQuotas = can('audit:view');
+
   const entitlements = useEntitlements();
   const row: EntitlementRow | undefined = entitlements.data?.entitlements.find((e) => e.product === 'agent_studio');
-  const limits = useOrgLimits();
+  const limits = useOrgLimits({ enabled: canReadQuotas });
   const meters = parseQuotaMeters(limits.data, 'agent_studio');
-  const enterprise = useEnterpriseStatus();
-  const wallet = useCreditWallet();
+  const enterprise = useEnterpriseStatus({ enabled: canReadQuotas });
+  const wallet = useCreditWallet({ enabled: canViewBilling });
+  const invoices = useInvoices({ enabled: canViewBilling });
 
-  const subLoading = entitlements.isPending || enterprise.isPending;
-  const subError = entitlements.isError || enterprise.isError;
+  // D-09-FOLLOWUP: a disabled TanStack v5 query sits in `pending` forever, so
+  // every loading/error flag is gated on the same capability its query is
+  // enabled with — otherwise readers would stare at an eternal skeleton.
+  const subLoading = entitlements.isPending || (enterprise.isPending && canReadQuotas);
+  const subError = entitlements.isError || (enterprise.isError && canReadQuotas);
   const kind: SubscriptionKind | null = subLoading || subError
     ? null
     : deriveSubscriptionKind({ enterprise: enterprise.data === true, plan: row?.plan ?? null });
@@ -95,8 +118,16 @@ export function SettingsBilling() {
           {copy && <SubscriptionNote>{copy.blurb}</SubscriptionNote>}
 
           {/* BUG-4 posture: the balance is real wallet data — loading
-              skeleton, plain error note, never a guessed number. */}
-          {wallet.isPending ? (
+              skeleton, plain error note, never a guessed number.
+              Gap 6: the wallet endpoint is @Roles('owner','admin','billing') —
+              readers/developers see the honest restricted note instead of a
+              doomed 403 + retry loop. */}
+          {!canViewBilling ? (
+            <QuotaNote>
+              Credit balance is visible to owner, admin, and billing roles. Your
+              role ({role ?? 'unknown'}) doesn’t include it — ask an admin if you need access.
+            </QuotaNote>
+          ) : wallet.isPending ? (
             <Skeleton $h="20px" $w="220px" $r="6px" />
           ) : wallet.isError || !wallet.data ? (
             <QuotaNote>Credit balance couldn’t be loaded — try refreshing.</QuotaNote>
@@ -134,8 +165,15 @@ export function SettingsBilling() {
 
           {/* BUG-4: honest quota states — loading skeleton, error note, and an
               explicit empty state (the platform surface's "No quota snapshot"
-              copy) instead of silently omitting the section. */}
-          {limits.isPending ? (
+              copy) instead of silently omitting the section.
+              Gap 6: /limits is @Roles('owner','admin','billing','developer') —
+              readers see the honest restricted note instead of a doomed 403. */}
+          {!canReadQuotas ? (
+            <QuotaNote>
+              Quota and limits are visible to owner, admin, billing, and developer roles. Your
+              role ({role ?? 'unknown'}) doesn’t include them — ask an admin if you need access.
+            </QuotaNote>
+          ) : limits.isPending ? (
             <Skeleton $h="96px" $r="12px" />
           ) : limits.isError ? (
             <QuotaNote>Quota couldn’t be loaded — try refreshing.</QuotaNote>
@@ -175,8 +213,17 @@ export function SettingsBilling() {
             </InvoiceLink>
           }
         >
+          {/* Gap 6: /invoices is @Roles('owner','admin','billing') — readers and
+              developers see the honest restricted note instead of a doomed
+              403 + retry loop, exactly like the dashboard's D-01 usage panel.
+              Note: the retry inside QueryView's error state calls refetch(),
+              which bypasses `enabled` in TanStack v5 — it's unreachable here
+              for gated roles because the QueryView only mounts when the
+              query is enabled, and for enabled roles the endpoint allows
+              them, so the retry is legitimate. */}
+          {canViewBilling ? (
           <QueryView
-            query={useInvoices()}
+            query={invoices}
             skeleton={<Skeleton $h="160px" $r="12px" />}
             isEmpty={(d) => (d.invoices ?? []).length === 0}
             empty={{ title: 'No invoices yet', description: 'Invoices appear once a billing period closes.' }}
@@ -219,6 +266,12 @@ export function SettingsBilling() {
               </DataTable>
             )}
           </QueryView>
+          ) : (
+            <QuotaNote style={{ padding: '24px 0' }}>
+              Invoices are visible to owner, admin, and billing roles. Your
+              role ({role ?? 'unknown'}) doesn’t include them — ask an admin if you need access.
+            </QuotaNote>
+          )}
         </Panel>
       </motion.div>
     </>

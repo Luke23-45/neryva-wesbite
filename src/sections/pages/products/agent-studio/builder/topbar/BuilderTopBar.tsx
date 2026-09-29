@@ -72,9 +72,9 @@ const SAVE_COPY: Record<BuilderSaveState, string> = {
 };
 
 /**
- * Identity slot (v10 T13): 24px flat mark + read-only breadcrumb (identity
- * is write-once; the engine has no rename verb, so the bar never offers
- * one) + Draft/Live pills. The "AgentStudio" wordmark is dropped — the
+ * Identity slot (v10 T13): 24px flat mark + read-only breadcrumb (rename
+ * lives in the inspector edit affordance → PATCH :assistantId, so the bar
+ * never offers one) + Draft/Live pills. The "AgentStudio" wordmark is dropped — the
  * mark + breadcrumb carry the brand in the merged bar. No tier badge: the
  * engine exposes no org tier (§8.2).
  */

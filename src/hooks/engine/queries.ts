@@ -358,11 +358,15 @@ export function useLedgers() {
   });
 }
 
-export function useInvoices() {
+export function useInvoices(options?: { enabled?: boolean }) {
   const orgId = useOrgRequired();
   return useQuery({
     queryKey: ['engine', 'invoices', orgId],
     queryFn: () => engine<{ invoices: unknown[] }>(`/console/billing/${orgId}/invoices`),
+    // Wave-7 gap 6: /invoices is engine-gated to owner/admin/billing
+    // (`@Roles` on billing.controller). Readers and developers fired a
+    // doomed 403 + retry loop from settings/billing before this gate.
+    enabled: options?.enabled ?? true,
     staleTime: 60_000,
   });
 }

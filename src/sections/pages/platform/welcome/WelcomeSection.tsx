@@ -17,8 +17,8 @@
  *
  * Write discipline:
  *  - name/workspace: Promise.allSettled with per-write Idempotency-Keys;
- *    422 → verbatim row error and HOLD (fix or Skip); transport failure →
- *    toast + carry on to completion (defaults are human-readable, rename lives
+ *    400 validation_failed → verbatim row error and HOLD (fix or Skip);
+ *    transport failure → toast + carry on to completion (defaults are human-readable, rename lives
  *    in settings);
  *  - completion: must succeed to advance. A transport failure stays here with a
  *    retry, because advancing would bounce straight off the route gate back
@@ -186,8 +186,8 @@ function consentLink(url: string, label: string): ReactNode {
 
 export function WelcomeSection({ initialDisplayName, email, orgId, returnTo, onboarding }: WelcomeSectionProps) {
     const navigate = useNavigate();
-    // Server writes live in the hooks (transport + 422 mapping + cache/session
-    // sync); this section owns validation copy, hold-vs-advance, and routing.
+    // Server writes live in the hooks (transport + validation_failed mapping +
+    // cache/session sync); this section owns validation copy, hold-vs-advance, and routing.
     const saveWelcome = useSaveWelcomeNames();
     const complete = useCompleteOnboarding();
     const busy = saveWelcome.isPending || complete.isPending;

@@ -42,7 +42,7 @@ export interface BuilderNodeData extends Record<string, unknown> {
   hint: string | null;
   status: SlotStatus;
   selected: boolean;
-  /** Purpose immutability glyph (no engine rename verb — C01 SPEC). */
+  /** Purpose lock glyph — the canvas slot is not editable; rename is the inspector edit affordance → PATCH :assistantId. */
   lock: boolean;
   /** The node's own flat color (C1) — icon tiles, palette rows, canvas minimap. */
   color: string;

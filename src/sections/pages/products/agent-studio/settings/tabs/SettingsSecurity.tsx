@@ -135,7 +135,7 @@ export function SettingsSecurity() {
                 {twoFa && <EnabledPill>enabled</EnabledPill>}
               </TwoFaTitle>
               <TwoFaSub>
-                Require a second factor on every sign-in. We support authenticator apps and security keys.
+                Require a second factor on every sign-in. We support authenticator apps.
               </TwoFaSub>
             </div>
             <Switch

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readEngineVocabulary } from '../../../../../test-utils/readEngineVocabulary';
 import {
   subscriptionRequirementCopy,
   validateCredentialSecret,
@@ -26,32 +27,9 @@ describe('subscriptionRequirementCopy (#7)', () => {
   });
 });
 
-/**
- * Console field audit — Gap #8: the provider field was free-text while the
- * engine enforces a CLOSED vocabulary (`isModelProvider` → 422 otherwise), so
- * a typo rode through a fresh MFA step-up to a guaranteed 422. The modal is
- * now a select over the same vocabulary. This test pins console↔engine
- * vocabulary parity: if either side changes the list, the test fails and the
- * author must update both.
- * Engine source of truth:
- * neryva-engine/src/modules/assistants/provider-credentials.schema.ts (`MODEL_PROVIDERS`).
- */
 describe('MODEL_PROVIDERS parity (#8)', () => {
-  const ENGINE_VOCABULARY = [
-    'openai',
-    'anthropic',
-    'google',
-    'azure-openai',
-    'amazon-bedrock',
-    'mistral',
-    'xai',
-    'deepseek',
-    'openrouter',
-    'ollama',
-  ];
-
-  it('matches the engine closed vocabulary exactly', () => {
-    expect([...MODEL_PROVIDERS]).toEqual(ENGINE_VOCABULARY);
+  it('matches the engine closed vocabulary exactly (read from the engine source at test time)', () => {
+    expect([...MODEL_PROVIDERS]).toEqual(readEngineVocabulary());
   });
 
   it('has no empty or duplicate entries', () => {

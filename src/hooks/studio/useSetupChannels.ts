@@ -152,6 +152,20 @@ export interface ChannelExtrasInput {
   csatEnabled: boolean;
 }
 
+/**
+ * G2 (wave-7): the EditModal textarea initializer for quick replies. The
+ * field is one reply per line, so the stored array is joined on a REAL
+ * newline — never a literal backslash-n — matching the split('\n') in
+ * buildChannelExtrasPatch. A literal separator here would load as one
+ * garbled reply and, on save, persist it back to the live widget.
+ * Pure helper (no React) so the load→save round trip is unit-testable.
+ */
+export function quickRepliesFieldValue(config: { quick_replies?: unknown }): string {
+  return Array.isArray(config.quick_replies)
+    ? (config.quick_replies as unknown[]).filter((r): r is string => typeof r === 'string').join('\n')
+    : '';
+}
+
 export function buildChannelExtrasPatch(
   platform: string,
   current: Record<string, unknown>,

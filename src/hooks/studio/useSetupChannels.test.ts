@@ -8,6 +8,7 @@ import {
   validateCredentialField,
   buildChannelExtrasPatch,
   outOfWindowTemplateProblem,
+  quickRepliesFieldValue,
   PLATFORM_CREDENTIAL_SPECS,
   CONNECTABLE_PLATFORMS,
 } from './useSetupChannels';
@@ -268,6 +269,36 @@ describe('buildChannelExtrasPatch (H13)', () => {
     expect(
       buildChannelExtrasPatch('web', current, { ...empty, quickReplies: '' }).quick_replies,
     ).toEqual([]);
+  });
+
+  it('round-trips 2 quick replies through the EditModal field with a real newline separator', () => {
+    // G2 (wave-7): the modal loads the stored array via quickRepliesFieldValue
+    // and saves by splitting on '\n' in buildChannelExtrasPatch. With 2+
+    // replies a literal backslash-n separator would load as one garbled reply
+    // and persist it to the live widget — prove the separator is a real
+    // newline and the stored value comes back as 2 distinct replies.
+    const stored = { quick_replies: ['Book a demo', 'See pricing'] };
+    const field = quickRepliesFieldValue(stored);
+    expect(field).toBe('Book a demo\nSee pricing');
+    expect(field).not.toContain('\\n');
+    expect(field.split('\n')).toEqual(['Book a demo', 'See pricing']);
+    const patch = buildChannelExtrasPatch('web', {}, { ...empty, quickReplies: field });
+    expect(patch.quick_replies).toEqual(['Book a demo', 'See pricing']);
+  });
+
+  it('emits no quick_replies patch when the modal is saved without touching 2 replies', () => {
+    // G2: wave-6's changed-keys-only invariant — opening the EditModal and
+    // hitting Save with the field untouched must not send quick_replies at
+    // all (no phantom garbled write to the live widget).
+    const stored = { quick_replies: ['Book a demo', 'See pricing'] };
+    const field = quickRepliesFieldValue(stored);
+    expect(buildChannelExtrasPatch('web', stored, { ...empty, quickReplies: field })).toEqual({});
+  });
+
+  it('quickRepliesFieldValue ignores non-string entries and non-array configs', () => {
+    expect(quickRepliesFieldValue({ quick_replies: ['a', 42, null, 'b'] })).toBe('a\nb');
+    expect(quickRepliesFieldValue({ quick_replies: 'nope' })).toBe('');
+    expect(quickRepliesFieldValue({})).toBe('');
   });
 
   it('sends the engine-consumed csat_enabled boolean on web only, on change', () => {

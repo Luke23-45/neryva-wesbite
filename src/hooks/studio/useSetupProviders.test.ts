@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseProviderCredentials, parseProviderEnablements, MODEL_PROVIDERS } from './useSetupProviders';
+import { readEngineVocabulary } from '../../test-utils/readEngineVocabulary';
 
 describe('provider vocabulary', () => {
-  it('matches the engine closed vocabulary', () => {
-    expect([...MODEL_PROVIDERS].sort()).toEqual(
-      ['openai', 'anthropic', 'google', 'azure-openai', 'amazon-bedrock', 'mistral', 'xai', 'deepseek', 'openrouter', 'ollama'].sort(),
-    );
+  it('matches the engine closed vocabulary (read from the engine source at test time)', () => {
+    // Wave-7 NG-A2 follow-up: previously a frozen list — fixture camouflage.
+    // The vocabulary is read from the engine source so drift fails loudly.
+    expect([...MODEL_PROVIDERS].sort()).toEqual(readEngineVocabulary().sort());
   });
 });
 
