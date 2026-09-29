@@ -109,7 +109,7 @@ export function EvaluatePanel({ agentId, versions }: { agentId: string; versions
   return (
     <Panel
       title="Evaluate"
-      subtitle="Formal rubric evaluation — decisions gate publishing and promotion by content hash. Drafts evaluate pre-publish. The interim engine harness scores lexical assertions; LLM judges run via the Studio eval-worker."
+      subtitle="Formal rubric evaluation — decisions gate publishing and promotion by content hash. Drafts evaluate pre-publish. The interim engine harness scores lexical assertions, state assertions (tool.<name>=called|not_called against the run's tool-call log), and LLM-judge rubrics via the configured judge endpoint (rubric cases fail closed without one)."
     >
       {evaluable.length === 0 ? (
         <Muted>No DRAFT or PUBLISHED version to evaluate — retired versions never execute.</Muted>

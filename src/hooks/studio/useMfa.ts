@@ -1,13 +1,13 @@
 /**
  * Two-factor authentication (ledger T-3) — the real TOTP lifecycle:
  * enroll (server-issued provisioning material) → activate with a live code
- * → recovery-code rotation, and disable behind a step-up proof.
- * Org-independent; keyed ['studio','mfa'].
+ * (the engine returns the recovery codes exactly once, on activate) →
+ * recovery-code rotation and disable, both behind a live TOTP or recovery
+ * code in the request body. Org-independent; keyed ['studio','mfa'].
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
-import { runWithStepUp } from '@lib/engine/stepup';
 
 export interface MfaStatus {
   enabled: boolean;
@@ -65,45 +65,63 @@ export function useEnrollTotp() {
   });
 }
 
+export interface RecoveryCodes {
+  codes: string[];
+}
+
+/**
+ * The engine returns the recovery codes exactly once — on activate and on
+ * rotate — under `recovery_codes`. Anything non-string is dropped; the
+ * caller is responsible for shown-once display.
+ */
+export function parseRecoveryCodes(raw: unknown): RecoveryCodes {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const list = record.recovery_codes ?? record.codes;
+  return { codes: Array.isArray(list) ? list.filter((c): c is string => typeof c === 'string') : [] };
+}
+
+/**
+ * Activate returns the recovery codes exactly once — they must be
+ * displayed to the user at this point; there is no second chance.
+ */
 export function useActivateTotp() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (code: string) =>
-      engine('/auth/mfa/totp/activate', { method: 'POST', body: { code } }),
+    mutationFn: async (code: string): Promise<RecoveryCodes> =>
+      parseRecoveryCodes(
+        await engine<unknown>('/auth/mfa/totp/activate', { method: 'POST', body: { code: code.trim() } }),
+      ),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...MFA_KEY] }),
     onError: (error) => toastEngineError(error, 'That code didn’t verify — check your authenticator'),
   });
 }
 
+/**
+ * Disable requires a live TOTP or recovery code IN THE BODY
+ * (`account.controller.ts` 400s without `body.code`; the step-up proof
+ * header is not read by this endpoint, so no proof is minted here).
+ * Disabling also revokes every session — callers must say so.
+ */
 export function useDisableTotp() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input?: { mfaProof?: string }) =>
-      runWithStepUp('Disable two-factor authentication', (proof) =>
-        engine('/auth/mfa/totp/disable', {
-          method: 'POST',
-          ...((input?.mfaProof || proof) ? { mfaProof: input?.mfaProof ?? proof } : {}),
-        }),
-      ),
+    mutationFn: async (input: { code: string }) =>
+      engine('/auth/mfa/totp/disable', { method: 'POST', body: { code: input.code.trim() } }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...MFA_KEY] }),
     onError: (error) => toastEngineError(error, 'Could not disable two-factor authentication'),
   });
 }
 
-export interface RecoveryCodes {
-  codes: string[];
-}
-
-export function parseRecoveryCodes(raw: unknown): RecoveryCodes {
-  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
-  const list = record.codes ?? record.recovery_codes;
-  return { codes: Array.isArray(list) ? list.filter((c): c is string => typeof c === 'string') : [] };
-}
-
+/**
+ * Rotation consumes a live TOTP or recovery code in the body and returns a
+ * fresh set of recovery codes — the old set dies immediately.
+ */
 export function useRotateRecoveryCodes() {
   return useMutation({
-    mutationFn: async (): Promise<RecoveryCodes> =>
-      parseRecoveryCodes(await engine<unknown>('/auth/mfa/recovery/rotate', { method: 'POST' })),
+    mutationFn: async (input: { code: string }): Promise<RecoveryCodes> =>
+      parseRecoveryCodes(
+        await engine<unknown>('/auth/mfa/recovery/rotate', { method: 'POST', body: { code: input.code.trim() } }),
+      ),
     onError: (error) => toastEngineError(error, 'Could not generate recovery codes'),
   });
 }

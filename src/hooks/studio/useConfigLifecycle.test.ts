@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { parseDraft, parseConfigVersions, parseDelivery, fetchConfigDelivery } from './useConfigLifecycle';
+import { parseDraft, parseConfigVersions, parseDelivery, fetchConfigDelivery, CONFIG_SCOPES, PUBLISHABLE_SCOPES } from './useConfigLifecycle';
 import { engine } from '@lib/engine/client';
 
 vi.mock('@lib/engine/client', () => ({ engine: vi.fn() }));
@@ -69,15 +69,45 @@ describe('fetchConfigDelivery', () => {
 });
 
 describe('parseDelivery', () => {
-  it('parses the targets envelope', () => {
+  it('derives delivery state from ackedAt, not satelliteStatus (C-P0-12)', () => {
+    // The engine's real wire shape: satelliteStatus is the lease state
+    // (live|stale|offline|never|unknown) — never 'acked'.
     const rows = parseDelivery({
-      targets: [{ satellite: 'sat-1', status: 'acked', ackedAt: '2026-09-24T10:00:00Z' }],
+      targets: [
+        { satelliteKey: 'sat-acked', satelliteStatus: 'live', notifiedAt: '2026-09-24T09:00:00Z', ackedAt: '2026-09-24T10:00:00Z' },
+        { satelliteKey: 'sat-stale-acked', satelliteStatus: 'stale', notifiedAt: '2026-09-24T09:00:00Z', ackedAt: '2026-09-24T10:05:00Z' },
+        { satelliteKey: 'sat-pending', satelliteStatus: 'live', notifiedAt: '2026-09-24T09:00:00Z', ackedAt: null },
+        { satelliteKey: 'sat-offline', satelliteStatus: 'offline', notifiedAt: '2026-09-24T09:00:00Z', ackedAt: null },
+      ],
     });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ satellite: 'sat-1', status: 'acked' });
+    expect(rows).toHaveLength(4);
+    // ACKed rows are 'acked' even when the lease state is stale.
+    expect(rows[0]).toMatchObject({ satellite: 'sat-acked', deliveryStatus: 'acked', satelliteStatus: 'live', ackedAt: '2026-09-24T10:00:00Z' });
+    expect(rows[1]).toMatchObject({ satellite: 'sat-stale-acked', deliveryStatus: 'acked', satelliteStatus: 'stale' });
+    // Unacked rows are 'pending' — regardless of lease state.
+    expect(rows[2]).toMatchObject({ satellite: 'sat-pending', deliveryStatus: 'pending', satelliteStatus: 'live', ackedAt: null });
+    expect(rows[3]).toMatchObject({ satellite: 'sat-offline', deliveryStatus: 'pending', satelliteStatus: 'offline' });
   });
 
   it('survives garbage', () => {
     expect(parseDelivery(null)).toEqual([]);
+  });
+});
+
+describe('config scopes (C-P0-13)', () => {
+  it('offers only the scopes with a live consumer for publish', () => {
+    // model_catalog and knowledge_config are the only scopes
+    // configPublish.latest() is ever called with engine-wide.
+    expect([...PUBLISHABLE_SCOPES]).toEqual(['model_catalog', 'knowledge_config']);
+    for (const s of PUBLISHABLE_SCOPES) {
+      expect(CONFIG_SCOPES).toContain(s);
+    }
+  });
+
+  it('does not offer the scopes nothing consumes', () => {
+    for (const s of ['policy_set', 'guardrail_profile', 'quota_profile']) {
+      expect(CONFIG_SCOPES).toContain(s); // still valid engine vocabulary
+      expect(PUBLISHABLE_SCOPES).not.toContain(s);
+    }
   });
 });

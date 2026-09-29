@@ -10,7 +10,8 @@
  *   (clamped 1..5)} → {run} — DRAFT + PUBLISHED evaluate (R-2); RETIRED
  *   refuses; cross-org datasets 404;
  * - GET eval/runs?dataset_id? → {runs} (newest-first, cap 100);
- * - POST eval/runs/:id/results — eval-worker ONLY (no UI surface);
+ * - POST eval/runs/:id/results — engine eval-scoring completes runs here;
+ *   external runners may also POST (no UI surface);
  * - POST eval/datasets/:d/candidates/:c/promote|reject (owner/admin);
  * - GET eval/datasets/:id/recall?k= (default 5, +reader);
  * - version-scoped POST assistants/:a/versions/:v/evaluate

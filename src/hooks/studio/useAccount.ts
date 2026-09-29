@@ -103,21 +103,61 @@ export function useRequestEmailVerification() {
   });
 }
 
+/**
+ * Email change, step 1 — POST /auth/me/email-change/request.
+ *
+ * The engine re-authenticates here: `current_password` is mandatory when the
+ * account has a password set, and a live TOTP/recovery `code` is mandatory
+ * when two-factor is enrolled (`email-change.service.ts`). Neither is
+ * knowable from GET /auth/me (it exposes no password flag), so the form
+ * collects both conditionally and we send exactly the non-empty ones —
+ * sending an empty string would trip the engine's verification, not be
+ * ignored.
+ */
+export interface EmailChangeRequest {
+  newEmail: string;
+  currentPassword?: string;
+  code?: string;
+}
+
 export function useRequestEmailChange() {
   return useMutation({
-    mutationFn: async (newEmail: string) =>
-      engine('/auth/me/email-change/request', { method: 'POST', body: { new_email: newEmail } }),
-    // The pending email surfaces from /auth/me on the next refetch — the
-    // account query is invalidated by the confirm step.
+    mutationFn: async (input: EmailChangeRequest) => {
+      const body: Record<string, string> = { new_email: input.newEmail.trim() };
+      const password = input.currentPassword?.trim();
+      const code = input.code?.trim();
+      if (password) {
+        body.current_password = password;
+      }
+      if (code) {
+        body.code = code;
+      }
+      return engine('/auth/me/email-change/request', { method: 'POST', body });
+    },
     onError: (error) => toastEngineError(error, 'Could not start the email change'),
   });
+}
+
+/**
+ * Email change, step 2 — POST /auth/me/email-change/confirm.
+ *
+ * The engine requires BOTH fields (`account.controller.ts` 400s on a
+ * missing `new_email`); the new address is carried forward from the
+ * request step's state, never re-typed, so it cannot desync.
+ */
+export interface EmailChangeConfirm {
+  newEmail: string;
+  code: string;
 }
 
 export function useConfirmEmailChange() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (code: string) =>
-      engine('/auth/me/email-change/confirm', { method: 'POST', body: { code } }),
+    mutationFn: async (input: EmailChangeConfirm) =>
+      engine('/auth/me/email-change/confirm', {
+        method: 'POST',
+        body: { new_email: input.newEmail.trim(), code: input.code.trim() },
+      }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...ACCOUNT_KEY] }),
     onError: (error) => toastEngineError(error, 'Could not confirm the email change'),
   });

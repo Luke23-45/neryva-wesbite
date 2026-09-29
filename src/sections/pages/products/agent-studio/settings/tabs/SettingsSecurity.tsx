@@ -9,6 +9,7 @@ import { Switch } from '@components/common/ui/Switch';
 import { TextInput } from '@components/common/ui/TextInput';
 import { Panel } from '@components/common/ui/Panel';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
+import { DangerButton } from '@components/common/ui/ConfirmDialog/ConfirmDialog.styles';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -25,10 +26,12 @@ import { SaveRow } from './shared';
  * - Password change through POST /auth/me/password (current password verified
  *   server-side; errors surface verbatim).
  * - TOTP: enroll returns the server-issued provisioning material, rendered
- *   as a genuine QR; activation verifies a live code; disabling requires a
- *   step-up proof with a confirmation dialog.
- * - Recovery codes come from the engine's rotation endpoint — one-time
- *   display, copy-all, download.
+ *   as a genuine QR; activation verifies a live code and returns the recovery
+ *   codes exactly once (shown-once display); disabling requires a live
+ *   authenticator or recovery code in the request body and revokes every session.
+ * - Recovery codes: the activate response is the single moment of existence —
+ *   copy-all, download, acknowledged; rotation is a separate user-initiated
+ *   action gated behind another live code.
  * - Sessions: live list with per-session and revoke-all.
  * - Security audit: the org's hash-chained audit trail (role-gated).
  * - Danger zone: account deletion with status + cancel.
@@ -47,6 +50,11 @@ export function SettingsSecurity() {
   const [code, setCode] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [disableConfirm, setDisableConfirm] = useState(false);
+  // Live second-factor codes for the security-sensitive confirms. Cleared
+  // from state the moment their mutation settles — never logged, never kept.
+  const [disableCode, setDisableCode] = useState('');
+  const [rotateDialog, setRotateDialog] = useState(false);
+  const [rotateCode, setRotateCode] = useState('');
 
   const enroll = useEnrollTotp();
   const activate = useActivateTotp();
@@ -69,6 +77,9 @@ export function SettingsSecurity() {
     setStep(null);
     setCode('');
     setEnrollment(null);
+    // Shown-once means shown-once: the codes must not linger in memory
+    // after the modal closes.
+    setRecoveryCodes(null);
   };
 
   const verifyAndAdvance = async () => {
@@ -77,12 +88,32 @@ export function SettingsSecurity() {
       return;
     }
     try {
-      await activate.mutateAsync(code.trim());
-      const rotated = await rotateCodes.mutateAsync();
-      setRecoveryCodes(rotated.codes ?? []);
+      // The engine returns the recovery codes exactly once, on activate —
+      // display those instead of rotating (rotation is a separate,
+      // user-initiated action that also needs a live code).
+      const activated = await activate.mutateAsync(code.trim());
+      setRecoveryCodes(activated.codes);
+      setCode('');
       setStep('codes');
     } catch {
       /* activation errors surface via toast; stay on the verify step */
+    }
+  };
+
+  const runRotate = async () => {
+    if (rotateCode.trim().length === 0) {
+      toast.error('Enter a code from your authenticator');
+      return;
+    }
+    try {
+      const rotated = await rotateCodes.mutateAsync({ code: rotateCode.trim() });
+      setRecoveryCodes(rotated.codes);
+      setRotateDialog(false);
+      toast.success('New codes generated — the old ones no longer work');
+    } catch {
+      /* rotation errors surface via toast; stay in the dialog */
+    } finally {
+      setRotateCode('');
     }
   };
 
@@ -163,12 +194,9 @@ export function SettingsSecurity() {
               <GhostBtn
                 type="button"
                 disabled={rotateCodes.isPending}
-                onClick={async () => {
-                  const rotated = await rotateCodes.mutateAsync().catch(() => null);
-                  if (rotated) {
-                    setRecoveryCodes(rotated.codes ?? []);
-                    toast.success('New codes generated — the old ones no longer work');
-                  }
+                onClick={() => {
+                  setRotateCode('');
+                  setRotateDialog(true);
                 }}
               >
                 Regenerate
@@ -350,20 +378,107 @@ export function SettingsSecurity() {
         </AnimatePresence>
       </Modal>
 
-      <ConfirmDialog
+      <Modal
         open={disableConfirm}
-        title="Disable two-factor authentication?"
-        message="Your account will be protected by your password only. You can turn it back on at any time."
-        destructive
-        confirmLabel="Disable"
-        onConfirm={() => {
-          disable.mutate(undefined, {
-            onSuccess: () => toast.success('Two-factor authentication is off'),
-          });
+        onClose={() => {
           setDisableConfirm(false);
+          setDisableCode('');
         }}
-        onCancel={() => setDisableConfirm(false)}
-      />
+        width={440}
+        title="Disable two-factor authentication?"
+        footer={
+          <>
+            <GhostBtn
+              type="button"
+              onClick={() => {
+                setDisableConfirm(false);
+                setDisableCode('');
+              }}
+            >
+              Cancel
+            </GhostBtn>
+            <DangerButton
+              type="button"
+              $destructive
+              disabled={disableCode.trim().length === 0 || disable.isPending}
+              onClick={() => {
+                disable.mutate(
+                  { code: disableCode },
+                  {
+                    onSuccess: () => {
+                      toast.success('Two-factor authentication is off');
+                      setDisableConfirm(false);
+                    },
+                    onSettled: () => setDisableCode(''),
+                  },
+                );
+              }}
+              style={disableCode.trim().length === 0 || disable.isPending ? { opacity: 0.5, cursor: 'default' } : undefined}
+            >
+              Disable
+            </DangerButton>
+          </>
+        }
+      >
+        <DialogCopy>
+          Enter a code from your authenticator app — or one of your recovery codes — to confirm.
+          Disabling signs out <strong>every session</strong>, including this one; you sign back in
+          with your password only. You can turn two-factor back on at any time.
+        </DialogCopy>
+        <TextInput
+          label="Authenticator or recovery code"
+          value={disableCode}
+          onChange={(e) => setDisableCode(e.target.value)}
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          autoFocus
+        />
+      </Modal>
+
+      <Modal
+        open={rotateDialog}
+        onClose={() => {
+          setRotateDialog(false);
+          setRotateCode('');
+        }}
+        width={440}
+        title="Generate new recovery codes?"
+        footer={
+          <>
+            <GhostBtn
+              type="button"
+              onClick={() => {
+                setRotateDialog(false);
+                setRotateCode('');
+              }}
+            >
+              Cancel
+            </GhostBtn>
+            <PrimaryBtn
+              type="button"
+              disabled={rotateCode.trim().length === 0 || rotateCodes.isPending}
+              onClick={() => void runRotate()}
+              whileTap={{ scale: 0.97 }}
+              transition={spring.snap}
+            >
+              Generate new codes
+            </PrimaryBtn>
+          </>
+        }
+      >
+        <DialogCopy>
+          Enter a code from your authenticator app to confirm. The codes shown above stop working
+          the moment new ones are generated.
+        </DialogCopy>
+        <TextInput
+          label="Authenticator code"
+          value={rotateCode}
+          onChange={(e) => setRotateCode(e.target.value)}
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          autoFocus
+        />
+      </Modal>
     </>
   );
 }
@@ -878,6 +993,18 @@ const CodeCopy = styled(motion.button)`
 const DownloadRow = styled.div`
   display: flex;
   justify-content: center;
+`;
+
+const DialogCopy = styled.p`
+  margin: 0 0 14px;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: 1.55;
+
+  strong {
+    color: ${({ theme }) => theme.app.text.primary};
+    font-weight: 600;
+  }
 `;
 
 const GhostBtn = styled.button`

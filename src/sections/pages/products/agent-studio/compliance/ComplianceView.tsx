@@ -79,11 +79,11 @@ import {
 
   useDeleteConfigDraft,
 
-  CONFIG_SCOPES,
+  PUBLISHABLE_SCOPES,
 
   type ConfigVersion,
 
-  type ConfigScope,
+  type PublishableConfigScope,
 
 } from '@hooks/studio/useConfigLifecycle';
 
@@ -676,13 +676,18 @@ function ExportDialog({ open, selection, onSelectionChange, pending, onClose, on
 
 /**
  * Config lifecycle editor, wired to the engine's real config-publish contract:
- * every read and write carries a scope (policy_set, guardrail_profile,
- * quota_profile, model_catalog, knowledge_config). Publish and rollback are
+ * every read and write carries a scope. Publish and rollback are
  * live-effect acts and go through step-up MFA; the engine has no canary
  * concept, so the console does not offer one.
+ *
+ * C-P0-13: the scope select only offers the publishable scopes — the
+ * scopes something actually consumes. policy_set, guardrail_profile, and
+ * quota_profile are accepted by the engine API but no engine or runtime
+ * consumer reads them, so the console does not present a publish trail
+ * for them.
  */
 function ConfigLifecycleSection() {
-  const [scope, setScope] = useState<ConfigScope>('policy_set');
+  const [scope, setScope] = useState<PublishableConfigScope>('model_catalog');
   const draft = useConfigDraft(scope);
   const history = useConfigHistory(scope);
   const delivery = useConfigDelivery(scope);
@@ -712,7 +717,7 @@ function ConfigLifecycleSection() {
     setTextError(null);
   };
 
-  const selectScope = (next: ConfigScope) => {
+  const selectScope = (next: PublishableConfigScope) => {
     setScope(next);
     resetEditor();
     setRollbackVersion(null);
@@ -761,8 +766,8 @@ function ConfigLifecycleSection() {
           subtitle="Edit, validate, and publish org config. The engine validates each scope against its own schema."
           action={
             <ActionCluster>
-              <ScopeSelect value={scope} onChange={(e) => selectScope(e.target.value as ConfigScope)} aria-label="Config scope">
-                {CONFIG_SCOPES.map((s) => (
+              <ScopeSelect value={scope} onChange={(e) => selectScope(e.target.value as PublishableConfigScope)} aria-label="Config scope">
+                {PUBLISHABLE_SCOPES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </ScopeSelect>
@@ -795,6 +800,16 @@ function ConfigLifecycleSection() {
           <QueryView query={draft} skeleton={<Skeleton $h="180px" $r="12px" />}>
             {() => (
               <ConfigStack>
+                {/* C-P0-13: honest scope gating — the engine API also accepts
+                    policy_set, guardrail_profile, and quota_profile, but no
+                    engine or runtime consumer reads them, so offering a
+                    publish trail here would be a green-looking no-op. The
+                    select lists only the scopes something actually applies. */}
+                <DraftNote>
+                  Only scopes with a live runtime consumer are listed. The engine API also accepts policy_set,
+                  guardrail_profile, and quota_profile — but nothing consumes them yet, so publishing them
+                  here would be a no-op.
+                </DraftNote>
                 {/* P5-C15: the editor must render even when no draft exists —
                     gating it behind the empty state made the first draft
                     impossible to create ("edit the JSON below" with no JSON
@@ -889,9 +904,15 @@ function ConfigLifecycleSection() {
                         <CellPrimary>{d.satellite}</CellPrimary>
                       </DataCell>
                       <DataCell $w="30%">
-                        <StatusPill tone={d.status === 'acked' ? 'success' : 'warning'} dot={false}>
-                          {d.status ?? 'pending'}
+                        {/* C-P0-12: delivery state derives from ackedAt (the
+                            engine's ACK signal), not satelliteStatus (the
+                            registry lease state). The lease state stays
+                            visible separately below so the two signals are
+                            not conflated. */}
+                        <StatusPill tone={d.deliveryStatus === 'acked' ? 'success' : 'warning'} dot={false}>
+                          {d.deliveryStatus}
                         </StatusPill>
+                        <CellMeta>lease: {d.satelliteStatus ?? 'unknown'}</CellMeta>
                       </DataCell>
                       <DataCell $w="30%">
                         <CellMeta>{d.ackedAt?.slice(0, 10) ?? '—'}</CellMeta>

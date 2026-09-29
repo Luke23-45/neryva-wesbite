@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { useAccount, useUpdateAccount, useRequestEmailVerification, useRequestEmailChange, useConfirmEmailChange, useIdentities, useUnlinkIdentity, type AccountInfo, type AccountIdentity } from '@hooks/studio/useAccount';
+import { useMfa } from '@hooks/studio/useMfa';
 import { spring, pageItem } from '@styles/motion';
 import { SaveRow } from './shared';
 
@@ -58,6 +59,8 @@ function ProfileForm({ info }: { info: AccountInfo }) {
   const requestVerification = useRequestEmailVerification();
   const requestEmailChange = useRequestEmailChange();
   const confirmEmailChange = useConfirmEmailChange();
+  const mfa = useMfa();
+  const twoFa = mfa.data?.enabled ?? false;
 
   const [name, setName] = useState(info.name ?? '');
   // P7-PF-08: timezone/locale/bio have no engine storage (the accounts table
@@ -69,6 +72,10 @@ function ProfileForm({ info }: { info: AccountInfo }) {
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [changeCode, setChangeCode] = useState('');
+  // Re-auth factors for the request step. Never persisted, cleared the
+  // moment the request settles.
+  const [changePassword, setChangePassword] = useState('');
+  const [changeMfaCode, setChangeMfaCode] = useState('');
   const [changeRequested, setChangeRequested] = useState(false);
 
   const [avatar, setAvatar] = useState<string | null>(() => {
@@ -237,7 +244,7 @@ function ProfileForm({ info }: { info: AccountInfo }) {
                   Verify email
                 </ActionButton>
               )}
-              <ActionButton variant="secondary" size="sm" onClick={() => { setChangeEmailOpen((v) => !v); setChangeRequested(false); }}>
+              <ActionButton variant="secondary" size="sm" onClick={() => { setChangeEmailOpen((v) => !v); setChangeRequested(false); setChangePassword(''); setChangeMfaCode(''); setChangeCode(''); }}>
                 Change email
               </ActionButton>
             </EmailActions>
@@ -252,6 +259,11 @@ function ProfileForm({ info }: { info: AccountInfo }) {
               )}
               {!changeRequested ? (
                 <>
+                  <TheaterNote>
+                    Your email is your sign-in identity, so this step re-authenticates you: your current
+                    password is required when your account has one, and a live authenticator or recovery
+                    code when two-factor authentication is on.
+                  </TheaterNote>
                   <EmailChangeRow>
                     <div style={{ flex: 1 }}>
                       <TextInput
@@ -260,38 +272,102 @@ function ProfileForm({ info }: { info: AccountInfo }) {
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
                         placeholder="you@company.com"
+                        autoComplete="email"
                       />
                     </div>
+                  </EmailChangeRow>
+                  <EmailChangeRow>
+                    <div style={{ flex: 1 }}>
+                      <TextInput
+                        label="Current password"
+                        type="password"
+                        value={changePassword}
+                        onChange={(e) => setChangePassword(e.target.value)}
+                        autoComplete="current-password"
+                        hint="Required only if your account has a password."
+                      />
+                    </div>
+                    {twoFa && (
+                      <div style={{ flex: 1 }}>
+                        <TextInput
+                          label="Authenticator or recovery code"
+                          value={changeMfaCode}
+                          onChange={(e) => setChangeMfaCode(e.target.value)}
+                          autoComplete="one-time-code"
+                          inputMode="numeric"
+                          hint="Required while two-factor authentication is on."
+                        />
+                      </div>
+                    )}
+                  </EmailChangeRow>
+                  <EmailChangeRow>
                     <ActionButton
                       variant="secondary"
                       size="sm"
                       disabled={!newEmail.includes('@') || requestEmailChange.isPending}
-                      onClick={() => requestEmailChange.mutate(newEmail.trim(), { onSuccess: () => setChangeRequested(true) })}
+                      onClick={() =>
+                        requestEmailChange.mutate(
+                          { newEmail, currentPassword: changePassword, code: changeMfaCode },
+                          {
+                            onSuccess: () => {
+                              setChangeRequested(true);
+                              toast.success('Confirmation code sent to your new inbox');
+                            },
+                            onSettled: () => {
+                              // Credentials never linger: the password and
+                              // MFA code are wiped the moment the request
+                              // settles; only the new address carries forward.
+                              setChangePassword('');
+                              setChangeMfaCode('');
+                            },
+                          },
+                        )
+                      }
                     >
                       Send confirmation
                     </ActionButton>
                   </EmailChangeRow>
                 </>
               ) : (
-                <EmailChangeRow>
-                  <div style={{ flex: 1 }}>
-                    <TextInput
-                      label="Confirmation code"
-                      value={changeCode}
-                      onChange={(e) => setChangeCode(e.target.value)}
-                      placeholder="6-digit code from your new inbox"
-                      autoFocus
-                    />
-                  </div>
-                  <ActionButton
-                    variant="primary"
-                    size="sm"
-                    disabled={changeCode.trim().length < 4 || confirmEmailChange.isPending}
-                    onClick={() => confirmEmailChange.mutate(changeCode.trim(), { onSuccess: () => { toast.success('Email updated'); setChangeEmailOpen(false); setChangeRequested(false); setNewEmail(''); setChangeCode(''); } })}
-                  >
-                    Confirm change
-                  </ActionButton>
-                </EmailChangeRow>
+                <>
+                  <TheaterNote>
+                    A code was sent to <strong>{newEmail}</strong>. Enter it to complete the change.
+                  </TheaterNote>
+                  <EmailChangeRow>
+                    <div style={{ flex: 1 }}>
+                      <TextInput
+                        label="Confirmation code"
+                        value={changeCode}
+                        onChange={(e) => setChangeCode(e.target.value)}
+                        placeholder="8-digit code from your new inbox"
+                        autoComplete="one-time-code"
+                        inputMode="numeric"
+                        autoFocus
+                      />
+                    </div>
+                    <ActionButton
+                      variant="primary"
+                      size="sm"
+                      disabled={changeCode.trim().length < 8 || confirmEmailChange.isPending}
+                      onClick={() =>
+                        confirmEmailChange.mutate(
+                          { newEmail, code: changeCode },
+                          {
+                            onSuccess: () => {
+                              toast.success('Email updated');
+                              setChangeEmailOpen(false);
+                              setChangeRequested(false);
+                              setNewEmail('');
+                              setChangeCode('');
+                            },
+                          },
+                        )
+                      }
+                    >
+                      Confirm change
+                    </ActionButton>
+                  </EmailChangeRow>
+                </>
               )}
             </EmailChangeBox>
           )}

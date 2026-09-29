@@ -24,7 +24,7 @@ export function UsageView() {
     <ViewShell>
       <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewTitle>Usage</ViewTitle>
-        <ViewSubtitle>Tokens, cost, and quota for your agents — measured by the engine, not estimated.</ViewSubtitle>
+        <ViewSubtitle>Tokens, cost, and quota for your agents — metered by the engine on every run.</ViewSubtitle>
       </ViewHeader>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>

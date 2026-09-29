@@ -31,6 +31,22 @@ export const CONFIG_SCOPES = [
 ] as const;
 export type ConfigScope = (typeof CONFIG_SCOPES)[number];
 
+/**
+ * Scopes the console offers for draft → validate → publish (C-P0-13).
+ *
+ * The engine's full vocabulary has five scopes, but `policy_set`,
+ * `guardrail_profile`, and `quota_profile` have no engine or runtime
+ * consumer — `configPublish.latest()` is only ever called with
+ * `model_catalog` / `knowledge_config`. Publishing one of those three
+ * validates, versions, fans out, and gets ACKed while being applied by
+ * nothing, so presenting the publish UX for them would be a
+ * green-looking no-op. The console therefore only offers the scopes
+ * something actually reads. The engine endpoints still accept all five
+ * scopes for API clients.
+ */
+export const PUBLISHABLE_SCOPES = ['model_catalog', 'knowledge_config'] as const;
+export type PublishableConfigScope = (typeof PUBLISHABLE_SCOPES)[number];
+
 export interface ConfigVersion {
   version: number;
   publishedAt: string | null;
@@ -46,8 +62,16 @@ export interface ConfigDraft {
 
 export interface ConfigDeliveryTarget {
   satellite: string;
-  status: string | null;
+  /**
+   * Satellite registry lease state (live|stale|offline|never|unknown) —
+   * the satellites sweeper's machine, NOT delivery ACK state. An ACKed
+   * satellite can still read `stale` here. Never compare this to 'acked'.
+   */
+  satelliteStatus: string | null;
+  /** Delivery ACK timestamp — non-null means this satellite ACKed the config version. */
   ackedAt: string | null;
+  /** Delivery state derived from `ackedAt` (the engine's ACK signal), never from `satelliteStatus`. */
+  deliveryStatus: 'acked' | 'pending';
   version: number | null;
 }
 
@@ -103,10 +127,15 @@ export function parseDelivery(raw: unknown): ConfigDeliveryTarget[] {
       const item = entry as Record<string, unknown>;
       const satellite = str(item.satelliteKey) ?? str(item.satellite);
       if (!satellite) return null;
+      // C-P0-12: delivery state comes from `ackedAt` (the engine's ACK
+      // signal). `satelliteStatus` is the registry lease state and is never
+      // the string 'acked' — comparing it produced a permanently-amber pill.
+      const ackedAt = str(item.ackedAt);
       return {
         satellite,
-        status: str(item.satelliteStatus) ?? str(item.status),
-        ackedAt: str(item.ackedAt),
+        satelliteStatus: str(item.satelliteStatus) ?? str(item.status),
+        ackedAt,
+        deliveryStatus: ackedAt !== null ? 'acked' : 'pending',
         version: typeof item.version === 'number' ? item.version : null,
       } satisfies ConfigDeliveryTarget;
     })

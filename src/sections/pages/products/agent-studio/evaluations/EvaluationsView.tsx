@@ -52,7 +52,8 @@ import { useOrg } from '@/Context/OrgContext';
  * the cross-agent runs ledger.
  *
  * Honest gaps: case executions have no read path, and the results write-back
- * is eval-worker-only — candidate promote/reject need case ids from those
+ * has no console surface — the engine eval-scoring worker completes runs
+ * there; candidate promote/reject need case ids from those
  * paths, so they surface where cases appear (run provenance), not here.
  * Cases themselves are fully manageable: list, edit, delete, import/export
  * (A4-41..A4-44).
@@ -191,7 +192,7 @@ export function EvaluationsView() {
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionGap>
-          <Panel title="Runs" subtitle="Newest first (cap 100, filtered locally). Latest completed decision per content hash is what every gate reads. Engine-side scoring is lexical (contains/not_contains); judge rubrics execute in the Studio eval-worker.">
+          <Panel title="Runs" subtitle="Newest first (cap 100, filtered locally). Latest completed decision per content hash is what every gate reads. Engine-side scoring covers lexical (contains/not_contains), state assertions (tool.<name>=called|not_called against the run's tool-call log), and rubrics (judged by the configured LLM-judge endpoint; rubric cases fail closed without one).">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               <label style={{ fontSize: 12 }}>
                 Decision
@@ -614,7 +615,7 @@ function CaseEditForm({
         <TextArea label="Must not contain (one per line)" value={draft.notContains} onChange={(e) => set({ notContains: e.target.value })} rows={2} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-        <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set({ stateAssertions: e.target.value })} />
+        <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set({ stateAssertions: e.target.value })} placeholder="tool.ticket_lookup=called" />
         <TextInput label="Expected document ids, uuid (one per line, drives recall)" value={draft.documentIds} onChange={(e) => set({ documentIds: e.target.value })} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginTop: 8 }}>
@@ -754,9 +755,11 @@ function CasesModal({ datasetId, name, onClose }: { datasetId: string; name: str
       }
     >
       <p style={{ fontSize: 13, opacity: 0.75 }}>
-        Scored lexically by the interim engine harness (<Mono>contains</Mono>/<Mono>not_contains</Mono> hit fractions; empty
-        assertions pass vacuously and say so). LLM-judge rubrics run via the Studio eval-worker. Unknown keys refuse — violations
-        return per-index 422s, never silent drops.
+        Scored by the engine harness on three components: lexical <Mono>contains</Mono>/<Mono>not_contains</Mono> hit fractions;
+        state assertions of the form <Mono>tool.&lt;name&gt;=called|not_called</Mono> checked against the run's tool-call log;
+        rubric cases sent to the engine's configured LLM-judge endpoint (<Mono>HARNESS__LLM_JUDGE_URL</Mono>) and passed at
+        min score — rubric cases fail closed when no judge is configured. Empty assertions pass vacuously and say so.
+        Unknown keys refuse — violations return per-index 422s, never silent drops.
       </p>
       {drafts.map((draft, index) => (
         <div key={index} style={{ borderTop: index === 0 ? 0 : '1px solid var(--neryva-border, #222)', paddingTop: index === 0 ? 0 : 12, marginTop: index === 0 ? 0 : 12 }}>
@@ -774,7 +777,7 @@ function CasesModal({ datasetId, name, onClose }: { datasetId: string; name: str
             <TextArea label="Must not contain (one per line)" value={draft.notContains} onChange={(e) => set(index, { notContains: e.target.value })} rows={2} placeholder="lifetime" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-            <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set(index, { stateAssertions: e.target.value })} placeholder="ticket_lookup_ran" />
+            <TextInput label="State assertions (one per line, optional)" value={draft.stateAssertions} onChange={(e) => set(index, { stateAssertions: e.target.value })} placeholder="tool.ticket_lookup=called" />
             <TextInput label="Expected document ids, uuid (one per line, drives recall)" value={draft.documentIds} onChange={(e) => set(index, { documentIds: e.target.value })} placeholder="…" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginTop: 8 }}>
