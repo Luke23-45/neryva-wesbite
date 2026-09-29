@@ -11,18 +11,27 @@ import {
   parseInstructions,
   type InstructionBlock,
 } from '../lib/instructions-model';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DeniedNote,
   Excerpt,
+  Gallery,
   RowError,
+  SampleBlurb,
+  SampleDot,
+  SampleLabel,
+  SampleMain,
+  SampleNote,
+  SampleRow,
   SamplesMeta,
   SamplesToggle,
+  SourceList,
+  ToggleLabel,
   ToggleRow,
   ToggleSub,
   ToggleText,
   ToggleTitle,
 } from './SamplesSection.styles';
-import { TypeBlurb, TypeDot, TypeLabel, TypeList, TypeMain, TypeNote, TypeRow } from './BuilderInspector.styles';
 
 /** Org-history cap (PLAN.md §7): bounded fan-out, stated in UI, never silent N+1. */
 const ORG_SAMPLE_CAP = 6;
@@ -96,23 +105,26 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
   return (
     <div>
       <SamplesToggle type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span>{open ? '▾' : '▸'} Use a sample</span>
+        <ToggleLabel>
+          {open ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+          Use a sample
+        </ToggleLabel>
         <SamplesMeta>3 sources · labeled</SamplesMeta>
       </SamplesToggle>
       {open && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+        <Gallery>
           {!canAuthor && (
             <DeniedNote>
               Viewing only — samples are browsable, but inserting needs an owner, admin, or developer.
             </DeniedNote>
           )}
-          <TypeList>
+          <SourceList>
             {templates.isPending && <RowError>Loading registry blueprints…</RowError>}
             {templates.data &&
               templateCards.map((card) => {
                 const hasText = card.text.trim() !== '';
                 return (
-                  <TypeRow
+                  <SampleRow
                     key={card.slug}
                     type="button"
                     $disabled={!hasText || !canAuthor}
@@ -124,18 +136,18 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                         : undefined
                     }
                   >
-                    <TypeDot $color="#0A84FF" aria-hidden="true" />
-                    <TypeMain>
-                      <TypeLabel>{humanizeSlug(card.slug)}</TypeLabel>
-                      <TypeBlurb>
+                    <SampleDot $color="#0A84FF" aria-hidden="true" />
+                    <SampleMain>
+                      <SampleLabel>{humanizeSlug(card.slug)}</SampleLabel>
+                      <SampleBlurb>
                         {hasText ? `${parseInstructions(card.text).length} blocks · registry blueprint` : 'No starter text'}
-                      </TypeBlurb>
-                    </TypeMain>
-                    <TypeNote>From template starters</TypeNote>
-                  </TypeRow>
+                      </SampleBlurb>
+                    </SampleMain>
+                    <SampleNote>From template starters</SampleNote>
+                  </SampleRow>
                 );
               })}
-          </TypeList>
+          </SourceList>
 
           <ToggleRow>
             <ToggleText>
@@ -149,7 +161,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
             <Switch id="org-samples-toggle" checked={orgOn} onChange={(next) => { setOrgOn(next); writeOptIn(orgId, next); }} label="Org prompt history" />
           </ToggleRow>
           {orgOn && (
-            <TypeList>
+            <SourceList>
               {assistants.isPending && <RowError>Loading agents…</RowError>}
               {orgFailures.length > 0 && (
                 <RowError>
@@ -169,20 +181,20 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                   onInsert={insert}
                 />
               ))}
-            </TypeList>
+            </SourceList>
           )}
 
-          <TypeList>
-            <TypeRow type="button" $disabled disabled title="Starter copy is unwritten — this row ships no text until reviewed.">
-              <TypeDot $color="#636366" aria-hidden="true" />
-              <TypeMain>
-                <TypeLabel>Reviewed starter set</TypeLabel>
-                <TypeBlurb>Ships with reviewed copy — templates work today</TypeBlurb>
-              </TypeMain>
-              <TypeNote>Scaffold library · pending review</TypeNote>
-            </TypeRow>
-          </TypeList>
-        </div>
+          <SourceList>
+            <SampleRow type="button" $disabled disabled title="Starter copy is unwritten — this row ships no text until reviewed.">
+              <SampleDot $color="#636366" aria-hidden="true" />
+              <SampleMain>
+                <SampleLabel>Reviewed starter set</SampleLabel>
+                <SampleBlurb>Ships with reviewed copy — templates work today</SampleBlurb>
+              </SampleMain>
+              <SampleNote>Scaffold library · pending review</SampleNote>
+            </SampleRow>
+          </SourceList>
+        </Gallery>
       )}
     </div>
   );
@@ -217,20 +229,20 @@ function OrgSampleRow({
   }
   if (text.trim() === '') {
     return (
-      <TypeRow type="button" $disabled disabled title={`${agentName} has no instructions to reuse.`}>
-        <TypeDot $color="#30D158" aria-hidden="true" />
-        <TypeMain>
-          <TypeLabel>{agentName}</TypeLabel>
-          <TypeBlurb>No instructions yet</TypeBlurb>
-        </TypeMain>
-        <TypeNote>From your org’s agents</TypeNote>
-      </TypeRow>
+      <SampleRow type="button" $disabled disabled title={`${agentName} has no instructions to reuse.`}>
+        <SampleDot $color="#30D158" aria-hidden="true" />
+        <SampleMain>
+          <SampleLabel>{agentName}</SampleLabel>
+          <SampleBlurb>No instructions yet</SampleBlurb>
+        </SampleMain>
+        <SampleNote>From your org’s agents</SampleNote>
+      </SampleRow>
     );
   }
 
   const singleLine = !text.trim().includes('\n');
   return (
-    <TypeRow
+    <SampleRow
       type="button"
       $disabled={!canAuthor}
       disabled={!canAuthor}
@@ -247,12 +259,12 @@ function OrgSampleRow({
           : undefined
       }
     >
-      <TypeDot $color="#30D158" aria-hidden="true" />
-      <TypeMain>
-        <TypeLabel>{agentName}</TypeLabel>
+      <SampleDot $color="#30D158" aria-hidden="true" />
+      <SampleMain>
+        <SampleLabel>{agentName}</SampleLabel>
         <Excerpt>{text.trim().slice(0, 140)}</Excerpt>
-      </TypeMain>
-      <TypeNote>From your org’s agents</TypeNote>
-    </TypeRow>
+      </SampleMain>
+      <SampleNote>From your org’s agents</SampleNote>
+    </SampleRow>
   );
 }
