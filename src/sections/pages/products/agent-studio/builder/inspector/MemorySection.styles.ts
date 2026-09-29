@@ -19,21 +19,21 @@ export const PreviewList = styled.ul`
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const PreviewItem = styled.li`
-  border-radius: 13px;
+  border-radius: ${({ theme }) => theme.radii.xl};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 12px 14px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.primary};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const PreviewMeta = styled.div`
   color: ${({ theme }) => theme.app.text.muted};
   font-size: ${({ theme }) => theme.app.type.caption};
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
 `;

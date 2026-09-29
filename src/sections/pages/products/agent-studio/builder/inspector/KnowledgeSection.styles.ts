@@ -15,21 +15,22 @@ export { SwitchRow, SwitchText, SwitchTitle, SwitchSub } from './ModelSection.st
 export const PinList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const TabStrip = styled.div`
   display: flex;
-  gap: 2px;
+  gap: ${({ theme }) => theme.spacing.px2};
   border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
 export const Tab = styled.button<{ $active: boolean }>`
   background: none;
   border: none;
-  padding: 12px 14px;
+  padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.px14};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${(props) => (props.$active ? 650 : 500)};
+  font-weight: ${(props) =>
+    props.$active ? props.theme.typography.weights.semibold : props.theme.typography.weights.medium};
   font-family: inherit;
   color: ${(props) => (props.$active ? props.theme.app.text.primary : props.theme.app.text.muted)};
   border-bottom: 2px solid ${(props) => (props.$active ? props.theme.app.status.info.fg : 'transparent')};
@@ -37,7 +38,7 @@ export const Tab = styled.button<{ $active: boolean }>`
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 
   &:hover {
     color: ${({ theme }) => theme.app.text.primary};
@@ -50,13 +51,13 @@ export const Tab = styled.button<{ $active: boolean }>`
 `;
 
 export const OrgBadge = styled.span`
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.status.warning.fg};
   border: 1px solid ${({ theme }) => theme.app.status.warning.border};
-  border-radius: 7px;
-  padding: 2px 6px;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  padding: ${({ theme }) => theme.spacing.px2} ${({ theme }) => theme.spacing.px6};
 `;
 
 export const PinCard = styled.div<{ $tone: 'ok' | 'attention' | 'info' | 'error' }>`
@@ -77,23 +78,23 @@ export const PinCard = styled.div<{ $tone: 'ok' | 'attention' | 'info' | 'error'
         : props.$tone === 'error'
           ? props.theme.app.status.error.bg
           : props.theme.app.status.info.bg};
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 `;
 
 export const PinHead = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const PinTitle = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -103,7 +104,7 @@ export const PinTitle = styled.span`
 export const PinState = styled.span`
   margin-left: auto;
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 500;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.app.text.muted};
   white-space: nowrap;
 `;
@@ -111,27 +112,27 @@ export const PinState = styled.span`
 export const PinMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const PinFix = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const PinActions = styled.div`
   display: flex;
-  gap: 16px;
-  margin-top: 4px;
+  gap: ${({ theme }) => theme.spacing.s4};
+  margin-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const TextButton = styled.button`
   background: none;
   border: none;
-  padding: 6px 0;
+  padding: ${({ theme }) => theme.spacing.px6} 0;
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   font-family: inherit;
   color: ${({ theme }) => theme.app.status.info.fg};
   cursor: pointer;
@@ -157,20 +158,20 @@ export const MutedButton = styled(TextButton)`
 
 export const EmptyPins = styled.div`
   border: 1px dashed ${({ theme }) => theme.app.border.strong};
-  border-radius: 14px;
-  padding: 20px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px20};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   text-align: center;
 `;
 
 export const Dropzone = styled.button`
   width: 100%;
   border: 1.5px dashed ${({ theme }) => theme.app.border.strong};
-  border-radius: 18px;
+  border-radius: ${({ theme }) => theme.radii['2xl']};
   background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 32px 20px;
+  padding: ${({ theme }) => theme.spacing.s6} ${({ theme }) => theme.spacing.px20};
   cursor: pointer;
   text-align: center;
   color: ${({ theme }) => theme.app.text.primary};
@@ -188,39 +189,39 @@ export const Dropzone = styled.button`
 `;
 
 export const DropTitle = styled.div`
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
 `;
 
 export const DropSub = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
-  margin-top: 6px;
-  line-height: 1.55;
+  margin-top: ${({ theme }) => theme.spacing.px6};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const FileRow = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 14px;
+  border-radius: ${({ theme }) => theme.radii.xl};
   background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 14px 16px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const UploadList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
+  gap: ${({ theme }) => theme.spacing.px10};
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const FileHead = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   font-size: ${({ theme }) => theme.app.type.body};
 `;
 
@@ -229,7 +230,7 @@ export const FileName = styled.strong`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
@@ -237,13 +238,13 @@ export const FileMeta = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const FieldGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 
   @media (max-width: 520px) {
     grid-template-columns: 1fr;
@@ -253,13 +254,13 @@ export const FieldGrid = styled.div`
 export const Stepper = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const StepBtn = styled.button`
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
+  width: ${({ theme }) => theme.app.iconSize.lg};
+  height: ${({ theme }) => theme.app.iconSize.lg};
+  border-radius: ${({ theme }) => theme.radii.sm};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   background: ${({ theme }) => theme.app.surface.subtle};
   color: ${({ theme }) => theme.app.text.secondary};
@@ -286,49 +287,49 @@ export const StepBtn = styled.button`
 
 export const StepValue = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 650;
-  min-width: 24px;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  min-width: ${({ theme }) => theme.app.iconSize.md};
   text-align: center;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ConnectorRow = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   background: ${({ theme }) => theme.app.surface.subtle};
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 `;
 
 export const ConnectorList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
+  gap: ${({ theme }) => theme.spacing.px10};
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const InlineForm = styled.div`
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
   display: grid;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const TabPanel = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 4px;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const ViewerNote = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 14px;
+  border-radius: ${({ theme }) => theme.radii.xl};
   background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 16px 18px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;

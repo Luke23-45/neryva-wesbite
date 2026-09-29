@@ -26,7 +26,8 @@ import {
   type MemoryScope,
 } from '../lib/memory-model';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   ChoicePill,
   ChoiceRow,
@@ -242,7 +243,7 @@ export function ContextSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

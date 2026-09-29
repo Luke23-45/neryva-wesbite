@@ -11,6 +11,8 @@ import { useCreateAssistant, useUpdateAssistantIdentity } from '@hooks/studio/us
 import { buildAgentBuildPath, buildAgentEditPath } from '../lib/slot-model';
 import { SectionContent } from '../sections/SectionBody.styles';
 import { DESCRIPTION_MAX, isDescriptionValid, isNameValid, NAME_MAX, NAME_MIN, suggestRename } from './purpose-model';
+import { SkeletonRows } from './SkeletonRows';
+import { DefinitionErrorPanel } from './DefinitionErrorPanel';
 import {
   Avatar,
   CardActions,
@@ -50,6 +52,14 @@ interface PurposeInspectorProps {
   agentId: string | null;
   agentName: string | null;
   description: string | null;
+  /**
+   * Identity query state (build mode): pending renders skeletons instead of
+   * a false "Untitled agent" card; error renders the inline error panel.
+   * Optional — absent means the identity is loaded.
+   */
+  identityPending?: boolean;
+  identityError?: boolean;
+  onRetryIdentity?: () => void;
   canAuthor: boolean;
   role: OrgRole | null;
   onFormState?: (state: PurposeFormState) => void;
@@ -66,7 +76,7 @@ interface PurposeInspectorProps {
  * unchanged — creation contract, 409 one-tap rename, identity PATCH.
  */
 export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>(function PurposeInspector(
-  { mode, agentId, agentName, description, canAuthor, role, onFormState, onCreated },
+  { mode, agentId, agentName, description, identityPending, identityError, onRetryIdentity, canAuthor, role, onFormState, onCreated },
   ref,
 ) {
   const [name, setName] = useState('');
@@ -248,6 +258,23 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
               </ActionButton>
             </RowActions>
           </Form>
+        </SectionContent>
+      );
+    }
+    // Identity fetch states (build mode): pending never renders a false
+    // "Untitled agent" card — skeletons hold the space; a fetch failure
+    // gets the inline error panel with retry.
+    if (identityError) {
+      return (
+        <SectionContent>
+          <DefinitionErrorPanel title="Couldn't load the agent" onRetry={onRetryIdentity} />
+        </SectionContent>
+      );
+    }
+    if (identityPending) {
+      return (
+        <SectionContent>
+          <SkeletonRows rows={3} />
         </SectionContent>
       );
     }

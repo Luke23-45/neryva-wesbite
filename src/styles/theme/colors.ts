@@ -170,8 +170,10 @@ export const colors = {
   borderAccent: '#c084fc',    // Accent border — Bright Lilac (primary brand color)
 
   // ═════════════════════════════════════════════════════════════════
-  // GRADIENT DEFINITIONS
+  // GRADIENT DEFINITIONS — MARKETING ONLY
   // ═════════════════════════════════════════════════════════════════
+  // CONSOLE BAN: no console surface (Agent Studio, platform pages, auth,
+  // shared UI) may reference these gradients. Flat colors only on console.
   gradients: {
     // Primary gradient — hero sections, important CTAs. Lilac → Azure,
     // mirroring the top-to-bottom wing sweep of the logo.

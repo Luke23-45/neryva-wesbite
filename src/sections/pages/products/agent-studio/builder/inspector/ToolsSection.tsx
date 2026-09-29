@@ -39,6 +39,7 @@ import {
   SKIP_COPY,
 } from '../lib/tools-model';
 import { ConflictDialog } from './ConflictDialog';
+import { SkeletonRows } from './SkeletonRows';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
 import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import {
@@ -437,7 +438,7 @@ export function ToolsSection({
               />
             </FilterRow>
             {catalog.isPending ? (
-              <ToolMeta>Loading the catalog…</ToolMeta>
+              <SkeletonRows rows={5} barHeight="52px" />
             ) : catalog.isError ? (
               <Whisper $tone="red">The catalog is unreachable — bound entries above still save; binding resumes on reload.</Whisper>
             ) : (

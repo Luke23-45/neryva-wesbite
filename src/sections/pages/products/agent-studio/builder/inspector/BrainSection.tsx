@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check } from 'lucide-react';
 import { ApiError } from '@lib/engine/client';
+import { setupDeniedCopy } from '@lib/engine/capabilities';
+import { useOrg } from '@/Context/OrgContext';
 import {
   useSaveDraftVersion,
   useUpdateDraftVersion,
@@ -16,12 +18,14 @@ import {
   type ReasoningEffort,
 } from '../lib/brain-model';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, Wrap } from './InstructionsSection.styles';
+import { Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   FieldBlock,
   FieldHead,
   FieldHelper,
   FieldTitle,
+  DeniedNote,
   ProfileCard,
   ProfileGrid,
   ProfileMap,
@@ -94,6 +98,8 @@ export function BrainSection({
   saveSignal = 0,
 }: BrainSectionProps) {
   const queryClient = useQueryClient();
+  const { role } = useOrg();
+  const denied = setupDeniedCopy(role, 'setup:author');
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
@@ -231,7 +237,7 @@ export function BrainSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }
@@ -252,6 +258,13 @@ export function BrainSection({
             Fine-tune the raw values in Model.
           </FieldHelper>
         </FieldHead>
+        {!canAuthor && (
+          <DeniedNote>
+            Brain editing needs an owner, admin, or developer — {denied} The
+            current reasoning profile is highlighted below so you can still
+            see how this agent thinks.
+          </DeniedNote>
+        )}
         <ProfileGrid>
           {MODEL_PRESETS.map((preset) => {
             const matched = matchedPreset?.id === preset.id;

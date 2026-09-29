@@ -18,14 +18,15 @@ export { PinMeta } from './KnowledgeSection.styles';
 export const PresetRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const PresetPill = styled.button<{ $active?: boolean }>`
-  border-radius: 999px;
-  padding: 9px 18px;
+  border-radius: ${({ theme }) => theme.radii.pill};
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${({ $active }) => ($active ? 650 : 500)};
+  font-weight: ${({ theme, $active }) =>
+    $active ? theme.typography.weights.semibold : theme.typography.weights.medium};
   font-family: inherit;
   cursor: pointer;
   border: 1px solid
@@ -48,14 +49,14 @@ export const PresetPill = styled.button<{ $active?: boolean }>`
 export const ModeLine = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const DirectionGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;

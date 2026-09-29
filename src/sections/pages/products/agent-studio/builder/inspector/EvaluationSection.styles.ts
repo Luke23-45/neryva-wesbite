@@ -14,16 +14,16 @@ export { Muted } from './TrySection.styles';
 export const DatasetLabel = styled.label`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const DatasetSelect = styled.select`
   height: 40px;
-  padding: 0 12px;
-  border-radius: 10px;
+  padding: 0 ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.tint};
   color: ${({ theme }) => theme.app.text.primary};
@@ -43,39 +43,39 @@ export const AttemptsWrap = styled.div`
 
 export const ActionsRow = styled.div`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: center;
   flex-wrap: wrap;
 `;
 
 export const LinkRow = styled.div`
   display: flex;
-  gap: 16px;
+  gap: ${({ theme }) => theme.spacing.s4};
   flex-wrap: wrap;
   align-items: center;
 `;
 
 export const FixBlock = styled.div`
-  margin-top: 12px;
-  padding: 14px 16px;
+  margin-top: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   border: 1px solid ${({ theme }) => theme.app.status.warning.border};
   background: ${({ theme }) => theme.app.status.warning.bg};
-  border-radius: 14px;
+  border-radius: ${({ theme }) => theme.radii.xl};
 `;
 
 export const FixTitle = styled.div`
   font-size: ${({ theme }) => theme.app.type.title};
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.primary};
-  margin-bottom: 6px;
+  margin-bottom: ${({ theme }) => theme.spacing.px6};
 `;
 
 export const FixForm = styled.div`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: flex-end;
-  margin-top: 10px;
+  margin-top: ${({ theme }) => theme.spacing.px10};
   flex-wrap: wrap;
 `;
 
@@ -86,7 +86,37 @@ export const FixField = styled.div`
 
 export const FixLinks = styled.div`
   display: flex;
-  gap: 16px;
-  margin-top: 10px;
+  gap: ${({ theme }) => theme.spacing.s4};
+  margin-top: ${({ theme }) => theme.spacing.px10};
   flex-wrap: wrap;
 `;
+
+/**
+ * Inline query-error panel for the runs list (P1a): names the failure,
+ * states the consequence (nothing lost), and offers the retry. Error
+ * tone only — never the denied treatment.
+ */
+export const RunsError = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+  background: ${({ theme }) => theme.app.status.error.bg};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const RunsErrorTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.status.error.fg};
+`;
+
+export const RunsErrorBody = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+`;
+
+/** Inline text retry button — link treatment, no chrome. */
+export { InlineRetry } from './InlineRetry';

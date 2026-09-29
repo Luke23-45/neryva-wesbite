@@ -13,7 +13,7 @@ export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSe
 export const Thread = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const TurnGroup = styled.div`
@@ -24,10 +24,10 @@ export const Bubble = styled.div<{ $role: 'user' | 'agent' }>`
   align-self: ${({ $role }) => ($role === 'user' ? 'flex-end' : 'flex-start')};
   max-width: 92%;
   border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 14px;
-  padding: 12px 16px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   white-space: pre-wrap;
   word-break: break-word;
   background: ${({ $role, theme }) => ($role === 'user' ? theme.app.surface.active : 'transparent')};
@@ -35,19 +35,19 @@ export const Bubble = styled.div<{ $role: 'user' | 'agent' }>`
 
 export const BubbleMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.ghost};
-  margin-bottom: 4px;
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const NoticePill = styled.span<{ $tone: 'tool' | 'usage' | 'status' | 'error' | 'approval' }>`
   display: inline-flex;
   align-self: flex-start;
   max-width: 100%;
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.lg};
   font-size: ${({ theme }) => theme.app.type.caption};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme, $tone }) =>
     $tone === 'error'
       ? theme.app.status.error.fg
@@ -70,8 +70,8 @@ export const NoticePill = styled.span<{ $tone: 'tool' | 'usage' | 'status' | 'er
 `;
 
 export const PrereqBlock = styled.div<{ $tone: 'block' | 'advisory' }>`
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   border: 1px solid
     ${({ theme, $tone }) => ($tone === 'block' ? theme.app.status.error.border : theme.app.status.warning.border)};
   background: ${({ theme, $tone }) => ($tone === 'block' ? theme.app.status.error.bg : theme.app.status.warning.bg)};
@@ -79,26 +79,26 @@ export const PrereqBlock = styled.div<{ $tone: 'block' | 'advisory' }>`
 
 export const PrereqHeadline = styled.div<{ $tone: 'block' | 'advisory' }>`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 650;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme, $tone }) => ($tone === 'block' ? theme.app.status.error.fg : theme.app.status.warning.fg)};
 `;
 
 export const PrereqDetail = styled.div`
-  margin-top: 6px;
+  margin-top: ${({ theme }) => theme.spacing.px6};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const DockRow = styled.div`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: center;
-  margin-top: 12px;
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const Muted = styled.p`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;

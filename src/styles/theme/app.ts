@@ -80,9 +80,38 @@ export const app = {
     body: '13px',      // default UI text
     bodyLg: '14px',    // emphasis, topbar titles
     title: '15px',     // panel titles
+    titleLg: '20px',   // large titles: agent / section names
     pageTitle: '26px', // view title
     metric: '30px',    // metric card values
   },
+
+  /** Icon tile + avatar sizes — one dialect for all app surfaces. */
+  iconSize: {
+    sm: '16px',   // small tiles, dots
+    md: '24px',   // standard icon tiles
+    lg: '32px',   // large tiles
+    avatar: '56px', // identity avatar (documented standard)
+  },
+
+  /** Loading skeleton spec — shimmer via CSS gradient animation.
+   *  GlobalStyles already kills CSS animation under prefers-reduced-motion,
+   *  so skeletons degrade to a static fill for those users. */
+  skeleton: {
+    base: 'rgba(255, 255, 255, 0.04)',
+    shimmer: 'rgba(255, 255, 255, 0.08)',
+  },
+
+  /** Dark-surface focus ring. The GlobalStyles :focus-visible ring uses a
+   *  light-theme blue that is near-invisible on near-black surfaces —
+   *  app surfaces use this instead. */
+  focusRing: '0 0 0 3px rgba(147, 197, 253, 0.35)',
+
+  /** Deliberate native-control accent (checkbox/radio `accent-color`).
+   *  Flat iOS blue, kept intentionally — do not "fix" to a theme color. */
+  accentControl: '#0a84ff',
+
+  /** Numeric alignment for metric values (use as `font-variant-numeric`). */
+  numeric: 'tabular-nums',
 
   /** App-surface shadows (darker + softer than the light-theme set). */
   shadow: {

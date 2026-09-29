@@ -37,10 +37,10 @@ import {
   BudgetBar,
   BudgetFill,
   CounterRow,
-  EmptyState,
   Whisper,
   Wrap,
 } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 
 export interface BrandSectionProps {
   assistantId: string;
@@ -213,7 +213,7 @@ export function BrandSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

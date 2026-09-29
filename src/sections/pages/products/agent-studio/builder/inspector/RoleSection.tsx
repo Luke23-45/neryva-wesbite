@@ -15,6 +15,7 @@ import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
 import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import { TextButton } from './ToolsSection.styles';
 import { TextArea } from '@components/common/ui/TextArea';
 import { TextInput } from '@components/common/ui/TextInput';
@@ -319,7 +320,7 @@ export function RoleSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

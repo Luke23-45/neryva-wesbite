@@ -17,20 +17,20 @@ export const AdvancedToggle = styled.button`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 0;
+  padding: ${({ theme }) => theme.spacing.s3} 0;
   background: transparent;
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.primary};
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
-    border-radius: 8px;
+    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: ${({ theme }) => theme.spacing.px2};
+    border-radius: ${({ theme }) => theme.radii.sm};
   }
 
   svg {
@@ -42,24 +42,24 @@ export const AdvancedToggle = styled.button`
 export const ParamRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const ParamHead = styled.div`
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const ParamName = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ParamValue = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;

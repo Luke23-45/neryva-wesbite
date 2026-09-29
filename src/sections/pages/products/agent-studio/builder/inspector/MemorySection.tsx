@@ -14,6 +14,7 @@ import {
   type MemoryScope,
 } from '../lib/memory-model';
 import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   FieldBlock,
   FieldHead,
@@ -129,9 +130,15 @@ export function MemorySection({
           <FieldHelper>{USER_PREVIEW_COPY}</FieldHelper>
         </FieldHead>
         {previewPending ? (
-          <PinMeta>Checking in-scope memories…</PinMeta>
+          <SkeletonRows rows={3} />
         ) : previewError ? (
-          <Whisper $tone="amber">In-scope preview is unavailable.</Whisper>
+          <Whisper $tone="amber">
+            In-scope preview is unavailable — the policy above still applies
+            at run time; only this preview failed to load.{' '}
+            <TextButton type="button" onClick={() => void previewSource.refetch()}>
+              Retry
+            </TextButton>
+          </Whisper>
         ) : !previewActive ? (
           <PinMeta>
             {engineScope === 'none'
@@ -194,9 +201,15 @@ export function MemorySection({
             </SwitchRow>
           </>
         ) : orgPolicy.isError ? (
-          <Whisper $tone="amber">Org defaults are unreachable.</Whisper>
+          <Whisper $tone="amber">
+            Org defaults are unreachable — scrub and TTL are still enforced at
+            run time; this panel just can’t show them.{' '}
+            <TextButton type="button" onClick={() => void orgPolicy.refetch()}>
+              Retry
+            </TextButton>
+          </Whisper>
         ) : (
-          <PinMeta>Loading org defaults…</PinMeta>
+          <SkeletonRows rows={2} barHeight="40px" />
         )}
         <PinMeta>
           Scrub and TTL are org policy (owners/admins, Workspace settings). Purge lives in the{' '}

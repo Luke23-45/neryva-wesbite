@@ -6,6 +6,7 @@ import { useCreateEvalDataset } from '@hooks/studio/useSetupEval';
 import { EVAL_COPY } from '../lib/eval-model';
 import { Note } from './TraceDrawer.styles';
 import { Muted } from './TrySection.styles';
+import { Whisper } from './InstructionsSection.styles';
 import { FixBlock, FixField, FixForm, FixLinks, FixTitle } from './EvaluationSection.styles';
 
 function str(value: unknown): string | null {
@@ -27,6 +28,30 @@ export function EvalNoDatasetFix({
 }) {
   const createDataset = useCreateEvalDataset();
   const [name, setName] = useState('');
+  const [createFailed, setCreateFailed] = useState(false);
+
+  const submit = () => {
+    const trimmed = name.trim();
+    if (trimmed === '' || createDataset.isPending) return;
+    setCreateFailed(false);
+    createDataset.mutate(
+      { name: trimmed },
+      {
+        onSuccess: (created) => {
+          const record = typeof created === 'object' && created !== null ? (created as Record<string, unknown>) : {};
+          const nested = typeof record.dataset === 'object' && record.dataset !== null ? (record.dataset as Record<string, unknown>) : null;
+          const id = str(record.id) ?? (nested ? str(nested.id) : null);
+          if (id) {
+            onDatasetCreated(id);
+            setName('');
+          }
+        },
+        // The hook toasts, but a toast is transient — the inline whisper is
+        // the durable branch so the failure stays visible next to the form.
+        onError: () => setCreateFailed(true),
+      },
+    );
+  };
 
   return (
     <FixBlock>
@@ -40,26 +65,17 @@ export function EvalNoDatasetFix({
           <ActionButton
             size="sm"
             disabled={name.trim() === '' || createDataset.isPending}
-            onClick={() =>
-              createDataset.mutate(
-                { name: name.trim() },
-                {
-                  onSuccess: (created) => {
-                    const record = typeof created === 'object' && created !== null ? (created as Record<string, unknown>) : {};
-                    const nested = typeof record.dataset === 'object' && record.dataset !== null ? (record.dataset as Record<string, unknown>) : null;
-                    const id = str(record.id) ?? (nested ? str(nested.id) : null);
-                    if (id) {
-                      onDatasetCreated(id);
-                      setName('');
-                    }
-                  },
-                },
-              )
-            }
+            onClick={submit}
           >
             Create dataset
           </ActionButton>
         </FixForm>
+      )}
+      {createFailed && (
+        <Whisper $tone="red">
+          The dataset wasn’t created — nothing was saved. Fix the name and
+          press Create dataset again.
+        </Whisper>
       )}
       <FixLinks>
         <Link to="/agent-studio/templates">Install a template →</Link>

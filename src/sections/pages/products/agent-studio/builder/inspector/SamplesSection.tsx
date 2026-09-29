@@ -16,6 +16,7 @@ import {
   DeniedNote,
   Excerpt,
   Gallery,
+  InlineRetry,
   RowError,
   SampleBlurb,
   SampleDot,
@@ -120,6 +121,15 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
           )}
           <SourceList>
             {templates.isPending && <RowError>Loading registry blueprints…</RowError>}
+            {templates.isError && (
+              <RowError>
+                The template registry couldn’t be reached.{' '}
+                <InlineRetry type="button" onClick={() => { void templates.refetch(); }}>
+                  Try again
+                </InlineRetry>{' '}
+                — your org’s agents below still load.
+              </RowError>
+            )}
             {templates.data &&
               templateCards.map((card) => {
                 const hasText = card.text.trim() !== '';
@@ -168,8 +178,18 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                   {orgFailures.length} agent{orgFailures.length === 1 ? '' : 's'} couldn’t load — skipped, nothing retried in a loop.
                 </RowError>
               )}
-              {orgCandidates.length === 0 && !assistants.isPending && (
-                <RowError>No sibling agents yet.</RowError>
+              {assistants.isError ? (
+                <RowError>
+                  Your agents couldn’t be listed.{' '}
+                  <InlineRetry type="button" onClick={() => { void assistants.refetch(); }}>
+                    Try again
+                  </InlineRetry>{' '}
+                  — the toggle stays on; nothing was skipped silently.
+                </RowError>
+              ) : (
+                orgCandidates.length === 0 && !assistants.isPending && (
+                  <RowError>No sibling agents yet.</RowError>
+                )
               )}
               {orgCandidates.map((agent) => (
                 <OrgSampleRow

@@ -38,16 +38,27 @@ export const typography = {
     small: 1.5,
     label: 1.25,
     compact: 1.35,
+    // App-surface line heights (Agent Studio foundation pass). Marketing scale
+    // above is for the light site; dense dark UI uses these two.
+    appBody: 1.6,  // default UI text — collapses the 1.5/1.55/1.65 drift
+    appTight: 1.3, // display / tight text — collapses the 1.0/1.4 drift
   },
 
   weights: {
     regular: 400,
     medium: 500,
+    // True semibold. The inspector previously used 650 in 16 files — 650 is not
+    // a real IBM Plex Sans weight and renders unpredictably (rounds toward 700).
+    // 600 also wins by occurrences (34 vs 31). All emphasis normalizes here.
+    semibold: 600,
   },
 
   letterSpacing: {
     normal: '0',
     label: '0.04em',
+    micro: '-0.005em', // adopted micro-tightening for UI text
+    tight: '-0.01em',  // display text
+    wide: '0.08em',    // all-caps micro-labels
   },
 } as const;
 

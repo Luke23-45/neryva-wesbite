@@ -39,7 +39,8 @@ import { ConflictDialog } from './ConflictDialog';
 import { ModelPicker } from './ModelPicker';
 import { CredentialsPanel } from './CredentialsPanel';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   AdvancedToggle,
   FieldBlock,
@@ -335,7 +336,7 @@ export function ModelSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

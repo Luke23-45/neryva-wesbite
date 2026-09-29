@@ -11,23 +11,23 @@ import styled from 'styled-components';
 export const Gallery = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 12px;
+  gap: ${({ theme }) => theme.spacing.s4};
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const SourceList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const SampleRow = styled.button<{ $disabled?: boolean }>`
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
   width: 100%;
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
   color: ${({ theme }) => theme.app.text.primary};
@@ -41,78 +41,78 @@ export const SampleRow = styled.button<{ $disabled?: boolean }>`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
+    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: ${({ theme }) => theme.spacing.px2};
   }
 `;
 
 export const SampleDot = styled.span<{ $color: string }>`
-  width: 10px;
-  height: 10px;
+  width: ${({ theme }) => theme.spacing.px10};
+  height: ${({ theme }) => theme.spacing.px10};
   flex: none;
-  margin-top: 4px;
-  border-radius: 50%;
+  margin-top: ${({ theme }) => theme.spacing.s1};
+  border-radius: ${({ theme }) => theme.radii.round};
   background: ${({ $color }) => $color};
 `;
 
 export const SampleMain = styled.span`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.s1};
   flex: 1;
   min-width: 0;
 `;
 
 export const SampleLabel = styled.span`
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
 `;
 
 export const SampleBlurb = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const SampleNote = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   white-space: nowrap;
-  padding-top: 2px;
+  padding-top: ${({ theme }) => theme.spacing.px2};
 `;
 
 export const ToggleRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 2px;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.px2};
 `;
 
 export const ToggleText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.s1};
   flex: 1;
 `;
 
 export const ToggleTitle = styled.div`
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const ToggleSub = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const Excerpt = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -122,15 +122,15 @@ export const Excerpt = styled.div`
 export const RowError = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const DeniedNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.65;
-  padding: 14px 16px;
-  border-radius: 14px;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   background: ${({ theme }) => theme.app.surface.subtle};
   border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
@@ -140,39 +140,42 @@ export const SamplesToggle = styled.button`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   border: 0;
   background: ${({ theme }) => theme.app.status.info.bg};
   color: ${({ theme }) => theme.app.status.info.fg};
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   font-family: inherit;
   cursor: pointer;
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
+    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: ${({ theme }) => theme.spacing.px2};
   }
 `;
 
 export const ToggleLabel = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const SamplesMeta = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 400;
+  font-weight: ${({ theme }) => theme.typography.weights.regular};
   opacity: 0.8;
 `;
 
 export const SamplesBody = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
+  margin-top: ${({ theme }) => theme.spacing.px10};
 `;
+
+/** Inline text retry button for query-error rows — link treatment, no chrome. */
+export { InlineRetry } from './InlineRetry';

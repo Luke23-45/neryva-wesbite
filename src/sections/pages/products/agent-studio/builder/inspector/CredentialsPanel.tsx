@@ -12,6 +12,8 @@ import {
   type ProviderCredential,
 } from '@hooks/studio/useSetupProviders';
 import { useEnterpriseStatus } from '@hooks/engine/billing';
+import { SkeletonRows } from './SkeletonRows';
+import { EmptyState } from './InstructionsSection.styles';
 import {
   CheckRow,
   Counter,
@@ -67,6 +69,8 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
   // for them regardless of what the UI shows.
   const enterprise = useEnterpriseStatus({ enabled: canRead });
   const isEnterprise = enterprise.data === true;
+  const isEmpty =
+    credentials.data !== undefined && !credentials.isError && credentials.data.length === 0;
 
   if (!canRead) {
     return (
@@ -81,7 +85,7 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
   return (
     <Wrap>
       {credentials.data === undefined && !credentials.isError && (
-        <DeniedNote>Loading credentials…</DeniedNote>
+        <SkeletonRows rows={3} />
       )}
       {credentials.isError && (
         <DeniedNote>Credentials unreachable — retry the page. Model rows keep their last-known reasons.</DeniedNote>
@@ -111,6 +115,16 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
             onDone={() => onConnectOpenChange(false)}
             onCancel={() => onConnectOpenChange(false)}
           />
+        ) : isEmpty ? (
+          <EmptyState>
+            No credentials yet — connect a provider key to bring your own
+            models. Neryva-managed platform credentials keep working either way.
+            <div>
+              <ActionButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
+                Connect provider
+              </ActionButton>
+            </div>
+          </EmptyState>
         ) : (
           <ActionButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
             Connect provider

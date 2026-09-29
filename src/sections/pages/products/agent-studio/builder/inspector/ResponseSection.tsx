@@ -22,7 +22,8 @@ import type { ReasoningEffort } from '../lib/brain-model';
 import { ConflictDialog } from './ConflictDialog';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   AdvancedToggle,
   FieldBlock,
@@ -306,7 +307,7 @@ export function ResponseSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

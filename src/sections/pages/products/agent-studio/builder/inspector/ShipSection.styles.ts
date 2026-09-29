@@ -14,12 +14,12 @@ export { Muted } from './TrySection.styles';
 
 export const Verdict = styled.div<{ $tone: 'success' | 'warning' | 'error' | 'neutral' }>`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: baseline;
   font-size: ${({ theme }) => theme.app.type.title};
-  font-weight: 650;
-  letter-spacing: -0.005em;
-  margin-bottom: 6px;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
+  margin-bottom: ${({ theme }) => theme.spacing.px6};
   color: ${({ $tone, theme }) =>
     $tone === 'success'
       ? theme.app.status.success.fg
@@ -31,9 +31,9 @@ export const Verdict = styled.div<{ $tone: 'success' | 'warning' | 'error' | 'ne
 `;
 
 export const Dot = styled.span<{ $tone: 'success' | 'warning' | 'error' | 'neutral' }>`
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
+  width: ${({ theme }) => theme.spacing.px10};
+  height: ${({ theme }) => theme.spacing.px10};
+  border-radius: ${({ theme }) => theme.radii.round};
   flex: none;
   align-self: center;
   background: ${({ $tone, theme }) =>
@@ -49,8 +49,8 @@ export const Dot = styled.span<{ $tone: 'success' | 'warning' | 'error' | 'neutr
 export const Sub = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.65;
-  margin-bottom: 10px;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  margin-bottom: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const FixLink = styled.button`
@@ -61,7 +61,7 @@ export const FixLink = styled.button`
   cursor: pointer;
   color: ${({ theme }) => theme.app.text.primary};
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: ${({ theme }) => theme.spacing.px2};
 `;
 
 export const RefusalLink = styled(Link)`
@@ -74,54 +74,54 @@ export const Mono = styled.span`
 `;
 
 export const Refusal = styled.div`
-  margin-top: 16px;
+  margin-top: ${({ theme }) => theme.spacing.s4};
   border: 1px solid ${({ theme }) => theme.app.status.error.border};
   background: ${({ theme }) => theme.app.status.error.bg};
-  border-radius: 14px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const RefusalTitle = styled.strong`
-  font-weight: 650;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.status.error.fg};
 `;
 
 export const RefusalMessage = styled.div`
-  margin-top: 6px;
+  margin-top: ${({ theme }) => theme.spacing.px6};
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const RefusalFix = styled.div`
-  margin-top: 10px;
+  margin-top: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const Notice = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
-  margin-top: 10px;
-  line-height: 1.65;
+  margin-top: ${({ theme }) => theme.spacing.px10};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.status.warning.fg};
 `;
 
 export const AckLabel = styled.label`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: flex-start;
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.primary};
-  margin-top: 12px;
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const AckCheckbox = styled.input`
-  margin-top: 4px;
-  width: 18px;
-  height: 18px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
+  width: ${({ theme }) => theme.spacing.px18};
+  height: ${({ theme }) => theme.spacing.px18};
   flex: none;
   accent-color: ${({ theme }) => theme.app.status.warning.fg};
 `;
 
 export const PublishBlock = styled.div`
-  margin-top: 16px;
+  margin-top: ${({ theme }) => theme.spacing.s4};
 `;

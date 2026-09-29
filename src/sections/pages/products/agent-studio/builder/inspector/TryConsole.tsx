@@ -9,6 +9,7 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { TRY_COPY, describeTryPrereqs } from '../lib/try-model';
 import { readTryParam, writeTryParam } from '../lib/try-thread-param';
 import { TraceDrawer, type TraceEditTarget } from './TraceDrawer';
+import { SkeletonRows } from './SkeletonRows';
 import { StreamingBubble, Note } from './TraceDrawer.styles';
 import { EmptyState, Wrap } from './InstructionsSection.styles';
 import { TextButton } from './ToolsSection.styles';
@@ -117,6 +118,10 @@ export function TryConsole({
 
   const traceTurn = turns.find((t) => t.key === traceKey) ?? null;
   const guardrails = definition?.guardrails ?? null;
+  // A restored thread whose transcript fetch failed: the hook leaves the
+  // turn parked with its "restored" notice and no content — surface the
+  // failure visibly instead of an empty restored turn.
+  const restoreFailed = session.messages.isError && turns.some((t) => t.restored);
 
   const fixLink = (kind: 'no-model' | 'instructions-advisory') =>
     editMode.kind === 'jump' ? (
@@ -139,7 +144,7 @@ export function TryConsole({
         </FieldHelper>
       </FieldBlock>
 
-      {modelsLoading && <Muted>Checking usable models…</Muted>}
+      {modelsLoading && <SkeletonRows rows={1} widths={['45%']} />}
       {prereqs.map((prereq) => (
         <PrereqBlock key={prereq.kind} $tone={prereq.tone}>
           <PrereqHeadline $tone={prereq.tone}>{prereq.headline}</PrereqHeadline>
@@ -179,6 +184,16 @@ export function TryConsole({
                     {notice.text}
                   </NoticePill>
                 ))}
+                {turn.restored && restoreFailed && (
+                  <NoticePill $tone="error">
+                    The previous thread couldn’t be restored — this composer
+                    starts fresh. Nothing was deleted; the thread is still on
+                    the server.{' '}
+                    <TextButton onClick={() => void session.messages.refetch()}>
+                      Retry restore
+                    </TextButton>
+                  </NoticePill>
+                )}
                 {(turn.status === 'done' || turn.status === 'error') && (
                   <TextButton onClick={() => setTraceKey(turn.key)}>Open trace ›</TextButton>
                 )}

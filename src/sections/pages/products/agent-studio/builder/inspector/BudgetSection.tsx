@@ -31,7 +31,8 @@ import {
   type BudgetCaps,
 } from '../lib/budget-model';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
+import { Whisper, Wrap } from './InstructionsSection.styles';
 import { TextButton } from './ToolsSection.styles';
 import {
   CapLabel,
@@ -212,7 +213,7 @@ export function BudgetSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }
@@ -275,7 +276,7 @@ export function BudgetSection({
           <FieldHelper>Rough, not the bill</FieldHelper>
         </FieldHead>
         {costs.isPending ? (
-          <FieldHelper>Loading list prices…</FieldHelper>
+          <SkeletonRows rows={3} />
         ) : costs.isError ? (
           <Whisper $tone="amber">Prices are unreachable — caps above still save; estimates resume on reload.</Whisper>
         ) : allowed.length === 0 ? (

@@ -9,63 +9,63 @@ import styled from 'styled-components';
  */
 
 export const EvalSection = styled.div`
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.primary};
-  margin: 20px 0 4px;
+  margin: ${({ theme }) => theme.spacing.px20} 0 ${({ theme }) => theme.spacing.s1};
 `;
 
 export const EvalList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const EvalItem = styled.div`
-  padding: 10px 14px;
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.s3};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.lg};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.primary};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const EvalMeta = styled.div`
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const StaleBanner = styled.div`
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   border: 1px solid ${({ theme }) => theme.app.status.warning.border};
   background: ${({ theme }) => theme.app.status.warning.bg};
 `;
 
 export const StaleHeadline = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 650;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.status.warning.fg};
 `;
 
 export const StaleDetail = styled.div`
-  margin-top: 6px;
+  margin-top: ${({ theme }) => theme.spacing.px6};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const ShadowBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.lg};
   font-size: ${({ theme }) => theme.app.type.caption};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.status.info.fg};
   background: ${({ theme }) => theme.app.status.info.bg};
   border: 1px dashed ${({ theme }) => theme.app.status.info.border};
@@ -74,9 +74,9 @@ export const ShadowBadge = styled.span`
 export const StatusRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: center;
-  margin-top: 12px;
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const ScoreLine = styled.span`
@@ -87,7 +87,7 @@ export const ScoreLine = styled.span`
 export const FinishedAt = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.ghost};
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const Undecided = styled.span`
@@ -97,29 +97,29 @@ export const Undecided = styled.span`
 
 export const CheckRow = styled.div`
   display: flex;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   align-items: baseline;
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
-  margin-top: 8px;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  margin-top: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const CheckMark = styled.span<{ $pass: boolean }>`
   flex: none;
-  font-weight: 700;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme, $pass }) => ($pass ? theme.app.status.success.fg : theme.app.status.error.fg)};
 `;
 
 export const CaseCard = styled.div`
-  padding: 12px 14px;
-  border-radius: 12px;
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.lg};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 `;
 
 export const CaseExcerpt = styled.div`
@@ -133,13 +133,13 @@ export const Mono = styled.span`
 `;
 
 export const CopyRow = styled.div`
-  margin-top: 10px;
+  margin-top: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const EvalActions = styled.div`
   display: flex;
-  gap: 16px;
+  gap: ${({ theme }) => theme.spacing.s4};
   align-items: center;
-  margin-top: 16px;
+  margin-top: ${({ theme }) => theme.spacing.s4};
   flex-wrap: wrap;
 `;

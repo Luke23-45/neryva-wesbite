@@ -11,29 +11,29 @@ import styled from 'styled-components';
 export const Receipt = styled.div`
   border: 1px solid ${({ theme }) => theme.app.status.success.border};
   background: ${({ theme }) => theme.app.status.success.bg};
-  border-radius: 16px;
-  padding: 18px;
-  margin-top: 16px;
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  margin-top: ${({ theme }) => theme.spacing.s4};
 `;
 
 export const Headline = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   font-size: ${({ theme }) => theme.app.type.title};
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.status.success.fg};
 `;
 
 export const Lines = styled.div`
-  margin-top: 10px;
+  margin-top: ${({ theme }) => theme.spacing.px10};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.7;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.secondary};
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const Mono = styled.span`
@@ -44,13 +44,13 @@ export const Mono = styled.span`
 export const Exits = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
+  gap: ${({ theme }) => theme.spacing.px10};
+  margin-top: ${({ theme }) => theme.spacing.px14};
 `;
 
 export const Footer = styled.div`
-  margin-top: 12px;
+  margin-top: ${({ theme }) => theme.spacing.s3};
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;

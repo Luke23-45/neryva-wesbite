@@ -29,6 +29,8 @@ export const radii = {
   pill: '999px',
   round: '50%',
   // Backwards-compatible aliases — already used throughout the studio.
+  // @deprecated — do not use in new code; migrate existing refs to the main
+  // scale above (sm→xs 4px, md→8px≈sm, lg→sm 8px, xl→lg 12px).
   legacy: {
     sm: '4px',
     md: '6px',

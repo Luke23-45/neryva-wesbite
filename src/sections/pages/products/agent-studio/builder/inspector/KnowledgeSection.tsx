@@ -52,8 +52,9 @@ import {
   PASTE_MEDIA_TYPES,
 } from '../lib/knowledge-model';
 import { ConflictDialog } from './ConflictDialog';
+import { SkeletonRows } from './SkeletonRows';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { Whisper, Wrap } from './InstructionsSection.styles';
 import {
   ConnectorList,
   ConnectorRow,
@@ -417,7 +418,7 @@ export function KnowledgeSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }
@@ -776,7 +777,7 @@ export function KnowledgeSection({
                   placeholder="Filter by slug or title…"
                 />
                 {documents.isPending ? (
-                  <PinMeta>Loading the library…</PinMeta>
+                  <SkeletonRows rows={4} barHeight="72px" />
                 ) : documents.isError ? (
                   <Whisper $tone="red">The library is unreachable — pins below still save; mapping resumes on reload.</Whisper>
                 ) : libraryRows.length === 0 ? (
@@ -821,7 +822,7 @@ export function KnowledgeSection({
                   <OrgBadge>org</OrgBadge> Connector accounts are org-wide — syncing pulls documents into the shared library for every agent.
                 </PinMeta>
                 {connectors.isPending ? (
-                  <PinMeta>Loading accounts…</PinMeta>
+                  <SkeletonRows rows={3} barHeight="44px" />
                 ) : connectors.isError ? (
                   <Whisper $tone="red">Connector accounts are unreachable — linking and syncing resume on reload.</Whisper>
                 ) : (connectors.data ?? []).length === 0 ? (

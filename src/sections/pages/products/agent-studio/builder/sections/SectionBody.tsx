@@ -33,6 +33,14 @@ export interface InspectorContext {
   agentId: string | null;
   agentName: string | null;
   description: string | null;
+  /**
+   * Identity (assistant detail) query state for the purpose section's read
+   * card: pending shows skeletons (never a false "Untitled agent"), error
+   * shows the inline error panel. Optional — absent means loaded.
+   */
+  identityPending?: boolean;
+  identityError?: boolean;
+  onRetryIdentity?: () => void;
   canAuthor: boolean;
   role: OrgRole | null;
   hasDraft: boolean;
@@ -176,6 +184,9 @@ export function SectionBody({
           agentId={context.agentId}
           agentName={context.agentName}
           description={context.description}
+          identityPending={context.identityPending}
+          identityError={context.identityError}
+          onRetryIdentity={context.onRetryIdentity}
           canAuthor={context.canAuthor}
           role={context.role}
           onFormState={onFormState}

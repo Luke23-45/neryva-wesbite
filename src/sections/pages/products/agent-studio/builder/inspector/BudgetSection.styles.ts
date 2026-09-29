@@ -14,37 +14,37 @@ export { SwitchRow, SwitchText, SwitchTitle, SwitchSub } from './ModelSection.st
 export const CapRow = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const CapLabel = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const EstimateList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const EstimateItem = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
+  gap: ${({ theme }) => theme.spacing.s1};
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.s3};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.lg};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.primary};
-  line-height: 1.6;
-  font-variant-numeric: tabular-nums;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const EstimateMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;

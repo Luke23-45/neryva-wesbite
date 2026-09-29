@@ -11,30 +11,30 @@ import styled from 'styled-components';
 export const Wrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: ${({ theme }) => theme.spacing.px14};
 `;
 
 export const CredRow = styled.div<{ $revoked?: boolean }>`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
   opacity: ${({ $revoked }) => ($revoked ? 0.85 : 1)};
 `;
 
 export const CredHead = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const CredName = styled.span`
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.primary};
   flex: 1;
   min-width: 0;
@@ -46,15 +46,15 @@ export const CredName = styled.span`
 export const CredMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
-  font-variant-numeric: tabular-nums;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const CredFlag = styled.span<{ $tone: 'red' | 'amber' | 'muted' | 'info' }>`
-  font-size: 11px;
-  font-weight: 650;
-  padding: 3px 10px;
-  border-radius: 999px;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
+  border-radius: ${({ theme }) => theme.radii.pill};
   white-space: nowrap;
   color: ${({ theme, $tone }) =>
     $tone === 'red'
@@ -76,9 +76,9 @@ export const CredFlag = styled.span<{ $tone: 'red' | 'amber' | 'muted' | 'info' 
 
 export const RowActions = styled.div`
   display: flex;
-  gap: 4px 16px;
+  gap: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.s4};
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const TextButton = styled.button`
@@ -86,11 +86,11 @@ export const TextButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.app.status.info.fg};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   font-family: inherit;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s2};
+  border-radius: ${({ theme }) => theme.radii.sm};
 
   &:hover:not(:disabled) {
     text-decoration: underline;
@@ -114,33 +114,33 @@ export const DangerButton = styled(TextButton)`
 export const InlineForm = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.lg};
   border: 1px dashed ${({ theme }) => theme.app.border.strong};
   background: ${({ theme }) => theme.app.bg.base};
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const FormNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const CheckRow = styled.label`
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   cursor: pointer;
 
   input {
-    margin-top: 3px;
-    width: 16px;
-    height: 16px;
+    margin-top: ${({ theme }) => theme.spacing.s1};
+    width: ${({ theme }) => theme.app.iconSize.sm};
+    height: ${({ theme }) => theme.app.iconSize.sm};
     accent-color: ${({ theme }) => theme.app.status.error.fg};
   }
 `;
@@ -148,9 +148,9 @@ export const CheckRow = styled.label`
 export const DeniedNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.65;
-  padding: 16px 18px;
-  border-radius: 14px;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
   background: ${({ theme }) => theme.app.surface.subtle};
   border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
@@ -159,19 +159,19 @@ export const Counter = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.ghost};
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const FieldLabel = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 600;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const Select = styled.select`
   height: 40px;
-  padding: 0 12px;
-  border-radius: 10px;
+  padding: 0 ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.tint};
   color: ${({ theme }) => theme.app.text.primary};
@@ -188,5 +188,5 @@ export const SelectWrap = styled.label`
   font-size: ${({ theme }) => theme.app.type.caption};
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 `;

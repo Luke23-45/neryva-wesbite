@@ -58,6 +58,7 @@ import {
   Whisper,
   Wrap,
 } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 
 /**
  * Research ceiling (PLAN.md §5.1): 2–3 canonical examples beat 10 mediocre
@@ -368,7 +369,7 @@ export function InstructionsSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

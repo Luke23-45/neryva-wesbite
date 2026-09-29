@@ -11,21 +11,21 @@ import styled from 'styled-components';
 export const Wrap = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  max-width: 720px;
-  padding-top: 8px;
+  gap: ${({ theme }) => theme.spacing.s6};
+  max-width: ${({ theme }) => theme.containers.prose};
+  padding-top: ${({ theme }) => theme.spacing.s2};
 `;
 
 /** Shared label — sentence case, 600 weight. Micro-caps read as admin UI. */
 export const SectionLabel = styled.div`
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   color: ${({ theme }) => theme.app.text.secondary};
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 /* ── Shared field anatomy ────────────────────────────────────────
@@ -35,20 +35,20 @@ export const SectionLabel = styled.div`
 export const FieldBlock = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const FieldHead = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const FieldTitle = styled.h3`
   margin: 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.tight};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
@@ -56,15 +56,14 @@ export const FieldHelper = styled.p`
   margin: 0;
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.5;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const MicroCount = styled.span`
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: ${({ theme }) => theme.typography.weights.regular};
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 /* ── Composer block groups ─────────────────────────────────────── */
@@ -72,25 +71,25 @@ export const MicroCount = styled.span`
 export const BlockGroup = styled.section`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const BlockHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const BlockNumber = styled.span`
   flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: ${({ theme }) => theme.app.iconSize.md};
+  height: ${({ theme }) => theme.app.iconSize.md};
+  border-radius: ${({ theme }) => theme.radii.round};
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.muted};
   background: ${({ theme }) => theme.app.surface.subtle};
   border: 1px solid ${({ theme }) => theme.app.border.default};
@@ -98,17 +97,16 @@ export const BlockNumber = styled.span`
 
 export const BlockTitle = styled.h3`
   margin: 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.tight};
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
 export const BlockSub = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 400;
+  font-weight: ${({ theme }) => theme.typography.weights.regular};
   color: ${({ theme }) => theme.app.text.muted};
-  letter-spacing: 0;
 `;
 
 export const BlockCount = styled.span`
@@ -116,17 +114,17 @@ export const BlockCount = styled.span`
   flex: none;
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const BlockCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border-radius: 14px;
-  padding: 16px 18px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 
   &:focus-within {
     border-color: ${({ theme }) => theme.app.border.strong};
@@ -140,15 +138,16 @@ export const CustomCard = styled(BlockCard)`
 export const RuleList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const RuleRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 4px;
-  border-radius: 12px;
+  gap: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s2}
+    ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s1};
+  border-radius: ${({ theme }) => theme.radii.lg};
   border: 1px solid transparent;
 
   &:hover {
@@ -171,11 +170,11 @@ export const IconButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: ${({ theme }) => theme.app.iconSize.lg};
+  height: ${({ theme }) => theme.app.iconSize.lg};
   flex: none;
   border: 0;
-  border-radius: 9px;
+  border-radius: ${({ theme }) => theme.radii.sm};
   background: transparent;
   color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
@@ -198,9 +197,9 @@ export const IconButton = styled.button`
 
 export const AddRow = styled.div`
   display: flex;
-  gap: 16px;
+  gap: ${({ theme }) => theme.spacing.s4};
   align-items: center;
-  padding-top: 4px;
+  padding-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const AddButton = styled.button`
@@ -208,14 +207,14 @@ export const AddButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.app.status.info.fg};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 500;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
   font-family: inherit;
   cursor: pointer;
-  padding: 6px 4px;
-  border-radius: 8px;
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s1};
+  border-radius: ${({ theme }) => theme.radii.sm};
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: ${({ theme }) => theme.spacing.px6};
 
   &:hover {
     text-decoration: underline;
@@ -223,21 +222,21 @@ export const AddButton = styled.button`
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
+    outline-offset: 2px;
   }
 `;
 
 export const AddHint = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.5;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const Whisper = styled.div<{ $tone: 'amber' | 'red' }>`
-  border-radius: 12px;
-  padding: 12px 16px;
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.55;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   border: 1px solid
     ${({ theme, $tone }) =>
       $tone === 'amber' ? theme.app.status.warning.border : theme.app.status.error.border};
@@ -251,24 +250,24 @@ export const CounterRow = styled.div`
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
 `;
 
 export const BudgetBar = styled.div`
-  height: 6px;
-  border-radius: 3px;
+  height: ${({ theme }) => theme.spacing.px6};
+  border-radius: ${({ theme }) => theme.radii.xs};
   background: ${({ theme }) => theme.app.surface.active};
   overflow: hidden;
-  margin-top: 8px;
+  margin-top: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const BudgetFill = styled.div<{ $ratio: number }>`
   height: 100%;
   width: ${({ $ratio }) => Math.min(100, Math.max(0, $ratio * 100))}%;
-  border-radius: 3px;
+  border-radius: ${({ theme }) => theme.radii.xs};
   background: ${({ theme, $ratio }) =>
     $ratio > 1
       ? theme.app.status.error.fg
@@ -280,18 +279,18 @@ export const BudgetFill = styled.div<{ $ratio: number }>`
 export const Goldilocks = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.55;
-  margin-top: 10px;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  margin-top: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const PreviewCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.bg.base};
-  border-radius: 14px;
-  padding: 18px 20px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.s5};
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: ${({ theme }) => theme.spacing.px14};
 `;
 
 export const PreviewBlock = styled.button`
@@ -300,7 +299,7 @@ export const PreviewBlock = styled.button`
   text-align: left;
   padding: 0;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: ${({ theme }) => theme.radii.sm};
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
@@ -310,89 +309,89 @@ export const PreviewBlock = styled.button`
 
 export const PreviewHeader = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 650;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.status.info.fg};
-  margin-bottom: 4px;
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const PreviewText = styled.pre`
   margin: 0;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12.5px;
-  line-height: 1.65;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.body};
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 `;
 
 export const OverrideBanner = styled.div`
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: ${({ theme }) => theme.radii.lg};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.55;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   border: 1px solid ${({ theme }) => theme.app.status.info.border};
   background: ${({ theme }) => theme.app.status.info.bg};
   color: ${({ theme }) => theme.app.text.secondary};
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
   flex-wrap: wrap;
 `;
 
 export const EmptyState = styled.div`
   border: 1px dashed ${({ theme }) => theme.app.border.strong};
-  border-radius: 14px;
-  padding: 20px 22px;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  padding: ${({ theme }) => theme.spacing.s5};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const ConflictDiff = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: ${({ theme }) => theme.spacing.s2};
+  margin-top: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const ConflictPane = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: ${({ theme }) => theme.radii.md};
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.s3};
   font-size: ${({ theme }) => theme.app.type.caption};
-  line-height: 1.55;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const ConflictLabel = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: 650;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.muted};
-  margin-bottom: 4px;
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const ConflictIntro = styled.p`
   margin: 0;
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 export const ConflictWarning = styled.p`
-  margin: 12px 0 0;
+  margin: ${({ theme }) => theme.spacing.s3} 0 0;
   font-size: ${({ theme }) => theme.app.type.caption};
-  line-height: 1.6;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.status.error.fg};
 `;
 
 export const ConflictText = styled.pre`
   margin: 0;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme }) => theme.app.text.body};
   white-space: pre-wrap;
   overflow-wrap: anywhere;

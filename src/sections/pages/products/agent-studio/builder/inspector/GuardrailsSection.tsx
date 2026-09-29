@@ -31,7 +31,8 @@ import {
 } from '../lib/guardrails-model';
 import { ConflictDialog } from './ConflictDialog';
 import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { Whisper, Wrap } from './InstructionsSection.styles';
+import { SkeletonRows } from './SkeletonRows';
 import {
   DirectionGroup,
   FieldBlock,
@@ -247,7 +248,7 @@ export function GuardrailsSection({
   if (!definition) {
     return (
       <Wrap>
-        <EmptyState>Loading the draft…</EmptyState>
+        <SkeletonRows rows={4} />
       </Wrap>
     );
   }

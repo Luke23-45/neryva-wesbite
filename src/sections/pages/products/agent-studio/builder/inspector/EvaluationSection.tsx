@@ -31,6 +31,7 @@ import { buildAgentDetailPath } from '../lib/slot-model';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { EvalNoDatasetFix } from './EvalNoDatasetFix';
 import { EvalResults } from './EvalResults';
+import { SkeletonRows } from './SkeletonRows';
 import {
   ActionsRow,
   AttemptsWrap,
@@ -40,8 +41,12 @@ import {
   FieldHead,
   FieldHelper,
   FieldTitle,
+  InlineRetry,
   LinkRow,
   Muted,
+  RunsError,
+  RunsErrorBody,
+  RunsErrorTitle,
   Wrap,
 } from './EvaluationSection.styles';
 import { Note } from './TraceDrawer.styles';
@@ -91,6 +96,18 @@ export function EvaluationSection({
   const runnable = versionId !== null && (isDraft || versionStatus === 'DRAFT' || versionStatus === 'PUBLISHED');
   const row = (versions.data ?? []).find((v) => v.id === versionId) ?? null;
 
+  /**
+   * First load still in flight. fetchStatus stays 'idle' for disabled
+   * queries (e.g. provenance with no versionId), so this never mistakes
+   * "not asked" for "still loading" — P1a false-empty guard.
+   */
+  const firstLoad = (query: { isPending: boolean; fetchStatus: string }): boolean =>
+    query.isPending && query.fetchStatus !== 'idle';
+  const runsLoading = firstLoad(runs);
+  const datasetsLoading = firstLoad(datasets);
+  const provenanceLoading = firstLoad(provenance);
+  const notificationsLoading = firstLoad(notifications);
+
   // Newest-first by timestamps (shared ordering — never the raw wire order).
   const versionRuns = orderRunsNewestFirst((runs.data ?? []).filter((run) => run.assistantVersionId === versionId));
   const latest: EvalRun | null = trackedRunId
@@ -102,9 +119,14 @@ export function EvaluationSection({
   const seededName = templateSlug && templateVersion ? `template:${templateSlug}@${templateVersion}` : null;
   const seededDataset = seededName ? ((datasets.data ?? []).find((d) => d.name === seededName) ?? null) : null;
   const pickedDataset = datasetId ? ((datasets.data ?? []).find((d) => d.id === datasetId) ?? null) : null;
-  const required: unknown[] = Array.isArray((template.data?.releasePolicy as { required?: unknown } | undefined)?.required)
-    ? ((template.data?.releasePolicy as { required?: unknown }).required as unknown[])
-    : [];
+  // null while the template is unresolved — EvalResults renders the honest
+  // "resolves on the version surface" note; [] would falsely claim "no release policy".
+  const required: unknown[] | null =
+    template.data == null
+      ? null
+      : Array.isArray((template.data.releasePolicy as { required?: unknown } | undefined)?.required)
+        ? ((template.data.releasePolicy as { required?: unknown }).required as unknown[])
+        : [];
 
   const driftItems = (notifications.data?.items ?? []).filter(
     (item) =>
@@ -161,27 +183,35 @@ export function EvaluationSection({
       <FieldBlock>
         <FieldHead>
           <FieldTitle>Dataset</FieldTitle>
-          <FieldHelper>{seededDataset ? 'seeded' : 'attach'}</FieldHelper>
+          {!(datasetsLoading || provenanceLoading) && (
+            <FieldHelper>{seededDataset ? 'seeded' : 'attach'}</FieldHelper>
+          )}
         </FieldHead>
-        {seededDataset ? (
-          <FieldHelper>
-            {describeDatasetOrigin(seededDataset.name)} · resolves automatically when the picker stays on template default.
-          </FieldHelper>
+        {datasetsLoading || provenanceLoading ? (
+          <SkeletonRows rows={3} />
         ) : (
-          <FieldHelper>No template-seeded dataset — pick one explicitly or create it below. The template default fails loudly until then.</FieldHelper>
+          <>
+            {seededDataset ? (
+              <FieldHelper>
+                {describeDatasetOrigin(seededDataset.name)} · resolves automatically when the picker stays on template default.
+              </FieldHelper>
+            ) : (
+              <FieldHelper>No template-seeded dataset — pick one explicitly or create it below. The template default fails loudly until then.</FieldHelper>
+            )}
+            <DatasetLabel>
+              Dataset (omit for the template-seeded default)
+              <DatasetSelect value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
+                <option value="">Template default (fails loudly when none exists)</option>
+                {(datasets.data ?? []).map((dataset) => (
+                  <option key={dataset.id} value={dataset.id}>
+                    {dataset.name}
+                  </option>
+                ))}
+              </DatasetSelect>
+            </DatasetLabel>
+            {pickedDataset && <FieldHelper>{describeDatasetOrigin(pickedDataset.name)} dataset.</FieldHelper>}
+          </>
         )}
-        <DatasetLabel>
-          Dataset (omit for the template-seeded default)
-          <DatasetSelect value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
-            <option value="">Template default (fails loudly when none exists)</option>
-            {(datasets.data ?? []).map((dataset) => (
-              <option key={dataset.id} value={dataset.id}>
-                {dataset.name}
-              </option>
-            ))}
-          </DatasetSelect>
-        </DatasetLabel>
-        {pickedDataset && <FieldHelper>{describeDatasetOrigin(pickedDataset.name)} dataset.</FieldHelper>}
       </FieldBlock>
 
       {showFixPath && <EvalNoDatasetFix onDatasetCreated={(id) => setDatasetId(id)} canCreate={mayRun} />}
@@ -217,7 +247,20 @@ export function EvaluationSection({
         )}
       </FieldBlock>
 
-      {latest ? (
+      {runsLoading ? (
+        <SkeletonRows rows={3} />
+      ) : runs.isError ? (
+        <RunsError>
+          <RunsErrorTitle>Eval runs couldn’t be loaded.</RunsErrorTitle>
+          <RunsErrorBody>
+            Your versions and datasets are untouched —{' '}
+            <InlineRetry type="button" onClick={() => { void runs.refetch(); }}>
+              try again
+            </InlineRetry>
+            .
+          </RunsErrorBody>
+        </RunsError>
+      ) : latest ? (
         <EvalResults
           run={latest}
           versionStatus={row?.status ?? versionStatus}
@@ -236,7 +279,9 @@ export function EvaluationSection({
         <FieldHead>
           <FieldTitle>Watching</FieldTitle>
         </FieldHead>
-        {latestDrift ? (
+        {notificationsLoading ? (
+          <FieldHelper>Checking for drift signals…</FieldHelper>
+        ) : latestDrift ? (
           <>
             <FieldHelper>
               {latestDrift.title ?? 'Model drift'} — {latestDrift.message ?? 'the catalog moved under the active version.'}

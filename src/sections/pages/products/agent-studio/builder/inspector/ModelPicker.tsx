@@ -23,6 +23,7 @@ import {
   SearchInput,
   Wrap,
 } from './ModelPicker.styles';
+import { SkeletonRows } from './SkeletonRows';
 
 export interface ModelPickerProps {
   allowed: string[];
@@ -169,7 +170,7 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
         aria-label="Search model catalog"
       />
 
-      {catalog === undefined && !catalogError && <EmptyNote>Loading the model catalog…</EmptyNote>}
+      {catalog === undefined && !catalogError && <SkeletonRows rows={5} barHeight="52px" />}
       {catalogError && <EmptyNote>Catalog unreachable — retry the page. Saving without a picked model is refused.</EmptyNote>}
       {catalog !== undefined && catalog.length === 0 && !catalogError && (
         <EmptyNote>No models in the platform catalog yet — nothing can ship until staff publishes entries.</EmptyNote>

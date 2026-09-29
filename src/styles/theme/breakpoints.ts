@@ -7,6 +7,7 @@ export const breakpoints = {
 export const containers = {
   page: '1200px',
   prose: '720px',
+  narrow: '560px', // narrow content measure (Agent Studio secondary panels)
   wide: '1440px',
 } as const;
 

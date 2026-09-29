@@ -17,13 +17,13 @@ export { PinMeta } from './KnowledgeSection.styles';
 export const StepperRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
 export const StepButton = styled.button`
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: ${({ theme }) => theme.app.iconSize.lg};
+  height: ${({ theme }) => theme.app.iconSize.lg};
+  border-radius: ${({ theme }) => theme.radii.lg};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: transparent;
   color: ${({ theme }) => theme.app.text.primary};
@@ -44,22 +44,22 @@ export const StepButton = styled.button`
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
+    outline-offset: ${({ theme }) => theme.spacing.px2};
   }
 `;
 
 export const StepValue = styled.input`
   width: 76px;
   text-align: center;
-  border-radius: 11px;
+  border-radius: ${({ theme }) => theme.radii.lg};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
   color: ${({ theme }) => theme.app.text.primary};
-  font-size: 15px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
   font-family: inherit;
-  padding: 8px 4px;
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s1};
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
@@ -70,14 +70,15 @@ export const StepValue = styled.input`
 export const ChoiceRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 export const ChoicePill = styled.button<{ $active?: boolean }>`
-  border-radius: 999px;
-  padding: 9px 18px;
+  border-radius: ${({ theme }) => theme.radii.pill};
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${({ $active }) => ($active ? 650 : 500)};
+  font-weight: ${({ theme, $active }) =>
+    $active ? theme.typography.weights.semibold : theme.typography.weights.medium};
   font-family: inherit;
   cursor: pointer;
   border: 1px solid
@@ -92,21 +93,21 @@ export const ChoicePill = styled.button<{ $active?: boolean }>`
 
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
+    outline-offset: ${({ theme }) => theme.spacing.px2};
   }
 `;
 
 export const SourceList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const SourceItem = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 12px;
+  border-radius: ${({ theme }) => theme.radii.lg};
   background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 10px 14px;
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.s3};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.primary};

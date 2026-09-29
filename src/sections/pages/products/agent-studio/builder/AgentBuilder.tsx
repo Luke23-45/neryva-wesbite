@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { canSetup } from '@lib/engine/capabilities';
+import { ApiError } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
 import { useAssistant, useAssistantDefinition, useAssistantVersions, useKnowledgeHealth, usePublishReadiness, DRAFT_WRITE_MUTATION_KEY } from '@hooks/studio/useAgentAuthoring';
 import { useIsMutating } from '@tanstack/react-query';
@@ -18,6 +19,7 @@ import { SectionNav } from './nav/SectionNav';
 import { OVERVIEW_ID, type SectionEntry } from './nav/section-groups';
 import { OverviewScreen } from './overview/OverviewScreen';
 import { SectionBody, type InspectorContext } from './sections/SectionBody';
+import { DefinitionErrorPanel } from './inspector/DefinitionErrorPanel';
 import type { PurposeNodeDatum } from './inspector/PurposeExtras';
 import type { TraceEditTarget } from './inspector/TraceDrawer';
 import { OriginScreen } from './origin/OriginScreen';
@@ -547,6 +549,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       agentId,
       agentName,
       description,
+      identityPending: mode === 'build' && assistant.isPending,
+      identityError: mode === 'build' && assistant.isError,
+      onRetryIdentity: () => assistant.refetch(),
       canAuthor,
       role,
       hasDraft,
@@ -577,20 +582,19 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
        */
       publishSignal,
     }),
-    [mode, agentId, agentName, description, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal],
+    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal],
   );
 
-  // — Build-mode loading / not-found (firsthand states, never blank) —
+  // — Build-mode loading / not-found / fetch-error (firsthand states, never blank) —
 
-  if (mode === 'build' && assistant.data === undefined) {
-    return (
-      <Shell>
-        <LoadingVeil>Loading the agent…</LoadingVeil>
-      </Shell>
-    );
-  }
+  // The engine client throws ApiError on 404, so a missing agent arrives as
+  // assistant.isError (not data === null) — map it to the not-found state.
+  const assistantNotFound =
+    mode === 'build' &&
+    (assistant.data === null ||
+      (assistant.isError && assistant.error instanceof ApiError && assistant.error.status === 404));
 
-  if (mode === 'build' && assistant.data === null) {
+  if (assistantNotFound) {
     return (
       <Shell>
         <NotFound>
@@ -600,6 +604,24 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
             Back to Agents
           </ActionButton>
         </NotFound>
+      </Shell>
+    );
+  }
+
+  if (mode === 'build' && assistant.isError) {
+    return (
+      <Shell>
+        <NotFound>
+          <DefinitionErrorPanel title="Couldn't load the agent" onRetry={() => assistant.refetch()} />
+        </NotFound>
+      </Shell>
+    );
+  }
+
+  if (mode === 'build' && assistant.data === undefined) {
+    return (
+      <Shell>
+        <LoadingVeil>Loading the agent…</LoadingVeil>
       </Shell>
     );
   }
@@ -636,6 +658,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
             buildHref={agentId ? buildAgentEditPath(agentId) : '/agent-studio/agents'}
             onSelectSection={handleSelectSection}
           />
+        ) : mode === 'build' && form.isError ? (
+          <DefinitionErrorPanel title="Couldn't load the draft" onRetry={() => form.refetch()} />
         ) : (
           <SectionBody
             sectionId={view}

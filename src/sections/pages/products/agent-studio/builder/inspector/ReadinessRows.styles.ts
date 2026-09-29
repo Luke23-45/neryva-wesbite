@@ -15,14 +15,14 @@ export const Rows = styled.div`
 
 export const CheckRow = styled.div`
   display: flex;
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.s3};
   align-items: flex-start;
-  padding: 12px 0;
+  padding: ${({ theme }) => theme.spacing.s3} 0;
   border-bottom: 1px solid ${({ theme }) => theme.app.border.strong};
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
+    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: ${({ theme }) => theme.spacing.px2};
   }
 `;
 
@@ -36,30 +36,30 @@ export const CheckIcon = styled.span<{ $tone: 'success' | 'warning' | 'error' | 
           ? theme.app.status.error.fg
           : theme.app.text.secondary};
   display: inline-flex;
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const CheckBody = styled.div`
   flex: 1;
   font-size: ${({ theme }) => theme.app.type.body};
-  line-height: 1.65;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 export const CheckTitle = styled.div`
-  font-weight: 650;
-  margin-bottom: 2px;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  margin-bottom: ${({ theme }) => theme.spacing.px2};
 `;
 
 export const ExtraList = styled.ul`
-  margin: 8px 0 0;
-  padding-left: 20px;
+  margin: ${({ theme }) => theme.spacing.s2} 0 0;
+  padding-left: ${({ theme }) => theme.spacing.px20};
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const FixZone = styled.div`
-  margin-top: 8px;
+  margin-top: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const FixJump = styled.button`
@@ -70,7 +70,7 @@ export const FixJump = styled.button`
   cursor: pointer;
   color: ${({ theme }) => theme.app.text.primary};
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: ${({ theme }) => theme.spacing.px2};
 `;
 
 export const FixRouteLink = styled(Link)`
