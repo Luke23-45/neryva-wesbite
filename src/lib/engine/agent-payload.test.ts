@@ -104,7 +104,7 @@ describe('fromEnginePayload', () => {
     });
     // 19-32: reasoning_effort/top_p are legacy response_policy keys — they
     // migrate into model_params on read and are never re-emitted inside
-    // response_policy (the engine's strict schema 422s them there).
+    // response_policy (the engine's strict schema 400s them there).
     expect(shaped.response_policy).toEqual({
       output_format: 'plain',
       citations_enabled: false,
@@ -266,7 +266,7 @@ describe('toEnginePayload', () => {
     expect(wire.guardrail_policy).toEqual({ input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking' });
   });
 
-  it('strips every consumer-only key from the wire (unknown-keys 422 must stay unreachable)', () => {
+  it('strips every consumer-only key from the wire (unknown-keys 400 must stay unreachable)', () => {
     const def = consumer();
     def.max_context_tokens = 64000;
     def.retrieval = { memory_max_results: 9 };

@@ -54,7 +54,7 @@ import {
 
 // Only google_drive has OAuth dance metadata server-side
 // (connector-oauth.ts OAUTH_PROVIDER_META) — the dance button renders for
-// Drive accounts only; the server 422s any other provider.
+// Drive accounts only; the server 400s any other provider.
 const DANCE_PROVIDERS: readonly string[] = ['google_drive'];
 
 const stateTone: Record<string, StatusTone> = {

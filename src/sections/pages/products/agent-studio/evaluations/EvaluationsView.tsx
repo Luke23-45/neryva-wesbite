@@ -776,7 +776,7 @@ function CasesModal({ datasetId, name, onClose }: { datasetId: string; name: str
         state assertions of the form <Mono>tool.&lt;name&gt;=called|not_called</Mono> checked against the run's tool-call log;
         rubric cases sent to the engine's configured LLM-judge endpoint (<Mono>HARNESS__LLM_JUDGE_URL</Mono>) and passed at
         min score — rubric cases fail closed when no judge is configured. Empty assertions pass vacuously and say so.
-        Unknown keys refuse — violations return per-index 422s, never silent drops.
+        Unknown keys refuse — violations return per-index 400s, never silent drops.
       </p>
       {drafts.map((draft, index) => (
         <div key={index} style={{ borderTop: index === 0 ? 0 : '1px solid var(--neryva-border, #222)', paddingTop: index === 0 ? 0 : 12, marginTop: index === 0 ? 0 : 12 }}>

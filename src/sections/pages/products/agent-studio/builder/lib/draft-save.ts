@@ -1,7 +1,7 @@
 /**
  * Shared draft-save mechanics (C03 PLAN.md §6) — the single debounce constant
  * and the full-payload builder both surfaces write through. Two debounce
- * constants would be config slop; a partial body would be a 422 trap.
+ * constants would be config slop; a partial body would be a 400 trap.
  */
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 

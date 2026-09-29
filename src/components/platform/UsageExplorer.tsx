@@ -1,7 +1,7 @@
 /**
  * The usage explorer (ledger B-1) — real metering data over the engine's
  * overview/series endpoints: KPI grid, daily series chart, product and
- * range filters (URL-synced), CSV export. Shared verbatim by
+ * range filters (URL-synced), NDJSON export. Shared verbatim by
  * /platform/usage and the studio Usage page (no fork).
  *
  * Series/KPI shapes are parsed defensively (`parseOverviewKpis`,

@@ -80,7 +80,7 @@ describe('checkDefinitionCaps', () => {
     expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('response_policy'))).toBe(false);
     const full = shippable();
     // 19-32: reasoning_effort/top_p no longer live on response_policy — they
-    // ride model_params (the engine's strict responsePolicySchema 422s them).
+    // ride model_params (the engine's strict responsePolicySchema 400s them).
     full.response_policy = {
       output_format: 'plain',
       citations_enabled: false,
@@ -150,7 +150,7 @@ describe('checkDefinitionCaps', () => {
   });
   it('rejects empty role list members like the engine min(1) does (19-28)', () => {
     // The UI can't produce empties, but a hand-crafted "" must not slip past
-    // the caps layer — the engine 422s on it.
+    // the caps layer — the engine 400s on it.
     const empty = shippable();
     empty.role_policy = { traits: ['calm', ''], knowledge_areas: ['billing'], prohibited_topics: [''] };
     const issues = checkDefinitionCaps(empty).filter((i) => i.path.startsWith('role_policy'));
@@ -258,7 +258,7 @@ describe('sectionOf (caps issues → editor sections)', () => {
     expect(sectionOf('mystery.field')).toBe('instructions');
   });
 
-  it('routes guardrail 422s to the guardrails section (C07 — was instructions)', () => {
+  it('routes guardrail 400s to the guardrails section (C07 — was instructions)', () => {
     expect(sectionOf('guardrail_policy.input_policy')).toBe('guardrails');
     expect(sectionOf('guardrail_policy.execution_mode')).toBe('guardrails');
   });

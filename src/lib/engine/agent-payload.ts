@@ -19,7 +19,7 @@
  *   (absent = no voice block, never an empty one).
  * - max_context_tokens / retrieval_policy / memory_max_results /
  *   max_recursion_depth stay consumer-side ONLY — the
- *   engine 422s them as unknown keys (rejectUnknownPayloadKeys). Brand is
+ *   engine 400s them as unknown keys (rejectUnknownPayloadKeys). Brand is
  *   FIRST-CLASS since G4 (persisted, hashed, composed into the served prompt).
  * - budgets: cents→micros (×10_000), ms stay seconds on the wire.
  */
@@ -47,7 +47,7 @@ export interface ResponsePolicy {
   // The engine's responsePolicySchema is strict with only the three render
   // fields — the pair rides model_params (the same contract the Brain and
   // Response sections write). parseResponsePolicy no longer reads them, and
-  // toEnginePayload no longer re-emits them (the engine 422s them loudly).
+  // toEnginePayload no longer re-emits them (the engine 400s them loudly).
   // Legacy drafts carrying the pair inside response_policy are migrated into
   // model_params on read (fromEnginePayload) — never re-emitted.
 }
@@ -250,7 +250,7 @@ export interface EnginePayload {
     citations_enabled?: boolean;
     streaming?: 'auto' | 'on' | 'off';
     // 19-32: no reasoning_effort/top_p — they ride model_params (the engine's
-    // strict responsePolicySchema 422s them here).
+    // strict responsePolicySchema 400s them here).
   };
   /**
    * role_policy is written through only when at least one member is set
@@ -388,7 +388,7 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     // defaults). The object may be partial (foreign payloads) — the wire
     // materializes the console defaults for missing members, never sends
     // undefined values. 19-32: reasoning_effort/top_p are NEVER re-emitted
-    // here — they ride model_params (engine-strict schema 422s them inside
+    // here — they ride model_params (engine-strict schema 400s them inside
     // response_policy); legacy drafts are migrated on read instead.
     ...(def.response_policy
       ? {
@@ -494,7 +494,7 @@ function pick<T>(...candidates: unknown[]): T | undefined {
  * (the canonical home the engine accepts) so no maker value is lost on
  * reload. Rules: never overwrite a canonical model_params value (it wins over
  * the stale legacy key); never re-emit into response_policy (the engine's
- * strict responsePolicySchema 422s it). A custom reasoning_effort string is
+ * strict responsePolicySchema 400s it). A custom reasoning_effort string is
  * preserved in state — setup-caps holds the save until the maker picks a
  * preset, so the cast never reaches the wire for a custom value.
  */
