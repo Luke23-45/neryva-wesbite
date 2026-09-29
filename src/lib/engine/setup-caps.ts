@@ -5,9 +5,9 @@
  * `engine/src/modules/assistants/validation.ts` (+ spec §5/§6 where the spec
  * is tighter and says so); re-verify if either moves.
  *
- * Bounds: instructions non-empty + ≤20,000 (spec §6 — engine allows 32,768;
- * the tighter spec cap wins) · models 1–16 `provider/model` shape ·
- * tools ≤32 `{name ^[a-z0-9_]+$, access required, approval}` ·
+ * Bounds: instructions non-empty + ≤32,768 (engine zod, DB CHECK, contract
+ * max_len — all three agree; aligned 19-08) · models 1–20 `provider/model` shape ·
+ * tools ≤50 `{name ^[a-z0-9_]+$, access required, approval}` ·
  * history 1–100 · retrieval results 1–20 · budgets per §5 ·
  * secret shapes rejected before persistence (mirrors validation.ts).
  */
@@ -21,11 +21,11 @@ export interface CapIssue {
 }
 
 export const CAPS = {
-  instructionsMax: 20_000,
+  instructionsMax: 32_768,
   brandMax: 2_000,
   modelsMin: 1,
-  modelsMax: 16,
-  toolsMax: 32,
+  modelsMax: 20,
+  toolsMax: 50,
   toolNamePattern: /^[a-z0-9_]+$/,
   toolNameMax: 64,
   historyMin: 1,

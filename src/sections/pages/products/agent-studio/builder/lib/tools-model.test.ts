@@ -76,7 +76,7 @@ describe('validateEntries', () => {
     if (!dup.ok) expect(dup.message).toMatch(/twice/);
   });
   it('mirrors the contract cap single-source', () => {
-    expect(TOOLS_MAX).toBe(32);
+    expect(TOOLS_MAX).toBe(50);
     expect(contractCaps().toolsMax).toBe(CAPS.toolsMax);
   });
 });
@@ -86,7 +86,7 @@ describe('canBind', () => {
     expect(canBind(0)).toEqual({ ok: true });
     const held = canBind(TOOLS_MAX);
     expect(held.ok).toBe(false);
-    if (!held.ok) expect(held.message).toMatch(/32/);
+    if (!held.ok) expect(held.message).toMatch(/50/);
   });
 });
 

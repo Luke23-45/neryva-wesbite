@@ -39,8 +39,9 @@ export interface ComposedDocument {
   rawOverride: string;
 }
 
-/** Engine contract bound (tighter of validation 32,768 vs schema 20,000). */
-export const INSTRUCTIONS_LIMIT = 20000;
+/** Engine contract bound 32,768: engine zod, DB CHECK, and contract max_len all
+ * agree (19-08; closes P2 19-27 — the old "schema 20,000" claim was wrong). */
+export const INSTRUCTIONS_LIMIT = 32768;
 
 let blockCounter = 0;
 

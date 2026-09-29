@@ -176,8 +176,8 @@ describe('ToolsSection entries', () => {
     expect(payload.definition.tools.find((t) => t.name === 'lookup_ticket')?.execution_mode).toBe('shadow');
   });
 
-  it('holds binding past the 32-entry cap with a named message', async () => {
-    const many = Array.from({ length: 32 }, (_, i) => ({
+  it('holds binding past the 50-entry cap with a named message', async () => {
+    const many = Array.from({ length: 50 }, (_, i) => ({
       name: `tool_${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const,
     }));
     await act(async () => {
@@ -185,7 +185,7 @@ describe('ToolsSection entries', () => {
     });
     fireEvent.change(screen.getByPlaceholderText(/Filter by name/), { target: { value: 'export_report' } });
     fireEvent.click(screen.getByText('Bind with hash pin'));
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/Tool limit reached \(32\)/));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/Tool limit reached \(50\)/));
   });
 });
 

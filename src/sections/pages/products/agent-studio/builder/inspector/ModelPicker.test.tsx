@@ -78,12 +78,12 @@ describe('ModelPicker catalog', () => {
     expect(onChange).toHaveBeenCalledWith(['deepseek/chat', 'anthropic/claude-sonnet-4-5']);
   });
 
-  it('holds the 16-model cap with reason, and filters by search', async () => {
-    const allowed = Array.from({ length: 16 }, (_, i) => `x/m${i}`);
+  it('holds the 20-model cap with reason, and filters by search', async () => {
+    const allowed = Array.from({ length: 20 }, (_, i) => `x/m${i}`);
     await act(async () => {
       shell({ allowed });
     });
-    expect(screen.getByText(/16-model cap/)).toBeTruthy();
+    expect(screen.getByText(/20-model cap/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'deepseek' } });
     expect(screen.queryByText('Claude Sonnet 4.5')).toBeNull();
     expect(screen.getByText('DeepSeek Chat')).toBeTruthy();

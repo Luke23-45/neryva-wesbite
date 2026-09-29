@@ -4,8 +4,9 @@
  * Engine bounds encoded (validation.ts:5-25,55-58 — re-verify if it moves):
  * temperature 0–2; top_p (0,1]; max_output_tokens 1–200,000; reasoning_effort
  * minimal|low|medium|high; output_schema ≤16,384 valid JSON object; allowed
- * 1–16 refs `provider/model`. Presets MUST land inside these ranges — asserted
- * by test so a future edit cannot silently leave the contract.
+ * 1–20 refs `provider/model` (engine validation.ts:107 `.max(20)`).
+ * Presets MUST land inside these ranges — asserted by test so a future edit
+ * cannot silently leave the contract.
  */
 
 export type ReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
@@ -51,7 +52,7 @@ export const ENGINE_RANGES = {
   topP: { min: 0, max: 1, exclusiveMin: true, step: 0.05 },
   maxOutputTokens: { min: 1, max: 200000 },
   outputSchemaMax: 16384,
-  allowedModelsMax: 16,
+  allowedModelsMax: 20,
 } as const;
 
 /** Current params equal a preset (computed badge — never stored). */

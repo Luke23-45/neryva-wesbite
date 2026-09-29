@@ -87,7 +87,7 @@ describe('InstructionsSection composer', () => {
     });
     expect(screen.getByDisplayValue('Concierge.')).toBeTruthy();
     expect(screen.getByDisplayValue('Be kind.')).toBeTruthy();
-    expect(screen.getByText(/\/ 20,000 chars/)).toBeTruthy();
+    expect(screen.getByText(/\/ 32,768 chars/)).toBeTruthy();
     expect(screen.getByText(/tokens \(est\.\)/)).toBeTruthy();
   });
 
@@ -101,9 +101,9 @@ describe('InstructionsSection composer', () => {
     const inputs = screen.getAllByLabelText(/Rule \d+/);
     expect(inputs.length).toBe(2);
     // Over the cap: held whisper appears, no PUT fires after the debounce.
-    const huge = 'x'.repeat(20001);
+    const huge = 'x'.repeat(32769);
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: huge } });
-    expect(screen.getByText(/over the 20,000 cap/)).toBeTruthy();
+    expect(screen.getByText(/over the 32,768 cap/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -268,15 +268,15 @@ describe('InstructionsSection save lifecycle (model-less draft regression)', () 
   });
 
   it('explicit Save while held toasts the reason instead of swallowing the click', async () => {
-    const over = `## Role\n${'x'.repeat(20001)}\n\n## Rules\n- Be kind.\n`;
+    const over = `## Role\n${'x'.repeat(32769)}\n\n## Rules\n- Be kind.\n`;
     const b = boot({ definition: { ...DEFINITION, instructions: over }, saveSignal: 0 });
     await b.render();
-    expect(screen.getByText(/over the 20,000 cap/)).toBeTruthy();
+    expect(screen.getByText(/over the 32,768 cap/)).toBeTruthy();
     // Topbar Save (saveSignal) while the section is held must explain itself.
     await b.rerender({ definition: { ...DEFINITION, instructions: over }, saveSignal: 1 });
     expect(updateMutate).not.toHaveBeenCalled();
     expect(saveMutate).not.toHaveBeenCalled();
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/over the 20,000 cap/));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/over the 32,768 cap/));
   });
 
   it('adopts fresh server text on a stale remount instead of sticking on old text', async () => {

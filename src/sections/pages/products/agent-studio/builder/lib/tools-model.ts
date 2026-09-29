@@ -16,7 +16,7 @@ import { effectiveApproval, type ConsumerApproval } from '@lib/engine/agent-payl
 import { CAPS } from '@lib/engine/setup-caps';
 import { TOOL_NAME_PATTERN } from '@hooks/studio/useSetupTools';
 
-export const TOOLS_MAX = 32;
+export const TOOLS_MAX = 50;
 export const ENTRY_NAME_MIN = 2;
 export const ENTRY_NAME_MAX = 64;
 export const ENTRY_NAME_PATTERN = /^[a-z0-9_]+$/;
@@ -56,9 +56,10 @@ export interface ToolEntryInput {
 
 export type EntriesCheck = { ok: true; names: string[] } | { ok: false; message: string };
 
-/** Bound-entries gate — contract max 32, unique names (exact match: the engine
- *  lowercases catalog paths server-side and the entry pattern already
- *  forbids case, so exactness is exact). */
+/** Bound-entries gate — engine max 50 (neryva-engine
+ * `src/modules/assistants/validation.ts:128-144` `.max(50)`), unique names
+ * (exact match: the engine lowercases catalog paths server-side and the entry
+ * pattern already forbids case, so exactness is exact). */
 export function validateEntries(entries: readonly ToolEntryInput[]): EntriesCheck {
   const names = entries.map((e) => e.name.trim()).filter((n) => n !== '');
   if (names.length > TOOLS_MAX) {
@@ -74,7 +75,7 @@ export function validateEntries(entries: readonly ToolEntryInput[]): EntriesChec
   return { ok: true, names: [...seen] };
 }
 
-/** 32-cap hold for the bind affordance (named, never a silent disable). */
+/** 50-cap hold for the bind affordance (named, never a silent disable). */
 export function canBind(boundCount: number): { ok: true } | { ok: false; message: string } {
   if (boundCount >= TOOLS_MAX) {
     return { ok: false, message: `Tool limit reached (${TOOLS_MAX}) — unbind one to bind another.` };

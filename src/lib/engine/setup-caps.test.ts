@@ -15,28 +15,34 @@ describe('checkDefinitionCaps', () => {
     expect(validateConsumer(shippable())).toBeNull();
   });
 
-  it('requires instructions and caps them at 20,000', () => {
+  it('requires instructions and caps them at 32,768 (engine/DB/contract bound)', () => {
     const empty = shippable();
     empty.instructions = '  ';
     expect(checkDefinitionCaps(empty).some((i) => i.path === 'instructions')).toBe(true);
     const long = shippable();
-    long.instructions = `x${'y'.repeat(20_000)}`;
+    long.instructions = `x${'y'.repeat(32_768)}`;
     expect(checkDefinitionCaps(long).some((i) => i.path === 'instructions')).toBe(true);
+    const withinEngineCeiling = shippable();
+    withinEngineCeiling.instructions = `x${'y'.repeat(25_000)}`;
+    expect(checkDefinitionCaps(withinEngineCeiling).some((i) => i.path === 'instructions')).toBe(false);
   });
 
-  it('bounds models 1–16 with provider/model shape', () => {
+  it('bounds models 1–20 with provider/model shape', () => {
     const none = shippable();
     none.model_policy.allowed_models = [];
     expect(checkDefinitionCaps(none).some((i) => i.path === 'model_policy.allowed_models')).toBe(true);
     const many = shippable();
-    many.model_policy.allowed_models = Array.from({ length: 17 }, (_, i) => `a/m${i}`);
+    many.model_policy.allowed_models = Array.from({ length: 21 }, (_, i) => `a/m${i}`);
     expect(checkDefinitionCaps(many).some((i) => i.path === 'model_policy.allowed_models')).toBe(true);
+    const atMax = shippable();
+    atMax.model_policy.allowed_models = Array.from({ length: 20 }, (_, i) => `a/m${i}`);
+    expect(checkDefinitionCaps(atMax).some((i) => i.path === 'model_policy.allowed_models')).toBe(false);
     const shapeless = shippable();
     shapeless.model_policy.allowed_models = ['reasoner'];
     expect(checkDefinitionCaps(shapeless).some((i) => i.path.includes('allowed_models[0]'))).toBe(true);
   });
 
-  it('bounds history 1–20 (contract aligned to the runtime served-20) and tools ≤32 with slug-safe names', () => {
+  it('bounds history 1–20 (contract aligned to the runtime served-20) and tools ≤50 with slug-safe names', () => {
     const history = shippable();
     history.context_policy.history_limit = 0;
     expect(checkDefinitionCaps(history).some((i) => i.path === 'context_policy.history_limit')).toBe(true);
@@ -47,8 +53,11 @@ describe('checkDefinitionCaps', () => {
     atMax.context_policy.history_limit = 20;
     expect(checkDefinitionCaps(atMax).some((i) => i.path === 'context_policy.history_limit')).toBe(false);
     const tools = shippable();
-    tools.tools = Array.from({ length: 33 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
+    tools.tools = Array.from({ length: 51 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
     expect(checkDefinitionCaps(tools).some((i) => i.path === 'tools')).toBe(true);
+    const atMaxTools = shippable();
+    atMaxTools.tools = Array.from({ length: 50 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
+    expect(checkDefinitionCaps(atMaxTools).some((i) => i.path === 'tools')).toBe(false);
     const named = shippable();
     named.tools = [{ name: 'Bad-Name!', access: 'read', approval: 'never', execution_mode: 'live' }];
     expect(checkDefinitionCaps(named).some((i) => i.path === 'tools[0].name')).toBe(true);

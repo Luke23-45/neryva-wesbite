@@ -37,7 +37,7 @@ export interface ModelPickerProps {
 
 /**
  * Catalog multi-pick (C04 PLAN.md §5): search, per-row usability with reasons,
- * effective-cost labels, cap-16 hold, fallback-order strip. Unusable rows are
+ * effective-cost labels, cap-20 hold, fallback-order strip. Unusable rows are
  * DISABLED (never hidden); allowed-but-decayed rows stay removable. Viewer gets
  * the same list read-only.
  */
@@ -190,7 +190,7 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
       </CatalogList>
 
       {capped && canAuthor && (
-        <CapNote>16-model cap — remove one to add another.</CapNote>
+        <CapNote>20-model cap — remove one to add another.</CapNote>
       )}
     </Wrap>
   );

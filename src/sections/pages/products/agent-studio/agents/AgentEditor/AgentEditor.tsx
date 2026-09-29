@@ -34,6 +34,7 @@ import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useToolCatalog, BUILT_IN_TOOLS } from '@hooks/studio/useSetupTools';
 import { toEnginePayload, effectiveApproval, type GuardrailExecutionMode } from '@lib/engine/agent-payload';
 import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
+import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-model';
 import { checkDefinitionCaps, sectionOf } from '@lib/engine/setup-caps';
 import { ApiError } from '@lib/engine/client';
 import { BackLink } from '../AgentDetailView.styles';
@@ -298,7 +299,7 @@ export function AgentEditor() {
                   <SectionGap>
                     <Panel title={`Instructions${sectionCount(issuesBySection, 'instructions')}`} subtitle="What this agent is and how it behaves. Required — publish refuses without it.">
                       <TextArea
-                        label={`System instructions (${effective.instructions.length.toLocaleString()} / 20,000 chars · ~${Math.ceil(effective.instructions.length / 4).toLocaleString()} tokens, estimated)`}
+                        label={`System instructions (${effective.instructions.length.toLocaleString()} / ${INSTRUCTIONS_LIMIT.toLocaleString()} chars · ~${Math.ceil(effective.instructions.length / 4).toLocaleString()} tokens, estimated)`}
                         value={effective.instructions}
                         onChange={(e) => patch({ instructions: e.target.value })}
                         rows={8}

@@ -127,7 +127,7 @@ describe('instructions-model markers', () => {
 
 describe('instructions-model document helpers', () => {
   it('blanks, emptiness, singletons, limits, estimates', () => {
-    expect(INSTRUCTIONS_LIMIT).toBe(20000);
+    expect(INSTRUCTIONS_LIMIT).toBe(32768);
     expect(isEmptyDocument({ blocks: [] })).toBe(true);
     expect(isEmptyDocument(blankDocument())).toBe(true);
     const doc = blankDocument();

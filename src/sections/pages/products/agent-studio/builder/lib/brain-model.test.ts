@@ -25,7 +25,7 @@ describe('brain model (C04 binds)', () => {
       expect(max_output_tokens).toBeLessThanOrEqual(ENGINE_RANGES.maxOutputTokens.max);
       expect(['low', 'medium', 'high']).toContain(reasoning_effort);
     }
-    expect(ENGINE_RANGES.allowedModelsMax).toBe(16);
+    expect(ENGINE_RANGES.allowedModelsMax).toBe(20);
   });
 
   it('matches presets by exact params (badge is computed, never stored)', () => {
