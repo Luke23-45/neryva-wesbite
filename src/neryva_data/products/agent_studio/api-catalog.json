@@ -1,5 +1,4 @@
 {
-  "generatedFrom": "neryva-product/agent-studio/contracts/openapi/openapi.v1.json",
   "openapi": "3.1.0",
   "title": "Neryva Agent Studio",
   "version": "v1",
@@ -159,7 +158,7 @@
       "method": "post",
       "tag": "Harness (Internal Only)",
       "summary": "Replay a redacted eval corpus through a pinned deployment (operator only)",
-      "description": "Replay P6-7 redacted eval cases through one pinned provider/model.\n\nEach case runs independently (corpora are sampled pairs, not threads),\nthrough the same production gateway the customer runtime uses, on the\ninternal harness slot — no cus…",
+      "description": "Replay P6-7 redacted eval cases through one pinned provider/model.\n\nEach case runs independently (corpora are sampled pairs, not threads),\nthrough the same production gateway the customer runtime uses, on the\ninternal harness slot \u2014 no cus\u2026",
       "params": [],
       "body": {
         "required": true,
@@ -231,7 +230,7 @@
       "method": "post",
       "tag": "Harness (Internal Only)",
       "summary": "Fork a harness session at a message boundary",
-      "description": "Fork any thread at a message boundary (Arch §7.1, P7-5).\n\nCreates a new active session that copies the original's history up to the\nfork point. The original session's ID and history stay unchanged; both\ncan then be resumed independently. T…",
+      "description": "Fork any thread at a message boundary (Arch \u00a77.1, P7-5).\n\nCreates a new active session that copies the original's history up to the\nfork point. The original session's ID and history stay unchanged; both\ncan then be resumed independently. T\u2026",
       "params": [
         {
           "name": "session_id",
@@ -273,7 +272,7 @@
       "method": "post",
       "tag": "Harness (Internal Only)",
       "summary": "Replay a session with a different model/provider",
-      "description": "Replay all user turns from an existing session through a new model.\n\nCreates a new session with the same user messages, re-running each\nthrough the specified provider/model. Used for model comparison via\ncontrolled replay (Arch §13, P7-5 r…",
+      "description": "Replay all user turns from an existing session through a new model.\n\nCreates a new session with the same user messages, re-running each\nthrough the specified provider/model. Used for model comparison via\ncontrolled replay (Arch \u00a713, P7-5 r\u2026",
       "params": [
         {
           "name": "session_id",
@@ -522,7 +521,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Process Conversation",
-      "description": "Process a conversation message.\n\nIdempotent when the client sends an ``Idempotency-Key`` header: the\nfirst response is stored and replayed verbatim for repeat requests\n(matrix 1.7). The user turn is also written to the durable thread\nwith …",
+      "description": "Process a conversation message.\n\nIdempotent when the client sends an ``Idempotency-Key`` header: the\nfirst response is stored and replayed verbatim for repeat requests\n(matrix 1.7). The user turn is also written to the durable thread\nwith \u2026",
       "params": [],
       "body": {
         "required": true,
@@ -571,7 +570,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Stream Conversation",
-      "description": "Stream a conversation response over Server-Sent Events.\n\nEmits ``session``, ``delta`` (token-level), ``guardrails`` and ``result``\n(or ``error``) events. The response is generated via the LLM's\n``stream_chat``; guardrails and policy checks…",
+      "description": "Stream a conversation response over Server-Sent Events.\n\nEmits ``session``, ``delta`` (token-level), ``guardrails`` and ``result``\n(or ``error``) events. The response is generated via the LLM's\n``stream_chat``; guardrails and policy checks\u2026",
       "params": [],
       "body": {
         "required": true,
@@ -877,7 +876,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Auto Rollback Tenant Config Version",
-      "description": "Auto-rollback on regression (P5-2): re-promote the prior version.\n\nMarks the failing published version ``regressed`` (a failed eval gate —\nit cannot be re-promoted until re-validated) and fully re-publishes the\npreviously live version. Mir…",
+      "description": "Auto-rollback on regression (P5-2): re-promote the prior version.\n\nMarks the failing published version ``regressed`` (a failed eval gate \u2014\nit cannot be re-promoted until re-validated) and fully re-publishes the\npreviously live version. Mir\u2026",
       "params": [
         {
           "name": "tenant_id",
@@ -937,7 +936,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Publish Tenant Config Version",
-      "description": "Publish a draft (or re-promote any version); supersedes the old one.\n\nGated on the P5-2 pipeline: a version that failed validation or its eval\nsuite cannot be promoted. ``canary_percent`` (0-100) turns the publish\ninto a canary rollout — t…",
+      "description": "Publish a draft (or re-promote any version); supersedes the old one.\n\nGated on the P5-2 pipeline: a version that failed validation or its eval\nsuite cannot be promoted. ``canary_percent`` (0-100) turns the publish\ninto a canary rollout \u2014 t\u2026",
       "params": [
         {
           "name": "tenant_id",
@@ -1204,7 +1203,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Onboard Tenant",
-      "description": "Run the onboarding checklist (P5-10): default deny-by-default surface,\nisolation namespaces/prefixes, budget defaults, tenant-bound operator key.\n\nIdempotent: steps already provisioned are reported as such. The raw\noperator key is returned…",
+      "description": "Run the onboarding checklist (P5-10): default deny-by-default surface,\nisolation namespaces/prefixes, budget defaults, tenant-bound operator key.\n\nIdempotent: steps already provisioned are reported as such. The raw\noperator key is returned\u2026",
       "params": [
         {
           "name": "tenant_id",
@@ -1403,7 +1402,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Move a thread to the cold-tier archive (P1-7)",
-      "description": "Enqueue a ``thread.archive`` worker job (202).\n\nThe worker dumps the full durable payload (thread, messages, parts,\nevents) to region-pinned object storage and flips the archived marker\n— hot queries and the retention sweep then ignore the…",
+      "description": "Enqueue a ``thread.archive`` worker job (202).\n\nThe worker dumps the full durable payload (thread, messages, parts,\nevents) to region-pinned object storage and flips the archived marker\n\u2014 hot queries and the retention sweep then ignore the\u2026",
       "params": [
         {
           "name": "thread_id",
@@ -1522,7 +1521,7 @@
       "method": "post",
       "tag": "Other",
       "summary": "Restore a thread from the cold-tier archive (P1-7)",
-      "description": "Enqueue a ``thread.restore`` worker job (202).\n\nThe worker downloads the cold-tier payload, verifies its checksum and\nthread id, then clears the archived marker so the thread is visible to\nhot queries again. A corrupt payload raises and th…",
+      "description": "Enqueue a ``thread.restore`` worker job (202).\n\nThe worker downloads the cold-tier payload, verifies its checksum and\nthread id, then clears the archived marker so the thread is visible to\nhot queries again. A corrupt payload raises and th\u2026",
       "params": [
         {
           "name": "thread_id",
@@ -1814,7 +1813,7 @@
       "method": "post",
       "tag": "Policies",
       "summary": "Simulate Policy Set",
-      "description": "Dry-run a draft policy set against recent stored traffic.\n\nReplays the draft against the redacted content of the tenant's recent\nassistant messages using the same evaluation engine as the runtime\n(deny-by-default included) and reports per-…",
+      "description": "Dry-run a draft policy set against recent stored traffic.\n\nReplays the draft against the redacted content of the tenant's recent\nassistant messages using the same evaluation engine as the runtime\n(deny-by-default included) and reports per-\u2026",
       "params": [
         {
           "name": "tenant_id",
@@ -2182,7 +2181,7 @@
       "method": "get",
       "tag": "Usage & Billing",
       "summary": "Usage Chargeback",
-      "description": "Chargeback report for customer invoicing (P2 §3.8).\n\nReturns line-item rows: one per (provider, model, surface, day) tuple,\nplus tenant rollups. JSON or CSV.\n\nSuper-admins get the platform-wide report; tenant-bound principals\nare scoped to…",
+      "description": "Chargeback report for customer invoicing (P2 \u00a73.8).\n\nReturns line-item rows: one per (provider, model, surface, day) tuple,\nplus tenant rollups. JSON or CSV.\n\nSuper-admins get the platform-wide report; tenant-bound principals\nare scoped to\u2026",
       "params": [
         {
           "name": "since",
