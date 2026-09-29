@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { KeyRound, ShieldCheck, Trash2, RefreshCw } from 'lucide-react';
+import { KeyRound, Trash2, RefreshCw } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { Panel } from '@components/common/ui/Panel';
-import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
@@ -24,8 +23,6 @@ import { pageItem } from '@styles/motion';
 import { useModelAvailability, useModelCosts, costLabel } from '@hooks/studio/useSetupModels';
 import {
   useProviderCredentials,
-  useCreateProviderCredential,
-  useRotateProviderCredential,
   useRevokeProviderCredential,
   useProviderEnablements,
   useSetProviderEnablement,
@@ -311,17 +308,14 @@ export function ModelsView() {
 }
 
 function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBlocked }: { canWrite: boolean; writeDenied: string; canGovern: boolean; governDenied: string; byokBlocked: boolean }) {
+  const navigate = useNavigate();
   // Credential reads are owner/admin/developer — readers/billing get the
   // denied panel, never a 403 flash (the server enforces regardless).
   const credentials = useProviderCredentials({ enabled: canWrite });
   const enablements = useProviderEnablements();
   const setEnablement = useSetProviderEnablement();
-  const createCredential = useCreateProviderCredential();
-  const rotateCredential = useRotateProviderCredential();
   const revokeCredential = useRevokeProviderCredential();
 
-  const [credOpen, setCredOpen] = useState(false);
-  const [rotateTarget, setRotateTarget] = useState<{ id: string; label: string } | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; label: string } | null>(null);
   // Gap #13 (console field audit): the revoke endpoint accepts an optional
   // incident `reason` (≤512, documented on the row) and an explicit
@@ -361,7 +355,7 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
           subtitle="Fingerprint-only list. Create/rotate demand a fresh MFA proof; revoke stays proof-free so incident response never waits. There is no connection test — a mistyped or revoked key is discovered at run time when an agent tries to call the model."
           action={
             byokBlocked ? undefined : (
-              <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => setCredOpen(true)}>
+              <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => navigate({ to: '/agent-studio/models/credentials/new' })}>
                 <KeyRound size={13} strokeWidth={1.8} />
                 Add credential
               </ActionButton>
@@ -418,8 +412,10 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
                           type="button"
                           aria-label={`Rotate ${cred.label}`}
                           title={canGovern ? 'Rotate (fresh MFA proof required)' : governDenied}
-                          disabled={!canGovern || rotateCredential.isPending || cred.status === 'revoked'}
-                          onClick={() => setRotateTarget({ id: cred.id, label: cred.label })}
+                          disabled={!canGovern || cred.status === 'revoked'}
+                          onClick={() =>
+                            navigate({ to: '/agent-studio/models/credentials/$credentialId/rotate', params: { credentialId: cred.id } })
+                          }
                         >
                           <RefreshCw size={13} strokeWidth={1.7} />
                         </IconBtn>
@@ -494,27 +490,7 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
         </SectionGap>
       </motion.div>
 
-      <CredentialModal
-        open={credOpen}
-        onClose={() => setCredOpen(false)}
-        title="Add provider credential"
-        submitLabel="Add (MFA proof required)"
-        onSubmit={(input) => createCredential.mutate(input, { onSuccess: () => setCredOpen(false) })}
-        pending={createCredential.isPending}
-        withLabel
-      />
-      <CredentialModal
-        open={rotateTarget !== null}
-        onClose={() => setRotateTarget(null)}
-        title={`Rotate — ${rotateTarget?.label ?? ''}`}
-        submitLabel="Rotate (MFA proof required)"
-        onSubmit={(input) => {
-          if (rotateTarget) {
-            rotateCredential.mutate({ credentialId: rotateTarget.id, secret: input.secret }, { onSuccess: () => setRotateTarget(null) });
-          }
-        }}
-        pending={rotateCredential.isPending}
-      />
+      {/* M-3 revoke stays a ConfirmDialog — out of scope for the modal→section migration. */}
       <ConfirmDialog
         open={revokeTarget !== null}
         title="Revoke this credential?"
@@ -549,100 +525,5 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
         </label>
       </ConfirmDialog>
     </>
-  );
-}
-
-function CredentialModal({
-  open,
-  onClose,
-  title,
-  submitLabel,
-  onSubmit,
-  pending,
-  withLabel = false,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  submitLabel: string;
-  onSubmit: (input: { provider: string; label: string; secret: string }) => void;
-  pending: boolean;
-  withLabel?: boolean;
-}) {
-  const [provider, setProvider] = useState<string>(MODEL_PROVIDERS[1]);
-  const [label, setLabel] = useState('');
-  const [secret, setSecret] = useState('');
-
-  // Gap #10 (console field audit): the engine rejects secrets outside 8..4096
-  // chars AFTER the MFA proof (`assertSecret`). Validate against what we send
-  // (the trimmed value) before the proof so the refusal happens client-side.
-  const secretProblem = validateCredentialSecret(secret);
-
-  const valid = !secretProblem && secret.trim() !== '' && (withLabel ? label.trim() !== '' : true);
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!valid || pending}
-            onClick={() => {
-              onSubmit({ provider: provider.trim(), label: withLabel ? label.trim() : provider.trim(), secret: secret.trim() });
-              setSecret('');
-            }}
-          >
-            <ShieldCheck size={13} strokeWidth={1.8} />
-            {submitLabel}
-          </ActionButton>
-        </>
-      }
-    >
-      {/*
-        Gap #8 (console field audit): the engine enforces a CLOSED provider
-        vocabulary (`isModelProvider` → 400 otherwise). A free-text input let
-        a typo ride all the way through a fresh MFA step-up to a guaranteed
-        400. A select over the same vocabulary makes the typo unrepresentable.
-      */}
-      <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
-        Provider
-        <select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          style={{ display: 'block', width: '100%', marginTop: 4 }}
-          aria-label="Provider"
-        >
-          {MODEL_PROVIDERS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </label>
-      {withLabel && (
-        <div style={{ marginTop: 12 }}>
-          <TextInput label="Label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. prod-anthropic" />
-        </div>
-      )}
-      <div style={{ marginTop: 12 }}>
-        <TextInput
-          label="Secret (write-only — sealed on arrival, cleared on submit)"
-          type="password"
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-          placeholder="…"
-          autoComplete="off"
-          maxLength={4096}
-          hint="8–4096 characters — the engine rejects shorter secrets."
-          error={secretProblem ?? undefined}
-        />
-      </div>
-    </Modal>
   );
 }

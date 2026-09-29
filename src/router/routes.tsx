@@ -58,8 +58,12 @@ import AgentStudioSettingsTeamPage from '@pages/products/agent_studio/AgentStudi
 import AgentStudioSettingsBillingPage from '@pages/products/agent_studio/AgentStudioSettingsBillingPage';
 import AgentStudioSettingsSecurityPage from '@pages/products/agent_studio/AgentStudioSettingsSecurityPage';
 import AgentStudioSettingsApiKeysPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeysPage';
+import AgentStudioSettingsApiKeyNewPage from '@pages/products/agent_studio/AgentStudioSettingsApiKeyNewPage';
+import AgentStudioSettingsTwoFactorSetupPage from '@pages/products/agent_studio/AgentStudioSettingsTwoFactorSetupPage';
 import AgentStudioKnowledgePage from '@pages/products/agent_studio/AgentStudioKnowledgePage';
-import AgentStudioModelsPage from '@pages/products/agent_studio/AgentStudioModelsPage';
+import AgentStudioModelsPage, { AgentStudioModelsLayout } from '@pages/products/agent_studio/AgentStudioModelsPage';
+import AgentStudioModelsCredentialsNewPage from '@pages/products/agent_studio/AgentStudioModelsCredentialsNewPage';
+import AgentStudioModelsCredentialsRotatePage from '@pages/products/agent_studio/AgentStudioModelsCredentialsRotatePage';
 import AgentStudioToolsPage from '@pages/products/agent_studio/AgentStudioToolsPage';
 import AgentStudioMemoryPage from '@pages/products/agent_studio/AgentStudioMemoryPage';
 import AgentStudioDatasetsPage from '@pages/products/agent_studio/AgentStudioDatasetsPage';
@@ -494,6 +498,18 @@ export const agentStudioSettingsApiKeysRoute = createRoute({
   component: AgentStudioSettingsApiKeysPage,
 });
 
+export const agentStudioSettingsApiKeyNewRoute = createRoute({
+  getParentRoute: () => agentStudioSettingsRoute,
+  path: '/api-keys/new',
+  component: AgentStudioSettingsApiKeyNewPage,
+});
+
+export const agentStudioSettingsTwoFactorSetupRoute = createRoute({
+  getParentRoute: () => agentStudioSettingsRoute,
+  path: '/security/two-factor/setup',
+  component: AgentStudioSettingsTwoFactorSetupPage,
+});
+
 export const agentStudioKnowledgeRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/knowledge',
@@ -503,7 +519,25 @@ export const agentStudioKnowledgeRoute = createRoute({
 export const agentStudioModelsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models',
+  component: AgentStudioModelsLayout,
+});
+
+export const agentStudioModelsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioModelsRoute,
+  path: '/',
   component: AgentStudioModelsPage,
+});
+
+export const agentStudioModelsCredentialsNewRoute = createRoute({
+  getParentRoute: () => agentStudioModelsRoute,
+  path: '/credentials/new',
+  component: AgentStudioModelsCredentialsNewPage,
+});
+
+export const agentStudioModelsCredentialsRotateRoute = createRoute({
+  getParentRoute: () => agentStudioModelsRoute,
+  path: '/credentials/$credentialId/rotate',
+  component: AgentStudioModelsCredentialsRotatePage,
 });
 
 export const agentStudioToolsRoute = createRoute({
@@ -697,7 +731,11 @@ export const routeDefinitions = [
       agentStudioAgentEditRoute,
     ]),
     agentStudioKnowledgeRoute,
-    agentStudioModelsRoute,
+    agentStudioModelsRoute.addChildren([
+      agentStudioModelsIndexRoute,
+      agentStudioModelsCredentialsNewRoute,
+      agentStudioModelsCredentialsRotateRoute,
+    ]),
     agentStudioToolsRoute,
     agentStudioMemoryRoute,
     agentStudioDatasetsRoute,
@@ -737,6 +775,8 @@ export const routeDefinitions = [
       agentStudioSettingsBillingRoute,
       agentStudioSettingsSecurityRoute,
       agentStudioSettingsApiKeysRoute,
+      agentStudioSettingsApiKeyNewRoute,
+      agentStudioSettingsTwoFactorSetupRoute,
     ]),
   ]),
 ];
