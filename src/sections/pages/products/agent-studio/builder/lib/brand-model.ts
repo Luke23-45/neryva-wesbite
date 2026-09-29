@@ -13,9 +13,11 @@ export function isBrandEmpty(text: string): boolean {
   return text.trim().length === 0;
 }
 
-/** Payload length = raw chars (what ships, what the cap counts). */
+/** Cap chars = TRIMMED chars — the wire sends `def.brand.trim()` and
+ * `checkDefinitionCaps` (and the engine) measure `def.brand.trim()`.
+ * Whitespace the stack never stores must not hold a save. */
 export function countBrandChars(text: string): number {
-  return text.length;
+  return text.trim().length;
 }
 
 /** Token estimate, Room parity (~chars/4), ALWAYS labeled "(est.)" at render. */
