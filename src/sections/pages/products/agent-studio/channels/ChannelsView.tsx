@@ -1,14 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
-import styled from 'styled-components';
-import toast from 'react-hot-toast';
-import { Plus, Plug, ShieldCheck, RefreshCw, Trash2, Webhook, Code2 } from 'lucide-react';
+import styled, { css } from 'styled-components';
+import { Plus, ShieldCheck, Trash2, Webhook, Code2, KeyRound } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
-import { Modal } from '@components/common/ui/Modal';
-import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { CopyButton } from '@components/common/ui/CopyButton';
@@ -24,27 +20,15 @@ import { pageItem } from '@styles/motion';
 import {
   useChannels,
   isChannelsModuleDisabled,
-  useCreateChannel,
-  useUpdateChannel,
   useDeactivateChannel,
-  useRotateChannelCredentials,
   useVerifyChannel,
-  useWebhookSetup,
   widgetSnippet,
-  widgetSnippetOrigin,
-  normalizeOriginEntry,
-  validateCredentialField,
-  buildChannelExtrasPatch,
-  outOfWindowTemplateProblem,
-  quickRepliesFieldValue,
-  PLATFORM_CREDENTIAL_SPECS,
   type ChannelAccount,
-  type ConnectablePlatform,
-  type WebhookSetupResult,
 } from '@hooks/studio/useSetupChannels';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
+import { PlatformIcon } from './platformIcons';
 
 /**
  * Serve plane (customer-setup-review.md G1) — where published agents meet
@@ -53,6 +37,10 @@ import { useOrg } from '@/Context/OrgContext';
  * origin allowlist; deactivate DESTROYS credentials (reconnect re-seals);
  * webhook verify tokens show ONCE. Only whatsapp/messenger/telegram/web can
  * be credentialed today (instagram/x/email are listed but unsupported).
+ *
+ * Connect/edit/rotate/webhook-setup are dedicated routed sections
+ * (C-1/C-2/C-3) — the list below only keeps inline row actions (verify,
+ * copy snippet) and the destructive deactivate ConfirmDialog.
  */
 
 const statusTone: Record<string, StatusTone> = {
@@ -88,7 +76,7 @@ const RowActions = styled.div`
   gap: 6px;
 `;
 
-const IconBtn = styled.button`
+const iconBtnBase = css`
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -111,6 +99,10 @@ const IconBtn = styled.button`
   }
 `;
 
+const IconBtn = styled.button`
+  ${iconBtnBase}
+`;
+
 const ReturnBanner = styled.div`
   border: 1px solid ${({ theme }) => theme.app.status.info.border};
   background: ${({ theme }) => theme.app.status.info.bg};
@@ -120,12 +112,10 @@ const ReturnBanner = styled.div`
   font-size: 13px;
 `;
 
-const TokenBox = styled.div`
-  border: 1px dashed ${({ theme }) => theme.app.status.warning.border};
-  background: ${({ theme }) => theme.app.status.warning.bg};
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-top: 12px;
+const PlatformCell = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 13px;
 `;
 
@@ -150,14 +140,9 @@ export function ChannelsView() {
   const channelsDisabled = channels.isError && isChannelsModuleDisabled(channels.error);
   const assistants = useAssistants();
   const verify = useVerifyChannel();
-  const webhookSetup = useWebhookSetup();
   const deactivate = useDeactivateChannel();
 
-  const [connectOpen, setConnectOpen] = useState(false);
-  const [editing, setEditing] = useState<ChannelAccount | null>(null);
   const [deactivating, setDeactivating] = useState<ChannelAccount | null>(null);
-  const [rotating, setRotating] = useState<ChannelAccount | null>(null);
-  const [setupResult, setSetupResult] = useState<{ account: ChannelAccount; result: WebhookSetupResult } | null>(null);
 
   const assistantNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -181,10 +166,25 @@ export function ChannelsView() {
             Where published agents meet customers — connect a platform, bind its assistant, verify, then set up the webhook.
           </ViewSubtitle>
         </ViewHeader>
-        <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Connect a platform' : governDenied} onClick={() => setConnectOpen(true)}>
-          <Plus size={14} strokeWidth={2} />
-          Connect
-        </ActionButton>
+        {canGovern ? (
+          <ActionButton
+            size="sm"
+            onClick={() =>
+              navigate({
+                to: '/agent-studio/channels/connect',
+                search: { returnTo: returnTo ?? undefined, assistantId: incomingAssistantId ?? undefined },
+              })
+            }
+          >
+            <Plus size={14} strokeWidth={2} />
+            Connect
+          </ActionButton>
+        ) : (
+          <ActionButton size="sm" disabled title={governDenied}>
+            <Plus size={14} strokeWidth={2} />
+            Connect
+          </ActionButton>
+        )}
       </ViewHeaderRow>
 
       {returnTo && (
@@ -230,7 +230,10 @@ export function ChannelsView() {
                     <DataRow key={account.id} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 2} $interactive={false}>
                       <DataCell $w="20%">{account.displayName}</DataCell>
                       <DataCell $w="12%">
-                        <Mono>{account.platform}</Mono>
+                        <PlatformCell>
+                          <PlatformIcon platform={account.platform} size={16} />
+                          <Mono>{account.platform}</Mono>
+                        </PlatformCell>
                       </DataCell>
                       <DataCell $w="10%">
                         <StatusPill tone={statusTone[account.status ?? ''] ?? 'neutral'} dot={false}>
@@ -258,40 +261,84 @@ export function ChannelsView() {
                           >
                             <ShieldCheck size={13} strokeWidth={1.7} />
                           </IconBtn>
-                          <IconBtn
-                            type="button"
-                            aria-label={`Webhook setup for ${account.displayName}`}
-                            title={canGovern ? 'Get the callback URL (+ once-shown verify token)' : governDenied}
-                            disabled={!canGovern || webhookSetup.isPending}
-                            onClick={() =>
-                              webhookSetup.mutate(account.id, {
-                                onSuccess: (result) => setSetupResult({ account, result }),
-                              })
-                            }
-                          >
-                            <Webhook size={13} strokeWidth={1.7} />
-                          </IconBtn>
+                          {canGovern ? (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Webhook setup for ${account.displayName}`}
+                              title="Get the callback URL (+ once-shown verify token)"
+                              onClick={() =>
+                                navigate({
+                                  to: '/agent-studio/channels/$accountId/webhook-setup',
+                                  params: { accountId: account.id },
+                                  search: { returnTo: undefined, assistantId: undefined },
+                                })
+                              }
+                            >
+                              <Webhook size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          ) : (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Webhook setup for ${account.displayName}`}
+                              title={governDenied}
+                              disabled
+                            >
+                              <Webhook size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          )}
                           {account.platform === 'web' && account.publicKey ? (
                             <CopyButton value={widgetSnippet(account.publicKey)} label="Copy widget snippet" />
                           ) : null}
-                          <IconBtn
-                            type="button"
-                            aria-label={`Rotate credentials for ${account.displayName}`}
-                            title={canGovern ? 'Rotate sealed credentials' : governDenied}
-                            disabled={!canGovern || account.platform === 'web'}
-                            onClick={() => setRotating(account)}
-                          >
-                            <RefreshCw size={13} strokeWidth={1.7} />
-                          </IconBtn>
-                          <IconBtn
-                            type="button"
-                            aria-label={`Edit ${account.displayName}`}
-                            title={canGovern ? 'Edit binding and config' : governDenied}
-                            disabled={!canGovern}
-                            onClick={() => setEditing(account)}
-                          >
-                            <Code2 size={13} strokeWidth={1.7} />
-                          </IconBtn>
+                          {canGovern ? (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Rotate credentials for ${account.displayName}`}
+                              title="Rotate sealed credentials (credentials section)"
+                              onClick={() =>
+                                navigate({
+                                  to: '/agent-studio/channels/$accountId',
+                                  params: { accountId: account.id },
+                                  search: { returnTo: undefined, assistantId: undefined },
+                                })
+                              }
+                            >
+                              <KeyRound size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          ) : (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Rotate credentials for ${account.displayName}`}
+                              title={governDenied}
+                              disabled
+                            >
+                              <KeyRound size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          )}
+                          {canGovern ? (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Edit ${account.displayName}`}
+                              title="Edit binding and config"
+                              onClick={() =>
+                                navigate({
+                                  to: '/agent-studio/channels/$accountId',
+                                  params: { accountId: account.id },
+                                  search: { returnTo: undefined, assistantId: undefined },
+                                })
+                              }
+                            >
+                              <Code2 size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          ) : (
+                            <IconBtn
+                              type="button"
+                              aria-label={`Edit ${account.displayName}`}
+                              title={governDenied}
+                              disabled
+                            >
+                              <Code2 size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          )}
                           <IconBtn
                             type="button"
                             aria-label={`Deactivate ${account.displayName}`}
@@ -330,31 +377,6 @@ export function ChannelsView() {
         </SectionGap>
       </motion.div>
 
-      <ConnectModal
-        open={connectOpen}
-        onClose={() => setConnectOpen(false)}
-        initialAssistantId={incomingAssistantId}
-        returnTo={returnTo}
-        onConnectedReturn={() => {
-          if (returnTo) {
-            navigate({ to: returnTo });
-          }
-        }}
-      />
-      {editing && (
-        <EditModal
-          key={editing.id}
-          account={editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
-      {rotating && (
-        <RotateModal
-          key={rotating.id}
-          account={rotating}
-          onClose={() => setRotating(null)}
-        />
-      )}
       <ConfirmDialog
         open={deactivating !== null}
         title="Deactivate this channel?"
@@ -369,506 +391,6 @@ export function ChannelsView() {
         }}
         onCancel={() => setDeactivating(null)}
       />
-      {setupResult && (
-        <Modal open onClose={() => setSetupResult(null)} title={`Webhook — ${setupResult.account.displayName}`} width={600} footer={<ActionButton variant="secondary" onClick={() => setSetupResult(null)}>Done</ActionButton>}>
-          {setupResult.result.webhookUrl ? (
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 13, margin: '0 0 6px' }}>Callback URL (paste into the platform dashboard):</p>
-              <Mono>{setupResult.result.webhookUrl}</Mono>{' '}
-              <CopyButton value={setupResult.result.webhookUrl} label="Copy callback URL" />
-              {/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])([:/]|$)/i.test(setupResult.result.webhookUrl) ? (
-                <p style={{ fontSize: 12, color: '#b45309', margin: '6px 0 0' }}>
-                  This URL points at localhost — the platform cannot reach it. Set ENGINE_BASE_URL to this
-                  deployment's public engine URL and re-run webhook setup.
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <p style={{ fontSize: 13 }}><Muted>No callback URL returned.</Muted></p>
-          )}
-          {setupResult.result.verifyToken ? (
-            <TokenBox>
-              <strong>Verify token — shown ONCE, never again.</strong>
-              <div style={{ marginTop: 6 }}><Mono>{setupResult.result.verifyToken}</Mono>{' '}<CopyButton value={setupResult.result.verifyToken} label="Copy verify token" /></div>
-            </TokenBox>
-          ) : (
-            <p style={{ fontSize: 13 }}><Muted>{setupResult.account.platform === 'telegram' ? 'Telegram registers server-side — no token step.' : 'No verify token for this platform.'}</Muted></p>
-          )}
-          {setupResult.account.platform === 'web' && setupResult.account.publicKey ? (
-            <div style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 13, margin: '0 0 6px' }}>
-                Loader snippet (paste before <Mono>{'</body>'}</Mono>; baked for <Mono>{widgetSnippetOrigin()}</Mono> —
-                re-copy from your production console for live sites):
-              </p>
-              <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{widgetSnippet(setupResult.account.publicKey)}</pre>{' '}
-              <CopyButton value={widgetSnippet(setupResult.account.publicKey)} label="Copy snippet" />
-            </div>
-          ) : null}
-        </Modal>
-      )}
     </ViewShell>
-  );
-}
-
-function ConnectModal({
-  open,
-  onClose,
-  initialAssistantId,
-  returnTo,
-  onConnectedReturn,
-}: {
-  open: boolean;
-  onClose: () => void;
-  /** C14 publish exit — preselects the serving assistant (still changeable). */
-  initialAssistantId?: string | null;
-  /** C14 publish exit — post-connect destination (the agent detail URL). */
-  returnTo?: string | null;
-  onConnectedReturn?: () => void;
-}) {
-  const create = useCreateChannel();
-  const assistants = useAssistants();
-  const [platform, setPlatform] = useState<ConnectablePlatform>('web');
-  const [displayName, setDisplayName] = useState('');
-  const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
-  const [assistantId, setAssistantId] = useState(initialAssistantId ?? '');
-  const [origins, setOrigins] = useState('');
-  const [greeting, setGreeting] = useState('');
-
-  const spec = PLATFORM_CREDENTIAL_SPECS.find((s) => s.platform === platform) ?? PLATFORM_CREDENTIAL_SPECS[3];
-
-  // H5: entries are normalized to scheme://host[:port] — a pasted path
-  // (https://acme.com/docs) is stripped client-side instead of failing the
-  // engine's assertAllowedDomainFormat with a toast.
-  const originsList = origins.split(',').map(normalizeOriginEntry).filter(Boolean);
-  const originsProblem = platform === 'web' && originsList.length === 0 ? 'Web channels require at least one origin (scheme://host).' : null;
-  const nameProblem = !displayName.trim() ? 'Display name is required.' : null;
-  const assistantProblem = !assistantId ? 'Binding is required — channel conversations pin this assistant (routability-checked).' : null;
-  // H3: non-empty is not enough — app_secret must be 64 hex and bot_token
-  // must match 123456:token, mirroring the engine's assertCredentialsShape.
-  const credentialProblems = spec.fields
-    .map((field) => {
-      const value = credentialValues[field.key]?.trim() ?? '';
-      if (!value) {
-        return `${field.label} is required.`;
-      }
-      return validateCredentialField(field, value);
-    })
-    .filter((p): p is string => p !== null);
-
-  const problems = [nameProblem, assistantProblem, originsProblem, ...credentialProblems].filter((p): p is string => p !== null);
-
-  const submit = () => {
-    if (problems.length > 0 || create.isPending) {
-      return;
-    }
-    const credentials: Record<string, unknown> = {};
-    for (const field of spec.fields) {
-      credentials[field.key] = credentialValues[field.key].trim();
-    }
-    const config: Record<string, unknown> = { default_assistant_id: assistantId };
-    if (platform === 'web') {
-      config.allowed_domains = originsList;
-      if (greeting.trim()) {
-        config.greeting = greeting.trim().slice(0, 500);
-      }
-    }
-    create.mutate(
-      { platform, displayName: displayName.trim(), credentials, config },
-      {
-        onSuccess: () => {
-          toast.success('Channel connected as pending — verify it, then set up the webhook.');
-          onClose();
-          onConnectedReturn?.();
-        },
-      },
-    );
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Connect a channel"
-      width={600}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton disabled={problems.length > 0 || create.isPending} onClick={submit}>
-            <Plug size={13} strokeWidth={1.8} />
-            Connect (starts pending)
-          </ActionButton>
-        </>
-      }
-    >
-      <label style={{ fontSize: 13, display: 'block' }}>
-        Platform (only credentialable platforms are offered)
-        <select value={platform} onChange={(e) => { setPlatform(e.target.value as ConnectablePlatform); setCredentialValues({}); }} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          {PLATFORM_CREDENTIAL_SPECS.map((s) => (
-            <option key={s.platform} value={s.platform}>{s.label}</option>
-          ))}
-        </select>
-      </label>
-      <p style={{ fontSize: 12, opacity: 0.7 }}>{spec.blurb}</p>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Support WhatsApp" autoFocus error={nameProblem ?? undefined} />
-      </div>
-      {spec.fields.map((field) => (
-        <div key={field.key} style={{ marginTop: 12 }}>
-          <TextInput
-            label={field.label}
-            type={field.secret === true ? 'password' : 'text'}
-            value={credentialValues[field.key] ?? ''}
-            onChange={(e) => setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-            placeholder={field.placeholder}
-            hint={field.hint}
-            autoComplete="off"
-          />
-        </div>
-      ))}
-      {spec.fields.length === 0 && (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>Keyless — the engine generates the public key on connect.</p>
-      )}
-      <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-        Serving assistant (required)
-        <select value={assistantId} onChange={(e) => setAssistantId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-          <option value="">Pick the assistant this channel serves…</option>
-          {(assistants.data ?? []).map((assistant) => (
-            <option key={assistant.id} value={assistant.id}>{assistant.name} ({assistant.status})</option>
-          ))}
-        </select>
-      </label>
-      {assistantProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{assistantProblem}</p>}
-      {returnTo && !assistantProblem && (
-        <p style={{ fontSize: 12, opacity: 0.7 }}>After connecting you return to the agent.</p>
-      )}
-      {platform === 'web' && (
-        <>
-          <div style={{ marginTop: 12 }}>
-            <TextInput
-              label="Allowed origins (comma-separated, required)"
-              value={origins}
-              onChange={(e) => setOrigins(e.target.value)}
-              placeholder="https://acme.com, https://shop.acme.com"
-              hint="Exact scheme://host entries — CORS reflects ONLY these, never a wildcard."
-              error={originsProblem ?? undefined}
-            />
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <TextInput label="Greeting (optional, ≤500)" value={greeting} onChange={(e) => setGreeting(e.target.value)} placeholder="Hi! How can we help?" />
-          </div>
-        </>
-      )}
-      {problems.length > 0 && (
-        <ul style={{ fontSize: 12, color: '#f87171', paddingLeft: 18 }}>
-          {problems.map((problem, i) => (
-            <li key={i}>{problem}</li>
-          ))}
-        </ul>
-      )}
-    </Modal>
-  );
-}
-
-function EditModal({ account, onClose }: { account: ChannelAccount; onClose: () => void }) {
-  const update = useUpdateChannel();
-  const assistants = useAssistants();
-  const currentBinding = typeof account.config.default_assistant_id === 'string' ? account.config.default_assistant_id : '';
-  const [displayName, setDisplayName] = useState(account.displayName);
-  // Preserve the account's actual status — never coerce pending→active as a
-  // side effect of editing an unrelated field (P5I-CH-C3).
-  const [status, setStatus] = useState(account.status ?? 'active');
-  const [assistantId, setAssistantId] = useState(currentBinding);
-  const [origins, setOrigins] = useState(Array.isArray(account.config.allowed_domains) ? (account.config.allowed_domains as string[]).join(', ') : '');
-  const [greeting, setGreeting] = useState(typeof account.config.greeting === 'string' ? account.config.greeting : '');
-  // H13: the engine consumes these config keys (escalation notes in the
-  // outbound pipeline; voice + out-of-window template/note on Meta
-  // platforms) — they get real fields here instead of the old
-  // "ask for the fields you need" copy.
-  const [escalationNote, setEscalationNote] = useState(typeof account.config.escalation_note === 'string' ? account.config.escalation_note : '');
-  const [escalationResolvedNote, setEscalationResolvedNote] = useState(
-    typeof account.config.escalation_resolved_note === 'string' ? account.config.escalation_resolved_note : '',
-  );
-  const [voiceReplies, setVoiceReplies] = useState(account.config.voice_replies_enabled === true);
-  const oowTemplate = typeof account.config.out_of_window_template === 'object' && account.config.out_of_window_template !== null
-    ? (account.config.out_of_window_template as { name?: unknown; language?: unknown })
-    : null;
-  const [oowTemplateName, setOowTemplateName] = useState(typeof oowTemplate?.name === 'string' ? oowTemplate.name : '');
-  const [oowTemplateLanguage, setOowTemplateLanguage] = useState(typeof oowTemplate?.language === 'string' ? oowTemplate.language : '');
-  const [oowNote, setOowNote] = useState(typeof account.config.out_of_window_note === 'string' ? account.config.out_of_window_note : '');
-  // H12: the engine consumes quick_replies (string[], ≤6 × ≤64) and
-  // csat_enabled (boolean) on web channel configs — the widget plane
-  // renders the chips + thumbs control from the session bootstrap, and
-  // the :publicKey/feedback endpoint refuses writes unless csat_enabled.
-  // G2: the field initializer lives in quickRepliesFieldValue so the
-  // load→save separator is unit-tested (real newline, never '\n' literal).
-  const [quickReplies, setQuickReplies] = useState(() => quickRepliesFieldValue(account.config));
-  const [csatEnabled, setCsatEnabled] = useState(account.config.csat_enabled === true);
-
-  // H5: same origin normalization as the connect modal.
-  const originsList = origins.split(',').map(normalizeOriginEntry).filter(Boolean);
-
-  // G3: a half-filled out-of-window template is never persisted — block save
-  // and say so, instead of silently storing a state Meta would reject.
-  const extrasProblem =
-    account.platform === 'whatsapp'
-      ? outOfWindowTemplateProblem({
-          outOfWindowTemplateName: oowTemplateName,
-          outOfWindowTemplateLanguage: oowTemplateLanguage,
-        })
-      : null;
-
-  const submit = () => {
-    const config: Record<string, unknown> = {};
-    if (assistantId !== currentBinding) {
-      config.default_assistant_id = assistantId;
-    }
-    if (account.platform === 'web') {
-      config.allowed_domains = originsList;
-      config.greeting = greeting.trim().slice(0, 500);
-    }
-    // H13: only changed extras keys are sent (null clears a text key).
-    Object.assign(
-      config,
-      buildChannelExtrasPatch(account.platform, account.config, {
-        escalationNote,
-        escalationResolvedNote,
-        voiceRepliesEnabled: voiceReplies,
-        outOfWindowTemplateName: oowTemplateName,
-        outOfWindowTemplateLanguage: oowTemplateLanguage,
-        outOfWindowNote: oowNote,
-        quickReplies,
-        csatEnabled,
-      }),
-    );
-    update.mutate(
-      {
-        channelId: account.id,
-        ...(displayName.trim() !== account.displayName ? { displayName: displayName.trim() } : {}),
-        ...(status !== (account.status ?? 'active') ? { status: status as 'active' | 'suspended' } : {}),
-        ...(Object.keys(config).length > 0 ? { config } : {}),
-      },
-      { onSuccess: () => onClose() },
-    );
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Edit — ${account.displayName}`}
-      width={600}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton disabled={update.isPending || extrasProblem !== null} onClick={submit}>
-            Save
-          </ActionButton>
-        </>
-      }
-    >
-      {extrasProblem && (
-        <p role="alert" style={{ color: '#f87171', fontSize: 12, marginBottom: 8 }}>
-          {extrasProblem}
-        </p>
-      )}
-      <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-      <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-        <label style={{ fontSize: 13, flex: 1 }}>
-          Status
-          <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            <option value="active">active</option>
-            <option value="suspended">suspended</option>
-            {status === 'pending' ? <option value="pending" disabled>pending (verify to activate)</option> : null}
-          </select>
-        </label>
-        <label style={{ fontSize: 13, flex: 2 }}>
-          Serving assistant (re-binding re-checks routability)
-          <select value={assistantId} onChange={(e) => setAssistantId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            <option value="">Unbound (legacy — new accounts always bind)</option>
-            {(assistants.data ?? []).map((assistant) => (
-              <option key={assistant.id} value={assistant.id}>{assistant.name} ({assistant.status})</option>
-            ))}
-          </select>
-        </label>
-      </div>
-      {account.platform === 'web' && (
-        <>
-          <div style={{ marginTop: 12 }}>
-            <TextInput label="Allowed origins (comma-separated)" value={origins} onChange={(e) => setOrigins(e.target.value)} hint="Merge-patched: the full list you enter becomes the allowlist." />
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <TextInput label="Greeting (≤500)" value={greeting} onChange={(e) => setGreeting(e.target.value)} />
-          </div>
-        </>
-      )}
-      {/* G2: escalation notes are offered on every platform (the engine
-          persists and consumes them with no platform gate); voice/template
-          stay whatsapp-only, the out-of-window note messenger-only, and the
-          widget quick replies + CSAT control web-only (the widget plane
-          consumes them from the session bootstrap). */}
-      <>
-        <div style={{ marginTop: 16, fontSize: 13, fontWeight: 600 }}>Messaging extras</div>
-          <div style={{ marginTop: 12 }}>
-            <TextInput
-              label="Escalation note (≤500)"
-              value={escalationNote}
-              onChange={(e) => setEscalationNote(e.target.value)}
-              placeholder="Connecting you with a human teammate…"
-              hint="Sent to the end user when the conversation is handed to a human. Empty clears it — the engine then uses its default line."
-            />
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <TextInput
-              label="Escalation resolved note (≤500)"
-              value={escalationResolvedNote}
-              onChange={(e) => setEscalationResolvedNote(e.target.value)}
-              placeholder="A human teammate helped — the assistant is back."
-              hint="Sent when the human hands the conversation back. Empty clears it — the engine then uses its default line."
-            />
-          </div>
-          {account.platform === 'whatsapp' && (
-            <>
-              <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
-                <input type="checkbox" checked={voiceReplies} onChange={(e) => setVoiceReplies(e.target.checked)} style={{ marginTop: 3 }} />
-                <span>
-                  Voice replies
-                  <span style={{ display: 'block', fontSize: 12, opacity: 0.7, fontWeight: 400 }}>
-                    Also deliver assistant replies as a synthesized voice note. Best-effort — TTS must be configured, and a TTS failure never fails the text delivery.
-                  </span>
-                </span>
-              </label>
-              <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600 }}>Out-of-window template</div>
-              <p style={{ fontSize: 12, opacity: 0.7 }}>
-                WhatsApp template used when the 24h messaging window is closed. Fill in both fields, or leave both empty to clear.
-              </p>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 2 }}>
-                  <TextInput label="Template name" value={oowTemplateName} onChange={(e) => setOowTemplateName(e.target.value)} placeholder="hello_world" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <TextInput label="Language" value={oowTemplateLanguage} onChange={(e) => setOowTemplateLanguage(e.target.value)} placeholder="en_US" />
-                </div>
-              </div>
-            </>
-          )}
-          {account.platform === 'messenger' && (
-            <div style={{ marginTop: 12 }}>
-              <TextInput
-                label="Out-of-window note (≤500)"
-                value={oowNote}
-                onChange={(e) => setOowNote(e.target.value)}
-                placeholder="Our team replies within a day…"
-                hint="Sent as the reply when the 24h window is closed (Messenger has no template mechanism). Empty clears it."
-              />
-            </div>
-          )}
-          {account.platform === 'web' && (
-            <>
-              <div style={{ marginTop: 12 }}>
-                <TextArea
-                  label="Quick replies (one per line)"
-                  name="quickReplies"
-                  value={quickReplies}
-                  onChange={(e) => setQuickReplies(e.target.value)}
-                  rows={3}
-                  placeholder={'Book a demo\nSee pricing'}
-                  hint="Up to 6 chips, 64 chars each — rendered beside the widget composer. Empty clears them."
-                />
-              </div>
-              <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
-                <input type="checkbox" checked={csatEnabled} onChange={(e) => setCsatEnabled(e.target.checked)} style={{ marginTop: 3 }} />
-                <span>
-                  CSAT feedback
-                  <span style={{ display: 'block', fontSize: 12, opacity: 0.7, fontWeight: 400 }}>
-                    Show the thumbs up/down control in the widget and collect reply ratings. Feedback is never collected unless this is on.
-                  </span>
-                </span>
-              </label>
-            </>
-          )}
-      </>
-      {account.publicKey && (
-        <div style={{ marginTop: 12, fontSize: 13 }}>
-          Public key: <Mono>{account.publicKey}</Mono> <CopyButton value={account.publicKey} label="Copy public key" />
-        </div>
-      )}
-      {account.webhookUrl && (
-        <div style={{ marginTop: 8, fontSize: 13 }}>
-          Webhook: <Mono>{account.webhookUrl}</Mono> <CopyButton value={account.webhookUrl} label="Copy webhook URL" />
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-function RotateModal({ account, onClose }: { account: ChannelAccount; onClose: () => void }) {
-  const rotate = useRotateChannelCredentials();
-  const spec = PLATFORM_CREDENTIAL_SPECS.find((s) => s.platform === account.platform);
-  const [values, setValues] = useState<Record<string, string>>({});
-
-  if (!spec || spec.fields.length === 0) {
-    return null;
-  }
-
-  const missing = spec.fields.filter((field) => !(values[field.key]?.trim()));
-  // H3: same pre-validation as the connect modal — a malformed secret is
-  // blocked here instead of failing the server-side shape check.
-  const formatProblems = spec.fields
-    .map((field) => validateCredentialField(field, values[field.key] ?? ''))
-    .filter((p): p is string => p !== null);
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Rotate credentials — ${account.displayName}`}
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={missing.length > 0 || formatProblems.length > 0 || rotate.isPending}
-            onClick={() => {
-              const credentials: Record<string, unknown> = {};
-              for (const field of spec.fields) {
-                credentials[field.key] = (values[field.key] ?? '').trim();
-              }
-              rotate.mutate({ channelId: account.id, credentials }, { onSuccess: () => onClose() });
-            }}
-          >
-            Rotate (re-seals immediately)
-          </ActionButton>
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.75 }}>New material seals on arrival and is never shown again. Old material stops working at once.</p>
-      {spec.fields.map((field) => (
-        <div key={field.key} style={{ marginTop: 12 }}>
-          <TextInput
-            label={field.label}
-            type="password"
-            value={values[field.key] ?? ''}
-            onChange={(e) => setValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-            placeholder={field.placeholder}
-            hint={field.hint}
-            autoComplete="off"
-          />
-        </div>
-      ))}
-      {missing.length > 0 && <p style={{ fontSize: 12, color: '#f87171' }}>All credential fields are required for rotation.</p>}
-      {formatProblems.length > 0 && (
-        <ul style={{ fontSize: 12, color: '#f87171', paddingLeft: 18 }}>
-          {formatProblems.map((problem, i) => (
-            <li key={i}>{problem}</li>
-          ))}
-        </ul>
-      )}
-    </Modal>
   );
 }

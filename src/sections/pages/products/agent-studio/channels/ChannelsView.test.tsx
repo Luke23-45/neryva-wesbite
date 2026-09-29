@@ -8,10 +8,13 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
 import { theme } from '@styles/theme';
 import { ChannelsView } from './ChannelsView';
+import { ConnectSection } from './ConnectSection';
+import { ChannelDetailSection } from './ChannelDetailSection';
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
@@ -20,13 +23,21 @@ vi.mock('@/Context/OrgContext', () => ({
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
 let mockChannelsData: unknown[] = [];
+let mockChannelData: unknown = null;
 
 vi.mock('@hooks/studio/useSetupChannels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupChannels')>();
   return {
     ...actual,
     useChannels: () => ({ data: mockChannelsData, isPending: false, isError: false, refetch: vi.fn() }),
-    useCreateChannel: () => ({ mutate: createMutate, isPending: false }),
+    useChannel: () => ({ data: mockChannelData, isPending: false, isError: false, refetch: vi.fn() }),
+    useCreateChannel: () => ({
+      mutate: (input: unknown, opts?: { onSuccess?: (r: unknown) => void }) => {
+        createMutate(input, opts);
+        opts?.onSuccess?.({ id: 'ch-new-1' });
+      },
+      isPending: false,
+    }),
     useUpdateChannel: () => ({ mutate: updateMutate, isPending: false }),
     useDeactivateChannel: () => ({ mutate: vi.fn(), isPending: false }),
     useRotateChannelCredentials: () => ({ mutate: vi.fn(), isPending: false }),
@@ -49,30 +60,45 @@ vi.mock('@hooks/studio/useAssistants', () => ({
   }),
 }));
 
-async function shell(search: Record<string, string> = {}) {
+function shell(children: React.ReactNode) {
+  return (
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        {children}
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
+
+async function routerAt(initialPath: string) {
   const rootRoute = createRootRoute();
-  const channelsRoute = createRoute({
+  const layoutRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/agent-studio/channels',
     validateSearch: (incoming: Record<string, unknown>) => ({
       returnTo: typeof incoming.returnTo === 'string' ? incoming.returnTo : undefined,
       assistantId: typeof incoming.assistantId === 'string' ? incoming.assistantId : undefined,
     }),
-    component: () => (
-      <ThemeProvider theme={theme}>
-        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <ChannelsView />
-        </QueryClientProvider>
-      </ThemeProvider>
-    ),
+    component: () => <Outlet />,
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: '/',
+    component: () => shell(<ChannelsView />),
+  });
+  const connectRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: '/connect',
+    component: () => shell(<ConnectSection />),
+  });
+  const detailRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: '/$accountId',
+    component: () => shell(<ChannelDetailSection />),
   });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([channelsRoute]),
-    history: createMemoryHistory({
-      initialEntries: [
-        `/agent-studio/channels${Object.keys(search).length > 0 ? `?${new URLSearchParams(search).toString()}` : ''}`,
-      ],
-    }),
+    routeTree: rootRoute.addChildren([layoutRoute.addChildren([indexRoute, connectRoute, detailRoute])]),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   await act(async () => {
     render(<RouterProvider router={router} />);
@@ -84,27 +110,40 @@ beforeEach(() => {
   createMutate.mockReset();
   updateMutate.mockReset();
   mockChannelsData = [];
+  mockChannelData = null;
 });
 
 describe('ChannelsView (C14 returnTo exit)', () => {
   it('works standalone without search params', async () => {
-    await shell();
+    await routerAt('/agent-studio/channels');
     expect(screen.getByText('Channels')).toBeTruthy();
     expect(screen.queryByText(/Connected from publish/)).toBeNull();
   });
 
-  it('announces the publish return and preselects the assistant', async () => {
-    await shell({ returnTo: '/agent-studio/agents/agent-1', assistantId: 'agent-1' });
+  it('announces the publish return and links to connect with the contract params', async () => {
+    const router = await routerAt('/agent-studio/channels?returnTo=/agent-studio/agents/agent-1&assistantId=agent-1');
     expect(screen.getByText(/Connected from publish/)).toBeTruthy();
     fireEvent.click(screen.getByText('Connect'));
+    // Lands on the dedicated connect section, contract params intact.
+    expect(router.state.location.pathname).toBe('/agent-studio/channels/connect');
+    expect(router.state.location.search).toMatchObject({
+      returnTo: '/agent-studio/agents/agent-1',
+      assistantId: 'agent-1',
+    });
+  });
+});
+
+describe('ConnectSection (C-1)', () => {
+  it('preselects the assistant from the C14 contract', async () => {
+    await routerAt('/agent-studio/channels/connect?returnTo=/agent-studio/agents/agent-1&assistantId=agent-1');
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
     const assistantSelect = selects.find((s) => s.value === 'agent-1');
     expect(assistantSelect?.value).toBe('agent-1');
+    expect(screen.getByText(/After connecting you return to the agent/)).toBeTruthy();
   });
 
-  it('binds the preselected assistant on connect', async () => {
-    await shell({ returnTo: '/agent-studio/agents/agent-1', assistantId: 'agent-1' });
-    fireEvent.click(screen.getByText('Connect'));
+  it('binds the preselected assistant on connect and returns to the agent', async () => {
+    const router = await routerAt('/agent-studio/channels/connect?returnTo=/agent-studio/agents/agent-1&assistantId=agent-1');
     fireEvent.change(screen.getByPlaceholderText('e.g. Support WhatsApp'), { target: { value: 'Support Web' } });
     fireEvent.change(screen.getByPlaceholderText('https://acme.com, https://shop.acme.com'), {
       target: { value: 'https://acme.com' },
@@ -112,10 +151,19 @@ describe('ChannelsView (C14 returnTo exit)', () => {
     fireEvent.click(screen.getByText('Connect (starts pending)'));
     const sent = createMutate.mock.calls[0]?.[0] as { config: Record<string, unknown> };
     expect(sent.config.default_assistant_id).toBe('agent-1');
+    // C14: connect-then-return never dead-ends.
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1');
+  });
+
+  it('blocks submit while validation problems remain (byte-identical rules)', async () => {
+    await routerAt('/agent-studio/channels/connect');
+    // No display name, no assistant, no origins → Connect stays disabled.
+    expect(screen.getByText('Connect (starts pending)')).toBeDisabled();
+    expect(createMutate).not.toHaveBeenCalled();
   });
 });
 
-describe('ChannelsView EditModal (H12 widget extras)', () => {
+describe('ChannelDetailSection (C-2, H12 widget extras)', () => {
   const webAccount = {
     id: 'ch-web-1',
     platform: 'web',
@@ -130,10 +178,9 @@ describe('ChannelsView EditModal (H12 widget extras)', () => {
   };
 
   it('renders the web-only quick replies + CSAT fields and PATCHes the exact engine-consumed keys', async () => {
-    mockChannelsData = [webAccount];
-    await shell();
-    fireEvent.click(screen.getByLabelText('Edit Web Widget'));
-    // The modal exposes the engine-consumed config keys, pre-filled.
+    mockChannelData = webAccount;
+    await routerAt('/agent-studio/channels/ch-web-1');
+    // The section exposes the engine-consumed config keys, pre-filled.
     const replies = screen.getByLabelText('Quick replies (one per line)') as HTMLTextAreaElement;
     expect(replies.value).toBe('Book a demo');
     const csat = screen.getByLabelText(/CSAT feedback/) as HTMLInputElement;
@@ -142,7 +189,7 @@ describe('ChannelsView EditModal (H12 widget extras)', () => {
     // the engine's widgetSessionBootstrap + feedback gate read.
     fireEvent.change(replies, { target: { value: 'Book a demo\nSee pricing' } });
     fireEvent.click(csat);
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Save changes' })[0]);
     const sent = updateMutate.mock.calls[0]?.[0] as { channelId: string; config: Record<string, unknown> };
     expect(sent.channelId).toBe('ch-web-1');
     // Exactly the keys the engine's widgetSessionBootstrap + feedback gate
@@ -153,12 +200,18 @@ describe('ChannelsView EditModal (H12 widget extras)', () => {
   });
 
   it('hides the widget extras on non-web platforms', async () => {
-    mockChannelsData = [
-      { ...webAccount, id: 'ch-wa-1', platform: 'whatsapp', displayName: 'WA Line', publicKey: null, config: {} },
-    ];
-    await shell();
-    fireEvent.click(screen.getByLabelText('Edit WA Line'));
+    mockChannelData = { ...webAccount, id: 'ch-wa-1', platform: 'whatsapp', displayName: 'WA Line', publicKey: null, config: {} };
+    await routerAt('/agent-studio/channels/ch-wa-1');
     expect(screen.queryByLabelText('Quick replies (one per line)')).toBeNull();
     expect(screen.queryByLabelText(/CSAT feedback/)).toBeNull();
+    // whatsapp-only fields are present instead.
+    expect(screen.getByText('Template name')).toBeTruthy();
+    expect(screen.getByText(/Voice replies/)).toBeTruthy();
+  });
+
+  it('redirects an unknown account id back to the list', async () => {
+    mockChannelData = null;
+    const router = await routerAt('/agent-studio/channels/nope');
+    expect(router.state.location.pathname).toBe('/agent-studio/channels');
   });
 });

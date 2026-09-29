@@ -2,11 +2,12 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { Link } from '@tanstack/react-router';
 import { Plus, Users, Mail, Clock, ShieldCheck, RefreshCw, Power, Trash2 } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
-import { Modal } from '@components/common/ui/Modal';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { StyledActionButton } from '@components/common/ui/ActionButton/ActionButton.styles';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
@@ -18,7 +19,6 @@ import {
   DataCell,
 } from '@components/common/ui/DataTable';
 import { CopyButton } from '@components/common/ui/CopyButton';
-import { toastEngineError } from '@lib/engine/errors';
 import { pageItem } from '@styles/motion';
 import { useOrg } from '@/Context/OrgContext';
 import type { OrgRole } from '@/Context/OrgContext';
@@ -30,12 +30,9 @@ import {
   useServiceAccounts,
 } from '@hooks/engine/queries';
 import {
-  useInviteMember,
   useResendInvite,
   useRevokeInvite,
-  useCreateGroup,
   useDeleteGroup,
-  useCreateServiceAccount,
   useRotateServiceAccountToken,
   useDisableServiceAccount,
   useEnableServiceAccount,
@@ -75,9 +72,6 @@ import {
   MetaValue,
   ScopeRow,
   ScopePill,
-  InviteForm,
-  InviteLabel,
-  InviteInput,
 } from './TeamsView.styles';
 
 /**
@@ -97,8 +91,6 @@ const ROLE_TONES: Record<OrgRole, StatusTone> = {
   reader: 'neutral',
 };
 
-const INVITE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
-
 export function TeamsView() {
   const { canManageMembers, role } = useOrg();
   const summary = useOrgSummary();
@@ -107,7 +99,6 @@ export function TeamsView() {
   // guaranteed-403 query for other roles (same gate as SettingsTeam and
   // OrgMembersPage; P5-T2 follow-through).
   const invites = useInvites({ enabled: canManageMembers });
-  const [inviteOpen, setInviteOpen] = useState(false);
 
   const seat = summary.data?.seats.find((s) => s.product === 'agent_studio') ?? summary.data?.seats[0];
 
@@ -121,10 +112,10 @@ export function TeamsView() {
           </ViewSubtitle>
         </ViewHeader>
         {canManageMembers && (
-          <ActionButton size="sm" onClick={() => setInviteOpen(true)}>
+          <ActionButtonLink as={Link} to="/agent-studio/teams/invite" $size="sm" $variant="primary">
             <Plus size={14} strokeWidth={2} />
             Invite member
-          </ActionButton>
+          </ActionButtonLink>
         )}
       </ViewHeaderRow>
 
@@ -248,8 +239,6 @@ export function TeamsView() {
       <GroupsSection />
 
       {role !== 'reader' && <ServiceAccountsSection />}
-
-      <InviteModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </ViewShell>
   );
 }
@@ -391,11 +380,7 @@ function PendingInvitesCard() {
 function GroupsSection() {
   const { canManageMembers } = useOrg();
   const groups = useGroups();
-  const create = useCreateGroup();
   const remove = useDeleteGroup();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
@@ -405,10 +390,10 @@ function GroupsSection() {
           <ShieldCheck size={14} strokeWidth={1.7} />
           Groups
           {canManageMembers && (
-            <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setCreateOpen(true); }}>
+            <ActionButtonLink as={Link} to="/agent-studio/teams/groups/new" $size="sm" $variant="secondary">
               <Plus size={13} strokeWidth={2} />
               New group
-            </ActionButton>
+            </ActionButtonLink>
           )}
         </SectionTitle>
         <QueryView query={groups} skeleton={<Skeleton $h="140px" $r="12px" />} isEmpty={(d) => d.groups.length === 0} empty={{ title: 'No groups', description: 'Groups bundle members for shared access — create one to get started.' }}>
@@ -445,37 +430,6 @@ function GroupsSection() {
         </QueryView>
       </motion.div>
 
-      <Modal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Create a group"
-        footer={
-          <>
-            <ActionButton variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</ActionButton>
-            <ActionButton
-              disabled={!name.trim() || create.isPending}
-              onClick={() => create.mutate(
-                { name: name.trim(), description: description.trim() || undefined },
-                { onSuccess: () => { toast.success('Group created'); setCreateOpen(false); } },
-              )}
-            >
-              Create group
-            </ActionButton>
-          </>
-        }
-      >
-        <InviteForm>
-          <InviteLabel>
-            Group name
-            <InviteInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Support agents" autoFocus />
-          </InviteLabel>
-          <InviteLabel>
-            Description
-            <InviteInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this group is for" />
-          </InviteLabel>
-        </InviteForm>
-      </Modal>
-
       <ConfirmDialog
         open={!!deleteTarget}
         title="Delete this group?"
@@ -498,18 +452,13 @@ function GroupsSection() {
 function ServiceAccountsSection() {
   const { canManageMembers } = useOrg();
   const accounts = useServiceAccounts();
-  const create = useCreateServiceAccount();
   const rotate = useRotateServiceAccountToken();
   const disable = useDisableServiceAccount();
   const enable = useEnableServiceAccount();
   const del = useDeleteServiceAccount();
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [scopes, setScopes] = useState('studio:read');
-  const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [rotateTarget, setRotateTarget] = useState<{ id: string; name: string } | null>(null);
+  const [issuedToken, setIssuedToken] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
@@ -519,10 +468,10 @@ function ServiceAccountsSection() {
           <Clock size={14} strokeWidth={1.7} />
           Service accounts
           {canManageMembers && (
-            <ActionButton size="sm" variant="secondary" onClick={() => { setName(''); setDescription(''); setScopes('studio:read'); setCreateOpen(true); }}>
+            <ActionButtonLink as={Link} to="/agent-studio/teams/service-accounts/new" $size="sm" $variant="secondary">
               <Plus size={13} strokeWidth={2} />
               New service account
-            </ActionButton>
+            </ActionButtonLink>
           )}
         </SectionTitle>
         <QueryView query={accounts} skeleton={<Skeleton $h="160px" $r="12px" />} isEmpty={(d) => d.serviceAccounts.length === 0} empty={{ title: 'No service accounts', description: 'Machine accounts for CI and integrations — their token is shown exactly once.' }}>
@@ -599,103 +548,46 @@ function ServiceAccountsSection() {
         </QueryView>
       </motion.div>
 
-      <Modal
-        open={createOpen}
-        onClose={() => { setCreateOpen(false); setIssuedToken(null); }}
-        title={issuedToken ? 'Service account token' : 'New service account'}
-        footer={
-          issuedToken ? (
-            <ActionButton onClick={() => { setCreateOpen(false); setIssuedToken(null); }}>Done</ActionButton>
-          ) : (
-            <>
-              <ActionButton variant="secondary" onClick={() => setCreateOpen(false)}>Cancel</ActionButton>
-              <ActionButton
-                disabled={!name.trim() || create.isPending}
-                onClick={() => create.mutate(
-                  {
-                    name: name.trim(),
-                    description: description.trim() || undefined,
-                    scopes: scopes.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean),
-                  },
-                  {
-                    onSuccess: (result) => {
-                      setIssuedToken(result.token);
-                      toast.success('Service account created');
-                    },
-                  },
-                )}
-              >
-                Create
-              </ActionButton>
-            </>
-          )
-        }
-      >
-        {issuedToken ? (
-          <TokenReveal>
-            <TokenRevealTitle>Copy this token now</TokenRevealTitle>
-            <TokenRevealText>It is shown exactly once and cannot be retrieved again.</TokenRevealText>
-            <TokenBox>
-              <code>{issuedToken}</code>
-              <CopyButton value={issuedToken} label="Copy token" />
-            </TokenBox>
-          </TokenReveal>
-        ) : (
-          <InviteForm>
-            <InviteLabel>
-              Name
-              <InviteInput value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. ci-pipeline" autoFocus />
-            </InviteLabel>
-            <InviteLabel>
-              Description
-              <InviteInput value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What runs on this account" />
-            </InviteLabel>
-            <InviteLabel>
-              Scopes (space or comma separated)
-              <InviteInput value={scopes} onChange={(e) => setScopes(e.target.value)} placeholder="studio:read studio:write" />
-            </InviteLabel>
-          </InviteForm>
-        )}
-      </Modal>
-
-      <Modal
-        open={!!rotateTarget}
-        onClose={() => { setRotateTarget(null); setIssuedToken(null); }}
-        title={issuedToken ? 'New service token' : `Rotate token for "${rotateTarget?.name ?? ''}"?`}
-        footer={
-          issuedToken ? (
-            <ActionButton onClick={() => { setRotateTarget(null); setIssuedToken(null); }}>Done</ActionButton>
-          ) : (
-            <>
-              <ActionButton variant="secondary" onClick={() => setRotateTarget(null)}>Cancel</ActionButton>
-              <ActionButton
-                disabled={rotate.isPending}
-                onClick={() => rotateTarget && rotate.mutate(
-                  { id: rotateTarget.id },
-                  { onSuccess: (result) => { setIssuedToken(result.token); toast.success('Token rotated'); } },
-                )}
-              >
-                Rotate
-              </ActionButton>
-            </>
-          )
-        }
-      >
-        {issuedToken ? (
-          <TokenReveal>
-            <TokenRevealTitle>Copy this token now</TokenRevealTitle>
-            <TokenRevealText>The previous token stopped working the moment this one was issued.</TokenRevealText>
-            <TokenBox>
-              <code>{issuedToken}</code>
-              <CopyButton value={issuedToken} label="Copy token" />
-            </TokenBox>
-          </TokenReveal>
-        ) : (
-          <TokenRevealText>
-            Rotation issues a new token and invalidates the old one immediately. Services using it must be updated.
-          </TokenRevealText>
-        )}
-      </Modal>
+      {/* Rotate token — inline section (not a modal). Two phases: confirm →
+          token reveal. The token is shown exactly once. */}
+      {rotateTarget && (
+        <motion.div initial="hidden" animate="visible" variants={pageItem} custom={30}>
+          <Panel>
+            {issuedToken ? (
+              <TokenReveal>
+                <TokenRevealTitle>Copy this token now</TokenRevealTitle>
+                <TokenRevealText>The previous token stopped working the moment this one was issued.</TokenRevealText>
+                <TokenBox>
+                  <code>{issuedToken}</code>
+                  <CopyButton value={issuedToken} label="Copy token" />
+                </TokenBox>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                  <ActionButton onClick={() => { setRotateTarget(null); setIssuedToken(null); }}>Done</ActionButton>
+                </div>
+              </TokenReveal>
+            ) : (
+              <>
+                <TokenRevealTitle>Rotate token for &ldquo;{rotateTarget.name}&rdquo;?</TokenRevealTitle>
+                <TokenRevealText>
+                  Rotation issues a new token and invalidates the old one immediately. Services using it must be updated.
+                </TokenRevealText>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <ActionButton variant="secondary" onClick={() => setRotateTarget(null)}>Cancel</ActionButton>
+                  <ActionButton
+                    disabled={rotate.isPending}
+                    onClick={() => rotate.mutate(
+                      { id: rotateTarget.id },
+                      { onSuccess: (result) => { setIssuedToken(result.token); toast.success('Token rotated'); } },
+                    )}
+                  >
+                    Rotate
+                  </ActionButton>
+                </div>
+              </>
+            )}
+          </Panel>
+        </motion.div>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}
@@ -718,140 +610,17 @@ function ServiceAccountsSection() {
   );
 }
 
-// ─── Invite modal (team-loop T1/T2: delivery + shown-once manual link) ────
-function InviteModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { role: myRole, name: orgName } = useOrg();
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<OrgRole>('developer');
-  const [delivery, setDelivery] = useState<'email' | 'manual'>('manual');
-  const [manual, setManual] = useState<{ accept_url: string; expires_at?: string; email: string } | null>(null);
-  const invite = useInviteMember();
-  const isOwner = myRole === 'owner';
-  const roleOptions = isOwner ? INVITE_ROLES : INVITE_ROLES.filter((r) => r !== 'admin');
-
-  const close = () => {
-    setManual(null);
-    setEmail('');
-    onClose();
-  };
-
-  const send = () => {
-    const trimmed = email.trim();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      toast.error('Enter a valid email address');
-      return;
-    }
-    if (role === 'admin' && !isOwner) {
-      toast.error('Only an owner may invite someone as admin.');
-      return;
-    }
-    invite.mutate(
-      { email: trimmed, role, delivery },
-      {
-        onSuccess: (result) => {
-          if (delivery === 'manual' && result.accept_url) {
-            setManual({ accept_url: result.accept_url, expires_at: result.expires_at, email: trimmed });
-            return;
-          }
-          toast.success(`Invite sent to ${trimmed}`);
-          setEmail('');
-          onClose();
-        },
-        // The hook is silent on error (OrgMembersPage renders inline copy) —
-        // this modal has no inline slot, so toast the verbatim server message.
-        onError: (error) => {
-          toastEngineError(error);
-        },
-      },
-    );
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={close}
-      title={manual ? 'Share the invitation link' : 'Invite a member'}
-      footer={
-        manual ? (
-          <>
-            <ActionButton variant="secondary" onClick={close}>Done</ActionButton>
-          </>
-        ) : (
-          <>
-            <ActionButton variant="secondary" onClick={close}>
-              Cancel
-            </ActionButton>
-            <ActionButton disabled={invite.isPending} onClick={send}>{delivery === 'manual' ? 'Create link' : 'Send invite'}</ActionButton>
-          </>
-        )
-      }
-    >
-      {manual ? (
-        <InviteForm>
-          <InviteLabel>
-            One-time link for {manual.email} (shown once — resend to generate a new one)
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <InviteInput type="text" readOnly value={manual.accept_url} aria-label="One-time invitation link" onFocus={(e) => e.target.select()} />
-              <CopyButton value={manual.accept_url} label="Copy link" />
-            </div>
-          </InviteLabel>
-          <InviteLabel>
-            Share
-            <div style={{ display: 'flex', gap: 8 }}>
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const subject = `You've been invited to ${orgName ?? 'your workspace'} as ${role}`;
-                  const body = [
-                    `You have been invited to join ${orgName ?? 'your workspace'} as ${role}.`,
-                    '',
-                    manual.accept_url,
-                    '',
-                    'This link is single-use. Sign in with the invited address — other addresses will be rejected.',
-                  ].join('\n');
-                  window.location.href = `mailto:${encodeURIComponent(manual.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                }}
-              >
-                Compose email
-              </ActionButton>
-            </div>
-          </InviteLabel>
-        </InviteForm>
-      ) : (
-        <InviteForm>
-          <InviteLabel>
-            Email address
-            <InviteInput
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="teammate@company.com"
-              autoFocus
-            />
-          </InviteLabel>
-          <InviteLabel>
-            Role
-            <RoleSelect value={role} onChange={(e) => setRole(e.target.value as OrgRole)} aria-label="Invite role">
-              {roleOptions.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </RoleSelect>
-          </InviteLabel>
-          <InviteLabel>
-            Delivery
-            <RoleSelect value={delivery} onChange={(e) => setDelivery(e.target.value as 'email' | 'manual')} aria-label="Delivery method">
-              <option value="manual">Manual / copy-link (primary)</option>
-              <option value="email">Email (engine sends)</option>
-            </RoleSelect>
-          </InviteLabel>
-        </InviteForm>
-      )}
-    </Modal>
-  );
-}
-
 // ─── local styled additions ──────────────────────────────────────────
+
+/**
+ * Router link with the ActionButton look — list → section navigation.
+ * ActionButton itself is button-only (no `as` polymorphism), so the styled
+ * base is reused here; the anchor underline is removed and the polymorphic
+ * `as` prop is supplied at each call site (`as={Link}`).
+ */
+const ActionButtonLink = styled(StyledActionButton)`
+  text-decoration: none;
+`;
 const IconGhostBtn = styled.button`
   width: 28px;
   height: 28px;
@@ -889,27 +658,6 @@ const ServiceActions = styled.div`
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
-`;
-
-const RoleSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const TokenReveal = styled.div`

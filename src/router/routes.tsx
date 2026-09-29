@@ -48,6 +48,8 @@ import AgentStudioAgentBuilderPage from '@pages/products/agent_studio/AgentStudi
 import AgentStudioConversationsPage from '@pages/products/agent_studio/AgentStudioConversationsPage';
 import AgentStudioActivityPage from '@pages/products/agent_studio/AgentStudioActivityPage';
 import AgentStudioIntegrationsPage, { AgentStudioIntegrationsLayout } from '@pages/products/agent_studio/AgentStudioIntegrationsPage';
+import AgentStudioIntegrationsLinkPage from '@pages/products/agent_studio/AgentStudioIntegrationsLinkPage';
+import AgentStudioIntegrationsOAuthAppNewPage from '@pages/products/agent_studio/AgentStudioIntegrationsOAuthAppNewPage';
 import AgentStudioWebhooksPage from '@pages/products/agent_studio/AgentStudioWebhooksPage';
 import AgentStudioSettingsIndexPage from '@pages/products/agent_studio/AgentStudioSettingsIndexPage';
 import AgentStudioSettingsProfilePage from '@pages/products/agent_studio/AgentStudioSettingsProfilePage';
@@ -62,13 +64,19 @@ import AgentStudioToolsPage from '@pages/products/agent_studio/AgentStudioToolsP
 import AgentStudioMemoryPage from '@pages/products/agent_studio/AgentStudioMemoryPage';
 import AgentStudioDatasetsPage from '@pages/products/agent_studio/AgentStudioDatasetsPage';
 import AgentStudioBlocksPage from '@pages/products/agent_studio/AgentStudioBlocksPage';
-import AgentStudioChannelsPage from '@pages/products/agent_studio/AgentStudioChannelsPage';
+import AgentStudioChannelsPage, { AgentStudioChannelsLayout } from '@pages/products/agent_studio/AgentStudioChannelsPage';
+import AgentStudioChannelsConnectPage from '@pages/products/agent_studio/AgentStudioChannelsConnectPage';
+import AgentStudioChannelsDetailPage from '@pages/products/agent_studio/AgentStudioChannelsDetailPage';
+import AgentStudioChannelsWebhookSetupPage from '@pages/products/agent_studio/AgentStudioChannelsWebhookSetupPage';
 import AgentStudioApprovalsPage from '@pages/products/agent_studio/AgentStudioApprovalsPage';
 import AgentStudioAnalyticsPage from '@pages/products/agent_studio/AgentStudioAnalyticsPage';
 import AgentStudioCompliancePage from '@pages/products/agent_studio/AgentStudioCompliancePage';
 import AgentStudioTemplatesPage from '@pages/products/agent_studio/AgentStudioTemplatesPage';
 import AgentStudioApiPage from '@pages/products/agent_studio/AgentStudioApiPage';
-import AgentStudioTeamsPage from '@pages/products/agent_studio/AgentStudioTeamsPage';
+import AgentStudioTeamsPage, { AgentStudioTeamsLayout } from '@pages/products/agent_studio/AgentStudioTeamsPage';
+import AgentStudioTeamsInvitePage from '@pages/products/agent_studio/AgentStudioTeamsInvitePage';
+import AgentStudioTeamsGroupNewPage from '@pages/products/agent_studio/AgentStudioTeamsGroupNewPage';
+import AgentStudioTeamsServiceAccountNewPage from '@pages/products/agent_studio/AgentStudioTeamsServiceAccountNewPage';
 import AgentStudioUsagePage from '@pages/products/agent_studio/AgentStudioUsagePage';
 import AgentStudioEvaluationsPage from '@pages/products/agent_studio/AgentStudioEvaluationsPage';
 
@@ -417,6 +425,18 @@ export const agentStudioIntegrationsIndexRoute = createRoute({
   component: AgentStudioIntegrationsPage,
 });
 
+export const agentStudioIntegrationsLinkRoute = createRoute({
+  getParentRoute: () => agentStudioIntegrationsRoute,
+  path: '/link/$provider',
+  component: AgentStudioIntegrationsLinkPage,
+});
+
+export const agentStudioIntegrationsOAuthAppNewRoute = createRoute({
+  getParentRoute: () => agentStudioIntegrationsRoute,
+  path: '/oauth-apps/new',
+  component: AgentStudioIntegrationsOAuthAppNewPage,
+});
+
 export const agentStudioWebhooksRoute = createRoute({
   getParentRoute: () => agentStudioIntegrationsRoute,
   path: '/webhooks',
@@ -516,12 +536,37 @@ export const agentStudioChannelsRoute = createRoute({
   path: '/channels',
   // C14 publish exit: the success screen links here with ?returnTo=<detail
   // URL> + ?assistantId=<id> so connect-then-return never dead-ends. Both
-  // optional — the library works standalone without them.
+  // optional — the library works standalone without them. Validated on the
+  // layout so every child route inherits the contract.
   validateSearch: (search: Record<string, unknown>) => ({
     returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
     assistantId: typeof search.assistantId === 'string' ? search.assistantId : undefined,
   }),
+  component: AgentStudioChannelsLayout,
+});
+
+export const agentStudioChannelsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioChannelsRoute,
+  path: '/',
   component: AgentStudioChannelsPage,
+});
+
+export const agentStudioChannelsConnectRoute = createRoute({
+  getParentRoute: () => agentStudioChannelsRoute,
+  path: '/connect',
+  component: AgentStudioChannelsConnectPage,
+});
+
+export const agentStudioChannelsDetailRoute = createRoute({
+  getParentRoute: () => agentStudioChannelsRoute,
+  path: '/$accountId',
+  component: AgentStudioChannelsDetailPage,
+});
+
+export const agentStudioChannelsWebhookSetupRoute = createRoute({
+  getParentRoute: () => agentStudioChannelsRoute,
+  path: '/$accountId/webhook-setup',
+  component: AgentStudioChannelsWebhookSetupPage,
 });
 
 export const agentStudioApprovalsRoute = createRoute({
@@ -557,7 +602,31 @@ export const agentStudioApiRoute = createRoute({
 export const agentStudioTeamsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/teams',
+  component: AgentStudioTeamsLayout,
+});
+
+export const agentStudioTeamsIndexRoute = createRoute({
+  getParentRoute: () => agentStudioTeamsRoute,
+  path: '/',
   component: AgentStudioTeamsPage,
+});
+
+export const agentStudioTeamsInviteRoute = createRoute({
+  getParentRoute: () => agentStudioTeamsRoute,
+  path: '/invite',
+  component: AgentStudioTeamsInvitePage,
+});
+
+export const agentStudioTeamsGroupNewRoute = createRoute({
+  getParentRoute: () => agentStudioTeamsRoute,
+  path: '/groups/new',
+  component: AgentStudioTeamsGroupNewPage,
+});
+
+export const agentStudioTeamsServiceAccountNewRoute = createRoute({
+  getParentRoute: () => agentStudioTeamsRoute,
+  path: '/service-accounts/new',
+  component: AgentStudioTeamsServiceAccountNewPage,
 });
 
 export const agentStudioUsageRoute = createRoute({
@@ -632,15 +701,30 @@ export const routeDefinitions = [
     agentStudioToolsRoute,
     agentStudioMemoryRoute,
     agentStudioDatasetsRoute,
-    agentStudioChannelsRoute,
+    agentStudioChannelsRoute.addChildren([
+      agentStudioChannelsIndexRoute,
+      agentStudioChannelsConnectRoute,
+      agentStudioChannelsDetailRoute,
+      agentStudioChannelsWebhookSetupRoute,
+    ]),
     agentStudioApprovalsRoute,
     agentStudioConversationsRoute,
     agentStudioActivityRoute,
     agentStudioAnalyticsRoute,
-    agentStudioIntegrationsRoute.addChildren([agentStudioIntegrationsIndexRoute, agentStudioWebhooksRoute]),
+    agentStudioIntegrationsRoute.addChildren([
+      agentStudioIntegrationsIndexRoute,
+      agentStudioIntegrationsLinkRoute,
+      agentStudioIntegrationsOAuthAppNewRoute,
+      agentStudioWebhooksRoute,
+    ]),
     agentStudioTemplatesRoute,
     agentStudioApiRoute,
-    agentStudioTeamsRoute,
+    agentStudioTeamsRoute.addChildren([
+      agentStudioTeamsIndexRoute,
+      agentStudioTeamsInviteRoute,
+      agentStudioTeamsGroupNewRoute,
+      agentStudioTeamsServiceAccountNewRoute,
+    ]),
     agentStudioUsageRoute,
     agentStudioEvaluationsRoute,
     agentStudioComplianceRoute,

@@ -1,14 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useSearch } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plug, ArrowRight, Pause, Play, RefreshCw, KeyRound, Trash2 } from 'lucide-react';
+import { ArrowRight, Pause, Play, RefreshCw, KeyRound, Trash2 } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
-import { Modal } from '@components/common/ui/Modal';
-import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { QueryView } from '@components/common/ui/AsyncStates';
@@ -22,22 +19,17 @@ import {
 import { pageItem } from '@styles/motion';
 import {
   useConnectors,
-  useLinkConnector,
   useSetConnectorState,
   useSyncConnector,
   useOAuthApps,
-  useCreateOAuthApp,
   useDeleteOAuthApp,
   useOAuthAuthorize,
-  buildConnectorConfig,
-  singleFieldOverflowNote,
-  validateCredentialShape,
   PROVIDER_LINK_SPECS,
-  type ConnectorProvider,
   type SyncResult,
 } from '@hooks/studio/useSetupConnectors';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
+import { ProviderIcon } from './ProviderIcon';
 
 import {
   Grid,
@@ -113,6 +105,11 @@ const SyncResultBox = styled.div`
   font-size: 13px;
 `;
 
+/** Linked-accounts row with the just-linked account highlighted. */
+const HighlightRow = styled(DataRow)<{ $highlight: boolean }>`
+  ${({ $highlight, theme }) => $highlight && `background: ${theme.app.surface.active};`}
+`;
+
 export function IntegrationsView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
@@ -121,17 +118,17 @@ export function IntegrationsView() {
   const governDenied = setupDeniedCopy(role, 'setup:govern');
 
   const connectors = useConnectors();
-  const link = useLinkConnector();
   const setState = useSetConnectorState();
   const sync = useSyncConnector();
   const authorize = useOAuthAuthorize();
   const apps = useOAuthApps({ enabled: canGovern });
-  const createApp = useCreateOAuthApp();
   const deleteApp = useDeleteOAuthApp();
 
-  const [linkProvider, setLinkProvider] = useState<ConnectorProvider | null>(null);
   const [lastSync, setLastSync] = useState<{ account: string; result: SyncResult } | null>(null);
-  const [appOpen, setAppOpen] = useState(false);
+
+  // Just-linked highlight: the link section navigates back with ?linked=<id>.
+  const search = useSearch({ strict: false }) as { linked?: string };
+  const linkedId = typeof search.linked === 'string' ? search.linked : null;
 
   const accounts = useMemo(() => connectors.data ?? [], [connectors.data]);
   const byProvider = useMemo(() => {
@@ -189,8 +186,8 @@ export function IntegrationsView() {
             {PROVIDER_LINK_SPECS.map((spec, i) => (
               <Card key={spec.provider} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 2}>
                 <CardHead>
-                  <Icon $color="#94a3b8">
-                    <Plug size={16} strokeWidth={1.7} aria-hidden="true" />
+                  <Icon $color="inherit">
+                    <ProviderIcon provider={spec.provider} />
                   </Icon>
                   <div style={{ minWidth: 0 }}>
                     <CardName>{spec.label}</CardName>
@@ -200,15 +197,17 @@ export function IntegrationsView() {
                 <CardDescription>{spec.blurb}</CardDescription>
                 <CardFoot>
                   <StatusText>{spec.credentials === 'dance-only' ? 'OAuth dance' : spec.credentials === 'none' ? 'Keyless' : 'Sealed secret'}</StatusText>
-                  <ActionButton
-                    size="sm"
-                    variant="secondary"
-                    disabled={!canWrite || link.isPending}
-                    title={canWrite ? `Link a ${spec.label} account` : writeDenied}
-                    onClick={() => setLinkProvider(spec.provider)}
-                  >
-                    Link
-                  </ActionButton>
+                  {canWrite ? (
+                    <Link to="/agent-studio/integrations/link/$provider" params={{ provider: spec.provider }} title={`Link a ${spec.label} account`}>
+                      <ActionButton size="sm" variant="secondary">
+                        Link
+                      </ActionButton>
+                    </Link>
+                  ) : (
+                    <ActionButton size="sm" variant="secondary" disabled title={writeDenied}>
+                      Link
+                    </ActionButton>
+                  )}
                 </CardFoot>
               </Card>
             ))}
@@ -235,7 +234,7 @@ export function IntegrationsView() {
                     <DataCell $w="24%" $align="right">Actions</DataCell>
                   </DataHead>
                   {rows.map((account) => (
-                    <DataRow key={account.id} $interactive={false}>
+                    <HighlightRow key={account.id} $interactive={false} $highlight={linkedId === account.id}>
                       <DataCell $w="24%">{account.displayName}</DataCell>
                       <DataCell $w="14%">
                         <Mono>{account.provider}</Mono>
@@ -289,7 +288,7 @@ export function IntegrationsView() {
                           </IconBtn>
                         </RowActions>
                       </DataCell>
-                    </DataRow>
+                    </HighlightRow>
                   ))}
                 </DataTable>
               )}
@@ -312,9 +311,17 @@ export function IntegrationsView() {
             title="OAuth apps"
             subtitle="Per-tenant provider apps for the dance (owner/admin). Client secrets are write-only."
             action={
-              <ActionButton size="sm" variant="secondary" disabled={!canGovern} title={canGovern ? 'Register an OAuth app' : governDenied} onClick={() => setAppOpen(true)}>
-                Register app
-              </ActionButton>
+              canGovern ? (
+                <Link to="/agent-studio/integrations/oauth-apps/new" title="Register an OAuth app">
+                  <ActionButton size="sm" variant="secondary">
+                    Register app
+                  </ActionButton>
+                </Link>
+              ) : (
+                <ActionButton size="sm" variant="secondary" disabled title={governDenied}>
+                  Register app
+                </ActionButton>
+              )
             }
           >
             {canGovern ? (
@@ -382,234 +389,6 @@ export function IntegrationsView() {
           </Panel>
         </SectionGap>
       </motion.div>
-
-      {linkProvider && (
-        <LinkModal
-          key={linkProvider}
-          provider={linkProvider}
-          onClose={() => setLinkProvider(null)}
-          onLink={(input) => link.mutate(input, { onSuccess: () => setLinkProvider(null) })}
-          pending={link.isPending}
-        />
-      )}
-      <OAuthAppModal open={appOpen} onClose={() => setAppOpen(false)} onCreate={(input) => createApp.mutate(input, { onSuccess: () => setAppOpen(false) })} pending={createApp.isPending} />
     </ViewShell>
-  );
-}
-
-function LinkModal({
-  provider,
-  onClose,
-  onLink,
-  pending,
-}: {
-  provider: ConnectorProvider | null;
-  onClose: () => void;
-  onLink: (input: { provider: string; displayName: string; config: Record<string, unknown>; credentials?: string }) => void;
-  pending: boolean;
-}) {
-  const spec = PROVIDER_LINK_SPECS.find((s) => s.provider === provider) ?? null;
-  const [displayName, setDisplayName] = useState('');
-  const [configValues, setConfigValues] = useState<Record<string, string>>({});
-  const [credentials, setCredentials] = useState('');
-  const [pageUrl, setPageUrl] = useState('');
-
-  // Sitemap locator (G9): marketers paste a page URL, not an XML path. We
-  // suggest the conventional locations for the user to CONFIRM (open it) —
-  // the browser cannot probe them (CORS), and the first sync validates.
-  const sitemapCandidates = (() => {
-    if (!spec || spec.provider !== 'sitemap') {
-      return [];
-    }
-    try {
-      const origin = new URL(pageUrl.trim()).origin;
-      return [`${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`, `${origin}/sitemap-index.xml`];
-    } catch {
-      return [];
-    }
-  })();
-
-  if (!spec) {
-    return null;
-  }
-
-  const missingConfig = spec.configFields.filter((f) => f.required && !configValues[f.key]?.trim());
-  const needsCredentials = spec.credentials === 'secret-required' || spec.credentials === 'msal-cc';
-  const credentialsProblem =
-    spec.credentials === 'dance-only' && credentials.trim()
-      ? 'Drive binds tokens via the OAuth dance — link without credentials, then authorize.'
-      : needsCredentials && credentials.trim().length < 4
-        ? 'A credential is required here: this provider has no dance, and linked-without-credential accounts cannot sync or be repaired (no credential-update endpoint exists).'
-        : spec.credentials === 'msal-cc' && credentials.trim()
-          ? validateMsalCc(credentials)
-          : // I14/I15: confluence/zendesk pastes must carry the engine's
-            // separator (email:api_token / email/api_token) — a bare token
-            // is blocked here; it would fail every sync with a 401 if it ever linked.
-            validateCredentialShape(spec, credentials);
-
-  const valid = displayName.trim() !== '' && missingConfig.length === 0 && !credentialsProblem;
-
-  const submit = () => {
-    if (!valid || pending) {
-      return;
-    }
-    onLink({
-      provider: spec.provider,
-      displayName: displayName.trim(),
-      // P1-decision: singular `single` fields keep only the first value
-      // (Zendesk locale); extras are disclosed, never silently kept.
-      config: buildConnectorConfig(spec, configValues),
-      ...(spec.credentials !== 'none' && spec.credentials !== 'dance-only' && credentials.trim() ? { credentials: credentials.trim() } : {}),
-    });
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`Link ${spec.label}`}
-      width={560}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton disabled={!valid || pending} onClick={submit}>
-            Link account
-          </ActionButton>
-        </>
-      }
-    >
-      <p style={{ fontSize: 13, opacity: 0.75 }}>{spec.blurb}</p>
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={`e.g. ${spec.label} docs`} autoFocus />
-      </div>
-      {spec.provider === 'sitemap' && (
-        <div style={{ marginTop: 12 }}>
-          <TextInput
-            label="Find your sitemap — paste any page URL"
-            value={pageUrl}
-            onChange={(e) => setPageUrl(e.target.value)}
-            placeholder="https://docs.company.com/handbook"
-            hint="Pick the candidate that opens as XML — the first sync validates it."
-          />
-          {sitemapCandidates.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-              {sitemapCandidates.map((candidate) => (
-                <ActionButton
-                  key={candidate}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setConfigValues((prev) => ({ ...prev, sitemap_url: candidate }))}
-                >
-                  Use {candidate}
-                </ActionButton>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      {spec.configFields.map((field) => {
-        // P1-decision: if a single-value field ever held multiples, say so —
-        // the extras are discarded at submit, not silently kept.
-        const overflowNote = singleFieldOverflowNote(field, configValues[field.key] ?? '');
-        return (
-          <div key={field.key} style={{ marginTop: 12 }}>
-            <TextInput
-              label={`${field.label}${field.required ? ' (required)' : ''}`}
-              value={configValues[field.key] ?? ''}
-              onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
-              placeholder={field.placeholder}
-              hint={field.hint}
-              error={field.required && !configValues[field.key]?.trim() ? 'Required for sync.' : undefined}
-            />
-            {overflowNote && <p style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>{overflowNote}</p>}
-          </div>
-        );
-      })}
-      {spec.credentials !== 'none' && spec.credentials !== 'dance-only' && (
-        <div style={{ marginTop: 12 }}>
-          <TextArea
-            label={spec.credentials === 'msal-cc' ? 'msal-cc JSON bundle' : 'Credential (sealed on arrival — never shown again)'}
-            value={credentials}
-            onChange={(e) => setCredentials(e.target.value)}
-            rows={spec.credentials === 'msal-cc' ? 4 : 2}
-            placeholder={spec.credentials === 'msal-cc' ? '{"client_id": "…", "tenant": "…", "secret": "…"}' : 'Paste the token'}
-          />
-          {credentialsProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{credentialsProblem}</p>}
-        </div>
-      )}
-      <p style={{ fontSize: 12, opacity: 0.65, marginTop: 12 }}>{spec.credentialsHint}</p>
-    </Modal>
-  );
-}
-
-function validateMsalCc(raw: string): string | null {
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.client_id === 'string' && typeof parsed.tenant === 'string' && typeof parsed.secret === 'string' && parsed.secret.length >= 8) {
-      return null;
-    }
-  } catch {
-    // fall through to the message
-  }
-  return 'SharePoint needs an msal-cc JSON bundle {client_id, tenant, secret} with secret ≥ 8 chars.';
-}
-
-function OAuthAppModal({
-  open,
-  onClose,
-  onCreate,
-  pending,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (input: { provider: string; clientId: string; clientSecret: string }) => void;
-  pending: boolean;
-}) {
-  const [provider, setProvider] = useState('google_drive');
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-
-  const valid = provider.trim() !== '' && clientId.trim() !== '' && clientSecret.trim() !== '';
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Register OAuth app"
-      width={520}
-      footer={
-        <>
-          <ActionButton variant="secondary" onClick={onClose}>
-            Cancel
-          </ActionButton>
-          <ActionButton
-            disabled={!valid || pending}
-            onClick={() => {
-              onCreate({ provider: provider.trim(), clientId: clientId.trim(), clientSecret: clientSecret.trim() });
-              setClientSecret('');
-            }}
-          >
-            Register
-          </ActionButton>
-        </>
-      }
-    >
-      <TextInput label="Provider" value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="google_drive" />
-      <div style={{ marginTop: 12 }}>
-        <TextInput label="Client ID" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="…" />
-      </div>
-      <div style={{ marginTop: 12 }}>
-        <TextInput
-          label="Client secret (write-only — cleared on submit)"
-          type="password"
-          value={clientSecret}
-          onChange={(e) => setClientSecret(e.target.value)}
-          placeholder="…"
-          autoComplete="off"
-        />
-      </div>
-    </Modal>
   );
 }
