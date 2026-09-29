@@ -21,10 +21,25 @@ import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave
 import type { ReasoningEffort } from '../lib/brain-model';
 import { ConflictDialog } from './ConflictDialog';
 import { TextInput } from '@components/common/ui/TextInput';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { AdvancedToggle, SliderHead, SliderRow, SliderValue, StaticLabel, StaticRow } from './BrainSection.styles';
-import { ToolMeta } from './ToolsSection.styles';
-import { PresetPill, PresetRow } from './GuardrailsSection.styles';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import {
+  AdvancedToggle,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  ParamHead,
+  ParamName,
+  ParamRow,
+  ParamValue,
+  PresetPill,
+  PresetRow,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
+} from './ResponseSection.styles';
 
 export interface ResponseSectionProps {
   assistantId: string;
@@ -299,27 +314,42 @@ export function ResponseSection({
   if (!canAuthor) {
     return (
       <Wrap>
-        <StaticRow>
-          <StaticLabel>Format</StaticLabel>
-          <span>{policy.output_format === 'plain' ? 'Plain text' : 'Markdown'}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Citations</StaticLabel>
-          <span>{policy.citations_enabled ? 'On' : 'Off'}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Streaming</StaticLabel>
-          <span>{policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1)}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Reasoning</StaticLabel>
-          <span>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Default'}</span>
-        </StaticRow>
-        <StaticRow>
-          <StaticLabel>Top-p</StaticLabel>
-          <span>{policy.top_p ?? 'Default'}</span>
-        </StaticRow>
-        <ToolMeta>Response needs an owner, admin, or developer — {denied}</ToolMeta>
+        <FieldBlock>
+          <FieldHead>
+            <FieldTitle>Response</FieldTitle>
+          </FieldHead>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Format</SwitchTitle>
+              <SwitchSub>{policy.output_format === 'plain' ? 'Plain text' : 'Markdown'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Citations</SwitchTitle>
+              <SwitchSub>{policy.citations_enabled ? 'On' : 'Off'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Streaming</SwitchTitle>
+              <SwitchSub>{policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1)}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Reasoning</SwitchTitle>
+              <SwitchSub>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Default'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Top-p</SwitchTitle>
+              <SwitchSub>{policy.top_p ?? 'Default'}</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <FieldHelper>Response needs an owner, admin, or developer — {denied}</FieldHelper>
+        </FieldBlock>
       </Wrap>
     );
   }
@@ -333,8 +363,10 @@ export function ResponseSection({
       }}
     >
       {/* Output format */}
-      <div>
-        <SectionLabel>OUTPUT FORMAT</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Output format</FieldTitle>
+        </FieldHead>
         <PresetRow role="group" aria-label="Output format">
           <PresetPill
             type="button"
@@ -353,12 +385,14 @@ export function ResponseSection({
             Plain text
           </PresetPill>
         </PresetRow>
-        <ToolMeta>Plain text strips formatting — use it for SMS/voice-style channels.</ToolMeta>
-      </div>
+        <FieldHelper>Plain text strips formatting — use it for SMS/voice-style channels.</FieldHelper>
+      </FieldBlock>
 
       {/* Citations */}
-      <div>
-        <SectionLabel>CITATIONS</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Citations</FieldTitle>
+        </FieldHead>
         <PresetRow role="group" aria-label="Citations">
           <PresetPill
             type="button"
@@ -377,12 +411,14 @@ export function ResponseSection({
             Off
           </PresetPill>
         </PresetRow>
-        <ToolMeta>Off hides source links even when the agent used retrieved knowledge.</ToolMeta>
-      </div>
+        <FieldHelper>Off hides source links even when the agent used retrieved knowledge.</FieldHelper>
+      </FieldBlock>
 
       {/* Streaming */}
-      <div>
-        <SectionLabel>STREAMING</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Streaming</FieldTitle>
+        </FieldHead>
         <PresetRow role="group" aria-label="Streaming">
           {(['auto', 'on', 'off'] as const).map((mode) => (
             <PresetPill
@@ -396,21 +432,22 @@ export function ResponseSection({
             </PresetPill>
           ))}
         </PresetRow>
-        <ToolMeta>Auto lets each channel decide; some channels always buffer.</ToolMeta>
-      </div>
+        <FieldHelper>Auto lets each channel decide; some channels always buffer.</FieldHelper>
+      </FieldBlock>
 
       {/* Advanced */}
-      <div>
+      <FieldBlock>
         <AdvancedToggle type="button" onClick={() => setAdvancedOpen((o) => !o)} aria-expanded={advancedOpen}>
-          Advanced {advancedOpen ? '▾' : '▸'} · reasoning effort, top-p
+          <span>Advanced · reasoning effort, top-p</span>
+          {advancedOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </AdvancedToggle>
         {advancedOpen && (
           <>
-            <SliderRow>
-              <SliderHead>
-                <span>Reasoning effort</span>
-                <SliderValue>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'default'}</SliderValue>
-              </SliderHead>
+            <ParamRow>
+              <ParamHead>
+                <ParamName>Reasoning effort</ParamName>
+                <ParamValue>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'default'}</ParamValue>
+              </ParamHead>
               <PresetRow role="group" aria-label="Reasoning effort">
                 <PresetPill
                   type="button"
@@ -432,18 +469,18 @@ export function ResponseSection({
                   </PresetPill>
                 ))}
               </PresetRow>
-              <ToolMeta>Only meaningful when the model supports reasoning.</ToolMeta>
+              <FieldHelper>Only meaningful when the model supports reasoning.</FieldHelper>
               {isCustomEffort(policy.reasoning_effort) && (
                 <Whisper $tone="amber">
                   Custom effort “{policy.reasoning_effort}” — pick a preset to replace it.
                 </Whisper>
               )}
-            </SliderRow>
-            <SliderRow>
-              <SliderHead>
-                <span>Top-p</span>
-                <SliderValue>{policy.top_p ?? 'default'}</SliderValue>
-              </SliderHead>
+            </ParamRow>
+            <ParamRow>
+              <ParamHead>
+                <ParamName>Top-p</ParamName>
+                <ParamValue>{policy.top_p ?? 'default'}</ParamValue>
+              </ParamHead>
               <TextInput
                 aria-label="Top-p (0 to 1)"
                 type="number"
@@ -454,13 +491,13 @@ export function ResponseSection({
                 onChange={(event) => clampTopP(event.target.value)}
                 placeholder="e.g. 0.9"
               />
-              <ToolMeta>Lower = more focused, higher = more varied. Rarely needs changing.</ToolMeta>
-            </SliderRow>
+              <FieldHelper>Lower = more focused, higher = more varied. Rarely needs changing.</FieldHelper>
+            </ParamRow>
           </>
         )}
-      </div>
+      </FieldBlock>
 
-      <ToolMeta>{describePolicy(policy)}</ToolMeta>
+      <FieldHelper>{describePolicy(policy)}</FieldHelper>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
