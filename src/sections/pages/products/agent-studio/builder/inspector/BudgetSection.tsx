@@ -31,10 +31,23 @@ import {
   type BudgetCaps,
 } from '../lib/budget-model';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, SectionLabel, Whisper, Wrap } from './InstructionsSection.styles';
-import { StaticLabel, StaticRow } from './BrainSection.styles';
-import { ControlLabel, ControlRow, TextButton, ToolMeta } from './ToolsSection.styles';
-import { PreviewItem, PreviewList, PreviewMeta } from './MemorySection.styles';
+import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { TextButton } from './ToolsSection.styles';
+import {
+  CapLabel,
+  CapRow,
+  EstimateItem,
+  EstimateList,
+  EstimateMeta,
+  FieldBlock,
+  FieldHead,
+  FieldHelper,
+  FieldTitle,
+  SwitchRow,
+  SwitchSub,
+  SwitchText,
+  SwitchTitle,
+} from './BudgetSection.styles';
 
 export interface BudgetSectionProps {
   assistantId: string;
@@ -207,17 +220,26 @@ export function BudgetSection({
   if (!canAuthor) {
     return (
       <Wrap>
-        {CAP_KEYS.map((key) => {
-          const described = describeCap(key, budget[key]);
-          return (
-            <StaticRow key={key}>
-              <StaticLabel>{CAP_LABELS[key]}</StaticLabel>
-              <span>{described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}</span>
-            </StaticRow>
-          );
-        })}
-        <ToolMeta>{FAIL_CLOSED_COPY}</ToolMeta>
-        <ToolMeta>Budget needs an owner, admin, or developer — {denied}</ToolMeta>
+        <FieldBlock>
+          <FieldHead>
+            <FieldTitle>Budget</FieldTitle>
+          </FieldHead>
+          {CAP_KEYS.map((key) => {
+            const described = describeCap(key, budget[key]);
+            return (
+              <SwitchRow key={key}>
+                <SwitchText>
+                  <SwitchTitle>{CAP_LABELS[key]}</SwitchTitle>
+                  <SwitchSub>
+                    {described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}
+                  </SwitchSub>
+                </SwitchText>
+              </SwitchRow>
+            );
+          })}
+          <FieldHelper>{FAIL_CLOSED_COPY}</FieldHelper>
+          <FieldHelper>Budget needs an owner, admin, or developer — {denied}</FieldHelper>
+        </FieldBlock>
       </Wrap>
     );
   }
@@ -235,32 +257,38 @@ export function BudgetSection({
       }}
     >
       {/* Block A · caps */}
-      <div>
-        <SectionLabel>CAPS · PER-RUN</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Caps</FieldTitle>
+          <FieldHelper>Per run</FieldHelper>
+        </FieldHead>
         {CAP_KEYS.map((key) => (
           <CapField key={key} capKey={key} budget={budget} patch={patch} />
         ))}
-        <ToolMeta>Clear a field to unset it — platform defaults resume.</ToolMeta>
-      </div>
+        <FieldHelper>Clear a field to unset it — platform defaults resume.</FieldHelper>
+      </FieldBlock>
 
       {/* Block B · estimate */}
-      <div>
-        <SectionLabel>ESTIMATE · ROUGH, NOT THE BILL</SectionLabel>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Estimate</FieldTitle>
+          <FieldHelper>Rough, not the bill</FieldHelper>
+        </FieldHead>
         {costs.isPending ? (
-          <ToolMeta>Loading list prices…</ToolMeta>
+          <FieldHelper>Loading list prices…</FieldHelper>
         ) : costs.isError ? (
           <Whisper $tone="amber">Prices are unreachable — caps above still save; estimates resume on reload.</Whisper>
         ) : allowed.length === 0 ? (
-          <ToolMeta>Pick a model in Brain — estimates need a priced model, never a fake $0.</ToolMeta>
+          <FieldHelper>Pick a model in Brain — estimates need a priced model, never a fake $0.</FieldHelper>
         ) : (
-          <PreviewList>
+          <EstimateList>
             {allowed.map((ref) => {
               const cost = costsByRef.get(ref);
               if (!cost) {
                 return (
-                  <PreviewItem key={ref}>
+                  <EstimateItem key={ref}>
                     {ref} — unpriced.
-                  </PreviewItem>
+                  </EstimateItem>
                 );
               }
               const cached = cachedPriceLine({
@@ -276,39 +304,39 @@ export function BudgetSection({
                 costMicrosPer1kCachedInput: cost.costMicrosPer1kCachedInput,
               });
               return (
-                <PreviewItem key={ref}>
+                <EstimateItem key={ref}>
                   {ref} — in {cost.costMicrosPer1kInput !== null ? formatRatePer1k(cost.costMicrosPer1kInput) : 'unpriced'}
                   {cached ? ` · ${cached}` : ''} · out{' '}
                   {cost.costMicrosPer1kOutput !== null ? formatRatePer1k(cost.costMicrosPer1kOutput) : 'unpriced'}
                   {estimate ? (
-                    <PreviewMeta>
+                    <EstimateMeta>
                       {formatEstimate(estimate.micros)}{' '}
                       {budget.max_total_tokens !== undefined
                         ? `per ${estimateTokens.toLocaleString()}-token run (your cap)`
                         : 'per 20k-token run (reference scale)'}
-                    </PreviewMeta>
+                    </EstimateMeta>
                   ) : (
-                    <PreviewMeta>Unpriced — no estimate.</PreviewMeta>
+                    <EstimateMeta>Unpriced — no estimate.</EstimateMeta>
                   )}
-                </PreviewItem>
+                </EstimateItem>
               );
             })}
-          </PreviewList>
+          </EstimateList>
         )}
-        <ToolMeta>{ESTIMATE_COPY}</ToolMeta>
-      </div>
+        <FieldHelper>{ESTIMATE_COPY}</FieldHelper>
+      </FieldBlock>
 
       {/* Block C · fail-closed */}
-      <div>
-        <SectionLabel>IF A CAP BREAKS</SectionLabel>
-        <ToolMeta>{FAIL_CLOSED_COPY}</ToolMeta>
-        <ToolMeta>{PUBLISH_COPY}</ToolMeta>
-        <ControlRow>
-          <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/usage' })}>
-            Open Usage (measured) →
-          </TextButton>
-        </ControlRow>
-      </div>
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>If a cap breaks</FieldTitle>
+        </FieldHead>
+        <FieldHelper>{FAIL_CLOSED_COPY}</FieldHelper>
+        <FieldHelper>{PUBLISH_COPY}</FieldHelper>
+        <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/usage' })}>
+          Open Usage (measured) →
+        </TextButton>
+      </FieldBlock>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
@@ -386,10 +414,8 @@ function CapField({
   const display = value === undefined ? '' : isSpend ? String(value / 100) : String(value);
 
   return (
-    <div style={{ marginBottom: 4 }}>
-      <ControlRow>
-        <ControlLabel>{CAP_LABELS[capKey]}</ControlLabel>
-      </ControlRow>
+    <CapRow>
+      <CapLabel>{CAP_LABELS[capKey]}</CapLabel>
       <TextInput
         type="number"
         id={`budget-${capKey}`}
@@ -412,9 +438,9 @@ function CapField({
           patch({ [capKey]: parsed } as Partial<BudgetState>);
         }}
       />
-      <ToolMeta>
+      <FieldHelper>
         {described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}
-      </ToolMeta>
-    </div>
+      </FieldHelper>
+    </CapRow>
   );
 }
