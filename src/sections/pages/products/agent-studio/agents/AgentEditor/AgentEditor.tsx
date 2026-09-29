@@ -597,16 +597,6 @@ export function AgentEditor() {
                           <NumberField label="Knowledge max results" value={effective.knowledge_policy.max_results} min={1} max={20} onChange={(v) => patch({ knowledge_policy: { ...effective.knowledge_policy, max_results: v } })} />
                           <NumberField label="Memory max results (editor-side)" value={effective.retrieval.memory_max_results} min={0} max={50} onChange={(v) => patch({ retrieval: { ...effective.retrieval, memory_max_results: v } })} />
                         </FieldRow>
-                        <SwitchRow>
-                          <SwitchText>
-                            <SwitchTitle>Hybrid retrieval</SwitchTitle>
-                            <SwitchSub>Mix semantic and keyword search for knowledge lookups.</SwitchSub>
-                          </SwitchText>
-                          <Switch
-                            checked={effective.retrieval.hybrid_retrieval}
-                            onChange={(next) => patch({ retrieval: { ...effective.retrieval, hybrid_retrieval: next } })}
-                          />
-                        </SwitchRow>
                         <TextArea
                           label="Brand voice"
                           value={effective.brand}

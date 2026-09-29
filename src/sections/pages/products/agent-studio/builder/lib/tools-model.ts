@@ -5,8 +5,8 @@
  * Two name rules, two objects (PLAN §8b — never merged):
  * - CATALOG names: ^[a-z][a-z0-9_]{1,63}$ (tool-catalog.service.ts:47,434;
  *   console TOOL_NAME_PATTERN mirrors it — parity asserted by test).
- * - ENTRY names: ^[a-z0-9_]+$ min 2 max 64 (contract; engine min 1, no regex —
- *   contract wins; setup-caps covers shape, this model owns the min-2 floor).
+ * - ENTRY names: ^[a-z0-9_]+$ min 2 max 64 (contract; engine matches:
+ *   validation.ts min 2 max 64 regex ^[a-z0-9_]+$ — parity asserted by test).
  *
  * Approval display runs through the SINGLE central mapping
  * (agent-payload.effectiveApproval, fixed in this pass per PLAN §8e) with

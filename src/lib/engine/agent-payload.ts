@@ -18,7 +18,7 @@
  *   policies are OMITTED (zod min(1) fails on ''); blank brand is omitted
  *   (absent = no voice block, never an empty one).
  * - max_context_tokens / retrieval_policy / memory_max_results /
- *   hybrid_retrieval / max_recursion_depth stay consumer-side ONLY — the
+ *   max_recursion_depth stay consumer-side ONLY — the
  *   engine 422s them as unknown keys (rejectUnknownPayloadKeys). Brand is
  *   FIRST-CLASS since G4 (persisted, hashed, composed into the served prompt).
  * - budgets: cents→micros (×10_000), ms stay seconds on the wire.
@@ -223,10 +223,9 @@ export interface ConsumerDefinition {
     /** Cents (engine max_cost_micros). */
     max_cost_cents?: number;
   };
-  /** Consumer-only retrieval display (memory results + hybrid toggle). */
+  /** Consumer-only retrieval display (memory results). */
   retrieval: {
     memory_max_results: number;
-    hybrid_retrieval: boolean;
   };
   /** Consumer-only brand voice. */
   brand: string;
@@ -286,7 +285,7 @@ export function defaultConsumer(): ConsumerDefinition {
     knowledge_policy: { retrieval_enabled: false, max_results: 5 },
     guardrails: { pii_redaction: true, input_policy: '', output_policy: '', execution_mode: 'blocking' },
     budget: {},
-    retrieval: { memory_max_results: 4, hybrid_retrieval: true },
+    retrieval: { memory_max_results: 4 },
     brand: '',
   };
 }
@@ -651,7 +650,6 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     },
     retrieval: {
       memory_max_results: numOr(retrievalRaw.memory_max_results, base.retrieval.memory_max_results),
-      hybrid_retrieval: boolOr(retrievalRaw.hybrid_retrieval, base.retrieval.hybrid_retrieval),
     },
     brand: str(pick(r.brand)) ?? '',
   };

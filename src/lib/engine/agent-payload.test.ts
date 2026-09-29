@@ -269,7 +269,7 @@ describe('toEnginePayload', () => {
   it('strips every consumer-only key from the wire (unknown-keys 422 must stay unreachable)', () => {
     const def = consumer();
     def.max_context_tokens = 64000;
-    def.retrieval = { memory_max_results: 9, hybrid_retrieval: false };
+    def.retrieval = { memory_max_results: 9 };
     const wire = toEnginePayload(def) as unknown as Record<string, unknown>;
     expect('retrieval_policy' in wire).toBe(false);
     expect('max_context_tokens' in wire).toBe(false);

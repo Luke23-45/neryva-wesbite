@@ -37,7 +37,6 @@ const CONSUMER_ONLY_KEYS = new Set([
   'max_context_tokens',
   'retrieval',
   'memory_max_results',
-  'hybrid_retrieval',
 ]);
 
 /** Current engine schema generation (`schema.ts:294`). Display + warn, never gate. */

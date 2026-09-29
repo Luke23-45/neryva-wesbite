@@ -2,8 +2,12 @@
  * Knowledge model (C05 PLAN.md §4) — PURE, zero imports.
  *
  * Engine bounds encoded (re-verify if the engine moves):
- * - pins: `context_policy.knowledge_sources`, contract max 16 kebab slugs
- *   (v1.schema.json knowledge_sources maxItems=16; README correction #9);
+ * - pins: `context_policy.knowledge_sources`, engine publish max 16 kebab slugs
+ *   (validation.ts K-03 — 422s >16 or non-slug; the console enforces the same
+ *   16 via PINS_MAX below). NOTE: the runtime agent-definition schema
+ *   (v1.schema.json knowledge_sources maxItems=20) accepts up to 20 — that is
+ *   the contract ceiling for the engine-emitted knowledge_refs allowlist
+ *   (P0 residual #5), not the maker-authored pin bound.
  * - slug: 3–64, lowercase/digits/hyphens, starts+ends alnum (source-slug.ts:17;
  *   mirrored by setup-caps checkSourceSlug — parity asserted by test);
  * - retrieval: `retrieval_enabled` default false (deliberate toggle),
