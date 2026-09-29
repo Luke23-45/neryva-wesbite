@@ -11,7 +11,7 @@
  * - slug: 3–64, lowercase/digits/hyphens, starts+ends alnum (source-slug.ts:17;
  *   mirrored by setup-caps checkSourceSlug — parity asserted by test);
  * - retrieval: `retrieval_enabled` default false (deliberate toggle),
- *   `max_results` 1–20 default 5 (validation.ts:88-93);
+ *   `max_results` 1–20 default 5 (validation.ts:187-191);
  * - title ≤256 (knowledge.controller.ts CreateUploadDto);
  * - sessions: CREATED→UPLOADING→UPLOADED→SCANNING→EXTRACTING→INDEXING→READY |
  *   QUARANTINED | FAILED (knowledge/schema.ts:80-81);
@@ -88,7 +88,7 @@ export function validatePaste(text: string, mediaType: string): PasteCheck {
 
 export type PinsCheck = { ok: true; slugs: string[] } | { ok: false; message: string };
 
-/** Pin list gate — contract max 16, kebab each, deduped (order = declared order). */
+/** Pin list gate — engine maker-pin max 16, kebab each, deduped (order = declared order). */
 export function validatePins(slugs: readonly string[]): PinsCheck {
   const normalized = slugs.map((s) => s.trim().toLowerCase()).filter((s) => s !== '');
   const unique = [...new Set(normalized)];
