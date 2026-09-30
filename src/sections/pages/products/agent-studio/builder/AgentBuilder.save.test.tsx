@@ -225,7 +225,7 @@ describe('AgentBuilder manual save (roleDirty regression)', () => {
 
     fireEvent.click(btn);
     await waitFor(() => expect(updateMutate).toHaveBeenCalledTimes(1));
-    const input = updateMutate.mock.calls[0][0] as { definition: { role_policy: { role: string } } };
-    expect(input.definition.role_policy.role).toBe('Support lead');
+    const input = updateMutate.mock.calls[0][0] as { definition: { role?: { role?: { content: string } } } };
+    expect(input.definition.role?.role?.content).toBe('Support lead');
   });
 });

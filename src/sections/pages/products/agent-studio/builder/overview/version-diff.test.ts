@@ -50,7 +50,7 @@ describe('diffChangedSections', () => {
   it('attributes role, guardrails, tools, budget, response to their sections', () => {
     const live = defaultConsumer();
     const draft = withPatch((d) => {
-      d.role_policy = { role: 'Concierge' };
+      d.role = { role: { content: 'Concierge' } };
       d.guardrails = { ...d.guardrails, pii_redaction: !d.guardrails.pii_redaction };
       d.tools = [...d.tools, { name: 'web_search', access: 'read', approval: 'on_effect', execution_mode: 'live' }];
       d.budget = { ...d.budget, max_tool_calls: 7 };

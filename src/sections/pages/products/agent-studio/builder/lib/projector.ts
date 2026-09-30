@@ -30,6 +30,12 @@ import { gradeEvaluation } from './eval-model';
 import type { VersionEvalState } from './eval-model';
 import { gradeShip } from './publish-model';
 import { firstBlocker, matchPreset, reasonFix, usableRefs, type CatalogRow } from './brain-model';
+import {
+  parseRoleTextField,
+  roleListHasValue,
+  roleTextHasValue,
+  type RoleFieldBlock,
+} from '@lib/engine/role-fields';
 
 export interface BuilderNodeData extends Record<string, unknown> {
   slotKey: string;
@@ -197,25 +203,34 @@ export function responseSubtitle(definition: ConsumerDefinition | null): string 
 }
 
 /**
- * Role node subtitle — payload truth (D-N2 option A). Absent policy renders
- * nothing (no persona is valid and the default). A set policy shows the role
- * name plus how many of the other five persona fields are filled.
+ * Role section subtitle — payload truth (D-N2). Absent role renders
+ * nothing (no persona is valid and the default). A set role shows the role
+ * name plus how many of the other five fields are filled (parsed values,
+ * not raw block text — mode is not content).
  */
 export function roleSubtitle(definition: ConsumerDefinition | null): string | null {
   if (!definition) return null;
-  const policy = definition.role_policy;
-  if (!policy) return null;
-  const name = policy.role?.trim() || null;
+  const role = definition.role;
+  if (!role) return null;
+  const name = parseRoleTextFieldSafe(role.role);
   const extras =
-    (policy.goal?.trim() ? 1 : 0) +
-    (policy.traits?.length ? 1 : 0) +
-    (policy.communication_style?.trim() ? 1 : 0) +
-    (policy.knowledge_areas?.length ? 1 : 0) +
-    (policy.prohibited_topics?.length ? 1 : 0);
+    (roleTextHasValue(role.goal) ? 1 : 0) +
+    (roleListHasValue(role.traits) ? 1 : 0) +
+    (roleTextHasValue(role.communicationStyle) ? 1 : 0) +
+    (roleListHasValue(role.knowledgeAreas) ? 1 : 0) +
+    (roleListHasValue(role.prohibitedTopics) ? 1 : 0);
   if (!name && extras === 0) return null;
   const shown = name && name.length > 42 ? `${name.slice(0, 42)}…` : name;
   if (!shown) return extras === 1 ? 'Persona · 1 field set' : `Persona · ${extras} fields set`;
   return extras > 0 ? `${shown} · +${extras} more` : shown;
+}
+
+/** Parsed role text, or null when blank/unparseable (read-side honesty). */
+function parseRoleTextFieldSafe(block: RoleFieldBlock | undefined): string | null {
+  if (!block) return null;
+  const parsed = parseRoleTextField(block);
+  if (parsed === undefined || parsed.trim() === '') return null;
+  return parsed;
 }
 
 /**
@@ -816,7 +831,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     );
   }
 
-  // Role is a real section (the Role node owns role_policy — D-N2 option A,
+  // Role is a real section (the Role section owns role — D-N2,
   // structured persona, composed into the system prompt server-side).
   // Subtitle carries payload truth; like context/response it stays out of
   // FUNCTIONAL_NODE_IDS. Honest rule: an empty policy composes no persona

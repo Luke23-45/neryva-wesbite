@@ -27,7 +27,7 @@ export type InstructionMode = 'raw' | 'markdown' | 'json';
 
 export const INSTRUCTION_MODES: readonly InstructionMode[] = ['raw', 'markdown', 'json'] as const;
 
-/** A singleton block (role / objective / output / refusal): mode + content, no ID. */
+/** A singleton block (objective / output / refusal): mode + content, no ID. */
 export interface SingletonBlock {
   mode: InstructionMode;
   content: string;
@@ -48,7 +48,6 @@ export interface ExampleBlock extends RepeatableBlock {
 /** Canonical Instructions v1 document. Unknown keys are stripped by the server on read; writers pin schemaVersion: 1. */
 export interface InstructionsV1 {
   schemaVersion: 1;
-  role?: SingletonBlock;
   objective?: SingletonBlock;
   output?: SingletonBlock;
   refusal?: SingletonBlock;
@@ -96,18 +95,17 @@ export function isValidMode(mode: string): mode is InstructionMode {
 }
 
 /** Singleton slots in canonical compiler order. */
-export type SingletonKind = 'role' | 'objective' | 'output' | 'refusal';
+export type SingletonKind = 'objective' | 'output' | 'refusal';
 
 /** Repeatable slots in canonical compiler order. */
 export type RepeatableKind = 'rules' | 'examples' | 'custom';
 
 export type InstructionBlockKind = SingletonKind | RepeatableKind;
 
-export const SINGLETON_KINDS: readonly SingletonKind[] = ['role', 'objective', 'output', 'refusal'] as const;
+export const SINGLETON_KINDS: readonly SingletonKind[] = ['objective', 'output', 'refusal'] as const;
 export const REPEATABLE_KINDS: readonly RepeatableKind[] = ['rules', 'examples', 'custom'] as const;
 
 export const BLOCK_LABELS: Record<InstructionBlockKind, string> = {
-  role: 'Role',
   objective: 'Objective',
   rules: 'Rules',
   examples: 'Examples',
@@ -118,7 +116,6 @@ export const BLOCK_LABELS: Record<InstructionBlockKind, string> = {
 
 /** Short authoring guidance per slot, shown under each block header. */
 export const BLOCK_HINTS: Record<InstructionBlockKind, string> = {
-  role: 'Who the agent is — persona, voice, and stance.',
   objective: 'The job to be done — what success looks like.',
   rules: 'What the agent must always do, must never do, or should do under specific conditions.',
   examples: 'Show, don’t just tell — a few input/output pairs worth imitating.',
@@ -132,11 +129,10 @@ export function blankSingleton(): SingletonBlock {
   return { mode: 'markdown', content: '' };
 }
 
-/** A blank document: all four singletons present (empty), repeatable lists empty. */
+/** A blank document: all three singletons present (empty), repeatable lists empty. */
 export function blankInstructionsV1(): InstructionsV1 {
   return {
     schemaVersion: INSTRUCTIONS_SCHEMA_VERSION,
-    role: blankSingleton(),
     objective: blankSingleton(),
     output: blankSingleton(),
     refusal: blankSingleton(),
@@ -153,7 +149,6 @@ export function blankInstructionsV1(): InstructionsV1 {
 export function ensureSingletonsV1(doc: InstructionsV1): InstructionsV1 {
   return {
     ...doc,
-    role: doc.role ?? blankSingleton(),
     objective: doc.objective ?? blankSingleton(),
     output: doc.output ?? blankSingleton(),
     refusal: doc.refusal ?? blankSingleton(),
@@ -234,7 +229,6 @@ export function normalizeDocumentForSave(doc: InstructionsV1): InstructionsV1 {
     });
   return {
     schemaVersion: INSTRUCTIONS_SCHEMA_VERSION,
-    role: cleanSingleton(doc.role),
     objective: cleanSingleton(doc.objective),
     output: cleanSingleton(doc.output),
     refusal: cleanSingleton(doc.refusal),
@@ -253,7 +247,6 @@ export function normalizeDocumentForSave(doc: InstructionsV1): InstructionsV1 {
 export function clientSaveBlockers(doc: InstructionsV1): string[] {
   const problems: string[] = [];
   const singletonEntries: Array<[string, SingletonBlock | undefined]> = [
-    ['Role', doc.role],
     ['Objective', doc.objective],
     ['Output', doc.output],
     ['Refusal', doc.refusal],

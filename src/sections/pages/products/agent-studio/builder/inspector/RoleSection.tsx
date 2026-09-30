@@ -10,15 +10,27 @@ import {
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
-import { ROLE_LIMITS, type RolePolicy } from '@lib/engine/agent-payload';
+import { ROLE_LIMITS, type Role } from '@lib/engine/agent-payload';
+import {
+  defaultRoleFieldMode,
+  isRoleFieldMode,
+  parseRoleListField,
+  parseRoleTextField,
+  roleListHasValue,
+  roleTextHasValue,
+  type RoleFieldBlock,
+  type RoleFieldMode,
+} from '@lib/engine/role-fields';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
-import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { AddRow, EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import { SkeletonRows } from './SkeletonRows';
 import { TextButton } from './ToolsSection.styles';
 import { TextArea } from '@components/common/ui/TextArea';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Segmented } from '@components/common/ui/Segmented';
+import { MarkdownText } from '../../chat/ChatMessages/MarkdownText';
 import {
   FieldBlock,
   FieldHead,
@@ -62,54 +74,76 @@ interface ConflictState {
   attemptedDef: AgentDefinition;
 }
 
-/** Full local state — every role_policy member present, all optional. */
-interface RolePolicyState {
-  role: string;
-  goal: string;
-  traits: string[];
-  communication_style: string;
-  knowledge_areas: string[];
-  prohibited_topics: string[];
+const MODE_OPTIONS = [
+  { value: 'raw', label: 'Raw' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'json', label: 'JSON' },
+] as const;
+
+const WRITE_PREVIEW_OPTIONS = [
+  { value: 'write', label: 'Write' },
+  { value: 'preview', label: 'Preview' },
+] as const;
+
+type RoleFieldKey = 'role' | 'goal' | 'traits' | 'communicationStyle' | 'knowledgeAreas' | 'prohibitedTopics';
+
+const FIELD_KEYS: readonly RoleFieldKey[] = [
+  'role',
+  'goal',
+  'traits',
+  'communicationStyle',
+  'knowledgeAreas',
+  'prohibitedTopics',
+] as const;
+
+const LIST_KEYS: ReadonlySet<RoleFieldKey> = new Set(['traits', 'knowledgeAreas', 'prohibitedTopics']);
+
+/** Full local state — six modal fields, each { mode, content }. */
+type RoleState = Record<RoleFieldKey, { mode: RoleFieldMode; content: string }>;
+
+/** Normalize whatever the definition holds into editable local state.
+ * Unknown modes fall back to the documented default (raw for text,
+ * json for lists); the caps layer flags nothing here — the section
+ * never rewrites what it read, it just edits it. */
+function readRole(definition: AgentDefinition): RoleState {
+  const r = definition.role;
+  const out = {} as RoleState;
+  for (const key of FIELD_KEYS) {
+    const isList = LIST_KEYS.has(key);
+    const raw = r?.[key] as RoleFieldBlock | undefined;
+    out[key] = {
+      mode: raw && isRoleFieldMode(raw.mode) ? raw.mode : defaultRoleFieldMode(isList),
+      content: typeof raw?.content === 'string' ? raw.content : '',
+    };
+  }
+  return out;
 }
 
-/** Normalize whatever the definition holds into editable local state. */
-function readPolicy(definition: AgentDefinition): RolePolicyState {
-  const rp = definition.role_policy;
-  return {
-    role: rp?.role ?? '',
-    goal: rp?.goal ?? '',
-    traits: rp?.traits ? [...rp.traits] : [],
-    communication_style: rp?.communication_style ?? '',
-    knowledge_areas: rp?.knowledge_areas ? [...rp.knowledge_areas] : [],
-    prohibited_topics: rp?.prohibited_topics ? [...rp.prohibited_topics] : [],
-  };
-}
-
-/** The console writes role_policy ONLY when at least one member is set —
+/** The console writes `role` ONLY when at least one field is set —
  * absent = no persona configured (valid, the engine composes nothing).
- * Blank strings and empty lists never ship; clearing every field removes
- * the key so no meaningless empty object persists. */
-function policyOrUndefined(policy: RolePolicyState): RolePolicy | undefined {
-  const members: RolePolicy = {
-    ...(policy.role.trim() ? { role: policy.role.trim() } : {}),
-    ...(policy.goal.trim() ? { goal: policy.goal.trim() } : {}),
-    ...(policy.traits.length > 0 ? { traits: [...policy.traits] } : {}),
-    ...(policy.communication_style.trim() ? { communication_style: policy.communication_style.trim() } : {}),
-    ...(policy.knowledge_areas.length > 0 ? { knowledge_areas: [...policy.knowledge_areas] } : {}),
-    ...(policy.prohibited_topics.length > 0 ? { prohibited_topics: [...policy.prohibited_topics] } : {}),
-  };
-  return Object.keys(members).length > 0 ? members : undefined;
+ * Blank fields never ship; clearing every field removes the key so no
+ * meaningless empty object persists. */
+function roleOrUndefined(state: RoleState): Role | undefined {
+  const fields: Role = {};
+  for (const key of FIELD_KEYS) {
+    const field = state[key];
+    if (field.content.trim() !== '') {
+      fields[key] = { mode: field.mode, content: field.content };
+    }
+  }
+  return Object.keys(fields).length > 0 ? fields : undefined;
 }
 
 /** Blank local state for a missing definition (loading). */
-const EMPTY_BLANK: RolePolicyState = {
-  role: '',
-  goal: '',
-  traits: [],
-  communication_style: '',
-  knowledge_areas: [],
-  prohibited_topics: [],
-};
+function blankRoleState(): RoleState {
+  const out = {} as RoleState;
+  for (const key of FIELD_KEYS) {
+    out[key] = { mode: defaultRoleFieldMode(LIST_KEYS.has(key)), content: '' };
+  }
+  return out;
+}
+
+const EMPTY_BLANK: RoleState = blankRoleState();
 
 /** Keyboard-accessible tag-list editor: Enter or the Add button appends a
  * trimmed, de-duplicated tag; chips carry a labeled remove button. Count
@@ -184,14 +218,224 @@ function TagEditor({
   );
 }
 
+interface RoleFieldDef {
+  key: RoleFieldKey;
+  kind: 'text' | 'list';
+  title: string;
+  helper: string;
+  /** Singular item label for list fields (aria labels, placeholders). */
+  label: string;
+  rows: number;
+  /** Parsed-value cap (raw/markdown modes only — JSON quoting adds
+   * characters, so the caps layer enforces JSON mode instead). */
+  maxLength?: number;
+  maxItems?: number;
+  maxItem?: number;
+  placeholder: string;
+}
+
+/** Canonical runtime order: Role → Goal → Traits → Communication style
+ * → Knowledge areas → Avoid. */
+const FIELDS: readonly RoleFieldDef[] = [
+  {
+    key: 'role',
+    kind: 'text',
+    title: 'Role',
+    helper: 'The persona this agent plays — composed into its system prompt. All fields are optional.',
+    label: 'role',
+    rows: 2,
+    maxLength: ROLE_LIMITS.role,
+    placeholder: 'e.g. Senior support engineer',
+  },
+  {
+    key: 'goal',
+    kind: 'text',
+    title: 'Goal',
+    helper: 'What this agent is here to achieve.',
+    label: 'goal',
+    rows: 3,
+    maxLength: ROLE_LIMITS.goal,
+    placeholder: 'What this agent is here to achieve',
+  },
+  {
+    key: 'traits',
+    kind: 'list',
+    title: 'Traits',
+    helper: 'How the agent carries itself.',
+    label: 'trait',
+    rows: 4,
+    maxItems: ROLE_LIMITS.traits.max,
+    maxItem: ROLE_LIMITS.traits.item,
+    placeholder: 'one\nper line',
+  },
+  {
+    key: 'communicationStyle',
+    kind: 'text',
+    title: 'Communication style',
+    helper: 'Tone, format, language — how the agent speaks.',
+    label: 'communication style',
+    rows: 3,
+    maxLength: ROLE_LIMITS.communicationStyle,
+    placeholder: 'Tone, format, language — how the agent speaks',
+  },
+  {
+    key: 'knowledgeAreas',
+    kind: 'list',
+    title: 'Knowledge areas',
+    helper: 'Domains this agent knows well.',
+    label: 'knowledge area',
+    rows: 4,
+    maxItems: ROLE_LIMITS.knowledgeAreas.max,
+    maxItem: ROLE_LIMITS.knowledgeAreas.item,
+    placeholder: 'one\nper line',
+  },
+  {
+    key: 'prohibitedTopics',
+    kind: 'list',
+    title: 'Avoid',
+    helper: 'Topics the agent steers clear of.',
+    label: 'avoided topic',
+    rows: 4,
+    maxItems: ROLE_LIMITS.prohibitedTopics.max,
+    maxItem: ROLE_LIMITS.prohibitedTopics.item,
+    placeholder: 'one\nper line',
+  },
+];
+
+/** A text field: mode selector on top, textarea below, Write/Preview in
+ * markdown mode (the Instructions section's primitives, reused). */
+function RoleTextField({
+  def,
+  field,
+  onPatch,
+}: {
+  def: RoleFieldDef;
+  field: { mode: RoleFieldMode; content: string };
+  onPatch: (part: Partial<{ mode: RoleFieldMode; content: string }>) => void;
+}) {
+  const [preview, setPreview] = useState(false);
+  const showPreview = field.mode === 'markdown' && preview;
+  return (
+    <FieldBlock>
+      <FieldHead>
+        <FieldTitle>{def.title}</FieldTitle>
+        <FieldHelper>{def.helper}</FieldHelper>
+      </FieldHead>
+      <AddRow>
+        <Segmented
+          options={MODE_OPTIONS}
+          value={field.mode}
+          onChange={(mode: RoleFieldMode) => onPatch({ mode })}
+          size="sm"
+          ariaLabel={`${def.title} format`}
+        />
+        {field.mode === 'markdown' && (
+          <Segmented
+            options={WRITE_PREVIEW_OPTIONS}
+            value={preview ? 'preview' : 'write'}
+            onChange={(v: 'write' | 'preview') => setPreview(v === 'preview')}
+            size="sm"
+            ariaLabel={`${def.title} view`}
+          />
+        )}
+      </AddRow>
+      {showPreview ? (
+        <MarkdownText text={field.content} />
+      ) : (
+        <TextArea
+          aria-label={def.title}
+          value={field.content}
+          maxLength={field.mode === 'json' ? undefined : def.maxLength}
+          rows={def.rows}
+          onChange={(event) => onPatch({ content: event.target.value })}
+          placeholder={
+            field.mode === 'json'
+              ? '"A JSON string — quotes included"'
+              : def.placeholder
+          }
+        />
+      )}
+    </FieldBlock>
+  );
+}
+
+/** A list field: tag editor in JSON mode, textarea in Raw/Markdown modes
+ * (one item per line; markdown wants strict "- " lines). */
+function RoleListField({
+  def,
+  field,
+  onPatch,
+}: {
+  def: RoleFieldDef;
+  field: { mode: RoleFieldMode; content: string };
+  onPatch: (part: Partial<{ mode: RoleFieldMode; content: string }>) => void;
+}) {
+  const parsed = useMemo(() => parseRoleListField(field), [field]);
+  // Malformed JSON must be visible, never silently replaced: fall back to a
+  // raw textarea so the stored content survives until the user fixes it.
+  const malformedJson =
+    field.mode === 'json' && field.content.trim() !== '' && parsed === undefined;
+  const maxItems = def.maxItems ?? 0;
+  const maxItem = def.maxItem ?? 0;
+  return (
+    <FieldBlock>
+      <FieldHead>
+        <FieldTitle>{def.title}</FieldTitle>
+        <FieldHelper>
+          {def.helper}{' '}
+          {field.mode === 'json'
+            ? `Up to ${maxItems}.`
+            : field.mode === 'markdown'
+              ? `One "- " line per item — up to ${maxItems}.`
+              : `One item per line — up to ${maxItems}.`}
+        </FieldHelper>
+      </FieldHead>
+      <AddRow>
+        <Segmented
+          options={MODE_OPTIONS}
+          value={field.mode}
+          onChange={(mode: RoleFieldMode) => onPatch({ mode })}
+          size="sm"
+          ariaLabel={`${def.title} format`}
+        />
+      </AddRow>
+      {field.mode === 'json' && !malformedJson ? (
+        <TagEditor
+          label={def.label}
+          values={parsed ?? []}
+          maxItems={maxItems}
+          maxItem={maxItem}
+          onChange={(values) => onPatch({ content: JSON.stringify(values) })}
+        />
+      ) : (
+        <>
+          {malformedJson && (
+            <Whisper $tone="red" role="alert">
+              This field does not parse as a JSON list — fix the text below.
+              Nothing is overwritten until it parses.
+            </Whisper>
+          )}
+          <TextArea
+            aria-label={def.title}
+            value={field.content}
+            rows={def.rows}
+            onChange={(event) => onPatch({ content: event.target.value })}
+            placeholder={field.mode === 'markdown' ? '- one\n- per line' : def.placeholder}
+          />
+        </>
+      )}
+    </FieldBlock>
+  );
+}
+
 /**
- * Role node — the SINGLE owner/editor of `role_policy` (D-N2, option A:
- * structured persona composed into the system prompt server-side). All six
- * members are optional; an empty policy is a valid "no persona" state.
- * Mirrors the Context/Response save machinery: POST/PUT through the
- * draft-version hooks, 8s autosave with unmount flush, manual saveSignal,
- * 409 adoption, 412 conflict dialog. Every cap issue shown here is
- * filtered to role_policy paths.
+ * Role section — the SINGLE owner/editor of `role` (D-N2: six modal
+ * fields, each Raw/Markdown/JSON, composed into the system prompt
+ * server-side). All six fields are optional; an empty role is a valid
+ * "no persona" state. Mirrors the Context/Response save machinery:
+ * POST/PUT through the draft-version hooks, 8s autosave with unmount
+ * flush, manual saveSignal, 409 adoption, 412 conflict dialog. Every cap
+ * issue shown here is filtered to role paths.
  */
 export function RoleSection({
   assistantId,
@@ -209,8 +453,8 @@ export function RoleSection({
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
-  const [policy, setPolicy] = useState<RolePolicyState>(() =>
-    definition ? readPolicy(definition) : EMPTY_BLANK,
+  const [policy, setPolicy] = useState<RoleState>(() =>
+    definition ? readRole(definition) : EMPTY_BLANK,
   );
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
@@ -218,7 +462,7 @@ export function RoleSection({
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
 
-  const source = useMemo(() => (definition ? readPolicy(definition) : null), [definition]);
+  const source = useMemo(() => (definition ? readRole(definition) : null), [definition]);
   const current = useMemo(() => JSON.stringify(policy), [policy]);
   const dirty = source !== null && current !== JSON.stringify(source);
 
@@ -235,7 +479,7 @@ export function RoleSection({
 
   const buildNext = useCallback((): AgentDefinition | null => {
     if (!definition) return null;
-    return buildDraftPayload(definition, { role_policy: policyOrUndefined(policy) });
+    return buildDraftPayload(definition, { role: roleOrUndefined(policy) });
   }, [definition, policy]);
 
   const heldMessages = useMemo(() => {
@@ -244,7 +488,7 @@ export function RoleSection({
     if (next) {
       messages.push(
         ...checkDefinitionCaps(next)
-          .filter((issue) => issue.path === 'role_policy' || issue.path.startsWith('role_policy.'))
+          .filter((issue) => issue.path === 'role' || issue.path.startsWith('role.'))
           .map((i) => i.message),
       );
     }
@@ -254,7 +498,7 @@ export function RoleSection({
   const pending = saveDraft.isPending || updateDraft.isPending;
 
   const sourcePolicyJson = useMemo(
-    () => (definition ? JSON.stringify({ role_policy: definition.role_policy }) : null),
+    () => (definition ? JSON.stringify({ role: definition.role }) : null),
     [definition],
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
@@ -276,7 +520,7 @@ export function RoleSection({
               setConflict({
                 expectedHash: versionHash,
                 currentHash: typeof details.current === 'string' ? details.current : null,
-                attempted: JSON.stringify({ role_policy: next.role_policy }),
+                attempted: JSON.stringify({ role: next.role }),
                 attemptedDef: next,
               });
             }
@@ -290,7 +534,7 @@ export function RoleSection({
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
-          toast.success('A draft opened elsewhere — resumed it. Your role policy stays; the next save writes to it.');
+          toast.success('A draft opened elsewhere — resumed it. Your role stays; the next save writes to it.');
         }
       },
     });
@@ -313,9 +557,12 @@ export function RoleSection({
     holdReason: () => heldMessages[0] ?? null,
   });
 
-  const patch = useCallback((part: Partial<RolePolicyState>) => {
-    setPolicy((prev) => ({ ...prev, ...part }));
-  }, []);
+  const patchField = useCallback(
+    (key: RoleFieldKey, part: Partial<{ mode: RoleFieldMode; content: string }>) => {
+      setPolicy((prev) => ({ ...prev, [key]: { ...prev[key], ...part } }));
+    },
+    [],
+  );
 
   if (!definition) {
     return (
@@ -326,50 +573,56 @@ export function RoleSection({
   }
 
   if (!canAuthor) {
+    const roleText = parseRoleTextField(policy.role);
+    const goalText = parseRoleTextField(policy.goal);
+    const styleText = parseRoleTextField(policy.communicationStyle);
+    const traitList = parseRoleListField(policy.traits) ?? [];
+    const areaList = parseRoleListField(policy.knowledgeAreas) ?? [];
+    const topicList = parseRoleListField(policy.prohibitedTopics) ?? [];
     const hasAny =
-      policy.role.trim() ||
-      policy.goal.trim() ||
-      policy.traits.length > 0 ||
-      policy.communication_style.trim() ||
-      policy.knowledge_areas.length > 0 ||
-      policy.prohibited_topics.length > 0;
+      roleTextHasValue(policy.role) ||
+      roleTextHasValue(policy.goal) ||
+      roleListHasValue(policy.traits) ||
+      roleTextHasValue(policy.communicationStyle) ||
+      roleListHasValue(policy.knowledgeAreas) ||
+      roleListHasValue(policy.prohibitedTopics);
     return (
       <Wrap>
         {hasAny ? (
           <PersonaCard>
-            {policy.role.trim() && <PersonaName>{policy.role}</PersonaName>}
-            {policy.goal.trim() && <PersonaGoal>{policy.goal}</PersonaGoal>}
-            {policy.traits.length > 0 && (
+            {roleText && roleText.trim() && <PersonaName>{roleText}</PersonaName>}
+            {goalText && goalText.trim() && <PersonaGoal>{goalText}</PersonaGoal>}
+            {traitList.length > 0 && (
               <PersonaGroup>
                 <PersonaLabel>Traits</PersonaLabel>
                 <PersonaChips>
-                  {policy.traits.map((trait) => (
+                  {traitList.map((trait) => (
                     <PersonaChip key={trait}>{trait}</PersonaChip>
                   ))}
                 </PersonaChips>
               </PersonaGroup>
             )}
-            {policy.communication_style.trim() && (
+            {styleText && styleText.trim() && (
               <PersonaGroup>
                 <PersonaLabel>Communication style</PersonaLabel>
-                <PersonaText>{policy.communication_style}</PersonaText>
+                <PersonaText>{styleText}</PersonaText>
               </PersonaGroup>
             )}
-            {policy.knowledge_areas.length > 0 && (
+            {areaList.length > 0 && (
               <PersonaGroup>
                 <PersonaLabel>Knowledge areas</PersonaLabel>
                 <PersonaChips>
-                  {policy.knowledge_areas.map((area) => (
+                  {areaList.map((area) => (
                     <PersonaChip key={area}>{area}</PersonaChip>
                   ))}
                 </PersonaChips>
               </PersonaGroup>
             )}
-            {policy.prohibited_topics.length > 0 && (
+            {topicList.length > 0 && (
               <PersonaGroup>
-                <PersonaLabel>Prohibited topics</PersonaLabel>
+                <PersonaLabel>Avoid</PersonaLabel>
                 <PersonaChips>
-                  {policy.prohibited_topics.map((topic) => (
+                  {topicList.map((topic) => (
                     <PersonaChip key={topic}>{topic}</PersonaChip>
                   ))}
                 </PersonaChips>
@@ -392,99 +645,23 @@ export function RoleSection({
         }
       }}
     >
-      {/* Role name */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Role</FieldTitle>
-          <FieldHelper>
-            The persona this agent plays — composed into its system prompt. All fields are optional.
-          </FieldHelper>
-        </FieldHead>
-        <TextInput
-          aria-label="Role"
-          value={policy.role}
-          maxLength={ROLE_LIMITS.role}
-          onChange={(event) => patch({ role: event.target.value })}
-          placeholder="e.g. Senior support engineer"
-        />
-      </FieldBlock>
-
-      {/* Goal */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Goal</FieldTitle>
-          <FieldHelper>What this agent is here to achieve.</FieldHelper>
-        </FieldHead>
-        <TextArea
-          aria-label="Goal"
-          value={policy.goal}
-          maxLength={ROLE_LIMITS.goal}
-          rows={3}
-          onChange={(event) => patch({ goal: event.target.value })}
-          placeholder="What this agent is here to achieve"
-        />
-      </FieldBlock>
-
-      {/* Traits */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Traits</FieldTitle>
-          <FieldHelper>How the agent carries itself — up to {ROLE_LIMITS.traits.max}.</FieldHelper>
-        </FieldHead>
-        <TagEditor
-          label="trait"
-          values={policy.traits}
-          maxItems={ROLE_LIMITS.traits.max}
-          maxItem={ROLE_LIMITS.traits.item}
-          onChange={(traits) => patch({ traits })}
-        />
-      </FieldBlock>
-
-      {/* Communication style */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Communication style</FieldTitle>
-          <FieldHelper>Tone, format, language — how the agent speaks.</FieldHelper>
-        </FieldHead>
-        <TextArea
-          aria-label="Communication style"
-          value={policy.communication_style}
-          maxLength={ROLE_LIMITS.communication_style}
-          rows={3}
-          onChange={(event) => patch({ communication_style: event.target.value })}
-          placeholder="Tone, format, language — how the agent speaks"
-        />
-      </FieldBlock>
-
-      {/* Knowledge areas */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Knowledge areas</FieldTitle>
-          <FieldHelper>Domains the agent leans into — up to {ROLE_LIMITS.knowledge_areas.max}.</FieldHelper>
-        </FieldHead>
-        <TagEditor
-          label="knowledge area"
-          values={policy.knowledge_areas}
-          maxItems={ROLE_LIMITS.knowledge_areas.max}
-          maxItem={ROLE_LIMITS.knowledge_areas.item}
-          onChange={(knowledge_areas) => patch({ knowledge_areas })}
-        />
-      </FieldBlock>
-
-      {/* Prohibited topics */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Prohibited topics</FieldTitle>
-          <FieldHelper>Topics the agent stays away from — up to {ROLE_LIMITS.prohibited_topics.max}.</FieldHelper>
-        </FieldHead>
-        <TagEditor
-          label="prohibited topic"
-          values={policy.prohibited_topics}
-          maxItems={ROLE_LIMITS.prohibited_topics.max}
-          maxItem={ROLE_LIMITS.prohibited_topics.item}
-          onChange={(prohibited_topics) => patch({ prohibited_topics })}
-        />
-      </FieldBlock>
+      {FIELDS.map((def) =>
+        def.kind === 'text' ? (
+          <RoleTextField
+            key={def.key}
+            def={def}
+            field={policy[def.key]}
+            onPatch={(part) => patchField(def.key, part)}
+          />
+        ) : (
+          <RoleListField
+            key={def.key}
+            def={def}
+            field={policy[def.key]}
+            onPatch={(part) => patchField(def.key, part)}
+          />
+        ),
+      )}
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
@@ -500,11 +677,11 @@ export function RoleSection({
           currentHash={conflict.currentHash}
           pending={pending}
           onClose={() => setConflict(null)}
-          selectTheirs={(live) => JSON.stringify({ role_policy: live.role_policy })}
+          selectTheirs={(live) => JSON.stringify({ role: live.role })}
           onReloadTheirs={(theirs) => {
             try {
-              const parsed = JSON.parse(theirs) as { role_policy?: RolePolicy };
-              setPolicy(readPolicy({ ...definition, role_policy: parsed.role_policy }));
+              const parsed = JSON.parse(theirs) as { role?: Role };
+              setPolicy(readRole({ ...definition, role: parsed.role }));
             } catch {
               // Unparseable theirs: leave local state, still refetch below.
             }

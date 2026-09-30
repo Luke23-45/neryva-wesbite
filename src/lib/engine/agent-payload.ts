@@ -24,6 +24,13 @@
  * - budgets: cents→micros (×10_000), ms stay seconds on the wire.
  */
 
+import {
+  parseRoleListField,
+  parseRoleTextField,
+  readRoleBlock,
+  type RoleFieldBlock,
+} from './role-fields';
+
 export type ConsumerApproval = 'never' | 'on_effect' | 'always';
 export type EngineApproval = 'required' | 'optional';
 export type ConsumerMemoryScope = 'none' | 'conversation' | 'org' | 'user' | 'assistant';
@@ -81,73 +88,75 @@ export function parseResponsePolicy(raw: unknown): ResponsePolicy | undefined {
 }
 
 /**
- * Engine limits for the Role node (D-N2 option A — structured persona).
- * Mirrors the engine's rolePolicySchema (strict, all-optional): the single
- * source the section's inputs and setup-caps both read.
+ * Engine limits for the Role section (D-N2 — six modal fields). Mirrors
+ * the engine's roleSchema parsed-value caps: the single source the
+ * section's inputs and setup-caps both read.
  */
 export const ROLE_LIMITS = {
   role: 200,
   goal: 500,
   traits: { max: 10, item: 60 },
-  communication_style: 500,
-  knowledge_areas: { max: 20, item: 80 },
-  prohibited_topics: { max: 20, item: 80 },
+  communicationStyle: 500,
+  knowledgeAreas: { max: 20, item: 80 },
+  prohibitedTopics: { max: 20, item: 80 },
 } as const;
 
 /**
- * Per-agent role policy (Role node — D-N2 option A: structured persona,
- * composed into the system prompt server-side). Optional on the consumer
- * definition: absent = no persona configured (valid — the engine composes
- * nothing). Every member is optional on input; the console's Role section
- * writes only non-blank members and omits the object when nothing is set.
+ * Per-agent role (Role section — D-N2: six modal fields, each { mode,
+ * content }, composed into the system prompt server-side). Optional on the
+ * consumer definition: absent = no persona configured (valid — the engine
+ * composes nothing). Every field is optional on input; the console's Role
+ * section writes only non-blank fields and omits the object when nothing
+ * is set.
  */
-export interface RolePolicy {
-  role?: string;
-  goal?: string;
-  traits?: string[];
-  communication_style?: string;
-  knowledge_areas?: string[];
-  prohibited_topics?: string[];
+export interface Role {
+  role?: RoleFieldBlock;
+  goal?: RoleFieldBlock;
+  traits?: RoleFieldBlock;
+  communicationStyle?: RoleFieldBlock;
+  knowledgeAreas?: RoleFieldBlock;
+  prohibitedTopics?: RoleFieldBlock;
 }
 
 /**
- * Accepts a valid partial policy — each member is validated independently
- * and invalid members are dropped (over-limit strings, over-long lists, or
- * non-string items void the member, never the whole policy). Returns
- * undefined only when nothing recognizable survives.
+ * Accepts a valid partial role — each field is validated independently and
+ * invalid fields are dropped (unparseable in its mode, or over the
+ * parsed-value caps, voids the field, never the whole role). Returns
+ * undefined only when nothing recognizable survives. Mirrors the engine's
+ * roleSchema caps on PARSED values (mode is not content).
  */
-export function parseRolePolicy(raw: unknown): RolePolicy | undefined {
+export function parseRole(raw: unknown): Role | undefined {
   if (typeof raw !== 'object' || raw === null) return undefined;
   const r = raw as Record<string, unknown>;
-  const policy: RolePolicy = {};
-  const text = (value: unknown, max: number): string | undefined => {
-    if (typeof value !== 'string') return undefined;
-    const trimmed = value.trim();
-    return trimmed !== '' && trimmed.length <= max ? trimmed : undefined;
+  const role: Role = {};
+  const text = (key: string, max: number): void => {
+    const block = readRoleBlock(r[key]);
+    if (!block) return;
+    const parsed = parseRoleTextField(block);
+    if (parsed === undefined || parsed.length === 0 || parsed.length > max) return;
+    role[key as keyof Role] = block as Role[keyof Role];
   };
-  const list = (value: unknown, maxItems: number, maxItem: number): string[] | undefined => {
-    if (!Array.isArray(value) || value.length === 0 || value.length > maxItems) return undefined;
-    const items: string[] = [];
-    for (const entry of value) {
-      const cleaned = text(entry, maxItem);
-      if (cleaned === undefined) return undefined;
-      items.push(cleaned);
+  const list = (key: string, maxItems: number, maxItem: number): void => {
+    const block = readRoleBlock(r[key]);
+    if (!block) return;
+    const parsed = parseRoleListField(block);
+    if (
+      parsed === undefined ||
+      parsed.length === 0 ||
+      parsed.length > maxItems ||
+      parsed.some((t) => t.length === 0 || t.length > maxItem)
+    ) {
+      return;
     }
-    return items;
+    role[key as keyof Role] = block as Role[keyof Role];
   };
-  const role = text(r.role, ROLE_LIMITS.role);
-  if (role !== undefined) policy.role = role;
-  const goal = text(r.goal, ROLE_LIMITS.goal);
-  if (goal !== undefined) policy.goal = goal;
-  const traits = list(r.traits, ROLE_LIMITS.traits.max, ROLE_LIMITS.traits.item);
-  if (traits !== undefined) policy.traits = traits;
-  const style = text(r.communication_style, ROLE_LIMITS.communication_style);
-  if (style !== undefined) policy.communication_style = style;
-  const areas = list(r.knowledge_areas, ROLE_LIMITS.knowledge_areas.max, ROLE_LIMITS.knowledge_areas.item);
-  if (areas !== undefined) policy.knowledge_areas = areas;
-  const topics = list(r.prohibited_topics, ROLE_LIMITS.prohibited_topics.max, ROLE_LIMITS.prohibited_topics.item);
-  if (topics !== undefined) policy.prohibited_topics = topics;
-  return Object.keys(policy).length > 0 ? policy : undefined;
+  text('role', ROLE_LIMITS.role);
+  text('goal', ROLE_LIMITS.goal);
+  text('communicationStyle', ROLE_LIMITS.communicationStyle);
+  list('traits', ROLE_LIMITS.traits.max, ROLE_LIMITS.traits.item);
+  list('knowledgeAreas', ROLE_LIMITS.knowledgeAreas.max, ROLE_LIMITS.knowledgeAreas.item);
+  list('prohibitedTopics', ROLE_LIMITS.prohibitedTopics.max, ROLE_LIMITS.prohibitedTopics.item);
+  return Object.keys(role).length > 0 ? role : undefined;
 }
 
 export type ToolAccess = 'read' | 'write';
@@ -196,11 +205,11 @@ export interface ConsumerDefinition {
    */
   response_policy?: ResponsePolicy;
   /**
-   * Per-agent role policy (Role node — D-N2 option A: structured persona).
-   * Optional: absent = no persona configured (valid); the console writes
-   * only non-blank members and omits the object when nothing is set.
+   * Per-agent role (Role section — D-N2: six modal fields). Optional:
+   * absent = no persona configured (valid); the console writes only
+   * non-blank fields and omits the object when nothing is set.
    */
-  role_policy?: RolePolicy;
+  role?: Role;
   /** Consumer-only: never on the wire (template/consumer extension). */
   max_context_tokens: number;
   tools: ConsumerTool[];
@@ -253,18 +262,18 @@ export interface EnginePayload {
     // strict responsePolicySchema 400s them here).
   };
   /**
-   * role_policy is written through only when at least one member is set
-   * (absent = no persona configured — valid). Every member is optional on
-   * input; blank strings and empty lists never ship. Sections outside Role
-   * never fabricate it.
+   * role is written through only when at least one field is set (absent =
+   * no persona configured — valid). Every field is optional on input;
+   * each is a { mode, content } block and blank fields never ship.
+   * Sections outside Role never fabricate it.
    */
-  role_policy?: {
-    role?: string;
-    goal?: string;
-    traits?: string[];
-    communication_style?: string;
-    knowledge_areas?: string[];
-    prohibited_topics?: string[];
+  role?: {
+    role?: RoleFieldBlock;
+    goal?: RoleFieldBlock;
+    traits?: RoleFieldBlock;
+    communicationStyle?: RoleFieldBlock;
+    knowledgeAreas?: RoleFieldBlock;
+    prohibitedTopics?: RoleFieldBlock;
   };
   tool_policy: { tools: Array<{ name: string; access: string; approval: string; schema_hash?: string; execution_mode?: string }> };
   knowledge_policy?: { retrieval_enabled: boolean; max_results: number };
@@ -399,22 +408,28 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
           },
         }
       : {}),
-    // Role node (D-N2 option A): written only when at least one member is
-    // set (absent = no persona configured — valid, the engine composes
-    // nothing). Blank strings and empty lists never ship; the section owns
-    // this key and no other section fabricates it.
+    // Role section (D-N2): written only when at least one field is set
+    // (absent = no persona configured — valid, the engine composes
+    // nothing). Blank fields never ship; the section owns this key and no
+    // other section fabricates it.
     ...(() => {
-      const rp = def.role_policy;
-      if (!rp) return {};
-      const members: NonNullable<EnginePayload['role_policy']> = {
-        ...(rp.role?.trim() ? { role: rp.role.trim() } : {}),
-        ...(rp.goal?.trim() ? { goal: rp.goal.trim() } : {}),
-        ...(rp.traits?.length ? { traits: [...rp.traits] } : {}),
-        ...(rp.communication_style?.trim() ? { communication_style: rp.communication_style.trim() } : {}),
-        ...(rp.knowledge_areas?.length ? { knowledge_areas: [...rp.knowledge_areas] } : {}),
-        ...(rp.prohibited_topics?.length ? { prohibited_topics: [...rp.prohibited_topics] } : {}),
-      };
-      return Object.keys(members).length > 0 ? { role_policy: members } : {};
+      const r = def.role;
+      if (!r) return {};
+      const fields: NonNullable<EnginePayload['role']> = {};
+      for (const key of [
+        'role',
+        'goal',
+        'traits',
+        'communicationStyle',
+        'knowledgeAreas',
+        'prohibitedTopics',
+      ] as const) {
+        const block = r[key];
+        if (block && block.content.trim() !== '') {
+          fields[key] = { ...(block.mode ? { mode: block.mode } : {}), content: block.content };
+        }
+      }
+      return Object.keys(fields).length > 0 ? { role: fields } : {};
     })(),
     tool_policy: { tools },
     // Explicit toggle, never silent fallback: the engine defaults OFF, and
@@ -587,8 +602,8 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
   const responsePolicyRaw = obj(pick(r.response_policy, r.responsePolicy));
   const responsePolicy = parseResponsePolicy(responsePolicyRaw);
 
-  // Role (D-N2 option A): garbage resolves to absent (no persona), never a guess.
-  const rolePolicy = parseRolePolicy(pick(r.role_policy, r.rolePolicy));
+  // Role (D-N2): garbage resolves to absent (no persona), never a guess.
+  const role = parseRole(r.role);
 
   // All 5 engine scopes round-trip (C08: `user` is the default and is offered,
   // never omitted). Unknown strings resolve the engine default, never a guess.
@@ -622,7 +637,7 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     // Garbage resolves to absent (engine defaults render), never a guess.
     ...(responsePolicy !== undefined ? { response_policy: responsePolicy } : {}),
     // Garbage resolves to absent (no persona configured), never a guess.
-    ...(rolePolicy !== undefined ? { role_policy: rolePolicy } : {}),
+    ...(role !== undefined ? { role } : {}),
     max_context_tokens: numOr(pick(r.max_context_tokens, r.maxContextTokens), base.max_context_tokens),
     tools,
     knowledge_policy: {

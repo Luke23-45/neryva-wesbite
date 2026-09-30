@@ -76,7 +76,7 @@ describe('blankInstructionsV1', () => {
   it('builds a blank schemaVersion-1 document', () => {
     const doc = blankInstructionsV1();
     expect(doc.schemaVersion).toBe(1);
-    for (const kind of ['role', 'objective', 'output', 'refusal'] as const) {
+    for (const kind of ['objective', 'output', 'refusal'] as const) {
       expect(doc[kind]).toEqual({ mode: 'markdown', content: '' });
     }
     expect(doc.rules).toEqual([]);
@@ -89,10 +89,10 @@ describe('ensureSingletonsV1', () => {
   it('fills a missing singleton without touching existing content', () => {
     const doc = blankInstructionsV1();
     doc.objective = undefined;
-    doc.role = { mode: 'raw', content: 'Concierge.' };
+    doc.output = { mode: 'raw', content: 'Verdict first.' };
     const fixed = ensureSingletonsV1(doc);
     expect(fixed.objective).toEqual({ mode: 'markdown', content: '' });
-    expect(fixed.role).toEqual({ mode: 'raw', content: 'Concierge.' });
+    expect(fixed.output).toEqual({ mode: 'raw', content: 'Verdict first.' });
   });
 
   it('defaults missing repeatable lists to []', () => {
@@ -101,7 +101,7 @@ describe('ensureSingletonsV1', () => {
     expect(fixed.rules).toEqual([]);
     expect(fixed.examples).toEqual([]);
     expect(fixed.custom).toEqual([]);
-    expect(fixed.role).toEqual({ mode: 'markdown', content: '' });
+    expect(fixed.objective).toEqual({ mode: 'markdown', content: '' });
   });
 });
 
@@ -114,7 +114,7 @@ describe('isEmptyDocumentV1 / countNonEmptyBlocks', () => {
 
   it('treats whitespace-only content as blank', () => {
     const doc = blankInstructionsV1();
-    doc.role = { mode: 'markdown', content: '   \n\t ' };
+    doc.objective = { mode: 'markdown', content: '   \n\t ' };
     doc.rules = [rule('  ')];
     expect(isEmptyDocumentV1(doc)).toBe(true);
     expect(countNonEmptyBlocks(doc)).toBe(0);
@@ -129,7 +129,7 @@ describe('isEmptyDocumentV1 / countNonEmptyBlocks', () => {
 
   it('counts singletons and repeatable blocks together', () => {
     const doc = blankInstructionsV1();
-    doc.role = { mode: 'markdown', content: 'Concierge.' };
+    doc.objective = { mode: 'markdown', content: 'Concierge.' };
     doc.rules = [rule('Be kind.')];
     doc.custom = [{ id: generateBlockId(), mode: 'raw', content: 'x' }];
     expect(countNonEmptyBlocks(doc)).toBe(3);
@@ -153,13 +153,13 @@ describe('jsonBlockError', () => {
 
 describe('normalizeDocumentForSave', () => {
   it('pins schemaVersion 1 and defaults missing lists', () => {
-    const raw = { schemaVersion: 99, role: { mode: 'raw', content: 'x' } } as unknown as InstructionsV1;
+    const raw = { schemaVersion: 99, objective: { mode: 'raw', content: 'x' } } as unknown as InstructionsV1;
     const clean = normalizeDocumentForSave(raw);
     expect(clean.schemaVersion).toBe(1);
     expect(clean.rules).toEqual([]);
     expect(clean.examples).toEqual([]);
     expect(clean.custom).toEqual([]);
-    expect(clean.role).toEqual({ mode: 'raw', content: 'x' });
+    expect(clean.objective).toEqual({ mode: 'raw', content: 'x' });
   });
 
   it('strips unknown top-level keys', () => {
@@ -168,7 +168,7 @@ describe('normalizeDocumentForSave', () => {
     expect(clean).not.toHaveProperty('bogus');
     expect(clean).not.toHaveProperty('nested');
     expect(Object.keys(clean).sort()).toEqual(
-      ['custom', 'examples', 'objective', 'output', 'refusal', 'role', 'rules', 'schemaVersion'].sort(),
+      ['custom', 'examples', 'objective', 'output', 'refusal', 'rules', 'schemaVersion'].sort(),
     );
   });
 
@@ -199,16 +199,16 @@ describe('normalizeDocumentForSave', () => {
 
   it('repairs an invalid mode instead of passing it through', () => {
     const doc = blankInstructionsV1();
-    doc.role = { mode: 'yaml', content: 'x' } as unknown as { mode: 'markdown'; content: string };
+    doc.output = { mode: 'yaml', content: 'x' } as unknown as { mode: 'markdown'; content: string };
     const clean = normalizeDocumentForSave(doc);
-    expect(clean.role?.mode).toBe('markdown');
+    expect(clean.output?.mode).toBe('markdown');
   });
 });
 
 describe('clientSaveBlockers', () => {
   it('returns [] for a clean document', () => {
     const doc = blankInstructionsV1();
-    doc.role = { mode: 'markdown', content: 'Concierge.' };
+    doc.objective = { mode: 'markdown', content: 'Concierge.' };
     doc.rules = [rule('Be kind.')];
     doc.examples = [{ id: generateBlockId(), mode: 'json', content: '{"in":"hi","out":"hello"}', title: 'Greeting' }];
     expect(clientSaveBlockers(doc)).toEqual([]);

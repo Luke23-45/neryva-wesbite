@@ -13,7 +13,7 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
  * would be a Law VII violation):
  *   instructions → instructions
  *   brand → brand
- *   role_policy → role
+ *   role → role
  *   model_policy → model
  *   model_params.reasoning_effort → brain (the Brain section owns the
  *     reasoning profile); every other model_params member → model
@@ -107,7 +107,7 @@ export function diffChangedSections(
 
   wholeKey('instructions', 'instructions');
   wholeKey('brand', 'brand');
-  wholeKey('role_policy', 'role');
+  wholeKey('role', 'role');
   wholeKey('model_policy', 'model');
   wholeKey('knowledge_policy', 'knowledge');
   wholeKey('guardrails', 'guardrails');

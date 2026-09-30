@@ -849,15 +849,13 @@ export function InstructionsSection({
                       aria-label={BLOCK_LABELS[kind]}
                       value={block.content}
                       onChange={(event) => patchSingleton(kind, { content: event.target.value })}
-                      rows={kind === 'role' ? 3 : 2}
+                      rows={2}
                       placeholder={
-                        kind === 'role'
-                          ? 'You are…'
-                          : kind === 'output'
-                            ? 'Verdict + section cite · max 3 exchanges'
-                            : kind === 'refusal'
-                              ? 'Over $500 or off-policy → escalate to a human'
-                              : 'One breath.'
+                        kind === 'output'
+                          ? 'Verdict + section cite · max 3 exchanges'
+                          : kind === 'refusal'
+                            ? 'Over $500 or off-policy → escalate to a human'
+                            : 'One breath.'
                       }
                     />
                   )}

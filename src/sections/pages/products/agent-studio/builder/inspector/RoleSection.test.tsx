@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -24,9 +24,9 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   };
 });
 
-function definitionWith(role: AgentDefinition['role_policy']): AgentDefinition {
+function definitionWith(role: AgentDefinition['role']): AgentDefinition {
   const def = defaultConsumer();
-  return { ...def, role_policy: role };
+  return { ...def, role };
 }
 
 function shell(props?: Partial<React.ComponentProps<typeof RoleSection>>) {
@@ -65,30 +65,39 @@ async function flushAutosave() {
   });
 }
 
+/** Click a mode tab inside the field's format selector. */
+function setMode(fieldLabel: string, mode: 'Raw' | 'Markdown' | 'JSON') {
+  const group = screen.getByRole('tablist', { name: `${fieldLabel} format` });
+  fireEvent.click(within(group).getByRole('tab', { name: mode }));
+}
+
 describe('RoleSection', () => {
   it('renders all six optional fields with honest empty state — no invented persona', () => {
     shell();
     expect(screen.getByLabelText('Role')).toHaveValue('');
     expect(screen.getByLabelText('Goal')).toHaveValue('');
     expect(screen.getByLabelText('Communication style')).toHaveValue('');
+    // Lists default to JSON mode → tag editors.
     expect(screen.getByLabelText('Add trait')).toBeInTheDocument();
     expect(screen.getByLabelText('Add knowledge area')).toBeInTheDocument();
-    expect(screen.getByLabelText('Add prohibited topic')).toBeInTheDocument();
+    expect(screen.getByLabelText('Add avoided topic')).toBeInTheDocument();
     expect(screen.getByText('0/10')).toBeInTheDocument();
     expect(screen.getAllByText('0/20')).toHaveLength(2);
+    // Every field carries a Raw/Markdown/JSON selector.
+    expect(screen.getAllByRole('tablist', { name: / format$/ })).toHaveLength(6);
     // No fake persona, no preview panel.
     expect(screen.queryByText(/persona/i, { selector: 'h2' })).toBeNull();
   });
 
-  it('loads a stored persona into the fields', () => {
+  it('loads a stored modal role into the fields', () => {
     shell({
       definition: definitionWith({
-        role: 'Senior support engineer',
-        goal: 'Resolve tickets in one touch.',
-        traits: ['calm', 'precise'],
-        communication_style: 'Short paragraphs.',
-        knowledge_areas: ['billing'],
-        prohibited_topics: ['politics'],
+        role: { mode: 'raw', content: 'Senior support engineer' },
+        goal: { content: 'Resolve tickets in one touch.' },
+        traits: { content: '["calm", "precise"]' },
+        communicationStyle: { mode: 'markdown', content: 'Short paragraphs.' },
+        knowledgeAreas: { content: '["billing"]' },
+        prohibitedTopics: { content: '["politics"]' },
       }),
     });
     expect(screen.getByLabelText('Role')).toHaveValue('Senior support engineer');
@@ -98,6 +107,12 @@ describe('RoleSection', () => {
     expect(screen.getByText('precise')).toBeInTheDocument();
     expect(screen.getByText('billing')).toBeInTheDocument();
     expect(screen.getByText('politics')).toBeInTheDocument();
+    // Stored modes are honored.
+    expect(
+      within(screen.getByRole('tablist', { name: 'Communication style format' })).getByRole('tab', {
+        name: 'Markdown',
+      }),
+    ).toHaveAttribute('aria-selected', 'true');
   });
 
   it('autosaves an edited role through the draft-version hook', async () => {
@@ -108,7 +123,7 @@ describe('RoleSection', () => {
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    expect(sent.definition.role_policy).toEqual({ role: 'Support concierge' });
+    expect(sent.definition.role).toEqual({ role: { mode: 'raw', content: 'Support concierge' } });
   });
 
   it('adds tags with Enter, removes them with the chip button, never duplicates', async () => {
@@ -136,7 +151,7 @@ describe('RoleSection', () => {
 
   it('enforces the tag count cap and trims before storing', async () => {
     shell();
-    const input = screen.getByLabelText('Add prohibited topic');
+    const input = screen.getByLabelText('Add avoided topic');
     for (let i = 0; i < 20; i += 1) {
       await act(async () => {
         fireEvent.change(input, { target: { value: `topic ${i}` } });
@@ -153,7 +168,7 @@ describe('RoleSection', () => {
     expect(screen.getByText('topic 0')).toBeInTheDocument();
   });
 
-  it('holds the autosave when a member exceeds its cap', async () => {
+  it('holds the autosave when a field exceeds its cap', async () => {
     shell();
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'x'.repeat(201) } });
@@ -163,9 +178,71 @@ describe('RoleSection', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('at most 200 characters');
   });
 
-  it('clearing every field removes role_policy instead of persisting an empty object', async () => {
+  it('holds the autosave when a field is invalid in its selected mode', async () => {
+    shell();
+    await act(async () => {
+      setMode('Role', 'JSON');
+      fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'not json' } });
+    });
+    await flushAutosave();
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('not valid in its selected mode');
+    // Fixing the JSON releases the hold.
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Role'), { target: { value: '"Support concierge"' } });
+    });
+    await flushAutosave();
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.role).toEqual({ role: { mode: 'json', content: '"Support concierge"' } });
+  });
+
+  it('edits list fields as one-per-line text in Raw mode', async () => {
+    shell();
+    await act(async () => {
+      setMode('Traits', 'Raw');
+    });
+    const area = screen.getByLabelText('Traits');
+    expect(area.tagName).toBe('TEXTAREA');
+    await act(async () => {
+      fireEvent.change(area, { target: { value: 'calm\nprecise' } });
+    });
+    await flushAutosave();
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.role).toEqual({ traits: { mode: 'raw', content: 'calm\nprecise' } });
+  });
+
+  it('surfaces malformed JSON in a list field instead of silently overwriting it', async () => {
     shell({
-      definition: definitionWith({ role: 'Support concierge', traits: ['calm'] }),
+      definition: definitionWith({
+        traits: { mode: 'json', content: '["calm", oops]' },
+      }),
+    });
+    // The tag editor is replaced by a raw textarea showing the stored text.
+    // (The autosave-hold alert also renders — both are role="alert".)
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts.some((a) => a.textContent?.includes('does not parse as a JSON list'))).toBe(true);
+    const area = screen.getByLabelText('Traits');
+    expect(area.tagName).toBe('TEXTAREA');
+    expect(area).toHaveValue('["calm", oops]');
+    // Fixing the JSON brings the tag editor back with the parsed values.
+    await act(async () => {
+      fireEvent.change(area, { target: { value: '["calm", "precise"]' } });
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('calm')).toBeInTheDocument();
+    expect(screen.getByText('precise')).toBeInTheDocument();
+    await flushAutosave();
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearing every field removes role instead of persisting an empty object', async () => {
+    shell({
+      definition: definitionWith({
+        role: { content: 'Support concierge' },
+        traits: { content: '["calm"]' },
+      }),
     });
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Role'), { target: { value: '' } });
@@ -174,7 +251,7 @@ describe('RoleSection', () => {
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    expect(sent.definition.role_policy).toBeUndefined();
+    expect(sent.definition.role).toBeUndefined();
   });
 
   it('Escape blurs the focused field instead of stranding input', async () => {
@@ -193,10 +270,15 @@ describe('RoleSection', () => {
     unmount();
     shell({
       canAuthor: false,
-      definition: definitionWith({ role: 'Support concierge', traits: ['calm'] }),
+      definition: definitionWith({
+        role: { mode: 'json', content: '"Support concierge"' },
+        traits: { mode: 'raw', content: 'calm\nprecise' },
+      }),
     });
+    // Parsed values render regardless of the stored mode.
     expect(screen.getByText('Support concierge')).toBeInTheDocument();
     expect(screen.getByText('calm')).toBeInTheDocument();
+    expect(screen.getByText('precise')).toBeInTheDocument();
     expect(screen.queryByLabelText('Role')).not.toBeInTheDocument();
   });
 

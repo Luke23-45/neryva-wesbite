@@ -104,62 +104,70 @@ describe('checkDefinitionCaps', () => {
     partial.response_policy = { output_format: 'plain' };
     expect(checkDefinitionCaps(partial).some((i) => i.path.startsWith('response_policy'))).toBe(false);
   });
-  it('accepts an absent role_policy and rejects out-of-contract persona values', () => {
+  it('accepts an absent role and rejects out-of-contract field values', () => {
     // Absent = no persona (valid): no issues.
     const absent = shippable();
-    expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('role_policy'))).toBe(false);
-    // A full valid persona holds no autosave.
+    expect(checkDefinitionCaps(absent).some((i) => i.path.startsWith('role.'))).toBe(false);
+    // A full valid role holds no autosave.
     const full = shippable();
-    full.role_policy = {
-      role: 'Senior support engineer',
-      goal: 'Resolve tickets in one touch.',
-      traits: ['calm', 'precise'],
-      communication_style: 'Short paragraphs.',
-      knowledge_areas: ['billing'],
-      prohibited_topics: ['politics'],
+    full.role = {
+      role: { content: 'Senior support engineer' },
+      goal: { content: 'Resolve tickets in one touch.' },
+      traits: { content: '["calm", "precise"]' },
+      communicationStyle: { content: 'Short paragraphs.' },
+      knowledgeAreas: { content: '["billing"]' },
+      prohibitedTopics: { content: '["politics"]' },
     };
-    expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+    expect(checkDefinitionCaps(full).some((i) => i.path.startsWith('role.'))).toBe(false);
     // A valid partial holds no autosave.
     const partial = shippable();
-    partial.role_policy = { role: 'Concierge' };
-    expect(checkDefinitionCaps(partial).some((i) => i.path.startsWith('role_policy'))).toBe(false);
-    // Over-limit text members and lists hold the save.
+    partial.role = { role: { content: 'Concierge' } };
+    expect(checkDefinitionCaps(partial).some((i) => i.path.startsWith('role.'))).toBe(false);
+    // Over-limit PARSED values hold the save (caps apply to parsed values,
+    // not raw mode text — mode is not content).
     const bad = shippable();
-    bad.role_policy = {
-      role: 'x'.repeat(201),
-      goal: 'y'.repeat(501),
-      communication_style: 'z'.repeat(501),
-      traits: new Array(11).fill('trait'),
-      knowledge_areas: ['x'.repeat(81)],
-      prohibited_topics: new Array(21).fill('topic'),
+    bad.role = {
+      role: { content: 'x'.repeat(201) },
+      goal: { content: 'y'.repeat(501) },
+      communicationStyle: { content: 'z'.repeat(501) },
+      traits: { content: JSON.stringify(new Array(11).fill('trait')) },
+      knowledgeAreas: { content: JSON.stringify(['x'.repeat(81)]) },
+      prohibitedTopics: { content: JSON.stringify(new Array(21).fill('topic')) },
     };
-    const issues = checkDefinitionCaps(bad).filter((i) => i.path.startsWith('role_policy'));
+    const issues = checkDefinitionCaps(bad).filter((i) => i.path.startsWith('role.'));
     expect(issues.map((i) => i.path).sort()).toEqual([
-      'role_policy.communication_style',
-      'role_policy.goal',
-      'role_policy.knowledge_areas',
-      'role_policy.prohibited_topics',
-      'role_policy.role',
-      'role_policy.traits',
+      'role.communicationStyle',
+      'role.goal',
+      'role.knowledgeAreas',
+      'role.prohibitedTopics',
+      'role.role',
+      'role.traits',
     ]);
-    // Non-string members are invalid too.
-    const wrongType = shippable();
-    wrongType.role_policy = { role: 42, traits: 'calm' } as never;
-    const typeIssues = checkDefinitionCaps(wrongType).filter((i) => i.path.startsWith('role_policy'));
-    expect(typeIssues.map((i) => i.path).sort()).toEqual(['role_policy.role', 'role_policy.traits']);
+    // Unparseable-in-mode fields are invalid too.
+    const badMode = shippable();
+    badMode.role = {
+      role: { mode: 'json', content: 'Concierge' },
+      traits: { content: 'calm' },
+    };
+    const modeIssues = checkDefinitionCaps(badMode).filter((i) => i.path.startsWith('role.'));
+    expect(modeIssues.map((i) => i.path).sort()).toEqual(['role.role', 'role.traits']);
+    expect(modeIssues.every((i) => i.message.endsWith('not valid in its selected mode.'))).toBe(true);
   });
-  it('rejects empty role list members like the engine min(1) does (19-28)', () => {
-    // The UI can't produce empties, but a hand-crafted "" must not slip past
-    // the caps layer — the engine 400s on it.
-    const empty = shippable();
-    empty.role_policy = { traits: ['calm', ''], knowledge_areas: ['billing'], prohibited_topics: [''] };
-    const issues = checkDefinitionCaps(empty).filter((i) => i.path.startsWith('role_policy'));
-    expect(issues.map((i) => i.path).sort()).toEqual(['role_policy.prohibited_topics', 'role_policy.traits']);
-    expect(issues.every((i) => i.message.endsWith('items must not be empty.'))).toBe(true);
-    // Non-empty members hold no autosave.
+  it('drops blank list entries at parse — they never hold the save', () => {
+    // Blank entries are filtered when the block parses (engine parity), so
+    // a hand-crafted "" inside a JSON list resolves to a shorter list,
+    // never a caps issue.
+    const blanky = shippable();
+    blanky.role = {
+      traits: { content: '["calm", ""]' },
+      knowledgeAreas: { content: '["billing"]' },
+      prohibitedTopics: { content: '[""]' },
+    };
+    expect(checkDefinitionCaps(blanky).some((i) => i.path.startsWith('role.'))).toBe(false);
+    // Non-empty fields hold no autosave.
     const ok = shippable();
-    ok.role_policy = { traits: ['calm', 'precise'], prohibited_topics: ['politics'] };
-    expect(checkDefinitionCaps(ok).some((i) => i.path.startsWith('role_policy'))).toBe(false);
+    ok.role = { traits: { content: '["calm", "precise"]' }, prohibitedTopics: { content: '["politics"]' } };
+    expect(checkDefinitionCaps(ok).some((i) => i.path.startsWith('role.'))).toBe(false);
   });
   it('bounds budgets per the engine caps', () => {
     const tokens = shippable();
@@ -246,8 +254,8 @@ describe('sectionOf (caps issues → editor sections)', () => {
     expect(sectionOf('context_policy.history_limit')).toBe('context');
     expect(sectionOf('response_policy.output_format')).toBe('response');
     expect(sectionOf('response_policy')).toBe('response');
-    expect(sectionOf('role_policy.traits')).toBe('role');
-    expect(sectionOf('role_policy')).toBe('role');
+    expect(sectionOf('role.traits')).toBe('role');
+    expect(sectionOf('role')).toBe('role');
     expect(sectionOf('tools[0].name')).toBe('tools');
     expect(sectionOf('knowledge_policy.max_results')).toBe('retrieval');
     expect(sectionOf('budget.max_total_tokens')).toBe('budget');

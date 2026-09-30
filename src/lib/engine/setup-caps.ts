@@ -13,6 +13,11 @@
  */
 import type { ConsumerDefinition } from './agent-payload';
 import { ROLE_LIMITS } from './agent-payload';
+import {
+  parseRoleListField,
+  parseRoleTextField,
+  type RoleFieldBlock,
+} from './role-fields';
 
 export interface CapIssue {
   /** Dotted field path (e.g. `model_policy.allowed_models`, `budget.max_total_tokens`). */
@@ -198,54 +203,61 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
     issues.push({ path: 'model_params.top_p', message: 'Top-p must be above 0 and at most 1.' });
   }
 
-  // Role node (D-N2 option A — structured persona): absent = no persona (no
-  // issue). Present = every member that IS present must be in contract.
-  // Bounds mirror the engine's rolePolicySchema (ROLE_LIMITS).
-  const rp = def.role_policy;
-  if (rp !== undefined) {
-    if (rp.role !== undefined && (typeof rp.role !== 'string' || rp.role.length > ROLE_LIMITS.role)) {
-      issues.push({ path: 'role_policy.role', message: `Role is at most ${ROLE_LIMITS.role} characters.` });
-    }
-    if (rp.goal !== undefined && (typeof rp.goal !== 'string' || rp.goal.length > ROLE_LIMITS.goal)) {
-      issues.push({ path: 'role_policy.goal', message: `Goal is at most ${ROLE_LIMITS.goal} characters.` });
-    }
-    if (
-      rp.communication_style !== undefined &&
-      (typeof rp.communication_style !== 'string' || rp.communication_style.length > ROLE_LIMITS.communication_style)
-    ) {
-      issues.push({
-        path: 'role_policy.communication_style',
-        message: `Communication style is at most ${ROLE_LIMITS.communication_style} characters.`,
-      });
-    }
-    const lists: Array<{ value: string[] | undefined; path: string; max: number; item: number; label: string }> = [
-      { value: rp.traits, path: 'role_policy.traits', max: ROLE_LIMITS.traits.max, item: ROLE_LIMITS.traits.item, label: 'Traits' },
+  // Role section (D-N2 — six modal fields): absent = no persona (no
+  // issue). Present = every field that IS present must parse in its mode
+  // and stay within the parsed-value caps. Bounds mirror the engine's
+  // roleSchema (ROLE_LIMITS); mode is not content.
+  const r = def.role;
+  if (r !== undefined) {
+    const texts: Array<{ block: RoleFieldBlock | undefined; path: string; max: number; label: string }> = [
+      { block: r.role, path: 'role.role', max: ROLE_LIMITS.role, label: 'Role' },
+      { block: r.goal, path: 'role.goal', max: ROLE_LIMITS.goal, label: 'Goal' },
       {
-        value: rp.knowledge_areas,
-        path: 'role_policy.knowledge_areas',
-        max: ROLE_LIMITS.knowledge_areas.max,
-        item: ROLE_LIMITS.knowledge_areas.item,
+        block: r.communicationStyle,
+        path: 'role.communicationStyle',
+        max: ROLE_LIMITS.communicationStyle,
+        label: 'Communication style',
+      },
+    ];
+    for (const { block, path, max, label } of texts) {
+      if (block === undefined) continue;
+      const parsed = parseRoleTextField(block);
+      if (parsed === undefined) {
+        issues.push({ path, message: `${label}: not valid in its selected mode.` });
+        continue;
+      }
+      if (parsed.length > max) {
+        issues.push({ path, message: `${label} is at most ${max} characters.` });
+      }
+    }
+    const lists: Array<{ block: RoleFieldBlock | undefined; path: string; max: number; item: number; label: string }> = [
+      { block: r.traits, path: 'role.traits', max: ROLE_LIMITS.traits.max, item: ROLE_LIMITS.traits.item, label: 'Traits' },
+      {
+        block: r.knowledgeAreas,
+        path: 'role.knowledgeAreas',
+        max: ROLE_LIMITS.knowledgeAreas.max,
+        item: ROLE_LIMITS.knowledgeAreas.item,
         label: 'Knowledge areas',
       },
       {
-        value: rp.prohibited_topics,
-        path: 'role_policy.prohibited_topics',
-        max: ROLE_LIMITS.prohibited_topics.max,
-        item: ROLE_LIMITS.prohibited_topics.item,
-        label: 'Prohibited topics',
+        block: r.prohibitedTopics,
+        path: 'role.prohibitedTopics',
+        max: ROLE_LIMITS.prohibitedTopics.max,
+        item: ROLE_LIMITS.prohibitedTopics.item,
+        label: 'Avoid',
       },
     ];
-    for (const { value, path, max, item, label } of lists) {
-      if (value === undefined) continue;
-      if (!Array.isArray(value) || value.length > max || value.some((t) => typeof t !== 'string' || t.length > item)) {
-        issues.push({ path, message: `${label}: at most ${max} items of ${item} characters each.` });
+    for (const { block, path, max, item, label } of lists) {
+      if (block === undefined) continue;
+      const parsed = parseRoleListField(block);
+      if (parsed === undefined) {
+        issues.push({ path, message: `${label}: not valid in its selected mode.` });
         continue;
       }
-      // R-06: the engine's z.string().min(1) also rejects empty members — the
-      // UI can't produce them, but a hand-crafted "" must not slip past the
-      // caps layer either.
-      if (value.some((t) => t.length === 0)) {
-        issues.push({ path, message: `${label}: items must not be empty.` });
+      // The engine's per-item min(1) also rejects empty items — the UI
+      // can't produce them, but a hand-crafted block must not slip past.
+      if (parsed.length > max || parsed.some((t) => t.length === 0 || t.length > item)) {
+        issues.push({ path, message: `${label}: at most ${max} items of ${item} characters each.` });
       }
     }
   }
@@ -325,7 +337,7 @@ export function sectionOf(path: string): string {
       return 'context';
     case 'response_policy':
       return 'response';
-    case 'role_policy':
+    case 'role':
       return 'role';
     case 'tools':
       return 'tools';

@@ -194,7 +194,7 @@ describe('projector context/response (real sections)', () => {
   });
 });
 
-describe('projector role (real section, D-N2 option A)', () => {
+describe('projector role (real section, D-N2)', () => {
   it('stays untouched without persona content — no invented readiness', () => {
     const input = base();
     expect(statusOf(input, 'role')).toBe('untouched');
@@ -204,14 +204,14 @@ describe('projector role (real section, D-N2 option A)', () => {
 
   it('summarizes a stored persona without inventing values', () => {
     const def = defaultConsumer();
-    def.role_policy = { role: 'Senior support engineer', traits: ['calm', 'precise'], goal: 'One-touch resolution' };
+    def.role = { role: { content: 'Senior support engineer' }, traits: { content: '["calm", "precise"]' }, goal: { content: 'One-touch resolution' } };
     const input = base({ definition: def });
     expect(subtitleOf(input, 'role')).toBe('Senior support engineer · +2 more');
   });
 
   it('renders Not configured when the policy is blank', () => {
     const def = defaultConsumer();
-    def.role_policy = { role: '  ', traits: [] };
+    def.role = { role: { content: '  ' }, traits: { content: '[]' } };
     expect(subtitleOf(base({ definition: def }), 'role')).toBe('Not configured');
     expect(statusOf(base({ definition: def }), 'role')).toBe('untouched');
   });

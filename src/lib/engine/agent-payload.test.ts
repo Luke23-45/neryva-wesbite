@@ -152,57 +152,59 @@ describe('fromEnginePayload', () => {
     });
   });
 
-  it('passes role_policy through only when set; blanks and garbage resolve to absent', () => {
+  it('passes role through only when set; blanks and garbage resolve to absent', () => {
     // Absent = no persona (valid): nothing on the wire.
     const bare = fromEnginePayload(REGISTRY_DEFINITION);
-    expect(bare.role_policy).toBeUndefined();
-    expect('role_policy' in toEnginePayload(bare)).toBe(false);
-    expect(defaultConsumer().role_policy).toBeUndefined();
+    expect(bare.role).toBeUndefined();
+    expect('role' in toEnginePayload(bare)).toBe(false);
+    expect(defaultConsumer().role).toBeUndefined();
 
-    // Full structured persona round-trips losslessly.
+    // Full modal role round-trips losslessly (blocks keep their mode).
     const full = {
-      role: 'Senior support engineer',
-      goal: 'Resolve tickets in one touch.',
-      traits: ['calm', 'precise'],
-      communication_style: 'Short paragraphs, plain language.',
-      knowledge_areas: ['billing', 'troubleshooting'],
-      prohibited_topics: ['politics'],
+      role: { mode: 'raw' as const, content: 'Senior support engineer' },
+      goal: { content: 'Resolve tickets in one touch.' },
+      traits: { content: '["calm", "precise"]' },
+      communicationStyle: { mode: 'markdown' as const, content: 'Short paragraphs.' },
+      knowledgeAreas: { content: '["billing", "troubleshooting"]' },
+      prohibitedTopics: { content: '["politics"]' },
     };
-    const shaped = fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: full });
-    expect(shaped.role_policy).toEqual(full);
-    expect(toEnginePayload(shaped).role_policy).toEqual(full);
-
-    // camelCase foreign payloads read through the same parser.
-    const camel = fromEnginePayload({ ...REGISTRY_DEFINITION, rolePolicy: full });
-    expect(camel.role_policy).toEqual(full);
+    const shaped = fromEnginePayload({ ...REGISTRY_DEFINITION, role: full });
+    expect(shaped.role).toEqual(full);
+    expect(toEnginePayload(shaped).role).toEqual(full);
 
     // Garbage resolves to absent, never a guess.
-    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: 'concierge' }).role_policy).toBeUndefined();
-    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: null }).role_policy).toBeUndefined();
-    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: {} }).role_policy).toBeUndefined();
+    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role: 'concierge' }).role).toBeUndefined();
+    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role: null }).role).toBeUndefined();
+    expect(fromEnginePayload({ ...REGISTRY_DEFINITION, role: {} }).role).toBeUndefined();
 
-    // Partial payloads parse as-is; members stay optional.
-    const partial = fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: { role: 'Concierge' } });
-    expect(partial.role_policy).toEqual({ role: 'Concierge' });
-    expect(toEnginePayload(partial).role_policy).toEqual({ role: 'Concierge' });
+    // Partial payloads parse as-is; fields stay optional.
+    const partial = fromEnginePayload({ ...REGISTRY_DEFINITION, role: { role: { content: 'Concierge' } } });
+    expect(partial.role).toEqual({ role: { content: 'Concierge' } });
+    expect(toEnginePayload(partial).role).toEqual({ role: { content: 'Concierge' } });
 
-    // Over-limit members drop; a list with any invalid member drops
-    // entirely (fail-closed — garbage resolves to absent, never a guess).
+    // Over-cap parsed values drop the field; unparseable-in-mode drops the
+    // field; the rest survives (fail-closed per field — garbage resolves
+    // to absent, never a guess).
     const oversized = fromEnginePayload({
       ...REGISTRY_DEFINITION,
-      role_policy: { role: 'x'.repeat(201), goal: 'valid goal', traits: ['ok', 'x'.repeat(61)] },
+      role: {
+        role: { content: 'x'.repeat(201) },
+        goal: { content: 'valid goal' },
+        traits: { content: JSON.stringify(['ok', 'x'.repeat(61)]) },
+        communicationStyle: { mode: 'json', content: 'not json' },
+      },
     });
-    expect(oversized.role_policy).toEqual({ goal: 'valid goal' });
+    expect(oversized.role).toEqual({ goal: { content: 'valid goal' } });
 
-    // Blank strings and empty lists never ship; clearing everything omits
-    // the key instead of persisting a meaningless empty object.
+    // Blank fields never ship; clearing everything omits the key instead
+    // of persisting a meaningless empty object.
     const blanky = fromEnginePayload({
       ...REGISTRY_DEFINITION,
-      role_policy: { role: '  ', traits: [], knowledge_areas: ['  '] },
+      role: { role: { content: '  ' }, traits: { content: '[]' }, knowledgeAreas: { content: '  ' } },
     });
-    expect(blanky.role_policy).toBeUndefined();
-    const cleared = { ...fromEnginePayload({ ...REGISTRY_DEFINITION, role_policy: full }), role_policy: { role: '' } };
-    expect('role_policy' in toEnginePayload(cleared)).toBe(false);
+    expect(blanky.role).toBeUndefined();
+    const cleared = { ...fromEnginePayload({ ...REGISTRY_DEFINITION, role: full }), role: { role: { content: '' } } };
+    expect('role' in toEnginePayload(cleared)).toBe(false);
   });
 
   it('round-trips guardrail execution_mode; absent or garbage resolves blocking', () => {

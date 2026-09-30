@@ -61,9 +61,8 @@ vi.mock('./BrandSamples', () => ({
 
 const DOC = {
   schemaVersion: 1,
-  role: { mode: 'markdown', content: 'Concierge.' },
-  objective: { mode: 'markdown', content: 'Help guests.' },
-  output: { mode: 'raw', content: '' },
+  objective: { mode: 'markdown', content: 'Concierge.' },
+  output: { mode: 'markdown', content: 'Help guests.' },
   refusal: { mode: 'raw', content: '' },
   rules: [{ id: 'ins_abcdef123456', mode: 'markdown', content: 'Be kind.' }],
   examples: [],
@@ -73,17 +72,17 @@ const DOC = {
 const GET_OK = {
   schema_version: 1,
   instructions: DOC,
-  compiled: { text: '## Role\nConcierge.', hash: 'h0' },
+  compiled: { text: '## Objective\nConcierge.', hash: 'h0' },
   hash: 'h1',
 };
 
 const PREVIEW_OK = {
-  text: '## Role\nConcierge.\n\n## Objective\nHelp guests.\n\n## Rules\n- Be kind.\n',
+  text: '## Objective\nConcierge.\n\n## Output\nHelp guests.\n\n## Rules\n- Be kind.\n',
   hash: 'ph1',
   compiler_version: '1.0.0',
   blocks: [
-    { kind: 'role', block_id: null, title: null, empty: false },
     { kind: 'objective', block_id: null, title: null, empty: false },
+    { kind: 'output', block_id: null, title: null, empty: false },
     { kind: 'rules', block_id: 'ins_abcdef123456', title: null, empty: false },
   ],
 };
@@ -91,7 +90,7 @@ const PREVIEW_OK = {
 const PUT_OK = { version_id: 'v1', hash: 'h2', compiled: { text: 'x', hash: 'ch2' } };
 
 const DEFINITION = {
-  instructions: '## Role\nConcierge.\n',
+  instructions: '## Objective\nConcierge.\n',
   name: 'Test agent',
 } as unknown as AgentDefinition;
 
@@ -199,7 +198,7 @@ describe('InstructionsSection structured composer', () => {
         (opts as { method?: string })?.method === 'POST' && String(path).endsWith('/preview'),
     );
     expect(previewCall).toBeTruthy();
-    expect((previewCall![1] as { body: { instructions: typeof DOC } }).body.instructions.role.content).toBe('Concierge.');
+    expect((previewCall![1] as { body: { instructions: typeof DOC } }).body.instructions.objective.content).toBe('Concierge.');
   });
 
   it('PUTs the structured document with If-Match after the autosave debounce', async () => {
@@ -213,7 +212,7 @@ describe('InstructionsSection structured composer', () => {
     const [path, opts] = puts[0] as [string, { headers?: Record<string, string>; body: { instructions: typeof DOC } }];
     expect(path).toBe('/console/org/org-test/assistants/agent-main/versions/v1/instructions');
     expect(opts.headers?.['If-Match']).toBe('h1');
-    expect(opts.body.instructions.role.content).toBe('Concierge!!');
+    expect(opts.body.instructions.objective.content).toBe('Concierge!!');
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(expect.stringMatching(/every save is a version/));
   });
 
@@ -254,9 +253,9 @@ describe('InstructionsSection structured composer', () => {
         </QueryClientProvider>
       </ThemeProvider>,
     );
-    await screen.findByPlaceholderText('You are…');
+    await screen.findByPlaceholderText('One breath.');
     withFakeTimers();
-    fireEvent.change(screen.getByPlaceholderText('You are…'), { target: { value: 'Hello.' } });
+    fireEvent.change(screen.getByPlaceholderText('One breath.'), { target: { value: 'Hello.' } });
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -266,7 +265,7 @@ describe('InstructionsSection structured composer', () => {
     const [path, opts] = puts[0] as [string, { headers?: Record<string, string>; body: { instructions: typeof DOC } }];
     expect(path).toBe('/console/org/org-test/assistants/agent-main/versions/v2/instructions');
     expect(opts.headers?.['If-Match']).toBe('h0');
-    expect(opts.body.instructions.role.content).toBe('Hello.');
+    expect(opts.body.instructions.objective.content).toBe('Hello.');
   });
 
   it('holds the save and states the reason on invalid JSON in the JSON tab', async () => {
@@ -310,9 +309,9 @@ describe('InstructionsSection structured composer', () => {
 
   it('switching a block to JSON mode with invalid JSON shows the inline warning and holds the save', async () => {
     await bootWithDoc();
-    const roleFormat = screen.getByLabelText('Role format');
-    fireEvent.click(within(roleFormat).getByText('JSON'));
-    // Inline warning in the Role block plus the red summary banner.
+    const objectiveFormat = screen.getByLabelText('Objective format');
+    fireEvent.click(within(objectiveFormat).getByText('JSON'));
+    // Inline warning in the Objective block plus the red summary banner.
     expect(screen.getAllByText(/Not valid JSON/).length).toBeGreaterThanOrEqual(1);
     await act(async () => {
       vi.advanceTimersByTime(9000);
@@ -321,7 +320,7 @@ describe('InstructionsSection structured composer', () => {
     // Wrapping as a JSON string clears the hold.
     fireEvent.click(screen.getByText('Wrap as JSON string'));
     expect(screen.queryByText(/Not valid JSON/)).toBeNull();
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: '"Concierge!!"' } });
+    fireEvent.change(screen.getByLabelText('Objective'), { target: { value: '"Concierge!!"' } });
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
