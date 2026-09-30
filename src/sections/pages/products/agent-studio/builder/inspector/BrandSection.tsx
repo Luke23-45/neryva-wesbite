@@ -108,7 +108,7 @@ function brandOrUndefined(state: BrandState): BrandVoice | undefined {
 function modeCaption(mode: RoleFieldMode): string {
   if (mode === 'markdown') return 'Markdown';
   if (mode === 'json') return 'JSON';
-  return 'Raw';
+  return 'Plain';
 }
 
 /**
@@ -216,7 +216,6 @@ export function BrandSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => undefined,
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -236,7 +235,6 @@ export function BrandSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => undefined,
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
