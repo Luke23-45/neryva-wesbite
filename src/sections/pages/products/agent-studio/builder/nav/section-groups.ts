@@ -45,7 +45,10 @@ export const SECTION_GROUPS: SectionGroupDef[] = [
   {
     id: 'intelligence',
     label: 'Intelligence',
-    sections: ['model', 'brain'],
+    // 'brain' soft-deleted from the UI (2026-09-30): the BrainSection
+    // implementation, styles, tests, and lib stay in the codebase for
+    // future use — it is only removed from navigation and the setup walk.
+    sections: ['model'],
   },
   {
     id: 'knowledge',

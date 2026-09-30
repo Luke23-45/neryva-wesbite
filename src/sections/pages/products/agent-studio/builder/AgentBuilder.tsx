@@ -56,7 +56,7 @@ export interface AgentBuilderProps {
   initialSlot?: string | null;
   /**
    * Guided setup flow (?setup=1, build mode only): after "Create agent" the
-   * bottom bar becomes a Back / Continue stepper walking the 18 sections
+   * bottom bar becomes a Back / Continue stepper walking the 17 sections
    * instead of stranding the maker on the Overview.
    */
   setupFlow?: boolean;
@@ -311,7 +311,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   );
 
   // Guided setup flow (?setup=1): the bottom bar becomes a Back / Continue
-  // stepper over the 18 sections. Continue always advances — each section
+  // stepper over the 17 sections. Continue always advances — each section
   // carries its own validation and the Ship publish-readiness is the real
   // gate at the end of the walkthrough. The Overview is not a step: from
   // there Continue restarts at the entry step.

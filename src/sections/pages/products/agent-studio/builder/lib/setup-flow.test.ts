@@ -11,9 +11,9 @@ import {
 } from './setup-flow';
 
 describe('setup-flow step order', () => {
-  it('walks the 18 sections in canonical nav order, without the overview', () => {
+  it('walks the 17 sections in canonical nav order, without the overview', () => {
     const order = getSetupOrder();
-    expect(order).toHaveLength(18);
+    expect(order).toHaveLength(17);
     expect(order[0]).toBe('purpose');
     expect(order[order.length - 1]).toBe('ship');
     expect(order).not.toContain('overview');
@@ -44,7 +44,7 @@ describe('setup-flow step order', () => {
 
   it('reports 0-based positions for the step counter', () => {
     expect(setupStepIndex('purpose')).toBe(0);
-    expect(setupStepIndex('ship')).toBe(17);
+    expect(setupStepIndex('ship')).toBe(16);
     expect(setupStepIndex('overview')).toBe(-1);
     expect(setupStepIndex(null)).toBe(-1);
   });

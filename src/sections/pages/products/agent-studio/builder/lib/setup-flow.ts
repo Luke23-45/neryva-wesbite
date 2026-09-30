@@ -3,7 +3,7 @@
  *
  * After "Create agent" succeeds, the builder continues in build mode with
  * ?setup=1: the bottom bar becomes a Back / Continue stepper that walks the
- * 18 sections in canonical nav order instead of stranding the maker on the
+ * 17 sections in canonical nav order instead of stranding the maker on the
  * Overview. All step math is pure (no React, no I/O) so the walkthrough
  * order is unit-pinnable; AgentBuilder owns rendering and navigation.
  */
