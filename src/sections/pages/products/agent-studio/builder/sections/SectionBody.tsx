@@ -26,7 +26,7 @@ import { LockedWrap } from '../inspector/BuilderInspector.styles';
 import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from '../inspector/TraceDrawer';
 import { sectionLabel, type SectionEntry } from '../nav/section-groups';
-import { SectionHead, SectionPane, SectionSub, SectionTitle, SectionWrap } from './SectionBody.styles';
+import { SectionActions, SectionPane, SectionWrap } from './SectionBody.styles';
 import { ActionButton } from '@components/common/ui/ActionButton';
 
 /**
@@ -111,7 +111,7 @@ export interface InspectorContext {
 
 interface SectionBodyProps {
   sectionId: string;
-  /** Projector entry for the header label + honest status line. */
+  /** Projector entry for the accessible section label. */
   entry?: SectionEntry;
   context: InspectorContext;
   /**
@@ -475,11 +475,12 @@ export function SectionBody({
   }
 
   const title = sectionLabel(sectionId, entry?.label ?? sectionId);
-  const statusLine = entry?.statusText?.trim() ? entry.statusText : null;
   // Per-section save: build mode, authors only, and only where a real save
   // exists behind the button. Identity saves through the PurposeInspector
   // handle (create in new mode is unreachable here — build-only button);
-  // the 11 draft sections fire the manual save signal.
+  // the 11 draft sections fire the manual save signal. The header is gone
+  // (the sidebar already says where the user is) — the button lives in a
+  // quiet utility row above the content, nothing else.
   const showSectionSave =
     context.mode === 'build' && context.canAuthor && SECTION_SAVE_IDS.has(sectionId);
   const handleSectionSave = () => {
@@ -492,17 +493,13 @@ export function SectionBody({
 
   return (
     <SectionWrap aria-label={`${title} section`}>
-      <SectionHead>
-        <div>
-          <SectionTitle>{title}</SectionTitle>
-          {statusLine ? <SectionSub>{statusLine}</SectionSub> : null}
-        </div>
-        {showSectionSave ? (
+      {showSectionSave ? (
+        <SectionActions>
           <ActionButton size="sm" variant="secondary" onClick={handleSectionSave} aria-label={`Save ${title}`}>
             Save {title}
           </ActionButton>
-        ) : null}
-      </SectionHead>
+        </SectionActions>
+      ) : null}
       <SectionPane>{body}</SectionPane>
     </SectionWrap>
   );

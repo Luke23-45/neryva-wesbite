@@ -3,9 +3,11 @@ import styled from 'styled-components';
 /**
  * SectionBody chrome (configure-first redesign).
  *
- * The main content pane: a quiet section header (real label + the
- * projector's honest status line) above the section's own real
- * implementation. No canvas chrome, no node meta lines.
+ * The main content pane: the section's own real implementation, starting
+ * immediately — no redundant header. The left sidebar already says where
+ * the user is, so a repeated title + status line is slop. The only chrome
+ * is a quiet utility row carrying the per-section Save button where a
+ * real save exists behind it.
  */
 
 export const SectionWrap = styled.div`
@@ -16,27 +18,15 @@ export const SectionWrap = styled.div`
   flex-direction: column;
 `;
 
-export const SectionHead = styled.div`
+/**
+ * Minimal utility row — not a header. No title, no status line, no border.
+ * Exists only to give the per-section Save button a quiet home; sections
+ * without a real save render nothing here and their content starts at once.
+ */
+export const SectionActions = styled.div`
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 28px 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
-`;
-
-export const SectionTitle = styled.h1`
-  margin: 0;
-  font-size: ${({ theme }) => theme.app.type.pageTitle};
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: ${({ theme }) => theme.app.text.primary};
-`;
-
-export const SectionSub = styled.p`
-  margin: 6px 0 0;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
+  justify-content: flex-end;
+  padding: 12px 28px 0;
 `;
 
 export const SectionPane = styled.div`

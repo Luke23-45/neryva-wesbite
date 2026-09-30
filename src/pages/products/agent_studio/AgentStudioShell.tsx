@@ -13,7 +13,6 @@ import { Outlet } from '@tanstack/react-router';
 import { StudioShell, type NavConfig } from '@/sections/pages/products/agent-studio/StudioShell';
 import { BuilderTopbarSlotsProvider } from '@/sections/pages/products/agent-studio/builder/topbar/BuilderTopbarSlots';
 import { SessionGate } from '@components/platform/SessionGate';
-import { EntitlementBanner } from '@components/platform/Entitlement';
 import { OrgSwitcher } from '@components/platform/OrgSwitcher';
 import { StepUpModal } from '@components/platform/StepUpModal';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
@@ -96,12 +95,7 @@ export default function AgentStudioShellPage() {
             searchPlaceholder={data.searchPlaceholder}
             recentChats={null}
             topbarOrg={<OrgSwitcher />}
-            banner={
-              <>
-                <StatusBanner />
-                <EntitlementBanner product="agent_studio" displayName="Agent Studio" />
-              </>
-            }
+            banner={<StatusBanner />}
           >
             <div style={{ padding: 24, maxWidth: 1120 }}>
               <Skeleton $h="28px" $w="260px" />
@@ -128,12 +122,7 @@ export default function AgentStudioShellPage() {
           searchPlaceholder={data.searchPlaceholder}
           recentChats={recentChats}
           topbarOrg={<OrgSwitcher />}
-          banner={
-            <>
-              <StatusBanner />
-              <EntitlementBanner product="agent_studio" displayName="Agent Studio" />
-            </>
-          }
+          banner={<StatusBanner />}
         >
           <Outlet />
         </StudioShell>

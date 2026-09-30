@@ -19,6 +19,7 @@ import {
   NextStepLabel,
   NextStepRow,
   NextStepsList,
+  NextStepsTitle,
 } from './BuilderInspector.styles';
 
 /** Minimal node datum the purpose extras need (the coordinator wires the projector's nodes). */
@@ -80,7 +81,7 @@ export function PurposeExtras({ assistantId, versionId, nodes, onSelectNode }: P
       )}
 
       <ExtrasSection aria-label="Next steps">
-        <CapsLabel>Next steps</CapsLabel>
+        <NextStepsTitle>Next steps</NextStepsTitle>
         <NextStepsList>
           {steps.length === 0 ? (
             <NextStepRow type="button" onClick={() => onSelectNode('ship')}>
