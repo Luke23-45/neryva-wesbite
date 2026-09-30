@@ -6,10 +6,12 @@ import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useMemories, useOrgMemoryPolicy } from '@hooks/studio/useSetupKnowledge';
 import {
   COMPACTION_COPY,
+  CONTEXT_TOKENS_DEFAULT,
   HISTORY_SERVED_MAX,
   SCRUB_COPY,
   USER_PREVIEW_COPY,
   describeTtl,
+  formatContextTokens,
   parseMemoryScope,
   type MemoryScope,
 } from '../lib/memory-model';
@@ -83,6 +85,11 @@ export function MemorySection({
 
   const engineScope = parseMemoryScope(definition.context_policy.memory_scope);
   const historyLimit = definition.context_policy.history_limit;
+  // Context-owned (D-N1): the token budget is set in the Context section and
+  // reported here read-only. Legacy drafts lack the key — the engine default
+  // renders, never a blank.
+  const tokensRaw = definition.context_policy.max_context_tokens;
+  const contextTokens = Number.isInteger(tokensRaw) ? (tokensRaw as number) : CONTEXT_TOKENS_DEFAULT;
 
   // A4-23: the preview shows exactly the library rows the pinned run-time
   // scope can serve. 'assistant' serves this agent's own assistant-scoped
@@ -119,6 +126,12 @@ export function MemorySection({
             <SwitchSub>
               {historyLimit} messages (runs serve ≤{HISTORY_SERVED_MAX}). {COMPACTION_COPY}
             </SwitchSub>
+          </SwitchText>
+        </SwitchRow>
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>Context length</SwitchTitle>
+            <SwitchSub>{formatContextTokens(contextTokens)} tokens per run</SwitchSub>
           </SwitchText>
         </SwitchRow>
       </FieldBlock>

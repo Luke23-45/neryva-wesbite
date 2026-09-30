@@ -52,6 +52,24 @@ describe('checkDefinitionCaps', () => {
     const atMax = shippable();
     atMax.context_policy.history_limit = 20;
     expect(checkDefinitionCaps(atMax).some((i) => i.path === 'context_policy.history_limit')).toBe(false);
+
+    // v1.15: the context token budget rides inside context_policy (int
+    // 1000–200000, default 32000).
+    const lowTokens = shippable();
+    lowTokens.context_policy.max_context_tokens = 999;
+    expect(checkDefinitionCaps(lowTokens).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(true);
+    const highTokens = shippable();
+    highTokens.context_policy.max_context_tokens = 200001;
+    expect(checkDefinitionCaps(highTokens).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(true);
+    const fractional = shippable();
+    fractional.context_policy.max_context_tokens = 32000.5;
+    expect(checkDefinitionCaps(fractional).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(true);
+    const atMinTokens = shippable();
+    atMinTokens.context_policy.max_context_tokens = 1000;
+    expect(checkDefinitionCaps(atMinTokens).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(false);
+    const atMaxTokens = shippable();
+    atMaxTokens.context_policy.max_context_tokens = 200000;
+    expect(checkDefinitionCaps(atMaxTokens).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(false);
     const tools = shippable();
     tools.tools = Array.from({ length: 51 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
     expect(checkDefinitionCaps(tools).some((i) => i.path === 'tools')).toBe(true);

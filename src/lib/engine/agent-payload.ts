@@ -17,10 +17,13 @@
  *   level (R-1 + G4: the DTOs admit them); BLANK instructions / guardrail
  *   policies are OMITTED (zod min(1) fails on ''); blank brand is omitted
  *   (absent = no voice block, never an empty one).
- * - max_context_tokens / retrieval_policy / memory_max_results /
- *   max_recursion_depth stay consumer-side ONLY — the
- *   engine 400s them as unknown keys (rejectUnknownPayloadKeys). Brand is
- *   FIRST-CLASS since G4 (persisted, hashed, composed into the served prompt).
+ * - max_context_tokens is wire-first-class since contract v1.15: it rides
+ *   INSIDE context_policy (engine int 1000–200000, default 32000). The old
+ *   top-level consumer-only key is gone.
+ * - retrieval_policy / memory_max_results / max_recursion_depth stay
+ *   consumer-side ONLY — the engine 400s them as unknown keys
+ *   (rejectUnknownPayloadKeys). Brand is FIRST-CLASS since G4 (persisted,
+ *   hashed, composed into the served prompt).
  * - budgets: cents→micros (×10_000), ms stay seconds on the wire.
  */
 
@@ -229,6 +232,14 @@ export interface ConsumerDefinition {
     summary_enabled: boolean;
     knowledge_sources: string[];
     memory_scope: ConsumerMemoryScope;
+    /**
+     * Context token budget (contract v1.15 — wire-first-class inside
+     * context_policy; engine int 1000–200000, default 32000). Optional on
+     * the consumer: absent (legacy drafts) = the engine default; the
+     * console's read path normalizes it to 32000, the wire passes it
+     * through verbatim (v1.14 retrieval-extension precedent).
+     */
+    max_context_tokens?: number;
   };
   /**
    * Per-agent response policy (Response node). Optional: absent = engine
@@ -241,8 +252,6 @@ export interface ConsumerDefinition {
    * non-blank fields and omits the object when nothing is set.
    */
   role?: Role;
-  /** Consumer-only: never on the wire (template/consumer extension). */
-  max_context_tokens: number;
   tools: ConsumerTool[];
   knowledge_policy: {
     retrieval_enabled: boolean;
@@ -302,7 +311,7 @@ export interface EnginePayload {
   model_params?: Record<string, unknown>;
   budget_policy?: Record<string, unknown>;
   model_policy: { allowed_models: string[]; fallback_enabled: boolean; pipeline?: ModelPipelineEntry[] };
-  context_policy: { history_limit: number; summary_enabled: boolean; knowledge_sources: string[]; memory_scope: string };
+  context_policy: { history_limit: number; summary_enabled: boolean; knowledge_sources: string[]; memory_scope: string; max_context_tokens?: number };
   /**
    * response_policy is written through only when the Response node set it
    * (absent = engine defaults). Every member is optional on input — the
@@ -360,8 +369,13 @@ export function defaultConsumer(): ConsumerDefinition {
     model_params: {},
     // Contract ceiling aligned to the runtime served-20: fresh drafts start
     // at the max the run will actually read.
-    context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: [], memory_scope: 'user' },
-    max_context_tokens: 32_000,
+    context_policy: {
+      history_limit: 20,
+      summary_enabled: true,
+      knowledge_sources: [],
+      memory_scope: 'user',
+      max_context_tokens: 32_000,
+    },
     tools: [],
     knowledge_policy: { retrieval_enabled: false, max_results: 5 },
     guardrails: { pii_redaction: true, input_policy: '', output_policy: '', execution_mode: 'blocking' },
@@ -507,6 +521,12 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
       summary_enabled: def.context_policy.summary_enabled,
       knowledge_sources: [...def.context_policy.knowledge_sources],
       memory_scope: memoryScope,
+      // v1.15 — wire-first-class inside context_policy (engine int
+      // 1000–200000, default 32000). Verbatim passthrough (the v1.14
+      // retrieval-extension precedent): absent drops from the JSON and the
+      // engine applies its default. The sections and the read path always
+      // carry an explicit value; undefined only arrives from legacy shapes.
+      max_context_tokens: def.context_policy.max_context_tokens,
     },
     // Response node: written only when the maker set it (absent = engine
     // defaults). The object may be partial (foreign payloads) — the wire
@@ -821,12 +841,15 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       summary_enabled: boolOr(context.summary_enabled, base.context_policy.summary_enabled),
       knowledge_sources: knowledgeSources,
       memory_scope: memoryScope,
+      // v1.15 — wire-first-class inside context_policy. Garbage resolves to
+      // the engine default (32000), never a guess; legacy rows without the
+      // key read the same default.
+      max_context_tokens: numOr(context.max_context_tokens, base.context_policy.max_context_tokens),
     },
     // Garbage resolves to absent (engine defaults render), never a guess.
     ...(responsePolicy !== undefined ? { response_policy: responsePolicy } : {}),
     // Garbage resolves to absent (no persona configured), never a guess.
     ...(role !== undefined ? { role } : {}),
-    max_context_tokens: numOr(pick(r.max_context_tokens, r.maxContextTokens), base.max_context_tokens),
     tools,
     knowledge_policy: {
       retrieval_enabled: boolOr(knowledge.retrieval_enabled, base.knowledge_policy.retrieval_enabled),

@@ -66,10 +66,10 @@ describe('diffChangedSections', () => {
     expect(diffChangedSections(draft, live)).toEqual([]);
   });
 
-  it('maps max_context_tokens to context', () => {
+  it('maps context_policy.max_context_tokens to context (v1.15: nested, not top-level)', () => {
     const live = defaultConsumer();
     const draft = withPatch((d) => {
-      d.max_context_tokens = (d.max_context_tokens ?? 0) + 1000;
+      d.context_policy.max_context_tokens = (d.context_policy.max_context_tokens ?? 32000) + 1000;
     });
     expect(diffChangedSections(draft, live)).toEqual(['context']);
   });

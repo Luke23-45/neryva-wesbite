@@ -68,7 +68,7 @@ describe('ContextSection', () => {
     const summary = screen.getByRole('group', { name: 'Conversation summary' });
     expect(summary.querySelectorAll('button')).toHaveLength(2);
     expect(screen.getByText(/No sources pinned — runs use the Knowledge library as configured/)).toBeTruthy();
-    expect(screen.getByText(/Pin sources in the Knowledge node/)).toBeTruthy();
+    expect(screen.getByText(/Read-only — pin sources in the Knowledge section/)).toBeTruthy();
   });
 
   it('steps history within 1–20 and clamps typed overflow', async () => {
@@ -109,11 +109,65 @@ describe('ContextSection', () => {
     expect(screen.queryByText(/No sources pinned/)).toBeNull();
   });
 
+  it('renders the context-length block: 5 preset pills, a custom input, and the budget report', () => {
+    shell();
+    const presets = screen.getByRole('group', { name: 'Context length presets' });
+    expect(presets.querySelectorAll('button')).toHaveLength(5);
+    expect(screen.getByText('8K')).toBeTruthy();
+    expect(screen.getByText('128K')).toBeTruthy();
+    expect(screen.getByLabelText('Custom context length in tokens')).toBeTruthy();
+    expect(screen.getByDisplayValue('32000')).toBeTruthy();
+    expect(screen.getByText(/The token budget for everything a run assembles/)).toBeTruthy();
+    expect(screen.getByText(/When content exceeds the budget/)).toBeTruthy();
+    expect(screen.getByText(/fails closed instead of guessing/)).toBeTruthy();
+  });
+
+  it('reads a legacy draft without the key as the 32000 engine default', () => {
+    const def = definitionWith({ memory_scope: 'user', history_limit: 20, summary_enabled: true });
+    delete (def.context_policy as Partial<typeof def.context_policy>).max_context_tokens;
+    shell({ definition: def });
+    expect(screen.getByDisplayValue('32000')).toBeTruthy();
+    const presets = screen.getByRole('group', { name: 'Context length presets' });
+    const active = Array.from(presets.querySelectorAll('button')).filter(
+      (b) => b.getAttribute('aria-pressed') === 'true',
+    );
+    expect(active).toHaveLength(1);
+    expect(active[0]?.textContent).toBe('32K');
+  });
+
+  it('selecting a preset autosaves it inside context_policy', async () => {
+    shell();
+    const presets = screen.getByRole('group', { name: 'Context length presets' });
+    await act(async () => {
+      fireEvent.click(screen.getByText('64K'));
+    });
+    expect(presets.querySelectorAll('button')[3]?.getAttribute('aria-pressed')).toBe('true');
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.context_policy.max_context_tokens).toBe(64000);
+  });
+
+  it('clamps a custom typed value to the 1000–200000 contract', async () => {
+    shell();
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Custom context length in tokens'), { target: { value: '500000' } });
+    });
+    expect(screen.getByDisplayValue('200000')).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Custom context length in tokens'), { target: { value: '500' } });
+    });
+    expect(screen.getByDisplayValue('1000')).toBeTruthy();
+  });
+
   it('renders read-only static rows with the role explanation for viewers', () => {
     shell({ canAuthor: false });
     expect(screen.getByText(/needs an owner, admin, or developer/)).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Context scope' })).toBeNull();
     expect(screen.queryByLabelText('History limit in messages')).toBeNull();
+    expect(screen.getByText(/tokens per run/)).toBeTruthy();
   });
 });
 

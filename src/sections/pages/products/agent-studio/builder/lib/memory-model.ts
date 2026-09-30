@@ -13,7 +13,10 @@
  * - runtime scope semantics FL-1.5
  *   (`engine/src/modules/conversations/mcp-authority.service.ts:2036-2144`);
  * - served-history clamp min(pinned,20) (:2066-2067);
- * - unconditional compaction (:2089-2107; `summary_enabled` read nowhere);
+ * - compaction gated on context_policy.summary_enabled (served on manifest
+ *   field 18 since contract v1.8; both runtime lanes consume it) — the old
+ *   "summary_enabled read nowhere / compaction unconditional" note was
+ *   retired 2026-10-01;
  * - org policy fail-open (`engine/src/modules/knowledge/memory.service.ts:60-133`).
  */
 
@@ -76,6 +79,37 @@ export const SERVED_20_COPY = 'Runs serve up to the 20 most recent messages.';
  *  Copy states the condition — never claims unconditional attachment. */
 export const COMPACTION_COPY =
   'When summaries are on, older turns arrive as a rolling summary outside the window.';
+
+// ─── Context length (token budget) ───────────────────────────────────────────
+// Contract v1.15: context_policy.max_context_tokens — wire-first-class inside
+// context_policy (engine int 1000–200000, default 32000). The runtime resolves
+// the pinned value into the compiler's token budget.
+
+/** Engine bounds for context_policy.max_context_tokens (validation.ts, v1.15). */
+export const CONTEXT_TOKENS_MIN = 1000;
+export const CONTEXT_TOKENS_MAX = 200_000;
+/** Engine default when the key is absent (legacy drafts). */
+export const CONTEXT_TOKENS_DEFAULT = 32_000;
+
+/** Preset pills offered by the Context section. */
+export const CONTEXT_TOKEN_PRESETS = [8_000, 16_000, 32_000, 64_000, 128_000] as const;
+
+/** Compact display: 32000 → "32K". */
+export function formatContextTokens(value: number): string {
+  if (!Number.isFinite(value)) return '—';
+  return value >= 1000 ? `${Math.round(value / 1000)}K` : `${value}`;
+}
+
+/** What the budget covers (compiler truth: mandatory system/policy/user
+ * content, then optional knowledge → memories → summaries → history). */
+export const CONTEXT_LENGTH_COPY =
+  'The token budget for everything a run assembles: instructions and policies, knowledge passages, memories, summaries, and recent history.';
+
+/** Honest budget report — truncation order, output reservation, fail-closed
+ * (from the context-compiler: knowledge → memories → summaries → history,
+ * oldest first; ~4,096 tokens reserved for the reply). */
+export const TOKEN_BUDGET_COPY =
+  'When content exceeds the budget, runs drop knowledge first, then memories, summaries, and the oldest history. About 4,096 tokens stay reserved for the reply. Instructions and policies are mandatory — if they cannot fit, the run fails closed instead of guessing.';
 
 /** Why the builder never previews user rows (actor resolves per run). */
 export const USER_PREVIEW_COPY =

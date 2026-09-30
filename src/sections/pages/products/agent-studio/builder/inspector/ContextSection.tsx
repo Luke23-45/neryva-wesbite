@@ -14,11 +14,18 @@ import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import {
   COMPACTION_COPY,
+  CONTEXT_LENGTH_COPY,
+  CONTEXT_TOKENS_DEFAULT,
+  CONTEXT_TOKENS_MAX,
+  CONTEXT_TOKENS_MIN,
+  CONTEXT_TOKEN_PRESETS,
   HISTORY_MIN,
   HISTORY_SERVED_MAX,
   MEMORY_SCOPE_ORDER,
   SCOPE_CONSEQUENCES,
   SERVED_20_COPY,
+  TOKEN_BUDGET_COPY,
+  formatContextTokens,
   fromConsumerScope,
   parseMemoryScope,
   toConsumerScope,
@@ -72,6 +79,7 @@ interface ContextPolicyState {
   memory_scope: ConsumerScope;
   history_limit: number;
   summary_enabled: boolean;
+  max_context_tokens: number;
 }
 
 function readPolicy(definition: AgentDefinition): ContextPolicyState {
@@ -81,10 +89,18 @@ function readPolicy(definition: AgentDefinition): ContextPolicyState {
   // clamps rather than renders an out-of-contract control.
   const parsed = Number.isInteger(history) ? (history as number) : HISTORY_SERVED_MAX;
   const clamped = Math.min(HISTORY_SERVED_MAX, Math.max(HISTORY_MIN, parsed));
+  // v1.15: the token budget rides inside context_policy (engine int
+  // 1000–200000, default 32000). Legacy drafts lack the key — the editor
+  // renders the engine default, never a blank control; out-of-contract
+  // values clamp like history.
+  const tokens = definition.context_policy.max_context_tokens;
+  const parsedTokens = Number.isInteger(tokens) ? (tokens as number) : CONTEXT_TOKENS_DEFAULT;
+  const clampedTokens = Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, parsedTokens));
   return {
     memory_scope: toConsumerScope(parseMemoryScope(definition.context_policy.memory_scope)),
     history_limit: clamped,
     summary_enabled: definition.context_policy.summary_enabled === true,
+    max_context_tokens: clampedTokens,
   };
 }
 
@@ -94,10 +110,11 @@ function scopeLabel(scope: MemoryScope): string {
 
 /**
  * Context node — the SINGLE owner/editor of `context_policy` (D-N1, option A).
- * History stepper 1–20, scope pills with consequences, the real
- * `summary_enabled` toggle (engine wires it runtime-side; the toggle states
- * exactly what it sends), and the read-only knowledge-source pins (the
- * Knowledge node owns them).
+ * History stepper 1–20, the context-length budget (presets + bounded custom,
+ * contract v1.15) with its read-only token-budget report, scope pills with
+ * consequences, the real `summary_enabled` toggle (engine wires it
+ * runtime-side; the toggle states exactly what it sends), and the read-only
+ * knowledge-source pins (the Knowledge node owns them).
  */
 export function ContextSection({
   assistantId,
@@ -118,7 +135,7 @@ export function ContextSection({
   const [policy, setPolicy] = useState<ContextPolicyState>(() =>
     definition
       ? readPolicy(definition)
-      : { memory_scope: 'user', history_limit: HISTORY_SERVED_MAX, summary_enabled: true },
+      : { memory_scope: 'user', history_limit: HISTORY_SERVED_MAX, summary_enabled: true, max_context_tokens: CONTEXT_TOKENS_DEFAULT },
   );
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
@@ -149,6 +166,7 @@ export function ContextSection({
         memory_scope: policy.memory_scope,
         history_limit: policy.history_limit,
         summary_enabled: policy.summary_enabled,
+        max_context_tokens: policy.max_context_tokens,
       },
     });
   }, [definition, policy]);
@@ -240,6 +258,16 @@ export function ContextSection({
     [patch],
   );
 
+  const clampTokens = useCallback(
+    (value: number) => {
+      if (!Number.isFinite(value)) return;
+      patch({
+        max_context_tokens: Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, Math.trunc(value))),
+      });
+    },
+    [patch],
+  );
+
   if (!definition) {
     return (
       <Wrap>
@@ -272,6 +300,12 @@ export function ContextSection({
               <SwitchSub>
                 {policy.history_limit} messages. {COMPACTION_COPY}
               </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Context length</SwitchTitle>
+              <SwitchSub>{formatContextTokens(policy.max_context_tokens)} tokens per run</SwitchSub>
             </SwitchText>
           </SwitchRow>
           <SwitchRow>
@@ -327,6 +361,59 @@ export function ContextSection({
           </StepButton>
         </StepperRow>
         <FieldHelper>{COMPACTION_COPY}</FieldHelper>
+      </FieldBlock>
+
+      {/* Context length — the run's token budget (contract v1.15, engine int
+          1000–200000, default 32000). Presets plus a bounded custom value;
+          the caps pre-check holds autosave on garbage, never silently. */}
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Context length</FieldTitle>
+          <FieldHelper>{CONTEXT_LENGTH_COPY}</FieldHelper>
+        </FieldHead>
+        <ChoiceRow role="group" aria-label="Context length presets">
+          {CONTEXT_TOKEN_PRESETS.map((preset) => (
+            <ChoicePill
+              key={preset}
+              type="button"
+              $active={policy.max_context_tokens === preset}
+              aria-pressed={policy.max_context_tokens === preset}
+              onClick={() => patch({ max_context_tokens: preset })}
+            >
+              {formatContextTokens(preset)}
+            </ChoicePill>
+          ))}
+        </ChoiceRow>
+        <StepperRow>
+          <StepValue
+            type="number"
+            aria-label="Custom context length in tokens"
+            min={CONTEXT_TOKENS_MIN}
+            max={CONTEXT_TOKENS_MAX}
+            step={1000}
+            value={policy.max_context_tokens}
+            onChange={(event) => clampTokens(Number(event.target.value))}
+          />
+        </StepperRow>
+        <FieldHelper>
+          Or type a custom budget — {CONTEXT_TOKENS_MIN.toLocaleString()}–
+          {CONTEXT_TOKENS_MAX.toLocaleString()} tokens, whole numbers.
+        </FieldHelper>
+      </FieldBlock>
+
+      {/* Token budget — read-only report of what the length above buys. */}
+      <FieldBlock>
+        <FieldHead>
+          <FieldTitle>Token budget</FieldTitle>
+          <FieldHelper>Read-only — how the run spends the budget above.</FieldHelper>
+        </FieldHead>
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>Effective budget</SwitchTitle>
+            <SwitchSub>{formatContextTokens(policy.max_context_tokens)} tokens per run</SwitchSub>
+          </SwitchText>
+        </SwitchRow>
+        <FieldHelper>{TOKEN_BUDGET_COPY}</FieldHelper>
       </FieldBlock>
 
       {/* Scope */}

@@ -185,6 +185,17 @@ describe('projector context/response (real sections)', () => {
     expect(subtitleOf(input2, 'response')).toBe('Plain text · citations off · streaming off');
   });
 
+  it('grades ready on a non-default context token budget — the budget is user content (v1.15)', () => {
+    const def = defaultConsumer();
+    def.context_policy = { ...def.context_policy, max_context_tokens: 64000 };
+    const input = base({ definition: def });
+    expect(statusOf(input, 'context')).toBe('ready');
+
+    const absent = defaultConsumer();
+    delete absent.context_policy.max_context_tokens;
+    expect(statusOf(base({ definition: absent }), 'context')).toBe('untouched');
+  });
+
   it('locks both in origin mode', () => {
     const input = base({ mode: 'new', definition: null, hasDraft: false });
     for (const id of ['context', 'response']) {

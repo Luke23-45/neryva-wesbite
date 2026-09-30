@@ -19,7 +19,7 @@ import {
 const REGISTRY_DEFINITION = {
   instructions: 'You are a support concierge. Cite sources.',
   model_policy: { allowed_models: ['anthropic/claude-sonnet-4-5'], fallback_enabled: true },
-  context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: ['help-center'], memory_scope: 'organization' },
+  context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: ['help-center'], memory_scope: 'organization', max_context_tokens: 32000 },
   tool_policy: {
     tools: [
       { name: 'search_knowledge', access: 'read', approval: 'optional', execution_mode: 'live' },
@@ -77,10 +77,22 @@ describe('fromEnginePayload', () => {
   });
 
   it('keeps consumer-only fields when present and defaults them otherwise', () => {
-    const withExtras = fromEnginePayload({ ...REGISTRY_DEFINITION, brand: { mode: 'raw', content: 'Warm.' }, max_context_tokens: 64000 });
+    const withExtras = fromEnginePayload({
+      ...REGISTRY_DEFINITION,
+      brand: { mode: 'raw', content: 'Warm.' },
+      context_policy: { ...REGISTRY_DEFINITION.context_policy, max_context_tokens: 64000 },
+    });
     expect(withExtras.brand).toEqual({ mode: 'raw', content: 'Warm.' });
-    expect(withExtras.max_context_tokens).toBe(64000);
+    expect(withExtras.context_policy.max_context_tokens).toBe(64000);
     expect(fromEnginePayload({}).brand).toBeUndefined();
+  });
+
+  it('defaults a missing context_policy.max_context_tokens to the engine 32000 (v1.15 legacy read)', () => {
+    expect(fromEnginePayload({}).context_policy.max_context_tokens).toBe(32000);
+    expect(fromEnginePayload({ context_policy: {} }).context_policy.max_context_tokens).toBe(32000);
+    expect(
+      fromEnginePayload({ context_policy: { max_context_tokens: 'lots' } }).context_policy.max_context_tokens,
+    ).toBe(32000);
   });
 
   it('round-trips brand through the wire as a modal block', () => {
@@ -270,12 +282,14 @@ describe('toEnginePayload', () => {
 
   it('strips every consumer-only key from the wire (unknown-keys 400 must stay unreachable)', () => {
     const def = consumer();
-    def.max_context_tokens = 64000;
+    def.context_policy.max_context_tokens = 64000;
     def.retrieval = { memory_max_results: 9 };
     const wire = toEnginePayload(def) as unknown as Record<string, unknown>;
     expect('retrieval_policy' in wire).toBe(false);
-    expect('max_context_tokens' in wire).toBe(false);
+    expect('retrieval' in wire).toBe(false);
     expect(JSON.stringify(wire)).not.toContain('max_recursion_depth');
+    // v1.15: max_context_tokens is wire-first-class INSIDE context_policy.
+    expect((wire.context_policy as Record<string, unknown>).max_context_tokens).toBe(64000);
   });
 
   it('ships brand on the wire as a modal block and omits blanks', () => {

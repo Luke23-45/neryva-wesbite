@@ -63,6 +63,15 @@ describe('validateImportPayload (client-first, errors block, warnings ride)', ()
     expect(result.strippedKeys.sort()).toEqual(['max_context_tokens', 'mystery_key']);
     expect(result.payload).not.toHaveProperty('mystery_key');
   });
+  it('keeps context_policy.max_context_tokens on import (v1.15 wire-first-class)', () => {
+    const result = validateImportPayload({
+      ...good,
+      context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: [], memory_scope: 'user', max_context_tokens: 64000 },
+    });
+    expect(result.strippedKeys).not.toContain('max_context_tokens');
+    expect((result.payload.context_policy as Record<string, unknown>).max_context_tokens).toBe(64000);
+    expect(importErrors(result.issues)).toEqual([]);
+  });
   it('reports the schema version for display without blocking (engine neither migrates nor refuses)', () => {
     const newer = validateImportPayload({ ...good, schema_version: 3 });
     expect(newer.schemaVersion).toBe(3);

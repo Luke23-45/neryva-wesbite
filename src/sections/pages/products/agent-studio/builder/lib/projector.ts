@@ -24,7 +24,7 @@ import {
 } from './slot-model';
 import { LANE_NODES, LANE_NODE_IDS, laneOf, type LaneId, type LaneNodeId } from './lane-model';
 import { gradeGuardrails, parseGuardrailMode } from './guardrails-model';
-import { gradeMemory, parseMemoryScope } from './memory-model';
+import { CONTEXT_TOKENS_DEFAULT, gradeMemory, parseMemoryScope } from './memory-model';
 import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
 import type { VersionEvalState } from './eval-model';
@@ -242,7 +242,8 @@ function parseRoleTextFieldSafe(block: RoleFieldBlock | undefined): string | nul
  * engine changes a default, the predicate here must move with it.
  */
 
-/** Engine default context_policy (validation.ts): history 20, summary on, user scope.
+/** Engine default context_policy (validation.ts): history 20, summary on,
+ * user scope, 32K token budget.
  * knowledge_sources is deliberately EXCLUDED — the Context section shows pins
  * read-only; the Knowledge section owns them. Counting pins here would mark
  * Context green for work done in Knowledge. */
@@ -251,7 +252,8 @@ function contextPolicyIsDefault(definition: ConsumerDefinition): boolean {
   return (
     policy.history_limit === 20 &&
     (policy.summary_enabled ?? true) === true &&
-    (policy.memory_scope ?? 'user') === 'user'
+    (policy.memory_scope ?? 'user') === 'user' &&
+    (policy.max_context_tokens ?? CONTEXT_TOKENS_DEFAULT) === CONTEXT_TOKENS_DEFAULT
   );
 }
 

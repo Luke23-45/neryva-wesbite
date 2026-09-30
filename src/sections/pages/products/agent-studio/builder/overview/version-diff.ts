@@ -19,13 +19,12 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
  *     reasoning profile); every other model_params member → model
  *   context_policy.knowledge_sources → knowledge (the Knowledge section
  *     pins sources there); every other context_policy member → context
+ *     (history, summary, scope, and the v1.15 max_context_tokens budget)
  *   knowledge_policy → knowledge
  *   guardrails → guardrails
  *   tools → tools
  *   budget → budget
  *   response_policy → response
- *   max_context_tokens → context (context-window setting; writable only
- *     from the legacy AgentEditor, but Context is the honest place to look)
  *   retrieval → EXCLUDED: derived display data (`fromEnginePayload`
  *     computes it from the row), not authored in the builder.
  */
@@ -114,7 +113,6 @@ export function diffChangedSections(
   wholeKey('tools', 'tools');
   wholeKey('budget', 'budget');
   wholeKey('response_policy', 'response');
-  wholeKey('max_context_tokens', 'context');
 
   pickChanged(
     d.model_params as Record<string, unknown> | undefined,

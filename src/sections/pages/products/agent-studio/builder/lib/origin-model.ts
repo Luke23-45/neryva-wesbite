@@ -32,9 +32,10 @@ const ENVELOPE_KEYS = new Set([
   'hash',
 ]);
 
-/** Consumer-only keys — valid drafts, never wire/import payloads. */
+/** Consumer-only keys — valid drafts, never wire/import payloads.
+ * (max_context_tokens left this set in v1.15: it now rides wire-first-class
+ * inside context_policy. A top-level key in an import is an unknown key.) */
 const CONSUMER_ONLY_KEYS = new Set([
-  'max_context_tokens',
   'retrieval',
   'memory_max_results',
 ]);

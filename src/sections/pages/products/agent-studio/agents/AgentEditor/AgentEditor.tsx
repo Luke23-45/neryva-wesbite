@@ -427,11 +427,11 @@ export function AgentEditor() {
                             onChange={(v) => patch({ context_policy: { ...effective.context_policy, history_limit: v } })}
                           />
                           <NumberField
-                            label="Max context tokens (editor-side only — never sent)"
-                            value={effective.max_context_tokens}
+                            label="Max context tokens"
+                            value={effective.context_policy.max_context_tokens ?? 32_000}
                             min={1000}
-                            max={1000000}
-                            onChange={(v) => patch({ max_context_tokens: v })}
+                            max={200000}
+                            onChange={(v) => patch({ context_policy: { ...effective.context_policy, max_context_tokens: v } })}
                           />
                         </FieldRow>
                         <FieldRow>

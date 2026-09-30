@@ -58,15 +58,23 @@ function shell(props?: Partial<React.ComponentProps<typeof MemorySection>>) {
 }
 
 describe('MemorySection', () => {
-  it('reports scope and history read-only and points at the Context node', () => {
+  it('reports scope, history, and context length read-only and points at the Context node', () => {
     shell();
-    // No editing controls: scope pills and the history stepper live in the
-    // Context node now.
+    // No editing controls: scope pills, the history stepper, and the
+    // context-length control live in the Context node now.
     expect(screen.queryByRole('group', { name: 'Memory scope' })).toBeNull();
     expect(screen.queryByLabelText('History limit in messages')).toBeNull();
-    expect(screen.getByText(/Scope and history are set in the Context node/)).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Context length presets' })).toBeNull();
+    expect(screen.getByText(/Set in the Context section/)).toBeTruthy();
     expect(screen.getByText(/20 messages/)).toBeTruthy();
+    // Context-owned (D-N1): the token budget is reported read-only here.
+    expect(screen.getByText(/32K tokens per run/)).toBeTruthy();
     expect(screen.getByText(/PII scrubbed before embedding/)).toBeTruthy();
+  });
+
+  it('reports a custom context length read-only', () => {
+    shell({ definition: definitionWith({ max_context_tokens: 64000 }) });
+    expect(screen.getByText(/64K tokens per run/)).toBeTruthy();
   });
 
   it('always reports clean — nothing here writes', () => {

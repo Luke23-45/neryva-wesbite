@@ -9,6 +9,7 @@
  * max_len — all three agree; aligned 19-08) · models 1–20 `provider/model` shape ·
  * tools ≤50 `{name ^[a-z0-9_]+$, access required, approval}` ·
  * history 1–100 · retrieval results 1–20 · budgets per §5 ·
+ * context tokens 1,000–200,000 (engine context_policy.max_context_tokens, v1.15) ·
  * secret shapes rejected before persistence (mirrors validation.ts).
  */
 import type { ConsumerDefinition } from './agent-payload';
@@ -37,6 +38,10 @@ export const CAPS = {
   // The contract ceiling aligns with the runtime served-20: the run reads at
   // most 20 messages, so the editor offers 1–20 (the engine rejects above).
   historyMax: 20,
+  // Context token budget (engine context_policy.max_context_tokens, v1.15;
+  // mirrors the product ContextPolicySchema bounds exactly).
+  contextTokensMin: 1000,
+  contextTokensMax: 200_000,
   resultsMin: 1,
   resultsMax: 20,
   budgetTokensMin: 1000,
@@ -159,6 +164,18 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
 
   if (!Number.isInteger(def.context_policy.history_limit) || def.context_policy.history_limit < CAPS.historyMin || def.context_policy.history_limit > CAPS.historyMax) {
     issues.push({ path: 'context_policy.history_limit', message: `Must be an integer ${CAPS.historyMin}–${CAPS.historyMax}.` });
+  }
+  // v1.15: the context token budget rides inside context_policy (the engine
+  // validates int 1000–200000, default 32000 — this mirrors validation.ts).
+  if (
+    !Number.isInteger(def.context_policy.max_context_tokens) ||
+    def.context_policy.max_context_tokens < CAPS.contextTokensMin ||
+    def.context_policy.max_context_tokens > CAPS.contextTokensMax
+  ) {
+    issues.push({
+      path: 'context_policy.max_context_tokens',
+      message: `Must be an integer ${CAPS.contextTokensMin}–${CAPS.contextTokensMax}.`,
+    });
   }
   // C08: all 5 engine scopes are valid (`user` is the default — the old
   // "`user` has no maker meaning" issue was proven false by the FL-1.5 runtime).
