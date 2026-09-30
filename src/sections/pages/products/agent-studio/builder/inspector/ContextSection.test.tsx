@@ -150,16 +150,70 @@ describe('ContextSection', () => {
     expect(sent.definition.context_policy.max_context_tokens).toBe(64000);
   });
 
-  it('clamps a custom typed value to the 1000–200000 contract', async () => {
+  it('commits a custom typed value on blur, clamping to the 1000–200000 contract', async () => {
     shell();
+    const input = screen.getByLabelText('Custom context length in tokens');
+    // Half-typed values are a draft: no clamping mid-keystroke.
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Custom context length in tokens'), { target: { value: '500000' } });
+      fireEvent.change(input, { target: { value: '1' } });
+    });
+    expect(screen.getByDisplayValue('1')).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '128000' } });
+      fireEvent.blur(input);
+    });
+    expect(screen.getByDisplayValue('128000')).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '500000' } });
+      fireEvent.blur(input);
     });
     expect(screen.getByDisplayValue('200000')).toBeTruthy();
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Custom context length in tokens'), { target: { value: '500' } });
+      fireEvent.change(input, { target: { value: '500' } });
+      fireEvent.blur(input);
     });
     expect(screen.getByDisplayValue('1000')).toBeTruthy();
+  });
+
+  it('reverts the draft on empty or garbage input instead of inventing a value', async () => {
+    shell();
+    const input = screen.getByLabelText('Custom context length in tokens');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '' } });
+      fireEvent.blur(input);
+    });
+    expect(screen.getByDisplayValue('32000')).toBeTruthy();
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'nope' } });
+      fireEvent.blur(input);
+    });
+    expect(screen.getByDisplayValue('32000')).toBeTruthy();
+  });
+
+  it('tolerates comma-grouped custom input ("128,000")', async () => {
+    shell();
+    const input = screen.getByLabelText('Custom context length in tokens');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '128,000' } });
+      fireEvent.blur(input);
+    });
+    expect(screen.getByDisplayValue('128000')).toBeTruthy();
+  });
+
+  it('saves a committed custom value inside context_policy', async () => {
+    shell();
+    const input = screen.getByLabelText('Custom context length in tokens');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '48000' } });
+      fireEvent.blur(input);
+    });
+    expect(screen.getByDisplayValue('48000')).toBeTruthy();
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.context_policy.max_context_tokens).toBe(48000);
   });
 
   it('renders read-only static rows with the role explanation for viewers', () => {

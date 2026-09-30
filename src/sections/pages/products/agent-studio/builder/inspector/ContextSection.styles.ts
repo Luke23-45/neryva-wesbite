@@ -73,6 +73,12 @@ export const ChoiceRow = styled.div`
   gap: ${({ theme }) => theme.spacing.px10};
 `;
 
+/** The token-budget input needs room for six digits; the shared StepValue
+ *  is sized for the two-digit history stepper. */
+export const TokenValue = styled(StepValue)`
+  width: 112px;
+`;
+
 export const ChoicePill = styled.button<{ $active?: boolean }>`
   border-radius: ${({ theme }) => theme.radii.pill};
   padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};

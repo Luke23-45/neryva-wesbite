@@ -6,10 +6,10 @@ import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useMemories, useOrgMemoryPolicy } from '@hooks/studio/useSetupKnowledge';
 import {
   COMPACTION_COPY,
-  CONTEXT_TOKENS_DEFAULT,
   HISTORY_SERVED_MAX,
   SCRUB_COPY,
   USER_PREVIEW_COPY,
+  coerceContextTokens,
   describeTtl,
   formatContextTokens,
   parseMemoryScope,
@@ -87,9 +87,9 @@ export function MemorySection({
   const historyLimit = definition.context_policy.history_limit;
   // Context-owned (D-N1): the token budget is set in the Context section and
   // reported here read-only. Legacy drafts lack the key — the engine default
-  // renders, never a blank.
-  const tokensRaw = definition.context_policy.max_context_tokens;
-  const contextTokens = Number.isInteger(tokensRaw) ? (tokensRaw as number) : CONTEXT_TOKENS_DEFAULT;
+  // renders, never a blank; out-of-contract values clamp exactly like the
+  // Context editor (coerceContextTokens) so the two sections never disagree.
+  const contextTokens = coerceContextTokens(definition.context_policy.max_context_tokens);
 
   // A4-23: the preview shows exactly the library rows the pinned run-time
   // scope can serve. 'assistant' serves this agent's own assistant-scoped

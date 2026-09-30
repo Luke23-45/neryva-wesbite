@@ -25,6 +25,7 @@ import {
   SCOPE_CONSEQUENCES,
   SERVED_20_COPY,
   TOKEN_BUDGET_COPY,
+  coerceContextTokens,
   formatContextTokens,
   fromConsumerScope,
   parseMemoryScope,
@@ -52,6 +53,7 @@ import {
   SwitchSub,
   SwitchText,
   SwitchTitle,
+  TokenValue,
 } from './ContextSection.styles';
 import { Minus, Plus } from 'lucide-react';
 
@@ -92,15 +94,13 @@ function readPolicy(definition: AgentDefinition): ContextPolicyState {
   // v1.15: the token budget rides inside context_policy (engine int
   // 1000–200000, default 32000). Legacy drafts lack the key — the editor
   // renders the engine default, never a blank control; out-of-contract
-  // values clamp like history.
-  const tokens = definition.context_policy.max_context_tokens;
-  const parsedTokens = Number.isInteger(tokens) ? (tokens as number) : CONTEXT_TOKENS_DEFAULT;
-  const clampedTokens = Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, parsedTokens));
+  // values clamp like history (coerceContextTokens, shared with Memory).
+  const tokens = coerceContextTokens(definition.context_policy.max_context_tokens);
   return {
     memory_scope: toConsumerScope(parseMemoryScope(definition.context_policy.memory_scope)),
     history_limit: clamped,
     summary_enabled: definition.context_policy.summary_enabled === true,
-    max_context_tokens: clampedTokens,
+    max_context_tokens: tokens,
   };
 }
 
@@ -139,6 +139,12 @@ export function ContextSection({
   );
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
+  // The custom token input holds a local draft while typing: clamping on
+  // every keystroke would snap a half-typed "128000" to 1000 the moment the
+  // first digit lands. The draft commits (parse → clamp) on blur/Enter;
+  // empty or garbage reverts to the committed value — never a surprise
+  // write, never a stuck keystroke.
+  const [tokensDraft, setTokensDraft] = useState<string | null>(null);
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
@@ -150,8 +156,10 @@ export function ContextSection({
   if (docKey !== sourceKey && !dirty) {
     setDocKey(sourceKey);
     if (source) setPolicy(source);
+    setTokensDraft(null);
   } else if (docKey !== sourceKey) {
     setDocKey(sourceKey);
+    setTokensDraft(null);
   }
 
   useEffect(() => {
@@ -258,15 +266,17 @@ export function ContextSection({
     [patch],
   );
 
-  const clampTokens = useCallback(
-    (value: number) => {
-      if (!Number.isFinite(value)) return;
-      patch({
-        max_context_tokens: Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, Math.trunc(value))),
-      });
-    },
-    [patch],
-  );
+  /** Commit the typed draft: commas tolerated ("128,000"), fractions
+   * truncated, out-of-range clamped; empty/garbage reverts silently. */
+  const commitTokensDraft = useCallback(() => {
+    if (tokensDraft === null) return;
+    const raw = tokensDraft.replace(/,/g, '').trim();
+    setTokensDraft(null);
+    if (raw === '') return;
+    const parsed = Math.trunc(Number(raw));
+    if (!Number.isFinite(parsed)) return;
+    patch({ max_context_tokens: coerceContextTokens(parsed) });
+  }, [tokensDraft, patch]);
 
   if (!definition) {
     return (
@@ -378,26 +388,36 @@ export function ContextSection({
               type="button"
               $active={policy.max_context_tokens === preset}
               aria-pressed={policy.max_context_tokens === preset}
-              onClick={() => patch({ max_context_tokens: preset })}
+              onClick={() => {
+                setTokensDraft(null);
+                patch({ max_context_tokens: preset });
+              }}
             >
               {formatContextTokens(preset)}
             </ChoicePill>
           ))}
         </ChoiceRow>
         <StepperRow>
-          <StepValue
-            type="number"
+          <TokenValue
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            spellCheck={false}
             aria-label="Custom context length in tokens"
-            min={CONTEXT_TOKENS_MIN}
-            max={CONTEXT_TOKENS_MAX}
-            step={1000}
-            value={policy.max_context_tokens}
-            onChange={(event) => clampTokens(Number(event.target.value))}
+            value={tokensDraft ?? String(policy.max_context_tokens)}
+            onChange={(event) => setTokensDraft(event.target.value)}
+            onBlur={commitTokensDraft}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && event.target instanceof HTMLElement) {
+                event.target.blur();
+              }
+            }}
           />
         </StepperRow>
         <FieldHelper>
           Or type a custom budget — {CONTEXT_TOKENS_MIN.toLocaleString()}–
-          {CONTEXT_TOKENS_MAX.toLocaleString()} tokens, whole numbers.
+          {CONTEXT_TOKENS_MAX.toLocaleString()} tokens, whole numbers. It
+          applies when you leave the field.
         </FieldHelper>
       </FieldBlock>
 
@@ -508,6 +528,7 @@ export function ContextSection({
               // Unparseable theirs: leave local state, still refetch below.
             }
             setConflict(null);
+            setTokensDraft(null);
             setAdopting(theirs);
             void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
             toast('Reloaded their version — review it, then keep editing or close.');

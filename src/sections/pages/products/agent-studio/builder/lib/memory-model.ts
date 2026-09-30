@@ -100,6 +100,18 @@ export function formatContextTokens(value: number): string {
   return value >= 1000 ? `${Math.round(value / 1000)}K` : `${value}`;
 }
 
+/**
+ * Coerce a wire/foreign token budget into the editor's contract: integer,
+ * clamped to 1000–200000. Legacy drafts lack the key → the 32000 engine
+ * default; out-of-contract values clamp (never render a broken control).
+ * Shared by the Context editor and the Memory read-only report so both
+ * sections always agree on the number.
+ */
+export function coerceContextTokens(raw: unknown): number {
+  const parsed = Number.isInteger(raw) ? (raw as number) : CONTEXT_TOKENS_DEFAULT;
+  return Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, parsed));
+}
+
 /** What the budget covers (compiler truth: mandatory system/policy/user
  * content, then optional knowledge → memories → summaries → history). */
 export const CONTEXT_LENGTH_COPY =

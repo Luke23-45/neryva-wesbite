@@ -11,6 +11,7 @@ import {
   SCOPE_CONSEQUENCES,
   SERVED_20_COPY,
   USER_PREVIEW_COPY,
+  coerceContextTokens,
   describeTtl,
   filterMemories,
   gradeMemory,
@@ -82,6 +83,17 @@ describe('parseOrgMemoryPolicy (fail-open mirror)', () => {
     expect(describeTtl(null)).toMatch(/kept until deleted/);
     expect(describeTtl(2_592_000)).toBe('30 days');
     expect(describeTtl(3600)).toBe('1 hour');
+  });
+});
+
+describe('coerceContextTokens', () => {
+  it('passes valid budgets through, defaults legacy drafts, clamps out-of-contract', () => {
+    expect(coerceContextTokens(64000)).toBe(64000);
+    expect(coerceContextTokens(undefined)).toBe(32000);
+    expect(coerceContextTokens('64000')).toBe(32000);
+    expect(coerceContextTokens(500)).toBe(1000);
+    expect(coerceContextTokens(500000)).toBe(200000);
+    expect(coerceContextTokens(64.5)).toBe(32000);
   });
 });
 
