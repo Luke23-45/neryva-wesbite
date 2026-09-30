@@ -126,8 +126,10 @@ describe('projector purpose (identity only)', () => {
     expect(nodeOf(base({ mode: 'new', definition: null, hasDraft: false }), 'purpose')?.lock).toBe(false);
   });
 
-  it('stays calm without a definition', () => {
-    expect(statusOf(base({ hasDraft: false, definition: null }), 'purpose')).toBe('untouched');
+  it('grades from the name, not draft existence — unnamed is untouched', () => {
+    expect(statusOf(base({ hasDraft: false, definition: null }), 'purpose')).toBe('ready');
+    expect(statusOf(base({ assistantName: '', hasDraft: false, definition: null }), 'purpose')).toBe('untouched');
+    expect(statusOf(base({ assistantName: '   ', definition: defaultConsumer() }), 'purpose')).toBe('untouched');
   });
 });
 
@@ -158,22 +160,28 @@ describe('projector instructions node', () => {
 });
 
 describe('projector context/response (real sections)', () => {
-  it('carries payload truth in the subtitles with no hint', () => {
+  it('stays untouched on engine defaults — defaults are not user content', () => {
     const input = base();
-    expect(statusOf(input, 'context')).toBe('ready');
-    expect(subtitleOf(input, 'context')).toContain('History 20');
-    expect(subtitleOf(input, 'context')).toContain('user');
-    expect(nodeOf(input, 'context')?.hint).toBeNull();
-    expect(statusOf(input, 'response')).toBe('ready');
-    expect(subtitleOf(input, 'response')).toBe('Markdown · citations on · streaming auto');
-    expect(nodeOf(input, 'response')?.hint).toBeNull();
+    expect(statusOf(input, 'context')).toBe('untouched');
+    expect(subtitleOf(input, 'context')).toBe('Not configured');
+    expect(nodeOf(input, 'context')?.hint).toMatch(/engine defaults/i);
+    expect(statusOf(input, 'response')).toBe('untouched');
+    expect(subtitleOf(input, 'response')).toBe('Not configured');
   });
 
-  it('reports a stored response policy honestly', () => {
+  it('grades ready once the user configures either policy', () => {
     const def = defaultConsumer();
-    def.response_policy = { output_format: 'plain', citations_enabled: false, streaming: 'off' };
+    def.context_policy = { history_limit: 50, summary_enabled: true, knowledge_sources: [], memory_scope: 'user' };
     const input = base({ definition: def });
-    expect(subtitleOf(input, 'response')).toBe('Plain text · citations off · streaming off');
+    expect(statusOf(input, 'context')).toBe('ready');
+    expect(subtitleOf(input, 'context')).toContain('History 50');
+    expect(nodeOf(input, 'context')?.hint).toBeNull();
+
+    const def2 = defaultConsumer();
+    def2.response_policy = { output_format: 'plain', citations_enabled: false, streaming: 'off' };
+    const input2 = base({ definition: def2 });
+    expect(statusOf(input2, 'response')).toBe('ready');
+    expect(subtitleOf(input2, 'response')).toBe('Plain text · citations off · streaming off');
   });
 
   it('locks both in origin mode', () => {
@@ -186,11 +194,10 @@ describe('projector context/response (real sections)', () => {
 });
 
 describe('projector role (real section, D-N2 option A)', () => {
-  it('exists as a real node with payload-truth subtitle', () => {
+  it('stays untouched without persona content — no invented readiness', () => {
     const input = base();
-    expect(statusOf(input, 'role')).toBe('ready');
-    expect(subtitleOf(input, 'role')).toBeNull();
-    expect(nodeOf(input, 'role')?.hint).toBeNull();
+    expect(statusOf(input, 'role')).toBe('untouched');
+    expect(subtitleOf(input, 'role')).toBe('Not configured');
     expect(nodeOf(input, 'role')?.title).toBe('Role');
   });
 
@@ -201,10 +208,11 @@ describe('projector role (real section, D-N2 option A)', () => {
     expect(subtitleOf(input, 'role')).toBe('Senior support engineer · +2 more');
   });
 
-  it('renders null when the policy is blank', () => {
+  it('renders Not configured when the policy is blank', () => {
     const def = defaultConsumer();
     def.role_policy = { role: '  ', traits: [] };
-    expect(subtitleOf(base({ definition: def }), 'role')).toBeNull();
+    expect(subtitleOf(base({ definition: def }), 'role')).toBe('Not configured');
+    expect(statusOf(base({ definition: def }), 'role')).toBe('untouched');
   });
 
   it('locks in origin mode', () => {
@@ -312,13 +320,13 @@ describe('projector edges', () => {
     const badCatalog = [{ ref: 'b/bad', usable: false, reasons: ['provider_credential_missing'] as string[] }];
     const dimLit = litIds(base({ definition: unusable, models: badCatalog }));
     expect(dimLit).toContain('e:purpose:context');
-    // The Context node is real now (engine defaults = genuinely ready), so
-    // its leg lights; the unusable model dims the model→brain leg. The
-    // brain→response leg stays lit — the brain's reasoning profile is
-    // optional-but-ready, and the dim model leg carries the model signal.
-    expect(dimLit).toContain('e:context:brain');
+    // Engine defaults are not user content: the untouched Context node dims
+    // its outbound leg; the unusable model dims the model→brain leg; the
+    // untouched brain dims the brain→response leg. Only genuinely configured
+    // nodes light the chain behind them.
+    expect(dimLit).not.toContain('e:context:brain');
     expect(dimLit).not.toContain('e:model:brain');
-    expect(dimLit).toContain('e:brain:response');
+    expect(dimLit).not.toContain('e:brain:response');
   });
 
   it('draws instructions→model lit when instructions exist', () => {
@@ -477,13 +485,21 @@ describe('projector model usability (C04)', () => {
     expect(statusOf(base(), 'model')).toBe('untouched');
   });
 
-  it('treats the brain as ready whenever a draft exists (profiles optional)', () => {
-    expect(statusOf(base(), 'brain')).toBe('ready');
+  it('grades the brain ready only when a reasoning preset is actually selected', () => {
+    expect(statusOf(base(), 'brain')).toBe('untouched');
+    expect(subtitleOf(base(), 'brain')).toBe('Not configured');
+    const def = defaultConsumer();
+    def.model_params = { temperature: 0.7, top_p: 1, max_output_tokens: 16000, reasoning_effort: 'high' };
+    const input = base({ definition: def });
+    expect(statusOf(input, 'brain')).toBe('ready');
+    expect(subtitleOf(input, 'brain')).toBe('Scholar');
+  });
+
+  it('keeps the brain neutral when the model is unusable (the model node carries the attention)', () => {
     const def = defaultConsumer();
     def.model_policy.allowed_models = ['b/bad'];
     const input = base({ definition: def, models: catalog });
-    // The model node carries the attention; the brain's reasoning profile is optional.
-    expect(statusOf(input, 'brain')).toBe('ready');
+    expect(statusOf(input, 'brain')).toBe('untouched');
     expect(statusOf(input, 'model')).toBe('attention');
   });
 });
@@ -509,10 +525,11 @@ describe('projector knowledge grading (C05)', () => {
 });
 
 describe('projector guardrails grading (C07)', () => {
-  it('grades from the draft policy', () => {
+  it('grades from the draft policy — engine defaults are untouched, never green', () => {
     const fresh = base();
-    expect(statusOf(fresh, 'guardrails')).toBe('ready');
-    expect(subtitleOf(fresh, 'guardrails')).toBe('Blocking · in default / out brand-safe · PII on');
+    expect(statusOf(fresh, 'guardrails')).toBe('untouched');
+    expect(subtitleOf(fresh, 'guardrails')).toBe('Not configured');
+    expect(nodeOf(fresh, 'guardrails')?.hint).toMatch(/Guardrails section/);
     const logging = defaultConsumer();
     logging.guardrails.execution_mode = 'logging';
     expect(statusOf(base({ definition: logging }), 'guardrails')).toBe('attention');
@@ -525,27 +542,30 @@ describe('projector guardrails grading (C07)', () => {
 });
 
 describe('projector budget grading (C09 — node grades caps, sections price)', () => {
-  it('never fakes costs', () => {
+  it('never fakes costs — no caps means untouched, never a green default', () => {
     const fresh = base();
-    expect(statusOf(fresh, 'budget')).toBe('ready');
-    expect(subtitleOf(fresh, 'budget')).toBe('Platform defaults');
+    expect(statusOf(fresh, 'budget')).toBe('untouched');
+    expect(subtitleOf(fresh, 'budget')).toBe('Not configured');
     const def = defaultConsumer();
     def.budget = { max_total_tokens: 20_000 };
+    expect(statusOf(base({ definition: def }), 'budget')).toBe('ready');
     expect(subtitleOf(base({ definition: def }), 'budget')).toBe('No spend cap');
     const capped = defaultConsumer();
     capped.budget = { max_cost_cents: 500 };
+    expect(statusOf(base({ definition: capped }), 'budget')).toBe('ready');
     expect(subtitleOf(base({ definition: capped }), 'budget')).toBe('Capped at $5.00');
-    expect(statusOf(base({ hasDraft: false, definition: null }), 'budget')).toBe('ready');
+    expect(statusOf(base({ hasDraft: false, definition: null }), 'budget')).toBe('untouched');
   });
 });
 
 describe('projector brand node (C03)', () => {
-  it('locks in origin, ghosts pre-draft, and never reds the default', () => {
+  it('locks in origin, ghosts pre-draft, and stays untouched on the default voice', () => {
     expect(statusOf(base({ mode: 'new', definition: null, hasDraft: false }), 'brand')).toBe('locked');
     expect(statusOf(base({ hasDraft: false, definition: null }), 'brand')).toBe('untouched');
     const blank = base({ definition: { ...defaultConsumer(), brand: '' } });
-    expect(statusOf(blank, 'brand')).toBe('ready');
+    expect(statusOf(blank, 'brand')).toBe('untouched');
     expect(subtitleOf(blank, 'brand')).toBe('Platform default');
+    expect(nodeOf(blank, 'brand')?.hint).toMatch(/Brand section/);
   });
 
   it('shows payload truth once a voice is set, on the context leg', () => {
@@ -557,19 +577,42 @@ describe('projector brand node (C03)', () => {
     expect(leg?.data?.variant).toBe('flow');
     expect(leg?.data?.lit).toBe(true);
   });
+
+  it('dims the context leg while the brand is untouched', () => {
+    const blank = base({ definition: { ...defaultConsumer(), brand: '' } });
+    const leg = projectBuilderGraph(blank).edges.find((e) => e.source === 'brand' && e.target === 'context');
+    expect(leg?.data?.lit).toBe(false);
+  });
 });
 
 describe('projector memory grading (C08)', () => {
-  it('grades from scope and history', () => {
+  it('grades untouched on engine defaults — defaults are not user content', () => {
     const fresh = base();
-    expect(statusOf(fresh, 'memory')).toBe('ready');
-    expect(subtitleOf(fresh, 'memory')).toBe('User · history 20');
+    expect(statusOf(fresh, 'memory')).toBe('untouched');
+    expect(subtitleOf(fresh, 'memory')).toBe('Not configured');
+    expect(nodeOf(fresh, 'memory')?.hint).toMatch(/Memory section/);
+  });
+
+  it('grades ready once scope or history is actually set', () => {
     const def = defaultConsumer();
     def.context_policy.memory_scope = 'none';
+    expect(statusOf(base({ definition: def }), 'memory')).toBe('ready');
     expect(subtitleOf(base({ definition: def }), 'memory')).toBe('None — thread only');
     const over = defaultConsumer();
     over.context_policy.history_limit = 100;
+    expect(statusOf(base({ definition: over }), 'memory')).toBe('ready');
     expect(subtitleOf(base({ definition: over }), 'memory')).toBe('User · history 100 (serves ≤20)');
+  });
+
+  it('dims the memory leg on defaults and lights it once configured', () => {
+    const freshLeg = projectBuilderGraph(base()).edges.find((e) => e.source === 'memory' && e.target === 'context');
+    expect(freshLeg?.data?.lit).toBe(false);
+    const def = defaultConsumer();
+    def.context_policy.history_limit = 50;
+    const litLeg = projectBuilderGraph(base({ definition: def })).edges.find(
+      (e) => e.source === 'memory' && e.target === 'context',
+    );
+    expect(litLeg?.data?.lit).toBe(true);
   });
 });
 
@@ -634,10 +677,10 @@ describe('toolsSlot grading (C06)', () => {
   const ROW = { name: 'lookup_ticket', hash: 'a'.repeat(64), version: 'v3', enabled: true as boolean | null };
   const BUILTINS = ['web_search'];
 
-  it('states no-tools deliberate (ready, never a void)', () => {
+  it('grades no tools as untouched — zero bindings are not a configuration', () => {
     const grade = toolsSlot([], undefined, BUILTINS);
-    expect(grade.status).toBe('ready');
-    expect(grade.subtitle).toMatch(/deliberate/i);
+    expect(grade.status).toBe('untouched');
+    expect(grade.subtitle).toBe('Not configured');
   });
 
   it('stays neutral while the catalog loads', () => {
@@ -686,17 +729,19 @@ describe('knowledgeSlot grading (C05)', () => {
     expect(knowledgeSlot(def, ['refund-policy'], undefined).status).toBe('info');
   });
 
-  it('states no-pin deliberate (ready, never a void)', () => {
+  it('grades no pins as untouched — zero pins are not a configuration', () => {
     const off = knowledgeSlot(defaultConsumer(), [], { degraded: false, pins: [] });
-    expect(off.status).toBe('ready');
-    expect(off.subtitle).toMatch(/deliberate/i);
+    expect(off.status).toBe('untouched');
+    expect(off.subtitle).toBe('Not configured');
+    // Retrieval switched on but nothing pinned: still untouched (never
+    // green), with the specific state named.
     const on = knowledgeSlot(
       { ...defaultConsumer(), knowledge_policy: { retrieval_enabled: true, max_results: 5 } },
       [],
       { degraded: false, pins: [] },
     );
-    expect(on.status).toBe('ready');
-    expect(on.subtitle).toMatch(/no pins/i);
+    expect(on.status).toBe('untouched');
+    expect(on.subtitle).toBe('Retrieval on · no pins');
   });
 
   it('flags unresolved pins with the publish consequence', () => {
@@ -760,5 +805,62 @@ describe('knowledgeSlot grading (C05)', () => {
     });
     expect(grade.status).toBe('ready');
     expect(grade.subtitle).toBe('2 of 2 mapped · covered');
+  });
+});
+
+describe('projector honest markers — identity-only regression', () => {
+  it('marks only purpose ready when the user has entered identity and nothing else', () => {
+    // The user's exact complaint: entering only Identity must not turn
+    // unrelated sections green. A fresh draft (name set, defaults
+    // everywhere) earns exactly one green marker.
+    const input = base({ assistantName: 'Billing Support', definition: defaultConsumer() });
+    const graph = projectBuilderGraph(input);
+    const ready = graph.nodes.filter((n) => n.data.status === 'ready').map((n) => n.id);
+    expect(ready).toEqual(['purpose']);
+  });
+
+  it('leaves every untouched section on the Not configured dashed-ring state', () => {
+    const input = base({ assistantName: 'Billing Support', definition: defaultConsumer() });
+    for (const id of [
+      'model',
+      'brain',
+      'knowledge',
+      'tools',
+      'memory',
+      'guardrails',
+      'context',
+      'response',
+      'role',
+      'brand',
+      'budget',
+    ]) {
+      expect(statusOf(input, id)).toBe('untouched');
+    }
+    // Instructions is empty here — publish refuses, so it reads attention
+    // (amber), never green.
+    expect(statusOf(input, 'instructions')).toBe('attention');
+  });
+
+  it('lights no satellite legs on a fresh draft', () => {
+    const input = base({ assistantName: 'Billing Support', definition: defaultConsumer() });
+    const graph = projectBuilderGraph(input);
+    const satelliteLegs = graph.edges.filter((e) =>
+      ['knowledge', 'tools', 'memory', 'guardrails', 'brand', 'evaluation'].includes(e.source),
+    );
+    expect(satelliteLegs.length).toBeGreaterThan(0);
+    expect(satelliteLegs.every((e) => e.data?.lit !== true)).toBe(true);
+  });
+
+  it('does not cross-mark: knowledge pins stay in knowledge, never light context', () => {
+    // knowledge_sources lives inside context_policy but the Knowledge
+    // section owns the pins (Context shows them read-only). Pinning
+    // sources must register in knowledge (info here — no pin health in
+    // the fixture) while context stays untouched.
+    const definition = defaultConsumer();
+    definition.context_policy.knowledge_sources = ['billing-faq'];
+    const input = base({ assistantName: 'Billing Support', definition });
+    expect(statusOf(input, 'knowledge')).not.toBe('untouched');
+    expect(statusOf(input, 'context')).toBe('untouched');
+    expect(subtitleOf(input, 'context')).toBe('Not configured');
   });
 });

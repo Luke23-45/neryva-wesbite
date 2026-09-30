@@ -92,19 +92,44 @@ export interface GuardrailPolicyState {
 }
 
 export interface GuardrailGrade {
-  status: 'ready' | 'attention';
+  status: 'ready' | 'attention' | 'untouched';
   subtitle: string;
   hint: string;
 }
 
 /**
+ * True when the policy carries no user content — every field reads as the
+ * engine default (validation.ts: input 'default', output 'brand-safe', PII
+ * redaction on, blocking mode). Blank console values count as default
+ * (displayPolicyName maps them the same way). Such a policy is `untouched`,
+ * never born-ready: defaults are not user content.
+ */
+export function isGuardrailPolicyDefault(policy: GuardrailPolicyState): boolean {
+  const input = policy.input_policy.trim();
+  const output = policy.output_policy.trim();
+  return (
+    (input === '' || input === 'default') &&
+    (output === '' || output === 'brand-safe') &&
+    policy.pii_redaction !== false &&
+    policy.execution_mode === 'blocking'
+  );
+}
+
+/**
  * Projector grading truth table (PLAN §6):
+ * - no policy content at all → untouched (engine defaults are not user content);
  * - logging → attention (measuring, nothing refused);
  * - any direction off → attention naming the direction;
  * - else ready (PII-off stays ready with a stated whisper — deliberate, not broken).
- * - no policy content at all → ready `Platform defaults` (born-ready).
  */
 export function gradeGuardrails(policy: GuardrailPolicyState): GuardrailGrade {
+  if (isGuardrailPolicyDefault(policy)) {
+    return {
+      status: 'untouched',
+      subtitle: 'Not configured',
+      hint: 'Engine defaults screen standard content — set a policy in the Guardrails section to own it.',
+    };
+  }
   const inputName = displayPolicyName(policy.input_policy, 'input');
   const outputName = displayPolicyName(policy.output_policy, 'output');
   const coverage = `in ${inputName} / out ${outputName}`;

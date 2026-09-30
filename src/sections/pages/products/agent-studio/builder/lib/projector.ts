@@ -220,9 +220,48 @@ export function roleSubtitle(definition: ConsumerDefinition | null): string | nu
 }
 
 /**
+ * Honest "user saved this section" predicates — the anti-born-ready rule.
+ * A section is `ready` only when the draft carries user-authored content;
+ * engine defaults and empty policies grade `untouched`, never `ready`.
+ * The defaults below mirror neryva-engine
+ * src/modules/assistants/validation.ts (zod .default() values); if the
+ * engine changes a default, the predicate here must move with it.
+ */
+
+/** Engine default context_policy (validation.ts): history 20, summary on, user scope.
+ * knowledge_sources is deliberately EXCLUDED — the Context section shows pins
+ * read-only; the Knowledge section owns them. Counting pins here would mark
+ * Context green for work done in Knowledge. */
+function contextPolicyIsDefault(definition: ConsumerDefinition): boolean {
+  const policy = definition.context_policy;
+  return (
+    policy.history_limit === 20 &&
+    (policy.summary_enabled ?? true) === true &&
+    (policy.memory_scope ?? 'user') === 'user'
+  );
+}
+
+/** Engine default response_policy (validation.ts): absent/empty = markdown, citations on, streaming auto. */
+function responsePolicyIsDefault(definition: ConsumerDefinition): boolean {
+  const policy = definition.response_policy;
+  if (!policy) return true;
+  return (
+    (policy.output_format ?? 'markdown') === 'markdown' &&
+    (policy.citations_enabled ?? true) === true &&
+    (policy.streaming ?? 'auto') === 'auto'
+  );
+}
+
+/** Memory is untouched when scope and history both read as engine defaults. */
+function memoryIsDefault(definition: ConsumerDefinition): boolean {
+  const policy = definition.context_policy;
+  return (policy.memory_scope ?? 'user') === 'user' && policy.history_limit === 20;
+}
+
+/**
  * Knowledge usability grade (C05) — readiness, not presence. Draft pins ×
  * library mapping × ACTIVE-version health:
- * - no pins: ready + stated (retrieval off = deliberate; on-but-empty = named);
+ * - no pins: untouched (retrieval off = Not configured; on-but-empty = named);
  * - pins, health loading: info (neutral, never a false green);
  * - unresolved / failed / coverage-incomplete: attention with reason→fix;
  * - health-silent pins (not in the ACTIVE snapshot — new pins, no live
@@ -247,12 +286,12 @@ export function knowledgeSlot(
       ? {
         subtitle: 'Retrieval on · no pins',
         hint: 'Retrieval is on but nothing is pinned — answers will not ground.',
-        status: 'ready',
+        status: 'untouched',
       }
       : {
-        subtitle: 'Retrieval off — deliberate',
-        hint: 'Knowledge is optional. Skipped is not broken.',
-        status: 'ready',
+        subtitle: 'Not configured',
+        hint: 'Knowledge is optional. Pin sources in the Knowledge section to ground answers.',
+        status: 'untouched',
       };
   }
   const mapped = librarySlugs === null ? null : pins.filter((s) => librarySlugs.includes(s)).length;
@@ -319,7 +358,7 @@ export function knowledgeSlot(
 /**
  * Tools usability grade (C06) — readiness, not presence. Draft entries ×
  * catalog rows × hash pins:
- * - no entries: ready + stated (tools are optional);
+ * - no entries: untouched + stated (tools are optional);
  * - catalog loading: info (neutral, never a false green);
  * - missing/disabled/stale: attention with reason→fix (publish refuses);
  * - unpinned rows: info lint (legal, drift-on-arrival);
@@ -345,9 +384,9 @@ export function toolsSlot(
 ): ToolsSlotGrade {
   if (entries.length === 0) {
     return {
-      subtitle: 'No tools — deliberate',
-      hint: 'Tools are optional. Skipped is not broken.',
-      status: 'ready',
+      subtitle: 'Not configured',
+      hint: 'Tools are optional. Bind tools in the Tools section to extend the agent.',
+      status: 'untouched',
     };
   }
   if (catalog === undefined) {
@@ -456,7 +495,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // — Identity lane —
   // Purpose is identity ONLY (v10 §8.5): instructions moved to the
   // Instructions node — purpose no longer grades them. Subtitle carries the
-  // name, never derived payload.
+  // name, never derived payload. Honest rule: the name is user-authored at
+  // creation, so a named agent is ready with or without a draft — an
+  // unnamed one is untouched, never born-ready.
+  const purposeNamed = (input.assistantName ?? '').trim() !== '';
   push(
     'purpose',
     {
@@ -466,7 +508,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       title: LANE_NODES.purpose.label,
       subtitle: locked ? 'Name your agent to begin' : (input.assistantName ?? SPINE_META.purpose.blurb),
       hint: null,
-      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
+      status: locked ? 'locked' : purposeNamed ? 'ready' : 'untouched',
       lock: !locked,
       color: LANE_NODES.purpose.color,
       portColor: LANE_NODES.purpose.color,
@@ -533,9 +575,13 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
             memory_scope: parseMemoryScope(definition.context_policy.memory_scope),
             history_limit: definition.context_policy.history_limit,
           });
-          subtitle = grade.subtitle;
-          hint = grade.hint === '' ? 'Memory policy is set — scope decides what surfaces.' : grade.hint;
-          status = grade.status;
+          // Honest rule: engine-default scope/history is not user content.
+          const touched = !memoryIsDefault(definition);
+          subtitle = touched ? grade.subtitle : 'Not configured';
+          hint = touched
+            ? (grade.hint === '' ? 'Memory policy is set — scope decides what surfaces.' : grade.hint)
+            : 'Engine defaults apply — set scope or history in the Memory section.';
+          status = touched ? grade.status : 'untouched';
           break;
         }
         case 'guardrails': {
@@ -572,27 +618,30 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
           break;
         }
         case 'brand': {
-          // Born-ready pattern (guardrails/memory precedent): an empty brand
-          // is the VALID platform-default state — never red, never ghosted
-          // once a draft exists to carry it.
-          subtitle = brandVoice === '' ? 'Platform default' : `${brandVoice.length.toLocaleString()} chars`;
-          status = 'ready';
+          // Honest rule: an empty brand is untouched — the platform default
+          // is engine behavior, not user content, and never earns the mark.
+          const touched = brandVoice !== '';
+          subtitle = touched ? `${brandVoice.length.toLocaleString()} chars` : 'Platform default';
+          hint = touched ? hint : 'No voice set — set one in the Brand section.';
+          status = touched ? 'ready' : 'untouched';
           break;
         }
         case 'budget': {
           // No costs read in the shell (the section/panel price estimates where
           // costs are loaded) — the node grades caps only, never $0-fakes.
+          // Honest rule: no caps set is untouched, never "Platform defaults".
           subtitle = budgetGrade?.subtitle ?? null;
-          hint = 'Caps stop runs closed — estimates live in the Budget slot.';
+          hint =
+            budgetGrade?.status === 'untouched' && budgetGrade.hint !== ''
+              ? budgetGrade.hint
+              : 'Caps stop runs closed — estimates live in the Budget slot.';
           status = budgetGrade?.status ?? 'untouched';
           break;
         }
       }
     } else if (!locked && !definition) {
-      if (kind === 'guardrails' || kind === 'budget') {
-        subtitle = 'Platform defaults';
-        status = 'ready';
-      }
+      // No draft, no content: nothing is born-ready. The loop default
+      // ('Not configured' / 'untouched') already says it honestly.
     }
 
     push(
@@ -613,11 +662,12 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     );
 
     // Derived runtime legs (BUILD_PLAN.md §5) — dim until the endpoint carries data.
-    // Brand rides the context leg (voice feeds assembly); like guardrails
-    // defaults it flows whenever a draft exists to carry it. The evaluation
+    // Brand rides the context leg (voice feeds assembly); the evaluation
     // verdict leg lights on a fresh PASS only (C10 signal, never a gate).
     // Budget has no generic leg — its only model relation is the labeled
     // 'spend cap' edge below (a second e:budget:model would duplicate the id).
+    // Legs follow the node's honest status — a leg never lights for an
+    // untouched section.
     if (kind === 'budget') continue;
     const legTarget = kind === 'knowledge' || kind === 'memory' || kind === 'brand' ? 'context' : 'model';
     const evalFreshPass =
@@ -627,6 +677,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       input.evalState.latest.decision === 'PASS' &&
       !input.evalState.latest.stale &&
       !input.evalState.latest.shadow;
+    const legNode = nodes.find((n) => n.id === kind);
     const lit =
       !locked &&
       !!definition &&
@@ -635,9 +686,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         : kind === 'tools'
           ? definition.tools.length > 0
           : kind === 'memory'
-            ? definition.context_policy.memory_scope !== 'none'
+            ? !memoryIsDefault(definition)
             : kind === 'guardrails' || kind === 'brand'
-              ? true
+              ? legNode?.data.status === 'ready'
               : kind === 'evaluation'
                 ? evalFreshPass
                 : false);
@@ -708,9 +759,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   );
 
   // Brain is a real section (the Brain node owns the reasoning profiles —
-  // Clerk/Scholar/Creator presets that shape how the model thinks). Profiles
-  // are optional: unset params are valid defaults, so the node grades ready
-  // whenever a draft exists, like role.
+  // Clerk/Scholar/Creator presets that shape how the model thinks). Honest
+  // rule: unset params are engine defaults, not user content — the node is
+  // ready only when a preset actually matched what the user saved.
+  const brainMatched = definition ? brainSubtitle(definition) !== null : false;
   push(
     'brain',
     {
@@ -718,9 +770,14 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'spine',
       kind: null,
       title: SPINE_META.brain.label,
-      subtitle: locked ? null : brainSubtitle(definition),
-      hint: locked ? 'Create the agent first' : null,
-      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
+      subtitle: locked ? null : (brainSubtitle(definition) ?? 'Not configured'),
+      hint:
+        locked
+          ? 'Create the agent first'
+          : brainMatched
+            ? null
+            : 'No reasoning profile selected — pick one in the Brain section.',
+      status: locked ? 'locked' : brainMatched ? 'ready' : 'untouched',
       lock: false,
       color: LANE_NODES.brain.color,
       portColor: LANE_NODES.brain.color,
@@ -731,8 +788,12 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // Context and Response are real sections (the Context node owns
   // context_policy; the Response node owns response_policy). Subtitles carry
   // payload truth; the two stay out of FUNCTIONAL_NODE_IDS — health and
-  // next-step math still read the 14 legacy-functional nodes.
+  // next-step math still read the 14 legacy-functional nodes. Honest rule:
+  // all-default policies are engine defaults, not user content.
+  const contextTouched = definition ? !contextPolicyIsDefault(definition) : false;
+  const responseTouched = definition ? !responsePolicyIsDefault(definition) : false;
   for (const id of ['context', 'response'] as const) {
+    const touched = id === 'context' ? contextTouched : responseTouched;
     push(
       id,
       {
@@ -740,9 +801,19 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         nodeType: 'spine',
         kind: null,
         title: LANE_NODES[id].label,
-        subtitle: id === 'context' ? contextSubtitle(definition) : responseSubtitle(definition),
-        hint: locked ? 'Create the agent first' : null,
-        status: locked ? 'locked' : definition ? 'ready' : 'untouched',
+        subtitle:
+          locked || touched
+            ? id === 'context'
+              ? contextSubtitle(definition)
+              : responseSubtitle(definition)
+            : 'Not configured',
+        hint:
+          locked
+            ? 'Create the agent first'
+            : touched
+              ? null
+              : `Engine defaults apply — configure them in the ${id === 'context' ? 'Context' : 'Response'} section.`,
+        status: locked ? 'locked' : touched ? 'ready' : 'untouched',
         lock: false,
         color: LANE_NODES[id].color,
         portColor: LANE_NODES[id].color,
@@ -754,7 +825,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // Role is a real section (the Role node owns role_policy — D-N2 option A,
   // structured persona, composed into the system prompt server-side).
   // Subtitle carries payload truth; like context/response it stays out of
-  // FUNCTIONAL_NODE_IDS — no persona is a valid default.
+  // FUNCTIONAL_NODE_IDS. Honest rule: an empty policy composes no persona
+  // block — no persona content means untouched, never born-ready.
+  const roleTouched = definition ? roleSubtitle(definition) !== null : false;
   push(
     'role',
     {
@@ -762,9 +835,14 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'spine',
       kind: null,
       title: LANE_NODES.role.label,
-      subtitle: roleSubtitle(definition),
-      hint: locked ? 'Create the agent first' : null,
-      status: locked ? 'locked' : definition ? 'ready' : 'untouched',
+      subtitle: locked ? null : (roleSubtitle(definition) ?? 'Not configured'),
+      hint:
+        locked
+          ? 'Create the agent first'
+          : roleTouched
+            ? null
+            : 'No persona set — define one in the Role section.',
+      status: locked ? 'locked' : roleTouched ? 'ready' : 'untouched',
       lock: false,
       color: LANE_NODES.role.color,
       portColor: LANE_NODES.role.color,

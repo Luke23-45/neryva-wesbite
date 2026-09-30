@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -11,11 +11,16 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
-import { PurposeInspector } from './PurposeInspector';
+import type { ReactNode, RefObject } from 'react';
+import { PurposeInspector, type PurposeHandle } from './PurposeInspector';
 import { ApiError } from '@lib/engine/client';
 
 const updateIdentityMock = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  isPending: false,
+}));
+
+const createIdentityMock = vi.hoisted(() => ({
   mutate: vi.fn(),
   isPending: false,
 }));
@@ -37,7 +42,11 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   return {
     ...actual,
     useCloneAssistant: () => ({ mutate: vi.fn(), isPending: false, error: null }),
-    useCreateAssistant: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+    useCreateAssistant: () => ({
+      mutate: createIdentityMock.mutate,
+      isPending: createIdentityMock.isPending,
+      error: null,
+    }),
     useUpdateAssistantIdentity: () => ({
       mutate: updateIdentityMock.mutate,
       isPending: updateIdentityMock.isPending,
@@ -260,5 +269,123 @@ describe('PurposeInspector (build mode)', () => {
     fireEvent.click(screen.getByRole('button', { name: /use “taken name 2”/i }));
     expect(screen.getByDisplayValue('Taken Name 2')).toBeTruthy();
     expect(screen.queryByText('That name is taken')).toBeNull();
+  });
+});
+
+describe('PurposeInspector save handle (per-section "Save Identity")', () => {
+  const buildProps = {
+    mode: 'build' as const,
+    agentId: 'agent-1',
+    agentName: 'Billing Support',
+    description: null as string | null,
+    canAuthor: true,
+    role: 'owner' as const,
+  };
+
+  function refShell(node: (ref: RefObject<PurposeHandle | null>) => ReactNode) {
+    const ref = { current: null } as RefObject<PurposeHandle | null>;
+    const rootRoute = createRootRoute();
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => (
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            {node(ref)}
+          </QueryClientProvider>
+        </ThemeProvider>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    return router.load().then(() => {
+      render(<RouterProvider router={router} />);
+      return ref;
+    });
+  }
+
+  it('new mode: save() creates through the same path as the Create verb', async () => {
+    createIdentityMock.mutate.mockReset();
+    const ref = await refShell((r) => (
+      <PurposeInspector
+        ref={r}
+        mode="new"
+        agentId={null}
+        agentName={null}
+        description={null}
+        canAuthor
+        role="owner"
+      />
+    ));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Billing concierge'), {
+      target: { value: 'Billing concierge' },
+    });
+    ref.current?.save();
+    expect(createIdentityMock.mutate).toHaveBeenCalledTimes(1);
+    expect(createIdentityMock.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Billing concierge' }),
+      expect.anything(),
+    );
+  });
+
+  it('new mode: save() refuses to create while the name is invalid', async () => {
+    createIdentityMock.mutate.mockReset();
+    const ref = await refShell((r) => (
+      <PurposeInspector
+        ref={r}
+        mode="new"
+        agentId={null}
+        agentName={null}
+        description={null}
+        canAuthor
+        role="owner"
+      />
+    ));
+    ref.current?.save();
+    expect(createIdentityMock.mutate).not.toHaveBeenCalled();
+  });
+
+  it('build read state: save() opens the editor — nothing to persist until it opens', async () => {
+    updateIdentityMock.mutate.mockReset();
+    const ref = await refShell((r) => <PurposeInspector ref={r} {...buildProps} />);
+    expect(screen.queryByDisplayValue('Billing Support')).toBeNull();
+    act(() => {
+      ref.current?.save();
+    });
+    // The edit form opens with the identity prefilled.
+    expect(screen.getByDisplayValue('Billing Support')).toBeTruthy();
+    expect(updateIdentityMock.mutate).not.toHaveBeenCalled();
+  });
+
+  it('build editing with changes: save() persists through the identity PATCH path', async () => {
+    updateIdentityMock.mutate.mockReset();
+    const ref = await refShell((r) => <PurposeInspector ref={r} {...buildProps} />);
+    act(() => {
+      ref.current?.save();
+    });
+    fireEvent.change(screen.getByDisplayValue('Billing Support'), { target: { value: 'Billing concierge' } });
+    act(() => {
+      ref.current?.save();
+    });
+    expect(updateIdentityMock.mutate).toHaveBeenCalledTimes(1);
+    expect(updateIdentityMock.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantId: 'agent-1', name: 'Billing concierge' }),
+      expect.anything(),
+    );
+  });
+
+  it('build editing without changes: save() stays quiet — no empty PATCH', async () => {
+    updateIdentityMock.mutate.mockReset();
+    const ref = await refShell((r) => <PurposeInspector ref={r} {...buildProps} />);
+    act(() => {
+      ref.current?.save();
+    });
+    // Form opened, nothing typed — the edit is not dirty.
+    act(() => {
+      ref.current?.save();
+    });
+    expect(updateIdentityMock.mutate).not.toHaveBeenCalled();
   });
 });

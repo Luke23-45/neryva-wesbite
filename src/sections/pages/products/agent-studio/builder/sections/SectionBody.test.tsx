@@ -12,6 +12,8 @@ import {
 import { theme } from '@styles/theme';
 import { SectionBody, type InspectorContext } from './SectionBody';
 import type { PurposeNodeDatum } from '../inspector/PurposeExtras';
+import type { PurposeHandle } from '../inspector/PurposeInspector';
+import type { RefObject } from 'react';
 
 /**
  * Mapping tests: the 18 section ids each mount their section in the main
@@ -99,6 +101,7 @@ const buildContext = (overrides: Partial<InspectorContext> = {}): InspectorConte
   onEditJump: () => undefined,
   saveSignal: 0,
   publishSignal: 0,
+  requestSave: () => undefined,
   ...overrides,
 });
 
@@ -107,6 +110,7 @@ async function shell(opts: {
   context?: InspectorContext;
   purposeNodes?: PurposeNodeDatum[];
   onPurposeSelect?: (id: string) => void;
+  purposeRef?: RefObject<PurposeHandle | null>;
 }) {
   const onPurposeSelect = opts.onPurposeSelect ?? vi.fn();
   const rootRoute = createRootRoute();
@@ -120,6 +124,7 @@ async function shell(opts: {
           context={opts.context ?? buildContext()}
           purposeNodes={opts.purposeNodes}
           onPurposeSelect={onPurposeSelect}
+          purposeRef={opts.purposeRef}
         />
       </ThemeProvider>
     ),
@@ -271,5 +276,67 @@ describe('Purpose extras (blueprint, next steps, CTA)', () => {
     });
     expect(screen.queryByLabelText('Next steps')).toBeNull();
     expect(screen.queryByText(/Browse the template gallery/)).toBeNull();
+  });
+});
+
+describe('SectionBody per-section Save', () => {
+  const SAVE_CASES: Array<[string, string]> = [
+    ['purpose', 'Save Identity'],
+    ['instructions', 'Save instructions'],
+    ['role', 'Save role'],
+    ['brand', 'Save brand'],
+    ['model', 'Save model'],
+    ['brain', 'Save brain'],
+    ['knowledge', 'Save knowledge'],
+    ['context', 'Save context'],
+    ['tools', 'Save tools'],
+    ['guardrails', 'Save guardrails'],
+    ['response', 'Save response'],
+    ['budget', 'Save budget'],
+  ];
+
+  it.each(SAVE_CASES)('shows "%s" in build mode for authors', async (id, label) => {
+    await shell({ sectionId: id });
+    expect(screen.getByRole('button', { name: label })).toBeTruthy();
+  });
+
+  it.each(['credentials', 'samples', 'try', 'evaluation', 'ship'])(
+    'shows no Save button on the %s action surface — its own verbs stay',
+    async (id) => {
+      await shell({ sectionId: id });
+      expect(screen.queryByRole('button', { name: /^Save / })).toBeNull();
+    },
+  );
+
+  it('shows no Save button on memory — read-only since D-N1, nothing to persist', async () => {
+    await shell({ sectionId: 'memory' });
+    expect(screen.queryByRole('button', { name: /^Save / })).toBeNull();
+  });
+
+  it('hides the Save button from viewers', async () => {
+    await shell({ sectionId: 'instructions', context: buildContext({ canAuthor: false }) });
+    expect(screen.queryByRole('button', { name: /^Save / })).toBeNull();
+  });
+
+  it('hides the Save button in new mode', async () => {
+    await shell({ sectionId: 'purpose', context: buildContext({ mode: 'new', agentId: null }) });
+    expect(screen.queryByRole('button', { name: /^Save / })).toBeNull();
+  });
+
+  it('fires the manual save signal for draft sections on click', async () => {
+    const requestSave = vi.fn();
+    await shell({ sectionId: 'instructions', context: buildContext({ requestSave }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Save instructions' }));
+    expect(requestSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes Save Identity through the PurposeInspector save handle', async () => {
+    const save = vi.fn();
+    const purposeRef = { current: { submit: () => undefined, save } } as RefObject<PurposeHandle | null>;
+    const requestSave = vi.fn();
+    await shell({ sectionId: 'purpose', context: buildContext({ requestSave }), purposeRef });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Identity' }));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(requestSave).not.toHaveBeenCalled();
   });
 });

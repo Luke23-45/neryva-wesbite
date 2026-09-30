@@ -27,6 +27,31 @@ import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from '../inspector/TraceDrawer';
 import { sectionLabel, type SectionEntry } from '../nav/section-groups';
 import { SectionHead, SectionPane, SectionSub, SectionTitle, SectionWrap } from './SectionBody.styles';
+import { ActionButton } from '@components/common/ui/ActionButton';
+
+/**
+ * Sections with a real save affordance behind the header's "Save {name}"
+ * button: the 11 draft sections (manual save signal → the section's own
+ * doSave) plus Identity (the PurposeInspector's save handle). Credentials,
+ * Samples, Try, Evaluation, and Ship are action surfaces with their own
+ * verbs — a Save button there would be a fake affordance. Memory is
+ * deliberately excluded too: it is read-only since D-N1 (no save machine,
+ * always reports clean), so "Save Memory" could never do anything.
+ */
+const SECTION_SAVE_IDS: ReadonlySet<string> = new Set([
+  'purpose',
+  'instructions',
+  'role',
+  'brand',
+  'model',
+  'brain',
+  'knowledge',
+  'context',
+  'tools',
+  'guardrails',
+  'response',
+  'budget',
+]);
 
 export interface InspectorContext {
   mode: 'new' | 'build';
@@ -69,6 +94,13 @@ export interface InspectorContext {
    * increments it; the mounted section fires its doSave when it changes.
    */
   saveSignal: number;
+  /**
+   * Fire the manual save signal for the mounted draft section — the
+   * per-section "Save {name}" button in the section header. Same path as
+   * the topbar Save: the section's own guards decide (held saves toast
+   * their reason, never fail silently).
+   */
+  requestSave: () => void;
   /**
    * Manual publish counter (v10 §8.12 — topbar Publish). Blocked clicks
    * never reach it — they select the ship node instead; unblocked clicks
@@ -444,12 +476,32 @@ export function SectionBody({
 
   const title = sectionLabel(sectionId, entry?.label ?? sectionId);
   const statusLine = entry?.statusText?.trim() ? entry.statusText : null;
+  // Per-section save: build mode, authors only, and only where a real save
+  // exists behind the button. Identity saves through the PurposeInspector
+  // handle (create in new mode is unreachable here — build-only button);
+  // the 11 draft sections fire the manual save signal.
+  const showSectionSave =
+    context.mode === 'build' && context.canAuthor && SECTION_SAVE_IDS.has(sectionId);
+  const handleSectionSave = () => {
+    if (sectionId === 'purpose') {
+      purposeRef?.current?.save();
+      return;
+    }
+    context.requestSave();
+  };
 
   return (
     <SectionWrap aria-label={`${title} section`}>
       <SectionHead>
-        <SectionTitle>{title}</SectionTitle>
-        {statusLine ? <SectionSub>{statusLine}</SectionSub> : null}
+        <div>
+          <SectionTitle>{title}</SectionTitle>
+          {statusLine ? <SectionSub>{statusLine}</SectionSub> : null}
+        </div>
+        {showSectionSave ? (
+          <ActionButton size="sm" variant="secondary" onClick={handleSectionSave} aria-label={`Save ${title}`}>
+            Save {title}
+          </ActionButton>
+        ) : null}
       </SectionHead>
       <SectionPane>{body}</SectionPane>
     </SectionWrap>

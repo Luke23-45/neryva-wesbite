@@ -17,6 +17,10 @@ export const SectionWrap = styled.div`
 `;
 
 export const SectionHead = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   padding: 20px 28px 12px;
   border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;

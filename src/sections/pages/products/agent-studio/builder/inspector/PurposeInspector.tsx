@@ -45,6 +45,12 @@ export interface PurposeFormState {
 export interface PurposeHandle {
   /** Invoked by the bottom action bar (single-action invariant — no twin submit). */
   submit: () => void;
+  /**
+   * Per-section "Save Identity" (section header). New mode: create the
+   * agent. Build mode: save the edit form, or open it when the identity
+   * card is in read state (there is nothing to save until it opens).
+   */
+  save: () => void;
 }
 
 interface PurposeInspectorProps {
@@ -123,7 +129,6 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   }, [valid, create, trimmed, desc, onCreated]);
 
   // Stable handle for the bottom action bar (single-action invariant).
-  useImperativeHandle(ref, () => ({ submit }), [submit]);
 
   const suggestion = useMemo(() => suggestRename(trimmed || 'Untitled agent'), [trimmed]);
 
@@ -171,6 +176,24 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
       },
     );
   }, [mode, agentId, editValid, editDirty, updateIdentity, trimmed, desc]);
+
+  // Per-section "Save Identity" (section header): create in new mode, save
+  // the edit form in build mode, or open the form when the card is in read
+  // state. Registered after saveIdentity/enterEdit are defined.
+  const save = useCallback(() => {
+    if (mode === 'new') {
+      submit();
+      return;
+    }
+    if (editing) {
+      saveIdentity();
+      return;
+    }
+    enterEdit();
+  }, [mode, submit, editing, saveIdentity, enterEdit]);
+
+  // Stable handle for the bottom action bar (single-action invariant).
+  useImperativeHandle(ref, () => ({ submit, save }), [submit, save]);
 
   const initial = (agentName ?? '').trim().charAt(0).toUpperCase() || '·';
 

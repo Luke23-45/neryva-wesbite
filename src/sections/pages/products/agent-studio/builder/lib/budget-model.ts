@@ -134,14 +134,16 @@ export function cachedPriceLine(cost: PricedModel): string | null {
 }
 
 export interface BudgetGrade {
-  status: 'ready';
+  status: 'ready' | 'untouched';
   subtitle: string;
   hint: string;
 }
 
 /**
- * Projector grading (PLAN §6): budget never degrades — deliberate config reads
- * ready (C05 retrieval-off precedent). Cost-unset reads `No spend cap` loudly.
+ * Projector grading: budget is `ready` only when the user set something —
+ * a spend cap or any limit. Nothing set reads `untouched` loudly: platform
+ * defaults are not user content and never earn the saved mark. Budget never
+ * degrades — there is no attention state.
  */
 export function gradeBudget(budget: BudgetCaps, estimateMicros: number | null): BudgetGrade {
   const capped = budget.max_cost_cents !== undefined && budget.max_cost_cents > 0;
@@ -159,7 +161,11 @@ export function gradeBudget(budget: BudgetCaps, estimateMicros: number | null): 
   if (anySet) {
     return { status: 'ready', subtitle: 'No spend cap', hint: '' };
   }
-  return { status: 'ready', subtitle: 'Platform defaults', hint: '' };
+  return {
+    status: 'untouched',
+    subtitle: 'Not configured',
+    hint: 'No caps set — runs are uncapped until you set one in the Budget section.',
+  };
 }
 
 // ─── Copy constants ──────────────────────────────────────────────────────────

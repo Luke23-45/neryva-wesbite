@@ -62,11 +62,11 @@ describe('displayPolicyName / isPolicyOff', () => {
 });
 
 describe('gradeGuardrails', () => {
-  it('grades a fresh default policy ready with platform-default subtitle', () => {
+  it('grades a fresh default policy untouched — engine defaults are not user content', () => {
     const grade = gradeGuardrails({ input_policy: '', output_policy: '', pii_redaction: true, execution_mode: 'blocking' });
-    expect(grade.status).toBe('ready');
-    expect(grade.subtitle).toBe('Blocking · in default / out brand-safe · PII on');
-    expect(grade.hint).toBe('');
+    expect(grade.status).toBe('untouched');
+    expect(grade.subtitle).toBe('Not configured');
+    expect(grade.hint).toMatch(/Guardrails section/);
   });
   it('grades logging as attention with a flip hint', () => {
     const grade = gradeGuardrails({ input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'logging' });

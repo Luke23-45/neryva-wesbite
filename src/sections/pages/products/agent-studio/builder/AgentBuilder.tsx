@@ -645,13 +645,18 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
       /** Manual save counter — sections fire doSave when it increments. */
       saveSignal,
       /**
+       * Per-section "Save {name}" (section header). Same path as the topbar
+       * Save — the mounted section's own guards decide.
+       */
+      requestSave,
+      /**
        * Manual publish counter (v10 §8.12 — topbar Publish). The Ship
        * section fires its publish flow when this increments; blocked
        * clicks never reach it — they select the ship section instead.
        */
       publishSignal,
     }),
-    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal],
+    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, requestSave],
   );
 
   // — Build-mode loading / not-found / fetch-error (firsthand states, never blank) —

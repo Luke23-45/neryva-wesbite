@@ -75,9 +75,14 @@ describe('estimateRun / cachedPriceLine (never derived)', () => {
 describe('gradeBudget', () => {
   it('grades capped+priced, capped-unpriced, uncapped, and blank distinctly', () => {
     expect(gradeBudget({ max_cost_cents: 500 }, 360_000_000).subtitle).toBe('Capped · ~$360.00 rough');
+    expect(gradeBudget({ max_cost_cents: 500 }, 360_000_000).status).toBe('ready');
     expect(gradeBudget({ max_cost_cents: 500 }, null).subtitle).toBe('Capped at $5.00');
     expect(gradeBudget({ max_total_tokens: 20_000 }, null).subtitle).toBe('No spend cap');
-    expect(gradeBudget({}, null).subtitle).toBe('Platform defaults');
+    expect(gradeBudget({ max_total_tokens: 20_000 }, null).status).toBe('ready');
+    const blank = gradeBudget({}, null);
+    expect(blank.status).toBe('untouched');
+    expect(blank.subtitle).toBe('Not configured');
+    expect(blank.hint).toMatch(/Budget section/);
   });
 });
 
