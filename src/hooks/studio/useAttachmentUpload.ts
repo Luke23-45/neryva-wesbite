@@ -78,6 +78,16 @@ export interface AttachInput {
    */
   targetDocumentId?: string;
   versionOfSlug?: string | null;
+  /**
+   * 0086 — per-session ingestion overrides (the Knowledge section's
+   * source_defaults for this source). Absent = the engine falls back to the
+   * org's `knowledge_config`. The engine validates fail-closed.
+   */
+  ingestionOverrides?: {
+    chunkSize?: number | null;
+    chunkOverlap?: number | null;
+    embeddingModel?: string | null;
+  } | null;
   mediaType?: KnowledgeMediaType;
 }
 
@@ -198,6 +208,12 @@ export function useAttachmentUpload() {
               ...(input.sourceSlug ? { source_slug: input.sourceSlug } : {}),
               ...(input.title ? { title: input.title } : {}),
             }),
+        // 0086: per-session ingestion overrides (source_defaults).
+        ...(input.ingestionOverrides?.chunkSize != null ? { chunk_size: input.ingestionOverrides.chunkSize } : {}),
+        ...(input.ingestionOverrides?.chunkOverlap != null
+          ? { chunk_overlap: input.ingestionOverrides.chunkOverlap }
+          : {}),
+        ...(input.ingestionOverrides?.embeddingModel ? { embedding_model: input.ingestionOverrides.embeddingModel } : {}),
       },
       idempotent: true,
     });
@@ -299,12 +315,14 @@ export function useAttachmentUpload() {
     slug: string;
     mediaType: PasteUploadType;
     title?: string;
+    ingestionOverrides?: AttachInput['ingestionOverrides'];
   }): Promise<string | null> =>
     attach({
       file: encodePasteFile(input.text, input.slug, input.mediaType),
       mediaType: input.mediaType,
       sourceSlug: input.slug.trim().toLowerCase() || undefined,
       ...(input.title ? { title: input.title } : {}),
+      ...(input.ingestionOverrides ? { ingestionOverrides: input.ingestionOverrides } : {}),
     });
 
   return { uploads, attach, attachText, reset, dismiss };

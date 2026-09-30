@@ -228,3 +228,94 @@ export const RETENTION_NOTE =
   'Documents can’t be deleted from this UI — the engine exposes no delete verb. Retired rows are upstream tombstones; unmap pins in the builder to stop serving them.';
 export const NO_RETRY_COPY = 'No retry exists — upload a replacement.';
 export const RETRIEVAL_OFF_COPY = 'Off — the agent answers from instructions and model only. Deliberate, not empty.';
+
+/* ── Retrieval extensions (Knowledge section redesign) ────────── */
+
+/** How chunks are matched: semantic vectors, keyword (BM25), or a blend. */
+export const RETRIEVAL_MODES = ['semantic', 'hybrid', 'keyword'] as const;
+export type RetrievalMode = (typeof RETRIEVAL_MODES)[number];
+export const RETRIEVAL_MODE_DEFAULT: RetrievalMode = 'hybrid';
+export const RETRIEVAL_MODE_LABELS: Record<RetrievalMode, string> = {
+  semantic: 'Semantic',
+  hybrid: 'Hybrid',
+  keyword: 'Keyword',
+};
+
+export const RERANK_DEFAULT = true;
+export const REQUIRE_CITATIONS_DEFAULT = true;
+
+/** Refresh policy for pinned sources. */
+export type RefreshPolicy = 'pin_version' | 'track_latest';
+export const REFRESH_POLICIES = ['pin_version', 'track_latest'] as const;
+export const REFRESH_POLICY_LABELS: Record<RefreshPolicy, string> = {
+  pin_version: 'Pin version',
+  track_latest: 'Track latest',
+};
+
+export interface SourceDefaults {
+  chunkSize: number;
+  chunkOverlap: number;
+  embeddingModel: string;
+  refreshPolicy: RefreshPolicy;
+}
+
+export const SOURCE_DEFAULTS: SourceDefaults = {
+  chunkSize: 400,
+  chunkOverlap: 80,
+  embeddingModel: 'openai/text-embedding-3-small',
+  refreshPolicy: 'pin_version',
+};
+
+/** Embedding models the console offers for new sources. */
+export const EMBEDDING_MODELS = ['openai/text-embedding-3-small', 'openai/text-embedding-3-large'] as const;
+
+export const CHUNK_SIZE_MIN = 100;
+export const CHUNK_SIZE_MAX = 4000;
+
+export function isRetrievalMode(value: unknown): value is RetrievalMode {
+  return typeof value === 'string' && (RETRIEVAL_MODES as readonly string[]).includes(value);
+}
+
+export function isRefreshPolicy(value: unknown): value is RefreshPolicy {
+  return typeof value === 'string' && (REFRESH_POLICIES as readonly string[]).includes(value);
+}
+
+export function validateChunkSize(value: number): { ok: true } | { ok: false; message: string } {
+  if (!Number.isInteger(value) || value < CHUNK_SIZE_MIN || value > CHUNK_SIZE_MAX) {
+    return { ok: false, message: `Chunk size must be ${CHUNK_SIZE_MIN}–${CHUNK_SIZE_MAX} tokens.` };
+  }
+  return { ok: true };
+}
+
+export function validateChunkOverlap(
+  value: number,
+  chunkSize: number,
+): { ok: true } | { ok: false; message: string } {
+  if (!Number.isInteger(value) || value < 0 || value >= chunkSize) {
+    return { ok: false, message: `Chunk overlap must be 0–${chunkSize - 1} tokens (less than chunk size).` };
+  }
+  return { ok: true };
+}
+
+/**
+ * Stale pins: a pin is stale when its recorded version trails the library's
+ * latest. The engine does not expose per-pin resolved versions yet (pins are
+ * plain slugs; knowledge-health joins states, not versions), so callers pass
+ * whatever baseline they have — currently an empty map, which yields no
+ * stale pins rather than invented ones. The UI renders the stale treatment
+ * only from this set.
+ */
+export function findStalePinSlugs(
+  pins: readonly string[],
+  inventory: readonly InventoryRow[],
+  pinnedVersions: ReadonlyMap<string, number>,
+): Set<string> {
+  const stale = new Set<string>();
+  for (const slug of pins) {
+    const baseline = pinnedVersions.get(slug);
+    if (baseline === undefined) continue;
+    const doc = inventory.find((d) => d.sourceSlug === slug);
+    if (doc?.latestVersion != null && doc.latestVersion > baseline) stale.add(slug);
+  }
+  return stale;
+}

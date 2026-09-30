@@ -254,6 +254,13 @@ export interface KnowledgeHealthPin {
   state: string | null;
   /** Per-model embedding coverage (C05 — engine returns it; null on older engines). */
   embeddingComplete: boolean | null;
+  /** Live staleness: the pinned version is not the library's latest READY
+   * version for the slug (engine-computed; false on older engines). */
+  stale: boolean;
+  /** The pinned document version number (null when unknown / legacy pin). */
+  pinnedVersion: number | null;
+  /** The library's latest READY version number (null when none). */
+  latestVersion: number | null;
 }
 
 export function parseKnowledgeHealth(raw: unknown): { degraded: boolean; pins: KnowledgeHealthPin[] } {
@@ -273,18 +280,34 @@ export function parseKnowledgeHealth(raw: unknown): { degraded: boolean; pins: K
           documentId: str(pin.document_id),
           state: str(pin.state),
           embeddingComplete: typeof pin.embedding_complete === 'boolean' ? pin.embedding_complete : null,
+          stale: pin.stale === true,
+          pinnedVersion: typeof pin.pinned_version === 'number' ? pin.pinned_version : null,
+          latestVersion: typeof pin.latest_version === 'number' ? pin.latest_version : null,
         } satisfies KnowledgeHealthPin;
       })
       .filter((p): p is KnowledgeHealthPin => p !== null),
   };
 }
 
-/** ACTIVE-version pins × live document states — drives the degraded banner. All roles. */
-export function useKnowledgeHealth(assistantId: string | null) {
+/**
+ * Pin health × live document states — drives the degraded banner and the
+ * builder's stale badges. All roles.
+ *
+ * `versionId` selects the version to grade. The builder passes its draft's
+ * id — Re-pin mutates the DRAFT, so the badges must describe the draft
+ * being edited, not the active version. Omit it for the operate view
+ * (ACTIVE version).
+ */
+export function useKnowledgeHealth(assistantId: string | null, versionId?: string | null) {
   const { orgId } = useOrg();
   return useQuery({
-    queryKey: [...AUTHORING_KEY, orgId, 'knowledge-health', assistantId],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/knowledge-health`),
+    queryKey: [...AUTHORING_KEY, orgId, 'knowledge-health', assistantId, versionId ?? null],
+    queryFn: () =>
+      engine<unknown>(
+        `/console/org/${orgId}/assistants/${assistantId}/knowledge-health${
+          versionId ? `?version_id=${encodeURIComponent(versionId)}` : ''
+        }`,
+      ),
     enabled: !!orgId && !!assistantId,
     staleTime: 30_000,
     select: parseKnowledgeHealth,

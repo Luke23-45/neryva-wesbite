@@ -77,9 +77,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
   const models = useModelAvailability({ enabled: mode === 'build' });
-  // ACTIVE-version pin health (C05) — grades the knowledge section and the
-  // bottom hint. Disabled in new mode: no assistant exists to read.
-  const health = useKnowledgeHealth(mode === 'build' ? (agentId ?? null) : null);
+  // Draft-targeted pin health (C05) — grades the knowledge section and the
+  // bottom hint against the draft Re-pin mutates, not the active version.
+  // Disabled in new mode: no assistant exists to read.
+  const health = useKnowledgeHealth(mode === 'build' ? (agentId ?? null) : null, form.data?.versionId ?? null);
   // Unconditional by design: one cached library read that warms the cache for
   // the Knowledge passes in both modes (no render depends on it in origin).
   const documents = useDocuments();

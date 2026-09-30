@@ -247,6 +247,21 @@ export interface ConsumerDefinition {
   knowledge_policy: {
     retrieval_enabled: boolean;
     max_results: number;
+    /**
+     * Retrieval extensions (Knowledge section redesign, v1.14). Picked
+     * through by toEnginePayload — the engine accepts and echoes them
+     * (additive contract change, the v1.13 model_policy.pipeline
+     * precedent). Read when present; absent = engine defaults.
+     */
+    retrieval_mode?: 'semantic' | 'hybrid' | 'keyword';
+    rerank?: boolean;
+    require_citations?: boolean;
+    source_defaults?: {
+      chunk_size?: number;
+      chunk_overlap?: number;
+      embedding_model?: string;
+      refresh_policy?: 'pin_version' | 'track_latest';
+    };
   };
   guardrails: {
     pii_redaction: boolean;
@@ -316,7 +331,24 @@ export interface EnginePayload {
     prohibitedTopics?: RoleFieldBlock;
   };
   tool_policy: { tools: Array<{ name: string; access: string; approval: string; schema_hash?: string; execution_mode?: string }> };
-  knowledge_policy?: { retrieval_enabled: boolean; max_results: number };
+  knowledge_policy?: {
+    retrieval_enabled: boolean;
+    max_results: number;
+    /**
+     * Retrieval extensions (Knowledge section redesign, v1.14). The engine
+     * accepts and echoes them (additive contract change). Absent = engine
+     * defaults.
+     */
+    retrieval_mode?: 'semantic' | 'hybrid' | 'keyword';
+    rerank?: boolean;
+    require_citations?: boolean;
+    source_defaults?: {
+      chunk_size?: number;
+      chunk_overlap?: number;
+      embedding_model?: string;
+      refresh_policy?: 'pin_version' | 'track_latest';
+    };
+  };
   guardrail_policy: { input_policy: string; output_policy: string; pii_redaction: boolean; execution_mode: string };
 }
 
@@ -516,10 +548,23 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     })(),
     tool_policy: { tools },
     // Explicit toggle, never silent fallback: the engine defaults OFF, and
-    // the UI always states the value it sends.
+    // the UI always states the value it sends. The v1.14 retrieval
+    // extensions pass through verbatim — the engine accepts and echoes
+    // them (additive contract change).
     knowledge_policy: {
       retrieval_enabled: def.knowledge_policy.retrieval_enabled,
       max_results: def.knowledge_policy.max_results,
+      retrieval_mode: def.knowledge_policy.retrieval_mode,
+      rerank: def.knowledge_policy.rerank,
+      require_citations: def.knowledge_policy.require_citations,
+      source_defaults: def.knowledge_policy.source_defaults
+        ? {
+            chunk_size: def.knowledge_policy.source_defaults.chunk_size,
+            chunk_overlap: def.knowledge_policy.source_defaults.chunk_overlap,
+            embedding_model: def.knowledge_policy.source_defaults.embedding_model,
+            refresh_policy: def.knowledge_policy.source_defaults.refresh_policy,
+          }
+        : undefined,
     },
     guardrail_policy: {
       input_policy: nonBlank(def.guardrails.input_policy) ?? 'default',
