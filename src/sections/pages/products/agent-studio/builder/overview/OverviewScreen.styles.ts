@@ -156,13 +156,17 @@ export const VersionValue = styled.dd`
   font-weight: 550;
 `;
 
-export const DraftPill = styled.span`
+export const DraftPill = styled.span<{ $tone?: 'info' | 'neutral' }>`
   display: inline-block;
   padding: 2px 10px;
   border-radius: 999px;
-  border: 1px solid ${({ theme }) => theme.app.status.info.border};
-  background: ${({ theme }) => theme.app.status.info.bg};
-  color: ${({ theme }) => theme.app.status.info.fg};
+  border: 1px solid
+    ${({ theme, $tone }) =>
+      $tone === 'neutral' ? theme.app.status.neutral.border : theme.app.status.info.border};
+  background: ${({ theme, $tone }) =>
+    $tone === 'neutral' ? theme.app.status.neutral.bg : theme.app.status.info.bg};
+  color: ${({ theme, $tone }) =>
+    $tone === 'neutral' ? theme.app.status.neutral.fg : theme.app.status.info.fg};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 600;
 `;

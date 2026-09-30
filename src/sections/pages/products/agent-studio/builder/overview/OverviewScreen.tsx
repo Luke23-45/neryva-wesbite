@@ -177,7 +177,21 @@ export function OverviewScreen({
           <VersionGrid>
             <VersionTerm>Status</VersionTerm>
             <VersionValue>
-              <DraftPill>{workingVersion.isDraft ? 'Draft' : 'Published'}</DraftPill>
+              {/*
+                The pill used to be binary (Draft/Published), so with no draft
+                and no version at all it lied "Published" right above
+                "Live: Not published yet". A missing versionId is its own
+                state — neutral, not blue.
+              */}
+              {workingVersion.versionId == null ? (
+                <DraftPill $tone="neutral">No version yet</DraftPill>
+              ) : (
+                <DraftPill>
+                  {workingVersion.isDraft || workingVersion.status === 'DRAFT'
+                    ? 'Draft'
+                    : 'Published'}
+                </DraftPill>
+              )}
             </VersionValue>
             <VersionTerm>Live</VersionTerm>
             <VersionValue>

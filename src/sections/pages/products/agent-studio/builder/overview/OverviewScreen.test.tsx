@@ -159,7 +159,7 @@ describe('OverviewScreen', () => {
     renderOverview(<OverviewScreen {...BASE} readiness={readiness()} />);
     expect(screen.getByText('Draft')).toBeInTheDocument();
     expect(screen.getByText('v6')).toBeInTheDocument();
-    expect(screen.getByText('Publishes as v7')).toBeInTheDocument();
+    expect(screen.getByText(/Expected v7 · assigned at publish/)).toBeInTheDocument();
     expect(screen.getByText(/1 section changed since v6/)).toBeInTheDocument();
     expect(screen.getByText(/Instructions/)).toBeInTheDocument();
   });
@@ -174,7 +174,23 @@ describe('OverviewScreen', () => {
       />,
     );
     expect(screen.getByText('Not published yet')).toBeInTheDocument();
-    expect(screen.getByText('Publishes as v1')).toBeInTheDocument();
+    expect(screen.getByText(/Expected v1 · assigned at publish/)).toBeInTheDocument();
     expect(screen.queryByText(/changed since/)).not.toBeInTheDocument();
+  });
+
+  it('shows a neutral "No version yet" status instead of lying "Published" when no version exists', () => {
+    renderOverview(
+      <OverviewScreen
+        {...BASE}
+        versions={[]}
+        workingVersion={{ versionId: null, status: null, isDraft: false }}
+        activeVersionId={null}
+        draftDefinition={null}
+        readiness={readiness()}
+      />,
+    );
+    expect(screen.getByText('No version yet')).toBeInTheDocument();
+    expect(screen.queryByText('Published')).not.toBeInTheDocument();
+    expect(screen.getByText('Not published yet')).toBeInTheDocument();
   });
 });
