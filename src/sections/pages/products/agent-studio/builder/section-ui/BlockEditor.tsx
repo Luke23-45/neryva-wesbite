@@ -81,12 +81,15 @@ function toSaved(
  * Convert a validated JSON value back to the editable text form when
  * leaving the JSON surface, so the JSON round-trip is lossless. Text
  * blocks unwrap the JSON string; list blocks join items as lines (the
- * inverse of the "Convert lines to a JSON array" quick fix). Returns
- * null when no conversion applies (the 'any' kind or an unrecognized
- * shape) — the text is then left untouched.
+ * inverse of the "Convert lines to a JSON array" quick fix); the 'any'
+ * kind unwraps strings too (the inverse of "Wrap as a JSON string" —
+ * the case the Instructions blocks hit). Non-string values under 'any'
+ * (arrays, objects, numbers) are left untouched: the JSON text is their
+ * faithful representation and there is no plain-text form to restore.
+ * Returns null when no conversion applies — the text is left untouched.
  */
 function jsonToEditableText(kind: BlockJsonKind, value: unknown): string | null {
-  if (kind === 'text' && typeof value === 'string') return value;
+  if ((kind === 'text' || kind === 'any') && typeof value === 'string') return value;
   if (kind === 'list' && Array.isArray(value)) {
     return value.filter((v): v is string => typeof v === 'string').join('\n');
   }
