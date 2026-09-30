@@ -5,7 +5,7 @@ import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useAssistantTemplates } from '@hooks/studio/useSetupTemplates';
 import { useOrg } from '@/Context/OrgContext';
-import { humanizeSlug } from '../lib/instructions-model';
+import { humanizeSlug } from '../lib/instructions-v1';
 import {
   DeniedNote,
   Excerpt,

@@ -34,7 +34,7 @@ import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useToolCatalog, BUILT_IN_TOOLS } from '@hooks/studio/useSetupTools';
 import { toEnginePayload, effectiveApproval, type GuardrailExecutionMode } from '@lib/engine/agent-payload';
 import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
-import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-model';
+import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-v1';
 import { checkDefinitionCaps, sectionOf } from '@lib/engine/setup-caps';
 import { ApiError } from '@lib/engine/client';
 import { BackLink } from '../AgentDetailView.styles';

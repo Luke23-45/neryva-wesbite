@@ -5,12 +5,7 @@ import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useAssistantTemplates } from '@hooks/studio/useSetupTemplates';
 import { useOrg } from '@/Context/OrgContext';
-import {
-  humanizeSlug,
-  makeBlock,
-  parseInstructions,
-  type InstructionBlock,
-} from '../lib/instructions-model';
+import { humanizeSlug, type NewInstructionBlock } from '../lib/instructions-v1';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DeniedNote,
@@ -56,7 +51,7 @@ function writeOptIn(orgId: string | null, on: boolean): void {
 }
 
 export interface SampleInsert {
-  blocks: InstructionBlock[];
+  blocks: NewInstructionBlock[];
   source: string;
 }
 
@@ -64,7 +59,7 @@ interface SamplesSectionProps {
   assistantId: string;
   canAuthor: boolean;
   startOpen: boolean;
-  onInsert: (blocks: InstructionBlock[], source: string) => void;
+  onInsert: (blocks: NewInstructionBlock[], source: string) => void;
 }
 
 /**
@@ -81,7 +76,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
   const templates = useAssistantTemplates();
   const assistants = useAssistants();
 
-  const insert = (blocks: InstructionBlock[], source: string) => {
+  const insert = (blocks: NewInstructionBlock[], source: string) => {
     if (blocks.length === 0) return;
     onInsert(blocks, source);
     toast.success('Inserted below your blocks — every save is a version.');
@@ -142,7 +137,11 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                     title={hasText ? 'Append starter blocks' : 'This blueprint carries no starter text.'}
                     onClick={
                       hasText && canAuthor
-                        ? () => insert(parseInstructions(card.text), `template ${card.slug}`)
+                        ? () =>
+                            insert(
+                              [{ kind: 'custom', mode: 'markdown', content: card.text.trim() }],
+                              `template ${card.slug}`,
+                            )
                         : undefined
                     }
                   >
@@ -150,7 +149,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                     <SampleMain>
                       <SampleLabel>{humanizeSlug(card.slug)}</SampleLabel>
                       <SampleBlurb>
-                        {hasText ? `${parseInstructions(card.text).length} blocks · registry blueprint` : 'No starter text'}
+                        {hasText ? 'starter text · registry blueprint' : 'No starter text'}
                       </SampleBlurb>
                     </SampleMain>
                     <SampleNote>From template starters</SampleNote>
@@ -232,7 +231,7 @@ function OrgSampleRow({
   agentName: string;
   canAuthor: boolean;
   onFailed: (id: string) => void;
-  onInsert: (blocks: InstructionBlock[], source: string) => void;
+  onInsert: (blocks: NewInstructionBlock[], source: string) => void;
 }) {
   const form = useAssistantDefinition(agentId);
   const text = form.data?.definition.instructions ?? '';
@@ -272,8 +271,8 @@ function OrgSampleRow({
           ? () =>
               onInsert(
                 singleLine
-                  ? [makeBlock('rule', text.trim())]
-                  : [makeBlock('custom', text.trim(), agentName)],
+                  ? [{ kind: 'rules', mode: 'markdown', content: text.trim() }]
+                  : [{ kind: 'custom', mode: 'markdown', content: text.trim() }],
                 `org agent ${agentName}`,
               )
           : undefined

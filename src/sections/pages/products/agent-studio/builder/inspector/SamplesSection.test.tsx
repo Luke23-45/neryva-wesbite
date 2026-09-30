@@ -142,8 +142,8 @@ describe('SamplesSection gallery', () => {
     expect(screen.getByText('Support Triage')).toBeTruthy();
     fireEvent.click(screen.getByText('Support Triage'));
     expect(onInsert).toHaveBeenCalledTimes(1);
-    const blocks = onInsert.mock.calls[0][0] as Array<{ type: string; body: string }>;
-    expect(blocks).toEqual([{ id: expect.any(String), type: 'role', title: '', body: 'Triage nurse.' }]);
+    const blocks = onInsert.mock.calls[0][0] as Array<{ kind: string; mode: string; content: string }>;
+    expect(blocks).toEqual([{ kind: 'custom', mode: 'markdown', content: '## Role\nTriage nurse.' }]);
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(expect.stringMatching(/every save is a version/));
   });
 
@@ -178,10 +178,10 @@ describe('SamplesSection gallery', () => {
     fireEvent.click(screen.getByText('Sibling One'));
     fireEvent.click(screen.getByText('Sibling Two'));
     expect(onInsert).toHaveBeenCalledTimes(2);
-    const first = onInsert.mock.calls[0][0] as Array<{ type: string }>;
-    const second = onInsert.mock.calls[1][0] as Array<{ type: string }>;
-    expect(first[0].type).toBe('rule');
-    expect(second[0].type).toBe('custom');
+    const first = onInsert.mock.calls[0][0] as Array<{ kind: string }>;
+    const second = onInsert.mock.calls[1][0] as Array<{ kind: string }>;
+    expect(first[0].kind).toBe('rules');
+    expect(second[0].kind).toBe('custom');
   });
 
   it('shows the gallery read-only to viewers (provenance intact, no insert)', async () => {

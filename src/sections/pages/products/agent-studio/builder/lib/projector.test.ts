@@ -141,13 +141,14 @@ describe('projector instructions node', () => {
     expect(subtitleOf(input, 'instructions')).toBeNull();
   });
 
-  it('shows payload truth (chars · rules) once instructions exist', () => {
+  it('shows payload truth (chars that ship) once instructions exist', () => {
     const def = defaultConsumer();
     def.instructions = '## Role\nConcierge.\n\n## Rules\n- Be kind.\n- Be fast.\n';
     const input = base({ definition: def });
     expect(statusOf(input, 'instructions')).toBe('ready');
-    expect(subtitleOf(input, 'instructions')).toContain('2 rules');
-    expect(subtitleOf(input, 'instructions')).toContain('chars');
+    expect(subtitleOf(input, 'instructions')).toBe(
+      `${def.instructions.length.toLocaleString()} chars`,
+    );
     expect(nodeOf(input, 'instructions')?.hint).toBeNull();
   });
 

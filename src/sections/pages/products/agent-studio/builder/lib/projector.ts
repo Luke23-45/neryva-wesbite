@@ -23,7 +23,6 @@ import {
   type SpineId,
 } from './slot-model';
 import { LANE_NODES, LANE_NODE_IDS, laneOf, type LaneId, type LaneNodeId } from './lane-model';
-import { parseInstructions } from './instructions-model';
 import { gradeGuardrails, parseGuardrailMode } from './guardrails-model';
 import { gradeMemory, parseMemoryScope } from './memory-model';
 import { gradeBudget } from './budget-model';
@@ -518,12 +517,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
 
   // Instructions (v10 §8.5 — new node): a draft without instructions is
   // attention-graded — publish refuses it, so the circuit says so early.
-  // Subtitle carries payload truth (chars that ship · rules that bind).
+  // Subtitle carries chars that ship; the rule count was dropped with the
+  // heuristic parser — counting rules from compiled text would be a guess.
   const instructionsText = definition?.instructions ?? '';
   const instructionsEmpty = definition === null || instructionsText.trim() === '';
-  const instructionsRules = instructionsEmpty
-    ? 0
-    : parseInstructions(instructionsText).filter((b) => b.type === 'rule').length;
   push(
     'instructions',
     {
@@ -531,10 +528,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'spine',
       kind: null,
       title: LANE_NODES.instructions.label,
-      subtitle:
-        locked || instructionsEmpty
-          ? null
-          : `${instructionsText.length.toLocaleString()} chars · ${instructionsRules} rules`,
+      subtitle: locked || instructionsEmpty ? null : `${instructionsText.length.toLocaleString()} chars`,
       hint: locked ? 'Create the agent first' : instructionsEmpty ? 'Missing — publish refuses' : null,
       status: locked ? 'locked' : instructionsEmpty ? 'attention' : 'ready',
       lock: false,
