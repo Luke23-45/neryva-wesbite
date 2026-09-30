@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { ApiError } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -11,35 +12,84 @@ import {
 } from '@hooks/studio/useAgentAuthoring';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import {
-  DEFAULT_RESPONSE_POLICY,
   parseResponsePolicy,
+  type ResponseCitationsStyle,
+  type ResponseLength,
   type ResponseOutputFormat,
   type ResponseStreaming,
 } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import type { ReasoningEffort } from '../lib/brain-model';
+import {
+  BUFFERED_CHANNELS,
+  CHANNEL_HELPERS,
+  CHANNEL_IDS,
+  CHANNEL_LABELS,
+  CITATIONS_STYLE_OPTIONS,
+  LENGTH_OPTIONS,
+  channelFormat,
+  channelHasOverride,
+  channelStreaming,
+  countChannelOverrides,
+  findLegacyMaxContextTokens,
+  isLegacyFieldRejection,
+  resolvePolicyState,
+  withChannelFormat,
+  withChannelStreaming,
+  type LegacyFieldHit,
+  type ResponsePolicyState,
+} from '../lib/response-model';
 import { ConflictDialog } from './ConflictDialog';
 import { TextInput } from '@components/common/ui/TextInput';
-import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Whisper, Wrap } from './InstructionsSection.styles';
+import { Switch } from '@components/common/ui/Switch';
+import { Segmented } from '@components/common/ui/Segmented';
+import { Whisper } from './InstructionsSection.styles';
 import { SkeletonRows } from './SkeletonRows';
+import { SectionGroup, SectionPage, MicroTip } from '../section-ui/SectionPage';
+import { RailCard, RailTitle } from '../section-ui/SectionPage.styles';
 import {
-  AdvancedToggle,
-  FieldBlock,
-  FieldHead,
+  CardHead,
+  CardIcon,
+  CardSub,
+  CardTitle,
+  CardTitleWrap,
+  GroupCard,
+  RailDot,
+  RailLabel,
+  RailRow,
+  RailValue,
+  TextButton,
+} from './ToolsSection.styles';
+import {
+  BlockerButton,
+  BlockerCard,
+  BlockerMessage,
+  BlockerPath,
+  BlockerRailCard,
+  BlockerTitle,
+  ChannelFootnote,
+  ChannelRow,
+  ChannelText,
+  Chip,
+  ChipRow,
+  ControlRow,
+  ControlText,
+  ControlHelper,
+  ControlLabel,
+  DisabledVeil,
   FieldHelper,
-  FieldTitle,
-  ParamHead,
-  ParamName,
-  ParamRow,
-  ParamValue,
-  PresetPill,
-  PresetRow,
-  SwitchRow,
-  SwitchSub,
-  SwitchText,
-  SwitchTitle,
+  InheritRow,
+  Pill,
+  PillDot,
+  ReadLabel,
+  ReadRow,
+  ReadValue,
+  RowDivider,
+  SaveToast,
+  SaveToastActions,
+  SaveToastBody,
+  SaveToastTitle,
 } from './ResponseSection.styles';
 
 export interface ResponseSectionProps {
@@ -62,26 +112,20 @@ interface ConflictState {
   attemptedDef: AgentDefinition;
 }
 
-interface PolicyState {
-  output_format: ResponseOutputFormat;
-  citations_enabled: boolean;
-  streaming: ResponseStreaming;
+interface PolicyState extends ResponsePolicyState {
   /**
-   * Lives in model_params (the engine's responsePolicySchema is strict with
-   * only the three render fields). A custom string from another client is
-   * preserved read-only — caps holds the save until the maker picks a preset.
+   * Lives in model_params (the engine's responsePolicySchema is strict).
+   * A custom string from another client is preserved read-only — caps
+   * holds the save until the maker picks a preset.
    */
   reasoning_effort?: ReasoningEffort | string;
   top_p?: number;
 }
 
 function readPolicy(definition: AgentDefinition): PolicyState {
-  const stored = definition.response_policy;
   const params = definition.model_params;
   return {
-    output_format: stored?.output_format ?? DEFAULT_RESPONSE_POLICY.output_format,
-    citations_enabled: stored?.citations_enabled ?? DEFAULT_RESPONSE_POLICY.citations_enabled,
-    streaming: stored?.streaming ?? DEFAULT_RESPONSE_POLICY.streaming,
+    ...resolvePolicyState(definition.response_policy ?? undefined),
     ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
     ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
   };
@@ -101,19 +145,26 @@ function isCustomEffort(effort: string | undefined): boolean {
 
 function describePolicy(policy: PolicyState): string {
   const format = policy.output_format === 'plain' ? 'Plain text' : 'Markdown';
+  const citations = policy.citations_enabled
+    ? `on · ${policy.citations_style === 'footnotes' ? 'footnotes' : 'inline'}`
+    : 'off';
   const streaming = policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1);
-  return `${format} · citations ${policy.citations_enabled ? 'on' : 'off'} · streaming ${streaming}`;
+  return `${format} · citations ${citations} · streaming ${streaming} · ${policy.length}`;
 }
 
 /**
  * Response node — the single editor of `response_policy` (output format,
- * citations, streaming) plus `model_params.reasoning_effort` /
- * `model_params.top_p`. Absent policy = engine defaults (markdown, citations
- * on, streaming auto); the first edit writes the full render object, never
- * partial keys. The Advanced pair lives in model_params because the engine's
- * responsePolicySchema is strict with only the three render fields — every
- * control maps to a real contract field, no preview, no latency SLO, no
- * schedule invented.
+ * citations, streaming, citation style, length, per-channel overrides)
+ * plus `model_params.reasoning_effort` / `model_params.top_p` (generation
+ * overrides). Absent policy = engine defaults; the first edit writes the
+ * full render object, never partial keys. Every control maps to a real
+ * contract field — no preview, no latency SLO, no schedule invented.
+ *
+ * Legacy: max_context_tokens is no longer supported by the engine (400s
+ * naming the field). When the draft carries it — in model_params,
+ * response_policy, or context_policy — the section surfaces a save
+ * blocker with an inline Remove field action instead of letting the
+ * save fail opaquely.
  */
 export function ResponseSection({
   assistantId,
@@ -126,17 +177,21 @@ export function ResponseSection({
   saveSignal = 0,
 }: ResponseSectionProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { role } = useOrg();
   const denied = setupDeniedCopy(role, 'setup:author');
+  const blockerRef = useRef<HTMLDivElement>(null);
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
   const [policy, setPolicy] = useState<PolicyState>(() =>
-    definition ? readPolicy(definition) : { ...DEFAULT_RESPONSE_POLICY },
+    definition ? readPolicy(definition) : { ...resolvePolicyState(undefined) },
   );
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [overridesOpen, setOverridesOpen] = useState(false);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
+  /** Legacy field the maker removed via the blocker — stripped in buildNext until the source refetches clean. */
+  const [removedLegacy, setRemovedLegacy] = useState<LegacyFieldHit | null>(null);
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
@@ -158,10 +213,10 @@ export function ResponseSection({
 
   const buildNext = useCallback((): AgentDefinition | null => {
     if (!definition) return null;
-    // The engine's responsePolicySchema is strict with only the three render
-    // fields — reasoning effort and top-p ride model_params (the same contract
-    // the Brain section writes). Keys owned by other sections merge through
-    // untouched; clearing a control deletes the key, never leaves a stale one.
+    // The engine's responsePolicySchema is strict — reasoning effort and
+    // top-p ride model_params (the same contract the Model section writes).
+    // Keys owned by other sections merge through untouched; clearing a
+    // control deletes the key, never leaves a stale one.
     const params = { ...definition.model_params };
     if (policy.reasoning_effort !== undefined) {
       // A custom stored string is preserved in state but caps holds the save
@@ -176,15 +231,41 @@ export function ResponseSection({
     } else {
       delete params.top_p;
     }
-    return buildDraftPayload(definition, {
+    const next = buildDraftPayload(definition, {
       response_policy: {
         output_format: policy.output_format,
         citations_enabled: policy.citations_enabled,
         streaming: policy.streaming,
+        citations_style: policy.citations_style,
+        length: policy.length,
+        ...(Object.keys(policy.channels).length > 0 ? { channels: policy.channels } : {}),
       },
       model_params: params,
     });
-  }, [definition, policy]);
+    // Legacy removal: the maker hit Remove field — strip the key from the
+    // payload so the save lands. Idempotent once the source refetches clean.
+    if (removedLegacy) {
+      if (removedLegacy.location === 'model_params') delete next.model_params.max_context_tokens;
+      if (removedLegacy.location === 'response_policy' && next.response_policy) {
+        delete (next.response_policy as Record<string, unknown>).max_context_tokens;
+      }
+      if (removedLegacy.location === 'context_policy' && next.context_policy) {
+        delete (next.context_policy as Record<string, unknown>).max_context_tokens;
+      }
+    }
+    return next;
+  }, [definition, policy, removedLegacy]);
+
+  /** The legacy blocker, computed from the draft being built (so Remove field hides it immediately). */
+  const legacyHit = useMemo(() => {
+    const next = buildNext();
+    if (!next) return null;
+    return findLegacyMaxContextTokens({
+      model_params: next.model_params as Record<string, unknown>,
+      response_policy: (next.response_policy ?? null) as Record<string, unknown> | null,
+      context_policy: (next.context_policy ?? null) as Record<string, unknown> | null,
+    });
+  }, [buildNext]);
 
   const heldMessages = useMemo(() => {
     const messages: string[] = [];
@@ -196,16 +277,22 @@ export function ResponseSection({
             (issue) =>
               issue.path === 'response_policy' ||
               issue.path.startsWith('response_policy.') ||
-              // The Advanced pair is validated under model_params; the rest of
-              // model_params belongs to Brain — never hold this section on its issues.
+              // The override pair is validated under model_params; the rest
+              // of model_params belongs to Model — never hold this section
+              // on its issues.
               issue.path === 'model_params.reasoning_effort' ||
               issue.path === 'model_params.top_p',
           )
           .map((i) => i.message),
       );
     }
+    // The legacy field is a hard blocker: the engine 400s naming it, so
+    // holding the save here is honest, not speculative.
+    if (legacyHit) {
+      messages.push('Legacy field blocks saving — remove max_context_tokens to resume.');
+    }
     return messages;
-  }, [buildNext]);
+  }, [buildNext, legacyHit]);
   const blocked = heldMessages.length > 0;
   const pending = saveDraft.isPending || updateDraft.isPending;
 
@@ -221,32 +308,74 @@ export function ResponseSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
+  const showLegacyToast = useCallback(() => {
+    toast(
+      (t) => (
+        <SaveToast>
+          <SaveToastBody>
+            <SaveToastTitle>Save failed</SaveToastTitle>
+            <span>Legacy field blocks saving — remove to resume.</span>
+          </SaveToastBody>
+          <SaveToastActions>
+            <TextButton
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                blockerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Focus the Remove button after the scroll lands.
+                window.setTimeout(() => {
+                  blockerRef.current?.querySelector('button')?.focus();
+                }, 450);
+              }}
+            >
+              Fix
+            </TextButton>
+            <TextButton type="button" onClick={() => toast.dismiss(t.id)} aria-label="Dismiss">
+              ✕
+            </TextButton>
+          </SaveToastActions>
+        </SaveToast>
+      ),
+      { duration: 8000 },
+    );
+  }, []);
+
+  const handleSaveError = useCallback(
+    (error: unknown) => {
+      if (error instanceof ApiError && error.status === 412) {
+        const details =
+          typeof error.details === 'object' && error.details !== null
+            ? (error.details as Record<string, unknown>)
+            : {};
+        const next = buildNext();
+        if (!next) return;
+        setConflict({
+          expectedHash: versionHash ?? '',
+          currentHash: typeof details.current === 'string' ? details.current : null,
+          attempted: JSON.stringify({
+            response_policy: next.response_policy,
+            model_params: next.model_params,
+          }),
+          attemptedDef: next,
+        });
+        return;
+      }
+      // The engine 400s max_context_tokens naming the field — surface the
+      // humanized toast with a Fix action instead of a raw error.
+      if (error instanceof ApiError && error.status === 400 && isLegacyFieldRejection(error)) {
+        showLegacyToast();
+      }
+    },
+    [buildNext, showLegacyToast, versionHash],
+  );
+
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
     if (isDraft && versionId && versionHash) {
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
-        {
-          onSuccess: () => undefined,
-          onError: (error) => {
-            if (error instanceof ApiError && error.status === 412) {
-              const details =
-                typeof error.details === 'object' && error.details !== null
-                  ? (error.details as Record<string, unknown>)
-                  : {};
-              setConflict({
-                expectedHash: versionHash,
-                currentHash: typeof details.current === 'string' ? details.current : null,
-                attempted: JSON.stringify({
-                  response_policy: next.response_policy,
-                  model_params: next.model_params,
-                }),
-                attemptedDef: next,
-              });
-            }
-          },
-        },
+        { onSuccess: () => undefined, onError: handleSaveError },
       );
       return;
     }
@@ -256,10 +385,12 @@ export function ResponseSection({
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
           toast.success('A draft opened elsewhere — resumed it. Your response policy stays; the next save writes to it.');
+          return;
         }
+        handleSaveError(error);
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, handleSaveError]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.
@@ -304,207 +435,427 @@ export function ResponseSection({
     [patch],
   );
 
+  const removeLegacyField = useCallback(() => {
+    if (!legacyHit) return;
+    setRemovedLegacy(legacyHit);
+    toast.success('Legacy field removed — saving.');
+  }, [legacyHit]);
+
+  const goToModel = useCallback(() => {
+    navigate({
+      to: '/agent-studio/agents/$agentId/build',
+      params: { agentId: assistantId },
+      search: { slot: 'model' },
+    });
+  }, [navigate, assistantId]);
+
+  const hasOverrides =
+    overridesOpen || policy.reasoning_effort !== undefined || policy.top_p !== undefined;
+  const channelCount = countChannelOverrides(policy);
+  const formatLabel = policy.output_format === 'plain' ? 'Plain text' : 'Markdown';
+
+  const pill = legacyHit ? (
+    <Pill $tone="danger">
+      <PillDot aria-hidden="true" />1 blocker
+    </Pill>
+  ) : (
+    <Pill $tone="neutral">
+      <PillDot aria-hidden="true" />
+      {formatLabel} · {channelCount === 0 ? 'no channel overrides' : `${channelCount} channel override${channelCount === 1 ? '' : 's'}`}
+    </Pill>
+  );
+
+  const rail = (
+    <>
+      <RailCard>
+        <RailTitle>On this page</RailTitle>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone="ok" aria-hidden="true" />
+            Presentation
+          </RailLabel>
+          <RailValue>set</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone={channelCount > 0 ? 'ok' : 'muted'} aria-hidden="true" />
+            Channels
+          </RailLabel>
+          <RailValue>{channelCount}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone={legacyHit ? 'warning' : hasOverrides ? 'warning' : 'ok'} aria-hidden="true" />
+            Overrides
+          </RailLabel>
+          <RailValue $tone={legacyHit || hasOverrides ? 'warning' : undefined}>
+            {legacyHit ? 'legacy' : hasOverrides ? 'active' : 'inheriting'}
+          </RailValue>
+        </RailRow>
+      </RailCard>
+      <RailCard>
+        <RailTitle>Posture</RailTitle>
+        <RailRow>
+          <RailLabel>Format</RailLabel>
+          <RailValue>{formatLabel}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Citations</RailLabel>
+          <RailValue>
+            {policy.citations_enabled ? `On · ${policy.citations_style === 'footnotes' ? 'footnotes' : 'inline'}` : 'Off'}
+          </RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Streaming</RailLabel>
+          <RailValue>{policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1)}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Length</RailLabel>
+          <RailValue>{policy.length.charAt(0).toUpperCase() + policy.length.slice(1)}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Channels</RailLabel>
+          <RailValue>
+            {channelCount} · {BUFFERED_CHANNELS.length} buffered
+          </RailValue>
+        </RailRow>
+      </RailCard>
+      {legacyHit && (
+        <BlockerRailCard>
+          <RailTitle>Save blocker</RailTitle>
+          <BlockerPath>{legacyHit.path}</BlockerPath>
+          <TextButton type="button" onClick={removeLegacyField}>
+            Remove field
+          </TextButton>
+        </BlockerRailCard>
+      )}
+      <RailCard>
+        <MicroTip>Voice and SMS always buffer — streaming and markdown choices never reach those channels.</MicroTip>
+      </RailCard>
+    </>
+  );
+
   if (!definition) {
     return (
-      <Wrap>
+      <SectionPage
+        title="Response"
+        subtitle="How answers look, flow, and cite — per channel, at runtime."
+      >
         <SkeletonRows rows={4} />
-      </Wrap>
+      </SectionPage>
     );
   }
 
   if (!canAuthor) {
     return (
-      <Wrap>
-        <FieldBlock>
-          <FieldHead>
-            <FieldTitle>Response</FieldTitle>
-          </FieldHead>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Format</SwitchTitle>
-              <SwitchSub>{policy.output_format === 'plain' ? 'Plain text' : 'Markdown'}</SwitchSub>
-            </SwitchText>
-          </SwitchRow>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Citations</SwitchTitle>
-              <SwitchSub>{policy.citations_enabled ? 'On' : 'Off'}</SwitchSub>
-            </SwitchText>
-          </SwitchRow>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Streaming</SwitchTitle>
-              <SwitchSub>{policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1)}</SwitchSub>
-            </SwitchText>
-          </SwitchRow>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Reasoning</SwitchTitle>
-              <SwitchSub>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Default'}</SwitchSub>
-            </SwitchText>
-          </SwitchRow>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Top-p</SwitchTitle>
-              <SwitchSub>{policy.top_p ?? 'Default'}</SwitchSub>
-            </SwitchText>
-          </SwitchRow>
-          <FieldHelper>Response needs an owner, admin, or developer — {denied}</FieldHelper>
-        </FieldBlock>
-      </Wrap>
+      <SectionPage
+        title="Response"
+        subtitle="How answers look, flow, and cite — per channel, at runtime."
+        pill={pill}
+        rail={rail}
+      >
+        <SectionGroup label="Presentation">
+          <GroupCard>
+            <ReadRow>
+              <ReadLabel>Output format</ReadLabel>
+              <ReadValue>{formatLabel}</ReadValue>
+            </ReadRow>
+            <RowDivider />
+            <ReadRow>
+              <ReadLabel>Citations</ReadLabel>
+              <ReadValue>
+                {policy.citations_enabled ? `On · ${policy.citations_style}` : 'Off'}
+              </ReadValue>
+            </ReadRow>
+            <RowDivider />
+            <ReadRow>
+              <ReadLabel>Streaming</ReadLabel>
+              <ReadValue>{policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1)}</ReadValue>
+            </ReadRow>
+            <RowDivider />
+            <ReadRow>
+              <ReadLabel>Length</ReadLabel>
+              <ReadValue>{policy.length.charAt(0).toUpperCase() + policy.length.slice(1)}</ReadValue>
+            </ReadRow>
+          </GroupCard>
+        </SectionGroup>
+        <SectionGroup label="Channels">
+          <GroupCard>
+            {CHANNEL_IDS.map((id, i) => (
+              <div key={id}>
+                {i > 0 && <RowDivider />}
+                <ReadRow>
+                  <ReadLabel>{CHANNEL_LABELS[id]}</ReadLabel>
+                  <ReadValue>
+                    {channelFormat(policy, id) === 'plain' ? 'Plain' : 'Markdown'} ·{' '}
+                    {BUFFERED_CHANNELS.includes(id)
+                      ? 'buffered'
+                      : channelStreaming(policy, id) === 'auto'
+                        ? 'Auto'
+                        : channelStreaming(policy, id) === 'on'
+                          ? 'streams'
+                          : 'buffered'}
+                    {!channelHasOverride(policy, id) && ' · inherits'}
+                  </ReadValue>
+                </ReadRow>
+              </div>
+            ))}
+          </GroupCard>
+        </SectionGroup>
+        <FieldHelper>Response needs an owner, admin, or developer — {denied}</FieldHelper>
+      </SectionPage>
     );
   }
 
   return (
-    <Wrap
+    <div
       onKeyDown={(event) => {
         if (event.key === 'Escape' && event.target instanceof HTMLElement) {
           event.target.blur();
         }
       }}
     >
-      {/* Output format */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Output format</FieldTitle>
-        </FieldHead>
-        <PresetRow role="group" aria-label="Output format">
-          <PresetPill
-            type="button"
-            $active={policy.output_format === 'markdown'}
-            aria-pressed={policy.output_format === 'markdown'}
-            onClick={() => patch({ output_format: 'markdown' })}
-          >
-            Markdown
-          </PresetPill>
-          <PresetPill
-            type="button"
-            $active={policy.output_format === 'plain'}
-            aria-pressed={policy.output_format === 'plain'}
-            onClick={() => patch({ output_format: 'plain' })}
-          >
-            Plain text
-          </PresetPill>
-        </PresetRow>
-        <FieldHelper>Plain text strips formatting — use it for SMS/voice-style channels.</FieldHelper>
-      </FieldBlock>
-
-      {/* Citations */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Citations</FieldTitle>
-        </FieldHead>
-        <PresetRow role="group" aria-label="Citations">
-          <PresetPill
-            type="button"
-            $active={policy.citations_enabled}
-            aria-pressed={policy.citations_enabled}
-            onClick={() => patch({ citations_enabled: true })}
-          >
-            On
-          </PresetPill>
-          <PresetPill
-            type="button"
-            $active={!policy.citations_enabled}
-            aria-pressed={!policy.citations_enabled}
-            onClick={() => patch({ citations_enabled: false })}
-          >
-            Off
-          </PresetPill>
-        </PresetRow>
-        <FieldHelper>Off hides source links even when the agent used retrieved knowledge.</FieldHelper>
-      </FieldBlock>
-
-      {/* Streaming */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Streaming</FieldTitle>
-        </FieldHead>
-        <PresetRow role="group" aria-label="Streaming">
-          {(['auto', 'on', 'off'] as const).map((mode) => (
-            <PresetPill
-              key={mode}
-              type="button"
-              $active={policy.streaming === mode}
-              aria-pressed={policy.streaming === mode}
-              onClick={() => patch({ streaming: mode })}
-            >
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
-            </PresetPill>
-          ))}
-        </PresetRow>
-        <FieldHelper>Auto lets each channel decide; some channels always buffer.</FieldHelper>
-      </FieldBlock>
-
-      {/* Advanced */}
-      <FieldBlock>
-        <AdvancedToggle type="button" onClick={() => setAdvancedOpen((o) => !o)} aria-expanded={advancedOpen}>
-          <span>Advanced · reasoning effort, top-p</span>
-          {advancedOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        </AdvancedToggle>
-        {advancedOpen && (
-          <>
-            <ParamRow>
-              <ParamHead>
-                <ParamName>Reasoning effort</ParamName>
-                <ParamValue>{policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'default'}</ParamValue>
-              </ParamHead>
-              <PresetRow role="group" aria-label="Reasoning effort">
-                <PresetPill
-                  type="button"
-                  $active={policy.reasoning_effort === undefined}
-                  aria-pressed={policy.reasoning_effort === undefined}
-                  onClick={() => patch({ reasoning_effort: undefined })}
-                >
-                  Default
-                </PresetPill>
-                {EFFORT_ORDER.map((effort) => (
-                  <PresetPill
-                    key={effort}
-                    type="button"
-                    $active={policy.reasoning_effort === effort}
-                    aria-pressed={policy.reasoning_effort === effort}
-                    onClick={() => patch({ reasoning_effort: effort })}
-                  >
-                    {effortLabel(effort)}
-                  </PresetPill>
-                ))}
-              </PresetRow>
-              <FieldHelper>Only meaningful when the model supports reasoning.</FieldHelper>
-              {isCustomEffort(policy.reasoning_effort) && (
-                <Whisper $tone="amber">
-                  Custom effort “{policy.reasoning_effort}” — pick a preset to replace it.
-                </Whisper>
-              )}
-            </ParamRow>
-            <ParamRow>
-              <ParamHead>
-                <ParamName>Top-p</ParamName>
-                <ParamValue>{policy.top_p ?? 'default'}</ParamValue>
-              </ParamHead>
-              <TextInput
-                aria-label="Top-p (0 to 1)"
-                type="number"
-                min={0.05}
-                max={1}
-                step={0.05}
-                value={policy.top_p ?? ''}
-                onChange={(event) => clampTopP(event.target.value)}
-                placeholder="e.g. 0.9"
+      <SectionPage
+        title="Response"
+        subtitle="How answers look, flow, and cite — per channel, at runtime."
+        pill={pill}
+        rail={rail}
+      >
+        {/* PRESENTATION */}
+        <SectionGroup label="Presentation">
+          <GroupCard>
+            <CardHead>
+              <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
+              <CardTitleWrap>
+                <CardTitle>Presentation</CardTitle>
+                <CardSub>The shape of every answer before it reaches a channel.</CardSub>
+              </CardTitleWrap>
+            </CardHead>
+            <ControlRow>
+              <ControlText>
+                <ControlLabel>Output format</ControlLabel>
+                <ControlHelper>Markdown renders rich answers; plain text suits SMS and voice.</ControlHelper>
+              </ControlText>
+              <Segmented
+                ariaLabel="Output format"
+                value={policy.output_format}
+                onChange={(v: ResponseOutputFormat) => patch({ output_format: v })}
+                options={[
+                  { value: 'markdown', label: 'Markdown' },
+                  { value: 'plain', label: 'Plain text' },
+                ]}
               />
-              <FieldHelper>Lower = more focused, higher = more varied. Rarely needs changing.</FieldHelper>
-            </ParamRow>
-          </>
+            </ControlRow>
+            <RowDivider />
+            <ControlRow>
+              <ControlText>
+                <ControlLabel>Citations</ControlLabel>
+                <ControlHelper>Source links under answers that used retrieved knowledge.</ControlHelper>
+              </ControlText>
+              <ControlRow $compact>
+                <Segmented
+                  ariaLabel="Citation style"
+                  value={policy.citations_style}
+                  onChange={(v: ResponseCitationsStyle) => patch({ citations_style: v })}
+                  options={CITATIONS_STYLE_OPTIONS}
+                />
+                <Segmented
+                  ariaLabel="Citations on or off"
+                  value={policy.citations_enabled ? 'on' : 'off'}
+                  onChange={(v: 'on' | 'off') => patch({ citations_enabled: v === 'on' })}
+                  options={[
+                    { value: 'on', label: 'On' },
+                    { value: 'off', label: 'Off' },
+                  ]}
+                />
+              </ControlRow>
+            </ControlRow>
+            <RowDivider />
+            <ControlRow>
+              <ControlText>
+                <ControlLabel>Streaming</ControlLabel>
+                <ControlHelper>Token-by-token delivery where the channel supports it.</ControlHelper>
+              </ControlText>
+              <Segmented
+                ariaLabel="Streaming"
+                value={policy.streaming}
+                onChange={(v: ResponseStreaming) => patch({ streaming: v })}
+                options={[
+                  { value: 'auto', label: 'Auto' },
+                  { value: 'on', label: 'On' },
+                  { value: 'off', label: 'Off' },
+                ]}
+              />
+            </ControlRow>
+            <RowDivider />
+            <ControlRow>
+              <ControlText>
+                <ControlLabel>Length</ControlLabel>
+                <ControlHelper>Concise fits one screen; detailed adds structure on ask.</ControlHelper>
+              </ControlText>
+              <Segmented
+                ariaLabel="Length"
+                value={policy.length}
+                onChange={(v: ResponseLength) => patch({ length: v })}
+                options={LENGTH_OPTIONS}
+              />
+            </ControlRow>
+          </GroupCard>
+        </SectionGroup>
+
+        {/* CHANNELS */}
+        <SectionGroup label="Channels">
+          <GroupCard>
+            <CardHead>
+              <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
+              <CardTitleWrap>
+                <CardTitle>Channels</CardTitle>
+                <CardSub>Per-channel overrides. Auto defers to these; buffered channels ignore streaming.</CardSub>
+              </CardTitleWrap>
+            </CardHead>
+            {CHANNEL_IDS.map((id, i) => {
+              const buffered = BUFFERED_CHANNELS.includes(id);
+              const fmt = channelFormat(policy, id);
+              return (
+                <div key={id}>
+                  {i > 0 && <RowDivider />}
+                  <ChannelRow>
+                    <ChannelText>
+                      <ControlLabel>{CHANNEL_LABELS[id]}</ControlLabel>
+                      <ControlHelper>{CHANNEL_HELPERS[id]}</ControlHelper>
+                    </ChannelText>
+                    <ControlRow $compact>
+                      <Segmented
+                        ariaLabel={`${CHANNEL_LABELS[id]} format`}
+                        value={fmt}
+                        onChange={(v: ResponseOutputFormat) => setPolicy((prev) => withChannelFormat(prev, id, v))}
+                        options={[
+                          { value: 'markdown', label: 'MD' },
+                          { value: 'plain', label: 'Plain' },
+                        ]}
+                      />
+                      <DisabledVeil $disabled={buffered} aria-disabled={buffered}>
+                        <Segmented
+                          ariaLabel={`${CHANNEL_LABELS[id]} streaming`}
+                          value={buffered ? 'off' : channelStreaming(policy, id) === 'auto' ? 'on' : channelStreaming(policy, id)}
+                          onChange={(v: 'on' | 'off') => {
+                            if (buffered) return;
+                            setPolicy((prev) => withChannelStreaming(prev, id, v));
+                          }}
+                          options={[
+                            { value: 'on', label: 'On' },
+                            { value: 'off', label: 'Off' },
+                          ]}
+                        />
+                      </DisabledVeil>
+                    </ControlRow>
+                  </ChannelRow>
+                </div>
+              );
+            })}
+            <ChannelFootnote>
+              Buffered channels compose the full answer first — streaming settings never apply.
+            </ChannelFootnote>
+          </GroupCard>
+        </SectionGroup>
+
+        {/* GENERATION OVERRIDES */}
+        <SectionGroup label="Generation overrides">
+          <GroupCard>
+            <CardHead>
+              <CardIcon $tone={hasOverrides || legacyHit ? 'warning' : 'ok'} aria-hidden="true">
+                {hasOverrides || legacyHit ? '!' : '✓'}
+              </CardIcon>
+              <CardTitleWrap>
+                <CardTitle>Generation overrides</CardTitle>
+                <CardSub>Reasoning effort and top-p inherit from Model defaults unless overridden here.</CardSub>
+              </CardTitleWrap>
+              <Switch
+                checked={overridesOpen}
+                onChange={setOverridesOpen}
+                label={overridesOpen ? 'Overridden' : 'Inheriting'}
+              />
+            </CardHead>
+            {!overridesOpen ? (
+              <InheritRow>
+                <ControlText>
+                  <ControlLabel>{hasOverrides ? 'Overridden' : 'Inheriting'}</ControlLabel>
+                  <ChipRow>
+                    <Chip>reasoning · {policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Medium'}</Chip>
+                    <Chip>top-p · {policy.top_p ?? '0.95'}</Chip>
+                  </ChipRow>
+                </ControlText>
+                <TextButton type="button" onClick={goToModel}>
+                  Edit in Model
+                </TextButton>
+              </InheritRow>
+            ) : (
+              <>
+                <ControlRow>
+                  <ControlText>
+                    <ControlLabel>Reasoning effort</ControlLabel>
+                    <ControlHelper>Only meaningful when the model supports reasoning.</ControlHelper>
+                  </ControlText>
+                  <Segmented
+                    ariaLabel="Reasoning effort"
+                    value={policy.reasoning_effort ?? 'default'}
+                    onChange={(v: string) =>
+                      patch({ reasoning_effort: v === 'default' ? undefined : v })
+                    }
+                    options={[
+                      { value: 'default', label: 'Default' },
+                      ...EFFORT_ORDER.map((e) => ({ value: e, label: effortLabel(e) })),
+                    ]}
+                  />
+                </ControlRow>
+                {isCustomEffort(policy.reasoning_effort) && (
+                  <Whisper $tone="amber">
+                    Custom effort “{policy.reasoning_effort}” — pick a preset to replace it.
+                  </Whisper>
+                )}
+                <RowDivider />
+                <ControlRow>
+                  <ControlText>
+                    <ControlLabel>Top-p</ControlLabel>
+                    <ControlHelper>Lower = more focused, higher = more varied. Rarely needs changing.</ControlHelper>
+                  </ControlText>
+                  <TextInput
+                    aria-label="Top-p (0 to 1)"
+                    type="number"
+                    min={0.05}
+                    max={1}
+                    step={0.05}
+                    value={policy.top_p ?? ''}
+                    onChange={(event) => clampTopP(event.target.value)}
+                    placeholder="e.g. 0.9"
+                  />
+                </ControlRow>
+              </>
+            )}
+          </GroupCard>
+        </SectionGroup>
+
+        {/* LEGACY BLOCKER */}
+        {legacyHit && (
+          <BlockerCard ref={blockerRef} role="alert">
+            <BlockerTitle>Legacy field blocks saving</BlockerTitle>
+            <BlockerMessage>max_context_tokens is no longer supported by the current plan.</BlockerMessage>
+            <BlockerButton type="button" onClick={removeLegacyField}>
+              Remove field
+            </BlockerButton>
+          </BlockerCard>
         )}
-      </FieldBlock>
 
-      <FieldHelper>{describePolicy(policy)}</FieldHelper>
+        <FieldHelper>{describePolicy(policy)}</FieldHelper>
 
-      {heldMessages.map((message) => (
-        <Whisper key={message} $tone="red" role="alert">
-          {message} Autosave held — fix it and saving resumes on its own.
-        </Whisper>
-      ))}
+        {heldMessages
+          .filter((m) => !m.startsWith('Legacy field blocks saving'))
+          .map((message) => (
+            <Whisper key={message} $tone="red" role="alert">
+              {message} Autosave held — fix it and saving resumes on its own.
+            </Whisper>
+          ))}
+      </SectionPage>
 
       {conflict && (
         <ConflictDialog
@@ -522,8 +873,6 @@ export function ResponseSection({
               const parsed = JSON.parse(theirs) as { response_policy?: unknown; model_params?: Record<string, unknown> };
               const theirsParsed = parseResponsePolicy(parsed.response_policy);
               const mps = parsed.model_params;
-              // readPolicy fills the engine defaults for missing members —
-              // a partial theirs must never leave undefined in state.
               setPolicy(
                 readPolicy({
                   ...definition,
@@ -558,6 +907,6 @@ export function ResponseSection({
           }}
         />
       )}
-    </Wrap>
+    </div>
   );
 }

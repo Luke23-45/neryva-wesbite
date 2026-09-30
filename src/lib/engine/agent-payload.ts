@@ -40,6 +40,18 @@ export type ConsumerMemoryScope = 'none' | 'conversation' | 'org' | 'user' | 'as
 
 export type ResponseOutputFormat = 'markdown' | 'plain';
 export type ResponseStreaming = 'auto' | 'on' | 'off';
+/** v1.18 — how citations render when enabled. Default 'inline'. */
+export type ResponseCitationsStyle = 'inline' | 'footnotes';
+/** v1.18 — answer length guidance. Default 'balanced'. */
+export type ResponseLength = 'concise' | 'balanced' | 'detailed';
+/** v1.18 — per-channel format/streaming override. Each member optional;
+ * absent member = inherit the presentation default (honest inheritance,
+ * never invented). Buffered channels (sms, voice) ignore streaming. */
+export interface ResponseChannelOverride {
+  format?: ResponseOutputFormat;
+  streaming?: 'on' | 'off';
+}
+export type ResponseChannelId = 'web_chat' | 'sms' | 'voice' | 'email';
 
 /**
  * Per-agent response policy (Response node). Optional on the consumer
@@ -48,13 +60,19 @@ export type ResponseStreaming = 'auto' | 'on' | 'off';
  * for whatever is missing, so a partial object is valid (never treated as
  * garbage). The console's Response section always writes the full object
  * on the first edit; partial keys only arrive from foreign payloads.
+ *
+ * v1.18 extensions: citations_style, length, channels (per-channel
+ * web_chat/sms/voice/email overrides, each with optional format/streaming).
  */
 export interface ResponsePolicy {
   output_format?: ResponseOutputFormat;
   citations_enabled?: boolean;
   streaming?: ResponseStreaming;
+  citations_style?: ResponseCitationsStyle;
+  length?: ResponseLength;
+  channels?: Partial<Record<ResponseChannelId, ResponseChannelOverride>>;
   // 19-32 (M-08/RP-04): the legacy reasoning_effort/top_p members are GONE.
-  // The engine's responsePolicySchema is strict with only the three render
+  // The engine's responsePolicySchema is strict with only the render
   // fields — the pair rides model_params (the same contract the Brain and
   // Response sections write). parseResponsePolicy no longer reads them, and
   // toEnginePayload no longer re-emits them (the engine 400s them loudly).
@@ -63,12 +81,18 @@ export interface ResponsePolicy {
 }
 
 /** Console defaults applied when the draft carries no response_policy. */
-export const DEFAULT_RESPONSE_POLICY: Required<
-  Pick<ResponsePolicy, 'output_format' | 'citations_enabled' | 'streaming'>
-> = {
+export const DEFAULT_RESPONSE_POLICY: {
+  output_format: ResponseOutputFormat;
+  citations_enabled: boolean;
+  streaming: ResponseStreaming;
+  citations_style: ResponseCitationsStyle;
+  length: ResponseLength;
+} = {
   output_format: 'markdown',
   citations_enabled: true,
   streaming: 'auto',
+  citations_style: 'inline',
+  length: 'balanced',
 };
 
 /**
@@ -84,10 +108,37 @@ export function parseResponsePolicy(raw: unknown): ResponsePolicy | undefined {
   if (r.output_format === 'markdown' || r.output_format === 'plain') policy.output_format = r.output_format;
   if (typeof r.citations_enabled === 'boolean') policy.citations_enabled = r.citations_enabled;
   if (r.streaming === 'auto' || r.streaming === 'on' || r.streaming === 'off') policy.streaming = r.streaming;
+  if (r.citations_style === 'inline' || r.citations_style === 'footnotes') policy.citations_style = r.citations_style;
+  if (r.length === 'concise' || r.length === 'balanced' || r.length === 'detailed') policy.length = r.length;
+  const channels = parseChannelOverrides(r.channels);
+  if (channels !== undefined) policy.channels = channels;
   // 19-32: reasoning_effort/top_p are STRIPPED here, not read. They belong to
   // model_params (engine-strict). Legacy values are migrated on read in
   // fromEnginePayload — never re-emitted into response_policy.
   return Object.keys(policy).length > 0 ? policy : undefined;
+}
+
+/**
+ * v1.18 — parse per-channel overrides. Each channel's format/streaming is
+ * optional; a channel with neither is dropped (absent = inherit, never an
+ * empty override object on the wire). Unknown channel keys are ignored.
+ * Returns undefined when no channel carries anything recognizable.
+ */
+export function parseChannelOverrides(raw: unknown): Partial<Record<ResponseChannelId, ResponseChannelOverride>> | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: Partial<Record<ResponseChannelId, ResponseChannelOverride>> = {};
+  const ids: readonly ResponseChannelId[] = ['web_chat', 'sms', 'voice', 'email'];
+  for (const id of ids) {
+    const c = r[id];
+    if (typeof c !== 'object' || c === null) continue;
+    const co = c as Record<string, unknown>;
+    const override: ResponseChannelOverride = {};
+    if (co.format === 'markdown' || co.format === 'plain') override.format = co.format;
+    if (co.streaming === 'on' || co.streaming === 'off') override.streaming = co.streaming;
+    if (Object.keys(override).length > 0) out[id] = override;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /**
@@ -409,6 +460,9 @@ export interface EnginePayload {
     output_format?: 'markdown' | 'plain';
     citations_enabled?: boolean;
     streaming?: 'auto' | 'on' | 'off';
+    citations_style?: 'inline' | 'footnotes';
+    length?: 'concise' | 'balanced' | 'detailed';
+    channels?: Partial<Record<'web_chat' | 'sms' | 'voice' | 'email', { format?: 'markdown' | 'plain'; streaming?: 'on' | 'off' }>>;
     // 19-32: no reasoning_effort/top_p — they ride model_params (the engine's
     // strict responsePolicySchema 400s them here).
   };
@@ -665,12 +719,19 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     // undefined values. 19-32: reasoning_effort/top_p are NEVER re-emitted
     // here — they ride model_params (engine-strict schema 400s them inside
     // response_policy); legacy drafts are migrated on read instead.
+    // v1.18: citations_style, length, channels ride along; channels with
+    // no overrides are dropped (absent = inherit).
     ...(def.response_policy
       ? {
           response_policy: {
             output_format: def.response_policy.output_format ?? DEFAULT_RESPONSE_POLICY.output_format,
             citations_enabled: def.response_policy.citations_enabled ?? DEFAULT_RESPONSE_POLICY.citations_enabled,
             streaming: def.response_policy.streaming ?? DEFAULT_RESPONSE_POLICY.streaming,
+            citations_style: def.response_policy.citations_style ?? DEFAULT_RESPONSE_POLICY.citations_style,
+            length: def.response_policy.length ?? DEFAULT_RESPONSE_POLICY.length,
+            ...(def.response_policy.channels && Object.keys(def.response_policy.channels).length > 0
+              ? { channels: def.response_policy.channels }
+              : {}),
           },
         }
       : {}),

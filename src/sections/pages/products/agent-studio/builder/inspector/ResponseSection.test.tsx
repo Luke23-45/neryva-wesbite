@@ -9,10 +9,16 @@ import { ResponseSection } from './ResponseSection';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 
 const updateMutate = vi.fn();
+const navigateMock = vi.fn();
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
@@ -49,92 +55,115 @@ function shell(props?: Partial<React.ComponentProps<typeof ResponseSection>>) {
 }
 
 beforeEach(() => {
-  updateMutate.mockReset();
-  vi.useFakeTimers();
+  navigateMock.mockReset();
 });
 
-afterEach(() => {
-  vi.useRealTimers();
-});
+/** The selected tab inside a segmented group. */
+function selectedTab(groupName: string): string | null {
+  const group = screen.getByRole('tablist', { name: groupName });
+  return group.querySelector('[aria-selected="true"]')?.textContent ?? null;
+}
 
 describe('ResponseSection', () => {
-  it('treats an absent policy as engine defaults (markdown, citations on, streaming auto)', () => {
+  it('treats an absent policy as engine defaults', () => {
     shell();
-    expect(screen.getByRole('button', { name: 'Markdown' }).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('button', { name: 'Plain text' }).getAttribute('aria-pressed')).toBe('false');
-    const citations = screen.getByRole('group', { name: 'Citations' });
-    expect(citations.querySelectorAll('button[aria-pressed="true"]')[0]?.textContent).toBe('On');
-    const streaming = screen.getByRole('group', { name: 'Streaming' });
-    expect(streaming.querySelectorAll('button[aria-pressed="true"]')[0]?.textContent).toBe('Auto');
-    expect(screen.getByText(/Markdown · citations on · streaming Auto/)).toBeTruthy();
+    expect(selectedTab('Output format')).toBe('Markdown');
+    expect(selectedTab('Citations on or off')).toBe('On');
+    expect(selectedTab('Citation style')).toBe('Inline links');
+    expect(selectedTab('Streaming')).toBe('Auto');
+    expect(selectedTab('Length')).toBe('Balanced');
+    expect(screen.getByText(/Markdown · citations on · inline · streaming Auto · balanced/)).toBeTruthy();
   });
 
-  it('renders the honest whispers for every control', () => {
+  it('renders the honest helper microcopy for every presentation control', () => {
     shell();
-    expect(screen.getByText(/Plain text strips formatting — use it for SMS\/voice-style channels/)).toBeTruthy();
-    expect(screen.getByText(/Off hides source links even when the agent used retrieved knowledge/)).toBeTruthy();
-    expect(screen.getByText(/Auto lets each channel decide; some channels always buffer/)).toBeTruthy();
+    expect(screen.getByText(/Markdown renders rich answers; plain text suits SMS and voice/)).toBeTruthy();
+    expect(screen.getByText(/Source links under answers that used retrieved knowledge/)).toBeTruthy();
+    expect(screen.getByText(/Token-by-token delivery where the channel supports it/)).toBeTruthy();
+    expect(screen.getByText(/Concise fits one screen; detailed adds structure on ask/)).toBeTruthy();
   });
 
-  it('switching to plain text writes the FULL policy object on autosave', async () => {
+  it('renders the four channel rows with helpers and the buffered footnote', () => {
     shell();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Plain text' }));
-    });
-    await act(async () => {
-      vi.advanceTimersByTime(8000);
-    });
-    expect(updateMutate).toHaveBeenCalledTimes(1);
-    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    // The render triple rides response_policy; the Advanced pair lives in
-    // model_params (the engine's responsePolicySchema is strict).
-    expect(sent.definition.response_policy).toEqual({
-      output_format: 'plain',
-      citations_enabled: true,
-      streaming: 'auto',
-    });
-    expect(sent.definition.response_policy).not.toHaveProperty('reasoning_effort');
-    expect(sent.definition.response_policy).not.toHaveProperty('top_p');
-    expect(sent.definition.model_params.reasoning_effort).toBeUndefined();
-    expect(sent.definition.model_params.top_p).toBeUndefined();
+    expect(screen.getByText('Web chat')).toBeTruthy();
+    expect(screen.getByText(/Renders markdown, streams tokens/)).toBeTruthy();
+    expect(screen.getByText(/Plain text only, always buffered/)).toBeTruthy();
+    expect(screen.getByText(/Spoken answers; markdown stripped/)).toBeTruthy();
+    expect(screen.getByText(/Async digest; markdown kept, buffered/)).toBeTruthy();
+    expect(
+      screen.getByText(/Buffered channels compose the full answer first — streaming settings never apply/),
+    ).toBeTruthy();
   });
 
-  it('advanced edits reasoning effort and top-p with honest whispers', async () => {
+  it('switching to plain text updates the policy state and header summary', async () => {
     shell();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Advanced/ }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Plain text' }));
     });
-    // Engine enum: minimal | low | medium | high; Default = absent.
-    expect(screen.getByRole('button', { name: 'Minimal' }).getAttribute('aria-pressed')).toBe('false');
+    // The header summary reflects the full resolved policy (defaults filled).
+    expect(screen.getByText(/Plain text · citations on · inline · streaming Auto · balanced/)).toBeTruthy();
+    expect(selectedTab('Output format')).toBe('Plain text');
+  });
+
+  it('a channel format override is reflected in the UI and marked overridden', async () => {
+    shell();
+    // SMS format: MD -> Plain
+    const smsFormat = screen.getByRole('tablist', { name: 'SMS format' });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'High' }));
+      fireEvent.click(smsFormat.querySelectorAll('[role="tab"]')[1]!);
     });
-    expect(screen.getByText(/Only meaningful when the model supports reasoning/)).toBeTruthy();
+    // The SMS row now shows Plain as selected; Web chat still shows Markdown.
+    expect(smsFormat.querySelector('[aria-selected="true"]')?.textContent).toBe('Plain');
+    const webchatFormat = screen.getByRole('tablist', { name: 'Web chat format' });
+    expect(webchatFormat.querySelector('[aria-selected="true"]')?.textContent).toBe('MD');
+  });
+
+  it('generation overrides toggle reveals reasoning effort and top-p, Edit in Model navigates', async () => {
+    shell();
+    // Inheriting state: chips + Edit in Model link.
+    expect(screen.getByText(/reasoning · Medium/)).toBeTruthy();
+    expect(screen.getByText(/top-p · 0.95/)).toBeTruthy();
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Top-p (0 to 1)'), { target: { value: '0.9' } });
+      fireEvent.click(screen.getByText('Edit in Model'));
     });
-    expect(screen.getByText(/Lower = more focused, higher = more varied/)).toBeTruthy();
+    expect(navigateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ search: expect.objectContaining({ slot: 'model' }) }),
+    );
+    // Flip the toggle open: the override controls appear.
     await act(async () => {
-      vi.advanceTimersByTime(8000);
+      fireEvent.click(screen.getByRole('switch'));
     });
-    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    // The Advanced pair writes model_params, never response_policy.
-    expect(sent.definition.model_params).toMatchObject({ reasoning_effort: 'high', top_p: 0.9 });
-    expect(sent.definition.response_policy).toEqual({
-      output_format: 'markdown',
-      citations_enabled: true,
-      streaming: 'auto',
-    });
-    expect(sent.definition.response_policy).not.toHaveProperty('reasoning_effort');
-    expect(sent.definition.response_policy).not.toHaveProperty('top_p');
+    expect(screen.getByRole('tablist', { name: 'Reasoning effort' })).toBeTruthy();
+    expect(screen.getByLabelText('Top-p (0 to 1)')).toBeTruthy();
+    // The card icon flips to the warning tone when overrides are active.
+    const card = screen.getByRole('tablist', { name: 'Reasoning effort' }).closest('div');
+    expect(card).toBeTruthy();
+  });
+
+  it('shows the legacy blocker with Remove field action', async () => {
+    const def = definitionWithPolicy(undefined);
+    def.model_params = { ...def.model_params, max_context_tokens: 8000 };
+    shell({ definition: def });
+    expect(screen.getByText('Legacy field blocks saving')).toBeTruthy();
+    expect(screen.getByText(/no longer supported by the current plan/)).toBeTruthy();
+    // The rail surfaces the save blocker.
+    expect(screen.getByText('Save blocker')).toBeTruthy();
+    // Remove field is an inline button (no modal) — one in the card, one in the rail.
+    expect(screen.getAllByRole('button', { name: 'Remove field' })).toHaveLength(2);
   });
 
   it('renders read-only static rows with the role explanation for viewers', () => {
     shell({
       canAuthor: false,
-      definition: definitionWithPolicy({ output_format: 'plain', citations_enabled: false, streaming: 'off' }),
+      definition: definitionWithPolicy({
+        output_format: 'plain',
+        citations_enabled: false,
+        streaming: 'off',
+        citations_style: 'footnotes',
+        length: 'detailed',
+      }),
     });
     expect(screen.getByText(/needs an owner, admin, or developer/)).toBeTruthy();
-    expect(screen.queryByRole('group', { name: 'Output format' })).toBeNull();
+    expect(screen.queryByRole('tablist', { name: 'Output format' })).toBeNull();
   });
 });

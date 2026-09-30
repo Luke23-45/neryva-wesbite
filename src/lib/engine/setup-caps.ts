@@ -209,6 +209,35 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
     ) {
       issues.push({ path: 'response_policy.streaming', message: 'Streaming is auto, on, or off.' });
     }
+    // v1.18 extensions mirror the engine's responsePolicySchema.
+    if (
+      response.citations_style !== undefined &&
+      response.citations_style !== 'inline' &&
+      response.citations_style !== 'footnotes'
+    ) {
+      issues.push({ path: 'response_policy.citations_style', message: 'Citation style is inline links or footnotes.' });
+    }
+    if (
+      response.length !== undefined &&
+      response.length !== 'concise' &&
+      response.length !== 'balanced' &&
+      response.length !== 'detailed'
+    ) {
+      issues.push({ path: 'response_policy.length', message: 'Length is concise, balanced, or detailed.' });
+    }
+    const channels = response.channels as Record<string, { format?: unknown; streaming?: unknown } | undefined> | undefined;
+    if (channels !== undefined) {
+      for (const id of ['web_chat', 'sms', 'voice', 'email'] as const) {
+        const ch = channels[id];
+        if (ch === undefined) continue;
+        if (ch.format !== undefined && ch.format !== 'markdown' && ch.format !== 'plain') {
+          issues.push({ path: `response_policy.channels.${id}.format`, message: 'Channel format is markdown or plain.' });
+        }
+        if (ch.streaming !== undefined && ch.streaming !== 'on' && ch.streaming !== 'off') {
+          issues.push({ path: `response_policy.channels.${id}.streaming`, message: 'Channel streaming is on or off.' });
+        }
+      }
+    }
   }
 
   // Response node split: reasoning effort + top-p are model_params members

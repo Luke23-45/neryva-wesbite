@@ -124,7 +124,12 @@ describe('fromEnginePayload', () => {
       streaming: 'off',
     });
     expect(shaped.model_params).toMatchObject({ reasoning_effort: 'high', top_p: 0.9 });
-    expect(toEnginePayload(shaped).response_policy).toEqual(shaped.response_policy);
+    // toEnginePayload fills console defaults for absent members.
+    expect(toEnginePayload(shaped).response_policy).toEqual({
+      ...shaped.response_policy,
+      citations_style: 'inline',
+      length: 'balanced',
+    });
     const garbage = fromEnginePayload({ ...REGISTRY_DEFINITION, response_policy: { output_format: 'html' } });
     expect(garbage.response_policy).toBeUndefined();
     const partial = fromEnginePayload({
@@ -135,6 +140,8 @@ describe('fromEnginePayload', () => {
       output_format: 'markdown',
       citations_enabled: true,
       streaming: 'auto',
+      citations_style: 'inline',
+      length: 'balanced',
     });
     const sparse = fromEnginePayload({
       ...REGISTRY_DEFINITION,
@@ -147,6 +154,8 @@ describe('fromEnginePayload', () => {
       output_format: 'plain',
       citations_enabled: true,
       streaming: 'auto',
+      citations_style: 'inline',
+      length: 'balanced',
     });
     const customEffort = fromEnginePayload({
       ...REGISTRY_DEFINITION,
@@ -162,6 +171,8 @@ describe('fromEnginePayload', () => {
       output_format: 'markdown',
       citations_enabled: true,
       streaming: 'auto',
+      citations_style: 'inline',
+      length: 'balanced',
     });
   });
 
@@ -420,7 +431,13 @@ describe('19-32 legacy response_policy keys (M-08/RP-04)', () => {
   it('toEnginePayload never emits reasoning_effort/top_p inside response_policy', () => {
     const consumer = fromEnginePayload(LEGACY_DRAFT);
     const wire = toEnginePayload(consumer) as unknown as Record<string, Record<string, unknown>>;
-    expect(wire.response_policy).toEqual({ output_format: 'markdown', citations_enabled: true, streaming: 'auto' });
+    expect(wire.response_policy).toEqual({
+      output_format: 'markdown',
+      citations_enabled: true,
+      streaming: 'auto',
+      citations_style: 'inline',
+      length: 'balanced',
+    });
     expect('reasoning_effort' in wire.response_policy).toBe(false);
     expect('top_p' in wire.response_policy).toBe(false);
   });
@@ -428,7 +445,13 @@ describe('19-32 legacy response_policy keys (M-08/RP-04)', () => {
   it('round-trips a migrated legacy draft onto the engine-strict wire shape', () => {
     const wire = toEnginePayload(fromEnginePayload(LEGACY_DRAFT)) as unknown as Record<string, Record<string, unknown>>;
     expect(wire.model_params).toMatchObject({ reasoning_effort: 'high', top_p: 0.7 });
-    expect(Object.keys(wire.response_policy).sort()).toEqual(['citations_enabled', 'output_format', 'streaming']);
+    expect(Object.keys(wire.response_policy).sort()).toEqual([
+      'citations_enabled',
+      'citations_style',
+      'length',
+      'output_format',
+      'streaming',
+    ]);
   });
 
   it('ignores garbage legacy values (non-string effort, non-finite top_p)', () => {
