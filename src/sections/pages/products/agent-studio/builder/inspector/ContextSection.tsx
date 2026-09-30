@@ -10,6 +10,9 @@ import {
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
+import { readRoleBlock } from '@lib/engine/role-fields';
+import { useLatestRunBudget } from '@hooks/studio/useRunBudgetDiagnostics';
+import { useToolCatalog } from '@hooks/studio/useSetupTools';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import {
@@ -26,6 +29,7 @@ import {
   SERVED_20_COPY,
   TOKEN_BUDGET_COPY,
   coerceContextTokens,
+  estimateFixedPromptTokens,
   formatContextTokens,
   fromConsumerScope,
   parseMemoryScope,
@@ -43,6 +47,8 @@ import {
   FieldHead,
   FieldHelper,
   FieldTitle,
+  MeterFill,
+  MeterTrack,
   PinMeta,
   SourceItem,
   SourceList,
@@ -148,6 +154,40 @@ export function ContextSection({
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
+
+  // Read-only reporting for the Token budget block — never touches policy,
+  // dirty, or autosave. Disabled for viewers (the block is author-only).
+  const runBudget = useLatestRunBudget(canAuthor ? assistantId : null, { enabled: canAuthor });
+  const toolCatalog = useToolCatalog({ enabled: canAuthor, includeDisabled: true });
+
+  /**
+   * Fixed-prompt token estimate, computed live from the draft definition:
+   * composed instructions + role block contents + bound tool schemas (JSON,
+   * joined from the tool catalog by name — the definition only carries
+   * schema hashes). Null = nothing measurable → the row shows "—".
+   */
+  const fixedPromptTokens = useMemo(() => {
+    if (!definition) return null;
+    const roleContents = Object.values(definition.role ?? {})
+      .map((block) => readRoleBlock(block)?.content ?? '')
+      .filter((content) => content.length > 0);
+    const catalogByName = new Map((toolCatalog.data ?? []).map((entry) => [entry.name, entry]));
+    const toolSchemaJsons: string[] = [];
+    for (const tool of definition.tools ?? []) {
+      const entry = catalogByName.get(tool.name);
+      if (!entry) continue;
+      const json = [entry.inputSchema, entry.outputSchema]
+        .filter((schema): schema is Record<string, unknown> => schema !== null)
+        .map((schema) => JSON.stringify(schema))
+        .join('');
+      if (json.length > 0) toolSchemaJsons.push(json);
+    }
+    return estimateFixedPromptTokens({
+      instructions: definition.instructions ?? '',
+      roleContents,
+      toolSchemaJsons,
+    });
+  }, [definition, toolCatalog.data]);
 
   const source = useMemo(() => (definition ? readPolicy(definition) : null), [definition]);
   const current = useMemo(() => JSON.stringify(policy), [policy]);
@@ -433,6 +473,51 @@ export function ContextSection({
             <SwitchSub>{formatContextTokens(policy.max_context_tokens)} tokens per run</SwitchSub>
           </SwitchText>
         </SwitchRow>
+        {/* Fixed prompt — computed live from the draft definition (estimate,
+            never a measurement). The denominator follows the budget being
+            edited above, so the meter moves with the presets. */}
+        <SwitchRow>
+          <SwitchText>
+            <SwitchTitle>Fixed prompt (estimate)</SwitchTitle>
+            <SwitchSub>
+              {fixedPromptTokens === null ? (
+                '—'
+              ) : (
+                <>
+                  ≈{formatContextTokens(fixedPromptTokens)} of your{' '}
+                  {formatContextTokens(policy.max_context_tokens)} budget — knowledge, memories,
+                  summaries, and history fill the rest.
+                </>
+              )}
+            </SwitchSub>
+          </SwitchText>
+        </SwitchRow>
+        {fixedPromptTokens !== null && (
+          <MeterTrack aria-hidden="true">
+            <MeterFill $pct={(fixedPromptTokens / policy.max_context_tokens) * 100} />
+          </MeterTrack>
+        )}
+        {/* Recent runs — read-only usage from the latest run's
+            ContextPrepared event. No runs yet → the empty state; runs that
+            predate the emission → nothing (never a placeholder number). */}
+        {runBudget.diagnostics ? (
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Recent runs</SwitchTitle>
+              <SwitchSub>
+                Last run used ≈{formatContextTokens(runBudget.diagnostics.used)} of{' '}
+                {formatContextTokens(runBudget.diagnostics.maxTokens)} budget.
+              </SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+        ) : runBudget.noRunsYet ? (
+          <SwitchRow>
+            <SwitchText>
+              <SwitchTitle>Recent runs</SwitchTitle>
+              <SwitchSub>No runs yet — usage appears here after the first run.</SwitchSub>
+            </SwitchText>
+          </SwitchRow>
+        ) : null}
         <FieldHelper>{TOKEN_BUDGET_COPY}</FieldHelper>
       </FieldBlock>
 

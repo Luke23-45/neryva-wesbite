@@ -79,6 +79,24 @@ export const TokenValue = styled(StepValue)`
   width: 112px;
 `;
 
+/**
+ * Fixed-prompt usage meter — flat fills on theme tokens only. The fill is
+ * the quiet neutral status tone: informational, never a CTA color.
+ */
+export const MeterTrack = styled.div`
+  height: 6px;
+  border-radius: ${({ theme }) => theme.radii.pill};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  overflow: hidden;
+`;
+
+export const MeterFill = styled.div<{ $pct: number }>`
+  height: 100%;
+  width: ${({ $pct }) => Math.min(100, Math.max(0, $pct))}%;
+  border-radius: ${({ theme }) => theme.radii.pill};
+  background: ${({ theme }) => theme.app.status.neutral.fg};
+`;
+
 export const ChoicePill = styled.button<{ $active?: boolean }>`
   border-radius: ${({ theme }) => theme.radii.pill};
   padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};

@@ -13,6 +13,8 @@ import {
   USER_PREVIEW_COPY,
   coerceContextTokens,
   describeTtl,
+  estimateFixedPromptTokens,
+  estimateTokensHeuristic,
   filterMemories,
   gradeMemory,
   parseMemoryScope,
@@ -94,6 +96,38 @@ describe('coerceContextTokens', () => {
     expect(coerceContextTokens(500)).toBe(1000);
     expect(coerceContextTokens(500000)).toBe(200000);
     expect(coerceContextTokens(64.5)).toBe(32000);
+  });
+});
+
+describe('estimateTokensHeuristic / estimateFixedPromptTokens', () => {
+  it('mirrors the runtime heuristic: ~4 chars per token, +2 overhead per text', () => {
+    expect(estimateTokensHeuristic('')).toBe(0);
+    expect(estimateTokensHeuristic('abcd')).toBe(3); // ceil(4/4) + 2
+    expect(estimateTokensHeuristic('abcde')).toBe(4); // ceil(5/4) + 2
+    expect(estimateTokensHeuristic('x'.repeat(400))).toBe(102); // ceil(400/4) + 2
+  });
+
+  it('returns null when nothing is measurable — never a 0 dressed as a reading', () => {
+    expect(
+      estimateFixedPromptTokens({ instructions: '', roleContents: [], toolSchemaJsons: [] }),
+    ).toBeNull();
+  });
+
+  it('sums instructions, role contents, and tool schemas', () => {
+    // 400 chars → 102, 4 chars → 3, '{"a":1}' (7 chars) → 4
+    expect(
+      estimateFixedPromptTokens({
+        instructions: 'x'.repeat(400),
+        roleContents: ['abcd'],
+        toolSchemaJsons: ['{"a":1}'],
+      }),
+    ).toBe(102 + 3 + 4);
+  });
+
+  it('skips blank parts instead of charging overhead for them', () => {
+    expect(
+      estimateFixedPromptTokens({ instructions: 'abcd', roleContents: [''], toolSchemaJsons: [] }),
+    ).toBe(3);
   });
 });
 

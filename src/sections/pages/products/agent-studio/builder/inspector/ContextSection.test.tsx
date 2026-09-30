@@ -10,9 +10,38 @@ import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 
 const updateMutate = vi.fn();
 
+const { mockUseToolCatalog, mockUseLatestRunBudget } = vi.hoisted(() => ({
+  mockUseToolCatalog: vi.fn(
+    (): { data: unknown[]; isPending: boolean; isError: boolean } => ({
+      data: [],
+      isPending: false,
+      isError: false,
+    }),
+  ),
+  mockUseLatestRunBudget: vi.fn(
+    (): { diagnostics: unknown; noRunsYet: boolean; isPending: boolean } => ({
+      diagnostics: null,
+      noRunsYet: false,
+      isPending: false,
+    }),
+  ),
+}));
+
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
+
+vi.mock('@hooks/studio/useRunBudgetDiagnostics', () => ({
+  useLatestRunBudget: () => mockUseLatestRunBudget(),
+}));
+
+vi.mock('@hooks/studio/useSetupTools', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hooks/studio/useSetupTools')>();
+  return {
+    ...actual,
+    useToolCatalog: () => mockUseToolCatalog(),
+  };
+});
 
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
@@ -50,6 +79,8 @@ function shell(props?: Partial<React.ComponentProps<typeof ContextSection>>) {
 
 beforeEach(() => {
   updateMutate.mockReset();
+  mockUseLatestRunBudget.mockReturnValue({ diagnostics: null, noRunsYet: false, isPending: false });
+  mockUseToolCatalog.mockReturnValue({ data: [], isPending: false, isError: false });
   vi.useFakeTimers();
 });
 
@@ -222,6 +253,78 @@ describe('ContextSection', () => {
     expect(screen.queryByRole('group', { name: 'Context scope' })).toBeNull();
     expect(screen.queryByLabelText('History limit in messages')).toBeNull();
     expect(screen.getByText(/tokens per run/)).toBeTruthy();
+  });
+
+  describe('token budget reporting (read-only)', () => {
+    function budgetDefinition(overrides?: Partial<AgentDefinition>): AgentDefinition {
+      const def = definitionWith({ memory_scope: 'user', history_limit: 20, summary_enabled: true });
+      return { ...def, instructions: '', role: undefined, tools: [], ...overrides };
+    }
+
+    it('renders the fixed-prompt estimate from the draft definition', () => {
+      // 400 chars → ceil(400/4) + 2 = 102
+      shell({ definition: budgetDefinition({ instructions: 'x'.repeat(400) }) });
+      expect(screen.getByText(/≈102 of your 32K budget/)).toBeTruthy();
+      expect(
+        screen.getByText(/knowledge, memories, summaries, and history fill the rest/),
+      ).toBeTruthy();
+    });
+
+    it('counts role contents and bound tool schemas in the estimate', () => {
+      mockUseToolCatalog.mockReturnValue({
+        data: [{ name: 'web_search', inputSchema: { type: 'object' }, outputSchema: null }],
+        isPending: false,
+        isError: false,
+      });
+      const def = budgetDefinition({
+        instructions: 'abcd', // 4 chars → 3
+        role: { role: { mode: 'raw', content: 'abcd' } }, // 4 chars → 3
+        tools: [{ name: 'web_search', access: 'read', approval: 'never', execution_mode: 'live' }],
+      });
+      shell({ definition: def });
+      // '{"type":"object"}' is 17 chars → ceil(17/4) + 2 = 7; total 3 + 3 + 7 = 13
+      expect(screen.getByText(/≈13 of your 32K budget/)).toBeTruthy();
+    });
+
+    it('shows — when nothing is measurable, never a 0', () => {
+      shell({ definition: budgetDefinition() });
+      expect(screen.getByText('Fixed prompt (estimate)')).toBeTruthy();
+      expect(screen.getByText('—')).toBeTruthy();
+    });
+
+    it('moves the meter denominator with the budget being edited', async () => {
+      shell({ definition: budgetDefinition({ instructions: 'x'.repeat(400) }) });
+      expect(screen.getByText(/≈102 of your 32K budget/)).toBeTruthy();
+      await act(async () => {
+        fireEvent.click(screen.getByText('64K'));
+      });
+      expect(screen.getByText(/≈102 of your 64K budget/)).toBeTruthy();
+    });
+
+    it('reports the empty state when the assistant has no runs yet', () => {
+      mockUseLatestRunBudget.mockReturnValue({
+        diagnostics: null,
+        noRunsYet: true,
+        isPending: false,
+      });
+      shell();
+      expect(screen.getByText(/No runs yet — usage appears here after the first run/)).toBeTruthy();
+    });
+
+    it('reports the latest run usage from ContextPrepared diagnostics', () => {
+      mockUseLatestRunBudget.mockReturnValue({
+        diagnostics: { maxTokens: 32000, reservedForOutput: 4096, used: 12000, remaining: 15904 },
+        noRunsYet: false,
+        isPending: false,
+      });
+      shell();
+      expect(screen.getByText(/Last run used ≈12K of 32K budget/)).toBeTruthy();
+    });
+
+    it('renders no Recent runs row when runs predate the emission', () => {
+      shell();
+      expect(screen.queryByText('Recent runs')).toBeNull();
+    });
   });
 });
 

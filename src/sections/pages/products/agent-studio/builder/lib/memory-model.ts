@@ -112,6 +112,37 @@ export function coerceContextTokens(raw: unknown): number {
   return Math.min(CONTEXT_TOKENS_MAX, Math.max(CONTEXT_TOKENS_MIN, parsed));
 }
 
+/**
+ * Token-estimate heuristic — a mirror of the runtime's own counter
+ * (`neryva-product/agent-studio/packages/context-compiler/src/token-budget.ts`
+ * `countTokensHeuristic`): ~4 chars per token, +2 per text for role/message
+ * overhead. An estimate, never a measurement — every surface that renders
+ * it says so.
+ */
+export function estimateTokensHeuristic(text: string): number {
+  if (text.length === 0) return 0;
+  return Math.ceil(text.length / 4) + 2;
+}
+
+export interface FixedPromptEstimateInput {
+  instructions: string;
+  roleContents: string[];
+  toolSchemaJsons: string[];
+}
+
+/**
+ * Fixed-prompt token estimate: the composed instructions + role block
+ * contents + bound tool schemas (JSON). Returns null when nothing
+ * measurable exists — callers render "—", never a 0 dressed as a reading.
+ */
+export function estimateFixedPromptTokens(input: FixedPromptEstimateInput): number | null {
+  const texts = [input.instructions, ...input.roleContents, ...input.toolSchemaJsons].filter(
+    (t) => t.length > 0,
+  );
+  if (texts.length === 0) return null;
+  return texts.reduce((sum, t) => sum + estimateTokensHeuristic(t), 0);
+}
+
 /** What the budget covers (compiler truth: mandatory system/policy/user
  * content, then optional knowledge → memories → summaries → history). */
 export const CONTEXT_LENGTH_COPY =
