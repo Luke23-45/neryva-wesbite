@@ -12,7 +12,7 @@ export default function AgentStudioAgentBuilderPage() {
         description="Wire the agent on the circuit — models, knowledge, tools, guardrails, memory, evaluation."
         canonicalPath="/agent-studio/agents/$agentId/build"
       />
-      <AgentBuilder mode="build" agentId={params.agentId} initialSlot={search.slot ?? null} />
+      <AgentBuilder mode="build" agentId={params.agentId} initialSlot={search.slot ?? null} setupFlow={search.setup === '1'} />
     </>
   );
 }

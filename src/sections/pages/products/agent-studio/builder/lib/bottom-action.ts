@@ -24,7 +24,10 @@ export interface BottomActionInput {
 export type BottomPrimary =
   | { action: 'create' }
   | { action: 'select'; target: string }
-  | { action: 'engine-room' };
+  | { action: 'engine-room' }
+  /** Guided setup flow (?setup=1): the walkthrough is complete — drop the
+   *  setup param and land on the Overview. */
+  | { action: 'finish-setup' };
 
 export interface BottomAction {
   primaryLabel: string;

@@ -31,3 +31,20 @@ export const WhisperDot = styled.span`
   border-radius: 50%;
   background: ${({ theme }) => theme.app.status.info.fg};
 `;
+
+/** Quiet setup-flow exit — a text link, never a competing button. */
+export const ExitLink = styled.button`
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  flex: none;
+  color: ${({ theme }) => theme.app.text.faint};
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.muted};
+  }
+`;

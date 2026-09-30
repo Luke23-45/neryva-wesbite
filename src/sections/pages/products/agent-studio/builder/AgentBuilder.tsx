@@ -16,7 +16,7 @@ import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShel
 import { BuilderTopbarActions, BuilderTopbarIdentity } from './topbar/BuilderTopBar';
 import { usePublishBuilderTopbarSlots, type BuilderTopbarSlots } from './topbar/BuilderTopbarSlots';
 import { SectionNav } from './nav/SectionNav';
-import { OVERVIEW_ID, type SectionEntry } from './nav/section-groups';
+import { OVERVIEW_ID, sectionLabel, type SectionEntry } from './nav/section-groups';
 import { OverviewScreen } from './overview/OverviewScreen';
 import { SectionBody, type InspectorContext } from './sections/SectionBody';
 import { DefinitionErrorPanel } from './inspector/DefinitionErrorPanel';
@@ -26,7 +26,8 @@ import { OriginScreen } from './origin/OriginScreen';
 import { TemplateBanner } from '../templates/TemplateBanner';
 import type { PurposeFormState, PurposeHandle } from './inspector/PurposeInspector';
 import { BuilderBottomBar } from './bottombar/BuilderBottomBar';
-import { deriveBottomAction, type BottomPrimary } from './lib/bottom-action';
+import { deriveBottomAction, type BottomAction, type BottomPrimary } from './lib/bottom-action';
+import { SETUP_ENTRY_STEP, clearSetupPosition, getSetupOrder, nextSetupSection, prevSetupSection, readSetupPosition, setupStepIndex, writeSetupPosition } from './lib/setup-flow';
 import { knowledgeSlot, projectBuilderGraph, FUNCTIONAL_NODE_IDS } from './lib/projector';
 import { selectVersionEvalState } from './lib/eval-model';
 import type { PublishEditTarget } from './lib/publish-model';
@@ -53,12 +54,21 @@ export interface AgentBuilderProps {
    * fall through to default selection — never an error, never a surprise.
    */
   initialSlot?: string | null;
+  /**
+   * Guided setup flow (?setup=1, build mode only): after "Create agent" the
+   * bottom bar becomes a Back / Continue stepper walking the 18 sections
+   * instead of stranding the maker on the Overview.
+   */
+  setupFlow?: boolean;
 }
 
-export function AgentBuilder({ mode, agentId = null, initialSlot = null }: AgentBuilderProps) {
+export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFlow = false }: AgentBuilderProps) {
   const navigate = useNavigate();
   const { role, name: orgName } = useOrg();
   const canAuthor = canSetup(role, 'setup:author');
+  // Guided setup is an author-only continuation of creation — viewers who
+  // land on ?setup=1 get the ordinary build mode.
+  const isSetupFlow = mode === 'build' && setupFlow === true && canAuthor && agentId != null;
   // P1-1 (T-01): publish is a setup:govern act (owner/admin only —
   // assistants.controller.ts:198-201). The topbar Publish must mirror the
   // Ship section's gate, never the broader setup:author tier.
@@ -300,6 +310,47 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     [projected.nodes],
   );
 
+  // Guided setup flow (?setup=1): the bottom bar becomes a Back / Continue
+  // stepper over the 18 sections. Continue always advances — each section
+  // carries its own validation and the Ship publish-readiness is the real
+  // gate at the end of the walkthrough. The Overview is not a step: from
+  // there Continue restarts at the entry step.
+  const setupAction = useMemo<BottomAction | null>(() => {
+    if (!isSetupFlow) return null;
+    const order = getSetupOrder();
+    const stepId = view === OVERVIEW_ID ? null : view;
+    const idx = setupStepIndex(stepId);
+    const next = nextSetupSection(stepId);
+    const position = idx === -1 ? 1 : idx + 1;
+    const currentId = idx === -1 ? SETUP_ENTRY_STEP : (stepId ?? SETUP_ENTRY_STEP);
+    const label =
+      sectionEntries.find((entry) => entry.id === currentId)?.label ??
+      sectionLabel(currentId, currentId);
+    return {
+      primaryLabel: next === null ? 'Finish' : 'Continue',
+      primary: next === null ? { action: 'finish-setup' } : { action: 'select', target: next },
+      whisper: `Step ${position} of ${order.length} · ${label}`,
+      showSkip: false,
+      skipTarget: null,
+    };
+  }, [isSetupFlow, view, sectionEntries]);
+  const setupPrev = isSetupFlow ? prevSetupSection(view === OVERVIEW_ID ? null : view) : null;
+
+  // Persist the walkthrough position (non-authoritative) so a refresh
+  // resumes the exact section instead of restarting at the entry step.
+  useEffect(() => {
+    if (!isSetupFlow || !agentId || view === OVERVIEW_ID || setupStepIndex(view) === -1) return;
+    writeSetupPosition(agentId, view);
+  }, [isSetupFlow, agentId, view]);
+
+  // Leave the walkthrough wherever the maker stands — just drop ?setup=1.
+  const handleExitSetup = useCallback(() => {
+    if (agentId) {
+      clearSetupPosition(agentId);
+      navigate({ to: buildAgentBuildPath(agentId), search: {} });
+    }
+  }, [agentId, navigate]);
+
   const selectedEntry = sectionEntries.find((entry) => entry.id === view) ?? undefined;
 
   // Identity next-steps data (I6/I7): id/label/status for the extras.
@@ -326,6 +377,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       select('purpose');
       return;
     }
+    if (isSetupFlow && agentId) {
+      // Guided setup entry: Identity was just completed to create the
+      // agent, so resume on Instructions — or on the stored section when
+      // a refresh interrupted the walkthrough. A ?slot= deep link is
+      // ignored here so the walkthrough never fights it — setup wins.
+      defaultedFor.current = scopeKey;
+      select(readSetupPosition(agentId) ?? SETUP_ENTRY_STEP);
+      return;
+    }
     if (form.data === undefined) return;
     if (initialSlot) {
       // All 18 ids exist (resolveInitialSlot) — unknown values fall
@@ -339,7 +399,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
     }
     defaultedFor.current = scopeKey;
     select(OVERVIEW_ID);
-  }, [mode, scopeKey, selectedId, form.data, select, initialSlot]);
+  }, [mode, scopeKey, selectedId, form.data, select, initialSlot, isSetupFlow, agentId]);
 
   // Section health (v10 §8.10): the 14 functional ids (everything except
   // context/response — excluded from readiness math). configured = 'ready'
@@ -395,6 +455,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
       if (primary.action === 'select') {
         // Section ids — bottom-action targets select directly.
         handleSelectSection(primary.target);
+        return;
+      }
+      if (primary.action === 'finish-setup') {
+        // Guided setup complete — drop ?setup=1 and land on the Overview.
+        handleSelectSection(OVERVIEW_ID);
+        if (agentId) {
+          clearSetupPosition(agentId);
+          navigate({ to: buildAgentBuildPath(agentId), search: {} });
+        }
         return;
       }
       if (agentId) navigate({ to: buildAgentEditPath(agentId) });
@@ -688,7 +757,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
               flushSync(() => {
                 setFormState({ dirty: false, valid: false });
               });
-              navigate({ to: buildAgentBuildPath(id) });
+              // Continue into the guided setup walkthrough (?setup=1)
+              // instead of stranding the maker on the Overview.
+              navigate({ to: buildAgentBuildPath(id), search: { setup: '1' } });
             }}
           />
         )}
@@ -699,6 +770,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null }: Agent
           createReady={formState.valid}
           busy={false}
           onPrimary={handlePrimary}
+        />
+      )}
+      {isSetupFlow && setupAction && (
+        <BuilderBottomBar
+          action={setupAction}
+          createReady
+          busy={false}
+          onPrimary={handlePrimary}
+          onBack={setupPrev ? () => handleSelectSection(setupPrev) : undefined}
+          onExitSetup={handleExitSetup}
         />
       )}
     </Shell>

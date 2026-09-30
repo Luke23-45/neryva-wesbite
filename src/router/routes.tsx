@@ -446,8 +446,11 @@ export const agentStudioAgentBuildRoute = createRoute({
   path: '/$agentId/build',
   // C15 operate re-entry: ?slot=<spine-or-kind> resumes the builder on a
   // slot (unknown values are ignored, never an error).
+  // Guided setup flow: ?setup=1 continues the post-creation walkthrough
+  // (Back / Continue stepper in the bottom bar).
   validateSearch: (search: Record<string, unknown>) => ({
     slot: typeof search.slot === 'string' ? search.slot : undefined,
+    setup: search.setup === '1' ? '1' : undefined,
   }),
   component: AgentStudioAgentBuilderPage,
 });
