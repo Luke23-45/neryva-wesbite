@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Segmented } from '@components/common/ui/Segmented';
 import { ApiError } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -11,7 +12,7 @@ import {
   useUpdateDraftVersion,
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
-import { useModelCosts } from '@hooks/studio/useSetupModels';
+import { useModelAvailability, useModelCosts } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
@@ -19,35 +20,51 @@ import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave
 import {
   BUDGET_BOUNDS,
   CAP_LABELS,
-  ESTIMATE_COPY,
-  FAIL_CLOSED_COPY,
-  PUBLISH_COPY,
-  cachedPriceLine,
-  describeCap,
+  PLATFORM_DEFAULTS,
   estimateRun,
-  formatEstimate,
-  formatRatePer1k,
+  formatDollars,
+  formatDuration,
   type BudgetCapKey,
   type BudgetCaps,
 } from '../lib/budget-model';
 import { ConflictDialog } from './ConflictDialog';
 import { SkeletonRows } from './SkeletonRows';
-import { Whisper, Wrap } from './InstructionsSection.styles';
-import { TextButton } from './ToolsSection.styles';
+import { Whisper } from './InstructionsSection.styles';
+import { SectionGroup, SectionPage, MicroTip } from '../section-ui/SectionPage';
 import {
+  Badge,
+  CapControl,
+  CapHelper,
+  CapInput,
   CapLabel,
-  CapRow,
-  EstimateItem,
-  EstimateList,
-  EstimateMeta,
-  FieldBlock,
-  FieldHead,
-  FieldHelper,
-  FieldTitle,
-  SwitchRow,
-  SwitchSub,
-  SwitchText,
-  SwitchTitle,
+  CapRowWrap,
+  CapText,
+  CardFootnote,
+  CardHead,
+  CardIcon,
+  CardSub,
+  CardTitle,
+  CardTitleWrap,
+  Chip,
+  ChipRow,
+  EstimateLabel,
+  EstimateRow,
+  EstimateValue,
+  GroupCard,
+  InfoLabel,
+  InfoRow,
+  InfoValue,
+  ModelChip,
+  Pill,
+  PillDot,
+  RailCard,
+  RailDot,
+  RailLabel,
+  RailRow,
+  RailTitle,
+  RailValue,
+  RowDivider,
+  UsageLink,
 } from './BudgetSection.styles';
 
 export interface BudgetSectionProps {
@@ -78,11 +95,24 @@ function readBudget(definition: AgentDefinition): BudgetState {
 
 const CAP_KEYS: BudgetCapKey[] = ['max_cost_cents', 'max_total_tokens', 'max_tool_calls', 'max_model_calls', 'wall_clock_seconds'];
 
+/** A cap counts as "set" when the maker gave it a value (spend needs > 0). */
+function isCapSet(key: BudgetCapKey, value: number | undefined): boolean {
+  if (value === undefined) return false;
+  if (key === 'max_cost_cents') return value > 0;
+  return true;
+}
+
+function formatCount(n: number): string {
+  return n.toLocaleString('en-US');
+}
+
 /**
- * C09 mount — plain-words caps with unset-vs-zero resolution, rough estimate
- * lines, fail-closed note; the proven save machine (debounce, PUT/POST,
- * 409 adopt, 412 dialog, dirty flag). Caps are ALL-OPTIONAL: clearing a field
- * unsets it (platform default / cost-unchecked) — never 0-for-unset.
+ * Budget — SVG redesign (2026-10-01).
+ *
+ * Three group cards: Caps (5 per-run limits, unset = platform default),
+ * Estimate (worst-case math from the primary model's real list rate), and
+ * When a cap breaks (the fail-closed law). The proven save machine is
+ * untouched: 8s autosave, PUT/POST, 409 adopt, 412 dialog, dirty flag.
  */
 export function BudgetSection({
   assistantId,
@@ -99,6 +129,7 @@ export function BudgetSection({
   const { role } = useOrg();
   const denied = setupDeniedCopy(role, 'setup:author');
   const costs = useModelCosts();
+  const availability = useModelAvailability();
 
   const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
   const [docKey, setDocKey] = useState(sourceKey);
@@ -189,16 +220,12 @@ export function BudgetSection({
     });
   }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
-  // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
-  // sections persists pending edits instead of silently dropping them.
   useDraftAutosave(
     { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
     doSave,
     [current],
   );
 
-  // Manual save (topbar Save button / Ctrl+S / ⌘S): never silent — a held
-  // save toasts its reason instead of swallowing the click.
   useManualSaveSignal(saveSignal, doSave, {
     canAuthor,
     blocked,
@@ -210,134 +237,278 @@ export function BudgetSection({
     setBudget((prev) => ({ ...prev, ...part }));
   }, []);
 
+  // ── Derived state for the SVG layout ──────────────────────────────────
+
+  const setCount = CAP_KEYS.filter((key) => isCapSet(key, budget[key])).length;
+  const spendUnset = budget.max_cost_cents === undefined || budget.max_cost_cents <= 0;
+
+  const allowed = definition?.model_policy.allowed_models ?? [];
+  const primaryRef = allowed[0];
+  const costsByRef = useMemo(() => new Map((costs.data ?? []).map((c) => [c.ref, c])), [costs.data]);
+  const availabilityByRef = useMemo(
+    () => new Map((availability.data ?? []).map((m) => [m.ref, m])),
+    [availability.data],
+  );
+  const primaryCost = primaryRef ? costsByRef.get(primaryRef) : undefined;
+  const primaryName = primaryRef
+    ? (availabilityByRef.get(primaryRef)?.displayName ?? primaryRef)
+    : null;
+
+  const tokenCap = budget.max_total_tokens ?? PLATFORM_DEFAULTS.max_total_tokens;
+  const worstCase = primaryCost
+    ? estimateRun(tokenCap, {
+        ref: primaryCost.ref,
+        costMicrosPer1kInput: primaryCost.costMicrosPer1kInput,
+        costMicrosPer1kOutput: primaryCost.costMicrosPer1kOutput,
+        costMicrosPer1kCachedInput: primaryCost.costMicrosPer1kCachedInput,
+      })
+    : null;
+  const worstDollars = worstCase ? worstCase.micros / 1_000_000 : null;
+  const thousandRuns = worstDollars !== null ? worstDollars * 1000 : null;
+
+  const ratePerMillion =
+    primaryCost &&
+    primaryCost.costMicrosPer1kInput !== null &&
+    primaryCost.costMicrosPer1kOutput !== null
+      ? ((primaryCost.costMicrosPer1kInput + primaryCost.costMicrosPer1kOutput) / 1_000_000) * 1000
+      : null;
+
+  const goToUsage = useCallback(() => {
+    navigate({ to: '/agent-studio/usage' });
+  }, [navigate]);
+
+  const pill = spendUnset ? (
+    <Pill $tone="warning">
+      <PillDot aria-hidden="true" />
+      spend unchecked
+    </Pill>
+  ) : undefined;
+
+  const rail = (
+    <>
+      <RailCard>
+        <RailTitle>On this page</RailTitle>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone={spendUnset ? 'warning' : 'ok'} aria-hidden="true" />
+            Caps
+          </RailLabel>
+          <RailValue>{setCount}/5</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone={worstDollars !== null ? 'ok' : 'muted'} aria-hidden="true" />
+            Estimate
+          </RailLabel>
+          <RailValue>
+            {worstDollars !== null ? `$${worstDollars.toFixed(2)}` : '—'}
+          </RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>
+            <RailDot $tone="ok" aria-hidden="true" />
+            Cap breaks
+          </RailLabel>
+          <RailValue>closed</RailValue>
+        </RailRow>
+      </RailCard>
+      <RailCard>
+        <RailTitle>Set vs default</RailTitle>
+        <RailRow>
+          <RailLabel>Spend cap</RailLabel>
+          <RailValue $tone={spendUnset ? 'warning' : undefined}>
+            {spendUnset ? 'unset' : formatDollars(budget.max_cost_cents as number)}
+          </RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Total tokens</RailLabel>
+          <RailValue>{formatCount(budget.max_total_tokens ?? PLATFORM_DEFAULTS.max_total_tokens)}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Tool calls</RailLabel>
+          <RailValue>{budget.max_tool_calls ?? PLATFORM_DEFAULTS.max_tool_calls}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Model calls</RailLabel>
+          <RailValue>{budget.max_model_calls ?? PLATFORM_DEFAULTS.max_model_calls}</RailValue>
+        </RailRow>
+        <RailRow>
+          <RailLabel>Wall clock</RailLabel>
+          <RailValue>
+            {budget.wall_clock_seconds !== undefined
+              ? formatDuration(budget.wall_clock_seconds)
+              : `${PLATFORM_DEFAULTS.wall_clock_seconds}s`}
+          </RailValue>
+        </RailRow>
+      </RailCard>
+      <RailCard>
+        <MicroTip>
+          Fail-closed means a broken cap stops the run — never a quiet overage on someone's invoice.
+        </MicroTip>
+      </RailCard>
+    </>
+  );
+
   if (!definition) {
     return (
-      <Wrap>
+      <SectionPage
+        title="Budget"
+        subtitle="What a single run may spend, consume, and take — before it fails closed."
+      >
         <SkeletonRows rows={4} />
-      </Wrap>
+      </SectionPage>
     );
   }
 
   if (!canAuthor) {
     return (
-      <Wrap>
-        <FieldBlock>
-          <FieldHead>
-            <FieldTitle>Budget</FieldTitle>
-          </FieldHead>
-          {CAP_KEYS.map((key) => {
-            const described = describeCap(key, budget[key]);
-            return (
-              <SwitchRow key={key}>
-                <SwitchText>
-                  <SwitchTitle>{CAP_LABELS[key]}</SwitchTitle>
-                  <SwitchSub>
-                    {described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}
-                  </SwitchSub>
-                </SwitchText>
-              </SwitchRow>
-            );
-          })}
-          <FieldHelper>{FAIL_CLOSED_COPY}</FieldHelper>
-          <FieldHelper>Budget needs an owner, admin, or developer — {denied}</FieldHelper>
-        </FieldBlock>
-      </Wrap>
+      <SectionPage
+        title="Budget"
+        subtitle="What a single run may spend, consume, and take — before it fails closed."
+        pill={pill}
+        rail={rail}
+      >
+        <SectionGroup label="Caps">
+          <GroupCard>
+            {CAP_KEYS.map((key, i) => (
+              <div key={key}>
+                {i > 0 && <RowDivider />}
+                <InfoRow>
+                  <InfoLabel>{CAP_LABELS[key]}</InfoLabel>
+                  <InfoValue>{readOnlyCapValue(key, budget[key])}</InfoValue>
+                </InfoRow>
+              </div>
+            ))}
+          </GroupCard>
+        </SectionGroup>
+        <SectionGroup label="When a cap breaks">
+          <GroupCard>
+            <CardHead>
+              <CardIcon $tone="ok">✓</CardIcon>
+              <CardTitleWrap>
+                <CardTitle>When a cap breaks</CardTitle>
+                <CardSub>Every dimension fails closed — never a quiet overage.</CardSub>
+              </CardTitleWrap>
+            </CardHead>
+            <InfoRow>
+              <InfoLabel>Run outcome</InfoLabel>
+              <Badge $tone="danger">FAILED · terminal event</Badge>
+            </InfoRow>
+          </GroupCard>
+        </SectionGroup>
+        <Whisper $tone="amber">Budget needs an owner, admin, or developer — {denied}</Whisper>
+      </SectionPage>
     );
   }
 
-  const allowed = definition.model_policy.allowed_models;
-  const costsByRef = new Map((costs.data ?? []).map((c) => [c.ref, c]));
-  const estimateTokens = budget.max_total_tokens ?? 20_000;
-
   return (
-    <Wrap
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target instanceof HTMLElement) {
-          event.target.blur();
-        }
-      }}
+    <SectionPage
+      title="Budget"
+      subtitle="What a single run may spend, consume, and take — before it fails closed."
+      pill={pill}
+      rail={rail}
     >
-      {/* Block A · caps */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Caps</FieldTitle>
-          <FieldHelper>Per run</FieldHelper>
-        </FieldHead>
-        {CAP_KEYS.map((key) => (
-          <CapField key={key} capKey={key} budget={budget} patch={patch} />
-        ))}
-        <FieldHelper>Clear a field to unset it — platform defaults resume.</FieldHelper>
-      </FieldBlock>
+      {/* Caps */}
+      <SectionGroup label="Caps">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone="warning">!</CardIcon>
+            <CardTitleWrap>
+              <CardTitle>Caps</CardTitle>
+              <CardSub>Per-run limits. Unset means the platform default serves.</CardSub>
+            </CardTitleWrap>
+            <Badge>{setCount} of 5 set</Badge>
+          </CardHead>
+          {CAP_KEYS.map((key, i) => (
+            <div key={key}>
+              {i > 0 && <RowDivider />}
+              <CapField capKey={key} budget={budget} patch={patch} />
+            </div>
+          ))}
+          <CardFootnote>Clear a field to unset it — platform defaults resume.</CardFootnote>
+        </GroupCard>
+      </SectionGroup>
 
-      {/* Block B · estimate */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Estimate</FieldTitle>
-          <FieldHelper>Rough, not the bill</FieldHelper>
-        </FieldHead>
-        {costs.isPending ? (
-          <SkeletonRows rows={3} />
-        ) : costs.isError ? (
-          <Whisper $tone="amber">Prices are unreachable — caps above still save; estimates resume on reload.</Whisper>
-        ) : allowed.length === 0 ? (
-          <FieldHelper>Pick a model in Brain — estimates need a priced model, never a fake $0.</FieldHelper>
-        ) : (
-          <EstimateList>
-            {allowed.map((ref) => {
-              const cost = costsByRef.get(ref);
-              if (!cost) {
-                return (
-                  <EstimateItem key={ref}>
-                    {ref} — unpriced.
-                  </EstimateItem>
-                );
-              }
-              const cached = cachedPriceLine({
-                ref,
-                costMicrosPer1kInput: cost.costMicrosPer1kInput,
-                costMicrosPer1kOutput: cost.costMicrosPer1kOutput,
-                costMicrosPer1kCachedInput: cost.costMicrosPer1kCachedInput,
-              });
-              const estimate = estimateRun(estimateTokens, {
-                ref,
-                costMicrosPer1kInput: cost.costMicrosPer1kInput,
-                costMicrosPer1kOutput: cost.costMicrosPer1kOutput,
-                costMicrosPer1kCachedInput: cost.costMicrosPer1kCachedInput,
-              });
-              return (
-                <EstimateItem key={ref}>
-                  {ref} — in {cost.costMicrosPer1kInput !== null ? formatRatePer1k(cost.costMicrosPer1kInput) : 'unpriced'}
-                  {cached ? ` · ${cached}` : ''} · out{' '}
-                  {cost.costMicrosPer1kOutput !== null ? formatRatePer1k(cost.costMicrosPer1kOutput) : 'unpriced'}
-                  {estimate ? (
-                    <EstimateMeta>
-                      {formatEstimate(estimate.micros)}{' '}
-                      {budget.max_total_tokens !== undefined
-                        ? `per ${estimateTokens.toLocaleString()}-token run (your cap)`
-                        : 'per 20k-token run (reference scale)'}
-                    </EstimateMeta>
-                  ) : (
-                    <EstimateMeta>Unpriced — no estimate.</EstimateMeta>
-                  )}
-                </EstimateItem>
-              );
-            })}
-          </EstimateList>
-        )}
-        <FieldHelper>{ESTIMATE_COPY}</FieldHelper>
-      </FieldBlock>
+      {/* Estimate */}
+      <SectionGroup label="Estimate">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone="ok">✓</CardIcon>
+            <CardTitleWrap>
+              <CardTitle>Estimate</CardTitle>
+              <CardSub>Rough, not the bill — derived from the primary model's list rate.</CardSub>
+            </CardTitleWrap>
+            <UsageLink type="button" onClick={goToUsage}>
+              Open Usage (measured) →
+            </UsageLink>
+          </CardHead>
+          {costs.isPending || availability.isPending ? (
+            <SkeletonRows rows={3} />
+          ) : costs.isError ? (
+            <Whisper $tone="amber">Prices are unreachable — caps above still save; estimates resume on reload.</Whisper>
+          ) : !primaryRef ? (
+            <Whisper $tone="amber">Pick a model in the Model section — estimates need a priced model, never a fake $0.</Whisper>
+          ) : !primaryCost || ratePerMillion === null ? (
+            <Whisper $tone="amber">{primaryName ?? primaryRef} is unpriced — no estimate to show.</Whisper>
+          ) : (
+            <>
+              <EstimateRow>
+                <EstimateLabel>Primary model</EstimateLabel>
+                <ModelChip>
+                  {primaryName} · ${ratePerMillion.toFixed(2)} / M
+                </ModelChip>
+              </EstimateRow>
+              <RowDivider />
+              <EstimateRow>
+                <EstimateLabel>Worst case per run · {formatCount(tokenCap)}-token cap</EstimateLabel>
+                <EstimateValue>${(worstDollars ?? 0).toFixed(2)}</EstimateValue>
+              </EstimateRow>
+              <RowDivider />
+              <EstimateRow>
+                <EstimateLabel>At 1,000 runs</EstimateLabel>
+                <EstimateValue>${(thousandRuns ?? 0).toFixed(2)}</EstimateValue>
+              </EstimateRow>
+            </>
+          )}
+          <CardFootnote>Uncached rates — measured spend lives in Usage, not here.</CardFootnote>
+        </GroupCard>
+      </SectionGroup>
 
-      {/* Block C · fail-closed */}
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>If a cap breaks</FieldTitle>
-        </FieldHead>
-        <FieldHelper>{FAIL_CLOSED_COPY}</FieldHelper>
-        <FieldHelper>{PUBLISH_COPY}</FieldHelper>
-        <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/usage' })}>
-          Open Usage (measured) →
-        </TextButton>
-      </FieldBlock>
+      {/* When a cap breaks */}
+      <SectionGroup label="When a cap breaks">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone="ok">✓</CardIcon>
+            <CardTitleWrap>
+              <CardTitle>When a cap breaks</CardTitle>
+              <CardSub>Every dimension fails closed — never a quiet overage.</CardSub>
+            </CardTitleWrap>
+          </CardHead>
+          <InfoRow>
+            <InfoLabel>Run outcome</InfoLabel>
+            <Badge $tone="danger">FAILED · terminal event</Badge>
+          </InfoRow>
+          <RowDivider />
+          <InfoRow>
+            <InfoLabel>Event names</InfoLabel>
+            <ChipRow>
+              {['spend', 'tokens', 'tools', 'models', 'clock'].map((name) => (
+                <Chip key={name}>{name}</Chip>
+              ))}
+            </ChipRow>
+          </InfoRow>
+          <RowDivider />
+          <InfoRow>
+            <InfoLabel>Quota</InfoLabel>
+            <InfoValue>released immediately on failure</InfoValue>
+          </InfoRow>
+          <RowDivider />
+          <InfoRow>
+            <InfoLabel>Edits ship</InfoLabel>
+            <InfoValue>with the version — publish to serve them</InfoValue>
+          </InfoRow>
+        </GroupCard>
+      </SectionGroup>
 
       {heldMessages.map((message) => (
         <Whisper key={message} $tone="red" role="alert">
@@ -387,9 +558,38 @@ export function BudgetSection({
           }}
         />
       )}
-    </Wrap>
+    </SectionPage>
   );
 }
+
+function readOnlyCapValue(key: BudgetCapKey, value: number | undefined): string {
+  if (key === 'max_cost_cents') {
+    return value === undefined || value <= 0 ? 'No spend cap' : formatDollars(value);
+  }
+  if (value === undefined) {
+    switch (key) {
+      case 'max_total_tokens':
+        return formatCount(PLATFORM_DEFAULTS.max_total_tokens);
+      case 'max_tool_calls':
+        return String(PLATFORM_DEFAULTS.max_tool_calls);
+      case 'max_model_calls':
+        return String(PLATFORM_DEFAULTS.max_model_calls);
+      case 'wall_clock_seconds':
+        return `${PLATFORM_DEFAULTS.wall_clock_seconds}s`;
+    }
+  }
+  if (key === 'wall_clock_seconds') return formatDuration(value);
+  if (key === 'max_total_tokens') return formatCount(value);
+  return String(value);
+}
+
+const CAP_HELPERS: Record<BudgetCapKey, string> = {
+  max_cost_cents: 'Unset or $0 — runs are cost-unchecked.',
+  max_total_tokens: 'Tokens per run — prompt plus completion.',
+  max_tool_calls: 'Calls per run across every bound tool.',
+  max_model_calls: 'Calls per run including retries and fallbacks.',
+  wall_clock_seconds: 'Seconds or minutes before the run is cut.',
+};
 
 function CapField({
   capKey,
@@ -401,47 +601,98 @@ function CapField({
   patch: (part: Partial<BudgetState>) => void;
 }) {
   const value = budget[capKey];
-  const described = describeCap(capKey, value);
   const isSpend = capKey === 'max_cost_cents';
+  const isWallClock = capKey === 'wall_clock_seconds';
+
+  // Wall clock: the SVG pairs the number with an s/min segmented toggle.
+  const [unit, setUnit] = useState<'s' | 'min'>('s');
+  const displayValue = (() => {
+    if (value === undefined) return '';
+    if (isSpend) return String(value / 100);
+    if (isWallClock && unit === 'min') return String(value / 60);
+    return String(value);
+  })();
+
   const bounds = isSpend
     ? { min: 0, step: '0.01' as const }
     : capKey === 'max_total_tokens'
       ? { min: BUDGET_BOUNDS.max_total_tokens.min, max: BUDGET_BOUNDS.max_total_tokens.max, step: 100 }
-      : capKey === 'wall_clock_seconds'
+      : isWallClock
         ? { min: BUDGET_BOUNDS.wall_clock_seconds.min, max: BUDGET_BOUNDS.wall_clock_seconds.max, step: 1 }
         : capKey === 'max_tool_calls'
           ? { min: BUDGET_BOUNDS.max_tool_calls.min, max: BUDGET_BOUNDS.max_tool_calls.max, step: 1 }
           : { min: BUDGET_BOUNDS.max_model_calls.min, max: BUDGET_BOUNDS.max_model_calls.max, step: 1 };
-  const display = value === undefined ? '' : isSpend ? String(value / 100) : String(value);
+
+  const handleChange = (raw: string) => {
+    if (raw.trim() === '') {
+      // UNSET, not 0: explicit undefined survives the merge and stringifies away.
+      patch({ [capKey]: undefined } as Partial<BudgetState>);
+      return;
+    }
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric)) return;
+    if (isSpend) {
+      patch({ [capKey]: Math.round(numeric * 100) } as Partial<BudgetState>);
+      return;
+    }
+    const seconds = isWallClock && unit === 'min' ? numeric * 60 : numeric;
+    patch({ [capKey]: Math.trunc(seconds) } as Partial<BudgetState>);
+  };
+
+  const badge = (() => {
+    if (isSpend) {
+      return value === undefined || value <= 0 ? (
+        <Badge $tone="warning">unchecked</Badge>
+      ) : null;
+    }
+    if (value === undefined) {
+      switch (capKey) {
+        case 'max_total_tokens':
+          return <Badge>{formatCount(PLATFORM_DEFAULTS.max_total_tokens)}</Badge>;
+        case 'max_tool_calls':
+          return <Badge>{PLATFORM_DEFAULTS.max_tool_calls}</Badge>;
+        case 'max_model_calls':
+          return <Badge>{PLATFORM_DEFAULTS.max_model_calls}</Badge>;
+        case 'wall_clock_seconds':
+          return <Badge>{PLATFORM_DEFAULTS.wall_clock_seconds}s</Badge>;
+      }
+    }
+    return null;
+  })();
 
   return (
-    <CapRow>
-      <CapLabel>{CAP_LABELS[capKey]}</CapLabel>
-      <TextInput
-        type="number"
-        id={`budget-${capKey}`}
-        aria-label={`${CAP_LABELS[capKey]}${isSpend ? ' in dollars' : ''}`}
-        value={display}
-        min={bounds.min}
-        {...('max' in bounds ? { max: bounds.max } : {})}
-        step={bounds.step}
-        placeholder={isSpend ? 'No cap' : 'Platform default'}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw.trim() === '') {
-            // UNSET, not 0: explicit undefined survives the merge (a deleted
-            // key in a spread copy would not) and stringifies away.
-            patch({ [capKey]: undefined } as Partial<BudgetState>);
-            return;
-          }
-          const parsed = isSpend ? Math.round(Number(raw) * 100) : Math.trunc(Number(raw));
-          if (!Number.isFinite(parsed)) return;
-          patch({ [capKey]: parsed } as Partial<BudgetState>);
-        }}
-      />
-      <FieldHelper>
-        {described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}
-      </FieldHelper>
-    </CapRow>
+    <CapRowWrap>
+      <CapText>
+        <CapLabel>{CAP_LABELS[capKey]}</CapLabel>
+        <CapHelper>{CAP_HELPERS[capKey]}</CapHelper>
+      </CapText>
+      <CapControl>
+        <CapInput>
+          <TextInput
+            type="number"
+            id={`budget-${capKey}`}
+            aria-label={`${CAP_LABELS[capKey]}${isSpend ? ' in dollars' : ''}`}
+            value={displayValue}
+            min={bounds.min}
+            {...('max' in bounds ? { max: bounds.max } : {})}
+            step={bounds.step}
+            placeholder={isSpend ? 'No cap' : 'Default'}
+            onChange={(event) => handleChange(event.target.value)}
+          />
+        </CapInput>
+        {isWallClock && (
+          <Segmented
+            options={[
+              { value: 's', label: 's' },
+              { value: 'min', label: 'min' },
+            ]}
+            value={unit}
+            onChange={setUnit}
+            ariaLabel="Wall clock unit"
+          />
+        )}
+        {badge}
+      </CapControl>
+    </CapRowWrap>
   );
 }

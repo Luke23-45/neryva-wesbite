@@ -23,6 +23,13 @@ vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
 
+const navigateMock = vi.fn();
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return { ...actual, useNavigate: () => navigateMock };
+});
+
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
   return {
@@ -37,7 +44,12 @@ vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
   return {
     ...actual,
     useModelCosts: () => ({
-      data: [{ provider: 'a', model: 'good', ref: 'a/good', costMicrosPer1kInput: 3_000_000, costMicrosPer1kOutput: 15_000_000, costMicrosPer1kCachedInput: 300_000, currency: 'USD', effectiveFrom: null }],
+      data: [{ provider: 'a', model: 'good', ref: 'a/good', costMicrosPer1kInput: 75_000, costMicrosPer1kOutput: 75_000, costMicrosPer1kCachedInput: null, currency: 'USD', effectiveFrom: null }],
+      isPending: false,
+      isError: false,
+    }),
+    useModelAvailability: () => ({
+      data: [{ provider: 'a', modelId: 'good', ref: 'a/good', displayName: 'Good Model', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: null, requiredProductLabel: null }],
       isPending: false,
       isError: false,
     }),
@@ -84,15 +96,46 @@ afterEach(() => {
 });
 
 describe('BudgetSection', () => {
-  it('renders 5 caps with unset whispers, cost-unchecked stated loudly', () => {
+  it('renders the SVG header, 5 caps, estimate, and fail-closed groups', () => {
     shell();
-    for (const label of ['Spend cap', 'Total tokens', 'Tool calls', 'Model calls', 'Wall clock']) {
-      expect(screen.getByLabelText(new RegExp(`^${label}`))).toBeTruthy();
-    }
-    expect(screen.getByText(/No spend cap/)).toBeTruthy();
-    expect(screen.getByText(/cost-unchecked/)).toBeTruthy();
+    expect(screen.getByText('Budget')).toBeTruthy();
+    expect(screen.getByText(/What a single run may spend/)).toBeTruthy();
+    // Spend unchecked badge when no cap is set.
+    expect(screen.getByText('spend unchecked')).toBeTruthy();
+    expect(screen.getByLabelText('Spend cap in dollars')).toBeTruthy();
+    expect(screen.getByLabelText('Total tokens')).toBeTruthy();
+    expect(screen.getByLabelText('Tool calls')).toBeTruthy();
+    expect(screen.getByLabelText('Model calls')).toBeTruthy();
+    expect(screen.getByLabelText('Wall clock')).toBeTruthy();
+    expect(screen.getByText('0 of 5 set')).toBeTruthy();
     expect(screen.getByText(/Rough, not the bill/)).toBeTruthy();
-    expect(screen.getByText(/fails closed/)).toBeTruthy();
+    expect(screen.getByText(/fails closed — never a quiet overage/)).toBeTruthy();
+    expect(screen.getByText(/FAILED · terminal event/)).toBeTruthy();
+  });
+
+  it('shows the spend cap badge and hides the header pill when a cap is set', () => {
+    shell({ definition: definitionWith({ max_cost_cents: 500 }) });
+    expect(screen.queryByText('spend unchecked')).toBeNull();
+    expect(screen.getByText('1 of 5 set')).toBeTruthy();
+    // No "unchecked" badge on the spend row when set.
+    expect(screen.queryByText('unchecked')).toBeNull();
+  });
+
+  it('shows platform default badges when caps are unset', () => {
+    shell();
+    // Badge + rail both show the token default.
+    expect(screen.getAllByText('200,000').length).toBeGreaterThanOrEqual(1);
+    // Tool calls default 8, model calls default 16, wall clock default 120s.
+    expect(screen.getByText('unchecked')).toBeTruthy();
+  });
+
+  it('derives the estimate from the primary model list rate, never hardcoded', () => {
+    // 75k + 75k micros per 1k = $0.15/1k; 200k tokens → $30.00 worst case.
+    // Appears in the Estimate group and the rail.
+    shell();
+    expect(screen.getByText(/Good Model/)).toBeTruthy();
+    expect(screen.getAllByText('$30.00').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('$30000.00')).toBeTruthy();
   });
 
   it('saves spend in cents and unsets on clear (never 0-for-unset)', async () => {
@@ -118,7 +161,6 @@ describe('BudgetSection', () => {
     });
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    // Explicit undefined stringifies away and the wire omits it (toWire !== undefined).
     expect(sent.definition.budget.max_cost_cents).toBeUndefined();
     expect(JSON.stringify(sent.definition.budget)).not.toContain('max_cost_cents');
   });
@@ -135,10 +177,12 @@ describe('BudgetSection', () => {
     expect(updateMutate).not.toHaveBeenCalled();
   });
 
-  it('estimates at uncached rates with the reported cached price', () => {
-    shell({ definition: definitionWith({ max_cost_cents: 500, max_total_tokens: 20_000 }) });
-    expect(screen.getByText(/cached-in \$0\.3000\/1k/)).toBeTruthy();
-    expect(screen.getByText(/~\$360\.00 per 20,000-token run \(your cap\)/)).toBeTruthy();
+  it('renders the wall clock s/min segmented toggle', () => {
+    shell();
+    const toggle = screen.getByRole('tablist', { name: 'Wall clock unit' });
+    expect(toggle).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 's' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'min' })).toBeTruthy();
   });
 
   it('renders read-only with the role explanation for viewers', () => {
