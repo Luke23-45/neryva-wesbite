@@ -426,3 +426,65 @@ describe('19-32 legacy response_policy keys (M-08/RP-04)', () => {
     expect(consumer.model_params.top_p).toBeUndefined();
   });
 });
+
+describe('model pipeline + response_format wire contract', () => {
+  const PIPELINE_DRAFT = {
+    instructions: 'Pipeline draft.',
+    model_policy: {
+      allowed_models: ['a/b', 'c/d'],
+      fallback_enabled: true,
+      pipeline: [
+        { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+        { ref: 'c/d', version_pin: '', credential_id: '', params: {} },
+      ],
+    },
+    model_params: { response_format: 'json', output_schema_name: 'ticket' },
+  };
+
+  it('round-trips the pipeline, cleaning blanks (blank pin/credential drop, empty params collapse)', () => {
+    const consumer = fromEnginePayload(PIPELINE_DRAFT);
+    expect(consumer.model_policy.pipeline).toEqual([
+      { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+      { ref: 'c/d' },
+    ]);
+    const wire = toEnginePayload(consumer) as unknown as Record<string, Record<string, unknown>>;
+    expect(wire.model_policy.pipeline).toEqual([
+      { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+      { ref: 'c/d' },
+    ]);
+    // allowed_models is derived from the pipeline refs on write.
+    expect(wire.model_policy.allowed_models).toEqual(['a/b', 'c/d']);
+  });
+
+  it('parses response_format / output_schema_name into model_params on read', () => {
+    const consumer = fromEnginePayload(PIPELINE_DRAFT);
+    expect(consumer.model_params.response_format).toBe('json');
+    expect(consumer.model_params.output_schema_name).toBe('ticket');
+    const wire = toEnginePayload(consumer) as unknown as Record<string, Record<string, unknown>>;
+    expect(wire.model_params).toMatchObject({ response_format: 'json', output_schema_name: 'ticket' });
+  });
+
+  it('leaves the pipeline absent on a legacy draft (no pipeline) — the section reconciles from allowed_models', () => {
+    const legacy = fromEnginePayload({
+      instructions: 'Legacy.',
+      model_policy: { allowed_models: ['a/b', 'ghost/x'], fallback_enabled: false },
+      model_params: {},
+    });
+    // The payload layer never invents pipeline entries; ModelSection's
+    // readPipeline builds [{ref:'a/b'},{ref:'ghost/x'}] from allowed_models.
+    expect(legacy.model_policy.pipeline).toBeUndefined();
+    expect(legacy.model_policy.allowed_models).toEqual(['a/b', 'ghost/x']);
+  });
+
+  it('treats garbage pipeline entries as absent, never crashing the read', () => {
+    const consumer = fromEnginePayload({
+      instructions: 'Garbage.',
+      model_policy: {
+        allowed_models: ['a/b'],
+        pipeline: ['nope', null, { ref: 42 }, { ref: 'a/b', params: 'nope' }],
+      },
+      model_params: {},
+    });
+    expect(consumer.model_policy.pipeline).toEqual([{ ref: 'a/b' }]);
+  });
+});

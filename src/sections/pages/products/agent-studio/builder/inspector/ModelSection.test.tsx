@@ -165,41 +165,38 @@ describe('ModelSection policy', () => {
     expect(input.definition.model_policy.allowed_models).toEqual(['a/b']);
   });
 
-  it('shows the selected models and the other params in the header card', async () => {
+  it('shows the serving pipeline with the selected model', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/RESOLVED · FIRST SERVES/)).toBeTruthy();
+    expect(screen.getByText('Serving order')).toBeTruthy();
     expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
-    // The selected ref shows in the header card and in the picker row.
-    expect(screen.getAllByText(/a\/b/).length).toBeGreaterThanOrEqual(1);
+    // The serving-order badge marks the primary.
+    expect(screen.getByText('1')).toBeTruthy();
   });
 
-  it('renders the resolved dot as unknown (gray) while the catalog loads — never attention (19-37)', async () => {
+  it('treats an unresolved catalog as unknown — never a credential blocker', async () => {
     const previous = mockCatalog.rows;
     mockCatalog.rows = undefined;
     try {
       await act(async () => {
         shell();
       });
-      const header = screen.getByText(/RESOLVED · FIRST SERVES/).parentElement as HTMLElement;
-      const dot = header.querySelector('span[aria-hidden="true"]') as HTMLElement;
-      expect(dot).toBeTruthy();
-      // 'info' gray (#8B94A3): unknown ≠ known-bad. The amber attention badge
-      // (#F5A524) is reserved for models the catalog confirms unusable.
-      expect(getComputedStyle(dot).backgroundColor).toBe('rgb(139, 148, 163)');
+      // Unknown ≠ known-bad: no credential blocker while the catalog is
+      // unresolved, and the pipeline row still renders (not hidden).
+      expect(screen.queryByText(/credential in vault/)).toBeNull();
+      expect(screen.getAllByText('a/b').length).toBeGreaterThanOrEqual(1);
     } finally {
       mockCatalog.rows = previous;
     }
   });
 
-  it('renders the resolved dot ready (green) once the catalog confirms usability', async () => {
+  it('raises no credential blocker once the catalog confirms usability', async () => {
     await act(async () => {
       shell();
     });
-    const header = screen.getByText(/RESOLVED · FIRST SERVES/).parentElement as HTMLElement;
-    const dot = header.querySelector('span[aria-hidden="true"]') as HTMLElement;
-    expect(getComputedStyle(dot).backgroundColor).toBe('rgb(61, 214, 140)'); // #3DD68C
+    expect(screen.queryByText(/credential in vault/)).toBeNull();
+    expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows reasoning effort as Default (unset) until the maker picks a value — no Medium pre-select (19-33)', async () => {
@@ -224,7 +221,6 @@ describe('ModelSection policy', () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/LOCKED/)).toBeTruthy();
     expect(screen.getByText(/Requires Pay-as-you-go — you don't have that/)).toBeTruthy();
     const link = screen.getByRole('link', { name: /view subscription options/i }) as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/agent-studio/settings/billing');
@@ -247,10 +243,12 @@ describe('ModelSection policy', () => {
   it('holds save on invalid schemas with the failure named', async () => {
     withFakeTimers();
     await act(async () => {
-      shell();
+      // The schema is authored in the focused editor (never a raw textarea);
+      // an invalid schema arriving on the definition still holds the save.
+      shell({
+        definition: { ...DEFINITION, model_params: { output_schema: '{nope' } },
+      });
     });
-    fireEvent.click(screen.getByText(/Advanced/));
-    fireEvent.change(screen.getByLabelText(/Output schema/), { target: { value: '{nope' } });
     expect(screen.getByText(/Not valid JSON/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(9000);
@@ -258,17 +256,19 @@ describe('ModelSection policy', () => {
     expect(updateMutate).not.toHaveBeenCalled();
   });
 
-  it('reorders the fallback chain through the picker', async () => {
+  it('reorders the serving pipeline through the row buttons', async () => {
     withFakeTimers();
     await act(async () => {
       shell({ definition: { ...DEFINITION, model_policy: { allowed_models: ['a/b', 'c/d'], fallback_enabled: true } } });
     });
-    fireEvent.click(screen.getByLabelText('Move a/b down'));
+    fireEvent.click(screen.getByLabelText('Move A B down'));
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
     const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
     expect(input.definition.model_policy.allowed_models).toEqual(['c/d', 'a/b']);
+    // The pipeline carries the new order; allowed_models is derived from it.
+    expect(input.definition.model_policy.pipeline?.map((entry) => entry.ref)).toEqual(['c/d', 'a/b']);
   });
 
   it('propagates dirty state to the parent', async () => {
@@ -340,7 +340,8 @@ describe('ModelSection policy', () => {
     });
     expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByLabelText('Fallback')).toBeNull();
-    expect(screen.getByText(/Off|On — next allowed/)).toBeTruthy();
+    // The fallback policy still reads as text in the readiness card.
+    expect(screen.getByText(/Single model — fallback not needed/)).toBeTruthy();
   });
 });
 

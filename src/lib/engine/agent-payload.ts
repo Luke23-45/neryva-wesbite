@@ -180,11 +180,37 @@ export interface ConsumerTool {
   execution_mode: ToolExecutionMode;
 }
 
+/** Per-model serving-pipeline entry (Model section). The pipeline is the
+ * source of order — allowed_models is derived from the entry refs. */
+export interface ModelPipelineEntry {
+  /** Catalog ref `provider/model`. */
+  ref: string;
+  /** Selected org credential id for this model's provider. */
+  credential_id?: string;
+  /** Pinned model version; absent/blank = latest (recommended). */
+  version_pin?: string;
+  /** Per-model param overrides — global defaults apply when absent. */
+  params?: {
+    temperature?: number;
+    max_output_tokens?: number;
+    top_p?: number;
+    reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
+    output_schema?: string;
+  };
+}
+
 export interface ConsumerDefinition {
   instructions: string;
   model_policy: {
     allowed_models: string[];
     fallback_enabled: boolean;
+    /**
+     * Serving pipeline (Model section) — the ordered per-model config.
+     * allowed_models is DERIVED from the entry refs (kept in sync on write;
+     * the engine re-derives on read). Optional: absent = pre-pipeline
+     * definitions (the section reconciles from allowed_models).
+     */
+    pipeline?: ModelPipelineEntry[];
   };
   model_params: {
     temperature?: number;
@@ -192,6 +218,11 @@ export interface ConsumerDefinition {
     top_p?: number;
     reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
     output_schema?: string;
+    /** Response format (Model section → Defaults): freeform, provider JSON
+     * mode, or a validated JSON schema. Absent = engine default. */
+    response_format?: 'text' | 'json' | 'schema';
+    /** Display name for the output schema (response_format 'schema'). */
+    output_schema_name?: string;
   };
   context_policy: {
     history_limit: number;
@@ -255,7 +286,7 @@ export interface EnginePayload {
   instructions?: string;
   model_params?: Record<string, unknown>;
   budget_policy?: Record<string, unknown>;
-  model_policy: { allowed_models: string[]; fallback_enabled: boolean };
+  model_policy: { allowed_models: string[]; fallback_enabled: boolean; pipeline?: ModelPipelineEntry[] };
   context_policy: { history_limit: number; summary_enabled: boolean; knowledge_sources: string[]; memory_scope: string };
   /**
    * response_policy is written through only when the Response node set it
@@ -357,6 +388,41 @@ function nonBlank(value: string): string | null {
 }
 
 /**
+ * Pipeline entry cleaner for the wire — strips unknown keys, drops blank
+ * optionals and empty param overrides so the payload carries only intent.
+ * Blank version pins and credential ids are omitted (absent = latest /
+ * unselected); an all-empty params object is omitted entirely.
+ */
+function cleanPipelineEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
+  const params = entry.params;
+  const hasParams =
+    params !== undefined &&
+    (params.temperature !== undefined ||
+      params.max_output_tokens !== undefined ||
+      params.top_p !== undefined ||
+      params.reasoning_effort !== undefined ||
+      (params.output_schema ?? '').trim() !== '');
+  return {
+    ref: entry.ref,
+    ...(entry.credential_id ? { credential_id: entry.credential_id } : {}),
+    ...(entry.version_pin && entry.version_pin.trim() !== '' ? { version_pin: entry.version_pin } : {}),
+    ...(hasParams && params
+      ? {
+          params: {
+            ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
+            ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
+            ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
+            ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
+            ...(params.output_schema !== undefined && params.output_schema.trim() !== ''
+              ? { output_schema: params.output_schema }
+              : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+/**
  * Consumer → wire. THROWS on programmer errors (nameless tool, unknown scope)
  * — the editor pre-validates via setup-caps; a throw here is a form bug,
  * never a user message. Field paths in the message.
@@ -400,6 +466,9 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     model_policy: {
       allowed_models: [...def.model_policy.allowed_models],
       fallback_enabled: def.model_policy.fallback_enabled,
+      // The pipeline is the source of order — allowed_models is derived from
+      // it (the section keeps them in sync; the engine re-derives on read).
+      ...(def.model_policy.pipeline ? { pipeline: def.model_policy.pipeline.map(cleanPipelineEntry) } : {}),
     },
     context_policy: {
       history_limit: def.context_policy.history_limit,
@@ -475,6 +544,9 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
   if (def.model_params.top_p !== undefined) params.top_p = def.model_params.top_p;
   if (def.model_params.reasoning_effort !== undefined) params.reasoning_effort = def.model_params.reasoning_effort;
   if (nonBlank(def.model_params.output_schema ?? '') !== null) params.output_schema = (def.model_params.output_schema as string).trim();
+  if (def.model_params.response_format !== undefined) params.response_format = def.model_params.response_format;
+  if (nonBlank(def.model_params.output_schema_name ?? '') !== null)
+    params.output_schema_name = (def.model_params.output_schema_name as string).trim();
   if (Object.keys(params).length > 0) {
     payload.model_params = params;
   }
@@ -542,6 +614,10 @@ function migrateLegacyResponseKeys(
       ? { reasoning_effort: params.reasoning_effort }
       : {}),
     ...(str(params.output_schema) ? { output_schema: str(params.output_schema) as string } : {}),
+    ...(params.response_format === 'text' || params.response_format === 'json' || params.response_format === 'schema'
+      ? { response_format: params.response_format }
+      : {}),
+    ...(str(params.output_schema_name) ? { output_schema_name: str(params.output_schema_name) as string } : {}),
   };
   if (
     migrated.reasoning_effort === undefined &&
@@ -585,6 +661,49 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
   const allowedModels = Array.isArray(model.allowed_models)
     ? model.allowed_models.filter((m): m is string => typeof m === 'string')
     : base.model_policy.allowed_models;
+
+  // Serving pipeline — garbage resolves to absent (the section reconciles
+  // from allowed_models), never a guess. Entries keep only known keys.
+  const pipelineRaw = Array.isArray(model.pipeline) ? model.pipeline : [];
+  const pipeline: ModelPipelineEntry[] = [];
+  {
+    const seen = new Set<string>();
+    for (const rawEntry of pipelineRaw) {
+      const entry = obj(rawEntry);
+      const ref = str(entry.ref);
+      if (!ref || seen.has(ref)) continue;
+      seen.add(ref);
+      const paramsRaw = obj(entry.params);
+      const effortRaw = str(paramsRaw.reasoning_effort);
+      const effort =
+        effortRaw === 'minimal' || effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high'
+          ? effortRaw
+          : undefined;
+      const credentialId = str(entry.credential_id);
+      const versionPin = str(entry.version_pin);
+      const schema = str(paramsRaw.output_schema);
+      const params =
+        typeof paramsRaw.temperature === 'number' ||
+        typeof paramsRaw.max_output_tokens === 'number' ||
+        typeof paramsRaw.top_p === 'number' ||
+        effort !== undefined ||
+        schema
+          ? {
+              ...(typeof paramsRaw.temperature === 'number' ? { temperature: paramsRaw.temperature } : {}),
+              ...(typeof paramsRaw.max_output_tokens === 'number' ? { max_output_tokens: paramsRaw.max_output_tokens } : {}),
+              ...(typeof paramsRaw.top_p === 'number' ? { top_p: paramsRaw.top_p } : {}),
+              ...(effort !== undefined ? { reasoning_effort: effort } : {}),
+              ...(schema ? { output_schema: schema } : {}),
+            }
+          : undefined;
+      pipeline.push({
+        ref,
+        ...(credentialId ? { credential_id: credentialId } : {}),
+        ...(versionPin ? { version_pin: versionPin } : {}),
+        ...(params ? { params } : {}),
+      });
+    }
+  }
 
   const toolsRaw = Array.isArray(toolPolicy.tools) ? toolPolicy.tools : [];
   const tools: ConsumerTool[] = [];
@@ -645,6 +764,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     model_policy: {
       allowed_models: allowedModels,
       fallback_enabled: boolOr(model.fallback_enabled, base.model_policy.fallback_enabled),
+      // Omitted when the wire carried none — the section reconciles from
+      // allowed_models so old definitions keep working.
+      ...(pipeline.length > 0 ? { pipeline } : {}),
     },
     // 19-32: legacy reasoning_effort/top_p inside response_policy are
     // migrated into model_params here (never re-emitted into response_policy).

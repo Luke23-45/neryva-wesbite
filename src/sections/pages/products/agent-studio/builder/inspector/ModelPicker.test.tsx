@@ -18,7 +18,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 });
 
 const CATALOG: ModelAvailability[] = [
-  { provider: 'anthropic', modelId: 'claude-sonnet-4-5', ref: 'anthropic/claude-sonnet-4-5', displayName: 'Claude Sonnet 4.5', contextWindowTokens: 200000, maxOutputTokens: 64000, capabilities: {}, residency: 'us', usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
+  { provider: 'anthropic', modelId: 'claude-sonnet-4-5', ref: 'anthropic/claude-sonnet-4-5', displayName: 'Claude Sonnet 4.5', contextWindowTokens: 200000, maxOutputTokens: 64000, capabilities: { vision: true }, residency: 'us', usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
   { provider: 'openai', modelId: 'gpt-5-eu', ref: 'openai/gpt-5-eu', displayName: 'GPT-5 EU', contextWindowTokens: 128000, maxOutputTokens: 32000, capabilities: {}, residency: 'eu', usable: false, reasons: ['residency_incompatible'], requiredProduct: null, requiredProductLabel: null },
   { provider: 'deepseek', modelId: 'chat', ref: 'deepseek/chat', displayName: 'DeepSeek Chat', contextWindowTokens: 64000, maxOutputTokens: 8000, capabilities: {}, residency: 'us', usable: false, reasons: ['provider_credential_missing'], requiredProduct: null, requiredProductLabel: null },
   { provider: 'anthropic', modelId: 'claude-opus-4-5', ref: 'anthropic/claude-opus-4-5', displayName: 'Claude Opus 4.5', contextWindowTokens: 200000, maxOutputTokens: 128000, capabilities: {}, residency: 'us', usable: false, reasons: ['subscription_required'], requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' },
@@ -29,33 +29,34 @@ const COSTS: ModelCost[] = [
 ];
 
 function shell(props?: Partial<React.ComponentProps<typeof ModelPicker>>) {
-  const onChange = vi.fn();
+  const onToggle = vi.fn();
   const onFixRequest = vi.fn();
   const ui = render(
     <ThemeProvider theme={theme}>
       <ModelPicker
-        allowed={['anthropic/claude-sonnet-4-5']}
-        catalog={CATALOG}
-        catalogError={false}
-        costs={COSTS}
+        rows={CATALOG}
+        costsByRef={new Map(COSTS.map((cost) => [cost.ref, cost]))}
+        pipelineRefs={['anthropic/claude-sonnet-4-5']}
+        credBlockedRefs={new Set()}
         canAuthor
-        onChange={onChange}
+        onToggle={onToggle}
         onFixRequest={onFixRequest}
         {...props}
       />
     </ThemeProvider>,
   );
-  return { onChange, onFixRequest, ui };
+  return { onToggle, onFixRequest, ui };
 }
 
 describe('ModelPicker catalog', () => {
-  it('shows usability, costs, and reasons with inline fixes', async () => {
+  it('shows usability, costs, capability chips, and reasons with inline fixes', async () => {
     let onFixRequest!: ReturnType<typeof vi.fn>;
     await act(async () => {
       ({ onFixRequest } = shell());
     });
     expect(screen.getByText('Claude Sonnet 4.5')).toBeTruthy();
-    expect(screen.getByText(/\$0\.0030\/1k in/)).toBeTruthy();
+    expect(screen.getByText(/\$3\.00\/1M in/)).toBeTruthy();
+    expect(screen.getByText('Vision')).toBeTruthy();
     expect(screen.getByText(/residency incompatible/)).toBeTruthy();
     // Unusable rows are disabled (never hidden)…
     const gpt = screen.getByLabelText(/GPT-5 EU — unusable/) as HTMLInputElement;
@@ -65,25 +66,30 @@ describe('ModelPicker catalog', () => {
     expect(onFixRequest).toHaveBeenCalledWith('profile', 'openai/gpt-5-eu');
   });
 
-  it('toggles membership and reorders the fallback chain', async () => {
-    let onChange!: ReturnType<typeof vi.fn>;
+  it('toggles pipeline membership from the catalog rows', async () => {
+    let onToggle!: ReturnType<typeof vi.fn>;
     await act(async () => {
-      ({ onChange } = shell({ allowed: ['anthropic/claude-sonnet-4-5', 'deepseek/chat'] }));
+      ({ onToggle } = shell());
     });
-    // Remove second.
-    fireEvent.click(screen.getByLabelText('Remove deepseek/chat'));
-    expect(onChange).toHaveBeenCalledWith(['anthropic/claude-sonnet-4-5']);
-    // Move first down.
-    fireEvent.click(screen.getByLabelText('Move anthropic/claude-sonnet-4-5 down'));
-    expect(onChange).toHaveBeenCalledWith(['deepseek/chat', 'anthropic/claude-sonnet-4-5']);
+    // Add a usable model.
+    fireEvent.click(screen.getByLabelText(/GPT-5 EU/));
+    // Reorder lives on the pipeline rows now — the picker only toggles.
+    expect(onToggle).toHaveBeenCalledWith('openai/gpt-5-eu');
+  });
+
+  it('marks models already in the pipeline', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText('In pipeline')).toBeTruthy();
   });
 
   it('holds the 20-model cap with reason, and filters by search', async () => {
-    const allowed = Array.from({ length: 20 }, (_, i) => `x/m${i}`);
+    const pipelineRefs = Array.from({ length: 20 }, (_, i) => `x/m${i}`);
     await act(async () => {
-      shell({ allowed });
+      shell({ pipelineRefs });
     });
-    expect(screen.getByText(/20-model cap/)).toBeTruthy();
+    expect(screen.getByText(/20 \/ 20/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'deepseek' } });
     expect(screen.queryByText('Claude Sonnet 4.5')).toBeNull();
     expect(screen.getByText('DeepSeek Chat')).toBeTruthy();
@@ -91,9 +97,9 @@ describe('ModelPicker catalog', () => {
 
   it('states empty and unreachable catalogs honestly', async () => {
     await act(async () => {
-      shell({ catalog: [] });
+      shell({ rows: [], loadError: true });
     });
-    expect(screen.getByText(/nothing can ship until staff publishes/)).toBeTruthy();
+    expect(screen.getByText(/Catalog unreachable/)).toBeTruthy();
   });
 
   it('renders read-only for viewers (states visible, controls dead)', async () => {
@@ -106,12 +112,12 @@ describe('ModelPicker catalog', () => {
     expect(screen.getByText('Claude Sonnet 4.5')).toBeTruthy();
   });
 
-  it('groups the catalog into usable and locked, never hiding locked rows', async () => {
+  it('groups the catalog by provider, never hiding locked rows', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/USABLE · 1/)).toBeTruthy();
-    expect(screen.getByText(/LOCKED · 3/)).toBeTruthy();
+    expect(screen.getByText(/Anthropic · 2/)).toBeTruthy();
+    expect(screen.getByText(/Openai · 1/)).toBeTruthy();
     // Locked rows stay visible with the why inline.
     expect(screen.getByText('Claude Opus 4.5')).toBeTruthy();
     expect(screen.getByText(/residency incompatible/)).toBeTruthy();
@@ -133,20 +139,20 @@ describe('ModelPicker catalog', () => {
       usable: false, reasons: ['subscription_required'], requiredProduct: null, requiredProductLabel: null,
     };
     await act(async () => {
-      shell({ catalog: [unlabeled] });
+      shell({ rows: [unlabeled] });
     });
     // No tier invented — plain "a subscription".
     expect(screen.getByText(/Requires a subscription — you don't have that/)).toBeTruthy();
   });
 
-  it('keeps a locked selected model removable (never a trap)', async () => {
-    let onChange!: ReturnType<typeof vi.fn>;
+  it('keeps a locked pipeline model removable (never a trap)', async () => {
+    let onToggle!: ReturnType<typeof vi.fn>;
     await act(async () => {
-      ({ onChange } = shell({ allowed: ['anthropic/claude-opus-4-5'] }));
+      ({ onToggle } = shell({ pipelineRefs: ['anthropic/claude-opus-4-5'] }));
     });
     const box = screen.getByLabelText(/Claude Opus 4.5 — unusable/) as HTMLInputElement;
     expect(box.disabled).toBe(false);
     fireEvent.click(box);
-    expect(onChange).toHaveBeenCalledWith([]);
+    expect(onToggle).toHaveBeenCalledWith('anthropic/claude-opus-4-5');
   });
 });

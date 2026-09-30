@@ -1,104 +1,155 @@
+/**
+ * Model section — redesigned from the supplied SVG ("Model — selection,
+ * per-model configuration, defaults, credentials").
+ *
+ * Four groups on the SectionPage shell:
+ *   PIPELINE    — serving order with expandable per-model rows (credential,
+ *                 version pin, param overrides), fallback policy, and the
+ *                 availability helper.
+ *   CATALOG     — provider-grouped model picker (search, capability chips,
+ *                 per-1M pricing, subscription-locked rows).
+ *   DEFAULTS    — generation defaults (temperature, advanced params) plus the
+ *                 response format (Text / JSON / Schema) with the JSON schema
+ *                 edited in the shared focused BlockEditor (never a raw
+ *                 textarea — 19-12).
+ *   CREDENTIALS — the vault panel plus per-model credential requirements.
+ *
+ * Save machine (preserved from the pre-redesign section): 8s debounced
+ * autosave + unmount flush + manual save signal + 409 adopt + 412 dialog,
+ * full-payload writes, dirty via JSON compare. Blocker validation is
+ * local-state-driven so fixing a blocker (e.g. picking a credential)
+ * unblocks the save it was holding.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
-import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
 import { Switch } from '@components/common/ui/Switch';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ApiError } from '@lib/engine/client';
 import { useCanSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
-import {
-  costLabel,
-  useModelAvailability,
-  useModelCosts,
-} from '@hooks/studio/useSetupModels';
+import { useModelAvailability, useModelCosts } from '@hooks/studio/useSetupModels';
 import {
   useSaveDraftVersion,
   useUpdateDraftVersion,
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
-import {
-  useProviderCredentials,
-} from '@hooks/studio/useSetupProviders';
+import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
+import type { ModelPipelineEntry } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
-import {
-  ENGINE_RANGES,
-  firstBlocker,
-  humanizeReason,
-  reasonFix,
-  usableRefs,
-  validateOutputSchema,
-  type ReasoningEffort,
-} from '../lib/brain-model';
-import { ConflictDialog } from './ConflictDialog';
-import { ModelPicker } from './ModelPicker';
-import { CredentialsPanel } from './CredentialsPanel';
-import { StatusDot } from '../canvas/nodes/SlotNode.styles';
-import { Whisper, Wrap } from './InstructionsSection.styles';
+import { ENGINE_RANGES, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
+import { BlockEditor } from '../section-ui/BlockEditor';
+import type { EditableBlock } from '../section-ui/types';
+import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
 import { SkeletonRows } from './SkeletonRows';
+import { ConflictDialog } from './ConflictDialog';
+import { CredentialsPanel } from './CredentialsPanel';
+import { ModelPicker } from './ModelPicker';
 import {
-  AdvancedToggle,
-  FieldBlock,
-  FieldHead,
-  FieldHelper,
-  FieldTitle,
-  CredentialsBlock,
-  ModelHero,
-  ModelHeroEmpty,
-  ModelHeroFix,
-  ModelHeroMain,
-  ModelHeroMeta,
-  ModelHeroName,
-  ParamStack,
+  AddModelButton,
+  BlockerPill,
+  CredBadge,
+  DefaultsGrid,
+  EmptyPipeline,
+  FormatHelp,
+  HeldBox,
+  HeldItem,
+  HelperText,
+  ModelIcon,
+  OverrideGrid,
+  OverrideToggle,
+  ParamLabel,
+  PipelineCard,
+  PipelineHeader,
+  PipelineRowActions,
+  PipelineRowHead,
+  PipelineRowMeta,
+  PipelineRowShell,
+  PipelineRowTitle,
   RangeEnds,
   RangeInput,
+  ReadinessCard,
+  ReadinessItem,
+  ReadinessLabel,
+  ReadinessMeta,
+  RowButton,
+  SchemaActions,
+  SchemaBadge,
+  SchemaCard,
+  SchemaNameRow,
+  SchemaPreview,
+  SelectWrap,
+  ServingOrderLabel,
   SliderHead,
   SliderName,
   SliderRow,
   SliderValue,
-  StaticFallback,
-  SwitchRow,
-  SwitchSub,
-  SwitchText,
-  SwitchTitle,
-  ToggleChevron,
+  VersionInput,
 } from './ModelSection.styles';
 
-export interface ModelSectionProps {
-  assistantId: string;
-  definition: AgentDefinition | null;
-  versionId: string | null;
-  versionHash: string | null;
-  isDraft: boolean;
-  canAuthor: boolean;
-  onDirtyChange: (dirty: boolean) => void;
-  /** Manual save counter (topbar Save button / Ctrl+S) — fires doSave when it increments.
-   *  Optional: sections rendered without a save source (tests, standalone) default to 0. */
-  saveSignal?: number;
-}
+type ResponseFormat = 'text' | 'json' | 'schema';
 
-interface ConflictState {
-  expectedHash: string;
-  currentHash: string | null;
-  /** Display JSON (dialog) — the frozen payload rides alongside for save-over. */
-  attempted: string;
-  attemptedDef: AgentDefinition;
-}
-
-interface ParamDraft {
+/** Generation defaults (the global layer — pipeline entries override per model). */
+interface DefaultsDraft {
   temperature?: number;
   max_output_tokens?: number;
   top_p?: number;
   reasoning_effort?: ReasoningEffort;
   output_schema?: string;
+  response_format?: ResponseFormat;
+  output_schema_name?: string;
 }
 
-function readParams(definition: AgentDefinition): ParamDraft {
+const EFFORT_OPTIONS: { value: ReasoningEffort; label: string }[] = [
+  { value: 'minimal', label: 'Minimal' },
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+];
+
+const RESPONSE_FORMAT_OPTIONS: { value: ResponseFormat; label: string }[] = [
+  { value: 'text', label: 'Text' },
+  { value: 'json', label: 'JSON' },
+  { value: 'schema', label: 'Schema' },
+];
+
+const RESPONSE_FORMAT_HELP: Record<ResponseFormat, string> = {
+  text: 'Freeform text — no format constraints.',
+  json: 'Provider JSON mode — valid JSON, no schema enforced.',
+  schema: 'A JSON schema every response must validate against.',
+};
+
+/**
+ * Reconcile the wire pipeline against the derived allowed_models. Garbage
+ * resolves to absent (never a guess); unknown refs reconcile out; order
+ * follows the pipeline, then any allowed_models entries it missed.
+ */
+function readPipeline(definition: AgentDefinition | null): ModelPipelineEntry[] {
+  if (!definition) return [];
+  const allowed = definition.model_policy.allowed_models;
+  const wire = definition.model_policy.pipeline ?? [];
+  const seen = new Set<string>();
+  const entries: ModelPipelineEntry[] = [];
+  for (const entry of wire) {
+    if (!allowed.includes(entry.ref) || seen.has(entry.ref)) continue;
+    seen.add(entry.ref);
+    entries.push({ ...entry });
+  }
+  for (const ref of allowed) {
+    if (seen.has(ref)) continue;
+    seen.add(ref);
+    entries.push({ ref });
+  }
+  return entries;
+}
+
+function readDefaults(definition: AgentDefinition | null): DefaultsDraft {
+  if (!definition) return {};
   const params = definition.model_params;
   return {
     ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
@@ -106,19 +157,69 @@ function readParams(definition: AgentDefinition): ParamDraft {
     ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
     ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
     ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
+    ...(params.response_format !== undefined ? { response_format: params.response_format } : {}),
+    ...(params.output_schema_name !== undefined ? { output_schema_name: params.output_schema_name } : {}),
   };
 }
 
 /**
- * Model node — the subscription-gated model picker, fallback chain, and
- * generation params. Moved out of the Brain node (v10.1): the catalog rows
- * carry `usable` + machine `reasons[]` (now including `subscription_required`
- * with `required_product`/`required_product_label`), and locked rows render
- * the why inline with a path to Subscriptions — never a dead end.
- *
- * The proven save state machine (debounce, PUT/POST, 409 adopt, 412 dialog,
- * dirty flag) is shared with the other policy sections.
+ * Canonical entry shape for state — blank version pins and credential ids
+ * are omitted (absent = latest / unselected) and an all-empty params object
+ * collapses to undefined, so dirty-compare converges with the wire.
  */
+function normalizeEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
+  const params = entry.params;
+  const hasParams =
+    params !== undefined &&
+    (params.temperature !== undefined ||
+      params.max_output_tokens !== undefined ||
+      params.top_p !== undefined ||
+      params.reasoning_effort !== undefined ||
+      (params.output_schema ?? '').trim() !== '');
+  return {
+    ref: entry.ref,
+    ...(entry.credential_id ? { credential_id: entry.credential_id } : {}),
+    ...(entry.version_pin && entry.version_pin.trim() !== '' ? { version_pin: entry.version_pin.trim() } : {}),
+    ...(hasParams && params ? { params } : {}),
+  };
+}
+
+function hasOverride(params: ModelPipelineEntry['params']): boolean {
+  if (!params) return false;
+  return (
+    params.temperature !== undefined ||
+    params.max_output_tokens !== undefined ||
+    params.top_p !== undefined ||
+    params.reasoning_effort !== undefined
+  );
+}
+
+function fmtCtx(tokens: number | null | undefined): string | null {
+  if (tokens === null || tokens === undefined) return null;
+  if (tokens >= 1000) return `${Math.round(tokens / 1000)}K ctx`;
+  return `${tokens} ctx`;
+}
+
+function pricePerM(micros: number | null | undefined): string {
+  if (micros === null || micros === undefined) return 'unpriced';
+  return `$${(micros / 1000).toFixed(2)}/1M`;
+}
+
+function providerLabel(provider: string): string {
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
+interface ModelSectionProps {
+  assistantId: string;
+  definition: AgentDefinition | null;
+  versionId: string | null;
+  versionHash: string | null;
+  isDraft: boolean;
+  canAuthor: boolean;
+  onDirtyChange: (dirty: boolean) => void;
+  saveSignal: number;
+}
+
 export function ModelSection({
   assistantId,
   definition,
@@ -127,55 +228,72 @@ export function ModelSection({
   isDraft,
   canAuthor,
   onDirtyChange,
-  saveSignal = 0,
+  saveSignal,
 }: ModelSectionProps) {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { role } = useOrg();
+  const queryClient = useQueryClient();
   const canSetup = useCanSetup();
   const canGovern = canSetup('setup:govern');
+  const { role } = useOrg();
   const canReadCredentials = role === 'owner' || role === 'admin' || role === 'developer';
 
-  const models = useModelAvailability();
+  const availability = useModelAvailability();
   const costs = useModelCosts();
 
-  const sourceKey = `${versionId ?? 'none'}:${versionHash ?? 'none'}`;
-  const [docKey, setDocKey] = useState(sourceKey);
-  const [allowed, setAllowed] = useState<string[]>(() => definition?.model_policy.allowed_models ?? []);
+  // ---- Data state (the save machine owns this) ----
+  const [pipeline, setPipeline] = useState<ModelPipelineEntry[]>(() => readPipeline(definition));
   const [fallback, setFallback] = useState(() => definition?.model_policy.fallback_enabled ?? false);
-  const [params, setParams] = useState<ParamDraft>(() => (definition ? readParams(definition) : {}));
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [conflict, setConflict] = useState<ConflictState | null>(null);
-  const [adopting, setAdopting] = useState<string | null>(null);
+  const [defaults, setDefaults] = useState<DefaultsDraft>(() => readDefaults(definition));
+
+  // ---- UI-only state ----
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [overrideOpen, setOverrideOpen] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const entry of readPipeline(definition)) if (hasOverride(entry.params)) init[entry.ref] = true;
+    return init;
+  });
+  const [pinCustom, setPinCustom] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const entry of readPipeline(definition)) {
+      if (entry.version_pin && entry.version_pin.trim() !== '') init[entry.ref] = true;
+    }
+    return init;
+  });
   const [connectProvider, setConnectProvider] = useState<string | null>(null);
   const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
-  const sendHashRef = useRef('');
+  const [conflict, setConflict] = useState<{
+    expectedHash: string;
+    currentHash: string | null;
+    attempted: string;
+    attemptedDef: AgentDefinition;
+  } | null>(null);
+  const [adopting, setAdopting] = useState<string | null>(null);
+  const [docKey, setDocKey] = useState<string | null>(null);
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
   const credentials = useProviderCredentials();
+  const sendHashRef = useRef('');
 
   const source = useMemo(
     () => ({
-      allowed: definition?.model_policy.allowed_models ?? [],
+      pipeline: definition ? readPipeline(definition) : [],
       fallback: definition?.model_policy.fallback_enabled ?? false,
-      params: definition ? readParams(definition) : {},
+      defaults: definition ? readDefaults(definition) : {},
     }),
     [definition],
   );
-  const current = useMemo(
-    () => JSON.stringify({ allowed, fallback, params }),
-    [allowed, fallback, params],
-  );
+  const sourceKey = useMemo(() => JSON.stringify(source), [source]);
+  const current = useMemo(() => JSON.stringify({ pipeline, fallback, defaults }), [pipeline, fallback, defaults]);
   const dirty = current !== JSON.stringify(source);
 
   // Adopt server slices whenever clean (save echo, 409-adopt, reload-theirs).
   if (docKey !== sourceKey && !dirty) {
     setDocKey(sourceKey);
-    setAllowed(source.allowed);
+    setPipeline(source.pipeline);
     setFallback(source.fallback);
-    setParams(source.params);
+    setDefaults(source.defaults);
   } else if (docKey !== sourceKey) {
     setDocKey(sourceKey);
   }
@@ -184,63 +302,133 @@ export function ModelSection({
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
 
-  const catalog = models.data;
-  const usable = useMemo(() => usableRefs(allowed, catalog), [allowed, catalog]);
-  const blocker = useMemo(
-    () => (allowed.length > 0 && usable.length === 0 && catalog !== undefined ? firstBlocker(allowed, catalog) : null),
-    [allowed, usable, catalog],
-  );
-  const primary = allowed[0] ?? null;
+  // ---- Derived: catalog + credentials ----
+  const catalogRows = availability.data;
+  const catalogCosts = costs.data;
+  const catalogByRef = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof catalogRows>[number]>();
+    for (const row of catalogRows ?? []) map.set(row.ref, row);
+    return map;
+  }, [catalogRows]);
+  const costsByRef = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof catalogCosts>[number]>();
+    for (const cost of catalogCosts ?? []) map.set(cost.ref, cost);
+    return map;
+  }, [catalogCosts]);
 
-  // Local param gates (caps doesn't cover temperature/top_p/schema — PLAN §12.3).
+  const credRows = useMemo(() => credentials.data ?? [], [credentials.data]);
+  const liveCreds = useMemo(
+    () => credRows.filter((c) => !c.revokedAt && c.status !== 'revoked'),
+    [credRows],
+  );
+  const liveCredsByProvider = useMemo(() => {
+    const map = new Map<string, typeof liveCreds>();
+    for (const cred of liveCreds) {
+      const list = map.get(cred.provider) ?? [];
+      list.push(cred);
+      map.set(cred.provider, list);
+    }
+    return map;
+  }, [liveCreds]);
+
+  // ---- Blocker validation (local-state-driven) ----
+  // Credential gate: a pipeline entry the catalog confirms unusable for a
+  // missing credential, with no live credential selected for its provider,
+  // holds the save. Unknown catalog (still loading / fetch failed) is unknown,
+  // never known-bad — no blocker.
+  const credBlockers = useMemo(() => {
+    if (catalogRows === undefined) return [];
+    const out: { ref: string; provider: string; displayName: string }[] = [];
+    for (const entry of pipeline) {
+      if (entry.credential_id) continue;
+      const row = catalogByRef.get(entry.ref);
+      if (!row || row.usable) continue;
+      if (!row.reasons.includes('provider_credential_missing')) continue;
+      const providerCreds = liveCredsByProvider.get(row.provider) ?? [];
+      if (providerCreds.length === 0) {
+        out.push({ ref: entry.ref, provider: row.provider, displayName: row.displayName });
+      }
+    }
+    return out;
+  }, [pipeline, catalogRows, catalogByRef, liveCredsByProvider]);
+
+  // Local param gates (caps doesn't cover temperature/top_p/schema).
   // NaN counts as invalid everywhere (typed garbage must hold, never ship).
   const paramIssues = useMemo(() => {
     const messages: string[] = [];
-    if (params.temperature !== undefined && (!Number.isFinite(params.temperature) || params.temperature < 0 || params.temperature > 2)) {
-      messages.push('Temperature must be 0–2.');
+    const checkRange = (
+      value: number | undefined,
+      label: string,
+      valid: (v: number) => boolean,
+      message: string,
+    ) => {
+      if (value !== undefined && (!Number.isFinite(value) || !valid(value))) messages.push(`${label}${message}`);
+    };
+    checkRange(defaults.temperature, '', (v) => v >= 0 && v <= 2, 'Temperature must be 0–2.');
+    checkRange(defaults.top_p, '', (v) => v > 0 && v <= 1, 'Top-p must be above 0 and at most 1.');
+    for (const entry of pipeline) {
+      const ep = entry.params;
+      if (!ep) continue;
+      const name = catalogByRef.get(entry.ref)?.displayName ?? entry.ref;
+      checkRange(ep.temperature, `${name}: `, (v) => v >= 0 && v <= 2, 'temperature must be 0–2.');
+      checkRange(ep.top_p, `${name}: `, (v) => v > 0 && v <= 1, 'top-p must be above 0 and at most 1.');
     }
-    if (params.top_p !== undefined && (!Number.isFinite(params.top_p) || params.top_p <= 0 || params.top_p > 1)) {
-      messages.push('Top-p must be above 0 and at most 1.');
-    }
-    if (params.output_schema !== undefined) {
-      const check = validateOutputSchema(params.output_schema);
+    if (defaults.output_schema !== undefined) {
+      const check = validateOutputSchema(defaults.output_schema);
       if (!check.ok) messages.push(check.message);
     }
+    if (defaults.response_format === 'schema' && (defaults.output_schema ?? '').trim() === '') {
+      messages.push('Response format is Schema — add a valid JSON schema.');
+    }
     return messages;
-  }, [params]);
+  }, [defaults, pipeline, catalogByRef]);
 
   const buildNext = useCallback((): AgentDefinition | null => {
     if (!definition) return null;
     return buildDraftPayload(definition, {
-      model_policy: { allowed_models: allowed, fallback_enabled: fallback },
+      model_policy: {
+        allowed_models: pipeline.map((entry) => entry.ref),
+        fallback_enabled: fallback,
+        pipeline: pipeline.map(normalizeEntry),
+      },
       model_params: {
-        ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-        ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
-        ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
-        ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
-        ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
+        ...(defaults.temperature !== undefined ? { temperature: defaults.temperature } : {}),
+        ...(defaults.max_output_tokens !== undefined ? { max_output_tokens: defaults.max_output_tokens } : {}),
+        ...(defaults.top_p !== undefined ? { top_p: defaults.top_p } : {}),
+        ...(defaults.reasoning_effort !== undefined ? { reasoning_effort: defaults.reasoning_effort } : {}),
+        ...(defaults.output_schema !== undefined ? { output_schema: defaults.output_schema } : {}),
+        ...(defaults.response_format !== undefined ? { response_format: defaults.response_format } : {}),
+        ...(defaults.output_schema_name !== undefined ? { output_schema_name: defaults.output_schema_name } : {}),
       },
     });
-  }, [definition, allowed, fallback, params]);
+  }, [definition, pipeline, fallback, defaults]);
 
   const capsIssues = useMemo(() => {
     const next = buildNext();
     if (!next) return [];
     return checkDefinitionCaps(next).filter(
-      (issue) => issue.path.startsWith('model_policy') || issue.path.startsWith('model_params') || issue.path === 'secrets',
+      (issue) =>
+        issue.path.startsWith('model_policy') || issue.path.startsWith('model_params') || issue.path === 'secrets',
     );
   }, [buildNext]);
 
-  const heldMessages = useMemo(() => [...paramIssues, ...capsIssues.map((i) => i.message)], [paramIssues, capsIssues]);
+  const heldMessages = useMemo(
+    () => [
+      ...credBlockers.map(
+        (b) => `No ${providerLabel(b.provider)} credential in vault — required by ${b.displayName}.`,
+      ),
+      ...paramIssues,
+      ...capsIssues.map((issue) => issue.message),
+    ],
+    [credBlockers, paramIssues, capsIssues],
+  );
   const blocked = heldMessages.length > 0;
   const pending = saveDraft.isPending || updateDraft.isPending;
+
   // Convergence is measured in POLICY shape (what the dialog hands back), not
   // local shape — comparing across shapes would park autosave forever.
   const sourcePolicyJson = useMemo(
-    () =>
-      definition
-        ? JSON.stringify({ model_policy: definition.model_policy, model_params: definition.model_params })
-        : null,
+    () => (definition ? JSON.stringify({ model_policy: definition.model_policy, model_params: definition.model_params }) : null),
     [definition],
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
@@ -300,6 +488,57 @@ export function ModelSection({
     holdReason: () => heldMessages[0] ?? null,
   });
 
+  // ---- Pipeline mutations ----
+  const patchEntry = useCallback((ref: string, patch: Partial<ModelPipelineEntry>) => {
+    setPipeline((prev) => prev.map((entry) => (entry.ref === ref ? normalizeEntry({ ...entry, ...patch }) : entry)));
+  }, []);
+
+  const patchEntryParams = useCallback(
+    (ref: string, patch: Partial<NonNullable<ModelPipelineEntry['params']>> | null) => {
+      setPipeline((prev) =>
+        prev.map((entry) => {
+          if (entry.ref !== ref) return entry;
+          if (patch === null) return normalizeEntry({ ...entry, params: undefined });
+          const merged = { ...(entry.params ?? {}), ...patch };
+          // Clearing a value back to undefined removes the key (no phantom writes).
+          for (const key of Object.keys(merged) as (keyof typeof merged)[]) {
+            if (merged[key] === undefined) delete merged[key];
+          }
+          return normalizeEntry({ ...entry, params: merged });
+        }),
+      );
+    },
+    [],
+  );
+
+  const addModel = useCallback(
+    (ref: string) => {
+      setPipeline((prev) => (prev.some((entry) => entry.ref === ref) ? prev : [...prev, normalizeEntry({ ref })]));
+      setExpanded((prev) => ({ ...prev, [ref]: true }));
+    },
+    [],
+  );
+
+  const removeModel = useCallback((ref: string) => {
+    setPipeline((prev) => prev.filter((entry) => entry.ref !== ref));
+  }, []);
+
+  const moveModel = useCallback((ref: string, direction: -1 | 1) => {
+    setPipeline((prev) => {
+      const index = prev.findIndex((entry) => entry.ref === ref);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      const [entry] = next.splice(index, 1);
+      next.splice(target, 0, entry);
+      return next;
+    });
+  }, []);
+
+  const resetDefaults = useCallback(() => {
+    setDefaults({});
+  }, []);
+
   const onFixRequest = useCallback(
     (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {
       if (action === 'connect') {
@@ -333,249 +572,465 @@ export function ModelSection({
     [credentials.data, navigate],
   );
 
+  const scrollToGroup = useCallback((key: string) => {
+    document.getElementById(`model-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  // Escape blurs number inputs so a half-typed value commits instead of
+  // lingering in the field while autosave fires.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && document.activeElement instanceof HTMLInputElement) {
+        document.activeElement.blur();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // ---- Output schema focused-editor session (19-12: never a raw textarea) ----
+  const [schemaEdit, setSchemaEdit] = useState<{
+    target: EditableBlock;
+    apply: (saved: { block: { mode: string; content: string } }) => void;
+  } | null>(null);
+
+  const openSchemaEditor = useCallback(() => {
+    setSchemaEdit({
+      target: {
+        key: 'model:output-schema',
+        sectionLabel: 'Model',
+        title: 'Output schema',
+        jsonKind: 'any',
+        block: { mode: 'json', content: defaults.output_schema ?? '' },
+        placeholder: '{"type": "object", "properties": { … }}',
+        cap: ENGINE_RANGES.outputSchemaMax,
+      },
+      apply: (saved) => {
+        const text = saved.block.content;
+        setDefaults((prev) =>
+          text.trim() === '' ? { ...prev, output_schema: undefined } : { ...prev, output_schema: text },
+        );
+      },
+    });
+  }, [defaults.output_schema]);
+
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   if (!definition) {
     return (
-      <Wrap>
+      <SectionPage title="Model" subtitle="Choose which models serve this agent, in order — and give each one what it needs.">
         <SkeletonRows rows={4} />
-      </Wrap>
+      </SectionPage>
     );
   }
 
-  const pinnedProviders = [...new Set(allowed.map((ref) => ref.split('/')[0] ?? ref))];
-  const primaryCost = primary ? costs.data?.find((c) => c.ref === primary) : undefined;
+  // The focused editor replaces the page in place — no modal, no route change.
+  if (schemaEdit) {
+    return (
+      <BlockEditor
+        key={schemaEdit.target.key}
+        target={schemaEdit.target}
+        onDraft={schemaEdit.apply}
+        onSave={schemaEdit.apply}
+        onClose={() => setSchemaEdit(null)}
+      />
+    );
+  }
+
+  // ---- Rail: outline + readiness ----
+  const responseFormat: ResponseFormat = defaults.response_format ?? 'text';
+  const schemaCheck = defaults.output_schema !== undefined ? validateOutputSchema(defaults.output_schema) : null;
+
+  const outlineItems = [
+    {
+      key: 'pipeline',
+      label: 'Pipeline',
+      meta: pipeline.length === 0 ? 'Empty' : `${pipeline.length} model${pipeline.length === 1 ? '' : 's'}`,
+      done: pipeline.length > 0,
+    },
+    {
+      key: 'catalog',
+      label: 'Catalog',
+      meta: catalogRows === undefined ? 'Loading…' : `${catalogRows.length} models`,
+      done: catalogRows !== undefined,
+    },
+    {
+      key: 'defaults',
+      label: 'Defaults',
+      meta: RESPONSE_FORMAT_OPTIONS.find((o) => o.value === responseFormat)?.label ?? 'Text',
+      done: paramIssues.length === 0,
+    },
+    {
+      key: 'credentials',
+      label: 'Credentials',
+      meta: `${liveCreds.length} connected`,
+      done: credBlockers.length === 0,
+    },
+  ];
+
+  const primaryName = pipeline.length > 0 ? (catalogByRef.get(pipeline[0].ref)?.displayName ?? pipeline[0].ref) : null;
+  const readinessItems = [
+    {
+      label: 'Primary model picked',
+      done: pipeline.length > 0,
+      meta: primaryName ?? 'No model yet — add one from the catalog.',
+    },
+    {
+      label: 'Credential for every model',
+      done: credBlockers.length === 0,
+      meta:
+        credBlockers.length > 0
+          ? `${credBlockers.length} model${credBlockers.length === 1 ? '' : 's'} missing a credential`
+          : pipeline.length === 0
+            ? 'No models yet'
+            : 'All connected',
+      fix: credBlockers.length > 0 ? () => scrollToGroup('pipeline') : undefined,
+    },
+    {
+      label: 'Parameters within limits',
+      done: paramIssues.length === 0,
+      meta: paramIssues.length > 0 ? `${paramIssues.length} issue${paramIssues.length === 1 ? '' : 's'} to fix` : 'Within limits',
+    },
+    {
+      label: 'Fallback policy set',
+      done: true,
+      meta:
+        pipeline.length < 2
+          ? 'Single model — fallback not needed'
+          : fallback
+            ? 'On — the next model serves on failure'
+            : 'Off — the first model serves alone',
+    },
+  ];
+
+  const pinnedProviders = [...new Set(pipeline.map((entry) => entry.ref.split('/')[0] ?? entry.ref))];
+  const credBlockedRefs = new Set(credBlockers.map((b) => b.ref));
+
+  const toggleModel = (ref: string) => {
+    if (pipeline.some((entry) => entry.ref === ref)) removeModel(ref);
+    else addModel(ref);
+  };
 
   return (
-    <Wrap
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target instanceof HTMLElement) {
-          event.target.blur();
-        }
-      }}
-    >
-      <ModelHero $tone={blocker ? 'attention' : 'ok'}>
-        {primary ? (
-          <ModelHeroMain>
-            <ModelHeroName>
-              {/* M-10: while the catalog is unresolved (loading or failed)
-                  the model's status is unknown — a gray 'info' dot, never
-                  the amber attention badge (unknown ≠ known-bad). */}
-              <StatusDot
-                $status={catalog === undefined ? 'info' : usable.includes(primary) ? 'ready' : 'attention'}
-                aria-hidden="true"
-              />
-              {catalog?.find((m) => m.ref === primary)?.displayName ?? primary}
-            </ModelHeroName>
-            <ModelHeroMeta>
-              {primary} · {primaryCost ? `${costLabel(primaryCost, 'in')} in / ${costLabel(primaryCost, 'out')} out` : 'unpriced'}
-              {fallback && allowed.length > 1 ? ` · fallback next → ${allowed[1]}` : ''}
-            </ModelHeroMeta>
-            {blocker && (
-              <ModelHeroFix>
-                {blocker.reason === null
-                  ? 'Unknown model — publish refuses.'
-                  : `Unusable: ${humanizeReason(blocker.reason)} — ${reasonFix(blocker.reason).label}.`}
-              </ModelHeroFix>
+    <SectionPage
+      title="Model"
+      subtitle="Which models serve this agent, in what order — and the credentials that unlock them."
+      pill={blocked ? <BlockerPill>{heldMessages.length} blocker{heldMessages.length === 1 ? '' : 's'}</BlockerPill> : undefined}
+      rail={
+        <>
+          <PageOutline items={outlineItems} onSelect={scrollToGroup} />
+          <ReadinessCard>
+            <ReadinessLabel>Readiness</ReadinessLabel>
+            {readinessItems.map((item) => (
+              <ReadinessItem key={item.label} $done={item.done}>
+                <span aria-hidden="true">{item.done ? '✓' : '○'}</span>
+                <div>
+                  <div>{item.label}</div>
+                  <ReadinessMeta>{item.meta}</ReadinessMeta>
+                </div>
+                {item.fix && canAuthor && (
+                  <button type="button" onClick={item.fix}>
+                    Fix
+                  </button>
+                )}
+              </ReadinessItem>
+            ))}
+            {blocked && (
+              <HeldBox role="alert">
+                <strong>
+                  Saving is held while {heldMessages.length} blocker{heldMessages.length === 1 ? '' : 's'} remain…
+                </strong>
+                {heldMessages.map((message) => (
+                  <HeldItem key={message}>{message}</HeldItem>
+                ))}
+              </HeldBox>
             )}
-          </ModelHeroMain>
-        ) : (
-          <ModelHeroMain>
-            <ModelHeroEmpty>No model picked yet — choose below. Saving without one is refused.</ModelHeroEmpty>
-          </ModelHeroMain>
-        )}
-      </ModelHero>
-
-      {canAuthor ? (
-        <FieldBlock>
-          <SwitchRow>
-            <SwitchText>
-              <SwitchTitle>Fallback</SwitchTitle>
-              <SwitchSub>When the preferred model is unavailable, serve with the next allowed model — in listed order.</SwitchSub>
-            </SwitchText>
-            <Switch checked={fallback} onChange={setFallback} label="Fallback" id="model-fallback-switch" />
-          </SwitchRow>
-          <FieldHelper>Fallback serves availability, not difficulty — a weaker model never silently substitutes quality.</FieldHelper>
-        </FieldBlock>
-      ) : (
-        <StaticFallback>
-          <SwitchTitle>Fallback</SwitchTitle>
-          <span>{fallback ? 'On — next allowed model, in order' : 'Off'}</span>
-        </StaticFallback>
-      )}
-
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Models</FieldTitle>
-          <FieldHelper>
-            {allowed.length} of {ENGINE_RANGES.allowedModelsMax} picked — first serves, the rest are fallback in order.
-          </FieldHelper>
-        </FieldHead>
-        <ModelPicker
-          allowed={allowed}
-          catalog={catalog}
-          catalogError={models.isError}
-          costs={costs.data}
-          canAuthor={canAuthor}
-          onChange={setAllowed}
-          onFixRequest={onFixRequest}
-        />
-      </FieldBlock>
-
-      <FieldBlock>
-        <FieldHead>
-          <FieldTitle>Parameters</FieldTitle>
-          <FieldHelper>Generation defaults for every run. Unset means the model default.</FieldHelper>
-        </FieldHead>
-        <ParamStack>
-          <SliderRow>
-            <SliderHead>
-              <SliderName>Temperature</SliderName>
-              <SliderValue>{params.temperature ?? 'default'}</SliderValue>
-            </SliderHead>
-            {canAuthor ? (
-              <>
-                <RangeInput
-                  type="range"
-                  min={ENGINE_RANGES.temperature.min}
-                  max={ENGINE_RANGES.temperature.max}
-                  step={ENGINE_RANGES.temperature.step}
-                  value={params.temperature ?? 1}
-                  aria-label="Temperature"
-                  onChange={(event) => setParams((prev) => ({ ...prev, temperature: Number(event.target.value) }))}
+          </ReadinessCard>
+          <MicroTip title="Serving order">
+            The first model serves every request. Fallback only covers availability — a weaker model never silently
+            substitutes quality.
+          </MicroTip>
+        </>
+      }
+    >
+      {/* ---- PIPELINE ---- */}
+      <div id="model-pipeline">
+        <SectionGroup
+          title="Pipeline"
+          description="The models that serve this agent, in order. Configure each one below."
+        >
+          <PipelineCard>
+            <PipelineHeader>
+              <ServingOrderLabel>Serving order</ServingOrderLabel>
+              {canAuthor && (
+                <Switch label="Fallback" checked={fallback} onChange={setFallback} id="model-fallback-switch" />
+              )}
+            </PipelineHeader>
+            {pipeline.length === 0 ? (
+              <EmptyPipeline>
+                No models yet — add one from the catalog below. The first model you add becomes the primary.
+              </EmptyPipeline>
+            ) : (
+              pipeline.map((entry, index) => (
+                <PipelineRow
+                  key={entry.ref}
+                  entry={entry}
+                  index={index}
+                  total={pipeline.length}
+                  row={catalogByRef.get(entry.ref)}
+                  cost={costsByRef.get(entry.ref)}
+                  providerCreds={liveCredsByProvider.get(entry.ref.split('/')[0] ?? '') ?? []}
+                  credBlocked={credBlockedRefs.has(entry.ref)}
+                  expanded={expanded[entry.ref] ?? false}
+                  onToggleExpand={() => setExpanded((prev) => ({ ...prev, [entry.ref]: !(prev[entry.ref] ?? false) }))}
+                  overrideOpen={overrideOpen[entry.ref] ?? false}
+                  onToggleOverride={() => setOverrideOpen((prev) => ({ ...prev, [entry.ref]: !(prev[entry.ref] ?? false) }))}
+                  pinCustom={pinCustom[entry.ref] ?? false}
+                  onPinCustomChange={(custom) => setPinCustom((prev) => ({ ...prev, [entry.ref]: custom }))}
+                  canAuthor={canAuthor}
+                  onMoveUp={() => moveModel(entry.ref, -1)}
+                  onMoveDown={() => moveModel(entry.ref, 1)}
+                  onRemove={() => removeModel(entry.ref)}
+                  onPatchEntry={(patch) => patchEntry(entry.ref, patch)}
+                  onPatchParams={(patch) => patchEntryParams(entry.ref, patch)}
+                  onConnect={() => onFixRequest('connect', entry.ref)}
                 />
-                <RangeEnds>
-                  <span>{ENGINE_RANGES.temperature.min}</span>
-                  <span>{ENGINE_RANGES.temperature.max}</span>
-                </RangeEnds>
-              </>
-            ) : null}
-          </SliderRow>
-          <AdvancedToggle type="button" onClick={() => setAdvancedOpen((o) => !o)} aria-expanded={advancedOpen}>
-            Advanced
-            <ToggleChevron $open={advancedOpen} aria-hidden="true">
-              <ChevronDown size={15} strokeWidth={2} />
-            </ToggleChevron>
-            <span>· top-p, max output, reasoning, schema</span>
-          </AdvancedToggle>
-          {advancedOpen && (
-            <>
-              <SliderRow>
-                <SliderHead>
-                  <SliderName>Top-p</SliderName>
-                  <SliderValue>{params.top_p ?? 'default'}</SliderValue>
-                </SliderHead>
-                {canAuthor && (
-                  <TextInput
-                    aria-label="Top-p (above 0, at most 1)"
-                    inputMode="decimal"
-                    value={params.top_p ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      setParams((prev) => (raw === '' ? { ...prev, top_p: undefined } : { ...prev, top_p: Number(raw) }));
-                    }}
-                    placeholder="e.g. 0.95"
-                  />
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <SliderName>Max output tokens</SliderName>
-                  <SliderValue>{params.max_output_tokens?.toLocaleString() ?? 'default'}</SliderValue>
-                </SliderHead>
-                {canAuthor && (
-                  <TextInput
-                    aria-label="Max output tokens (1–200000)"
-                    inputMode="numeric"
-                    value={params.max_output_tokens ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      setParams((prev) =>
-                        raw === '' ? { ...prev, max_output_tokens: undefined } : { ...prev, max_output_tokens: Number(raw) },
-                      );
-                    }}
-                    placeholder="e.g. 4096"
-                  />
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <SliderName>Reasoning effort</SliderName>
-                </SliderHead>
-                {canAuthor ? (
-                  <Segmented
-                    options={[
-                      // BR-01: an explicit Default segment — an unset effort
-                      // renders unset (no visual pre-select of 'medium', no
-                      // phantom write; choosing Default clears the value).
-                      { value: 'default', label: 'Default' },
-                      { value: 'minimal', label: 'Minimal' },
-                      { value: 'low', label: 'Low' },
-                      { value: 'medium', label: 'Medium' },
-                      { value: 'high', label: 'High' },
-                    ]}
-                    value={params.reasoning_effort ?? 'default'}
-                    onChange={(value) =>
-                      setParams((prev) =>
-                        value === 'default'
-                          ? { ...prev, reasoning_effort: undefined }
-                          : { ...prev, reasoning_effort: value },
-                      )
-                    }
-                    size="sm"
-                    ariaLabel="Reasoning effort"
-                  />
-                ) : (
-                  <SliderValue>{params.reasoning_effort ?? 'default'}</SliderValue>
-                )}
-              </SliderRow>
-              <SliderRow>
-                <SliderHead>
-                  <SliderName>Output schema (JSON object)</SliderName>
-                </SliderHead>
-                {canAuthor && (
-                  <TextArea
-                    aria-label="Output schema as a JSON object"
-                    value={params.output_schema ?? ''}
+              ))
+            )}
+            {canAuthor && (
+              <AddModelButton type="button" onClick={() => scrollToGroup('catalog')}>
+                + Add model from catalog
+              </AddModelButton>
+            )}
+            <HelperText>
+              Fallback serves availability, not difficulty — a weaker model never silently substitutes quality.
+            </HelperText>
+          </PipelineCard>
+        </SectionGroup>
+      </div>
+
+      {/* ---- CATALOG ---- */}
+      <div id="model-catalog">
+        <SectionGroup
+          title="Catalog"
+          description="Every model your organization can use. Locked rows name the subscription they need."
+        >
+          <ModelPicker
+            rows={catalogRows}
+            loadError={availability.isError}
+            costsByRef={costsByRef}
+            pipelineRefs={pipeline.map((entry) => entry.ref)}
+            credBlockedRefs={credBlockedRefs}
+            canAuthor={canAuthor}
+            onToggle={toggleModel}
+            onFixRequest={onFixRequest}
+          />
+        </SectionGroup>
+      </div>
+
+      {/* ---- DEFAULTS ---- */}
+      <div id="model-defaults">
+        <SectionGroup
+          title="Defaults"
+          description="Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above."
+        >
+          <DefaultsGrid>
+            <SliderRow>
+              <SliderHead>
+                <SliderName>Temperature</SliderName>
+                <SliderValue>{defaults.temperature ?? 'default'}</SliderValue>
+              </SliderHead>
+              {canAuthor && (
+                <>
+                  <RangeInput
+                    type="range"
+                    min={ENGINE_RANGES.temperature.min}
+                    max={ENGINE_RANGES.temperature.max}
+                    step={ENGINE_RANGES.temperature.step}
+                    value={defaults.temperature ?? 1}
+                    aria-label="Temperature"
                     onChange={(event) =>
-                      setParams((prev) =>
-                        event.target.value === '' ? { ...prev, output_schema: undefined } : { ...prev, output_schema: event.target.value },
-                      )
+                      setDefaults((prev) => ({ ...prev, temperature: Number(event.target.value) }))
                     }
-                    rows={4}
-                    placeholder='{"type": "object", …}'
                   />
+                  <RangeEnds>
+                    <span>{ENGINE_RANGES.temperature.min}</span>
+                    <span>{ENGINE_RANGES.temperature.max}</span>
+                  </RangeEnds>
+                </>
+              )}
+            </SliderRow>
+
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              aria-expanded={advancedOpen}
+              aria-controls="model-advanced-params"
+            >
+              Advanced
+              <ChevronDown size={15} strokeWidth={2} aria-hidden="true" />
+              <span>· top-p, max output, reasoning</span>
+            </button>
+            {advancedOpen && (
+              <div id="model-advanced-params">
+                <SliderRow>
+                  <SliderHead>
+                    <SliderName>Top-p</SliderName>
+                    <SliderValue>{defaults.top_p ?? 'default'}</SliderValue>
+                  </SliderHead>
+                  {canAuthor && (
+                    <TextInput
+                      aria-label="Top-p (above 0, at most 1)"
+                      inputMode="decimal"
+                      value={defaults.top_p ?? ''}
+                      onChange={(event) => {
+                        const raw = event.target.value.trim();
+                        setDefaults((prev) =>
+                          raw === '' ? { ...prev, top_p: undefined } : { ...prev, top_p: Number(raw) },
+                        );
+                      }}
+                      placeholder="e.g. 0.95"
+                    />
+                  )}
+                </SliderRow>
+                <SliderRow>
+                  <SliderHead>
+                    <SliderName>Max output tokens</SliderName>
+                    <SliderValue>{defaults.max_output_tokens?.toLocaleString() ?? 'default'}</SliderValue>
+                  </SliderHead>
+                  {canAuthor && (
+                    <TextInput
+                      aria-label="Max output tokens (1–200000)"
+                      inputMode="numeric"
+                      value={defaults.max_output_tokens ?? ''}
+                      onChange={(event) => {
+                        const raw = event.target.value.trim();
+                        setDefaults((prev) =>
+                          raw === '' ? { ...prev, max_output_tokens: undefined } : { ...prev, max_output_tokens: Number(raw) },
+                        );
+                      }}
+                      placeholder="e.g. 4096"
+                    />
+                  )}
+                </SliderRow>
+                <SliderRow>
+                  <SliderHead>
+                    <SliderName>Reasoning effort</SliderName>
+                  </SliderHead>
+                  {canAuthor ? (
+                    <Segmented
+                      options={[
+                        { value: 'default', label: 'Default' },
+                        ...EFFORT_OPTIONS,
+                      ]}
+                      value={defaults.reasoning_effort ?? 'default'}
+                      onChange={(value) =>
+                        setDefaults((prev) =>
+                          value === 'default'
+                            ? { ...prev, reasoning_effort: undefined }
+                            : { ...prev, reasoning_effort: value as ReasoningEffort },
+                        )
+                      }
+                      size="sm"
+                      ariaLabel="Reasoning effort"
+                    />
+                  ) : (
+                    <SliderValue>{defaults.reasoning_effort ?? 'default'}</SliderValue>
+                  )}
+                </SliderRow>
+              </div>
+            )}
+
+            <SliderRow>
+              <SliderHead>
+                <SliderName>Response format</SliderName>
+              </SliderHead>
+              {canAuthor ? (
+                <Segmented
+                  options={RESPONSE_FORMAT_OPTIONS}
+                  value={responseFormat}
+                  onChange={(value) =>
+                    setDefaults((prev) => ({ ...prev, response_format: value as ResponseFormat }))
+                  }
+                  size="sm"
+                  ariaLabel="Response format"
+                />
+              ) : (
+                <SliderValue>{RESPONSE_FORMAT_OPTIONS.find((o) => o.value === responseFormat)?.label}</SliderValue>
+              )}
+              <FormatHelp>{RESPONSE_FORMAT_HELP[responseFormat]}</FormatHelp>
+            </SliderRow>
+
+            {responseFormat === 'schema' && (
+              <SchemaCard>
+                <SchemaNameRow>
+                  <ParamLabel htmlFor="model-schema-name">Schema name</ParamLabel>
+                  {canAuthor ? (
+                    <TextInput
+                      id="model-schema-name"
+                      value={defaults.output_schema_name ?? ''}
+                      onChange={(event) => {
+                        const raw = event.target.value;
+                        setDefaults((prev) =>
+                          raw.trim() === '' ? { ...prev, output_schema_name: undefined } : { ...prev, output_schema_name: raw },
+                        );
+                      }}
+                      placeholder="e.g. ExtractionResult"
+                    />
+                  ) : (
+                    <SliderValue>{defaults.output_schema_name ?? '—'}</SliderValue>
+                  )}
+                </SchemaNameRow>
+                <ParamLabel>Output schema</ParamLabel>
+                {defaults.output_schema ? (
+                  <SchemaPreview>{defaults.output_schema.slice(0, 480)}{defaults.output_schema.length > 480 ? '…' : ''}</SchemaPreview>
+                ) : (
+                  <HelperText>No schema yet — responses won't be validated.</HelperText>
                 )}
-              </SliderRow>
-            </>
+                <SchemaActions>
+                  {schemaCheck?.ok && <SchemaBadge $tone="green">Validated</SchemaBadge>}
+                  {schemaCheck && !schemaCheck.ok && <SchemaBadge $tone="red">Invalid</SchemaBadge>}
+                  {canAuthor && (
+                    <button type="button" onClick={openSchemaEditor}>
+                      {defaults.output_schema ? 'Replace' : 'Add schema'}
+                    </button>
+                  )}
+                </SchemaActions>
+              </SchemaCard>
+            )}
+
+            {canAuthor && (
+              <button type="button" onClick={resetDefaults}>
+                Reset all
+              </button>
+            )}
+          </DefaultsGrid>
+        </SectionGroup>
+      </div>
+
+      {/* ---- CREDENTIALS ---- */}
+      <div id="model-credentials" data-credentials-panel>
+        <SectionGroup
+          title="Credentials"
+          description="Provider credentials in the vault. Fingerprints only — secrets never leave the vault."
+        >
+          {credBlockers.length > 0 && (
+            <HelperText>
+              Required by {credBlockers.map((b) => b.displayName).join(', ')} — connect {credBlockers.length === 1 ? 'a credential' : 'credentials'} below to unblock saving.
+            </HelperText>
           )}
-        </ParamStack>
-      </FieldBlock>
-
-      {heldMessages.map((message) => (
-        <Whisper key={message} $tone="red" role="alert">
-          {message} Autosave held — fix it and saving resumes on its own.
-        </Whisper>
-      ))}
-
-      <FieldBlock>
-        <div data-credentials-panel>
-          <FieldHead>
-            <FieldTitle>Credentials</FieldTitle>
-            <FieldHelper>Fingerprints only — secrets never leave the vault.</FieldHelper>
-          </FieldHead>
-          <CredentialsBlock>
-            <CredentialsPanel
-              pinnedProviders={pinnedProviders}
-              canGovern={canGovern}
-              canRead={canReadCredentials}
-              highlightProvider={connectProvider}
-              revokeOpenId={revokeCredentialId}
-              connectOpen={connectOpen}
-              onConnectOpenChange={setConnectOpen}
-              onRevokeOpenChange={setRevokeCredentialId}
-            />
-          </CredentialsBlock>
-        </div>
-      </FieldBlock>
+          <CredentialsPanel
+            pinnedProviders={pinnedProviders}
+            canGovern={canGovern}
+            canRead={canReadCredentials}
+            highlightProvider={connectProvider}
+            revokeOpenId={revokeCredentialId}
+            connectOpen={connectOpen}
+            onConnectOpenChange={setConnectOpen}
+            onRevokeOpenChange={setRevokeCredentialId}
+          />
+        </SectionGroup>
+      </div>
 
       {conflict && (
         <ConflictDialog
@@ -590,26 +1045,25 @@ export function ModelSection({
             // (adopting gate) — never save-over blindly after asking for theirs.
             try {
               const parsed = JSON.parse(theirs) as {
-                model_policy?: { allowed_models?: unknown; fallback_enabled?: unknown };
+                model_policy?: { allowed_models?: unknown; fallback_enabled?: unknown; pipeline?: unknown };
                 model_params?: Record<string, unknown>;
               };
               const mp = parsed.model_policy;
-              if (mp && Array.isArray(mp.allowed_models)) {
-                setAllowed(mp.allowed_models.filter((r): r is string => typeof r === 'string'));
-              }
+              const fakeDef = {
+                model_policy: {
+                  allowed_models: Array.isArray(mp?.allowed_models)
+                    ? mp.allowed_models.filter((r): r is string => typeof r === 'string')
+                    : [],
+                  fallback_enabled: mp?.fallback_enabled === true,
+                  ...(Array.isArray(mp?.pipeline) ? { pipeline: mp.pipeline as ModelPipelineEntry[] } : {}),
+                },
+                model_params: (parsed.model_params ?? {}) as AgentDefinition['model_params'],
+              } as AgentDefinition;
+              setPipeline(readPipeline(fakeDef));
               if (mp && typeof mp.fallback_enabled === 'boolean') setFallback(mp.fallback_enabled);
-              const mps = parsed.model_params;
-              if (mps && typeof mps === 'object') {
-                setParams({
-                  ...(typeof mps.temperature === 'number' ? { temperature: mps.temperature } : {}),
-                  ...(typeof mps.max_output_tokens === 'number' ? { max_output_tokens: mps.max_output_tokens } : {}),
-                  ...(typeof mps.top_p === 'number' ? { top_p: mps.top_p } : {}),
-                  ...(typeof mps.reasoning_effort === 'string' ? { reasoning_effort: mps.reasoning_effort as ReasoningEffort } : {}),
-                  ...(typeof mps.output_schema === 'string' ? { output_schema: mps.output_schema } : {}),
-                });
-              }
+              setDefaults(readDefaults(fakeDef));
             } catch {
-              // Unparseable theirs: leave local text, still refetch below —
+              // Unparseable theirs: leave local state, still refetch below —
               // props converge and the clean-adopt path takes over.
             }
             setConflict(null);
@@ -645,6 +1099,280 @@ export function ModelSection({
           onClose={() => setConflict(null)}
         />
       )}
-    </Wrap>
+    </SectionPage>
+  );
+}
+
+interface PipelineRowProps {
+  entry: ModelPipelineEntry;
+  index: number;
+  total: number;
+  row: { provider: string; modelId: string; displayName: string; contextWindowTokens: number | null; capabilities: Record<string, unknown>; usable: boolean } | undefined;
+  cost: { costMicrosPer1kInput: number | null; costMicrosPer1kOutput: number | null } | undefined;
+  providerCreds: { id: string; label: string; secretFingerprint: string }[];
+  credBlocked: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  overrideOpen: boolean;
+  onToggleOverride: () => void;
+  pinCustom: boolean;
+  onPinCustomChange: (custom: boolean) => void;
+  canAuthor: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+  onPatchEntry: (patch: Partial<ModelPipelineEntry>) => void;
+  onPatchParams: (patch: Partial<NonNullable<ModelPipelineEntry['params']>> | null) => void;
+  onConnect: () => void;
+}
+
+function PipelineRow({
+  entry,
+  index,
+  total,
+  row,
+  cost,
+  providerCreds,
+  credBlocked,
+  expanded,
+  onToggleExpand,
+  overrideOpen,
+  onToggleOverride,
+  pinCustom,
+  onPinCustomChange,
+  canAuthor,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+  onPatchEntry,
+  onPatchParams,
+  onConnect,
+}: PipelineRowProps) {
+  const provider = entry.ref.split('/')[0] ?? entry.ref;
+  const displayName = row?.displayName ?? entry.ref;
+  const ctx = fmtCtx(row?.contextWindowTokens);
+  const caps = row ? Object.entries(row.capabilities).filter(([, v]) => !!v).map(([k]) => k) : [];
+  const capLabels = caps
+    .map((c) => (c === 'vision' ? 'Vision' : c === 'tools' ? 'Tools' : c === 'reasoning' ? 'Reasoning' : null))
+    .filter((c): c is string => c !== null);
+
+  const selectedCred = providerCreds.find((c) => c.id === entry.credential_id) ?? null;
+
+  return (
+    <PipelineRowShell>
+      <PipelineRowHead>
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${displayName} configuration`}
+        >
+          <ServingOrderLabel aria-hidden="true">{index + 1}</ServingOrderLabel>
+          <ModelIcon aria-hidden="true">{displayName.charAt(0).toUpperCase()}</ModelIcon>
+          <div>
+            <PipelineRowTitle>{displayName}</PipelineRowTitle>
+            <PipelineRowMeta>
+              {providerLabel(provider)} · {row?.modelId ?? entry.ref}
+              {ctx ? ` · ${ctx}` : ''}
+              {capLabels.length > 0 ? ` · ${capLabels.join(' ')}` : ''}
+            </PipelineRowMeta>
+            <PipelineRowMeta>
+              {pricePerM(cost?.costMicrosPer1kInput)} in · {pricePerM(cost?.costMicrosPer1kOutput)} out
+            </PipelineRowMeta>
+          </div>
+          {credBlocked && <CredBadge $tone="red">Required</CredBadge>}
+          {!credBlocked && entry.credential_id && selectedCred && <CredBadge $tone="green">Connected</CredBadge>}
+          <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
+        </button>
+        {canAuthor && (
+          <PipelineRowActions>
+            <RowButton type="button" onClick={onMoveUp} disabled={index === 0} aria-label={`Move ${displayName} up`}>
+              ↑
+            </RowButton>
+            <RowButton
+              type="button"
+              onClick={onMoveDown}
+              disabled={index === total - 1}
+              aria-label={`Move ${displayName} down`}
+            >
+              ↓
+            </RowButton>
+            <RowButton type="button" onClick={onRemove} aria-label={`Remove ${displayName}`}>
+              ×
+            </RowButton>
+          </PipelineRowActions>
+        )}
+      </PipelineRowHead>
+
+      {expanded && (
+        <div>
+          <div>
+            <ParamLabel>
+              Credential{credBlocked && <CredBadge $tone="red">Required</CredBadge>}
+            </ParamLabel>
+            {providerCreds.length > 0 ? (
+              <SelectWrap>
+                <select
+                  value={entry.credential_id ?? ''}
+                  onChange={(event) =>
+                    onPatchEntry({ credential_id: event.target.value === '' ? undefined : event.target.value })
+                  }
+                  aria-label={`Credential for ${displayName}`}
+                  disabled={!canAuthor}
+                >
+                  <option value="">Select credential…</option>
+                  {providerCreds.map((cred) => (
+                    <option key={cred.id} value={cred.id}>
+                      {cred.label} ····{cred.secretFingerprint.slice(-4)}
+                    </option>
+                  ))}
+                </select>
+              </SelectWrap>
+            ) : (
+              <HelperText>
+                {credBlocked ? (
+                  <>
+                    <CredBadge $tone="red">Required</CredBadge> Connect a {providerLabel(provider)} credential to
+                    serve this model.{' '}
+                  </>
+                ) : (
+                  <>No {providerLabel(provider)} credential in the vault.{' '}</>
+                )}
+                {canAuthor && (
+                  <button type="button" onClick={onConnect}>
+                    Connect {providerLabel(provider)}
+                  </button>
+                )}
+              </HelperText>
+            )}
+          </div>
+
+          <div>
+            <ParamLabel>Version pin</ParamLabel>
+            {canAuthor ? (
+              <>
+                <Segmented
+                  options={[
+                    { value: 'latest', label: 'Latest (recommended)' },
+                    { value: 'custom', label: 'Custom' },
+                  ]}
+                  value={pinCustom ? 'custom' : 'latest'}
+                  onChange={(value) => {
+                    const custom = value === 'custom';
+                    onPinCustomChange(custom);
+                    if (!custom) onPatchEntry({ version_pin: undefined });
+                  }}
+                  size="sm"
+                  ariaLabel={`Version pin for ${displayName}`}
+                />
+                {pinCustom && (
+                  <VersionInput
+                    value={entry.version_pin ?? ''}
+                    onChange={(event) => onPatchEntry({ version_pin: event.target.value })}
+                    placeholder="e.g. 2026-01-04"
+                    aria-label={`Custom version for ${displayName}`}
+                  />
+                )}
+              </>
+            ) : (
+              <PipelineRowMeta>{entry.version_pin ?? 'Latest (recommended)'}</PipelineRowMeta>
+            )}
+          </div>
+
+          <OverrideToggle>
+            {canAuthor ? (
+              <Switch
+                label="Override defaults for this model"
+                checked={overrideOpen}
+                onChange={(checked) => {
+                  onToggleOverride();
+                  if (!checked) onPatchParams(null);
+                }}
+                id={`model-override-${index}`}
+              />
+            ) : (
+              <ParamLabel>Per-model overrides</ParamLabel>
+            )}
+          </OverrideToggle>
+          {overrideOpen && (
+            <OverrideGrid>
+              <SliderRow>
+                <SliderHead>
+                  <SliderName>Temperature</SliderName>
+                  <SliderValue>{entry.params?.temperature ?? 'default'}</SliderValue>
+                </SliderHead>
+                {canAuthor && (
+                  <RangeInput
+                    type="range"
+                    min={ENGINE_RANGES.temperature.min}
+                    max={ENGINE_RANGES.temperature.max}
+                    step={ENGINE_RANGES.temperature.step}
+                    value={entry.params?.temperature ?? 1}
+                    aria-label={`${displayName} temperature override`}
+                    onChange={(event) => onPatchParams({ temperature: Number(event.target.value) })}
+                  />
+                )}
+              </SliderRow>
+              <SliderRow>
+                <SliderHead>
+                  <SliderName>Top-p</SliderName>
+                  <SliderValue>{entry.params?.top_p ?? 'default'}</SliderValue>
+                </SliderHead>
+                {canAuthor && (
+                  <TextInput
+                    aria-label={`${displayName} top-p override (above 0, at most 1)`}
+                    inputMode="decimal"
+                    value={entry.params?.top_p ?? ''}
+                    onChange={(event) => {
+                      const raw = event.target.value.trim();
+                      onPatchParams({ top_p: raw === '' ? undefined : Number(raw) });
+                    }}
+                    placeholder="e.g. 0.95"
+                  />
+                )}
+              </SliderRow>
+              <SliderRow>
+                <SliderHead>
+                  <SliderName>Max output tokens</SliderName>
+                  <SliderValue>{entry.params?.max_output_tokens?.toLocaleString() ?? 'default'}</SliderValue>
+                </SliderHead>
+                {canAuthor && (
+                  <TextInput
+                    aria-label={`${displayName} max output tokens override`}
+                    inputMode="numeric"
+                    value={entry.params?.max_output_tokens ?? ''}
+                    onChange={(event) => {
+                      const raw = event.target.value.trim();
+                      onPatchParams({ max_output_tokens: raw === '' ? undefined : Number(raw) });
+                    }}
+                    placeholder="e.g. 4096"
+                  />
+                )}
+              </SliderRow>
+              <SliderRow>
+                <SliderHead>
+                  <SliderName>Reasoning effort</SliderName>
+                </SliderHead>
+                {canAuthor ? (
+                  <Segmented
+                    options={[{ value: 'default', label: 'Default' }, ...EFFORT_OPTIONS]}
+                    value={entry.params?.reasoning_effort ?? 'default'}
+                    onChange={(value) =>
+                      onPatchParams({
+                        reasoning_effort: value === 'default' ? undefined : (value as ReasoningEffort),
+                      })
+                    }
+                    size="sm"
+                    ariaLabel={`${displayName} reasoning effort override`}
+                  />
+                ) : (
+                  <SliderValue>{entry.params?.reasoning_effort ?? 'default'}</SliderValue>
+                )}
+              </SliderRow>
+            </OverrideGrid>
+          )}
+        </div>
+      )}
+    </PipelineRowShell>
   );
 }

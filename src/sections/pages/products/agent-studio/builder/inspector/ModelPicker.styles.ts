@@ -13,8 +13,27 @@ export const Wrap = styled.div`
   gap: ${({ theme }) => theme.spacing.px14};
 `;
 
+export const PickerHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const CountBadge = styled.span`
+  flex: none;
+  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  border-radius: ${({ theme }) => theme.radii.full};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
+  color: ${({ theme }) => theme.app.text.secondary};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  white-space: nowrap;
+`;
+
 export const SearchInput = styled.input`
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 40px;
   padding: 0 ${({ theme }) => theme.spacing.px14} 0 38px;
   border-radius: ${({ theme }) => theme.radii.lg};
@@ -34,18 +53,6 @@ export const SearchInput = styled.input`
   }
 `;
 
-export const OrderStrip = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.s2};
-`;
-
-export const OrderLabel = styled.div`
-  font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: ${({ theme }) => theme.typography.weights.semibold};
-  color: ${({ theme }) => theme.app.text.muted};
-`;
-
 export const GroupLabel = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -53,67 +60,34 @@ export const GroupLabel = styled.div`
   margin: ${({ theme }) => theme.spacing.px6} 0 ${({ theme }) => theme.spacing.px2};
 `;
 
-export const OrderChip = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.px10};
-  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.s3};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.primary};
-`;
-
-export const OrderName = styled.span`
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-export const OrderIndex = styled.span`
-  flex: none;
-  width: ${({ theme }) => theme.app.iconSize.md};
-  height: ${({ theme }) => theme.app.iconSize.md};
-  border-radius: ${({ theme }) => theme.radii.round};
+export const InPipelineBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  padding: 2px ${({ theme }) => theme.spacing.px8};
+  border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
-  font-variant-numeric: ${({ theme }) => theme.app.numeric};
-  color: ${({ theme }) => theme.app.text.muted};
-  background: ${({ theme }) => theme.app.surface.hover};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.status.info.fg};
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
+  white-space: nowrap;
 `;
 
-export const MiniButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: ${({ theme }) => theme.app.iconSize.md};
-  height: ${({ theme }) => theme.app.iconSize.md};
-  flex: none;
-  border: 0;
-  border-radius: ${({ theme }) => theme.radii.sm};
-  background: transparent;
-  color: ${({ theme }) => theme.app.text.muted};
-  cursor: pointer;
+export const CapChips = styled.span`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.px6};
 
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.app.surface.hover};
-    color: ${({ theme }) => theme.app.text.primary};
-  }
-
-  &:disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
+  span {
+    padding: 2px ${({ theme }) => theme.spacing.px8};
+    border-radius: ${({ theme }) => theme.radii.full};
+    font-size: ${({ theme }) => theme.app.type.micro};
+    color: ${({ theme }) => theme.app.text.secondary};
+    background: ${({ theme }) => theme.app.surface.tint};
+    border: 1px solid ${({ theme }) => theme.app.border.default};
+    white-space: nowrap;
   }
 `;
 

@@ -1,70 +1,511 @@
 import styled from 'styled-components';
 
 /**
- * Model section — redesigned.
+ * Model section — redesigned from the supplied SVG ("Model — selection,
+ * per-model configuration, defaults, credentials").
  *
- * The model choice is the most consequential decision on the page, so it
- * gets hero treatment: a current-model card with presence, then fallback,
- * the catalog, parameters, and credentials in descending importance.
+ * Flat console colors only — no gradients. All values come from the theme
+ * tokens (foundation pass); no raw literals.
  */
 
-export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
+/* ── Header blocker pill ───────────────────────────────────────── */
 
-/* ── Hero: the current model ───────────────────────────────────── */
+export const BlockerPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.px6};
+  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  border-radius: ${({ theme }) => theme.radii.full};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.status.error.fg};
+  background: ${({ theme }) => theme.app.status.error.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+`;
 
-export const ModelHero = styled.div<{ $tone: 'ok' | 'attention' }>`
+/* ── Pipeline ──────────────────────────────────────────────────── */
+
+export const PipelineCard = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.s4};
-  align-items: flex-start;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s3};
   padding: ${({ theme }) => theme.spacing.s5};
   border-radius: ${({ theme }) => theme.radii['3xl']};
   background: ${({ theme }) => theme.app.surface.subtle};
-  border: 1px solid
-    ${({ theme, $tone }) =>
-      $tone === 'attention' ? theme.app.status.warning.border : theme.app.border.default};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
-export const ModelHeroMain = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px6};
-`;
-
-export const ModelHeroName = styled.div`
+export const PipelineHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.px10};
-  font-size: ${({ theme }) => theme.app.type.titleLg};
-  font-weight: ${({ theme }) => theme.typography.weights.semibold};
-  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.tight};
-  color: ${({ theme }) => theme.app.text.primary};
-  overflow-wrap: anywhere;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.s3};
 `;
 
-export const ModelHeroMeta = styled.div`
+export const ServingOrderLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 ${({ theme }) => theme.spacing.px6};
+  border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
-  overflow-wrap: anywhere;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.text.secondary};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
-export const ModelHeroEmpty = styled.p`
-  margin: 0;
+export const PipelineRowShell = styled.div`
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  overflow: hidden;
+`;
+
+export const PipelineRowHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s2};
+
+  > button:first-child {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.s3};
+    padding: ${({ theme }) => theme.spacing.s3} ${({ theme }) => theme.spacing.s4};
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+
+    > div:nth-child(3) {
+      flex: 1;
+      min-width: 0;
+    }
+
+    svg:last-child {
+      flex-shrink: 0;
+      color: ${({ theme }) => theme.app.text.tertiary};
+    }
+  }
+`;
+
+export const PipelineRowTitle = styled.div`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.text.primary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const PipelineRowMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const PipelineRowActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.px4};
+  padding-right: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const RowButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: ${({ theme }) => theme.radii.lg};
+  background: transparent;
+  border: 1px solid transparent;
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-size: 14px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.app.surface.hover};
+    border-color: ${({ theme }) => theme.app.border.default};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+`;
+
+export const ModelIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radii.xl};
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.text.primary};
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const CredBadge = styled.span<{ $tone: 'red' | 'green' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.px4};
+  padding: 2px ${({ theme }) => theme.spacing.px8};
+  border-radius: ${({ theme }) => theme.radii.full};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].fg};
+  background: ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].bg};
+  border: 1px solid ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].border};
+`;
+
+export const EmptyPipeline = styled.div`
+  padding: ${({ theme }) => theme.spacing.s5};
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  border: 1px dashed ${({ theme }) => theme.app.border.default};
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.text.secondary};
-  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  text-align: center;
 `;
 
-export const ModelHeroFix = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.s2};
+export const AddModelButton = styled.button`
+  align-self: stretch;
+  padding: ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  border: 1px dashed ${({ theme }) => theme.app.border.default};
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-size: ${({ theme }) => theme.app.type.body};
+  cursor: pointer;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+    border-color: ${({ theme }) => theme.app.text.tertiary};
+    background: ${({ theme }) => theme.app.surface.subtle};
+  }
+`;
+
+export const HelperText = styled.p`
+  margin: 0;
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.status.warning.fg};
-  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  color: ${({ theme }) => theme.app.text.tertiary};
+  line-height: 1.5;
+
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: ${({ theme }) => theme.app.text.secondary};
+    font-size: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      color: ${({ theme }) => theme.app.text.primary};
+    }
+  }
 `;
 
-/* ── Fallback switch ───────────────────────────────────────────── */
+/* ── Per-model config (expanded row) ───────────────────────────── */
+
+export const ParamLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s2};
+  margin: ${({ theme }) => theme.spacing.s4} 0 ${({ theme }) => theme.spacing.s2};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.tertiary};
+`;
+
+export const SelectWrap = styled.div`
+  select {
+    width: 100%;
+    padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s3};
+    border-radius: ${({ theme }) => theme.radii.xl};
+    background: ${({ theme }) => theme.app.surface.subtle};
+    border: 1px solid ${({ theme }) => theme.app.border.default};
+    color: ${({ theme }) => theme.app.text.primary};
+    font-size: ${({ theme }) => theme.app.type.body};
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+`;
+
+export const VersionInput = styled.input`
+  width: 100%;
+  margin-top: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.xl};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-size: ${({ theme }) => theme.app.type.body};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.app.text.tertiary};
+  }
+`;
+
+export const OverrideToggle = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.s4};
+  padding-top: ${({ theme }) => theme.spacing.s3};
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const OverrideGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+  margin-top: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.xl};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+/* ── Defaults ──────────────────────────────────────────────────── */
+
+export const DefaultsGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s4};
+  padding: ${({ theme }) => theme.spacing.s5};
+  border-radius: ${({ theme }) => theme.radii['3xl']};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+
+  > button {
+    align-self: flex-start;
+    background: none;
+    border: none;
+    padding: ${({ theme }) => theme.spacing.px4} 0;
+    color: ${({ theme }) => theme.app.text.secondary};
+    font-size: ${({ theme }) => theme.app.type.caption};
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.spacing.px6};
+
+    &:hover {
+      color: ${({ theme }) => theme.app.text.primary};
+    }
+  }
+`;
+
+export const SliderRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const SliderHead = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const SliderName = styled.span`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+export const SliderValue = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+export const RangeInput = styled.input`
+  width: 100%;
+  accent-color: ${({ theme }) => theme.app.accentControl};
+  cursor: pointer;
+`;
+
+export const RangeEnds = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.tertiary};
+`;
+
+export const FormatHelp = styled.p`
+  margin: ${({ theme }) => theme.spacing.px4} 0 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.tertiary};
+`;
+
+/* ── Schema card ───────────────────────────────────────────────── */
+
+export const SchemaCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const SchemaNameRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+export const SchemaPreview = styled.pre`
+  margin: 0;
+  padding: ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.xl};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  color: ${({ theme }) => theme.app.text.secondary};
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: hidden;
+`;
+
+export const SchemaActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s2};
+
+  button {
+    background: none;
+    border: 1px solid ${({ theme }) => theme.app.border.default};
+    border-radius: ${({ theme }) => theme.radii.xl};
+    padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s3};
+    color: ${({ theme }) => theme.app.text.primary};
+    font-size: ${({ theme }) => theme.app.type.caption};
+    cursor: pointer;
+
+    &:hover {
+      background: ${({ theme }) => theme.app.surface.hover};
+    }
+  }
+`;
+
+export const SchemaBadge = styled.span<{ $tone: 'green' | 'red' }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${({ theme }) => theme.spacing.px8};
+  border-radius: ${({ theme }) => theme.radii.full};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: ${({ theme, $tone }) => theme.app.status[$tone === 'green' ? 'success' : 'error'].fg};
+  background: ${({ theme, $tone }) => theme.app.status[$tone === 'green' ? 'success' : 'error'].bg};
+  border: 1px solid ${({ theme, $tone }) => theme.app.status[$tone === 'green' ? 'success' : 'error'].border};
+`;
+
+/* ── Rail: readiness ───────────────────────────────────────────── */
+
+export const ReadinessCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii['2xl']};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+export const ReadinessLabel = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.tertiary};
+  margin-bottom: ${({ theme }) => theme.spacing.px4};
+`;
+
+export const ReadinessItem = styled.div<{ $done: boolean }>`
+  display: flex;
+  align-items: flex-start;
+  gap: ${({ theme }) => theme.spacing.s2};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme, $done }) => ($done ? theme.app.text.secondary : theme.app.text.primary)};
+
+  > span[aria-hidden='true'] {
+    color: ${({ theme, $done }) =>
+      $done ? theme.app.status.success.fg : theme.app.status.warning.fg};
+    font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  }
+
+  > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: ${({ theme }) => theme.app.text.secondary};
+    font-size: ${({ theme }) => theme.app.type.caption};
+    text-decoration: underline;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      color: ${({ theme }) => theme.app.text.primary};
+    }
+  }
+`;
+
+export const ReadinessMeta = styled.div`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.tertiary};
+`;
+
+export const HeldBox = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.s2};
+  padding: ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.xl};
+  background: ${({ theme }) => theme.app.status.error.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.status.error.fg};
+
+  strong {
+    display: block;
+    margin-bottom: ${({ theme }) => theme.spacing.px6};
+    font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  }
+`;
+
+export const HeldItem = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.px4};
+  line-height: 1.5;
+`;
+
+/* ── Shared switch row (re-exported by 7 sibling section style files) ── */
 
 export const SwitchRow = styled.div`
   display: flex;
@@ -95,96 +536,4 @@ export const SwitchSub = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
-`;
-
-/* ── Parameters ────────────────────────────────────────────────── */
-
-export const ParamStack = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px20};
-`;
-
-export const SliderRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px10};
-`;
-
-export const SliderHead = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.s3};
-`;
-
-export const SliderName = styled.span`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${({ theme }) => theme.typography.weights.semibold};
-  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
-  color: ${({ theme }) => theme.app.text.primary};
-`;
-
-export const SliderValue = styled.span`
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.muted};
-  font-variant-numeric: ${({ theme }) => theme.app.numeric};
-`;
-
-export const RangeInput = styled.input`
-  width: 100%;
-  accent-color: ${({ theme }) => theme.app.accentControl};
-  cursor: pointer;
-`;
-
-export const RangeEnds = styled.div`
-  display: flex;
-  justify-content: space-between;
-  font-size: ${({ theme }) => theme.app.type.micro};
-  color: ${({ theme }) => theme.app.text.faint};
-  font-variant-numeric: ${({ theme }) => theme.app.numeric};
-`;
-
-export const AdvancedToggle = styled.button`
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.px6};
-  border: 0;
-  background: transparent;
-  color: ${({ theme }) => theme.app.text.muted};
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  font-family: inherit;
-  cursor: pointer;
-  padding: ${({ theme }) => theme.spacing.s2} 0;
-  border-radius: ${({ theme }) => theme.radii.sm};
-
-  &:hover {
-    color: ${({ theme }) => theme.app.text.primary};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
-  }
-`;
-
-export const StaticFallback = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: ${({ theme }) => theme.spacing.s3};
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.secondary};
-`;
-
-export const ToggleChevron = styled.span<{ $open: boolean }>`
-  display: inline-flex;
-  color: ${({ theme }) => theme.app.text.muted};
-  transform: rotate(${({ $open }) => ($open ? 180 : 0)}deg);
-  transition: transform ${({ theme }) => theme.transitions.fast};
-`;
-
-export const CredentialsBlock = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.s3};
 `;

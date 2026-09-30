@@ -1,21 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { ChevronDown, ChevronUp, X } from 'lucide-react';
-import { costLabel, type ModelAvailability, type ModelCost } from '@hooks/studio/useSetupModels';
-import { ENGINE_RANGES, humanizeReason, moveModel, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
+import type { ModelAvailability, ModelCost } from '@hooks/studio/useSetupModels';
+import { ENGINE_RANGES, humanizeReason, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
 import {
+  CapChips,
   CapNote,
   CatalogList,
   CatalogRow,
+  CountBadge,
   EmptyNote,
   FixButton,
   GroupLabel,
-  MiniButton,
-  OrderChip,
-  OrderIndex,
-  OrderLabel,
-  OrderName,
-  OrderStrip,
+  InPipelineBadge,
+  PickerHead,
   ReasonText,
   RowMain,
   RowMeta,
@@ -26,68 +23,125 @@ import {
 import { SkeletonRows } from './SkeletonRows';
 
 export interface ModelPickerProps {
-  allowed: string[];
-  /** Undefined = still loading (no verdict rendered either way). */
-  catalog: ModelAvailability[] | undefined;
-  catalogError: boolean;
-  costs: ModelCost[] | undefined;
+  rows: ModelAvailability[] | undefined;
+  /** Catalog fetch failed — the list is unknown, not empty. */
+  loadError?: boolean;
+  costsByRef: Map<string, ModelCost>;
+  pipelineRefs: string[];
+  credBlockedRefs: Set<string>;
   canAuthor: boolean;
-  onChange: (allowed: string[]) => void;
+  /** Add to / remove from the pipeline (reorder lives on the pipeline rows). */
+  onToggle: (ref: string) => void;
   /** Row-level fix requested (connect/enable/profile/incident) — owned upstream. */
   onFixRequest: (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => void;
 }
 
+function fmtCtx(tokens: number | null | undefined): string | null {
+  if (tokens === null || tokens === undefined) return null;
+  if (tokens >= 1000) return `${Math.round(tokens / 1000)}K ctx`;
+  return `${tokens} ctx`;
+}
+
+function pricePerM(micros: number | null | undefined): string {
+  if (micros === null || micros === undefined) return 'unpriced';
+  return `$${(micros / 1000).toFixed(2)}/1M`;
+}
+
+function capabilityChips(capabilities: Record<string, unknown>): string[] {
+  const chips: string[] = [];
+  if (capabilities.vision) chips.push('Vision');
+  if (capabilities.tools) chips.push('Tools');
+  if (capabilities.reasoning) chips.push('Reasoning');
+  return chips;
+}
+
+function providerLabel(provider: string): string {
+  return provider.charAt(0).toUpperCase() + provider.slice(1);
+}
+
 /**
- * Catalog multi-pick (C04 PLAN.md §5): search, per-row usability with reasons,
- * effective-cost labels, cap-20 hold, fallback-order strip. Unusable rows are
- * DISABLED (never hidden); allowed-but-decayed rows stay removable. Viewer gets
- * the same list read-only.
+ * Catalog multi-pick — provider-grouped rows with search, capability chips,
+ * per-1M pricing, and inline usability reasons. Unusable rows are DISABLED
+ * (never hidden); pipeline rows stay removable. Viewer gets the same list
+ * read-only. Reorder moved to the pipeline rows (no OrderStrip here).
  */
-export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, onChange, onFixRequest }: ModelPickerProps) {
+export function ModelPicker({
+  rows,
+  loadError,
+  costsByRef,
+  pipelineRefs,
+  credBlockedRefs,
+  canAuthor,
+  onToggle,
+  onFixRequest,
+}: ModelPickerProps) {
   const [query, setQuery] = useState('');
-  const capped = allowed.length >= ENGINE_RANGES.allowedModelsMax;
+  const capped = pipelineRefs.length >= ENGINE_RANGES.allowedModelsMax;
 
   const visible = useMemo(() => {
-    const list = catalog ?? [];
+    const list = rows ?? [];
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
-      (m) => m.displayName.toLowerCase().includes(q) || m.ref.toLowerCase().includes(q) || m.provider.toLowerCase().includes(q),
+      (m) =>
+        m.displayName.toLowerCase().includes(q) ||
+        m.ref.toLowerCase().includes(q) ||
+        m.provider.toLowerCase().includes(q),
     );
-  }, [catalog, query]);
+  }, [rows, query]);
 
-  // Usable first, locked after — both stay visible (never hidden), locked
-  // rows carry the why inline. Allowed-but-decayed rows stay in the usable
-  // group only while the catalog still deems them usable.
-  const usableVisible = useMemo(() => visible.filter((m) => m.usable), [visible]);
-  const lockedVisible = useMemo(() => visible.filter((m) => !m.usable), [visible]);
+  // Provider groups in catalog order (never alphabetical — the catalog's
+  // own ordering is the source of truth).
+  const groups = useMemo(() => {
+    const order: string[] = [];
+    const byProvider = new Map<string, ModelAvailability[]>();
+    for (const model of visible) {
+      if (!byProvider.has(model.provider)) {
+        byProvider.set(model.provider, []);
+        order.push(model.provider);
+      }
+      byProvider.get(model.provider)?.push(model);
+    }
+    return order.map((provider) => ({ provider, models: byProvider.get(provider) ?? [] }));
+  }, [visible]);
 
   const renderRow = (model: ModelAvailability) => {
-    const on = allowed.includes(model.ref);
-    const disabled = !canAuthor || (!model.usable && !on) || (!on && capped);
-    const cost = costFor(model.ref);
-    const costText = cost
-      ? `${costLabel(cost, 'in')} in / ${costLabel(cost, 'out')} out`
-      : 'unpriced';
-    const reason = model.usable ? null : model.reasons[0] ?? 'unknown';
+    const inPipeline = pipelineRefs.includes(model.ref);
+    const disabled = !canAuthor || (!model.usable && !inPipeline) || (!inPipeline && capped);
+    const cost = costsByRef.get(model.ref);
+    const ctx = fmtCtx(model.contextWindowTokens);
+    const chips = capabilityChips(model.capabilities);
+    const reason = model.usable ? null : (model.reasons[0] ?? 'unknown');
     const fix = reason ? reasonFix(reason) : null;
     const gated = reason === 'subscription_required';
     return (
       <CatalogRow key={model.ref} $disabled={disabled} title={model.ref}>
         <input
           type="checkbox"
-          checked={on}
+          checked={inPipeline}
           disabled={disabled}
-          onChange={(event) => toggle(model.ref, event.target.checked)}
+          onChange={() => onToggle(model.ref)}
           aria-label={`${model.displayName}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
         />
         <RowMain>
           <RowName>
             {model.displayName}
+            {inPipeline && <InPipelineBadge>In pipeline</InPipelineBadge>}
           </RowName>
           <RowMeta>
-            {model.ref} · {costText}
+            {providerLabel(model.provider)} · {model.modelId}
+            {ctx ? ` · ${ctx}` : ''}
           </RowMeta>
+          <RowMeta>
+            {pricePerM(cost?.costMicrosPer1kInput)} in · {pricePerM(cost?.costMicrosPer1kOutput)} out
+          </RowMeta>
+          {chips.length > 0 && (
+            <CapChips>
+              {chips.map((chip) => (
+                <span key={chip}>{chip}</span>
+              ))}
+            </CapChips>
+          )}
           {!model.usable && (
             <ReasonText $tone={reason === 'credential_compromised' ? 'red' : 'amber'}>
               {gated ? (
@@ -98,10 +152,16 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
               ) : (
                 <>
                   unusable: {humanizeReason(reason ?? 'unknown')}
+                  {credBlockedRefs.has(model.ref) && ' — credential required to serve'}
                   {fix && fix.action && fix.action !== 'billing' && canAuthor && (
                     <>
                       {' · '}
-                      <FixButton type="button" onClick={() => onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)}>
+                      <FixButton
+                        type="button"
+                        onClick={() =>
+                          onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)
+                        }
+                      >
                         {fix.label}
                       </FixButton>
                     </>
@@ -115,89 +175,38 @@ export function ModelPicker({ allowed, catalog, catalogError, costs, canAuthor, 
     );
   };
 
-  const toggle = (ref: string, on: boolean) => {
-    if (on) {
-      if (allowed.includes(ref) || allowed.length >= ENGINE_RANGES.allowedModelsMax) return;
-      onChange([...allowed, ref]);
-    } else {
-      onChange(allowed.filter((r) => r !== ref));
-    }
-  };
-
-  const costFor = (ref: string) => costs?.find((c) => c.ref === ref);
-
   return (
     <Wrap>
-      {allowed.length > 0 && (
-        <OrderStrip aria-label="Fallback order">
-          <OrderLabel>Fallback order — first serves</OrderLabel>
-          {allowed.map((ref, index) => (
-            <OrderChip key={ref}>
-              <OrderIndex>{index + 1}</OrderIndex>
-              <OrderName title={ref}>{ref}</OrderName>
-              {canAuthor && (
-                <>
-                  <MiniButton
-                    type="button"
-                    aria-label={`Move ${ref} up`}
-                    disabled={index === 0}
-                    onClick={() => onChange(moveModel(allowed, index, index - 1))}
-                  >
-                    <ChevronUp size={15} strokeWidth={2} />
-                  </MiniButton>
-                  <MiniButton
-                    type="button"
-                    aria-label={`Move ${ref} down`}
-                    disabled={index === allowed.length - 1}
-                    onClick={() => onChange(moveModel(allowed, index, index + 1))}
-                  >
-                    <ChevronDown size={15} strokeWidth={2} />
-                  </MiniButton>
-                  <MiniButton type="button" aria-label={`Remove ${ref}`} onClick={() => toggle(ref, false)}>
-                    <X size={15} strokeWidth={2} />
-                  </MiniButton>
-                </>
-              )}
-            </OrderChip>
-          ))}
-        </OrderStrip>
-      )}
+      <PickerHead>
+        <SearchInput
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search catalog…"
+          aria-label="Search model catalog"
+        />
+        <CountBadge aria-label={`${pipelineRefs.length} of ${ENGINE_RANGES.allowedModelsMax} models picked`}>
+          {pipelineRefs.length} / {ENGINE_RANGES.allowedModelsMax}
+        </CountBadge>
+      </PickerHead>
 
-      <SearchInput
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search catalog…"
-        aria-label="Search model catalog"
-      />
-
-      {catalog === undefined && !catalogError && <SkeletonRows rows={5} barHeight="52px" />}
-      {catalogError && <EmptyNote>Catalog unreachable — retry the page. Saving without a picked model is refused.</EmptyNote>}
-      {catalog !== undefined && catalog.length === 0 && !catalogError && (
+      {rows === undefined && !loadError && <SkeletonRows rows={5} barHeight="52px" />}
+      {loadError && <EmptyNote>Catalog unreachable — retry the page. Saving without a picked model is refused.</EmptyNote>}
+      {rows !== undefined && rows.length === 0 && !loadError && (
         <EmptyNote>No models in the platform catalog yet — nothing can ship until staff publishes entries.</EmptyNote>
       )}
 
       <CatalogList>
-        {usableVisible.length > 0 && (
-          <>
+        {groups.map((group) => (
+          <div key={group.provider}>
             <GroupLabel>
-              Usable · {usableVisible.length}
+              {providerLabel(group.provider)} · {group.models.length}
             </GroupLabel>
-            {usableVisible.map((model) => renderRow(model))}
-          </>
-        )}
-        {lockedVisible.length > 0 && (
-          <>
-            <GroupLabel>
-              Locked · {lockedVisible.length}
-            </GroupLabel>
-            {lockedVisible.map((model) => renderRow(model))}
-          </>
-        )}
+            {group.models.map((model) => renderRow(model))}
+          </div>
+        ))}
       </CatalogList>
 
-      {capped && canAuthor && (
-        <CapNote>20-model cap — remove one to add another.</CapNote>
-      )}
+      {capped && canAuthor && <CapNote>20-model cap — remove one to add another.</CapNote>}
     </Wrap>
   );
 }
