@@ -31,7 +31,7 @@ export const Area = styled.textarea<{ $hasError: boolean }>`
   transition: border-color ${({ theme }) => theme.transitions.fast};
 
   &:focus {
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    border-color: rgba(255, 255, 255, 0.22);
   }
 
   &::placeholder {
