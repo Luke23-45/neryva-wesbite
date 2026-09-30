@@ -29,13 +29,14 @@ export const BUDGET_BOUNDS = {
   max_model_calls: { min: 1, max: 200 },
 } as const;
 
-/** Served when unset — the exact Studio compile matrix (PLAN §1). */
+/** Served when unset — the engine's actual defaults (both lanes). */
 export const PLATFORM_DEFAULTS = {
   max_total_tokens: 200_000,
   max_model_calls: 16,
   max_tool_calls: 8,
-  /** Seconds. Explicit 0 compiles to this too (`|| 120_000`). */
-  wall_clock_seconds: 120,
+  /** Seconds. 0 = no watchdog (engine serves 0 when unset; the product's
+   *  120s is a runtime safety net, not a platform default). */
+  wall_clock_seconds: 0,
 } as const;
 
 export type BudgetCapKey = 'max_cost_cents' | 'max_total_tokens' | 'max_tool_calls' | 'max_model_calls' | 'wall_clock_seconds';

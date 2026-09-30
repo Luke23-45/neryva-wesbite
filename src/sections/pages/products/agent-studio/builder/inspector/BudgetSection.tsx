@@ -335,9 +335,9 @@ export function BudgetSection({
         <RailRow>
           <RailLabel>Wall clock</RailLabel>
           <RailValue>
-            {budget.wall_clock_seconds !== undefined
+            {budget.wall_clock_seconds !== undefined && budget.wall_clock_seconds > 0
               ? formatDuration(budget.wall_clock_seconds)
-              : `${PLATFORM_DEFAULTS.wall_clock_seconds}s`}
+              : 'Not set'}
           </RailValue>
         </RailRow>
       </RailCard>
@@ -575,7 +575,7 @@ function readOnlyCapValue(key: BudgetCapKey, value: number | undefined): string 
       case 'max_model_calls':
         return String(PLATFORM_DEFAULTS.max_model_calls);
       case 'wall_clock_seconds':
-        return `${PLATFORM_DEFAULTS.wall_clock_seconds}s`;
+        return 'Not set';
     }
   }
   if (key === 'wall_clock_seconds') return formatDuration(value);
@@ -654,7 +654,7 @@ function CapField({
         case 'max_model_calls':
           return <Badge>{PLATFORM_DEFAULTS.max_model_calls}</Badge>;
         case 'wall_clock_seconds':
-          return <Badge>{PLATFORM_DEFAULTS.wall_clock_seconds}s</Badge>;
+          return <Badge $tone="warning">not set</Badge>;
       }
     }
     return null;
