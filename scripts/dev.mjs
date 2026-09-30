@@ -11,11 +11,36 @@ try {
   }
 } catch {}
 
-const viteArgs = process.argv.slice(2).filter((a) => a !== '--tunnel');
-const tunnel = process.argv.slice(2).includes('--tunnel');
+// Usage:
+//   npm run dev                      -> vite, local only
+//   npm run dev -- --tunnel           -> vite + ngrok (NGROK_URL in .env)
+//   npm run dev -- --tunnel funnel    -> vite + Tailscale Funnel (public https)
+//   npm run dev:tunnel / dev:funnel   -> shortcuts for the above
+const rawArgs = process.argv.slice(2);
+const tunnelArgIdx = rawArgs.findIndex((a) => a === '--tunnel' || a.startsWith('--tunnel='));
+let tunnelMode = null;
+if (tunnelArgIdx !== -1) {
+  const flag = rawArgs[tunnelArgIdx];
+  const inline = flag.includes('=') ? flag.split('=')[1] : rawArgs[tunnelArgIdx + 1];
+  tunnelMode = inline === 'funnel' ? 'funnel' : 'ngrok';
+}
+const tunnel = tunnelMode !== null;
+const viteArgs = rawArgs.filter((a, i) => {
+  if (a === '--tunnel' || a.startsWith('--tunnel=')) return false;
+  if (tunnelMode === 'funnel' && a === 'funnel' && i === tunnelArgIdx + 1) return false;
+  return true;
+});
 const children = [];
+let funnelBin = null;
 
 function shutdown(code = 0) {
+  // Tear down the public endpoint we created so Ctrl+C doesn't leave the
+  // dev server exposed on the internet.
+  if (funnelBin) {
+    try {
+      spawnSync(funnelBin, ['funnel', 'reset'], { stdio: 'ignore', shell: false });
+    } catch {}
+  }
   for (const c of children) {
     try { c.kill(); } catch {}
   }
@@ -63,12 +88,17 @@ if (portIdx !== -1 && viteArgs[portIdx + 1]) port = viteArgs[portIdx + 1];
 const portEq = viteArgs.find((a) => a.startsWith('--port='));
 if (portEq) port = portEq.split('=')[1];
 
-// In tunnel mode the ngrok target must equal the port vite actually binds,
+// In tunnel mode the tunnel target must equal the port vite actually binds,
 // so forbid vite's silent port-shifting: if :port is busy, fail loudly
-// instead of serving :3001 while ngrok forwards to an unrelated :3000.
+// instead of serving :3001 while the tunnel forwards to an unrelated :3000.
 const viteSpawnArgs = [...viteArgs];
 if (tunnel && !viteSpawnArgs.some((a) => a === '--strictPort' || a.startsWith('--strictPort='))) {
   viteSpawnArgs.push('--strictPort');
+}
+if (tunnelMode === 'funnel' && !viteSpawnArgs.some((a) => a === '--host' || a.startsWith('--host='))) {
+  // Funnel reverse-proxies to 127.0.0.1 only, but vite here binds ::1 by
+  // default — without this the tunnel would forward into a dead port.
+  viteSpawnArgs.push('--host', '127.0.0.1');
 }
 const viteBin = path.resolve(process.cwd(), 'node_modules/vite/bin/vite.js');
 const vite = spawn(process.execPath, [viteBin, ...viteSpawnArgs], { stdio: 'inherit' });
@@ -80,12 +110,12 @@ vite.on('exit', (code) => shutdown(code ?? 0));
 // returns its 503 error page for any request that arrives while the
 // upstream is still booting, and a Vite page load fires dozens of asset
 // requests at once — so opening the tunnel early guarantees a burst of 503s.
-async function waitForVite(port) {
+async function waitForVite(port, host = 'localhost') {
   const deadline = Date.now() + 30000;
   while (Date.now() < deadline) {
     if (vite.exitCode !== null && vite.exitCode !== undefined) return false;
     try {
-      const res = await fetch(`http://localhost:${port}/`);
+      const res = await fetch(`http://${host}:${port}/`);
       if (res.status < 500) return true;
     } catch {}
     await new Promise((r) => setTimeout(r, 500));
@@ -93,7 +123,9 @@ async function waitForVite(port) {
   return vite.exitCode === null || vite.exitCode === undefined;
 }
 
-if (tunnel) {
+if (tunnelMode === 'funnel') {
+  await runFunnelTunnel(port);
+} else if (tunnel) {
   const bin = resolveNgrokBin(process.env.NGROK_BIN || 'ngrok');
   if (!bin) {
     console.error('[dev] ngrok binary not found: set NGROK_BIN in .env to the full');
@@ -177,6 +209,90 @@ if (tunnel) {
     // (ngrok picks 4040, or the next free port if e.g. Expo holds 4040).
     confirmTunnelOnline(process.env.NGROK_URL, ngrok);
   }
+}
+
+// Tailscale binary: TAILSCALE_BIN wins, then PATH, then the default Windows
+// install location (the installer doesn't add itself to PATH).
+function resolveTailscaleBin(configured) {
+  const candidates = [configured, 'tailscale'];
+  if (process.platform === 'win32') {
+    candidates.push('C:\\Program Files\\Tailscale\\tailscale.exe');
+  }
+  for (const c of candidates) {
+    if (!c) continue;
+    if (path.isAbsolute(c)) {
+      if (existsSync(c)) return c;
+    } else {
+      const probe = spawnSync(c, ['version'], { encoding: 'utf8', shell: false });
+      if (!probe.error && probe.status === 0) return c;
+    }
+  }
+  return null;
+}
+
+async function runFunnelTunnel(port) {
+  const bin = resolveTailscaleBin(process.env.TAILSCALE_BIN || null);
+  if (!bin) {
+    console.error('[dev] tailscale not found: install it (`winget install Tailscale.Tailscale`)');
+    console.error('[dev] or set TAILSCALE_BIN in .env to the full path of tailscale.exe.');
+    console.error('[dev] Continuing with local vite only.');
+    return;
+  }
+  const status = spawnSync(bin, ['status'], { encoding: 'utf8', shell: false });
+  const statusText = `${status.stdout || ''}\n${status.stderr || ''}`;
+  if (status.error || status.status !== 0 || /logged out/i.test(statusText)) {
+    console.error('[dev] Tailscale is logged out. Log in once in your own terminal:');
+    console.error('[dev]   tailscale up');
+    console.error('[dev] then re-run with --tunnel funnel. Continuing with local vite only.');
+    return;
+  }
+  console.log(`[dev] waiting for vite on 127.0.0.1:${port}…`);
+  if (!(await waitForVite(port, '127.0.0.1')) || vite.exitCode !== null) {
+    console.error(`[dev] vite on :${port} never became ready — not starting the funnel.`);
+    shutdown(1);
+  }
+  console.log('[dev] vite is up — opening the funnel…');
+  // --bg configures the daemon and exits (foreground would block). Run it
+  // synchronously so a policy refusal or login problem surfaces now, while
+  // vite is still just local.
+  const open = spawnSync(bin, ['funnel', '--bg', String(port)], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: false,
+  });
+  const openText = `${open.stdout || ''}\n${open.stderr || ''}`.trim();
+  if (open.error || open.status !== 0) {
+    console.error('[dev] `tailscale funnel` failed:');
+    if (openText) console.error(openText);
+    if (/policy|admin|permission|not allowed/i.test(openText)) {
+      console.error('[dev] Funnel is likely disabled by your tailnet policy — enable it in the');
+      console.error('[dev] Tailscale admin console (DNS/funnel settings), then re-run.');
+    }
+    console.error('[dev] Continuing with local vite only.');
+    return;
+  }
+  if (openText) console.log(openText);
+  funnelBin = bin; // arm teardown: Ctrl+C runs `funnel reset`
+  await confirmFunnelOnline(bin);
+}
+
+async function confirmFunnelOnline(bin) {
+  // First run provisions TLS certs, so allow longer than the ngrok check.
+  // Match the https ts.net URL anywhere in the JSON — schema-proof.
+  const deadline = Date.now() + 45000;
+  while (Date.now() < deadline) {
+    try {
+      const st = spawnSync(bin, ['funnel', 'status', '--json'], { encoding: 'utf8', shell: false });
+      const m = `${st.stdout || ''}`.match(/https:\/\/[a-z0-9.-]+\.ts\.net/i);
+      if (m) {
+        console.log(`[dev] funnel online: ${m[0]}`);
+        console.log('[dev] (stable per machine — add it to the engine IDENTITY_EXTRA_REDIRECT_URIS once)');
+        return;
+      }
+    } catch {}
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  console.log('[dev] funnel URL not confirmed — run `tailscale funnel status` to inspect.');
 }
 
 // Poll the ngrok agent API until our public URL shows up (or give up quietly

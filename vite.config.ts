@@ -34,7 +34,8 @@ export default defineConfig({
     // all subdomains). The ngrok public domain comes from NGROK_URL in .env;
     // the wildcards cover any current/future reserved domain without code
     // changes. Serveo hostnames are dynamic (*.serveousercontent.com).
-    allowedHosts: ['.ngrok-free.dev', '.ngrok.io', '.serveousercontent.com'],
+    // .ts.net covers Tailscale Funnel (`npm run dev:funnel`).
+    allowedHosts: ['.ngrok-free.dev', '.ngrok.io', '.serveousercontent.com', '.ts.net'],
     proxy: {
       '/api/v1': {
         target: 'http://localhost:4000',
