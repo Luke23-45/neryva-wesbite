@@ -285,14 +285,15 @@ async function runFunnelTunnel(port) {
 
 async function confirmFunnelOnline(bin) {
   // First run provisions TLS certs, so allow longer than the ngrok check.
-  // Match the https ts.net URL anywhere in the JSON — schema-proof.
+  // The status JSON keys the host as "<machine>.<tailnet>.ts.net:443" (no
+  // scheme), so match the bare hostname and normalize to https ourselves.
   const deadline = Date.now() + 45000;
   while (Date.now() < deadline) {
     try {
       const st = spawnSync(bin, ['funnel', 'status', '--json'], { encoding: 'utf8', shell: false });
-      const m = `${st.stdout || ''}`.match(/https:\/\/[a-z0-9.-]+\.ts\.net/i);
+      const m = `${st.stdout || ''}`.match(/([a-z0-9.-]+\.ts\.net)(?::\d+)?/i);
       if (m) {
-        console.log(`[dev] funnel online: ${m[0]}`);
+        console.log(`[dev] funnel online: https://${m[1]}`);
         console.log('[dev] (stable per machine — add it to the engine IDENTITY_EXTRA_REDIRECT_URIS once)');
         return;
       }
