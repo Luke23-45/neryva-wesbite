@@ -279,7 +279,7 @@ describe('ContextSection', () => {
       const def = budgetDefinition({
         instructions: 'abcd', // 4 chars → 3
         role: { role: { mode: 'raw', content: 'abcd' } }, // 4 chars → 3
-        tools: [{ name: 'web_search', access: 'read', approval: 'never', execution_mode: 'live' }],
+        tools: [{ name: 'web_search', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true }],
       });
       shell({ definition: def });
       // '{"type":"object"}' is 17 chars → ceil(17/4) + 2 = 7; total 3 + 3 + 7 = 13

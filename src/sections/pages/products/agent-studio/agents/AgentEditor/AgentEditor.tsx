@@ -482,7 +482,7 @@ export function AgentEditor() {
                         <ActionButton
                           variant="secondary"
                           size="sm"
-                          onClick={() => patch({ tools: [...effective.tools, { name: '', access: 'read', approval: 'never', execution_mode: 'live' } satisfies ToolPolicy] })}
+                          onClick={() => patch({ tools: [...effective.tools, { name: '', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true } satisfies ToolPolicy] })}
                         >
                           <Plus size={13} strokeWidth={1.8} />
                           Add tool

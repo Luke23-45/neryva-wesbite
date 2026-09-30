@@ -181,6 +181,56 @@ export interface ConsumerTool {
    *  nothing). Required (default live) so draft/server convergence is exact —
    *  an optional field would park autosave comparing undefined vs 'live'. */
   execution_mode: ToolExecutionMode;
+  /**
+   * Tools section redesign: per-entry enable switch. Required (default
+   * true) so draft/server convergence is exact — an optional field would
+   * park autosave comparing undefined vs true (C06 execution_mode
+   * precedent). A disabled entry stays bound but is not offered to the
+   * model at runtime.
+   */
+  enabled: boolean;
+  /**
+   * Tools section redesign: entry-local switch. Required (default true) —
+   * same convergence rationale as execution_mode.
+   */
+  expose_description_to_planner: boolean;
+  /**
+   * Tools section redesign: entry-local switch. Required (default true) —
+   * same convergence rationale as execution_mode.
+   */
+  log_call_payloads: boolean;
+}
+
+/**
+ * Fill the tools-redesign defaults for legacy entries (missing → true).
+ * Idempotent: normalized entries pass through unchanged. Only an explicit
+ * `false` disables — garbage resolves to the default, never a guess.
+ */
+export function normalizeToolEntry(entry: {
+  name: string;
+  access: ToolAccess;
+  approval: ConsumerApproval;
+  schema_hash?: string;
+  execution_mode: ToolExecutionMode;
+  enabled?: unknown;
+  expose_description_to_planner?: unknown;
+  log_call_payloads?: unknown;
+}): ConsumerTool {
+  return {
+    name: entry.name,
+    access: entry.access,
+    approval: entry.approval,
+    ...(entry.schema_hash ? { schema_hash: entry.schema_hash } : {}),
+    execution_mode: entry.execution_mode,
+    enabled: entry.enabled !== false,
+    expose_description_to_planner: entry.expose_description_to_planner !== false,
+    log_call_payloads: entry.log_call_payloads !== false,
+  };
+}
+
+/** Agent-level default for effectful tools: 'never' unless explicitly 'always'. Garbage → 'never', never a guess. */
+export function normalizeEffectfulApprovalDefault(value: unknown): 'never' | 'always' {
+  return value === 'always' ? 'always' : 'never';
 }
 
 /** Per-model serving-pipeline entry (Model section). The pipeline is the
@@ -253,6 +303,12 @@ export interface ConsumerDefinition {
    */
   role?: Role;
   tools: ConsumerTool[];
+  /**
+   * Tools section redesign: agent-level default for effectful tools.
+   * Optional on the consumer — absent (legacy drafts) normalizes to
+   * 'never' on read; the Tools section is the single owner/editor.
+   */
+  effectful_approval_default?: 'never' | 'always';
   knowledge_policy: {
     retrieval_enabled: boolean;
     max_results: number;
@@ -339,7 +395,21 @@ export interface EnginePayload {
     knowledgeAreas?: RoleFieldBlock;
     prohibitedTopics?: RoleFieldBlock;
   };
-  tool_policy: { tools: Array<{ name: string; access: string; approval: string; schema_hash?: string; execution_mode?: string }> };
+  tool_policy: {
+    tools: Array<{
+      name: string;
+      access: string;
+      approval: string;
+      schema_hash?: string;
+      execution_mode?: string;
+      /** Tools redesign: per-entry switches (engine echoes verbatim). */
+      enabled?: boolean;
+      expose_description_to_planner?: boolean;
+      log_call_payloads?: boolean;
+    }>;
+  };
+  /** Tools redesign: agent-level default for effectful tools (engine echoes verbatim). */
+  effectful_approval_default?: string;
   knowledge_policy?: {
     retrieval_enabled: boolean;
     max_results: number;
@@ -377,6 +447,9 @@ export function defaultConsumer(): ConsumerDefinition {
       max_context_tokens: 32_000,
     },
     tools: [],
+    // Tools section redesign: explicit agent-level default for fresh
+    // drafts (legacy drafts normalize to 'never' on read).
+    effectful_approval_default: 'never',
     knowledge_policy: { retrieval_enabled: false, max_results: 5 },
     guardrails: { pii_redaction: true, input_policy: '', output_policy: '', execution_mode: 'blocking' },
     budget: {},
@@ -487,11 +560,27 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
     if (!tool.name.trim()) {
       throw new Error(`tool_policy.tools[${index}].name: every tool needs a name`);
     }
-    const entry: { name: string; access: string; approval: string; schema_hash?: string; execution_mode: string } = {
+    const entry: {
+      name: string;
+      access: string;
+      approval: string;
+      schema_hash?: string;
+      execution_mode: string;
+      enabled: boolean;
+      expose_description_to_planner: boolean;
+      log_call_payloads: boolean;
+    } = {
       name: tool.name,
       access: tool.access,
       approval: toEngineApproval(tool.approval),
       execution_mode: tool.execution_mode,
+      // Tools redesign: explicit booleans, never silent fallback — the
+      // Tools section normalizes entries on read so these are always set
+      // on this path (legacy AgentEditor literals default true via
+      // normalizeToolEntry before they reach a save).
+      enabled: tool.enabled,
+      expose_description_to_planner: tool.expose_description_to_planner,
+      log_call_payloads: tool.log_call_payloads,
     };
     if (tool.schema_hash) {
       entry.schema_hash = tool.schema_hash;
@@ -567,6 +656,11 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
       return Object.keys(fields).length > 0 ? { role: fields } : {};
     })(),
     tool_policy: { tools },
+    // Tools redesign: agent-level default for effectful tools. Always
+    // explicit on the wire (legacy shapes normalize to 'never'); the
+    // engine echoes it verbatim (additive contract change, v1.14
+    // retrieval-extension precedent).
+    effectful_approval_default: normalizeEffectfulApprovalDefault(def.effectful_approval_default),
     // Explicit toggle, never silent fallback: the engine defaults OFF, and
     // the UI always states the value it sends. The v1.14 retrieval
     // extensions pass through verbatim — the engine accepts and echoes
@@ -787,8 +881,28 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     const schemaHash = str(tool.schema_hash);
     const modeRaw = str(tool.execution_mode);
     const execution_mode: ToolExecutionMode = modeRaw === 'shadow' ? 'shadow' : 'live';
-    tools.push({ name, access, approval, ...(schemaHash ? { schema_hash: schemaHash } : {}), execution_mode });
+    // Tools redesign: per-entry switches ride the tool_policy wire
+    // (snake_case from the engine, camelCase tolerated). Absent (legacy
+    // rows) → defaults via normalizeToolEntry (true/true/true).
+    tools.push(
+      normalizeToolEntry({
+        name,
+        access,
+        approval,
+        ...(schemaHash ? { schema_hash: schemaHash } : {}),
+        execution_mode,
+        enabled: pick(tool.enabled),
+        expose_description_to_planner: pick(tool.expose_description_to_planner, tool.exposeDescriptionToPlanner),
+        log_call_payloads: pick(tool.log_call_payloads, tool.logCallPayloads),
+      }),
+    );
   }
+
+  // Tools redesign: agent-level default for effectful tools (top-level on
+  // the wire, camelCase tolerated). Absent/garbage (legacy rows) → 'never'.
+  const effectfulApprovalDefault = normalizeEffectfulApprovalDefault(
+    pick(r.effectful_approval_default, r.effectfulApprovalDefault),
+  );
 
   const knowledgeSources = Array.isArray(context.knowledge_sources)
     ? context.knowledge_sources.filter((s): s is string => typeof s === 'string')
@@ -851,6 +965,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     // Garbage resolves to absent (no persona configured), never a guess.
     ...(role !== undefined ? { role } : {}),
     tools,
+    // Tools redesign: always explicit after normalization (legacy rows →
+    // 'never'), so the section's dirty check converges.
+    effectful_approval_default: effectfulApprovalDefault,
     knowledge_policy: {
       retrieval_enabled: boolOr(knowledge.retrieval_enabled, base.knowledge_policy.retrieval_enabled),
       max_results: numOr(knowledge.max_results, base.knowledge_policy.max_results),

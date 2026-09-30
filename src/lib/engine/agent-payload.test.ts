@@ -22,12 +22,13 @@ const REGISTRY_DEFINITION = {
   context_policy: { history_limit: 20, summary_enabled: true, knowledge_sources: ['help-center'], memory_scope: 'organization', max_context_tokens: 32000 },
   tool_policy: {
     tools: [
-      { name: 'search_knowledge', access: 'read', approval: 'optional', execution_mode: 'live' },
-      { name: 'update_ticket', access: 'write', approval: 'required', execution_mode: 'shadow' },
+      { name: 'search_knowledge', access: 'read', approval: 'optional', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
+      { name: 'update_ticket', access: 'write', approval: 'required', execution_mode: 'shadow', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
     ],
   },
   knowledge_policy: { retrieval_enabled: true, max_results: 8 },
   guardrail_policy: { input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking' },
+  effectful_approval_default: 'never',
   model_params: { temperature: 0.3, max_output_tokens: 1024 },
   budget_policy: { max_total_tokens: 180000, max_cost_micros: 45000000, wall_clock_seconds: 300, max_tool_calls: 12, max_model_calls: 8 },
 };
@@ -40,8 +41,8 @@ describe('fromEnginePayload', () => {
     expect(consumer.context_policy.memory_scope).toBe('org');
     expect(consumer.context_policy.knowledge_sources).toEqual(['help-center']);
     expect(consumer.tools).toEqual([
-      { name: 'search_knowledge', access: 'read', approval: 'never', execution_mode: 'live' },
-      { name: 'update_ticket', access: 'write', approval: 'always', execution_mode: 'shadow' },
+      { name: 'search_knowledge', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
+      { name: 'update_ticket', access: 'write', approval: 'always', execution_mode: 'shadow', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
     ]);
     expect(consumer.knowledge_policy).toEqual({ retrieval_enabled: true, max_results: 8 });
     expect(consumer.model_params).toMatchObject({ temperature: 0.3, max_output_tokens: 1024 });
@@ -254,9 +255,9 @@ describe('toEnginePayload', () => {
     const def = consumer();
     def.context_policy.memory_scope = 'org';
     def.tools = [
-      { name: 'a', access: 'read', approval: 'never', execution_mode: 'live' },
-      { name: 'b', access: 'write', approval: 'on_effect', execution_mode: 'live' },
-      { name: 'c', access: 'write', approval: 'always', execution_mode: 'shadow' },
+      { name: 'a', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
+      { name: 'b', access: 'write', approval: 'on_effect', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
+      { name: 'c', access: 'write', approval: 'always', execution_mode: 'shadow', enabled: true, expose_description_to_planner: true, log_call_payloads: true },
     ];
     const wire = toEnginePayload(def);
     expect(wire.context_policy.memory_scope).toBe('organization');
@@ -323,7 +324,7 @@ describe('toEnginePayload', () => {
 
   it('fails closed on programmer errors (nameless tools)', () => {
     const def = consumer();
-    def.tools = [{ name: '  ', access: 'read', approval: 'never', execution_mode: 'live' }];
+    def.tools = [{ name: '  ', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true }];
     expect(() => toEnginePayload(def)).toThrow(/tools\[0\].name/);
   });
 });

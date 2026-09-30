@@ -71,16 +71,16 @@ describe('checkDefinitionCaps', () => {
     atMaxTokens.context_policy.max_context_tokens = 200000;
     expect(checkDefinitionCaps(atMaxTokens).some((i) => i.path === 'context_policy.max_context_tokens')).toBe(false);
     const tools = shippable();
-    tools.tools = Array.from({ length: 51 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
+    tools.tools = Array.from({ length: 51 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const, enabled: true, expose_description_to_planner: true, log_call_payloads: true }));
     expect(checkDefinitionCaps(tools).some((i) => i.path === 'tools')).toBe(true);
     const atMaxTools = shippable();
-    atMaxTools.tools = Array.from({ length: 50 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const }));
+    atMaxTools.tools = Array.from({ length: 50 }, (_, i) => ({ name: `t${i}`, access: 'read' as const, approval: 'never' as const, execution_mode: 'live' as const, enabled: true, expose_description_to_planner: true, log_call_payloads: true }));
     expect(checkDefinitionCaps(atMaxTools).some((i) => i.path === 'tools')).toBe(false);
     const named = shippable();
-    named.tools = [{ name: 'Bad-Name!', access: 'read', approval: 'never', execution_mode: 'live' }];
+    named.tools = [{ name: 'Bad-Name!', access: 'read', approval: 'never', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true }];
     expect(checkDefinitionCaps(named).some((i) => i.path === 'tools[0].name')).toBe(true);
     const pinned = shippable();
-    pinned.tools = [{ name: 't', access: 'read', approval: 'never', execution_mode: 'live', schema_hash: 'zzz' }];
+    pinned.tools = [{ name: 't', access: 'read', approval: 'never', execution_mode: 'live', schema_hash: 'zzz', enabled: true, expose_description_to_planner: true, log_call_payloads: true }];
     expect(checkDefinitionCaps(pinned).some((i) => i.path === 'tools[0].schema_hash')).toBe(true);
   });
 

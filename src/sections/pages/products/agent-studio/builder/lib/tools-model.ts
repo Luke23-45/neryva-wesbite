@@ -192,3 +192,162 @@ export const LINT_EFFECTFUL_COPY = 'Effectful without approval — legal, but ev
 export function contractCaps(): { toolsMax: number } {
   return { toolsMax: CAPS.toolsMax };
 }
+
+/* ── Tools section redesign: effective approval, effect mix, drift ── */
+
+/**
+ * Static effect descriptors for built-in tools (they carry no catalog row,
+ * so the row's effectClass is unavailable). Mirrors the engine posture
+ * (tool-catalog.service.ts BUILT_IN_TOOLS) and the runtime descriptors
+ * (agent-studio/contracts/tool/descriptor.ts DEFAULT_TOOL_DESCRIPTORS):
+ * web_search/search_knowledge/search_memory/generate_image are READ_ONLY
+ * (generate_image writes no org state — the artifact is claim-checked);
+ * request_human_handoff is MUTATING. The frontend groups non-READ_ONLY as
+ * "effectful" for the risk counts.
+ */
+export const BUILTIN_TOOL_EFFECT: Record<string, 'READ_ONLY' | 'EFFECTFUL'> = {
+  web_search: 'READ_ONLY',
+  request_human_handoff: 'EFFECTFUL',
+  generate_image: 'READ_ONLY',
+  search_knowledge: 'READ_ONLY',
+  search_memory: 'READ_ONLY',
+};
+
+/** Static approval requirements for built-ins where the runtime declares one (web_search's NONE). Absent = unknown, never invented. */
+export const BUILTIN_TOOL_APPROVAL: Record<string, string> = {
+  web_search: 'NONE',
+};
+
+/**
+ * "Effectful" per the redesign contract: effectClass not in (null,
+ * 'READ_ONLY'); built-ins resolve through their static descriptor.
+ */
+export function isEffectfulTool(effectClass: string | null | undefined, builtinName?: string | null): boolean {
+  if (builtinName && BUILTIN_TOOL_EFFECT[builtinName]) {
+    return BUILTIN_TOOL_EFFECT[builtinName] === 'EFFECTFUL';
+  }
+  return effectClass !== null && effectClass !== undefined && effectClass !== 'READ_ONLY';
+}
+
+export type EffectiveSource = 'entry' | 'catalog' | 'agent_default' | 'default';
+
+export interface EffectiveApprovalInput {
+  entryApproval: ConsumerApproval;
+  catalogRequirement: string | null | undefined;
+  effectful: boolean;
+  agentDefault: 'never' | 'always';
+}
+
+/**
+ * Effective approval with the redesign precedence — the SINGLE mapping the
+ * binary control and every risk count runs through:
+ * entry 'always' → catalog REQUIRED → agent default 'always'+effectful → optional.
+ *
+ * Legacy 'on_effect' is deliberately NOT its own step. The engine wire has no
+ * 'on_effect' vocabulary (T-04): the console collapses it to 'optional' on
+ * save, the engine's validation accepts only 'required'|'optional', and the
+ * runtime enforces the collapsed value. A display step for 'on_effect' would
+ * show "gated" for a tool the runtime will run UNGATED after the next save —
+ * a silent approval downgrade. So the display treats 'on_effect' as its wire
+ * equivalent ('never') and the agent-wide default is the successor mechanism
+ * for "effectful tools need approval".
+ */
+export function effectiveApprovalDetailed(input: EffectiveApprovalInput): {
+  mode: 'required' | 'optional';
+  source: EffectiveSource;
+} {
+  if (input.entryApproval === 'always') return { mode: 'required', source: 'entry' };
+  if (input.catalogRequirement === 'REQUIRED') return { mode: 'required', source: 'catalog' };
+  if (input.agentDefault === 'always' && input.effectful)
+    return { mode: 'required', source: 'agent_default' };
+  return { mode: 'optional', source: 'default' };
+}
+
+/** Provenance label for the binary control — stated next to it, never hidden. */
+export function approvalSourceLabel(source: EffectiveSource): string {
+  switch (source) {
+    case 'entry':
+      return 'entry asks';
+    case 'catalog':
+      return 'row escalates';
+    case 'agent_default':
+      return 'agent default';
+    case 'default':
+      return '';
+  }
+}
+
+export type BinaryApproval = 'ungated' | 'gated';
+
+/** Binary control position from the effective state — no data loss: the model stays ternary. */
+export function binaryFromEffective(mode: 'required' | 'optional'): BinaryApproval {
+  return mode === 'required' ? 'gated' : 'ungated';
+}
+
+/** Binary control write — writes 'always'/'never' only; legacy 'on_effect' entries keep their value until the maker flips the control. */
+export function binaryToEntryApproval(value: BinaryApproval): 'always' | 'never' {
+  return value === 'gated' ? 'always' : 'never';
+}
+
+/** Minimal per-entry input for the risk counts — the section maps its bound entries to this. */
+export interface ToolRiskInput {
+  name: string;
+  effectful: boolean;
+  effectiveMode: 'required' | 'optional';
+  pinKind: PinState['kind'];
+}
+
+/** Bound effectful tools whose effective approval is optional — the header pill and the Approvals group list. */
+export function ungatedEffectful(entries: readonly ToolRiskInput[]): ToolRiskInput[] {
+  return entries.filter((e) => e.effectful && e.effectiveMode === 'optional');
+}
+
+export interface EffectMix {
+  bound: number;
+  readOnly: number;
+  effectfulUngated: number;
+  effectfulGated: number;
+}
+
+/** Partition of the bound set for the rail "Effect mix" card. */
+export function effectMix(entries: readonly ToolRiskInput[]): EffectMix {
+  let readOnly = 0;
+  let effectfulUngated = 0;
+  let effectfulGated = 0;
+  for (const e of entries) {
+    if (!e.effectful) {
+      readOnly += 1;
+    } else if (e.effectiveMode === 'optional') {
+      effectfulUngated += 1;
+    } else {
+      effectfulGated += 1;
+    }
+  }
+  return { bound: entries.length, readOnly, effectfulUngated, effectfulGated };
+}
+
+/**
+ * Enablement drift — bound entries whose pin state publish refuses
+ * (stale/disabled/missing). Unpinned stays a row-level lint, never drift.
+ */
+export function driftNames(entries: readonly ToolRiskInput[]): string[] {
+  return entries
+    .filter((e) => e.pinKind === 'stale' || e.pinKind === 'disabled' || e.pinKind === 'missing')
+    .map((e) => e.name);
+}
+
+/**
+ * Relative time for the drift "Re-check" readout ("· 2h ago"). Returns null
+ * when there is no timestamp — the UI then shows no time claim at all.
+ */
+export function formatRelativeTime(dataUpdatedAt: number | null | undefined, nowMs = Date.now()): string | null {
+  if (typeof dataUpdatedAt !== 'number' || !Number.isFinite(dataUpdatedAt)) return null;
+  const diffMs = Math.max(0, nowMs - dataUpdatedAt);
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}

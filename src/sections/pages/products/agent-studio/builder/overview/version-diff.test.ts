@@ -52,7 +52,7 @@ describe('diffChangedSections', () => {
     const draft = withPatch((d) => {
       d.role = { role: { content: 'Concierge' } };
       d.guardrails = { ...d.guardrails, pii_redaction: !d.guardrails.pii_redaction };
-      d.tools = [...d.tools, { name: 'web_search', access: 'read', approval: 'on_effect', execution_mode: 'live' }];
+      d.tools = [...d.tools, { name: 'web_search', access: 'read', approval: 'on_effect', execution_mode: 'live', enabled: true, expose_description_to_planner: true, log_call_payloads: true }];
       d.budget = { ...d.budget, max_tool_calls: 7 };
       d.response_policy = { output_format: 'plain' };
     });

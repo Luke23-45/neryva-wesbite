@@ -6,19 +6,29 @@
 import { describe, expect, it } from 'vitest';
 import {
   approvalMode,
+  approvalSourceLabel,
+  binaryFromEffective,
+  binaryToEntryApproval,
   canBind,
   contractCaps,
+  driftNames,
+  effectiveApprovalDetailed,
+  effectMix,
+  formatRelativeTime,
   isBuiltinTool,
+  isEffectfulTool,
   moveTool,
   perimeterView,
   pinState,
   repinHash,
+  ungatedEffectful,
   TOOLS_MAX,
   validateCatalogName,
   validateEntries,
   validateToolName,
   ENTRY_NAME_MAX,
   ENTRY_NAME_MIN,
+  type ToolRiskInput,
 } from './tools-model';
 import { CAPS } from '@lib/engine/setup-caps';
 import { TOOL_NAME_PATTERN } from '@hooks/studio/useSetupTools';
@@ -158,5 +168,130 @@ describe('isBuiltinTool', () => {
   it('matches exact built-in names', () => {
     expect(isBuiltinTool('web_search', ['web_search'])).toBe(true);
     expect(isBuiltinTool('web_search_x', ['web_search'])).toBe(false);
+  });
+});
+
+describe('effectiveApprovalDetailed (5-rule precedence)', () => {
+  const base = {
+    entryApproval: 'never' as const,
+    catalogRequirement: null as string | null,
+    effectful: true,
+    agentDefault: 'never' as const,
+  };
+  it('entry "always" beats catalog and agent default', () => {
+    const r = effectiveApprovalDetailed({ ...base, entryApproval: 'always', catalogRequirement: 'REQUIRED', agentDefault: 'always' });
+    expect(r).toEqual({ mode: 'required', source: 'entry' });
+  });
+  it('catalog REQUIRED beats legacy on_effect and agent default', () => {
+    const r = effectiveApprovalDetailed({ ...base, catalogRequirement: 'REQUIRED', entryApproval: 'on_effect', agentDefault: 'always' });
+    expect(r).toEqual({ mode: 'required', source: 'catalog' });
+  });
+  it("legacy on_effect collapses to its wire value — never a phantom gate (T-04)", () => {
+    // The engine wire has no 'on_effect' vocabulary: the console collapses it
+    // to 'optional' on save and the runtime enforces the collapsed value. The
+    // display must not show "gated" for a tool the runtime will run ungated.
+    expect(effectiveApprovalDetailed({ ...base, entryApproval: 'on_effect' })).toEqual({
+      mode: 'optional',
+      source: 'default',
+    });
+    expect(effectiveApprovalDetailed({ ...base, entryApproval: 'on_effect', effectful: false })).toEqual({
+      mode: 'optional',
+      source: 'default',
+    });
+    // The agent-wide default is the successor mechanism: with 'always', a
+    // legacy on_effect entry on an effectful tool IS gated — at display and
+    // at enforcement alike.
+    expect(effectiveApprovalDetailed({ ...base, entryApproval: 'on_effect', agentDefault: 'always' })).toEqual({
+      mode: 'required',
+      source: 'agent_default',
+    });
+  });
+  it('agent default "always" requires approval only when effectful', () => {
+    expect(effectiveApprovalDetailed({ ...base, agentDefault: 'always' })).toEqual({
+      mode: 'required',
+      source: 'agent_default',
+    });
+    expect(effectiveApprovalDetailed({ ...base, agentDefault: 'always', effectful: false })).toEqual({
+      mode: 'optional',
+      source: 'default',
+    });
+  });
+  it('read-only tools never require approval from agent default', () => {
+    const r = effectiveApprovalDetailed({ ...base, agentDefault: 'always', effectful: false });
+    expect(r.mode).toBe('optional');
+  });
+  it('default state is optional with empty provenance', () => {
+    const r = effectiveApprovalDetailed(base);
+    expect(r).toEqual({ mode: 'optional', source: 'default' });
+    expect(approvalSourceLabel(r.source)).toBe('');
+  });
+});
+
+describe('approvalSourceLabel', () => {
+  it('labels each escalating source, never hides provenance', () => {
+    expect(approvalSourceLabel('entry')).toBe('entry asks');
+    expect(approvalSourceLabel('catalog')).toBe('row escalates');
+    expect(approvalSourceLabel('agent_default')).toBe('agent default');
+  });
+});
+
+describe('binary approval mapping (ternary preserved)', () => {
+  it('binaryFromEffective mirrors the effective state', () => {
+    expect(binaryFromEffective('required')).toBe('gated');
+    expect(binaryFromEffective('optional')).toBe('ungated');
+  });
+  it('binaryToEntryApproval writes always/never only — never invents on_effect', () => {
+    expect(binaryToEntryApproval('gated')).toBe('always');
+    expect(binaryToEntryApproval('ungated')).toBe('never');
+  });
+});
+
+describe('isEffectfulTool', () => {
+  it('static descriptors win for built-ins', () => {
+    expect(isEffectfulTool(null, 'web_search')).toBe(false);
+    expect(isEffectfulTool(null, 'search_knowledge')).toBe(false);
+    expect(isEffectfulTool(null, 'request_human_handoff')).toBe(true);
+    expect(isEffectfulTool(null, 'generate_image')).toBe(false); // READ_ONLY per engine tool-catalog.service.ts + runtime contracts/tool/descriptor.ts (writes no org state; artifact is claim-checked)
+  });
+  it('org rows: any non-READ_ONLY effectClass is effectful', () => {
+    expect(isEffectfulTool('READ_ONLY', null)).toBe(false);
+    expect(isEffectfulTool('WRITE', null)).toBe(true);
+    expect(isEffectfulTool(null, null)).toBe(false);
+    expect(isEffectfulTool(undefined, null)).toBe(false);
+  });
+});
+
+describe('ungatedEffectful / effectMix / driftNames (rail + groups share one bound definition)', () => {
+  const entries: ToolRiskInput[] = [
+    { name: 'search_memory', effectful: false, effectiveMode: 'optional', pinKind: 'unpinned' },
+    { name: 'request_human_handoff', effectful: true, effectiveMode: 'optional', pinKind: 'unpinned' },
+    { name: 'generate_image', effectful: true, effectiveMode: 'required', pinKind: 'stale' },
+    { name: 'legacy_report', effectful: true, effectiveMode: 'optional', pinKind: 'disabled' },
+    { name: 'org_extract', effectful: false, effectiveMode: 'optional', pinKind: 'missing' },
+    { name: 'org_unpinned', effectful: false, effectiveMode: 'optional', pinKind: 'unpinned' },
+  ];
+  it('ungatedEffectful keeps effectful+optional only', () => {
+    expect(ungatedEffectful(entries).map((e) => e.name)).toEqual(['request_human_handoff', 'legacy_report']);
+  });
+  it('effectMix partitions the full bound set', () => {
+    expect(effectMix(entries)).toEqual({ bound: 6, readOnly: 3, effectfulUngated: 2, effectfulGated: 1 });
+  });
+  it('driftNames keeps publish-refused pins — unpinned stays a row lint', () => {
+    expect(driftNames(entries)).toEqual(['generate_image', 'legacy_report', 'org_extract']);
+  });
+});
+
+describe('formatRelativeTime', () => {
+  it('returns null when there is no timestamp — no time claim', () => {
+    expect(formatRelativeTime(undefined)).toBeNull();
+    expect(formatRelativeTime(null)).toBeNull();
+    expect(formatRelativeTime(NaN)).toBeNull();
+  });
+  it('renders just-now/minutes/hours/days', () => {
+    const now = 1_700_000_000_000;
+    expect(formatRelativeTime(now, now)).toBe('just now');
+    expect(formatRelativeTime(now - 5 * 60_000, now)).toBe('5m ago');
+    expect(formatRelativeTime(now - 3 * 3_600_000, now)).toBe('3h ago');
+    expect(formatRelativeTime(now - 2 * 86_400_000, now)).toBe('2d ago');
   });
 });
