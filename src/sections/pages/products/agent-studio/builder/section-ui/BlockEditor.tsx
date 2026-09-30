@@ -19,6 +19,7 @@ import {
   estimateTokens,
   timeAgo,
   validateBlockJson,
+  type BlockJsonKind,
   type EditableBlock,
   type ModalBlock,
   type SavedBlock,
@@ -74,6 +75,22 @@ function toSaved(
   const saved: SavedBlock = { block: { mode: surface, content: text } };
   if (target.titleField) saved.title = title;
   return saved;
+}
+
+/**
+ * Convert a validated JSON value back to the editable text form when
+ * leaving the JSON surface, so the JSON round-trip is lossless. Text
+ * blocks unwrap the JSON string; list blocks join items as lines (the
+ * inverse of the "Convert lines to a JSON array" quick fix). Returns
+ * null when no conversion applies (the 'any' kind or an unrecognized
+ * shape) — the text is then left untouched.
+ */
+function jsonToEditableText(kind: BlockJsonKind, value: unknown): string | null {
+  if (kind === 'text' && typeof value === 'string') return value;
+  if (kind === 'list' && Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === 'string').join('\n');
+  }
+  return null;
 }
 
 export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: BlockEditorProps) {
@@ -144,11 +161,27 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
     [],
   );
 
-  const handleSurface = useCallback((next: Surface) => {
-    setSurface(next);
-    setDirty(true);
-    setWhisper(null);
-  }, []);
+  const handleSurface = useCallback(
+    (next: Surface) => {
+      // Leaving the JSON surface: if the JSON is valid, convert it back
+      // to the editable text form so the round-trip is lossless — a
+      // wrapped JSON string must not leak quotes and \n literals into
+      // the markdown/raw view.
+      if (surface === 'json' && next !== 'json') {
+        const result = validateBlockJson(target.jsonKind, text);
+        if (result.ok) {
+          const converted = jsonToEditableText(target.jsonKind, result.value);
+          if (converted !== null && converted !== text) {
+            setText(converted);
+          }
+        }
+      }
+      setSurface(next);
+      setDirty(true);
+      setWhisper(null);
+    },
+    [surface, text, target.jsonKind],
+  );
 
   const handleTitle = useCallback((next: string) => {
     setTitle(next);
@@ -211,6 +244,10 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
 
   const words = countWords(text);
   const tokens = estimateTokens(text.length);
+  // Fail-closed: while on the JSON surface with invalid JSON, Save & close
+  // is held disabled. The click-time guard in saveAndClose stays as defense
+  // in depth (it also covers the keyboard shortcut path).
+  const jsonBlocked = surface === 'json' && !validateBlockJson(target.jsonKind, text).ok;
   // The raw-content cap applies to the raw and markdown surfaces only —
   // JSON quoting adds characters, so JSON mode is governed by the
   // parsed-value caps at the save layer instead.
@@ -252,7 +289,12 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
             ]}
           />
         ) : null}
-        <SaveCloseButton type="button" onClick={saveAndClose}>
+        <SaveCloseButton
+          type="button"
+          onClick={saveAndClose}
+          disabled={!readOnly && jsonBlocked}
+          title={!readOnly && jsonBlocked ? 'Fix the JSON errors before saving' : undefined}
+        >
           {readOnly ? 'Close' : 'Save & close'}
         </SaveCloseButton>
       </SubHeader>
