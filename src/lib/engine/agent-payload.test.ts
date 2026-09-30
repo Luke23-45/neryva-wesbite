@@ -27,7 +27,7 @@ const REGISTRY_DEFINITION = {
     ],
   },
   knowledge_policy: { retrieval_enabled: true, max_results: 8 },
-  guardrail_policy: { input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking' },
+  guardrail_policy: { input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking', pii_entities: ['email', 'phone', 'payment_card', 'government_id', 'api_keys', 'addresses'], pii_action: 'token', pii_applies_to: ['storage', 'logs'], notify_owner: false, attach_to_trace: true, deny_topics: [] },
   effectful_approval_default: 'never',
   model_params: { temperature: 0.3, max_output_tokens: 1024 },
   budget_policy: { max_total_tokens: 180000, max_cost_micros: 45000000, wall_clock_seconds: 300, max_tool_calls: 12, max_model_calls: 8 },
@@ -278,7 +278,7 @@ describe('toEnginePayload', () => {
     def.model_policy.allowed_models = ['a/b'];
     const wire = toEnginePayload(def);
     expect('instructions' in wire).toBe(false);
-    expect(wire.guardrail_policy).toEqual({ input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking' });
+    expect(wire.guardrail_policy).toEqual({ input_policy: 'default', output_policy: 'brand-safe', pii_redaction: true, execution_mode: 'blocking', pii_entities: ['email', 'phone', 'payment_card', 'government_id', 'api_keys', 'addresses'], pii_action: 'token', pii_applies_to: ['storage', 'logs'], notify_owner: false, attach_to_trace: true, deny_topics: [] });
   });
 
   it('strips every consumer-only key from the wire (unknown-keys 400 must stay unreachable)', () => {

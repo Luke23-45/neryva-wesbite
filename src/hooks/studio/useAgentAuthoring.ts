@@ -314,6 +314,59 @@ export function useKnowledgeHealth(assistantId: string | null, versionId?: strin
   });
 }
 
+// ─── Guardrail deny-topic telemetry (redesign) ───────────────────────────────
+
+export interface GuardrailRefusalCount {
+  topic: string;
+  refusals: number;
+}
+
+export function parseGuardrailTelemetry(raw: unknown): {
+  windowDays: number;
+  refusals: GuardrailRefusalCount[];
+} {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const refusals = Array.isArray(record.refusals) ? record.refusals : [];
+  return {
+    windowDays:
+      typeof record.window_days === 'number' && Number.isFinite(record.window_days)
+        ? record.window_days
+        : 30,
+    refusals: refusals
+      .map((entry) => {
+        if (typeof entry !== 'object' || entry === null) return null;
+        const row = entry as Record<string, unknown>;
+        if (typeof row.topic !== 'string' || row.topic === '') return null;
+        return {
+          topic: row.topic,
+          refusals:
+            typeof row.refusals === 'number' && Number.isFinite(row.refusals) ? row.refusals : 0,
+        };
+      })
+      .filter((row): row is GuardrailRefusalCount => row !== null),
+  };
+}
+
+/**
+ * Per-topic deny-refusal counts for the Guardrails section ("N refusals ·
+ * 30d"). Read-only: topics absent from the window are absent from the
+ * response (never zero-filled) — the section shows no count for those,
+ * not a zero. A failed fetch resolves to null so rows render without
+ * counts instead of blocking the section.
+ */
+export function useGuardrailTelemetry(assistantId: string | null) {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...AUTHORING_KEY, orgId, 'guardrail-telemetry', assistantId],
+    queryFn: () =>
+      engine<unknown>(`/console/org/${orgId}/assistants/${assistantId}/guardrail-telemetry`),
+    enabled: !!orgId && !!assistantId,
+    staleTime: 60_000,
+    retry: 1,
+    select: parseGuardrailTelemetry,
+  });
+}
+
 // ─── Publish readiness (C14 — single derivation, both surfaces) ──────
 
 // Row/gate shapes live in the pure model (unit-tested without queries);

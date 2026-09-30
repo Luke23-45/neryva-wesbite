@@ -10,7 +10,37 @@ import styled from 'styled-components';
 
 export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
 export { SwitchRow, SwitchText, SwitchTitle, SwitchSub } from './ModelSection.styles';
-export { PresetPill, PresetRow } from './GuardrailsSection.styles';
+
+/** Preset pickers: pill buttons for the render-control groups. */
+export const PresetRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.px10};
+`;
+
+export const PresetPill = styled.button<{ $active?: boolean }>`
+  border-radius: ${({ theme }) => theme.radii.pill};
+  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme, $active }) =>
+    $active ? theme.typography.weights.semibold : theme.typography.weights.medium};
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid
+    ${({ theme, $active }) => ($active ? theme.app.border.focus : theme.app.border.default)};
+  background: ${({ theme, $active }) => ($active ? theme.app.surface.active : 'transparent')};
+  color: ${({ theme, $active }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+  }
+`;
 
 export const AdvancedToggle = styled.button`
   display: flex;

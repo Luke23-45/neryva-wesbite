@@ -1,48 +1,87 @@
 import styled from 'styled-components';
 
 /**
- * Guardrails section — redesigned.
+ * Guardrails section — SVG redesign.
  *
- * Three blocks: protection (input/output screening presets plus PII),
- * execution mode, and advanced custom names. Preset pills are the
- * section's primary control — roomy, tactile, with resolved-consequence
- * copy beneath each direction group.
+ * SectionPage shell with four safeguard groups (Screening, PII redaction,
+ * Execution mode, Deny topics), each a GroupCard with an icon header.
+ * Screening rows use iOS-style Segmented controls; PII is a master Switch
+ * with entity-type chips, a redaction-action segmented control, and
+ * applies-to chips; execution mode is a Segmented with a live mode hint
+ * plus violation-action chips; deny topics is a list with refusal counts
+ * and an add row.
  */
 
 export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
 export { SwitchRow, SwitchText, SwitchTitle, SwitchSub } from './ModelSection.styles';
 export { PinMeta } from './KnowledgeSection.styles';
 
-/** Preset pickers (C07): pill buttons that honestly render a none-active state
- *  when the draft carries a custom policy name (edited in Advanced). */
-export const PresetRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.px10};
+/** Green status pill for the page header — live execution mode + layer count. */
+export const ModePill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s1};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  border: 1px solid ${({ theme }) => theme.app.status.success.border};
+  background: ${({ theme }) => theme.app.status.success.bg};
+  color: ${({ theme }) => theme.app.status.success.fg};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  white-space: nowrap;
 `;
 
-export const PresetPill = styled.button<{ $active?: boolean }>`
-  border-radius: ${({ theme }) => theme.radii.pill};
-  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px18};
+export const ModePillDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+`;
+
+/** A screening row: label + helper on the left, segmented control right. */
+export const ScreenRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.s4};
+  padding: ${({ theme }) => theme.spacing.s1} 0;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+export const ScreenText = styled.div`
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.px2};
+`;
+
+export const ScreenLabel = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: ${({ theme, $active }) =>
-    $active ? theme.typography.weights.semibold : theme.typography.weights.medium};
-  font-family: inherit;
-  cursor: pointer;
-  border: 1px solid
-    ${({ theme, $active }) => ($active ? theme.app.border.focus : theme.app.border.default)};
-  background: ${({ theme, $active }) => ($active ? theme.app.surface.active : 'transparent')};
-  color: ${({ theme, $active }) => ($active ? theme.app.text.primary : theme.app.text.secondary)};
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  color: ${({ theme }) => theme.app.text.primary};
+`;
 
-  &:hover {
-    border-color: ${({ theme }) => theme.app.border.hover};
-    color: ${({ theme }) => theme.app.text.primary};
-  }
+export const ScreenHelper = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.tertiary};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+`;
 
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 2px;
-  }
+export const ScreenControl = styled.div`
+  flex: none;
+`;
+
+/** Hairline between screening rows. */
+export const RowDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.app.border.subtle};
+  margin: ${({ theme }) => theme.spacing.s1} 0;
 `;
 
 /** Mode indicator line: dot + word, never color alone. */
@@ -55,8 +94,186 @@ export const ModeLine = styled.div`
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
-export const DirectionGroup = styled.div`
+/** Read-only rows for viewers. */
+export const ReadRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.s4};
+  padding: ${({ theme }) => theme.spacing.s2} 0;
+`;
+
+export const ReadLabel = styled.span`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  color: ${({ theme }) => theme.app.text.primary};
+  flex: none;
+`;
+
+export const ReadValue = styled.span`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  text-align: right;
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+`;
+
+/* ── PII sub-controls ──────────────────────────────────────────────────── */
+
+/** Sub-section label inside a group card (e.g. "ENTITY TYPES"). */
+export const SubLabel = styled.span`
+  display: block;
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.tertiary};
+  margin: ${({ theme }) => theme.spacing.s3} 0 ${({ theme }) => theme.spacing.s2};
+`;
+
+/** Wrapping row of toggle chips. */
+export const ChipRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.spacing.s2};
+`;
+
+/**
+ * Toggle chip — selected is the flat iOS blue (accentControl), unselected
+ * is a neutral outline. A real button: keyboard-focusable, aria-pressed.
+ */
+export const SelectChip = styled.button<{ $selected: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  border: 1px solid
+    ${({ theme, $selected }) => ($selected ? theme.app.accentControl : theme.app.border.default)};
+  background: ${({ theme, $selected }) => ($selected ? theme.app.accentControl : 'transparent')};
+  color: ${({ theme, $selected }) => ($selected ? '#ffffff' : theme.app.text.secondary)};
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme, $selected }) =>
+    $selected ? theme.typography.weights.semibold : theme.typography.weights.medium};
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+
+  &:hover:not(:disabled) {
+    border-color: ${({ theme, $selected }) =>
+      $selected ? theme.app.accentControl : theme.app.text.tertiary};
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+`;
+
+/** Greys a sub-control block when the PII master toggle is off — honest disabled, never decorative. */
+export const SubControlBlock = styled.fieldset<{ $disabled: boolean }>`
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  ${({ $disabled }) => ($disabled ? 'opacity: 0.45; pointer-events: none;' : '')}
+`;
+
+/* ── Deny topics ───────────────────────────────────────────────────────── */
+
+export const TopicList = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px10};
+`;
+
+export const TopicRow = styled.li`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.s2} 0;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.subtle};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+export const TopicName = styled.span`
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  color: ${({ theme }) => theme.app.text.primary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+/** Read-only refusal count — real telemetry, never invented. Absent when unknown. */
+export const TopicCount = styled.span`
+  flex: none;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.tertiary};
+  font-variant-numeric: ${({ theme }) => theme.app.numeric};
+  white-space: nowrap;
+`;
+
+export const TopicRemove = styled.button`
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.tertiary};
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.app.status.error.bg};
+    color: ${({ theme }) => theme.app.status.error.fg};
+  }
+`;
+
+export const TopicAddRow = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.s2};
+  margin-top: ${({ theme }) => theme.spacing.s3};
+  align-items: stretch;
+`;
+
+export const TopicInput = styled.input`
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s3};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.tint};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-size: ${({ theme }) => theme.app.type.body};
+
+  &::placeholder {
+    color: ${({ theme }) => theme.app.text.tertiary};
+  }
+`;
+
+export const TopicAddButton = styled.button`
+  flex: none;
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 1px solid ${({ theme }) => theme.app.accentControl};
+  background: ${({ theme }) => theme.app.accentControl};
+  color: #ffffff;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 `;

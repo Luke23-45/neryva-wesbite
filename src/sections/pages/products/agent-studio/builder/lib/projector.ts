@@ -23,7 +23,7 @@ import {
   type SpineId,
 } from './slot-model';
 import { LANE_NODES, LANE_NODE_IDS, laneOf, type LaneId, type LaneNodeId } from './lane-model';
-import { gradeGuardrails, parseGuardrailMode } from './guardrails-model';
+import { gradeGuardrails, normalizeDenyTopics, parseGuardrailMode, parsePiiAction, parsePiiEntities, parsePiiSinks } from './guardrails-model';
 import { CONTEXT_TOKENS_DEFAULT, gradeMemory, parseMemoryScope } from './memory-model';
 import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
@@ -601,6 +601,12 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
             output_policy: definition.guardrails.output_policy,
             pii_redaction: definition.guardrails.pii_redaction,
             execution_mode: parseGuardrailMode(definition.guardrails.execution_mode),
+            pii_entities: parsePiiEntities(definition.guardrails.pii_entities),
+            pii_action: parsePiiAction(definition.guardrails.pii_action),
+            pii_applies_to: parsePiiSinks(definition.guardrails.pii_applies_to),
+            notify_owner: definition.guardrails.notify_owner === true,
+            attach_to_trace: definition.guardrails.attach_to_trace !== false,
+            deny_topics: normalizeDenyTopics(definition.guardrails.deny_topics),
           });
           subtitle = grade.subtitle;
           hint = grade.hint === '' ? 'Policy is set — verdicts enforce at run time.' : grade.hint;

@@ -172,6 +172,25 @@ export type ToolExecutionMode = 'live' | 'shadow';
  *  'blocking' (C06 execution_mode precedent). */
 export type GuardrailExecutionMode = 'blocking' | 'logging';
 
+/**
+ * Guardrails redesign (2026-10-01): the engine's guardrail_policy extensions.
+ * Consumer values mirror the engine zod schema exactly — the wire layer
+ * never invents a value the engine would strip.
+ */
+export type PiiEntityType = 'email' | 'phone' | 'payment_card' | 'government_id' | 'api_keys' | 'addresses';
+export type PiiAction = 'mask' | 'token' | 'drop';
+export type PiiSink = 'storage' | 'logs' | 'traces';
+
+export const PII_ENTITY_TYPES: readonly PiiEntityType[] = [
+  'email',
+  'phone',
+  'payment_card',
+  'government_id',
+  'api_keys',
+  'addresses',
+];
+export const PII_SINKS: readonly PiiSink[] = ['storage', 'logs', 'traces'];
+
 export interface ConsumerTool {
   name: string;
   access: ToolAccess;
@@ -333,6 +352,18 @@ export interface ConsumerDefinition {
     input_policy: string;
     output_policy: string;
     execution_mode: GuardrailExecutionMode;
+    /** Per-entity PII selection — engine default is all six. */
+    pii_entities: PiiEntityType[];
+    /** What redaction does to a detected entity — engine default 'token'. */
+    pii_action: PiiAction;
+    /** Where redaction applies — engine default ['storage', 'logs']. */
+    pii_applies_to: PiiSink[];
+    /** Notify the agent owner on a screening hit — engine default false. */
+    notify_owner: boolean;
+    /** Link the violating content reference to the run trace — engine default true. */
+    attach_to_trace: boolean;
+    /** Maker-defined deny topics, refused on contact — engine default []. */
+    deny_topics: string[];
   };
   budget: {
     max_model_calls?: number;
@@ -451,7 +482,18 @@ export function defaultConsumer(): ConsumerDefinition {
     // drafts (legacy drafts normalize to 'never' on read).
     effectful_approval_default: 'never',
     knowledge_policy: { retrieval_enabled: false, max_results: 5 },
-    guardrails: { pii_redaction: true, input_policy: '', output_policy: '', execution_mode: 'blocking' },
+    guardrails: {
+      pii_redaction: true,
+      input_policy: '',
+      output_policy: '',
+      execution_mode: 'blocking',
+      pii_entities: [...PII_ENTITY_TYPES],
+      pii_action: 'token',
+      pii_applies_to: ['storage', 'logs'],
+      notify_owner: false,
+      attach_to_trace: true,
+      deny_topics: [],
+    },
     budget: {},
     retrieval: { memory_max_results: 4 },
   };
@@ -687,6 +729,15 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
       // C07: always explicit — the engine defaults blocking, and the UI
       // always states the value it sends (knowledge_policy precedent).
       execution_mode: def.guardrails.execution_mode,
+      // Guardrails redesign: the full PII/violation/deny-topic policy rides
+      // the same guardrail_policy object — the section owns validity, the
+      // wire layer only normalizes garbage to engine defaults.
+      pii_entities: cleanPiiEntities(def.guardrails.pii_entities),
+      pii_action: cleanPiiAction(def.guardrails.pii_action),
+      pii_applies_to: cleanPiiSinks(def.guardrails.pii_applies_to),
+      notify_owner: def.guardrails.notify_owner === true,
+      attach_to_trace: def.guardrails.attach_to_trace !== false,
+      deny_topics: cleanDenyTopics(def.guardrails.deny_topics),
     },
   };
 
@@ -733,6 +784,51 @@ function numOr(value: unknown, fallback: number): number {
 
 function boolOr(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+/**
+ * Guardrails redesign: wire cleaners for the engine's guardrail_policy
+ * extensions. Garbage resolves to the engine default (never a guess);
+ * the section owns validity, these only keep the wire honest.
+ */
+function cleanPiiEntities(value: unknown): PiiEntityType[] {
+  if (!Array.isArray(value)) return [...PII_ENTITY_TYPES];
+  const kept = value.filter((v): v is PiiEntityType =>
+    typeof v === 'string' && (PII_ENTITY_TYPES as readonly string[]).includes(v),
+  );
+  return [...new Set(kept)];
+}
+
+function cleanPiiAction(value: unknown): PiiAction {
+  return value === 'mask' || value === 'token' || value === 'drop' ? value : 'token';
+}
+
+function cleanPiiSinks(value: unknown): PiiSink[] {
+  if (!Array.isArray(value)) return ['storage', 'logs'];
+  const kept = value.filter((v): v is PiiSink =>
+    typeof v === 'string' && (PII_SINKS as readonly string[]).includes(v),
+  );
+  return [...new Set(kept)];
+}
+
+/** Engine law: max 50 topics, no case-insensitive duplicates, 1–200 chars. */
+export const DENY_TOPICS_MAX = 50;
+
+function cleanDenyTopics(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of value) {
+    if (typeof raw !== 'string') continue;
+    const topic = raw.trim();
+    if (topic === '' || topic.length > 200) continue;
+    const key = topic.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(topic);
+    if (out.length >= DENY_TOPICS_MAX) break;
+  }
+  return out;
 }
 
 function obj(value: unknown): Record<string, unknown> {
@@ -977,6 +1073,23 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       input_policy: str(guardrails.input_policy) ?? '',
       output_policy: str(guardrails.output_policy) ?? '',
       execution_mode: guardrails.execution_mode === 'logging' ? 'logging' : 'blocking',
+      // Guardrails redesign: parse the engine's extended policy. Garbage
+      // resolves to absent/default (the section reconciles), never a guess.
+      pii_entities: Array.isArray(guardrails.pii_entities)
+        ? (guardrails.pii_entities as unknown[]).filter((v): v is PiiEntityType =>
+            typeof v === 'string' && (PII_ENTITY_TYPES as readonly string[]).includes(v))
+        : [...PII_ENTITY_TYPES],
+      pii_action:
+        guardrails.pii_action === 'mask' || guardrails.pii_action === 'token' || guardrails.pii_action === 'drop'
+          ? guardrails.pii_action
+          : 'token',
+      pii_applies_to: Array.isArray(guardrails.pii_applies_to)
+        ? (guardrails.pii_applies_to as unknown[]).filter((v): v is PiiSink =>
+            typeof v === 'string' && (PII_SINKS as readonly string[]).includes(v))
+        : ['storage', 'logs'],
+      notify_owner: guardrails.notify_owner === true,
+      attach_to_trace: guardrails.attach_to_trace !== false,
+      deny_topics: cleanDenyTopics(guardrails.deny_topics),
     },
     budget: {
       ...(typeof budget.max_model_calls === 'number' ? { max_model_calls: budget.max_model_calls } : {}),
