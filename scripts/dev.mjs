@@ -254,14 +254,21 @@ async function runFunnelTunnel(port) {
   console.log('[dev] vite is up — opening the funnel…');
   // --bg configures the daemon and exits (foreground would block). Run it
   // synchronously so a policy refusal or login problem surfaces now, while
-  // vite is still just local.
-  const open = spawnSync(bin, ['funnel', '--bg', String(port)], {
+  // vite is still just local. --yes skips first-run interactive prompts
+  // (stdin is ignored here — without it the command hangs forever waiting
+  // for an answer nobody can type). timeout caps a stuck daemon handshake.
+  const open = spawnSync(bin, ['funnel', '--bg', '--yes', String(port)], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: false,
+    timeout: 60000,
   });
   const openText = `${open.stdout || ''}\n${open.stderr || ''}`.trim();
   if (open.error || open.status !== 0) {
+    if (open.error && open.error.code === 'ETIMEDOUT') {
+      console.error('[dev] `tailscale funnel` hung for 60s (killed). The daemon may be stuck');
+      console.error('[dev] on first-run provisioning — check `tailscale funnel status` manually.');
+    }
     console.error('[dev] `tailscale funnel` failed:');
     if (openText) console.error(openText);
     if (/policy|admin|permission|not allowed/i.test(openText)) {
