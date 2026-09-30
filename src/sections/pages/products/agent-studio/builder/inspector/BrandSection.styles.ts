@@ -101,3 +101,12 @@ export const VoiceEmpty = styled.p`
   color: ${({ theme }) => theme.app.text.faint};
   font-style: italic;
 `;
+
+/** One-line explainer: what brand voice is and where it lands. Quiet by
+ * design — the textarea is the desk, this is the plaque on it. */
+export const Explainer = styled.p`
+  margin: 0 0 ${({ theme }) => theme.spacing.s3};
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+`;

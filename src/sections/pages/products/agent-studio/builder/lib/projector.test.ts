@@ -389,7 +389,7 @@ describe('projector edges', () => {
     expect(edge?.data?.label).toBe('voice & tone');
     expect(edge?.data?.variant).toBe('verdict'); // dashed semantic edge (v10 mockup)
     expect(edge?.data?.lit).toBe(false);
-    const voiced = { ...defaultConsumer(), brand: 'Short sentences. Always.' };
+    const voiced = { ...defaultConsumer(), brand: { mode: 'raw', content: 'Short sentences. Always.' } as const };
     expect(litIds(base({ definition: voiced }))).toContain('e:brand:response');
   });
 
@@ -563,14 +563,14 @@ describe('projector brand node (C03)', () => {
   it('locks in origin, ghosts pre-draft, and stays untouched on the default voice', () => {
     expect(statusOf(base({ mode: 'new', definition: null, hasDraft: false }), 'brand')).toBe('locked');
     expect(statusOf(base({ hasDraft: false, definition: null }), 'brand')).toBe('untouched');
-    const blank = base({ definition: { ...defaultConsumer(), brand: '' } });
+    const blank = base({ definition: { ...defaultConsumer(), brand: { mode: 'raw', content: '' } as const } });
     expect(statusOf(blank, 'brand')).toBe('untouched');
     expect(subtitleOf(blank, 'brand')).toBe('Platform default');
     expect(nodeOf(blank, 'brand')?.hint).toMatch(/Brand section/);
   });
 
   it('shows payload truth once a voice is set, on the context leg', () => {
-    const def = { ...defaultConsumer(), brand: 'Short sentences. Always.' };
+    const def = { ...defaultConsumer(), brand: { mode: 'raw', content: 'Short sentences. Always.' } as const };
     const input = base({ definition: def });
     expect(statusOf(input, 'brand')).toBe('ready');
     expect(subtitleOf(input, 'brand')).toContain('chars');
@@ -580,7 +580,7 @@ describe('projector brand node (C03)', () => {
   });
 
   it('dims the context leg while the brand is untouched', () => {
-    const blank = base({ definition: { ...defaultConsumer(), brand: '' } });
+    const blank = base({ definition: { ...defaultConsumer(), brand: { mode: 'raw', content: '' } as const } });
     const leg = projectBuilderGraph(blank).edges.find((e) => e.source === 'brand' && e.target === 'context');
     expect(leg?.data?.lit).toBe(false);
   });

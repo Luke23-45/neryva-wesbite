@@ -118,16 +118,22 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
     });
   }
 
-  // G4: brand ships to the engine (≤2000) and is composed into the served
-  // prompt — it is validated like any other wire field now. The wire sends
-  // brand trimmed (agent-payload.ts), so the cap counts the trimmed value —
-  // exact, not merely conservative (19-31).
-  const brandLength = def.brand.trim().length;
-  if (brandLength > CAPS.brandMax) {
-    issues.push({
-      path: 'brand',
-      message: `Brand voice must be ≤ ${CAPS.brandMax.toLocaleString()} characters (currently ${brandLength.toLocaleString()}).`,
-    });
+  // Brand section: absent = platform default (no issue). Present = the
+  // block must parse in its mode and the PARSED value must stay within
+  // the cap (mode is not content). Bounds mirror the engine's
+  // brandSchema; CAPS.brandMax must stay equal to BRAND_LIMIT
+  // (builder/lib/brand-model.ts) — the section's counter reads that one.
+  const brandBlock = def.brand;
+  if (brandBlock !== undefined) {
+    const parsed = parseRoleTextField(brandBlock);
+    if (parsed === undefined) {
+      issues.push({ path: 'brand', message: 'Brand voice: not valid in its selected mode.' });
+    } else if (parsed.length > CAPS.brandMax) {
+      issues.push({
+        path: 'brand',
+        message: `Brand voice must be ≤ ${CAPS.brandMax.toLocaleString()} characters (currently ${parsed.length.toLocaleString()}).`,
+      });
+    }
   }
 
   const models = def.model_policy.allowed_models;

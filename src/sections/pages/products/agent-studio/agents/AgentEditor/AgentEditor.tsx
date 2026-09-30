@@ -33,6 +33,7 @@ import { useModelAvailability, useModelCosts, costLabel } from '@hooks/studio/us
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useToolCatalog, BUILT_IN_TOOLS } from '@hooks/studio/useSetupTools';
 import { toEnginePayload, effectiveApproval, type GuardrailExecutionMode } from '@lib/engine/agent-payload';
+import { parseBrandVoice } from '@/sections/pages/products/agent-studio/builder/lib/brand-model';
 import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
 import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-v1';
 import { checkDefinitionCaps, sectionOf } from '@lib/engine/setup-caps';
@@ -599,8 +600,11 @@ export function AgentEditor() {
                         </FieldRow>
                         <TextArea
                           label="Brand voice"
-                          value={effective.brand}
-                          onChange={(e) => patch({ brand: e.target.value })}
+                          value={parseBrandVoice(effective.brand) ?? ''}
+                          onChange={(e) => {
+                            const content = e.target.value;
+                            patch({ brand: content.trim() === '' ? undefined : { mode: 'raw', content } });
+                          }}
                           rows={3}
                           placeholder="Warm, precise, never theatrical…"
                         />

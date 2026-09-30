@@ -206,25 +206,32 @@ describe('checkDefinitionCaps', () => {
     expect(checkDefinitionCaps(bogus).some((i) => i.path === 'context_policy.memory_scope')).toBe(true);
   });
 
-  it('caps brand voice at 2000 chars (G4 first-class wire field)', () => {
+  it('caps brand voice at 2000 parsed chars (modal block)', () => {
     const branded = shippable();
-    branded.brand = 'x'.repeat(2001);
+    branded.brand = { mode: 'raw', content: 'x'.repeat(2001) };
     expect(checkDefinitionCaps(branded).some((i) => i.path === 'brand')).toBe(true);
     const ok = shippable();
-    ok.brand = 'Warm.';
+    ok.brand = { mode: 'raw', content: 'Warm.' };
     expect(checkDefinitionCaps(ok)).toEqual([]);
   });
-  it('counts trimmed brand chars against the 2000 cap (19-31)', () => {
-    // The wire sends brand trimmed: padding must neither consume the budget
-    // nor reject input the engine would accept.
-    const padded = shippable();
-    padded.brand = `  ${'x'.repeat(1999)}  `;
-    expect(checkDefinitionCaps(padded).some((i) => i.path === 'brand')).toBe(false);
-    const over = shippable();
-    over.brand = `  ${'x'.repeat(2001)}  `;
-    const issues = checkDefinitionCaps(over).filter((i) => i.path === 'brand');
+
+  it('flags brand content that is invalid in its selected mode', () => {
+    const bad = shippable();
+    bad.brand = { mode: 'json', content: 'not json at all' };
+    const issues = checkDefinitionCaps(bad).filter((i) => i.path === 'brand');
     expect(issues).toHaveLength(1);
-    expect(issues[0].message).toContain('2,001');
+    expect(issues[0].message).toMatch(/not valid in its selected mode/);
+  });
+
+  it('measures the parsed value against the cap — padding counts, quoting does not', () => {
+    // The engine caps the parsed value as written (modalTextField): raw
+    // padding is content, while JSON quoting is metadata around the string.
+    const padded = shippable();
+    padded.brand = { mode: 'raw', content: `  ${'x'.repeat(1999)}  ` };
+    expect(checkDefinitionCaps(padded).some((i) => i.path === 'brand')).toBe(true);
+    const quoted = shippable();
+    quoted.brand = { mode: 'json', content: JSON.stringify('x'.repeat(2000)) };
+    expect(checkDefinitionCaps(quoted).some((i) => i.path === 'brand')).toBe(false);
   });
 });
 

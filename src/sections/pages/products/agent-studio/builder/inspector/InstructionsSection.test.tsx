@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -151,16 +151,25 @@ async function bootWithDoc(props?: Partial<React.ComponentProps<typeof Instructi
     await act(async () => {
       vi.advanceTimersByTime(50);
     });
-    if (screen.queryByDisplayValue('Concierge.')) break;
+    if (screen.queryByText('Concierge.')) break;
   }
-  screen.getByDisplayValue('Concierge.');
+  screen.getByText('Concierge.');
   return s;
 }
 
-/** The section's three tabs, scoped to the tab bar (markdown blocks have their
- *  own Write | Preview toggles with the same labels). */
-function tab(name: string) {
-  return within(screen.getByLabelText('Instructions editing mode')).getByText(name);
+/** Open a collapsed card's focused editor. Cards share their accessible name
+ *  with the pencil icon inside them — the card itself is the first match. */
+function openCard(name: string) {
+  fireEvent.click(screen.getAllByRole('button', { name: `Edit ${name}` })[0]);
+}
+
+/** The editor's non-destructive back link (section label is "Instructions"). */
+function backToPage() {
+  fireEvent.click(screen.getByRole('button', { name: 'Back to Instructions' }));
+}
+
+function saveAndClose() {
+  fireEvent.click(screen.getByRole('button', { name: 'Save & close' }));
 }
 
 function putCalls() {
@@ -168,30 +177,29 @@ function putCalls() {
 }
 
 describe('InstructionsSection structured composer', () => {
-  it('renders exactly Compose · Preview · JSON tabs and loads the structured document', async () => {
+  it('renders the six area cards and loads the structured document', async () => {
     await act(async () => {
       shell();
     });
-    await screen.findByDisplayValue('Concierge.');
-    const tabs = within(screen.getByLabelText('Instructions editing mode'));
-    expect(tabs.getByText('Compose')).toBeTruthy();
-    expect(tabs.getByText('Preview')).toBeTruthy();
-    expect(tabs.getByText('JSON')).toBeTruthy();
-    expect(tabs.queryByText('Raw')).toBeNull();
-    expect(screen.getByDisplayValue('Help guests.')).toBeTruthy();
-    expect(screen.getByDisplayValue('Be kind.')).toBeTruthy();
+    await screen.findByText('Concierge.');
+    // Card previews carry the saved content.
+    expect(screen.getByText('Help guests.')).toBeTruthy();
+    expect(screen.getByText('Be kind.')).toBeTruthy();
+    // Every area appears as a card and in the clickable outline.
+    for (const label of ['Objective', 'Rules', 'Output', 'Refusal', 'Examples', 'Custom text']) {
+      expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(2);
+    }
   });
 
   it('fires the server preview after the 600ms debounce and shows the compiled text', async () => {
     await bootWithDoc();
-    fireEvent.click(tab('Preview'));
     await act(async () => {
       vi.advanceTimersByTime(700);
     });
     await act(async () => {});
+    // The compiled card always shows the server-produced prompt — no tab needed.
     expect(screen.getByText(/compiler 1\.0\.0/)).toBeTruthy();
     expect(screen.getByText(/## Objective/)).toBeTruthy();
-    expect(screen.getByText(/compiler 1\.0\.0/)).toBeTruthy();
     // The browser never compiles: the preview request went to the engine.
     const previewCall = engineMock.mock.calls.find(
       ([path, opts]) =>
@@ -201,9 +209,11 @@ describe('InstructionsSection structured composer', () => {
     expect((previewCall![1] as { body: { instructions: typeof DOC } }).body.instructions.objective.content).toBe('Concierge.');
   });
 
-  it('PUTs the structured document with If-Match after the autosave debounce', async () => {
+  it('PUTs the structured document with If-Match after Save & close and the autosave debounce', async () => {
     await bootWithDoc();
+    openCard('Objective');
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
+    saveAndClose();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -225,7 +235,9 @@ describe('InstructionsSection structured composer', () => {
       return Promise.resolve(GET_OK);
     });
     await bootWithDoc();
+    openCard('Objective');
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
+    saveAndClose();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -253,9 +265,13 @@ describe('InstructionsSection structured composer', () => {
         </QueryClientProvider>
       </ThemeProvider>,
     );
+    // Versionless boots a local blank document — the Objective card is empty.
+    await screen.findByRole('button', { name: 'Edit Objective' });
+    openCard('Objective');
     await screen.findByPlaceholderText('One breath.');
     withFakeTimers();
     fireEvent.change(screen.getByPlaceholderText('One breath.'), { target: { value: 'Hello.' } });
+    saveAndClose();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -268,12 +284,19 @@ describe('InstructionsSection structured composer', () => {
     expect(opts.body.instructions.objective.content).toBe('Hello.');
   });
 
-  it('holds the save and states the reason on invalid JSON in the JSON tab', async () => {
+  it('holds the save and states the reason on invalid JSON in the editor', async () => {
     await bootWithDoc();
-    fireEvent.click(tab('JSON'));
-    const area = screen.getByLabelText(/Structured document/);
+    openCard('Objective');
+    // The editor's surface switcher moves this block to JSON…
+    fireEvent.click(screen.getByRole('tab', { name: 'JSON' }));
+    const area = screen.getByLabelText('JSON content');
     fireEvent.change(area, { target: { value: '{"broken":' } });
-    expect(screen.getByText(/does not parse/)).toBeTruthy();
+    // …the draft pushes into the section after 2s; back out to read the hold.
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+    backToPage();
+    expect(screen.getByText(/Not valid JSON/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -282,9 +305,13 @@ describe('InstructionsSection structured composer', () => {
 
   it('explicit Save while held toasts the reason instead of swallowing the click', async () => {
     const { rerender } = await bootWithDoc();
-    fireEvent.click(tab('JSON'));
-    const area = screen.getByLabelText(/Structured document/);
-    fireEvent.change(area, { target: { value: '{"broken":' } });
+    openCard('Objective');
+    fireEvent.click(screen.getByRole('tab', { name: 'JSON' }));
+    fireEvent.change(screen.getByLabelText('JSON content'), { target: { value: '{"broken":' } });
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+    backToPage();
     await act(async () => {
       rerender(
         <ThemeProvider theme={theme}>
@@ -304,34 +331,40 @@ describe('InstructionsSection structured composer', () => {
       );
     });
     expect(putCalls().length).toBe(0);
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/does not parse/));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(expect.stringMatching(/Not valid JSON/));
   });
 
-  it('switching a block to JSON mode with invalid JSON shows the inline warning and holds the save', async () => {
+  it('switching a block to JSON with invalid JSON shows the inline warning, and the wrap fix clears it', async () => {
     await bootWithDoc();
-    const objectiveFormat = screen.getByLabelText('Objective format');
-    fireEvent.click(within(objectiveFormat).getByText('JSON'));
-    // Inline warning in the Objective block plus the red summary banner.
+    openCard('Objective');
+    fireEvent.click(screen.getByRole('tab', { name: 'JSON' }));
+    // 'Concierge.' is not valid JSON — the surface's inline warning shows.
     expect(screen.getAllByText(/Not valid JSON/).length).toBeGreaterThanOrEqual(1);
-    await act(async () => {
-      vi.advanceTimersByTime(9000);
-    });
-    expect(putCalls().length).toBe(0);
     // Wrapping as a JSON string clears the hold.
-    fireEvent.click(screen.getByText('Wrap as JSON string'));
+    fireEvent.click(screen.getByText('Wrap as a JSON string'));
     expect(screen.queryByText(/Not valid JSON/)).toBeNull();
-    fireEvent.change(screen.getByLabelText('Objective'), { target: { value: '"Concierge!!"' } });
+    saveAndClose();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
-    expect(putCalls().length).toBe(1);
+    const puts = putCalls();
+    expect(puts.length).toBe(1);
+    const body = (puts[0][1] as { body: { instructions: typeof DOC } }).body.instructions;
+    expect(body.objective.content).toBe('"Concierge."');
+    expect(body.objective.mode).toBe('json');
   });
 
   it('whispers on a pasted secret and never fires the PUT', async () => {
     await bootWithDoc();
+    // Rules are edited per rule — open the first one.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit rule 1' }));
     fireEvent.change(screen.getByDisplayValue('Be kind.'), {
       target: { value: 'api_key: sk-live-1234567890abcdef' },
     });
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
+    backToPage();
     expect(screen.getByText(/pasted credential/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(9000);
@@ -342,7 +375,7 @@ describe('InstructionsSection structured composer', () => {
   it('inserting a sample mints a fresh ins_ id and ships it in the next PUT', async () => {
     await bootWithDoc();
     fireEvent.click(screen.getByText('insert-sample'));
-    expect(screen.getByDisplayValue('Sample rule')).toBeTruthy();
+    expect(screen.getByText('Sample rule')).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -354,9 +387,15 @@ describe('InstructionsSection structured composer', () => {
     expect(inserted!.id).toMatch(/^ins_[A-Za-z0-9]{12}$/);
   });
 
-  it('marks the section dirty on first keystroke', async () => {
+  it('marks the section dirty once the editor draft pushes', async () => {
     const { onDirtyChange } = await bootWithDoc();
+    openCard('Objective');
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
+    // The editor pushes its draft into the section every 2s — that is when
+    // the section goes dirty.
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
+    });
     expect(onDirtyChange).toHaveBeenCalledWith(true);
   });
 

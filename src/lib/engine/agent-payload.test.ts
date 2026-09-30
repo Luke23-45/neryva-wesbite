@@ -77,15 +77,15 @@ describe('fromEnginePayload', () => {
   });
 
   it('keeps consumer-only fields when present and defaults them otherwise', () => {
-    const withExtras = fromEnginePayload({ ...REGISTRY_DEFINITION, brand: 'Warm.', max_context_tokens: 64000 });
-    expect(withExtras.brand).toBe('Warm.');
+    const withExtras = fromEnginePayload({ ...REGISTRY_DEFINITION, brand: { mode: 'raw', content: 'Warm.' }, max_context_tokens: 64000 });
+    expect(withExtras.brand).toEqual({ mode: 'raw', content: 'Warm.' });
     expect(withExtras.max_context_tokens).toBe(64000);
-    expect(fromEnginePayload({}).brand).toBe('');
+    expect(fromEnginePayload({}).brand).toBeUndefined();
   });
 
-  it('round-trips brand through the wire (G4)', () => {
-    const branded = fromEnginePayload({ ...REGISTRY_DEFINITION, brand: 'Warm, precise.' });
-    expect(toEnginePayload(branded)).toMatchObject({ brand: 'Warm, precise.' });
+  it('round-trips brand through the wire as a modal block', () => {
+    const branded = fromEnginePayload({ ...REGISTRY_DEFINITION, brand: { mode: 'markdown', content: '**Warm**, precise.' } });
+    expect(toEnginePayload(branded)).toMatchObject({ brand: { mode: 'markdown', content: '**Warm**, precise.' } });
   });
 
   it('passes response_policy through only when set; garbage resolves to absent', () => {
@@ -278,12 +278,12 @@ describe('toEnginePayload', () => {
     expect(JSON.stringify(wire)).not.toContain('max_recursion_depth');
   });
 
-  it('ships brand on the wire (G4 first-class) and omits blanks', () => {
+  it('ships brand on the wire as a modal block and omits blanks', () => {
     const def = consumer();
-    def.brand = 'Warm, precise.';
-    expect(toEnginePayload(def).brand).toBe('Warm, precise.');
+    def.brand = { mode: 'raw', content: 'Warm, precise.' };
+    expect(toEnginePayload(def).brand).toEqual({ mode: 'raw', content: 'Warm, precise.' });
     const blank = consumer();
-    blank.brand = '   ';
+    blank.brand = { mode: 'raw', content: '   ' };
     expect('brand' in toEnginePayload(blank)).toBe(false);
   });
 

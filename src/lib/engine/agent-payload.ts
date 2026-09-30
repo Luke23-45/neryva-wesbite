@@ -236,13 +236,22 @@ export interface ConsumerDefinition {
   retrieval: {
     memory_max_results: number;
   };
-  /** Consumer-only brand voice. */
-  brand: string;
+  /** Consumer-only brand voice (Brand section) — one modal text block
+   * ({ mode, content }). Optional: absent = platform default (valid — the
+   * engine composes no voice block). The console writes the block only
+   * when it is non-blank and omits the key when nothing is set. */
+  brand?: RoleFieldBlock;
 }
 
 /** The exact wire object for POST assistants {definition} / POST versions / PUT draft. */
 export interface EnginePayload {
-  brand?: string;
+  /**
+   * brand is written through only when the block is non-blank (absent =
+   * platform default — valid). One { mode, content } block; blank blocks
+   * never ship. The Brand section owns this key and no other section
+   * fabricates it.
+   */
+  brand?: RoleFieldBlock;
   instructions?: string;
   model_params?: Record<string, unknown>;
   budget_policy?: Record<string, unknown>;
@@ -295,7 +304,6 @@ export function defaultConsumer(): ConsumerDefinition {
     guardrails: { pii_redaction: true, input_policy: '', output_policy: '', execution_mode: 'blocking' },
     budget: {},
     retrieval: { memory_max_results: 4 },
-    brand: '',
   };
 }
 
@@ -380,9 +388,15 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
   });
 
   const payload: EnginePayload = {
-    // G4: brand ships (blank omitted) — persisted, hashed, and composed
-    // into the served system prompt at context assembly.
-    ...(nonBlank(def.brand) !== null ? { brand: (def.brand as string).trim() } : {}),
+    // Brand section: written only when the block is non-blank (absent =
+    // platform default — valid, the engine composes nothing). Blank blocks
+    // never ship; the section owns this key and no other section
+    // fabricates it.
+    ...(() => {
+      const b = def.brand;
+      if (!b || b.content.trim() === '') return {};
+      return { brand: { ...(b.mode ? { mode: b.mode } : {}), content: b.content } };
+    })(),
     model_policy: {
       allowed_models: [...def.model_policy.allowed_models],
       fallback_enabled: def.model_policy.fallback_enabled,
@@ -605,6 +619,13 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
   // Role (D-N2): garbage resolves to absent (no persona), never a guess.
   const role = parseRole(r.role);
 
+  // Brand (modal block): garbage resolves to absent (platform default),
+  // never a guess. Blank/unparseable blocks are dropped on read — the
+  // section re-creates them on edit.
+  const brandBlock = readRoleBlock(pick(r.brand));
+  const brandParsed = brandBlock ? parseRoleTextField(brandBlock) : undefined;
+  const brand = brandParsed ? brandBlock : undefined;
+
   // All 5 engine scopes round-trip (C08: `user` is the default and is offered,
   // never omitted). Unknown strings resolve the engine default, never a guess.
   const scopeRaw = str(context.memory_scope) ?? 'user';
@@ -666,6 +687,7 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     retrieval: {
       memory_max_results: numOr(retrievalRaw.memory_max_results, base.retrieval.memory_max_results),
     },
-    brand: str(pick(r.brand)) ?? '',
+    // Garbage resolves to absent (platform default), never a guess.
+    ...(brand !== undefined ? { brand } : {}),
   };
 }

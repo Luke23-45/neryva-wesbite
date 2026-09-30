@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -65,31 +65,45 @@ async function flushAutosave() {
   });
 }
 
-/** Click a mode tab inside the field's format selector. */
-function setMode(fieldLabel: string, mode: 'Raw' | 'Markdown' | 'JSON') {
-  const group = screen.getByRole('tablist', { name: `${fieldLabel} format` });
-  fireEvent.click(within(group).getByRole('tab', { name: mode }));
+/** The editor pushes its draft into the section every 2s. */
+async function pushDraft() {
+  await act(async () => {
+    vi.advanceTimersByTime(2500);
+  });
+}
+
+/** Open a collapsed card's focused editor. The card shares its accessible
+ *  name with the pencil icon inside it — the card itself is first. */
+function openCard(name: string) {
+  fireEvent.click(screen.getAllByRole('button', { name: `Edit ${name}` })[0]);
+}
+
+/** The editor's non-destructive back link. */
+function backToPage() {
+  fireEvent.click(screen.getByRole('button', { name: 'Back to Role' }));
+}
+
+function saveAndClose() {
+  fireEvent.click(screen.getByRole('button', { name: 'Save & close' }));
+}
+
+/** Switch the open editor's surface (Plain / Markdown / JSON). */
+function setSurface(name: 'Plain' | 'Markdown' | 'JSON') {
+  fireEvent.click(screen.getByRole('tab', { name }));
 }
 
 describe('RoleSection', () => {
-  it('renders all six optional fields with honest empty state — no invented persona', () => {
+  it('renders all six optional fields as cards with honest empty state — no invented persona', () => {
     shell();
-    expect(screen.getByLabelText('Role')).toHaveValue('');
-    expect(screen.getByLabelText('Goal')).toHaveValue('');
-    expect(screen.getByLabelText('Communication style')).toHaveValue('');
-    // Lists default to JSON mode → tag editors.
-    expect(screen.getByLabelText('Add trait')).toBeInTheDocument();
-    expect(screen.getByLabelText('Add knowledge area')).toBeInTheDocument();
-    expect(screen.getByLabelText('Add avoided topic')).toBeInTheDocument();
-    expect(screen.getByText('0/10')).toBeInTheDocument();
-    expect(screen.getAllByText('0/20')).toHaveLength(2);
-    // Every field carries a Raw/Markdown/JSON selector.
-    expect(screen.getAllByRole('tablist', { name: / format$/ })).toHaveLength(6);
-    // No fake persona, no preview panel.
-    expect(screen.queryByText(/persona/i, { selector: 'h2' })).toBeNull();
+    for (const name of ['Role', 'Goal', 'Traits', 'Communication style', 'Knowledge areas', 'Avoid']) {
+      expect(screen.getByRole('button', { name: `Edit ${name}` })).toBeInTheDocument();
+    }
+    expect(screen.getByText('No role yet')).toBeInTheDocument();
+    // No fake persona anywhere on the page.
+    expect(screen.queryByText(/support concierge/i)).toBeNull();
   });
 
-  it('loads a stored modal role into the fields', () => {
+  it('loads a stored modal role into the card previews', () => {
     shell({
       definition: definitionWith({
         role: { mode: 'raw', content: 'Senior support engineer' },
@@ -100,117 +114,90 @@ describe('RoleSection', () => {
         prohibitedTopics: { content: '["politics"]' },
       }),
     });
-    expect(screen.getByLabelText('Role')).toHaveValue('Senior support engineer');
-    expect(screen.getByLabelText('Goal')).toHaveValue('Resolve tickets in one touch.');
-    expect(screen.getByLabelText('Communication style')).toHaveValue('Short paragraphs.');
+    expect(screen.getByText('Senior support engineer')).toBeInTheDocument();
+    expect(screen.getByText('Resolve tickets in one touch.')).toBeInTheDocument();
     expect(screen.getByText('calm')).toBeInTheDocument();
     expect(screen.getByText('precise')).toBeInTheDocument();
     expect(screen.getByText('billing')).toBeInTheDocument();
     expect(screen.getByText('politics')).toBeInTheDocument();
-    // Stored modes are honored.
-    expect(
-      within(screen.getByRole('tablist', { name: 'Communication style format' })).getByRole('tab', {
-        name: 'Markdown',
-      }),
-    ).toHaveAttribute('aria-selected', 'true');
+    // Stored modes are honored — the editor opens on the stored surface.
+    openCard('Communication style');
+    expect(screen.getByRole('tab', { name: 'Markdown' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('autosaves an edited role through the draft-version hook', async () => {
     shell();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'Support concierge' } });
+    openCard('Role');
+    fireEvent.change(screen.getByLabelText('Role content (plain text)'), {
+      target: { value: 'Support concierge' },
     });
+    saveAndClose();
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
     expect(sent.definition.role).toEqual({ role: { mode: 'raw', content: 'Support concierge' } });
   });
 
-  it('adds tags with Enter, removes them with the chip button, never duplicates', async () => {
+  it('edits list fields as one-per-line text on the Plain surface', async () => {
     shell();
-    const input = screen.getByLabelText('Add trait');
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'calm' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+    openCard('Traits');
+    setSurface('Plain');
+    fireEvent.change(screen.getByLabelText('Traits content (plain text)'), {
+      target: { value: 'calm\nprecise' },
     });
-    expect(screen.getByText('calm')).toBeInTheDocument();
-    expect(screen.getByText('1/10')).toBeInTheDocument();
-    // Duplicate (with surrounding whitespace) is ignored.
-    await act(async () => {
-      fireEvent.change(input, { target: { value: ' calm ' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-    });
-    expect(screen.getAllByText('calm')).toHaveLength(1);
-    expect(screen.getByText('1/10')).toBeInTheDocument();
-    // Remove via the chip's labeled button.
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Remove trait calm' }));
-    });
-    expect(screen.queryByText('calm')).not.toBeInTheDocument();
-  });
-
-  it('enforces the tag count cap and trims before storing', async () => {
-    shell();
-    const input = screen.getByLabelText('Add avoided topic');
-    for (let i = 0; i < 20; i += 1) {
-      await act(async () => {
-        fireEvent.change(input, { target: { value: `topic ${i}` } });
-        fireEvent.keyDown(input, { key: 'Enter' });
-      });
-    }
-    expect(screen.getByText('20/20')).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.change(input, { target: { value: 'one more' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
-    });
-    expect(screen.queryByText('one more')).not.toBeInTheDocument();
-    // Trimmed before storing.
-    expect(screen.getByText('topic 0')).toBeInTheDocument();
-  });
-
-  it('holds the autosave when a field exceeds its cap', async () => {
-    shell();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'x'.repeat(201) } });
-    });
-    await flushAutosave();
-    expect(updateMutate).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('at most 200 characters');
-  });
-
-  it('holds the autosave when a field is invalid in its selected mode', async () => {
-    shell();
-    await act(async () => {
-      setMode('Role', 'JSON');
-      fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'not json' } });
-    });
-    await flushAutosave();
-    expect(updateMutate).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent('not valid in its selected mode');
-    // Fixing the JSON releases the hold.
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Role'), { target: { value: '"Support concierge"' } });
-    });
-    await flushAutosave();
-    expect(updateMutate).toHaveBeenCalledTimes(1);
-    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
-    expect(sent.definition.role).toEqual({ role: { mode: 'json', content: '"Support concierge"' } });
-  });
-
-  it('edits list fields as one-per-line text in Raw mode', async () => {
-    shell();
-    await act(async () => {
-      setMode('Traits', 'Raw');
-    });
-    const area = screen.getByLabelText('Traits');
-    expect(area.tagName).toBe('TEXTAREA');
-    await act(async () => {
-      fireEvent.change(area, { target: { value: 'calm\nprecise' } });
-    });
+    saveAndClose();
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
     expect(sent.definition.role).toEqual({ traits: { mode: 'raw', content: 'calm\nprecise' } });
+  });
+
+  it('holds the autosave when a list exceeds its item cap', async () => {
+    shell();
+    openCard('Avoid');
+    setSurface('Plain');
+    const items = Array.from({ length: 21 }, (_, i) => `topic ${i}`).join('\n');
+    fireEvent.change(screen.getByLabelText('Avoid content (plain text)'), { target: { value: items } });
+    await pushDraft();
+    backToPage();
+    expect(screen.getByRole('alert')).toHaveTextContent('at most 20 items');
+    await flushAutosave();
+    expect(updateMutate).not.toHaveBeenCalled();
+  });
+
+  it('holds the autosave when a field exceeds its cap', async () => {
+    shell();
+    openCard('Role');
+    fireEvent.change(screen.getByLabelText('Role content (plain text)'), {
+      target: { value: 'x'.repeat(201) },
+    });
+    // Save & close is fail-closed on the cap, so push the draft and read the
+    // section-level hold.
+    await pushDraft();
+    backToPage();
+    expect(screen.getByRole('alert')).toHaveTextContent('at most 200 characters');
+    await flushAutosave();
+    expect(updateMutate).not.toHaveBeenCalled();
+  });
+
+  it('holds the autosave when a field is invalid in its selected mode', async () => {
+    shell();
+    openCard('Role');
+    setSurface('JSON');
+    fireEvent.change(screen.getByLabelText('JSON content'), { target: { value: 'not json' } });
+    await pushDraft();
+    backToPage();
+    expect(screen.getByRole('alert')).toHaveTextContent('not valid in its selected mode');
+    await flushAutosave();
+    expect(updateMutate).not.toHaveBeenCalled();
+    // Fixing the JSON releases the hold.
+    openCard('Role');
+    fireEvent.change(screen.getByLabelText('JSON content'), { target: { value: '"Support concierge"' } });
+    saveAndClose();
+    await flushAutosave();
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.role).toEqual({ role: { mode: 'json', content: '"Support concierge"' } });
   });
 
   it('surfaces malformed JSON in a list field instead of silently overwriting it', async () => {
@@ -219,22 +206,21 @@ describe('RoleSection', () => {
         traits: { mode: 'json', content: '["calm", oops]' },
       }),
     });
-    // The tag editor is replaced by a raw textarea showing the stored text.
-    // (The autosave-hold alert also renders — both are role="alert".)
-    const alerts = screen.getAllByRole('alert');
-    expect(alerts.some((a) => a.textContent?.includes('does not parse as a JSON list'))).toBe(true);
-    const area = screen.getByLabelText('Traits');
-    expect(area.tagName).toBe('TEXTAREA');
-    expect(area).toHaveValue('["calm", oops]');
-    // Fixing the JSON brings the tag editor back with the parsed values.
-    await act(async () => {
-      fireEvent.change(area, { target: { value: '["calm", "precise"]' } });
-    });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByText('calm')).toBeInTheDocument();
-    expect(screen.getByText('precise')).toBeInTheDocument();
+    // The card names the problem; the section hold names it too.
+    expect(screen.getByText(/invalid — edit to fix/)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('not valid in its selected mode');
+    // The editor opens on the stored text untouched.
+    openCard('Traits');
+    expect(screen.getByLabelText('JSON content')).toHaveValue('["calm", oops]');
+    // Fixing the JSON brings the parsed list back and releases the save.
+    fireEvent.change(screen.getByLabelText('JSON content'), { target: { value: '["calm", "precise"]' } });
+    saveAndClose();
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
+    const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
+    expect(sent.definition.role).toEqual({ traits: { mode: 'json', content: '["calm", "precise"]' } });
+    expect(screen.getByText('calm')).toBeInTheDocument();
+    expect(screen.getByText('precise')).toBeInTheDocument();
   });
 
   it('clearing every field removes role instead of persisting an empty object', async () => {
@@ -244,24 +230,29 @@ describe('RoleSection', () => {
         traits: { content: '["calm"]' },
       }),
     });
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Role'), { target: { value: '' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Remove trait calm' }));
-    });
+    openCard('Role');
+    fireEvent.change(screen.getByLabelText('Role content (plain text)'), { target: { value: '' } });
+    saveAndClose();
+    openCard('Traits');
+    setSurface('Plain');
+    fireEvent.change(screen.getByLabelText('Traits content (plain text)'), { target: { value: '' } });
+    saveAndClose();
     await flushAutosave();
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
     expect(sent.definition.role).toBeUndefined();
   });
 
-  it('Escape blurs the focused field instead of stranding input', async () => {
+  it('Escape in the editor returns to the page without saving', async () => {
     shell();
-    const input = screen.getByLabelText('Role') as HTMLInputElement;
-    input.focus();
+    openCard('Role');
+    const area = screen.getByLabelText('Role content (plain text)');
     await act(async () => {
-      fireEvent.keyDown(input, { key: 'Escape' });
+      fireEvent.keyDown(area, { key: 'Escape' });
     });
-    expect(document.activeElement).not.toBe(input);
+    // The editor closed — the card is back and nothing was pushed.
+    expect(screen.getByRole('button', { name: 'Edit Role' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Role content (plain text)')).toBeNull();
   });
 
   it('read-only viewers see an honest empty state or the stored values only', () => {
@@ -279,14 +270,14 @@ describe('RoleSection', () => {
     expect(screen.getByText('Support concierge')).toBeInTheDocument();
     expect(screen.getByText('calm')).toBeInTheDocument();
     expect(screen.getByText('precise')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Role')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit Role' })).not.toBeInTheDocument();
   });
 
-  it('reports dirty state to the parent guard', async () => {
+  it('reports dirty state to the parent guard once the editor draft pushes', async () => {
     shell();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Goal'), { target: { value: 'Help users.' } });
-    });
+    openCard('Goal');
+    fireEvent.change(screen.getByLabelText('Goal content (plain text)'), { target: { value: 'Help users.' } });
+    await pushDraft();
     expect(onDirtyChange).toHaveBeenLastCalledWith(true);
   });
 });

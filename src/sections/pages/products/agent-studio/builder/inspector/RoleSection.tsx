@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  BookOpen,
+  MessageSquare,
+  OctagonX,
+  Sparkles,
+  Target,
+  UserRound,
+} from 'lucide-react';
 import { ApiError } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -24,18 +32,22 @@ import {
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
-import { AddRow, EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
+import { EmptyState, Whisper } from './InstructionsSection.styles';
 import { SkeletonRows } from './SkeletonRows';
-import { TextButton } from './ToolsSection.styles';
-import { TextArea } from '@components/common/ui/TextArea';
-import { TextInput } from '@components/common/ui/TextInput';
-import { Segmented } from '@components/common/ui/Segmented';
-import { MarkdownText } from '../../chat/ChatMessages/MarkdownText';
 import {
-  FieldBlock,
-  FieldHead,
-  FieldHelper,
-  FieldTitle,
+  SectionPage,
+  PageOutline,
+  MicroTip,
+} from '../section-ui/SectionPage';
+import { PillDot, ProgressPill } from '../section-ui/SectionPage.styles';
+import {
+  BlockCard,
+  ListPreview,
+  TextPreview,
+} from '../section-ui/BlockCard';
+import { BlockEditor } from '../section-ui/BlockEditor';
+import type { EditableBlock, ModalBlock, SavedBlock } from '../section-ui/types';
+import {
   PersonaCard,
   PersonaChip,
   PersonaChips,
@@ -45,12 +57,6 @@ import {
   PersonaName,
   PersonaNote,
   PersonaText,
-  TagAddRow,
-  TagChip,
-  TagCount,
-  TagRemove,
-  TagRow,
-  TagText,
 } from './RoleSection.styles';
 
 export interface RoleSectionProps {
@@ -74,16 +80,11 @@ interface ConflictState {
   attemptedDef: AgentDefinition;
 }
 
-const MODE_OPTIONS = [
-  { value: 'raw', label: 'Raw' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'json', label: 'JSON' },
-] as const;
-
-const WRITE_PREVIEW_OPTIONS = [
-  { value: 'write', label: 'Write' },
-  { value: 'preview', label: 'Preview' },
-] as const;
+/** One focused-editor session: what to edit and how to apply it. */
+interface EditingSession {
+  target: EditableBlock;
+  apply: (saved: SavedBlock) => void;
+}
 
 type RoleFieldKey = 'role' | 'goal' | 'traits' | 'communicationStyle' | 'knowledgeAreas' | 'prohibitedTopics';
 
@@ -145,93 +146,17 @@ function blankRoleState(): RoleState {
 
 const EMPTY_BLANK: RoleState = blankRoleState();
 
-/** Keyboard-accessible tag-list editor: Enter or the Add button appends a
- * trimmed, de-duplicated tag; chips carry a labeled remove button. Count
- * and per-item length caps are enforced in the UI (caps module enforces
- * them before save too). */
-function TagEditor({
-  label,
-  values,
-  maxItems,
-  maxItem,
-  onChange,
-}: {
-  label: string;
-  values: string[];
-  maxItems: number;
-  maxItem: number;
-  onChange: (values: string[]) => void;
-}) {
-  const [text, setText] = useState('');
-  const full = values.length >= maxItems;
-
-  const add = useCallback(() => {
-    const cleaned = text.trim();
-    if (!cleaned || full || cleaned.length > maxItem || values.includes(cleaned)) {
-      return;
-    }
-    onChange([...values, cleaned]);
-    setText('');
-  }, [text, full, maxItem, values, onChange]);
-
-  return (
-    <div>
-      {values.length > 0 && (
-        <TagRow>
-          {values.map((tag) => (
-            <TagChip key={tag}>
-              <TagText>{tag}</TagText>
-              <TagRemove
-                type="button"
-                aria-label={`Remove ${label} ${tag}`}
-                onClick={() => onChange(values.filter((v) => v !== tag))}
-              >
-                ×
-              </TagRemove>
-            </TagChip>
-          ))}
-        </TagRow>
-      )}
-      <TagAddRow>
-        <TextInput
-          aria-label={`Add ${label}`}
-          value={text}
-          maxLength={maxItem}
-          disabled={full}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              add();
-            }
-          }}
-          placeholder={full ? `${maxItems} items — the cap` : `Add ${label}, then Enter`}
-        />
-        <TextButton type="button" onClick={add} disabled={full || !text.trim()}>
-          Add
-        </TextButton>
-        <TagCount>
-          {values.length}/{maxItems}
-        </TagCount>
-      </TagAddRow>
-    </div>
-  );
-}
-
 interface RoleFieldDef {
   key: RoleFieldKey;
   kind: 'text' | 'list';
   title: string;
   helper: string;
-  /** Singular item label for list fields (aria labels, placeholders). */
-  label: string;
-  rows: number;
-  /** Parsed-value cap (raw/markdown modes only — JSON quoting adds
-   * characters, so the caps layer enforces JSON mode instead). */
+  /** Parsed-value cap for text fields (raw/markdown surfaces only — JSON
+   * quoting adds characters, so the caps layer enforces JSON mode). */
   maxLength?: number;
-  maxItems?: number;
-  maxItem?: number;
   placeholder: string;
+  emptyHint: string;
+  icon: React.ReactNode;
 }
 
 /** Canonical runtime order: Role → Goal → Traits → Communication style
@@ -242,200 +167,80 @@ const FIELDS: readonly RoleFieldDef[] = [
     kind: 'text',
     title: 'Role',
     helper: 'The persona this agent plays — composed into its system prompt. All fields are optional.',
-    label: 'role',
-    rows: 2,
     maxLength: ROLE_LIMITS.role,
     placeholder: 'e.g. Senior support engineer',
+    emptyHint: 'e.g. Senior support engineer — one breath.',
+    icon: <UserRound size={16} strokeWidth={1.8} />,
   },
   {
     key: 'goal',
     kind: 'text',
     title: 'Goal',
     helper: 'What this agent is here to achieve.',
-    label: 'goal',
-    rows: 3,
     maxLength: ROLE_LIMITS.goal,
     placeholder: 'What this agent is here to achieve',
+    emptyHint: 'The outcome this agent exists to produce.',
+    icon: <Target size={16} strokeWidth={1.8} />,
   },
   {
     key: 'traits',
     kind: 'list',
     title: 'Traits',
     helper: 'How the agent carries itself.',
-    label: 'trait',
-    rows: 4,
-    maxItems: ROLE_LIMITS.traits.max,
-    maxItem: ROLE_LIMITS.traits.item,
     placeholder: 'one\nper line',
+    emptyHint: 'One per line — e.g. patient, precise, candid.',
+    icon: <Sparkles size={16} strokeWidth={1.8} />,
   },
   {
     key: 'communicationStyle',
     kind: 'text',
     title: 'Communication style',
     helper: 'Tone, format, language — how the agent speaks.',
-    label: 'communication style',
-    rows: 3,
     maxLength: ROLE_LIMITS.communicationStyle,
     placeholder: 'Tone, format, language — how the agent speaks',
+    emptyHint: 'e.g. Terse. Bullets over paragraphs. No flattery.',
+    icon: <MessageSquare size={16} strokeWidth={1.8} />,
   },
   {
     key: 'knowledgeAreas',
     kind: 'list',
     title: 'Knowledge areas',
     helper: 'Domains this agent knows well.',
-    label: 'knowledge area',
-    rows: 4,
-    maxItems: ROLE_LIMITS.knowledgeAreas.max,
-    maxItem: ROLE_LIMITS.knowledgeAreas.item,
     placeholder: 'one\nper line',
+    emptyHint: 'One per line — the domains it speaks with authority on.',
+    icon: <BookOpen size={16} strokeWidth={1.8} />,
   },
   {
     key: 'prohibitedTopics',
     kind: 'list',
     title: 'Avoid',
     helper: 'Topics the agent steers clear of.',
-    label: 'avoided topic',
-    rows: 4,
-    maxItems: ROLE_LIMITS.prohibitedTopics.max,
-    maxItem: ROLE_LIMITS.prohibitedTopics.item,
     placeholder: 'one\nper line',
+    emptyHint: 'One per line — topics it declines or redirects.',
+    icon: <OctagonX size={16} strokeWidth={1.8} />,
   },
 ];
 
-/** A text field: mode selector on top, textarea below, Write/Preview in
- * markdown mode (the Instructions section's primitives, reused). */
-function RoleTextField({
-  def,
-  field,
-  onPatch,
-}: {
-  def: RoleFieldDef;
-  field: { mode: RoleFieldMode; content: string };
-  onPatch: (part: Partial<{ mode: RoleFieldMode; content: string }>) => void;
-}) {
-  const [preview, setPreview] = useState(false);
-  const showPreview = field.mode === 'markdown' && preview;
-  return (
-    <FieldBlock>
-      <FieldHead>
-        <FieldTitle>{def.title}</FieldTitle>
-        <FieldHelper>{def.helper}</FieldHelper>
-      </FieldHead>
-      <AddRow>
-        <Segmented
-          options={MODE_OPTIONS}
-          value={field.mode}
-          onChange={(mode: RoleFieldMode) => onPatch({ mode })}
-          size="sm"
-          ariaLabel={`${def.title} format`}
-        />
-        {field.mode === 'markdown' && (
-          <Segmented
-            options={WRITE_PREVIEW_OPTIONS}
-            value={preview ? 'preview' : 'write'}
-            onChange={(v: 'write' | 'preview') => setPreview(v === 'preview')}
-            size="sm"
-            ariaLabel={`${def.title} view`}
-          />
-        )}
-      </AddRow>
-      {showPreview ? (
-        <MarkdownText text={field.content} />
-      ) : (
-        <TextArea
-          aria-label={def.title}
-          value={field.content}
-          maxLength={field.mode === 'json' ? undefined : def.maxLength}
-          rows={def.rows}
-          onChange={(event) => onPatch({ content: event.target.value })}
-          placeholder={
-            field.mode === 'json'
-              ? '"A JSON string — quotes included"'
-              : def.placeholder
-          }
-        />
-      )}
-    </FieldBlock>
-  );
+function modeCaption(mode: RoleFieldMode): string {
+  if (mode === 'markdown') return 'Markdown';
+  if (mode === 'json') return 'JSON';
+  return 'Raw';
 }
 
-/** A list field: tag editor in JSON mode, textarea in Raw/Markdown modes
- * (one item per line; markdown wants strict "- " lines). */
-function RoleListField({
-  def,
-  field,
-  onPatch,
-}: {
-  def: RoleFieldDef;
-  field: { mode: RoleFieldMode; content: string };
-  onPatch: (part: Partial<{ mode: RoleFieldMode; content: string }>) => void;
-}) {
-  const parsed = useMemo(() => parseRoleListField(field), [field]);
-  // Malformed JSON must be visible, never silently replaced: fall back to a
-  // raw textarea so the stored content survives until the user fixes it.
-  const malformedJson =
-    field.mode === 'json' && field.content.trim() !== '' && parsed === undefined;
-  const maxItems = def.maxItems ?? 0;
-  const maxItem = def.maxItem ?? 0;
-  return (
-    <FieldBlock>
-      <FieldHead>
-        <FieldTitle>{def.title}</FieldTitle>
-        <FieldHelper>
-          {def.helper}{' '}
-          {field.mode === 'json'
-            ? `Up to ${maxItems}.`
-            : field.mode === 'markdown'
-              ? `One "- " line per item — up to ${maxItems}.`
-              : `One item per line — up to ${maxItems}.`}
-        </FieldHelper>
-      </FieldHead>
-      <AddRow>
-        <Segmented
-          options={MODE_OPTIONS}
-          value={field.mode}
-          onChange={(mode: RoleFieldMode) => onPatch({ mode })}
-          size="sm"
-          ariaLabel={`${def.title} format`}
-        />
-      </AddRow>
-      {field.mode === 'json' && !malformedJson ? (
-        <TagEditor
-          label={def.label}
-          values={parsed ?? []}
-          maxItems={maxItems}
-          maxItem={maxItem}
-          onChange={(values) => onPatch({ content: JSON.stringify(values) })}
-        />
-      ) : (
-        <>
-          {malformedJson && (
-            <Whisper $tone="red" role="alert">
-              This field does not parse as a JSON list — fix the text below.
-              Nothing is overwritten until it parses.
-            </Whisper>
-          )}
-          <TextArea
-            aria-label={def.title}
-            value={field.content}
-            rows={def.rows}
-            onChange={(event) => onPatch({ content: event.target.value })}
-            placeholder={field.mode === 'markdown' ? '- one\n- per line' : def.placeholder}
-          />
-        </>
-      )}
-    </FieldBlock>
-  );
+function toModalBlock(block: { mode: RoleFieldMode; content: string }): ModalBlock {
+  return { mode: block.mode, content: block.content };
 }
 
 /**
  * Role section — the SINGLE owner/editor of `role` (D-N2: six modal
  * fields, each Raw/Markdown/JSON, composed into the system prompt
  * server-side). All six fields are optional; an empty role is a valid
- * "no persona" state. Mirrors the Context/Response save machinery:
- * POST/PUT through the draft-version hooks, 8s autosave with unmount
- * flush, manual saveSignal, 409 adoption, 412 conflict dialog. Every cap
- * issue shown here is filtered to role paths.
+ * "no persona" state. The page shows one card per field; clicking a card
+ * opens the focused in-place editor (no modal, no route change). Mirrors
+ * the Instructions save machinery: POST/PUT through the draft-version
+ * hooks, 8s autosave with unmount flush, manual saveSignal, 409 adoption,
+ * 412 conflict dialog. Every cap issue shown here is filtered to role
+ * paths.
  */
 export function RoleSection({
   assistantId,
@@ -458,6 +263,11 @@ export function RoleSection({
   );
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditingSession | null>(null);
+  const policyRef = useRef(policy);
+  useEffect(() => {
+    policyRef.current = policy;
+  });
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
@@ -564,12 +374,37 @@ export function RoleSection({
     [],
   );
 
+  const openField = useCallback(
+    (def: RoleFieldDef) => {
+      const field = policyRef.current[def.key];
+      setEditing({
+        target: {
+          key: `role:${def.key}`,
+          sectionLabel: 'Role',
+          title: def.title,
+          jsonKind: def.kind === 'list' ? 'list' : 'text',
+          block: toModalBlock(field),
+          placeholder:
+            def.kind === 'list'
+              ? field.mode === 'json'
+                ? '["patient", "precise", "candid"]'
+                : field.mode === 'markdown'
+                  ? '- patient\n- precise\n- candid'
+                  : 'patient\nprecise\ncandid'
+              : def.kind === 'text' && field.mode === 'json'
+                ? '"A JSON string — quotes included"'
+                : def.placeholder,
+          cap: def.maxLength,
+        },
+        apply: (saved) =>
+          patchField(def.key, { mode: saved.block.mode as RoleFieldMode, content: saved.block.content }),
+      });
+    },
+    [patchField],
+  );
+
   if (!definition) {
-    return (
-      <Wrap>
-        <SkeletonRows rows={4} />
-      </Wrap>
-    );
+    return <SkeletonRows rows={4} />;
   }
 
   if (!canAuthor) {
@@ -587,7 +422,16 @@ export function RoleSection({
       roleListHasValue(policy.knowledgeAreas) ||
       roleListHasValue(policy.prohibitedTopics);
     return (
-      <Wrap>
+      <SectionPage
+        title="Role"
+        subtitle="Who this agent is — its persona, goals, and boundaries."
+        pill={
+          <ProgressPill>
+            <PillDot aria-hidden="true" />
+            Read-only
+          </ProgressPill>
+        }
+      >
         {hasAny ? (
           <PersonaCard>
             {roleText && roleText.trim() && <PersonaName>{roleText}</PersonaName>}
@@ -633,41 +477,126 @@ export function RoleSection({
           <EmptyState>No persona configured — this agent runs without a role.</EmptyState>
         )}
         <PersonaNote>Role needs an owner, admin, or developer — {denied}</PersonaNote>
-      </Wrap>
+      </SectionPage>
     );
   }
 
+  // The focused editor replaces the page in place — no modal, no route
+  // change. Drafts push into the section every 2s, so closing the editor
+  // never loses work.
+  if (editing) {
+    return (
+      <BlockEditor
+        key={editing.target.key}
+        target={editing.target}
+        onDraft={editing.apply}
+        onSave={editing.apply}
+        onClose={() => setEditing(null)}
+      />
+    );
+  }
+
+  const doneCount = FIELD_KEYS.filter((key) =>
+    LIST_KEYS.has(key) ? roleListHasValue(policy[key]) : roleTextHasValue(policy[key]),
+  ).length;
+
+  const scrollToField = (key: string) => {
+    document.getElementById(key)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
-    <Wrap
+    <div
       onKeyDown={(event) => {
+        // Esc on the page only ever blurs — the editor owns Esc while open.
         if (event.key === 'Escape' && event.target instanceof HTMLElement) {
           event.target.blur();
         }
       }}
     >
-      {FIELDS.map((def) =>
-        def.kind === 'text' ? (
-          <RoleTextField
-            key={def.key}
-            def={def}
-            field={policy[def.key]}
-            onPatch={(part) => patchField(def.key, part)}
-          />
-        ) : (
-          <RoleListField
-            key={def.key}
-            def={def}
-            field={policy[def.key]}
-            onPatch={(part) => patchField(def.key, part)}
-          />
-        ),
-      )}
+      <SectionPage
+        title="Role"
+        subtitle="Who this agent is — its persona, goals, and boundaries."
+        progress={{ done: doneCount, total: FIELD_KEYS.length }}
+        rail={
+          <>
+            <PageOutline
+              items={FIELDS.map((def) => {
+                const field = policy[def.key];
+                const hasValue = def.kind === 'list' ? roleListHasValue(field) : roleTextHasValue(field);
+                const parsed = def.kind === 'list' ? parseRoleListField(field) : undefined;
+                return {
+                  key: `role-${def.key}`,
+                  label: def.title,
+                  meta: parsed !== undefined ? `${parsed.length}` : '',
+                  done: hasValue,
+                };
+              })}
+              onSelect={scrollToField}
+            />
+            <MicroTip>
+              All six fields are optional — an empty role is a valid “no persona” state.
+            </MicroTip>
+          </>
+        }
+      >
+        {FIELDS.map((def) => {
+          const field = policy[def.key];
+          const cardId = `role-${def.key}`;
+          if (def.kind === 'list') {
+            const parsed = parseRoleListField(field);
+            const malformed = field.content.trim() !== '' && parsed === undefined;
+            const items = parsed ?? [];
+            return (
+              <div key={def.key} id={cardId}>
+                <BlockCard
+                  title={def.title}
+                  helper={def.helper}
+                  charCount={`${field.content.length.toLocaleString()} chars`}
+                  done={roleListHasValue(field)}
+                  empty={!malformed && items.length === 0}
+                  emptyTitle={`No ${def.title.toLowerCase()} yet`}
+                  emptyHint={def.emptyHint}
+                  emptyIcon={def.icon}
+                  preview={
+                    malformed ? <TextPreview text={field.content} /> : <ListPreview items={items} />
+                  }
+                  caption={
+                    malformed
+                      ? `${modeCaption(field.mode)} · invalid — edit to fix`
+                      : `${modeCaption(field.mode)} · ${items.length} ${items.length === 1 ? 'item' : 'items'}`
+                  }
+                  onOpen={() => openField(def)}
+                />
+              </div>
+            );
+          }
+          const parsed = parseRoleTextField(field);
+          const malformed = field.content.trim() !== '' && parsed === undefined;
+          return (
+            <div key={def.key} id={cardId}>
+              <BlockCard
+                title={def.title}
+                helper={def.helper}
+                charCount={`${field.content.length.toLocaleString()} chars`}
+                done={roleTextHasValue(field)}
+                empty={!malformed && (parsed ?? '').trim() === ''}
+                emptyTitle={`No ${def.title.toLowerCase()} yet`}
+                emptyHint={def.emptyHint}
+                emptyIcon={def.icon}
+                preview={<TextPreview text={field.content} />}
+                caption={malformed ? `${modeCaption(field.mode)} · invalid — edit to fix` : modeCaption(field.mode)}
+                onOpen={() => openField(def)}
+              />
+            </div>
+          );
+        })}
 
-      {heldMessages.map((message) => (
-        <Whisper key={message} $tone="red" role="alert">
-          {message} Autosave held — fix it and saving resumes on its own.
-        </Whisper>
-      ))}
+        {heldMessages.map((message) => (
+          <Whisper key={message} $tone="red" role="alert">
+            {message} Autosave held — fix it and saving resumes on its own.
+          </Whisper>
+        ))}
+      </SectionPage>
 
       {conflict && (
         <ConflictDialog
@@ -703,6 +632,6 @@ export function RoleSection({
           }}
         />
       )}
-    </Wrap>
+    </div>
   );
 }

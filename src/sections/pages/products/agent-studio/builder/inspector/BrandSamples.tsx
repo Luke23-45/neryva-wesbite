@@ -6,6 +6,7 @@ import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useAssistantTemplates } from '@hooks/studio/useSetupTemplates';
 import { useOrg } from '@/Context/OrgContext';
 import { humanizeSlug } from '../lib/instructions-v1';
+import { parseBrandVoice } from '../lib/brand-model';
 import {
   DeniedNote,
   Excerpt,
@@ -70,7 +71,7 @@ export function BrandSamples({ assistantId, canAuthor, startOpen, onInsert }: Br
 
   const templateCards = (templates.data ?? []).map((entry) => {
     const raw = (entry.template.definition as Record<string, unknown>).brand;
-    return { slug: entry.template.slug, text: typeof raw === 'string' ? raw : '' };
+    return { slug: entry.template.slug, text: parseBrandVoice(raw) ?? '' };
   });
   const hasAnyBrand = templateCards.some((c) => c.text.trim() !== '');
 
@@ -197,7 +198,7 @@ function OrgVoiceRow({
   onInsert: (text: string, source: string) => void;
 }) {
   const form = useAssistantDefinition(agentId);
-  const text = form.data?.definition.brand ?? '';
+  const text = parseBrandVoice(form.data?.definition.brand) ?? '';
 
   useEffect(() => {
     if (form.isError) onFailed(agentId);

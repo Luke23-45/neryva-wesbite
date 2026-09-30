@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
 import { defaultConsumer } from '@lib/engine/agent-payload';
 import { BrandSection } from './BrandSection';
-import { BRAND_LIMIT, countBrandChars } from '../lib/brand-model';
+import { BRAND_LIMIT, countBrandChars, type BrandVoice } from '../lib/brand-model';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 
 vi.mock('react-hot-toast', () => ({
@@ -25,7 +25,7 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
     useUpdateDraftVersion: () => ({ mutate: vi.fn(), isPending: false }),
     useAssistantDefinition: () => ({
       data: {
-        definition: { ...defaultConsumer(), brand: '' },
+        definition: { ...defaultConsumer(), brand: undefined },
         versionId: 'v9',
         hash: 'h2',
         status: 'DRAFT',
@@ -50,10 +50,10 @@ const BASE: AgentDefinition = {
   ...defaultConsumer(),
   model_policy: { allowed_models: ['a/b'], fallback_enabled: false },
   instructions: '## Role\nConcierge.\n',
-  brand: '',
+  brand: undefined,
 };
 
-function shell(brand: string) {
+function shell(brand: BrandVoice | undefined) {
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -76,29 +76,43 @@ beforeEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('BrandSection save gate (19-81: gate measures trimmed length)', () => {
-  it('trims: countBrandChars ignores leading/trailing whitespace', () => {
-    expect(countBrandChars('abc   ')).toBe(3);
-    expect(countBrandChars('  abc  ')).toBe(3);
-    expect(countBrandChars('abc')).toBe(3);
+describe('BrandSection save gate (modal: gate measures parsed length)', () => {
+  it('countBrandChars counts parsed chars — mode is not content, and raw is not trimmed', () => {
+    expect(countBrandChars({ mode: 'raw', content: 'abc   ' })).toBe(6);
+    expect(countBrandChars({ mode: 'markdown', content: '**bold**' })).toBe(8);
+    // JSON quoting is metadata: the parsed string is what counts.
+    expect(countBrandChars({ mode: 'json', content: '"abc"' })).toBe(3);
+    expect(countBrandChars({ mode: 'json', content: '["a", "b"]' })).toBe(0);
+    expect(countBrandChars(undefined)).toBe(0);
   });
 
-  it('a value whose trimmed length is within the cap passes the save gate', () => {
-    // 2000 visible chars + trailing whitespace the wire/caps never store.
-    const brand = 'x'.repeat(BRAND_LIMIT) + '\n   ';
-    shell(brand);
+  it('a value within the cap passes the save gate', () => {
+    shell({ mode: 'raw', content: 'x'.repeat(BRAND_LIMIT) });
 
-    expect(screen.getByText(`2,000 / ${BRAND_LIMIT.toLocaleString()} chars`)).toBeTruthy();
+    expect(screen.getByText(`2,000 chars`)).toBeTruthy();
     // The over-cap hold message must NOT render — nothing holds this save.
     expect(screen.queryByText(/over the 2,000 cap — trim to save/)).toBeNull();
   });
 
-  it('a value whose trimmed length exceeds the cap fails the save gate', () => {
-    const brand = 'x'.repeat(BRAND_LIMIT + 1) + '   ';
-    shell(brand);
+  it('a value exceeding the cap fails the save gate', () => {
+    shell({ mode: 'raw', content: 'x'.repeat(BRAND_LIMIT + 1) });
 
-    expect(screen.getByText(`2,001 / ${BRAND_LIMIT.toLocaleString()} chars`)).toBeTruthy();
+    expect(screen.getByText(`2,001 chars`)).toBeTruthy();
     // The over-cap hold message renders → doSave early-returns, autosave held.
     expect(screen.getByText(/1 over the 2,000 cap — trim to save/)).toBeTruthy();
+  });
+
+  it('invalid JSON content holds the save with a mode message', () => {
+    shell({ mode: 'json', content: 'not json at all' });
+
+    expect(screen.getByText(/not valid in its selected mode/)).toBeTruthy();
+  });
+
+  it('a JSON string that parses counts its parsed length', () => {
+    shell({ mode: 'json', content: JSON.stringify('x'.repeat(BRAND_LIMIT)) });
+
+    // The card counts parsed chars — JSON quoting is not content.
+    expect(screen.getByText(`2,000 chars`)).toBeTruthy();
+    expect(screen.queryByText(/over the 2,000 cap — trim to save/)).toBeNull();
   });
 });

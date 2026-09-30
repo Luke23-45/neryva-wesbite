@@ -24,7 +24,7 @@ describe('diffChangedSections', () => {
     const live = defaultConsumer();
     const draft = withPatch((d) => {
       d.instructions = 'new instructions';
-      d.brand = 'new brand';
+      d.brand = { mode: 'raw', content: 'new brand' };
     });
     expect(diffChangedSections(draft, live)).toEqual(['instructions', 'brand']);
   });

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
-import { TextInput } from '@components/common/ui/TextInput';
-import { TextArea } from '@components/common/ui/TextArea';
-import { Segmented } from '@components/common/ui/Segmented';
+import { FileOutput, FileText, MessagesSquare, Plus, ShieldAlert, Target, X } from 'lucide-react';
 import { ApiError, engine } from '@lib/engine/client';
 import { defaultConsumer } from '@lib/engine/agent-payload';
 import { findSecret } from '@lib/engine/setup-caps';
@@ -21,12 +18,11 @@ import {
   clientSaveBlockers,
   ensureSingletonsV1,
   estimateTokens,
+  INSTRUCTIONS_BLOCK_MAX_LENGTH,
   INSTRUCTIONS_LIMIT,
   isEmptyDocumentV1,
-  jsonBlockError,
   makeRepeatableBlock,
   normalizeDocumentForSave,
-  REPEATABLE_KINDS,
   SINGLETON_KINDS,
   type ExampleBlock,
   type InstructionMode,
@@ -41,36 +37,40 @@ import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { ConflictDialog } from './ConflictDialog';
 import { SamplesSection } from './SamplesSection';
-import { MarkdownText } from '../../chat/ChatMessages/MarkdownText';
+import { SkeletonRows } from './SkeletonRows';
 import {
-  AddButton,
+  SectionPage,
+  PageOutline,
+  ContextBudget,
+  MicroTip,
+} from '../section-ui/SectionPage';
+import { PillDot, ProgressPill } from '../section-ui/SectionPage.styles';
+import {
+  BlockCard,
+  TextPreview,
+} from '../section-ui/BlockCard';
+import { BlockEditor } from '../section-ui/BlockEditor';
+import { RulesBuilder } from '../section-ui/RulesBuilder';
+import { AddButton } from '../section-ui/RulesBuilder.styles';
+import type { EditableBlock, ModalBlock, SavedBlock } from '../section-ui/types';
+import {
   AddHint,
   AddRow,
-  BlockCard,
-  BlockCount,
-  BlockGroup,
-  BlockHeader,
-  BlockNumber,
-  BlockSub,
-  BlockTitle,
-  BudgetBar,
-  BudgetFill,
   CounterRow,
-  CustomCard,
-  EmptyState,
-  Goldilocks,
   IconButton,
-  PreviewBlock,
-  PreviewCard,
-  PreviewHeader,
-  PreviewText,
-  RuleInputWrap,
-  RuleList,
-  RuleRow,
   Whisper,
-  Wrap,
 } from './InstructionsSection.styles';
-import { SkeletonRows } from './SkeletonRows';
+import {
+  CompiledCard,
+  CompiledEmpty,
+  CompiledHead,
+  CompiledHelper,
+  CompiledMeta,
+  CompiledText,
+  CompiledTitle,
+  ReadCard,
+  ReadText,
+} from './InstructionsCompiled.styles';
 
 /**
  * Research ceiling (PLAN.md §5.1): 2–3 canonical examples beat 10 mediocre
@@ -80,17 +80,6 @@ const MAX_EXAMPLES = 6;
 
 /** Server preview debounce — one compile request per pause in typing. */
 const PREVIEW_DEBOUNCE_MS = 600;
-
-const MODE_OPTIONS = [
-  { value: 'raw', label: 'Raw' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'json', label: 'JSON' },
-] as const;
-
-const WRITE_PREVIEW_OPTIONS = [
-  { value: 'write', label: 'Write' },
-  { value: 'preview', label: 'Preview' },
-] as const;
 
 export interface InstructionsSectionProps {
   assistantId: string;
@@ -127,13 +116,29 @@ interface ConflictState {
   attemptedPreview: string | null;
 }
 
+/** One focused-editor session: what to edit and how to apply it. */
+interface EditingSession {
+  target: EditableBlock;
+  apply: (saved: SavedBlock) => void;
+}
+
+function modeCaption(mode: InstructionMode): string {
+  if (mode === 'markdown') return 'Markdown';
+  if (mode === 'json') return 'JSON';
+  return 'Plain';
+}
+
+function toModalBlock(block: { mode: InstructionMode; content: string }): ModalBlock {
+  return { mode: block.mode, content: block.content };
+}
+
 /**
  * Structured Instructions composer — blocks over the version-scoped
- * Instructions v1 document. The browser never compiles: the Compose tab edits
- * the document, the Preview tab shows the server-compiled prompt, and the JSON
- * tab edits the exact payload the server validates. Saves PUT the document
- * with If-Match; the 412 merge-or-reload dialog is preserved (Room copy
- * skeleton).
+ * Instructions v1 document. The page shows one card per block; clicking a
+ * card opens the focused in-place editor (no modal, no route change). Saves
+ * PUT the document with If-Match; the 412 merge-or-reload dialog is
+ * preserved. The browser never compiles: the compiled card shows the
+ * server-produced prompt the model will receive.
  */
 export function InstructionsSection({
   assistantId,
@@ -152,20 +157,17 @@ export function InstructionsSection({
   const [doc, setDoc] = useState<InstructionsV1 | null>(null);
   const [baseDoc, setBaseDoc] = useState<InstructionsV1 | null>(null);
   const [serverHash, setServerHash] = useState<string | null>(versionHash);
-  const [tab, setTab] = useState<'compose' | 'preview' | 'json'>('compose');
   const [preview, setPreview] = useState<ServerPreview | null>(null);
-  const [jsonText, setJsonText] = useState('');
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [putPending, setPutPending] = useState(false);
   const [creatingDraft, setCreatingDraft] = useState(false);
-  // Per-block markdown Write/Preview toggle (markdown blocks only). Keyed by
-  // block id for repeatables, `singleton:<kind>` for singletons.
-  const [mdPreview, setMdPreview] = useState<Record<string, boolean>>({});
-  const fieldRefs = useRef(new Map<string, HTMLElement>());
-  const jsonKeyRef = useRef('');
-  const jsonEditedRef = useRef(false);
+  const [editing, setEditing] = useState<EditingSession | null>(null);
+  const [samplesNonce, setSamplesNonce] = useState(0);
+  const samplesRef = useRef<HTMLDivElement>(null);
   const previewSeqRef = useRef(0);
   const previewKeyRef = useRef('');
+  const docRef = useRef<InstructionsV1 | null>(null);
+  docRef.current = doc;
 
   const instructionsPath =
     orgId && versionId
@@ -187,12 +189,7 @@ export function InstructionsSection({
 
   const docKey = doc ? JSON.stringify(doc) : '';
   const baseKey = baseDoc ? JSON.stringify(baseDoc) : '';
-  // Dirty covers both editing surfaces. Compose edits change the document;
-  // JSON-tab edits are tracked via the ref until they are applied to the
-  // document (leaving the tab) or saved. Every mutation of jsonEditedRef is
-  // paired with a setState, so this recomputes on the same render.
-  const dirty =
-    (doc !== null && baseDoc !== null && docKey !== baseKey) || jsonEditedRef.current;
+  const dirty = doc !== null && baseDoc !== null && docKey !== baseKey;
 
   useEffect(() => {
     onDirtyChange(dirty);
@@ -209,9 +206,6 @@ export function InstructionsSection({
       const incoming = ensureSingletonsV1(serverDoc.instructions ?? blankInstructionsV1());
       setDoc(incoming);
       setBaseDoc(incoming);
-      setJsonText('');
-      jsonKeyRef.current = '';
-      jsonEditedRef.current = false;
     }
     setServerHash(serverDoc.hash);
   }, [serverDoc, dirty]);
@@ -226,31 +220,14 @@ export function InstructionsSection({
     }
   }, [versionId, doc, definition]);
 
-  // The JSON tab edits the exact payload the server validates. Parsed lazily
-  // so blockers and the manual-save hold reason can name JSON problems.
-  const jsonParsed = useMemo(() => {
-    if (tab !== 'json') return null;
-    try {
-      return { ok: true as const, doc: JSON.parse(jsonText) as InstructionsV1 };
-    } catch {
-      return { ok: false as const, doc: null as InstructionsV1 | null };
-    }
-  }, [tab, jsonText]);
-
   // What the next save (and the server preview) measures: the normalized
   // document, never the raw editor state.
-  const effectiveDoc = useMemo(() => {
-    if (tab === 'json') {
-      if (!jsonParsed || !jsonParsed.ok || !jsonParsed.doc) return null;
-      return normalizeDocumentForSave(jsonParsed.doc);
-    }
-    return doc ? normalizeDocumentForSave(doc) : null;
-  }, [tab, jsonParsed, doc]);
+  const effectiveDoc = useMemo(() => (doc ? normalizeDocumentForSave(doc) : null), [doc]);
   const effectiveKey = effectiveDoc ? JSON.stringify(effectiveDoc) : '';
 
   // Server preview — the ONLY compilation. Debounced per pause in typing, so
-  // the Preview tab, the budget bar, and the over-limit hold all measure the
-  // same server-produced text the model will receive.
+  // the budget rail and the over-limit hold all measure the same
+  // server-produced text the model will receive.
   useEffect(() => {
     if (!canAuthor || !isDraft || !instructionsPath || !effectiveDoc) return;
     const payload = effectiveDoc;
@@ -283,53 +260,12 @@ export function InstructionsSection({
     return () => window.clearTimeout(timer);
   }, [canAuthor, isDraft, instructionsPath, effectiveDoc, effectiveKey]);
 
-  // Entering the JSON tab serializes the current document; the user's JSON
-  // edits survive tab switches until the document itself changes or a save
-  // lands.
-  useEffect(() => {
-    if (tab !== 'json' || !doc) return;
-    if (!jsonEditedRef.current && jsonKeyRef.current !== docKey) {
-      setJsonText(JSON.stringify(normalizeDocumentForSave(doc), null, 2));
-      jsonKeyRef.current = docKey;
-    }
-  }, [tab, doc, docKey]);
-
-  // Leaving the JSON tab with valid user edits applies them to the document —
-  // Compose, Preview, and the budget then all measure the same JSON the user
-  // wrote. Invalid JSON stays in the tab (the hold banner names the problem)
-  // for the user to fix; it is never silently discarded or reinterpreted.
-  const prevTabRef = useRef(tab);
-  useEffect(() => {
-    const prev = prevTabRef.current;
-    prevTabRef.current = tab;
-    if (prev !== 'json' || tab === 'json' || !jsonEditedRef.current || !doc) return;
-    let parsed: InstructionsV1;
-    try {
-      parsed = JSON.parse(jsonText) as InstructionsV1;
-    } catch {
-      return;
-    }
-    const adopted = ensureSingletonsV1(normalizeDocumentForSave(parsed));
-    jsonEditedRef.current = false;
-    jsonKeyRef.current = '';
-    // Skip the state churn when the JSON already matches the document.
-    if (JSON.stringify(normalizeDocumentForSave(doc)) !== JSON.stringify(adopted)) {
-      setDoc(adopted);
-    }
-  }, [tab, jsonText, doc]);
-
   const previewStale = effectiveKey !== '' && previewKeyRef.current !== effectiveKey;
   const compiledChars = preview && !previewStale ? preview.text.length : null;
   const overLimit = compiledChars !== null && compiledChars > INSTRUCTIONS_LIMIT;
 
   const blockers = useMemo(() => {
     const messages: string[] = [];
-    if (tab === 'json') {
-      if (!jsonParsed || !jsonParsed.ok) {
-        messages.push('Fix the JSON — it does not parse yet.');
-        return messages;
-      }
-    }
     if (effectiveDoc) messages.push(...clientSaveBlockers(effectiveDoc));
     if (overLimit && compiledChars !== null) {
       messages.push(
@@ -337,7 +273,7 @@ export function InstructionsSection({
       );
     }
     return messages;
-  }, [tab, jsonParsed, effectiveDoc, overLimit, compiledChars]);
+  }, [effectiveDoc, overLimit, compiledChars]);
 
   const secretHit = useMemo(() => {
     if (!canAuthor || !effectiveDoc) return null;
@@ -351,10 +287,14 @@ export function InstructionsSection({
       const hit = check(effectiveDoc[kind]?.content ?? '', BLOCK_LABELS[kind]);
       if (hit) return hit;
     }
-    for (const kind of REPEATABLE_KINDS) {
-      const list = effectiveDoc[kind] ?? [];
+    const repeatableEntries: Array<[string, Array<{ content?: string }>]> = [
+      ['Rules', effectiveDoc.rules],
+      ['Examples', effectiveDoc.examples],
+      ['Custom', effectiveDoc.custom],
+    ];
+    for (const [label, list] of repeatableEntries) {
       for (let i = 0; i < list.length; i += 1) {
-        const hit = check(list[i]?.content ?? '', `${BLOCK_LABELS[kind]} #${i + 1}`);
+        const hit = check(list[i]?.content ?? '', `${label} #${i + 1}`);
         if (hit) return hit;
       }
     }
@@ -363,18 +303,6 @@ export function InstructionsSection({
 
   const blocked = blockers.length > 0 || secretHit !== null;
   const pending = putPending || saveDraft.isPending || creatingDraft;
-
-  const registerField = (key: string) => (element: HTMLElement | null) => {
-    if (element) fieldRefs.current.set(key, element);
-    else fieldRefs.current.delete(key);
-  };
-
-  const focusBlock = useCallback((key: string) => {
-    setTab('compose');
-    window.setTimeout(() => {
-      fieldRefs.current.get(key)?.focus();
-    }, 0);
-  }, []);
 
   const patchSingleton = useCallback((kind: SingletonKind, patch: Partial<SingletonBlock>) => {
     setDoc((prev) => {
@@ -423,19 +351,118 @@ export function InstructionsSection({
     });
   }, []);
 
-  const addRepeatable = useCallback((kind: RepeatableKind) => {
-    const made =
-      kind === 'examples' ? makeRepeatableBlock('examples', '') : makeRepeatableBlock(kind, '');
-    setDoc((prev) => {
-      if (!prev) return prev;
-      if (kind === 'rules') return { ...prev, rules: [...prev.rules, made as RepeatableBlock] };
-      if (kind === 'examples') return { ...prev, examples: [...prev.examples, made as ExampleBlock] };
-      return { ...prev, custom: [...prev.custom, made as RepeatableBlock] };
-    });
-    window.setTimeout(() => {
-      fieldRefs.current.get(kind === 'examples' ? (made as ExampleBlock).id : (made as RepeatableBlock).id)?.focus();
-    }, 0);
-  }, []);
+  const openSingleton = useCallback(
+    (kind: SingletonKind) => {
+      const block = docRef.current?.[kind] ?? blankSingleton();
+      setEditing({
+        target: {
+          key: `singleton:${kind}`,
+          sectionLabel: 'Instructions',
+          title: BLOCK_LABELS[kind],
+          jsonKind: 'any',
+          block: toModalBlock(block),
+          placeholder:
+            kind === 'output'
+              ? 'Verdict + section cite · max 3 exchanges'
+              : kind === 'refusal'
+                ? 'Over $500 or off-policy → escalate to a human'
+                : 'One breath.',
+          cap: INSTRUCTIONS_BLOCK_MAX_LENGTH,
+        },
+        apply: (saved) => patchSingleton(kind, { mode: saved.block.mode, content: saved.block.content }),
+      });
+    },
+    [patchSingleton],
+  );
+
+  const openRepeatableTarget = useCallback(
+    (
+      kind: RepeatableKind,
+      id: string,
+      label: string,
+      block: { mode: InstructionMode; content: string },
+      title?: string,
+    ) => {
+      setEditing({
+        target: {
+          key: `${kind}:${id}`,
+          sectionLabel: 'Instructions',
+          title: label,
+          jsonKind: 'any',
+          block: toModalBlock(block),
+          placeholder:
+            kind === 'examples'
+              ? 'User: …\nAssistant: …'
+              : 'Define what this agent must always do, must never do, or should do under specific conditions.',
+          cap: INSTRUCTIONS_BLOCK_MAX_LENGTH,
+          ...(kind === 'examples'
+            ? { titleField: { value: title ?? '', placeholder: 'Edge case: angry refund request' } }
+            : {}),
+        },
+        apply: (saved) =>
+          patchRepeatable(kind, id, {
+            mode: saved.block.mode,
+            content: saved.block.content,
+            ...(saved.title !== undefined ? { title: saved.title } : {}),
+          }),
+      });
+    },
+    [patchRepeatable],
+  );
+
+  const openRepeatable = useCallback(
+    (kind: RepeatableKind, id: string) => {
+      const current = docRef.current;
+      const list: Array<{ id: string; mode: InstructionMode; content: string }> = !current
+        ? []
+        : kind === 'rules'
+          ? current.rules
+          : kind === 'examples'
+            ? current.examples
+            : current.custom;
+      const found = list.find((b) => b.id === id);
+      if (!found) return;
+      const index = list.indexOf(found);
+      const label =
+        kind === 'rules'
+          ? `Rule ${index + 1}`
+          : kind === 'examples'
+            ? `Example ${index + 1}`
+            : list.length > 1
+              ? `Custom text ${index + 1}`
+              : 'Custom text';
+      openRepeatableTarget(
+        kind,
+        id,
+        label,
+        found,
+        kind === 'examples' ? (found as ExampleBlock).title ?? '' : undefined,
+      );
+    },
+    [openRepeatableTarget],
+  );
+
+  /** Add a repeatable block and open the focused editor on it right away. */
+  const addRepeatableAndEdit = useCallback(
+    (kind: RepeatableKind) => {
+      const made =
+        kind === 'examples' ? makeRepeatableBlock('examples', '') : makeRepeatableBlock(kind, '');
+      setDoc((prev) => {
+        if (!prev) return prev;
+        if (kind === 'rules') return { ...prev, rules: [...prev.rules, made as RepeatableBlock] };
+        if (kind === 'examples') return { ...prev, examples: [...prev.examples, made as ExampleBlock] };
+        return { ...prev, custom: [...prev.custom, made as RepeatableBlock] };
+      });
+      openRepeatableTarget(
+        kind,
+        (made as RepeatableBlock).id,
+        kind === 'rules' ? 'New rule' : kind === 'examples' ? 'New example' : 'New custom text',
+        made as RepeatableBlock,
+        kind === 'examples' ? '' : undefined,
+      );
+    },
+    [openRepeatableTarget],
+  );
 
   const appendSampleBlocks = useCallback((incoming: NewInstructionBlock[]) => {
     if (incoming.length === 0) return;
@@ -457,6 +484,13 @@ export function InstructionsSection({
     // The toast lives in SamplesSection.insert — one surface, never two.
   }, []);
 
+  const openSamples = useCallback(() => {
+    setSamplesNonce((n) => n + 1);
+    window.setTimeout(() => {
+      samplesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }, []);
+
   const putInstructions = useCallback(
     (path: string, toSave: InstructionsV1, matchHash: string): Promise<string> =>
       engine<Record<string, unknown>>(path, {
@@ -473,9 +507,6 @@ export function InstructionsSection({
       setServerHash(newHash);
       setBaseDoc(toSave);
       setDoc(toSave);
-      setJsonText('');
-      jsonKeyRef.current = '';
-      jsonEditedRef.current = false;
       if (newVersionId) {
         queryClient.setQueryData(
           ['studio', 'assistants', assistantId, 'instructions', newVersionId],
@@ -620,8 +651,6 @@ export function InstructionsSection({
   useDraftAutosave(
     { canAuthor, dirty, blocked, conflict, adoptingActive: false, pending, definition },
     doSave,
-    // effectiveKey covers both surfaces: Compose edits and JSON-tab edits
-    // each restart the debounce, so typing in either tab delays the save.
     [effectiveKey],
   );
 
@@ -660,24 +689,29 @@ export function InstructionsSection({
   }, [canAuthor, definition, creatingDraft, saveDraft, queryClient]);
 
   if (!definition) {
-    return (
-      <Wrap>
-        <SkeletonRows rows={4} />
-      </Wrap>
-    );
+    return <SkeletonRows rows={4} />;
   }
 
   if (!canAuthor || (!isDraft && versionId)) {
     const publishedText = definition.instructions ?? '';
     return (
-      <Wrap>
-        <PreviewCard>
+      <SectionPage
+        title="Instructions"
+        subtitle="Tell the agent how to behave, decide, and speak."
+        pill={
+          <ProgressPill>
+            <PillDot aria-hidden="true" />
+            Read-only
+          </ProgressPill>
+        }
+      >
+        <ReadCard>
           {publishedText.trim() === '' ? (
-            <EmptyState>No instructions yet.</EmptyState>
+            <ReadText>No instructions yet.</ReadText>
           ) : (
-            <PreviewText>{publishedText}</PreviewText>
+            <ReadText>{publishedText}</ReadText>
           )}
-        </PreviewCard>
+        </ReadCard>
         {canAuthor && !isDraft && versionId && (
           <AddRow>
             <AddButton type="button" onClick={createDraftForEdit} disabled={creatingDraft}>
@@ -697,15 +731,26 @@ export function InstructionsSection({
           startOpen={false}
           onInsert={() => undefined}
         />
-      </Wrap>
+      </SectionPage>
     );
   }
 
   if (doc === null) {
+    return <SkeletonRows rows={4} />;
+  }
+
+  // The focused editor replaces the page in place — no modal, no route
+  // change; the right rail recedes. Drafts push into the section every 2s,
+  // so closing the editor never loses work.
+  if (editing) {
     return (
-      <Wrap>
-        <SkeletonRows rows={4} />
-      </Wrap>
+      <BlockEditor
+        key={editing.target.key}
+        target={editing.target}
+        onDraft={editing.apply}
+        onSave={editing.apply}
+        onClose={() => setEditing(null)}
+      />
     );
   }
 
@@ -713,432 +758,280 @@ export function InstructionsSection({
   const rules = doc.rules;
   const examples = doc.examples;
   const customs = doc.custom;
-  const previewChars = compiledChars ?? 0;
-  const ratio = previewChars / INSTRUCTIONS_LIMIT;
-  const blockLabel = (kind: string): string =>
-    (BLOCK_LABELS as Record<string, string>)[kind] ?? kind;
+
+  const singletonDone = SINGLETON_KINDS.map((kind) => (doc[kind]?.content.trim() ?? '') !== '');
+  const totalBlocks = SINGLETON_KINDS.length + rules.length + examples.length + customs.length;
+  const doneBlocks =
+    singletonDone.filter(Boolean).length +
+    rules.filter((b) => b.content.trim() !== '').length +
+    examples.filter((b) => b.content.trim() !== '').length +
+    customs.filter((b) => b.content.trim() !== '').length;
+
+  const scrollToBlock = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const singletonIcons: Record<SingletonKind, React.ReactNode> = {
+    objective: <Target size={16} strokeWidth={1.8} />,
+    output: <FileOutput size={16} strokeWidth={1.8} />,
+    refusal: <ShieldAlert size={16} strokeWidth={1.8} />,
+  };
+  const singletonEmptyHints: Record<SingletonKind, string> = {
+    objective: 'One breath — what is this agent for?',
+    output: 'How should answers be shaped? Verdict + section cite · max 3 exchanges.',
+    refusal: 'When should it decline? Over $500 or off-policy → escalate to a human.',
+  };
+
+  const compiledTokens = compiledChars !== null ? estimateTokens(compiledChars) : null;
 
   return (
-    <Wrap
+    <div
       onKeyDown={(event) => {
-        // Esc inside the composer only ever blurs (PLAN.md §5.6) — canvas
-        // deselect is owned by the page guard, which stands down while dirty.
+        // Esc on the page only ever blurs (PLAN.md §5.6) — the editor owns
+        // Esc while it is open.
         if (event.key === 'Escape' && event.target instanceof HTMLElement) {
           event.target.blur();
         }
       }}
     >
-      <Segmented
-        options={[
-          { value: 'compose', label: 'Compose' },
-          { value: 'preview', label: 'Preview' },
-          { value: 'json', label: 'JSON' },
-        ]}
-        value={tab}
-        onChange={setTab}
-        size="sm"
-        ariaLabel="Instructions editing mode"
-      />
-
-      {tab === 'preview' && (
-        <PreviewCard>
-          {preview === null || previewStale ? (
-            <EmptyState>Compiling preview…</EmptyState>
-          ) : preview.text.trim() === '' ? (
-            <EmptyState>No instructions yet — compose or use a sample below.</EmptyState>
-          ) : (
-            <>
-              {preview.blocks
-                .filter((b) => !b.empty)
-                .map((b) => {
-                  const key = b.block_id ?? `singleton:${b.kind}`;
-                  return (
-                    <PreviewBlock
-                      key={key}
-                      type="button"
-                      onClick={() => focusBlock(key)}
-                      title="Jump to this block"
-                    >
-                      <PreviewHeader>
-                        {b.title ? `${blockLabel(b.kind)} — ${b.title}` : blockLabel(b.kind)}
-                      </PreviewHeader>
-                    </PreviewBlock>
-                  );
-                })}
-              <PreviewText>{preview.text}</PreviewText>
-              <CounterRow>
-                <span>compiler {preview.compiler_version || 'unknown'}</span>
-                <span>hash {preview.hash.slice(0, 12)}</span>
-              </CounterRow>
-            </>
-          )}
-        </PreviewCard>
-      )}
-
-      {tab === 'json' && (
-        <>
-          <TextArea
-            id="instructions-json-text"
-            label="Structured document — exactly what the server validates on save"
-            value={jsonText}
-            onChange={(event) => {
-              setJsonText(event.target.value);
-              jsonEditedRef.current = true;
-            }}
-            rows={20}
-            spellCheck={false}
+      <SectionPage
+        title="Instructions"
+        subtitle="Tell the agent how to behave, decide, and speak."
+        progress={{ done: doneBlocks, total: totalBlocks }}
+        rail={
+          <>
+            <PageOutline
+              items={[
+                { key: 'instr-objective', label: 'Objective', meta: '', done: singletonDone[0] },
+                {
+                  key: 'instr-rules',
+                  label: 'Rules',
+                  meta: `${rules.length}`,
+                  done: rules.some((b) => b.content.trim() !== ''),
+                },
+                { key: 'instr-output', label: 'Output', meta: '', done: singletonDone[1] },
+                { key: 'instr-refusal', label: 'Refusal', meta: '', done: singletonDone[2] },
+                {
+                  key: 'instr-examples',
+                  label: 'Examples',
+                  meta: `${examples.length}`,
+                  done: examples.some((b) => b.content.trim() !== ''),
+                },
+                {
+                  key: 'instr-custom',
+                  label: 'Custom text',
+                  meta: `${customs.length}`,
+                  done: customs.some((b) => b.content.trim() !== ''),
+                },
+              ]}
+              onSelect={scrollToBlock}
+            />
+            <ContextBudget
+              total={compiledChars ?? 0}
+              limit={INSTRUCTIONS_LIMIT}
+              rows={[
+                { key: 'compiled', label: 'Compiled prompt', chars: compiledChars ?? 0 },
+              ]}
+              note={
+                compiledChars === null
+                  ? 'Compiling…'
+                  : `${(INSTRUCTIONS_LIMIT - compiledChars).toLocaleString()} chars of headroom · ~${(compiledTokens ?? 0).toLocaleString()} tokens (est.)${
+                      compiledChars > 0 && compiledChars < 500
+                        ? ' — short prompts hold shape better; cut a paragraph, re-run evals, keep what scores.'
+                        : ''
+                    }`
+              }
+            />
+            <MicroTip>2–3 canonical examples beat 10 mediocre ones.</MicroTip>
+          </>
+        }
+      >
+        <div id="instr-objective">
+          <BlockCard
+            title={BLOCK_LABELS.objective}
+            helper={BLOCK_HINTS.objective}
+            charCount={`${(doc.objective?.content.length ?? 0).toLocaleString()} chars`}
+            done={singletonDone[0]}
+            empty={!singletonDone[0]}
+            emptyTitle="No objective yet"
+            emptyHint={singletonEmptyHints.objective}
+            emptyIcon={singletonIcons.objective}
+            preview={<TextPreview text={doc.objective?.content ?? ''} />}
+            caption={modeCaption(doc.objective?.mode ?? 'markdown')}
+            onOpen={() => openSingleton('objective')}
           />
-          <AddRow>
-            <AddButton
-              type="button"
-              onClick={() => {
-                setJsonText(JSON.stringify(normalizeDocumentForSave(doc), null, 2));
-                jsonKeyRef.current = docKey;
-                jsonEditedRef.current = false;
-              }}
-            >
-              Reset to composer
-            </AddButton>
-          </AddRow>
-        </>
-      )}
+        </div>
 
-      {tab === 'compose' && (
-        <>
-          {SINGLETON_KINDS.map((kind, index) => {
-            const block = doc[kind] ?? blankSingleton();
-            const key = `singleton:${kind}`;
-            const showMdPreview = block.mode === 'markdown' && mdPreview[key] === true;
-            const jsonErr = block.mode === 'json' ? jsonBlockError(block.content) : null;
-            return (
-              <BlockGroup key={kind}>
-                <BlockHeader>
-                  <BlockNumber aria-hidden="true">{index + 1}</BlockNumber>
-                  <BlockTitle>
-                    {BLOCK_LABELS[kind]} <BlockSub>{BLOCK_HINTS[kind]}</BlockSub>
-                  </BlockTitle>
-                  <BlockCount>{block.content.length.toLocaleString()} chars</BlockCount>
-                </BlockHeader>
-                <BlockCard>
-                  <AddRow>
-                    <Segmented
-                      options={MODE_OPTIONS}
-                      value={block.mode}
-                      onChange={(mode: InstructionMode) => patchSingleton(kind, { mode })}
-                      size="sm"
-                      ariaLabel={`${BLOCK_LABELS[kind]} format`}
-                    />
-                    {block.mode === 'markdown' && (
-                      <Segmented
-                        options={WRITE_PREVIEW_OPTIONS}
-                        value={showMdPreview ? 'preview' : 'write'}
-                        onChange={(v: 'write' | 'preview') =>
-                          setMdPreview((prev) => ({ ...prev, [key]: v === 'preview' }))
-                        }
-                        size="sm"
-                        ariaLabel={`${BLOCK_LABELS[kind]} view`}
-                      />
-                    )}
-                  </AddRow>
-                  {showMdPreview ? (
-                    <MarkdownText text={block.content} />
-                  ) : (
-                    <TextArea
-                      ref={registerField(key)}
-                      label={undefined}
-                      aria-label={BLOCK_LABELS[kind]}
-                      value={block.content}
-                      onChange={(event) => patchSingleton(kind, { content: event.target.value })}
-                      rows={2}
-                      placeholder={
-                        kind === 'output'
-                          ? 'Verdict + section cite · max 3 exchanges'
-                          : kind === 'refusal'
-                            ? 'Over $500 or off-policy → escalate to a human'
-                            : 'One breath.'
-                      }
-                    />
-                  )}
-                  {jsonErr && (
-                    <Whisper $tone="amber" role="alert">
-                      Not valid JSON — the server will refuse this block on save.{' '}
-                      <AddButton
-                        type="button"
-                        onClick={() => patchSingleton(kind, { content: JSON.stringify(block.content) })}
-                      >
-                        Wrap as JSON string
-                      </AddButton>
-                    </Whisper>
-                  )}
-                </BlockCard>
-              </BlockGroup>
-            );
-          })}
+        <div id="instr-rules">
+          <RulesBuilder
+            title="Rules"
+            helper={BLOCK_HINTS.rules}
+            emptyTitle="No rules yet"
+            emptyHint="Hard constraints the agent must never break. One rule per line works best."
+            rules={rules.map((b) => ({ id: b.id, block: toModalBlock(b) }))}
+            countLabel={(n) => `${n} ${n === 1 ? 'rule' : 'rules'}`}
+            onAdd={() => addRepeatableAndEdit('rules')}
+            onEdit={(id) => openRepeatable('rules', id)}
+            onDelete={(id) => removeRepeatable('rules', id)}
+            onMove={moveRule}
+            onBrowseExamples={openSamples}
+          />
+        </div>
 
-          <BlockGroup>
-            <BlockHeader>
-              <BlockTitle>
-                Rules <BlockSub>{BLOCK_HINTS.rules}</BlockSub>
-              </BlockTitle>
-              <BlockCount>
-                {rules.length} {rules.length === 1 ? 'rule' : 'rules'}
-              </BlockCount>
-            </BlockHeader>
-            <RuleList>
-              {rules.map((block, index) => (
-                <RuleRow key={block.id} data-rule-row={block.id}>
+        <div id="instr-output">
+          <BlockCard
+            title={BLOCK_LABELS.output}
+            helper={BLOCK_HINTS.output}
+            charCount={`${(doc.output?.content.length ?? 0).toLocaleString()} chars`}
+            done={singletonDone[1]}
+            empty={!singletonDone[1]}
+            emptyTitle="No output contract yet"
+            emptyHint={singletonEmptyHints.output}
+            emptyIcon={singletonIcons.output}
+            preview={<TextPreview text={doc.output?.content ?? ''} />}
+            caption={modeCaption(doc.output?.mode ?? 'markdown')}
+            onOpen={() => openSingleton('output')}
+          />
+        </div>
+
+        <div id="instr-refusal">
+          <BlockCard
+            title={BLOCK_LABELS.refusal}
+            helper={BLOCK_HINTS.refusal}
+            charCount={`${(doc.refusal?.content.length ?? 0).toLocaleString()} chars`}
+            done={singletonDone[2]}
+            empty={!singletonDone[2]}
+            emptyTitle="No refusal policy yet"
+            emptyHint={singletonEmptyHints.refusal}
+            emptyIcon={singletonIcons.refusal}
+            preview={<TextPreview text={doc.refusal?.content ?? ''} />}
+            caption={modeCaption(doc.refusal?.mode ?? 'markdown')}
+            onOpen={() => openSingleton('refusal')}
+          />
+        </div>
+
+        <div id="instr-examples">
+          {examples.map((block, index) => (
+            <div key={block.id} id={`instr-example-${block.id}`}>
+              <BlockCard
+                title={block.title?.trim() ? block.title.trim() : `Example ${index + 1}`}
+                helper="A canonical interaction the agent should imitate."
+                charCount={`${block.content.length.toLocaleString()} chars`}
+                done={block.content.trim() !== ''}
+                empty={block.content.trim() === ''}
+                emptyTitle="Empty example"
+                emptyHint="User: … Assistant: …"
+                emptyIcon={<MessagesSquare size={16} strokeWidth={1.8} />}
+                headerActions={
                   <IconButton
                     type="button"
-                    aria-label={`Move rule ${index + 1} up`}
-                    disabled={index === 0}
-                    onClick={() => moveRule(block.id, -1)}
+                    aria-label={`Remove example ${index + 1}`}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      removeRepeatable('examples', block.id);
+                    }}
                   >
-                    <ChevronUp size={14} strokeWidth={1.8} />
-                  </IconButton>
-                  <IconButton
-                    type="button"
-                    aria-label={`Move rule ${index + 1} down`}
-                    disabled={index === rules.length - 1}
-                    onClick={() => moveRule(block.id, 1)}
-                  >
-                    <ChevronDown size={14} strokeWidth={1.8} />
-                  </IconButton>
-                  <RuleInputWrap>
-                    <TextInput
-                      ref={registerField(block.id)}
-                      aria-label={`Rule ${index + 1}`}
-                      value={block.content}
-                      onChange={(event) => patchRepeatable('rules', block.id, { content: event.target.value })}
-                      placeholder="Define what this agent must always do, must never do, or should do under specific conditions."
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          addRepeatable('rules');
-                        }
-                      }}
-                    />
-                  </RuleInputWrap>
-                  <Segmented
-                    options={MODE_OPTIONS}
-                    value={block.mode}
-                    onChange={(mode: InstructionMode) => patchRepeatable('rules', block.id, { mode })}
-                    size="sm"
-                    ariaLabel={`Rule ${index + 1} format`}
-                  />
-                  <IconButton type="button" aria-label={`Delete rule ${index + 1}`} onClick={() => removeRepeatable('rules', block.id)}>
                     <X size={14} strokeWidth={1.8} />
                   </IconButton>
-                </RuleRow>
-              ))}
-            </RuleList>
-            {rules.length === 0 && (
-              <EmptyState>No rules yet — one rule per line works best.</EmptyState>
-            )}
+                }
+                preview={<TextPreview text={block.content} mono />}
+                caption={modeCaption(block.mode)}
+                onOpen={() => openRepeatable('examples', block.id)}
+              />
+            </div>
+          ))}
+          {examples.length < MAX_EXAMPLES ? (
             <AddRow>
-              <AddButton type="button" onClick={() => addRepeatable('rules')}>
-                <Plus size={13} strokeWidth={2} /> Add rule
+              <AddButton type="button" onClick={() => addRepeatableAndEdit('examples')}>
+                <Plus size={13} strokeWidth={2} /> Add example
               </AddButton>
-              <AddButton type="button" onClick={() => addRepeatable('custom')}>
-                <Plus size={13} strokeWidth={2} /> Add custom text
-              </AddButton>
-              {examples.length < MAX_EXAMPLES ? (
-                <AddButton type="button" onClick={() => addRepeatable('examples')}>
-                  <Plus size={13} strokeWidth={2} /> Add example
-                </AddButton>
-              ) : (
-                <AddHint>
-                  {MAX_EXAMPLES} examples is plenty — 2–3 canonical beats 10 mediocre.
-                </AddHint>
-              )}
             </AddRow>
-          </BlockGroup>
-
-          {examples.map((block, index) => {
-            const key = block.id;
-            const showMdPreview = block.mode === 'markdown' && mdPreview[key] === true;
-            const jsonErr = block.mode === 'json' ? jsonBlockError(block.content) : null;
-            return (
-              <BlockGroup key={block.id}>
-                <BlockHeader>
-                  <BlockTitle>Example {index + 1}</BlockTitle>
-                  <BlockCount>
-                    <AddButton type="button" onClick={() => removeRepeatable('examples', block.id)}>
-                      Remove
-                    </AddButton>
-                  </BlockCount>
-                </BlockHeader>
-                <BlockCard>
-                  <TextInput
-                    aria-label={`Example ${index + 1} title`}
-                    value={block.title ?? ''}
-                    onChange={(event) => patchRepeatable('examples', block.id, { title: event.target.value })}
-                    placeholder="Edge case: angry refund request"
-                  />
-                  <AddRow>
-                    <Segmented
-                      options={MODE_OPTIONS}
-                      value={block.mode}
-                      onChange={(mode: InstructionMode) => patchRepeatable('examples', block.id, { mode })}
-                      size="sm"
-                      ariaLabel={`Example ${index + 1} format`}
-                    />
-                    {block.mode === 'markdown' && (
-                      <Segmented
-                        options={WRITE_PREVIEW_OPTIONS}
-                        value={showMdPreview ? 'preview' : 'write'}
-                        onChange={(v: 'write' | 'preview') =>
-                          setMdPreview((prev) => ({ ...prev, [key]: v === 'preview' }))
-                        }
-                        size="sm"
-                        ariaLabel={`Example ${index + 1} view`}
-                      />
-                    )}
-                  </AddRow>
-                  {showMdPreview ? (
-                    <MarkdownText text={block.content} />
-                  ) : (
-                    <TextArea
-                      ref={registerField(key)}
-                      aria-label={`Example ${index + 1} body`}
-                      value={block.content}
-                      onChange={(event) => patchRepeatable('examples', block.id, { content: event.target.value })}
-                      rows={3}
-                      placeholder={'User: …\nAssistant: …'}
-                    />
-                  )}
-                  {jsonErr && (
-                    <Whisper $tone="amber" role="alert">
-                      Not valid JSON — the server will refuse this block on save.{' '}
-                      <AddButton
-                        type="button"
-                        onClick={() => patchRepeatable('examples', block.id, { content: JSON.stringify(block.content) })}
-                      >
-                        Wrap as JSON string
-                      </AddButton>
-                    </Whisper>
-                  )}
-                </BlockCard>
-              </BlockGroup>
-            );
-          })}
-
-          {customs.map((block, index) => {
-            const key = block.id;
-            const showMdPreview = block.mode === 'markdown' && mdPreview[key] === true;
-            const jsonErr = block.mode === 'json' ? jsonBlockError(block.content) : null;
-            return (
-              <BlockGroup key={block.id}>
-                <BlockHeader>
-                  <BlockTitle>
-                    Custom text <BlockSub>{BLOCK_HINTS.custom}</BlockSub>
-                  </BlockTitle>
-                  <BlockCount>
-                    <AddButton type="button" onClick={() => removeRepeatable('custom', block.id)}>
-                      Delete
-                    </AddButton>
-                  </BlockCount>
-                </BlockHeader>
-                <CustomCard>
-                  <AddRow>
-                    <Segmented
-                      options={MODE_OPTIONS}
-                      value={block.mode}
-                      onChange={(mode: InstructionMode) => patchRepeatable('custom', block.id, { mode })}
-                      size="sm"
-                      ariaLabel={`Custom text ${index + 1} format`}
-                    />
-                    {block.mode === 'markdown' && (
-                      <Segmented
-                        options={WRITE_PREVIEW_OPTIONS}
-                        value={showMdPreview ? 'preview' : 'write'}
-                        onChange={(v: 'write' | 'preview') =>
-                          setMdPreview((prev) => ({ ...prev, [key]: v === 'preview' }))
-                        }
-                        size="sm"
-                        ariaLabel={`Custom text ${index + 1} view`}
-                      />
-                    )}
-                  </AddRow>
-                  {showMdPreview ? (
-                    <MarkdownText text={block.content} />
-                  ) : (
-                    <TextArea
-                      ref={registerField(key)}
-                      aria-label="Custom text (preserved verbatim)"
-                      value={block.content}
-                      onChange={(event) => patchRepeatable('custom', block.id, { content: event.target.value })}
-                      rows={6}
-                    />
-                  )}
-                  {jsonErr && (
-                    <Whisper $tone="amber" role="alert">
-                      Not valid JSON — the server will refuse this block on save.{' '}
-                      <AddButton
-                        type="button"
-                        onClick={() => patchRepeatable('custom', block.id, { content: JSON.stringify(block.content) })}
-                      >
-                        Wrap as JSON string
-                      </AddButton>
-                    </Whisper>
-                  )}
-                </CustomCard>
-              </BlockGroup>
-            );
-          })}
-
-          {emptyDoc && (
-            <EmptyState>
-              Fastest start: use a sample below — appends as blocks, nothing overwritten.
-            </EmptyState>
+          ) : (
+            <AddHint>{MAX_EXAMPLES} examples is plenty — 2–3 canonical beats 10 mediocre.</AddHint>
           )}
-        </>
-      )}
+        </div>
 
-      {secretHit && (
-        <Whisper $tone="amber" role="alert">
-          Looks like a pasted credential in {secretHit.label} ({secretHit.message.replace(/^instructions:\s*/, '')}) —
-          secrets are refused at save. Mention it, don’t paste it.
-        </Whisper>
-      )}
-      {blockers.map((message) => (
-        <Whisper key={message} $tone="red" role="alert">
-          {message} Autosave held — fix it and saving resumes on its own.
-        </Whisper>
-      ))}
+        <div id="instr-custom">
+          {customs.map((block, index) => (
+            <div key={block.id} id={`instr-custom-${block.id}`}>
+              <BlockCard
+                title={customs.length > 1 ? `Custom text ${index + 1}` : 'Custom text'}
+                helper={BLOCK_HINTS.custom}
+                charCount={`${block.content.length.toLocaleString()} chars`}
+                done={block.content.trim() !== ''}
+                empty={block.content.trim() === ''}
+                emptyTitle="Empty custom block"
+                emptyHint="Anything that does not fit above — preserved verbatim."
+                emptyIcon={<FileText size={16} strokeWidth={1.8} />}
+                headerActions={
+                  <IconButton
+                    type="button"
+                    aria-label={`Delete custom text ${index + 1}`}
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      removeRepeatable('custom', block.id);
+                    }}
+                  >
+                    <X size={14} strokeWidth={1.8} />
+                  </IconButton>
+                }
+                preview={<TextPreview text={block.content} />}
+                caption={modeCaption(block.mode)}
+                onOpen={() => openRepeatable('custom', block.id)}
+              />
+            </div>
+          ))}
+          <AddRow>
+            <AddButton type="button" onClick={() => addRepeatableAndEdit('custom')}>
+              <Plus size={13} strokeWidth={2} /> Add custom text
+            </AddButton>
+          </AddRow>
+        </div>
 
-      <SamplesSection
-        assistantId={assistantId}
-        canAuthor
-        startOpen={emptyDoc}
-        onInsert={appendSampleBlocks}
-      />
-
-      <div>
-        <CounterRow>
-          <span>
-            {compiledChars === null ? (
-              'Measuring…'
+        <div id="instr-compiled">
+          <CompiledCard>
+            <CompiledHead>
+              <CompiledTitle>Compiled prompt</CompiledTitle>
+              {preview && !previewStale && (
+                <CompiledMeta>
+                  compiler {preview.compiler_version || 'unknown'} · hash {preview.hash.slice(0, 12)}
+                </CompiledMeta>
+              )}
+            </CompiledHead>
+            <CompiledHelper>Server-compiled — exactly what the model receives.</CompiledHelper>
+            {preview === null || previewStale ? (
+              <CompiledEmpty>Compiling preview…</CompiledEmpty>
+            ) : preview.text.trim() === '' ? (
+              <CompiledEmpty>No instructions yet — compose or use a sample below.</CompiledEmpty>
             ) : (
-              <>
-                {compiledChars.toLocaleString()} / {INSTRUCTIONS_LIMIT.toLocaleString()} chars
-              </>
+              <CompiledText>{preview.text}</CompiledText>
             )}
-          </span>
-          <span>
-            {compiledChars === null
-              ? 'server preview pending'
-              : `~${estimateTokens(compiledChars).toLocaleString()} tokens (est.) · server-measured`}
-          </span>
-        </CounterRow>
-        <BudgetBar>
-          <BudgetFill $ratio={ratio} />
-        </BudgetBar>
-        {compiledChars !== null && compiledChars < 500 && compiledChars > 0 && (
-          <Goldilocks>
-            Short prompts hold shape better — cut a paragraph, re-run evals, keep what scores.
-          </Goldilocks>
+          </CompiledCard>
+        </div>
+
+        {secretHit && (
+          <Whisper $tone="amber" role="alert">
+            Looks like a pasted credential in {secretHit.label} (
+            {secretHit.message.replace(/^instructions:\s*/, '')}) — secrets are refused at save. Mention it, don’t
+            paste it.
+          </Whisper>
         )}
-      </div>
+        {blockers.map((message) => (
+          <Whisper key={message} $tone="red" role="alert">
+            {message} Autosave held — fix it and saving resumes on its own.
+          </Whisper>
+        ))}
+
+        <div ref={samplesRef}>
+          <SamplesSection
+            key={samplesNonce}
+            assistantId={assistantId}
+            canAuthor
+            startOpen={samplesNonce > 0 || emptyDoc}
+            onInsert={appendSampleBlocks}
+          />
+        </div>
+      </SectionPage>
 
       {conflict && (
         <ConflictDialog
@@ -1161,9 +1054,6 @@ export function InstructionsSection({
                 );
                 setDoc(incoming);
                 setBaseDoc(incoming);
-                setJsonText('');
-                jsonKeyRef.current = '';
-                jsonEditedRef.current = false;
                 if (typeof raw.hash === 'string') setServerHash(raw.hash);
               } catch (err) {
                 // The live fetch failed: keep the user's structured document
@@ -1210,6 +1100,6 @@ export function InstructionsSection({
           onClose={() => setConflict(null)}
         />
       )}
-    </Wrap>
+    </div>
   );
 }

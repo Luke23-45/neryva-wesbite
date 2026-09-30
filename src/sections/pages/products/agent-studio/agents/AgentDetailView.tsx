@@ -22,6 +22,7 @@ import {
   defaultDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import { TestRunPanel } from './detail/TestRunPanel';
+import { parseBrandVoice } from '@/sections/pages/products/agent-studio/builder/lib/brand-model';
 import { TemplateDetailOrigin } from '../templates/TemplateDetailOrigin';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -334,13 +335,16 @@ export function AgentDetailView() {
 
             <motion.div initial="hidden" animate="visible" variants={pageItem} custom={11}>
               <SectionTitle>Brand voice</SectionTitle>
-              {definition.brand ? (
-                <ChipRow>
-                  <Chip $hue="lilac">{definition.brand}</Chip>
-                </ChipRow>
-              ) : (
-                <EmptyNote>No brand voice set.</EmptyNote>
-              )}
+              {(() => {
+                const voice = parseBrandVoice(definition.brand);
+                return voice !== undefined ? (
+                  <ChipRow>
+                    <Chip $hue="lilac">{voice}</Chip>
+                  </ChipRow>
+                ) : (
+                  <EmptyNote>No brand voice set.</EmptyNote>
+                );
+              })()}
             </motion.div>
 
             <motion.div initial="hidden" animate="visible" variants={pageItem} custom={12}>

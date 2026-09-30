@@ -555,7 +555,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
 
   // — Kind nodes (fixed set, id = kind; grading is the pre-v10 truth) —
   const pinCount = definition?.context_policy.knowledge_sources.length ?? 0;
-  const brandVoice = (definition?.brand || '').trim();
+  const brandVoice = parseRoleTextFieldSafe(definition?.brand);
   const budgetGrade = !locked && definition ? gradeBudget(definition.budget, null) : null;
 
   for (const kind of KIND_ORDER) {
@@ -629,8 +629,8 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         case 'brand': {
           // Honest rule: an empty brand is untouched — the platform default
           // is engine behavior, not user content, and never earns the mark.
-          const touched = brandVoice !== '';
-          subtitle = touched ? `${brandVoice.length.toLocaleString()} chars` : 'Platform default';
+          const touched = brandVoice !== null && brandVoice !== '';
+          subtitle = touched && brandVoice ? `${brandVoice.length.toLocaleString()} chars` : 'Platform default';
           hint = touched ? hint : 'No voice set — set one in the Brand section.';
           status = touched ? 'ready' : 'untouched';
           break;
@@ -1073,7 +1073,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     type: 'data',
     data: {
       variant: 'verdict',
-      lit: !locked && !!definition && brandVoice !== '',
+      lit: !locked && !!definition && brandVoice !== null && brandVoice !== '',
       label: 'voice & tone',
     },
   });
