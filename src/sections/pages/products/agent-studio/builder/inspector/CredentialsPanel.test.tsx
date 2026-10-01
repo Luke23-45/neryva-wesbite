@@ -25,15 +25,21 @@ vi.mock('@hooks/engine/billing', () => ({
   useEnterpriseStatus: () => ({ data: true }),
 }));
 
+// D6: the credential list is hoisted-mutable so the empty state is testable.
+const credentialMockState = vi.hoisted(() => ({
+  list: [
+    { id: 'k1', provider: 'anthropic', label: 'prod', externalRef: null, source: 'byok', status: 'active', secretFingerprint: '****9f2c', revocationReason: null, compromised: false, createdAt: '2026-08-01T00:00:00Z', rotatedAt: '2026-09-05T00:00:00Z', revokedAt: null },
+    { id: 'k2', provider: 'deepseek', label: 'backup', externalRef: null, source: 'byok', status: 'revoked', secretFingerprint: '****41ab', revocationReason: 'leaked in logs', compromised: true, createdAt: '2026-07-01T00:00:00Z', rotatedAt: null, revokedAt: '2026-09-14T00:00:00Z' },
+  ] as Array<Record<string, unknown>>,
+}));
+const seedCredentials = () => credentialMockState.list;
+
 vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupProviders')>();
   return {
     ...actual,
     useProviderCredentials: () => ({
-      data: [
-        { id: 'k1', provider: 'anthropic', label: 'prod', externalRef: null, source: 'byok', status: 'active', secretFingerprint: '****9f2c', revocationReason: null, compromised: false, createdAt: '2026-08-01T00:00:00Z', rotatedAt: '2026-09-05T00:00:00Z', revokedAt: null },
-        { id: 'k2', provider: 'deepseek', label: 'backup', externalRef: null, source: 'byok', status: 'revoked', secretFingerprint: '****41ab', revocationReason: 'leaked in logs', compromised: true, createdAt: '2026-07-01T00:00:00Z', rotatedAt: null, revokedAt: '2026-09-14T00:00:00Z' },
-      ],
+      data: credentialMockState.list,
       isPending: false,
       isError: false,
     }),
@@ -164,5 +170,22 @@ describe('CredentialsPanel provider plane', () => {
     });
     expect(screen.getByText(/visible to owners, admins, and developers/)).toBeTruthy();
     expect(screen.queryByText(/prod/)).toBeNull();
+  });
+});
+
+describe('CredentialsPanel empty state (D6)', () => {
+  it('states the Neryva-managed path first — connect is the optional BYOK route', async () => {
+    const previous = seedCredentials();
+    credentialMockState.list = [];
+    try {
+      await act(async () => {
+        shell();
+      });
+      expect(screen.getByText(/Neryva-managed platform credentials are available/)).toBeTruthy();
+      expect(screen.getByText(/Connect a key only when you want to bring your own/)).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Connect provider' })).toBeTruthy();
+    } finally {
+      credentialMockState.list = previous;
+    }
   });
 });

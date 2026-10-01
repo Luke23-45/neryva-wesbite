@@ -495,7 +495,15 @@ export function SectionBody({
     <SectionWrap aria-label={`${title} section`}>
       {showSectionSave ? (
         <SectionActions>
-          <ActionButton size="sm" variant="secondary" onClick={handleSectionSave} aria-label={`Save ${title}`}>
+          {/* C-D2: the relationship is stated, not left to guess — this is
+              the top bar's Save, surfaced here so the author doesn't scroll. */}
+          <ActionButton
+            size="sm"
+            variant="secondary"
+            onClick={handleSectionSave}
+            aria-label={`Save ${title}`}
+            title={`Save ${title} — the same save as the top bar, right here`}
+          >
             Save {title}
           </ActionButton>
         </SectionActions>

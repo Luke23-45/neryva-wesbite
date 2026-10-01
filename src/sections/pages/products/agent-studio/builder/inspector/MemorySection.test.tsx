@@ -137,3 +137,24 @@ describe('MemorySection', () => {
     expect(screen.getByText(/Loading the draft/)).toBeTruthy();
   });
 });
+
+describe('MemorySection design (M-D1, M-D2)', () => {
+  it('does not promise "In scope" when the policy serves nothing previewable (M-D2)', () => {
+    shell(); // FRESH uses memory_scope 'user' -> no library preview
+    expect(screen.getByRole('heading', { name: 'No memories in scope' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'In scope' })).toBeNull();
+  });
+
+  it('keeps the "In scope" heading when the policy serves a preview (M-D2)', () => {
+    shell({ definition: definitionWith({ memory_scope: 'assistant', history_limit: 20 }) });
+    expect(screen.getByRole('heading', { name: 'In scope' })).toBeTruthy();
+  });
+
+  it('uses plain language for the unpreviewable-policy and purge notes (M-D1)', () => {
+    shell();
+    expect(
+      screen.getByText(/nothing to preview under this policy/i),
+    ).toBeTruthy();
+    expect(screen.getByText(/to delete memories, use the/i)).toBeTruthy();
+  });
+});

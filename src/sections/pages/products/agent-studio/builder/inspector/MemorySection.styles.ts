@@ -37,3 +37,27 @@ export const PreviewMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   margin-top: ${({ theme }) => theme.spacing.s1};
 `;
+
+/**
+ * M-D3: secondary block title. The primary report ("Session memory") keeps
+ * the h3 FieldTitle; supporting blocks ("In scope", "Org defaults") step
+ * down to h4 — a real heading hierarchy, not three competing titles.
+ */
+export const BlockTitle = styled.h4`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.tight};
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+/**
+ * M-D4: readable measure for this read-only surface. Short rows no longer
+ * stretch across the full inspector width leaving dead space on the right.
+ */
+export const NarrowMeasure = styled.div`
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.s8};
+`;

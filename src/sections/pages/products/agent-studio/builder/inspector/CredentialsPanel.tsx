@@ -117,8 +117,12 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
           />
         ) : isEmpty ? (
           <EmptyState>
-            No credentials yet — connect a provider key to bring your own
-            models. Neryva-managed platform credentials keep working either way.
+            {/* D6: say what IS available first — the connect button is the
+                optional BYOK path, not the only path. */}
+            No provider keys connected. Neryva-managed platform credentials are
+            available — select any provider and model in the Model section and
+            Neryva handles billing. Connect a key only when you want to bring
+            your own.
             <div>
               <ActionButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
                 Connect provider

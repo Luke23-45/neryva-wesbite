@@ -23,6 +23,7 @@ import {
   type SpineId,
 } from './slot-model';
 import { LANE_NODES, LANE_NODE_IDS, laneOf, type LaneId, type LaneNodeId } from './lane-model';
+import { UNPINNED_RETRIEVAL_COPY } from './knowledge-model';
 import { gradeGuardrails, normalizeDenyTopics, parseGuardrailMode, parsePiiAction, parsePiiEntities, parsePiiSinks } from './guardrails-model';
 import { CONTEXT_TOKENS_DEFAULT, gradeMemory, parseMemoryScope } from './memory-model';
 import { gradeBudget } from './budget-model';
@@ -301,7 +302,7 @@ export function knowledgeSlot(
     return retrieval
       ? {
         subtitle: 'Retrieval on · no pins',
-        hint: 'Retrieval is on but nothing is pinned — answers will not ground.',
+        hint: UNPINNED_RETRIEVAL_COPY,
         status: 'untouched',
       }
       : {
@@ -868,7 +869,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   );
 
   // Samples (v10 §8.7): the gallery has no "configured" count in the
-  // contract, so without a summary this is info, never an invented number.
+  // contract, so without a summary this is untouched, never an invented
+  // number. 'info' would read as "all good" — the honest mark for an
+  // ungradable node is 'untouched' (not configured).
   const samples = input.samplesSummary;
   push(
     'samples',
@@ -885,7 +888,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
           : samples.count === 0
             ? 'Add examples to steer replies'
             : null,
-      status: locked ? 'locked' : !samples ? 'info' : samples.count === 0 ? 'untouched' : 'ready',
+      status: locked ? 'locked' : !samples ? 'untouched' : samples.count === 0 ? 'untouched' : 'ready',
       lock: false,
       color: LANE_NODES.samples.color,
       portColor: LANE_NODES.samples.color,

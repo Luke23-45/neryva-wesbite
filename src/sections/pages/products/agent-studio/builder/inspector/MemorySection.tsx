@@ -18,10 +18,12 @@ import {
 import { EmptyState, Whisper, Wrap } from './InstructionsSection.styles';
 import { SkeletonRows } from './SkeletonRows';
 import {
+  BlockTitle,
   FieldBlock,
   FieldHead,
   FieldHelper,
   FieldTitle,
+  NarrowMeasure,
   PinMeta,
   PreviewItem,
   PreviewList,
@@ -108,6 +110,7 @@ export function MemorySection({
 
   return (
     <Wrap>
+      <NarrowMeasure>
       {/* Scope + history — owned by the Context node, reported here */}
       <FieldBlock>
         <FieldHead>
@@ -136,10 +139,11 @@ export function MemorySection({
         </SwitchRow>
       </FieldBlock>
 
-      {/* Block C · in scope, read-only */}
+      {/* Block C · in scope, read-only. M-D2: the heading never promises
+          scope when the policy serves nothing previewable. */}
       <FieldBlock>
         <FieldHead>
-          <FieldTitle>In scope</FieldTitle>
+          <BlockTitle>{previewActive ? 'In scope' : 'No memories in scope'}</BlockTitle>
           <FieldHelper>{USER_PREVIEW_COPY}</FieldHelper>
         </FieldHead>
         {previewPending ? (
@@ -156,7 +160,7 @@ export function MemorySection({
           <PinMeta>
             {engineScope === 'none'
               ? 'No memories surface under this policy — the agent runs on the thread alone.'
-              : 'No library rows surface under this policy — they resolve at run time (per account, or on the thread).'}
+              : 'Nothing to preview under this policy — user memories resolve per account at run time, and thread memories live on the chat.'}
           </PinMeta>
         ) : previewRows.length === 0 ? (
           <PinMeta>
@@ -194,7 +198,7 @@ export function MemorySection({
       {/* Block D · org defaults, read-only */}
       <FieldBlock>
         <FieldHead>
-          <FieldTitle>Org defaults</FieldTitle>
+          <BlockTitle>Org defaults</BlockTitle>
         </FieldHead>
         {orgPolicy.policy ? (
           <>
@@ -225,7 +229,7 @@ export function MemorySection({
           <SkeletonRows rows={2} barHeight="40px" />
         )}
         <PinMeta>
-          Scrub and TTL are org policy (owners/admins, Workspace settings). Purge lives in the{' '}
+          Scrub and TTL are org policy (owners/admins, Workspace settings). To delete memories, use the{' '}
           <TextButton type="button" onClick={() => navigate({ to: '/agent-studio/memory' })}>
             Memory library
           </TextButton>
@@ -234,6 +238,7 @@ export function MemorySection({
       </FieldBlock>
 
       {!canAuthor && <PinMeta>Memory needs an owner, admin, or developer — {denied}</PinMeta>}
+      </NarrowMeasure>
     </Wrap>
   );
 }

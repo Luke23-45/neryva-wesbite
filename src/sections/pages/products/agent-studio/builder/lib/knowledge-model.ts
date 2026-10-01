@@ -227,7 +227,10 @@ export const SKIP_COPY = 'Skipped is not broken — publish still gates.';
 export const RETENTION_NOTE =
   'Documents can’t be deleted from this UI — the engine exposes no delete verb. Retired rows are upstream tombstones; unmap pins in the builder to stop serving them.';
 export const NO_RETRY_COPY = 'No retry exists — upload a replacement.';
-export const RETRIEVAL_OFF_COPY = 'Off — the agent answers from instructions and model only. Deliberate, not empty.';
+export const RETRIEVAL_OFF_COPY =
+  'Off — the agent answers from instructions and model only. Nothing is missing; turn retrieval on when you want answers grounded in your sources.';
+export const UNPINNED_RETRIEVAL_COPY =
+  'Retrieval is on but nothing is pinned — answers won’t draw on your sources until you pin at least one.';
 
 /* ── Retrieval extensions (Knowledge section redesign) ────────── */
 

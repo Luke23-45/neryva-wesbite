@@ -235,9 +235,11 @@ describe('projector role (real section, D-N2)', () => {
 });
 
 describe('projector samples node', () => {
-  it('stays info when ungradable (never an invented count)', () => {
+  it('stays untouched when ungradable (never an invented count)', () => {
+    // D5: no samples query exists, so the projector can never grade this
+    // node — 'info' would read as "all good". 'untouched' is the honest mark.
     const input = base({ samplesSummary: undefined });
-    expect(statusOf(input, 'samples')).toBe('info');
+    expect(statusOf(input, 'samples')).toBe('untouched');
     expect(subtitleOf(input, 'samples')).toBeNull();
   });
 

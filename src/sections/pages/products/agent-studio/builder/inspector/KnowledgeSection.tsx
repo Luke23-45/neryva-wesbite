@@ -59,6 +59,7 @@ import {
   RETRIEVAL_MODE_LABELS,
   RETRIEVAL_MODES,
   RETRIEVAL_OFF_COPY,
+  UNPINNED_RETRIEVAL_COPY,
   SKIP_COPY,
   SOURCE_DEFAULTS,
   STALLED_COPY,
@@ -652,7 +653,8 @@ export function KnowledgeSection({
     }
     const slugProblem = validateSourceSlug(pasteSlug);
     if (slugProblem) {
-      toast.error(`Pin address: ${slugProblem}`);
+      // K-BUG5: the field already shows the detail inline — the toast is a pointer.
+      toast.error('Pin address: fix the pin-address field below.');
       return;
     }
     setPasting(true);
@@ -888,39 +890,50 @@ export function KnowledgeSection({
           <PageOutline items={outlineItems} onSelect={scrollToGroup} />
           <RailCard>
             <RailTitle>Library</RailTitle>
-            <StatRows>
-              <StatRow>
-                <StatLabel>Documents</StatLabel>
-                <StatValue>{documents.isPending ? '—' : inventory.length}</StatValue>
-              </StatRow>
-              <StatRow>
-                <StatLabel>Indexed</StatLabel>
-                <StatValue>{documents.isPending ? '—' : indexedCount}</StatValue>
-              </StatRow>
-              <StatRow>
-                <StatLabel>Indexing</StatLabel>
-                <StatValue>{documents.isPending ? '—' : indexingCount}</StatValue>
-              </StatRow>
-              <StatRow>
-                <StatLabel>Stale pins</StatLabel>
-                <StatValue>{staleSlugs.size}</StatValue>
-              </StatRow>
-            </StatRows>
-            <PinProgress>
-              <PinProgressLabel>
-                <span>Pinned</span>
-                <span>
-                  {pins.length} of {PINS_MAX}
-                </span>
-              </PinProgressLabel>
-              <BudgetBar role="progressbar" aria-valuenow={pins.length} aria-valuemin={0} aria-valuemax={PINS_MAX} aria-label={`${pins.length} of ${PINS_MAX} pins used`}>
-                <BudgetFill $pct={PINS_MAX > 0 ? (pins.length / PINS_MAX) * 100 : 0} />
-              </BudgetBar>
-            </PinProgress>
+            {/* K-D5: an empty library gets one honest line, not four zero
+                rows — the zeros said nothing the line doesn't. */}
+            {documents.isPending || inventory.length > 0 ? (
+              <StatRows>
+                <StatRow>
+                  <StatLabel>Documents</StatLabel>
+                  <StatValue>{documents.isPending ? '—' : inventory.length}</StatValue>
+                </StatRow>
+                <StatRow>
+                  <StatLabel>Indexed</StatLabel>
+                  <StatValue>{documents.isPending ? '—' : indexedCount}</StatValue>
+                </StatRow>
+                <StatRow>
+                  <StatLabel>Indexing</StatLabel>
+                  <StatValue>{documents.isPending ? '—' : indexingCount}</StatValue>
+                </StatRow>
+                <StatRow>
+                  <StatLabel>Stale pins</StatLabel>
+                  <StatValue>{staleSlugs.size}</StatValue>
+                </StatRow>
+              </StatRows>
+            ) : (
+              <PinMeta>No documents yet — upload or paste a source to begin.</PinMeta>
+            )}
+            {/* K-D5: the outline ("Pinned sources · 0 / 16") and the card
+                counter already report an empty pin set — the progress bar
+                only renders once there is something to progress. */}
+            {pins.length > 0 && (
+              <PinProgress>
+                <PinProgressLabel>
+                  <span>Pinned</span>
+                  <span>
+                    {pins.length} of {PINS_MAX}
+                  </span>
+                </PinProgressLabel>
+                <BudgetBar role="progressbar" aria-valuenow={pins.length} aria-valuemin={0} aria-valuemax={PINS_MAX} aria-label={`${pins.length} of ${PINS_MAX} pins used`}>
+                  <BudgetFill $pct={PINS_MAX > 0 ? (pins.length / PINS_MAX) * 100 : 0} />
+                </BudgetBar>
+              </PinProgress>
+            )}
           </RailCard>
           <MicroTip>
-            Publish resolves each slug to an exact version — unresolved pins refuse publish without the degraded-knowledge
-            ack.
+            Publish resolves each slug to an exact version — unresolved pins block publishing until they resolve, or you
+            acknowledge shipping with degraded knowledge.
           </MicroTip>
         </>
       }
@@ -1020,14 +1033,14 @@ export function KnowledgeSection({
               )}
             </CardHeadRow>
             {pins.length === 0 ? (
-              <EmptyPins>{retrieval ? 'Retrieval is on but nothing is pinned — answers will not ground.' : SKIP_COPY}</EmptyPins>
+              <EmptyPins>{retrieval ? UNPINNED_RETRIEVAL_COPY : SKIP_COPY}</EmptyPins>
             ) : (
               <PinList>{pins.map((slug) => renderPinRow(slug))}</PinList>
             )}
             {(degraded || undercovered || unresolvedCount > 0) && (
               <Whisper $tone="amber">
                 {unresolvedCount > 0
-                  ? `${unresolvedCount} pin${unresolvedCount === 1 ? '' : 's'} unresolved — publish refuses without the degraded-knowledge ack. `
+                  ? `${unresolvedCount} pin${unresolvedCount === 1 ? '' : 's'} unresolved — publishing is blocked until they resolve, or you acknowledge shipping with degraded knowledge. `
                   : ''}
                 {undercovered ? 'A pinned source is still embedding for the current model. ' : ''}
                 {DEGRADED_ACK_COPY}
@@ -1036,7 +1049,8 @@ export function KnowledgeSection({
             {pins.length > 0 && !degraded && !undercovered && unresolvedCount === 0 && (
               <PinMeta>All pins resolved{health.data === undefined ? ' — coverage checks while health loads.' : ' and covered.'}</PinMeta>
             )}
-            <PinMeta>{UNMAP_COPY}</PinMeta>
+            {/* K-D1: the legend names its action — it was orphaned context-free. */}
+            <PinMeta>Unmap — {UNMAP_COPY}</PinMeta>
             {canAuthor && (
               <PinCta type="button" onClick={pinFromLibrary}>
                 + Pin from library
@@ -1213,11 +1227,14 @@ export function KnowledgeSection({
                         />
                       </FieldGrid>
                       <div>
-                        <ActionButton size="sm" disabled={pasting || pasteText.trim() === '' || pasteSlug.trim() === ''} onClick={ingestPaste}>
+                        {/* K-BUG4: an invalid slug holds the button — the field
+                            already shows the error inline; the button agrees. */}
+                        <ActionButton size="sm" disabled={pasting || pasteText.trim() === '' || !!validateSourceSlug(pasteSlug)} onClick={ingestPaste}>
                           Ingest paste
                         </ActionButton>
                       </div>
-                      <PinMeta>Pasted bytes ride the same verified session flow as files — pin the slug once READY.</PinMeta>
+                      {/* K-D2: plain language — was "Pasted bytes ride the same verified session flow…". */}
+                      <PinMeta>Pasted text uploads through the same verified flow as files. Once ingestion is READY, pin the slug to serve it.</PinMeta>
                     </InlineForm>
                   </TabPanel>
                 )}

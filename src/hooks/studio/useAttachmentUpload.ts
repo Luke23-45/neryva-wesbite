@@ -247,7 +247,20 @@ export function useAttachmentUpload() {
       form.append(key, value);
     }
     form.append('file', file);
-    const response = await fetch(uploadUrl, { method: 'POST', body: form });
+    // K-BUG2 — a network throw during the byte transfer must terminal the
+    // tracker row, mirroring A4-08's complete-handshake guard below: without
+    // this the row sticks on 'uploading' forever (no poll ever starts) and
+    // the only exit is a manual dismiss.
+    let response: Response;
+    try {
+      response = await fetch(uploadUrl, { method: 'POST', body: form });
+    } catch (error) {
+      update(sessionId, {
+        status: 'failed',
+        lastError: error instanceof Error ? error.message : 'The byte transfer failed before reaching storage — retry the upload.',
+      });
+      throw error;
+    }
     if (!response.ok) {
       update(sessionId, { status: 'failed', lastError: 'The byte transfer was rejected — retry the upload.' });
       return sessionId;

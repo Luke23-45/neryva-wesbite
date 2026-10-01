@@ -32,10 +32,14 @@ const HEALTH = {
   ],
 };
 
-const DOCS = [
-  { id: 'd1', sourceSlug: 'refund-policy', title: 'Refund policy 2026', state: 'ready', updatedAt: '2026-09-16T10:00:00Z', latestVersion: 3 },
-  { id: 'd2', sourceSlug: 'faq-2026', title: 'FAQ 2026', state: 'ready', updatedAt: '2026-09-16T10:00:00Z', latestVersion: 1 },
-];
+// K-D5: the documents list is hoisted-mutable so the empty rail is testable.
+const documentMockState = vi.hoisted(() => ({
+  list: [
+    { id: 'd1', sourceSlug: 'refund-policy', title: 'Refund policy 2026', state: 'ready', updatedAt: '2026-09-16T10:00:00Z', latestVersion: 3 },
+    { id: 'd2', sourceSlug: 'faq-2026', title: 'FAQ 2026', state: 'ready', updatedAt: '2026-09-16T10:00:00Z', latestVersion: 1 },
+  ] as Array<Record<string, unknown>>,
+}));
+const DOCS = documentMockState.list;
 
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
@@ -63,7 +67,7 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupKnowledge')>();
   return {
     ...actual,
-    useDocuments: () => ({ data: DOCS, isPending: false, isError: false }),
+    useDocuments: () => ({ data: documentMockState.list, isPending: false, isError: false }),
     useRenameDocumentSlug: () => ({ mutate: renameMutate, isPending: false }),
   };
 });
@@ -200,6 +204,17 @@ describe('KnowledgeSection paste', () => {
     expect(attachTextMock).not.toHaveBeenCalled();
   });
 
+  it('holds Ingest paste disabled on an invalid pin address (K-BUG4)', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'Paste' }));
+    fireEvent.change(screen.getByPlaceholderText('Paste the source text…'), { target: { value: 'Refunds within 30 days.' } });
+    fireEvent.change(screen.getByPlaceholderText('kebab-case, 3–64 chars'), { target: { value: 'bad slug' } });
+    expect(screen.getByText('Ingest paste').closest('button')).toBeDisabled();
+    expect(attachTextMock).not.toHaveBeenCalled();
+  });
+
   it('ingests valid paste through the shared session flow', async () => {
     attachTextMock.mockResolvedValueOnce('session-1');
     await act(async () => {
@@ -224,5 +239,26 @@ describe('KnowledgeSection roles', () => {
     });
     expect(screen.getByText(/Knowledge editing needs/)).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Upload' })).toBeNull();
+  });
+});
+
+describe('KnowledgeSection empty rail (K-D5)', () => {
+  it('reports an empty library and empty pin set once, not three times', async () => {
+    const previous = documentMockState.list;
+    documentMockState.list = [];
+    try {
+      await act(async () => {
+        shell({ definition: definitionWith([]) });
+      });
+      // One honest line for the empty library…
+      expect(screen.getByText('No documents yet — upload or paste a source to begin.')).toBeTruthy();
+      // …and no pin-progress bar while there is nothing to progress.
+      expect(screen.queryByRole('progressbar', { name: /pins used/ })).toBeNull();
+      // The pin count survives exactly twice: the outline row and the card
+      // counter (summary + detail) — never a third progress-bar report.
+      expect(screen.getAllByText('0 / 16')).toHaveLength(2);
+    } finally {
+      documentMockState.list = previous;
+    }
   });
 });

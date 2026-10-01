@@ -248,16 +248,14 @@ describe('paste tab', () => {
     expect(ingest).toBeEnabled();
   });
 
-  it('refuses an invalid pin address with the slug error and never starts a session', async () => {
+  it('holds Ingest paste disabled on an invalid pin address — never clickable (K-BUG4)', async () => {
     await routerAt('/agent-studio/knowledge/upload');
     pasteTab();
     fireEvent.change(screen.getByPlaceholderText('Paste the source text…'), {
       target: { value: 'Refunds within 30 days.' },
     });
     fireEvent.change(screen.getByPlaceholderText('kebab-case, 3–64 chars'), { target: { value: 'bad slug' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Ingest paste' }));
-    await act(async () => undefined);
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(SLUG_ERROR);
+    expect(screen.getByRole('button', { name: 'Ingest paste' })).toBeDisabled();
     expect(attachTextMock).not.toHaveBeenCalled();
   });
 

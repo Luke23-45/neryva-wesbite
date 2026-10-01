@@ -90,7 +90,7 @@ describe('ModelPicker catalog', () => {
     await act(async () => {
       shell({ pipelineRefs });
     });
-    expect(screen.getByText(/20 \/ 20/)).toBeTruthy();
+    expect(screen.getByText(/20 \/ 20 picked/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'deepseek' } });
     expect(screen.queryByText('Claude Sonnet 4.5')).toBeNull();
     expect(screen.getByText('DeepSeek Chat')).toBeTruthy();

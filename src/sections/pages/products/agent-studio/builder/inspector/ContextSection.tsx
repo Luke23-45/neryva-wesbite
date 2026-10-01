@@ -410,7 +410,10 @@ export function ContextSection({
             <Plus size={15} strokeWidth={2} />
           </StepButton>
         </StepperRow>
-        <FieldHelper>{COMPACTION_COPY}</FieldHelper>
+        {/* C-D3: the stepper range is stated, not discovered by hitting the disabled end. */}
+        <FieldHelper>
+          {HISTORY_MIN}–{HISTORY_SERVED_MAX} messages. {COMPACTION_COPY}
+        </FieldHelper>
       </FieldBlock>
 
       {/* Context length — the run's token budget (contract v1.15, engine int

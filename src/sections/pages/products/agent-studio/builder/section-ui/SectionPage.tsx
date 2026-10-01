@@ -120,7 +120,10 @@ export function PageOutline({
           <OutlineRow key={item.key}>
             {onSelect ? (
               <OutlineButton type="button" onClick={() => onSelect(item.key)}>
-                <StatusIcon done={item.done} size={13} />
+                {/* K-D4: clickable rows are jump links, not options — the
+                    hollow "not done" ring reads as a radio button, so only
+                    the done check renders here. The meta text carries state. */}
+                {item.done ? <StatusIcon done size={13} /> : null}
                 <OutlineLabel>{item.label}</OutlineLabel>
                 <OutlineMeta>{item.meta}</OutlineMeta>
               </OutlineButton>

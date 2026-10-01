@@ -15,6 +15,7 @@ import { KNOWLEDGE_MEDIA_TYPES, type PasteUploadType } from '@hooks/studio/useAt
 import {
   slugifyFilename,
   validatePaste,
+  validateSourceSlug,
   PASTE_MEDIA_TYPES,
 } from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
 import { checkSourceSlug } from '@lib/engine/setup-caps';
@@ -259,7 +260,9 @@ export function UploadSection() {
     })();
   };
 
-  const pasteBlocked = pasteText.trim() === '' || pasteSlug.trim() === '' || busy;
+  // K-BUG4: an invalid slug must hold the button, not just a blank one —
+  // the field already shows the error inline; the button must agree.
+  const pasteBlocked = pasteText.trim() === '' || !!validateSourceSlug(pasteSlug) || busy;
 
   return (
     <ViewShell>
