@@ -31,6 +31,7 @@ import {
 } from '@lib/engine/role-fields';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
+import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ConflictDialog } from './ConflictDialog';
 import { EmptyState, Whisper } from './InstructionsSection.styles';
 import { SkeletonRows } from './SkeletonRows';
@@ -313,6 +314,10 @@ export function RoleSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
+  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
+  // nav badge grades `ready` even at engine defaults.
+  const confirmSection = useSectionConfirmationContext();
+
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
@@ -320,6 +325,7 @@ export function RoleSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
+          onSuccess: () => confirmSection('role'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -339,6 +345,7 @@ export function RoleSection({
       return;
     }
     saveDraft.mutate(next, {
+      onSuccess: () => confirmSection('role'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -346,7 +353,7 @@ export function RoleSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.

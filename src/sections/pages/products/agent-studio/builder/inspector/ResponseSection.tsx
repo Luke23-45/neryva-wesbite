@@ -20,6 +20,7 @@ import {
 } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
+import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import type { ReasoningEffort } from '../lib/brain-model';
 import {
   BUFFERED_CHANNELS,
@@ -369,18 +370,22 @@ export function ResponseSection({
     [buildNext, showLegacyToast, versionHash],
   );
 
+  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
+  // nav badge grades `ready` even at engine defaults.
+  const confirmSection = useSectionConfirmationContext();
+
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
     if (isDraft && versionId && versionHash) {
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
-        { onSuccess: () => undefined, onError: handleSaveError },
+        { onSuccess: () => confirmSection('response'), onError: handleSaveError },
       );
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => undefined,
+      onSuccess: () => confirmSection('response'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -390,7 +395,7 @@ export function ResponseSection({
         handleSaveError(error);
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, handleSaveError]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, handleSaveError, confirmSection]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.

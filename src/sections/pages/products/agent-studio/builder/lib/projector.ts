@@ -140,6 +140,14 @@ export interface ProjectorInput {
    * agent state. The node renders info, the edge draws dim.
    */
   samplesSummary?: { count: number } | undefined;
+  /**
+   * Per-section confirmation (C-BUG4/M-BUG3, Option A). Set of section IDs
+   * the user has explicitly saved. A confirmed section grades as `ready`
+   * (with values subtitle) even when its policy matches engine defaults —
+   * the user reviewed and confirmed those defaults. Undefined/empty =
+   * content-based grading only (the pre-Option-A behavior).
+   */
+  confirmedSections?: Set<string> | undefined;
 }
 
 /** Minimal health-pin shape for usability math (superset-compatible). */
@@ -807,11 +815,16 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // context_policy; the Response node owns response_policy). Subtitles carry
   // payload truth; the two stay out of FUNCTIONAL_NODE_IDS — health and
   // next-step math still read the 14 legacy-functional nodes. Honest rule:
-  // all-default policies are engine defaults, not user content.
+  // all-default policies are engine defaults, not user content — UNLESS the
+  // user explicitly confirmed the section (C-BUG4/M-BUG3 Option A): a
+  // confirmed section shows its values and grades `ready` even at defaults.
   const contextTouched = definition ? !contextPolicyIsDefault(definition) : false;
   const responseTouched = definition ? !responsePolicyIsDefault(definition) : false;
+  const confirmed = input.confirmedSections ?? new Set<string>();
   for (const id of ['context', 'response'] as const) {
     const touched = id === 'context' ? contextTouched : responseTouched;
+    const isConfirmed = confirmed.has(id);
+    const showValues = touched || isConfirmed;
     push(
       id,
       {
@@ -820,7 +833,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         kind: null,
         title: LANE_NODES[id].label,
         subtitle:
-          locked || touched
+          locked || showValues
             ? id === 'context'
               ? contextSubtitle(definition)
               : responseSubtitle(definition)
@@ -828,10 +841,10 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         hint:
           locked
             ? 'Create the agent first'
-            : touched
+            : showValues
               ? null
               : `Engine defaults apply — configure them in the ${id === 'context' ? 'Context' : 'Response'} section.`,
-        status: locked ? 'locked' : touched ? 'ready' : 'untouched',
+        status: locked ? 'locked' : showValues ? 'ready' : 'untouched',
         lock: false,
         color: LANE_NODES[id].color,
         portColor: LANE_NODES[id].color,

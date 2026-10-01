@@ -33,6 +33,8 @@ import { selectVersionEvalState } from './lib/eval-model';
 import type { PublishEditTarget } from './lib/publish-model';
 import { useBuilderUI } from './lib/builder-store';
 import { usableRefs } from './lib/brain-model';
+import { useSectionConfirmation } from './lib/use-section-confirmation';
+import { SectionConfirmationContext } from './lib/section-confirmation-context';
 import {
   buildAgentBuildPath,
   buildAgentEditPath,
@@ -102,6 +104,11 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   });
 
   const agentKey = mode === 'build' ? agentId : null;
+
+  // C-BUG4/M-BUG3 Option A: per-section confirmation tracking. When a
+  // section's Save succeeds, it's marked confirmed; the projector treats
+  // confirmed sections as `ready` even at engine defaults.
+  const { confirmed: confirmedSections, confirm: confirmSection } = useSectionConfirmation(agentKey);
   const { selectedId, hydrate, select } = useBuilderUI();
 
   useEffect(() => {
@@ -291,8 +298,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
             : mode === 'build' && shipReadiness.isPending
               ? { verdict: 'unknown' as const, blockers: 0, checking: true }
               : undefined,
+        confirmedSections,
       }),
-    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data],
+    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data, confirmedSections],
   );
 
   // The main pane's view: 'overview' or a section id. New mode is locked to
@@ -736,9 +744,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
         ) : mode === 'build' && form.isError ? (
           <DefinitionErrorPanel title="Couldn't load the draft" onRetry={() => form.refetch()} />
         ) : (
-          <SectionBody
-            sectionId={view}
-            entry={selectedEntry}
+          <SectionConfirmationContext.Provider value={{ confirmSection }}>
+            <SectionBody
+              sectionId={view}
+              entry={selectedEntry}
             context={inspectorContext}
             purposeNodes={purposeNodeData}
             onPurposeSelect={handleSelectSection}
@@ -768,6 +777,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
               navigate({ to: buildAgentBuildPath(id), search: { setup: '1' } });
             }}
           />
+          </SectionConfirmationContext.Provider>
         )}
       </Main>
       {mode === 'new' && (

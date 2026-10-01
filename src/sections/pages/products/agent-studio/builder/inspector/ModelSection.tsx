@@ -44,6 +44,7 @@ import type { ModelPipelineEntry } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { useStringDraft } from '../lib/use-string-draft';
+import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ENGINE_RANGES, formatStepValue, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
 import { BlockEditor } from '../section-ui/BlockEditor';
 import type { EditableBlock } from '../section-ui/types';
@@ -475,6 +476,10 @@ export function ModelSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
+  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
+  // nav badge grades `ready` even at engine defaults.
+  const confirmSection = useSectionConfirmationContext();
+
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
@@ -483,7 +488,7 @@ export function ModelSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => undefined,
+          onSuccess: () => confirmSection('model'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -503,7 +508,7 @@ export function ModelSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => undefined,
+      onSuccess: () => confirmSection('model'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -511,7 +516,7 @@ export function ModelSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.

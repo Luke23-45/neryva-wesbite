@@ -35,6 +35,7 @@ import {
 } from '../lib/instructions-v1';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
+import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ConflictDialog } from './ConflictDialog';
 import { SamplesSection } from './SamplesSection';
 import { SkeletonRows } from './SkeletonRows';
@@ -522,6 +523,10 @@ export function InstructionsSection({
     [assistantId, queryClient],
   );
 
+  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
+  // nav badge grades `ready` even at engine defaults.
+  const confirmSection = useSectionConfirmationContext();
+
   const doSave = useCallback(() => {
     if (!canAuthor || !definition || !effectiveDoc || blocked || conflict || pending) return;
     const toSave = effectiveDoc;
@@ -533,6 +538,7 @@ export function InstructionsSection({
       void putInstructions(instructionsPath, toSave, sentHash)
         .then((newHash) => {
           adoptSaved(toSave, newHash, versionId);
+          confirmSection('instructions');
           toast.success('Instructions saved — every save is a version.');
         })
         .catch((error: unknown) => {
@@ -597,6 +603,7 @@ export function InstructionsSection({
         void putInstructions(chainedPath, toSave, newHash)
           .then((finalHash) => {
             adoptSaved(toSave, finalHash, newId);
+            confirmSection('instructions');
             toast.success('Instructions saved.');
           })
           .catch((error: unknown) => {
@@ -641,6 +648,7 @@ export function InstructionsSection({
     queryClient,
     preview,
     previewStale,
+    confirmSection,
   ]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching

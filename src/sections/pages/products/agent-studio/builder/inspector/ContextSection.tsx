@@ -15,6 +15,8 @@ import { useLatestRunBudget } from '@hooks/studio/useRunBudgetDiagnostics';
 import { useToolCatalog } from '@hooks/studio/useSetupTools';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
+import { useStringDraft } from '../lib/use-string-draft';
+import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import {
   COMPACTION_COPY,
   CONTEXT_LENGTH_COPY,
@@ -240,6 +242,10 @@ export function ContextSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
+  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
+  // nav badge grades `ready` even at engine defaults.
+  const confirmSection = useSectionConfirmationContext();
+
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
@@ -247,7 +253,7 @@ export function ContextSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => undefined,
+          onSuccess: () => confirmSection('context'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -267,7 +273,7 @@ export function ContextSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => undefined,
+      onSuccess: () => confirmSection('context'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -275,7 +281,7 @@ export function ContextSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.
@@ -305,6 +311,31 @@ export function ContextSection({
     },
     [patch],
   );
+
+  // C-BUG2: the history stepper input uses the string-draft pattern (not
+  // live-clamp): typing "0" must not snap to 1 mid-keystroke, and the
+  // heading/stepper disabled states must reflect the committed value, not
+  // a half-typed draft. Commits on blur/Enter with clamp + inline note;
+  // empty/garbage reverts with a note (never silent); Escape reverts.
+  const [historyNote, setHistoryNote] = useState<string | null>(null);
+  const historyDraft = useStringDraft(policy.history_limit, (value) => {
+    if (value === undefined) {
+      // Empty commit: revert to the committed value with an inline note.
+      setHistoryNote(`History limit reverted to ${policy.history_limit} — enter ${HISTORY_MIN}–${HISTORY_SERVED_MAX}.`);
+      return;
+    }
+    const clamped = Math.min(HISTORY_SERVED_MAX, Math.max(HISTORY_MIN, Math.trunc(value)));
+    if (clamped !== value) {
+      setHistoryNote(`Clamped to ${clamped} — the range is ${HISTORY_MIN}–${HISTORY_SERVED_MAX} messages.`);
+    } else {
+      setHistoryNote(null);
+    }
+    patch({ history_limit: clamped });
+  }, {
+    onInvalid: (raw) => {
+      setHistoryNote(`"${raw}" isn't a number — history limit stays at ${policy.history_limit}.`);
+    },
+  });
 
   /** Commit the typed draft: commas tolerated ("128,000"), fractions
    * truncated, out-of-range clamped; empty/garbage reverts silently. */
@@ -394,12 +425,13 @@ export function ContextSection({
             <Minus size={15} strokeWidth={2} />
           </StepButton>
           <StepValue
-            type="number"
+            type="text"
+            inputMode="numeric"
             aria-label="History limit in messages"
-            min={HISTORY_MIN}
-            max={HISTORY_SERVED_MAX}
-            value={policy.history_limit}
-            onChange={(event) => clampHistory(Number(event.target.value))}
+            value={historyDraft.value}
+            onChange={(event) => historyDraft.onChange(event.target.value)}
+            onBlur={historyDraft.onBlur}
+            onKeyDown={historyDraft.onKeyDown}
           />
           <StepButton
             type="button"
@@ -410,6 +442,9 @@ export function ContextSection({
             <Plus size={15} strokeWidth={2} />
           </StepButton>
         </StepperRow>
+        {historyNote && (
+          <FieldHelper role="status">{historyNote}</FieldHelper>
+        )}
         {/* C-D3: the stepper range is stated, not discovered by hitting the disabled end. */}
         <FieldHelper>
           {HISTORY_MIN}–{HISTORY_SERVED_MAX} messages. {COMPACTION_COPY}
