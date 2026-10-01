@@ -35,6 +35,7 @@ import { useAssistantTemplate } from './useSetupTemplates';
 import { useEvalRuns } from './useSetupEval';
 import { useDocuments } from './useSetupKnowledge';
 import { describeRequiredCheck } from '@/sections/pages/products/agent-studio/builder/lib/eval-model';
+import { isLegacyFieldRejection } from '@/sections/pages/products/agent-studio/builder/lib/response-model';
 import {
   classifyPublishRefusal,
   derivePublishReadiness,
@@ -658,8 +659,24 @@ export function useUpdateAssistantIdentity() {
  * derives its honest "Saving…" readout from it (A2-23). */
 export const DRAFT_WRITE_MUTATION_KEY = ['studio', 'assistants', 'draft-write'] as const;
 
+/**
+ * Failures the per-mutate onError handlers surface themselves. TanStack
+ * runs the mutation-level onError before the per-mutate one, so the
+ * mutation-level generic toast (the fallback for everything else) must
+ * skip the owned failures itself — one failure, one surface.
+ */
+export interface DraftWriteErrorOptions {
+  /**
+   * When true, the mutation-level generic toast stays silent for 400s that
+   * name a legacy field — the caller surfaces those itself (ResponseSection's
+   * humanized Fix toast). Default false: the generic toast remains the only
+   * surface for callers without their own handling.
+   */
+  handledLegacy400?: boolean;
+}
+
 /** Saves the edited definition as a new immutable draft version (full payload at top level — R-1). */
-export function useSaveDraftVersion(assistantId: string | null) {
+export function useSaveDraftVersion(assistantId: string | null, options?: DraftWriteErrorOptions) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
@@ -671,7 +688,16 @@ export function useSaveDraftVersion(assistantId: string | null) {
         idempotent: true,
       }),
     onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not save the draft'),
+    onError: (error) => {
+      // 409: every caller surfaces this per-mutate ("A draft opened elsewhere —
+      // resumed it"). 412: the editor's merge-or-reload ConflictDialog.
+      // 400-legacy: the caller's humanized Fix toast when it opted in.
+      if (error instanceof ApiError) {
+        if (error.status === 409 || error.status === 412) return;
+        if (options?.handledLegacy400 && isLegacyFieldRejection(error)) return;
+      }
+      toastEngineError(error, 'Could not save the draft');
+    },
   });
 }
 
@@ -680,7 +706,7 @@ export function useSaveDraftVersion(assistantId: string | null) {
  * hash from the freshest version GET (REQUIRED — the server 400s without
  * it); a stale hash 412s with both hashes for merge-or-reload (F-D4).
  */
-export function useUpdateDraftVersion(assistantId: string | null, versionId: string | null) {
+export function useUpdateDraftVersion(assistantId: string | null, versionId: string | null, options?: DraftWriteErrorOptions) {
   const { orgId } = useOrg();
   const invalidate = useInvalidateAuthoring();
   return useMutation({
@@ -694,11 +720,14 @@ export function useUpdateDraftVersion(assistantId: string | null, versionId: str
       }),
     onSuccess: () => invalidate(),
     // 412s are owned by the editor's merge-or-reload panel (both hashes +
-    // diff) — a toast here would double-surface the same refusal.
+    // diff); 400-legacy by the caller's humanized Fix toast when it opted in.
+    // A toast here on top would double-surface the same refusal.
     onError: (error) => {
-      if (!(error instanceof ApiError && error.status === 412)) {
-        toastEngineError(error, 'Could not save the draft');
+      if (error instanceof ApiError) {
+        if (error.status === 412) return;
+        if (options?.handledLegacy400 && isLegacyFieldRejection(error)) return;
       }
+      toastEngineError(error, 'Could not save the draft');
     },
   });
 }

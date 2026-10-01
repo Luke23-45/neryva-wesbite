@@ -16,7 +16,11 @@ export const spacing = {
   // files and is unchanged; these named keys fill the steps dense UI actually
   // needs. Prefer s-tokens when the value matches.
   px2: '2px',
+  px3: '3px',
+  px5: '5px',
   px6: '6px',
+  px7: '7px',
+  px9: '9px',
   px10: '10px',
   px14: '14px',
   px18: '18px',

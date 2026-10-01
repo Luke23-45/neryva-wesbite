@@ -196,6 +196,29 @@ describe('projector context/response (real sections)', () => {
     expect(statusOf(base({ definition: absent }), 'context')).toBe('untouched');
   });
 
+  it('grades ready on non-default citations_style, length, or channel overrides (RSP-3)', () => {
+    for (const policy of [
+      { citations_style: 'footnotes' },
+      { length: 'detailed' },
+      { channels: { sms: { format: 'plain' } } },
+    ] as const) {
+      const def = defaultConsumer();
+      def.response_policy = { ...def.response_policy, ...policy };
+      expect(statusOf(base({ definition: def }), 'response')).toBe('ready');
+    }
+    // Explicit engine defaults still read as untouched.
+    const def = defaultConsumer();
+    def.response_policy = {
+      output_format: 'markdown',
+      citations_enabled: true,
+      streaming: 'auto',
+      citations_style: 'inline',
+      length: 'balanced',
+      channels: {},
+    };
+    expect(statusOf(base({ definition: def }), 'response')).toBe('untouched');
+  });
+
   it('locks both in origin mode', () => {
     const input = base({ mode: 'new', definition: null, hasDraft: false });
     for (const id of ['context', 'response']) {
@@ -236,19 +259,14 @@ describe('projector role (real section, D-N2)', () => {
 
 describe('projector samples node', () => {
   it('stays untouched when ungradable (never an invented count)', () => {
-    // D5: no samples query exists, so the projector can never grade this
-    // node — 'info' would read as "all good". 'untouched' is the honest mark.
-    const input = base({ samplesSummary: undefined });
+    // SMP-3: no honest samplesSummary source exists (inserts become
+    // indistinguishable instruction blocks), so the projector can never
+    // grade this node — 'info' would read as "all good". 'untouched' is
+    // the honest mark.
+    const input = base({});
     expect(statusOf(input, 'samples')).toBe('untouched');
     expect(subtitleOf(input, 'samples')).toBeNull();
-  });
-
-  it('grades empty and configured honestly', () => {
-    expect(statusOf(base({ samplesSummary: { count: 0 } }), 'samples')).toBe('untouched');
-    expect(nodeOf(base({ samplesSummary: { count: 0 } }), 'samples')?.hint).toBe('Add examples to steer replies');
-    const ready = base({ samplesSummary: { count: 3 } });
-    expect(statusOf(ready, 'samples')).toBe('ready');
-    expect(subtitleOf(ready, 'samples')).toBe('3 samples');
+    expect(nodeOf(input, 'samples')?.hint).toBe('Configured in the Samples section');
   });
 });
 
@@ -361,12 +379,10 @@ describe('projector edges', () => {
     expect(litIds(base({ definition: def, models: badCatalog }))).not.toContain('e:model:brain');
   });
 
-  it('targets samples→instructions when gradable, samples→model when not', () => {
-    expect(edgeOf(base({ samplesSummary: { count: 2 } }), 'e:samples:instructions')?.target).toBe('instructions');
-    expect(edgeOf(base({ samplesSummary: { count: 2 } }), 'e:samples:model')).toBeUndefined();
-    expect(edgeOf(base({ samplesSummary: undefined }), 'e:samples:model')?.target).toBe('model');
-    expect(litIds(base({ samplesSummary: { count: 2 } }))).toContain('e:samples:instructions');
-    expect(litIds(base({ samplesSummary: undefined }))).not.toContain('e:samples:model');
+  it('targets samples→model, always dim (SMP-3: honestly ungradable)', () => {
+    expect(edgeOf(base({}), 'e:samples:model')?.target).toBe('model');
+    expect(edgeOf(base({}), 'e:samples:instructions')).toBeUndefined();
+    expect(litIds(base({}))).not.toContain('e:samples:model');
   });
 
   it('draws credentials→tools, lit when keys are configured', () => {

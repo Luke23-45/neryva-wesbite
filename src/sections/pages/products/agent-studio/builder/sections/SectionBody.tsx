@@ -436,12 +436,17 @@ export function SectionBody({
         // section) keeps the working insert — a cross-section insert would
         // be new functionality. Inserting stays available in Instructions.
         body = (
-          <SamplesSection
-            assistantId={id}
-            canAuthor={false}
-            startOpen={false}
-            onInsert={() => undefined}
-          />
+          <SectionPage
+            title="Samples"
+            subtitle="Browse starter text and org prompts — insert from the Instructions section."
+          >
+            <SamplesSection
+              assistantId={id}
+              canAuthor={false}
+              startOpen={false}
+              onInsert={() => undefined}
+            />
+          </SectionPage>
         );
         break;
       case 'evaluation':

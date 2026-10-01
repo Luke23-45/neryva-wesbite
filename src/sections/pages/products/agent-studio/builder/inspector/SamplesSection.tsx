@@ -12,7 +12,9 @@ import {
   Excerpt,
   Gallery,
   InlineRetry,
+  RowEmpty,
   RowError,
+  RowLoading,
   SampleBlurb,
   SampleDot,
   SampleLabel,
@@ -111,11 +113,11 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
         <Gallery>
           {!canAuthor && (
             <DeniedNote>
-              Viewing only — samples are browsable, but inserting needs an owner, admin, or developer.
+              Viewing only — samples are browsable; insert from the Instructions section.
             </DeniedNote>
           )}
           <SourceList>
-            {templates.isPending && <RowError>Loading registry blueprints…</RowError>}
+            {templates.isPending && <RowLoading>Loading registry blueprints…</RowLoading>}
             {templates.isError && (
               <RowError>
                 The template registry couldn’t be reached.{' '}
@@ -145,7 +147,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                         : undefined
                     }
                   >
-                    <SampleDot $color="#0A84FF" aria-hidden="true" />
+                    <SampleDot $tone="info" aria-hidden="true" />
                     <SampleMain>
                       <SampleLabel>{humanizeSlug(card.slug)}</SampleLabel>
                       <SampleBlurb>
@@ -171,7 +173,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
           </ToggleRow>
           {orgOn && (
             <SourceList>
-              {assistants.isPending && <RowError>Loading agents…</RowError>}
+              {assistants.isPending && <RowLoading>Loading agents…</RowLoading>}
               {orgFailures.length > 0 && (
                 <RowError>
                   {orgFailures.length} agent{orgFailures.length === 1 ? '' : 's'} couldn’t load — skipped, nothing retried in a loop.
@@ -187,7 +189,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
                 </RowError>
               ) : (
                 orgCandidates.length === 0 && !assistants.isPending && (
-                  <RowError>No sibling agents yet.</RowError>
+                  <RowEmpty>No sibling agents yet.</RowEmpty>
                 )
               )}
               {orgCandidates.map((agent) => (
@@ -205,10 +207,10 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
 
           <SourceList>
             <SampleRow type="button" $disabled disabled title="Starter copy is unwritten — this row ships no text until reviewed.">
-              <SampleDot $color="#636366" aria-hidden="true" />
+              <SampleDot $tone="neutral" aria-hidden="true" />
               <SampleMain>
                 <SampleLabel>Reviewed starter set</SampleLabel>
-                <SampleBlurb>Ships with reviewed copy — templates work today</SampleBlurb>
+                <SampleBlurb>Pending review — no text ships until it’s reviewed</SampleBlurb>
               </SampleMain>
               <SampleNote>Scaffold library · pending review</SampleNote>
             </SampleRow>
@@ -244,12 +246,12 @@ function OrgSampleRow({
     return <RowError>{agentName} couldn’t load.</RowError>;
   }
   if (form.data === undefined) {
-    return <RowError>Loading {agentName}…</RowError>;
+    return <RowLoading>Loading {agentName}…</RowLoading>;
   }
   if (text.trim() === '') {
     return (
       <SampleRow type="button" $disabled disabled title={`${agentName} has no instructions to reuse.`}>
-        <SampleDot $color="#30D158" aria-hidden="true" />
+        <SampleDot $tone="success" aria-hidden="true" />
         <SampleMain>
           <SampleLabel>{agentName}</SampleLabel>
           <SampleBlurb>No instructions yet</SampleBlurb>
@@ -278,7 +280,7 @@ function OrgSampleRow({
           : undefined
       }
     >
-      <SampleDot $color="#30D158" aria-hidden="true" />
+      <SampleDot $tone="success" aria-hidden="true" />
       <SampleMain>
         <SampleLabel>{agentName}</SampleLabel>
         <Excerpt>{text.trim().slice(0, 140)}</Excerpt>

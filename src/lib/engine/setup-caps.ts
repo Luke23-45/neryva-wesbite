@@ -343,7 +343,7 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
     issues.push({ path: 'budget.max_total_tokens', message: `Must be an integer ${CAPS.budgetTokensMin.toLocaleString()}–${CAPS.budgetTokensMax.toLocaleString()}.` });
   }
   if (budget.max_cost_cents !== undefined && (budget.max_cost_cents < 0 || budget.max_cost_cents * 10_000 > CAPS.budgetCostMicrosMax)) {
-    issues.push({ path: 'budget.max_cost_cents', message: 'Must be non-negative and within the platform cost ceiling.' });
+    issues.push({ path: 'budget.max_cost_cents', message: 'Must be non-negative and within the $1,000,000 platform cost ceiling.' });
   }
   if (budget.wall_clock_seconds !== undefined && (!Number.isInteger(budget.wall_clock_seconds) || budget.wall_clock_seconds < 0 || budget.wall_clock_seconds > CAPS.budgetWallClockMax)) {
     issues.push({ path: 'budget.wall_clock_seconds', message: `Must be an integer 0–${CAPS.budgetWallClockMax} (24h).` });

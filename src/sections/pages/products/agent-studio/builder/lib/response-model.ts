@@ -11,10 +11,11 @@
  *   format (markdown|plain) and streaming (on|off).
  * - The schema is strict: reasoning_effort/top_p ride model_params, never
  *   response_policy (the engine 400s them inside response_policy).
- * - max_context_tokens is a legacy field: the engine rejects it with a 400
- *   naming the field. It may linger in model_params, response_policy, or
- *   context_policy on old drafts — the section surfaces it as a save
- *   blocker with an inline Remove field action.
+ * - max_context_tokens is legacy in model_params and response_policy: those
+ *   positions predate the v1.15 move to context_policy, where the engine
+ *   accepts it (optional, default 32000). Old drafts may still carry it in
+ *   the legacy positions — the section surfaces it as a save blocker with
+ *   an inline Remove field action.
  */
 
 import type {
@@ -53,8 +54,8 @@ export const CHANNEL_LABELS: Record<ResponseChannelId, string> = {
 /** Helper microcopy per channel (from the SVG design). */
 export const CHANNEL_HELPERS: Record<ResponseChannelId, string> = {
   web_chat: 'Renders markdown, streams tokens.',
-  sms: 'Plain text only, always buffered.',
-  voice: 'Spoken answers; markdown stripped.',
+  sms: 'Always buffered; the format override is honored.',
+  voice: 'Spoken answers; always buffered, the format override is honored.',
   email: 'Async digest; markdown kept, buffered.',
 };
 
@@ -81,6 +82,19 @@ export function resolvePolicyState(raw: ResponsePolicy | undefined): ResponsePol
     length: raw?.length ?? DEFAULT_RESPONSE_POLICY.length,
     channels: raw?.channels ? { ...raw.channels } : {},
   };
+}
+
+/** True when the resolved policy carries no authoring — every field reads as
+ * the engine default and no channel override is stored. */
+export function isDefaultPolicyState(state: ResponsePolicyState): boolean {
+  return (
+    state.output_format === DEFAULT_RESPONSE_POLICY.output_format &&
+    state.citations_enabled === DEFAULT_RESPONSE_POLICY.citations_enabled &&
+    state.streaming === DEFAULT_RESPONSE_POLICY.streaming &&
+    state.citations_style === DEFAULT_RESPONSE_POLICY.citations_style &&
+    state.length === DEFAULT_RESPONSE_POLICY.length &&
+    Object.keys(state.channels).length === 0
+  );
 }
 
 /** Effective format for a channel: override wins, otherwise the presentation default. */
@@ -122,13 +136,28 @@ export function withChannelFormat(
   return { ...state, channels };
 }
 
-/** Set or clear a channel's streaming override. Clearing to the inherited value removes the key. */
+/** Set or clear a channel's streaming override. 'auto' clears the override
+ * entirely (defer to the global setting); clearing to the inherited value
+ * removes the key. 'auto' is never stored — ResponseChannelOverride only
+ * carries on|off. */
 export function withChannelStreaming(
   state: ResponsePolicyState,
   id: ResponseChannelId,
-  streaming: 'on' | 'off',
+  streaming: 'on' | 'off' | 'auto',
 ): ResponsePolicyState {
   const channels = { ...state.channels };
+  if (streaming === 'auto') {
+    const current = channels[id];
+    if (!current || current.streaming === undefined) return state;
+    const next = { ...current };
+    delete next.streaming;
+    if (next.format === undefined) {
+      delete channels[id];
+    } else {
+      channels[id] = next;
+    }
+    return { ...state, channels };
+  }
   const current = channels[id] ?? {};
   const next: ResponseChannelOverride = { ...current, streaming };
   if (next.format === undefined && next.streaming === state.streaming) {
@@ -140,13 +169,15 @@ export function withChannelStreaming(
 }
 
 /* ── Legacy max_context_tokens blocker ───────────────────────────────────
- * The engine no longer supports max_context_tokens — it 400s naming the
- * field. Old drafts may still carry it in model_params, response_policy,
- * or context_policy. The section surfaces the first occurrence as the
- * blocker and offers an inline Remove field action.
+ * max_context_tokens predates v1.15 in model_params and response_policy;
+ * its current home is context_policy, which the engine accepts (optional,
+ * default 32000) — so context_policy is never a legacy position. Old
+ * drafts may still carry the key in the legacy positions. The section
+ * surfaces the first occurrence as the blocker and offers an inline
+ * Remove field action.
  */
 
-export type LegacyFieldLocation = 'model_params' | 'response_policy' | 'context_policy';
+export type LegacyFieldLocation = 'model_params' | 'response_policy';
 
 export interface LegacyFieldHit {
   location: LegacyFieldLocation;
@@ -157,16 +188,12 @@ export interface LegacyFieldHit {
 export function findLegacyMaxContextTokens(def: {
   model_params?: Record<string, unknown>;
   response_policy?: Record<string, unknown> | null;
-  context_policy?: Record<string, unknown> | null;
 }): LegacyFieldHit | null {
   if (def.model_params && 'max_context_tokens' in def.model_params) {
     return { location: 'model_params', path: 'model_params.max_context_tokens' };
   }
   if (def.response_policy && 'max_context_tokens' in def.response_policy) {
     return { location: 'response_policy', path: 'response_policy.max_context_tokens' };
-  }
-  if (def.context_policy && 'max_context_tokens' in def.context_policy) {
-    return { location: 'context_policy', path: 'context_policy.max_context_tokens' };
   }
   return null;
 }
@@ -189,10 +216,6 @@ export function removeLegacyMaxContextTokens<T extends {
     const policy = { ...next.response_policy };
     delete policy.max_context_tokens;
     next.response_policy = policy;
-  } else if (hit.location === 'context_policy' && next.context_policy) {
-    const policy = { ...next.context_policy };
-    delete policy.max_context_tokens;
-    next.context_policy = policy;
   }
   return next;
 }

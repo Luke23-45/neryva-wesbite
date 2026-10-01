@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { RailCard } from '../section-ui/SectionPage.styles';
+import { TextButton } from './ToolsSection.styles';
 
 /**
  * Response section — SVG redesign (2026-10-01).
@@ -12,6 +13,17 @@ import { RailCard } from '../section-ui/SectionPage.styles';
 
 export { FieldBlock, FieldHead, FieldHelper, FieldTitle } from './InstructionsSection.styles';
 export { SwitchRow, SwitchText, SwitchTitle, SwitchSub } from './ModelSection.styles';
+
+/**
+ * Response-local TextButton with a 44px minimum hit area. The shared
+ * TextButton stays untouched so Tools and the other consumers keep their
+ * current rhythm.
+ */
+export const HitTextButton = styled(TextButton)`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+`;
 
 /* ── Header pill ─────────────────────────────────────────────────── */
 
@@ -177,11 +189,11 @@ export const BlockerButton = styled.button`
   cursor: pointer;
   border: 0;
   /* Flat iOS blue for the primary remove action (matches the SVG spec). */
-  background: #0a84ff;
-  color: #fff;
+  background: ${({ theme }) => theme.app.accentControl};
+  color: #ffffff;
 
   &:hover {
-    background: #0077ed;
+    filter: brightness(0.92);
   }
 
   &:focus-visible {

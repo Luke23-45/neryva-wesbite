@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { RailCard } from '../section-ui/SectionPage.styles';
 
 /**
@@ -26,6 +26,21 @@ export { RailCard, RailTitle } from '../section-ui/SectionPage.styles';
 export { MicroTip } from '../section-ui/SectionPage';
 
 /* ── Header pill ─────────────────────────────────────────────────── */
+
+const railPulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+`;
+
+/** Rail loading state — flat pulse text, motion-safe, announced via the
+ *  parent's aria-busy. */
+export const RailLoading = styled.span`
+  color: ${({ theme }) => theme.app.text.muted};
+  animation: ${railPulse} 1.6s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`;
 
 export const Pill = styled.span<{ $tone?: 'neutral' | 'warning' }>`
   display: inline-flex;
@@ -91,7 +106,7 @@ export const CapControl = styled.div`
 `;
 
 export const CapInput = styled.div`
-  width: 140px;
+  width: ${({ theme }) => theme.app.fieldWidth.numeric};
 `;
 
 export const RowDivider = styled.hr`
@@ -199,7 +214,12 @@ export const EstimateValue = styled.span`
 export const UsageLink = styled.button`
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 4px;
+  /* 44px hit area without changing the visual design — the text stays
+   * body-size, vertically centered in the taller target. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font-size: ${({ theme }) => theme.app.type.body};
   color: ${({ theme }) => theme.app.status.info.fg};
   cursor: pointer;

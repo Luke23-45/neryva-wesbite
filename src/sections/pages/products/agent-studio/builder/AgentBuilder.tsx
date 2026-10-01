@@ -7,7 +7,7 @@ import { ApiError } from '@lib/engine/client';
 import { useOrg } from '@/Context/OrgContext';
 import { useAssistant, useAssistantDefinition, useAssistantVersions, useKnowledgeHealth, usePublishReadiness, DRAFT_WRITE_MUTATION_KEY } from '@hooks/studio/useAgentAuthoring';
 import { useIsMutating } from '@tanstack/react-query';
-import { useModelAvailability } from '@hooks/studio/useSetupModels';
+import { useModelAvailability, useModelCosts } from '@hooks/studio/useSetupModels';
 import { useEvalRuns } from '@hooks/studio/useSetupEval';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { BUILT_IN_TOOLS, useToolCatalog } from '@hooks/studio/useSetupTools';
@@ -29,6 +29,7 @@ import { BuilderBottomBar } from './bottombar/BuilderBottomBar';
 import { deriveBottomAction, type BottomAction, type BottomPrimary } from './lib/bottom-action';
 import { SETUP_ENTRY_STEP, clearSetupPosition, getSetupOrder, nextSetupSection, prevSetupSection, readSetupPosition, setupStepIndex, writeSetupPosition } from './lib/setup-flow';
 import { knowledgeSlot, projectBuilderGraph, FUNCTIONAL_NODE_IDS } from './lib/projector';
+import { estimateRun, PLATFORM_DEFAULTS } from './lib/budget-model';
 import { selectVersionEvalState } from './lib/eval-model';
 import type { PublishEditTarget } from './lib/publish-model';
 import { useBuilderUI } from './lib/builder-store';
@@ -79,6 +80,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
   const models = useModelAvailability({ enabled: mode === 'build' });
+  const modelCosts = useModelCosts({ enabled: mode === 'build' });
   // Draft-targeted pin health (C05) — grades the knowledge section and the
   // bottom hint against the draft Re-pin mutates, not the active version.
   // Disabled in new mode: no assistant exists to read.
@@ -258,6 +260,22 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     [models.data],
   );
 
+  // BDT-5: worst-case run estimate for the budget graph node — primary
+  // model's list rate × token cap. Null when unpriced (never a fake $0).
+  const budgetEstimateMicros = useMemo(() => {
+    const primaryRef = definition?.model_policy.allowed_models[0];
+    if (!primaryRef) return null;
+    const cost = (modelCosts.data ?? []).find((c) => c.ref === primaryRef);
+    if (!cost) return null;
+    const tokenCap = definition?.budget.max_total_tokens ?? PLATFORM_DEFAULTS.max_total_tokens;
+    return estimateRun(tokenCap, {
+      ref: cost.ref,
+      costMicrosPer1kInput: cost.costMicrosPer1kInput,
+      costMicrosPer1kOutput: cost.costMicrosPer1kOutput,
+      costMicrosPer1kCachedInput: cost.costMicrosPer1kCachedInput,
+    })?.micros ?? null;
+  }, [definition, modelCosts.data]);
+
   const projected = useMemo(
     () =>
       projectBuilderGraph({
@@ -272,6 +290,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
         selectedId,
         modelLabel,
         models: models.data,
+        budgetEstimateMicros,
         knowledgeHealth: health.data ?? undefined,
         toolCatalog: toolCatalog.data ?? undefined,
         toolBuiltins: BUILT_IN_TOOLS,
@@ -300,7 +319,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
               : undefined,
         confirmedSections,
       }),
-    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data, confirmedSections],
+    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, budgetEstimateMicros, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data, confirmedSections],
   );
 
   // The main pane's view: 'overview' or a section id. New mode is locked to

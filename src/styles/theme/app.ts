@@ -93,6 +93,11 @@ export const app = {
     avatar: '56px', // identity avatar (documented standard)
   },
 
+  /** Fixed form-control widths — one dialect for short inputs. */
+  fieldWidth: {
+    numeric: '140px', // short numeric inputs (Budget cap fields)
+  },
+
   /** Loading skeleton spec — shimmer via CSS gradient animation.
    *  GlobalStyles already kills CSS animation under prefers-reduced-motion,
    *  so skeletons degrade to a static fill for those users. */

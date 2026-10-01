@@ -90,6 +90,15 @@ export function formatDollars(cents: number): string {
   return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * Estimate dollars that never read as free: a tiny-but-nonzero amount
+ * renders "~$0.00" instead of "$0.00".
+ */
+export function formatEstimateDollars(dollars: number): string {
+  if (dollars > 0 && dollars < 0.005) return '~$0.00';
+  return `$${dollars.toFixed(2)}`;
+}
+
 export function formatDuration(totalSeconds: number): string {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   if (totalSeconds < 3600) {

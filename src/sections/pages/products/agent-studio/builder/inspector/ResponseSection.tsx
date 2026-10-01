@@ -21,6 +21,7 @@ import {
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
+import { useStringDraft } from '../lib/use-string-draft';
 import type { ReasoningEffort } from '../lib/brain-model';
 import {
   BUFFERED_CHANNELS,
@@ -34,6 +35,7 @@ import {
   channelStreaming,
   countChannelOverrides,
   findLegacyMaxContextTokens,
+  isDefaultPolicyState,
   isLegacyFieldRejection,
   resolvePolicyState,
   withChannelFormat,
@@ -60,7 +62,6 @@ import {
   RailLabel,
   RailRow,
   RailValue,
-  TextButton,
 } from './ToolsSection.styles';
 import {
   BlockerButton,
@@ -80,6 +81,7 @@ import {
   ControlLabel,
   DisabledVeil,
   FieldHelper,
+  HitTextButton,
   InheritRow,
   Pill,
   PillDot,
@@ -150,7 +152,8 @@ function describePolicy(policy: PolicyState): string {
     ? `on · ${policy.citations_style === 'footnotes' ? 'footnotes' : 'inline'}`
     : 'off';
   const streaming = policy.streaming.charAt(0).toUpperCase() + policy.streaming.slice(1);
-  return `${format} · citations ${citations} · streaming ${streaming} · ${policy.length}`;
+  const length = policy.length.charAt(0).toUpperCase() + policy.length.slice(1);
+  return `${format} · citations ${citations} · streaming ${streaming} · ${length}`;
 }
 
 /**
@@ -161,11 +164,11 @@ function describePolicy(policy: PolicyState): string {
  * full render object, never partial keys. Every control maps to a real
  * contract field — no preview, no latency SLO, no schedule invented.
  *
- * Legacy: max_context_tokens is no longer supported by the engine (400s
- * naming the field). When the draft carries it — in model_params,
- * response_policy, or context_policy — the section surfaces a save
- * blocker with an inline Remove field action instead of letting the
- * save fail opaquely.
+ * Legacy: max_context_tokens predates v1.15 in model_params and
+ * response_policy (its current home is context_policy, which the engine
+ * accepts with a 32000 default). When the draft carries it in a legacy
+ * position, the section surfaces a save blocker with an inline Remove
+ * field action instead of letting the save fail opaquely.
  */
 export function ResponseSection({
   assistantId,
@@ -194,8 +197,8 @@ export function ResponseSection({
   /** Legacy field the maker removed via the blocker — stripped in buildNext until the source refetches clean. */
   const [removedLegacy, setRemovedLegacy] = useState<LegacyFieldHit | null>(null);
 
-  const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
-  const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
+  const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null, { handledLegacy400: true });
+  const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId, { handledLegacy400: true });
 
   const source = useMemo(() => (definition ? readPolicy(definition) : null), [definition]);
   const current = useMemo(() => JSON.stringify(policy), [policy]);
@@ -245,13 +248,13 @@ export function ResponseSection({
     });
     // Legacy removal: the maker hit Remove field — strip the key from the
     // payload so the save lands. Idempotent once the source refetches clean.
+    // context_policy is never a legacy position (its max_context_tokens is
+    // the current, engine-accepted field), so only model_params and
+    // response_policy are stripped.
     if (removedLegacy) {
       if (removedLegacy.location === 'model_params') delete next.model_params.max_context_tokens;
       if (removedLegacy.location === 'response_policy' && next.response_policy) {
         delete (next.response_policy as Record<string, unknown>).max_context_tokens;
-      }
-      if (removedLegacy.location === 'context_policy' && next.context_policy) {
-        delete (next.context_policy as Record<string, unknown>).max_context_tokens;
       }
     }
     return next;
@@ -264,7 +267,6 @@ export function ResponseSection({
     return findLegacyMaxContextTokens({
       model_params: next.model_params as Record<string, unknown>,
       response_policy: (next.response_policy ?? null) as Record<string, unknown> | null,
-      context_policy: (next.context_policy ?? null) as Record<string, unknown> | null,
     });
   }, [buildNext]);
 
@@ -280,9 +282,10 @@ export function ResponseSection({
               issue.path.startsWith('response_policy.') ||
               // The override pair is validated under model_params; the rest
               // of model_params belongs to Model — never hold this section
-              // on its issues.
+              // on its issues. Secrets issues belong to Credentials.
               issue.path === 'model_params.reasoning_effort' ||
-              issue.path === 'model_params.top_p',
+              issue.path === 'model_params.top_p' ||
+              issue.path === 'secrets',
           )
           .map((i) => i.message),
       );
@@ -318,7 +321,7 @@ export function ResponseSection({
             <span>Legacy field blocks saving — remove to resume.</span>
           </SaveToastBody>
           <SaveToastActions>
-            <TextButton
+            <HitTextButton
               type="button"
               onClick={() => {
                 toast.dismiss(t.id);
@@ -330,10 +333,10 @@ export function ResponseSection({
               }}
             >
               Fix
-            </TextButton>
-            <TextButton type="button" onClick={() => toast.dismiss(t.id)} aria-label="Dismiss">
+            </HitTextButton>
+            <HitTextButton type="button" onClick={() => toast.dismiss(t.id)} aria-label="Dismiss">
               ✕
-            </TextButton>
+            </HitTextButton>
           </SaveToastActions>
         </SaveToast>
       ),
@@ -418,27 +421,24 @@ export function ResponseSection({
     setPolicy((prev) => ({ ...prev, ...part }));
   }, []);
 
-  const clampTopP = useCallback(
-    (raw: string) => {
-      const trimmed = raw.trim();
-      if (trimmed === '') {
-        setPolicy((prev) => {
-          const next = { ...prev };
-          delete next.top_p;
-          return next;
-        });
-        return;
-      }
-      const value = Number(trimmed);
-      if (!Number.isFinite(value)) return;
-      // Snap to the 0.05 step grid and kill float artifacts (0.95 must
-      // persist as 0.95, never 0.9500000000000001). Floor at 0.05 — the
-      // engine rejects top_p <= 0 (z.number().gt(0)), so 0 can never save.
-      const clamped = Math.min(1, Math.max(0.05, value));
-      patch({ top_p: Number((Math.round(clamped / 0.05) * 0.05).toFixed(2)) });
-    },
-    [patch],
-  );
+  // Top-p uses the string-draft pattern (same as Model): the field holds raw
+  // text while typing so intermediate states ("0.", "abc") never corrupt the
+  // committed value and NaN can never enter state. Commit snaps to the 0.05
+  // step grid and kills float artifacts (0.95 persists as 0.95, never
+  // 0.9500000000000001); floors at 0.05 — the engine rejects top_p <= 0, so
+  // 0 can never save. Empty commits to undefined (clears the key).
+  const topPDraft = useStringDraft(policy.top_p, (value) => {
+    if (value === undefined) {
+      setPolicy((prev) => {
+        const next = { ...prev };
+        delete next.top_p;
+        return next;
+      });
+      return;
+    }
+    const clamped = Math.min(1, Math.max(0.05, value));
+    patch({ top_p: Number((Math.round(clamped / 0.05) * 0.05).toFixed(2)) });
+  });
 
   const removeLegacyField = useCallback(() => {
     if (!legacyHit) return;
@@ -470,16 +470,20 @@ export function ResponseSection({
     </Pill>
   );
 
+  const policyTouched = !isDefaultPolicyState(policy);
+
   const rail = (
     <>
       <RailCard>
         <RailTitle>On this page</RailTitle>
         <RailRow>
           <RailLabel>
-            <RailDot $tone="ok" aria-hidden="true" />
+            <RailDot $tone={policyTouched ? 'ok' : 'muted'} aria-hidden="true" />
             Presentation
           </RailLabel>
-          <RailValue>set</RailValue>
+          <RailValue $tone={policyTouched ? undefined : 'muted'}>
+            {policyTouched ? 'set' : 'defaults'}
+          </RailValue>
         </RailRow>
         <RailRow>
           <RailLabel>
@@ -529,9 +533,9 @@ export function ResponseSection({
         <BlockerRailCard>
           <RailTitle>Save blocker</RailTitle>
           <BlockerPath>{legacyHit.path}</BlockerPath>
-          <TextButton type="button" onClick={removeLegacyField}>
+          <HitTextButton type="button" onClick={removeLegacyField}>
             Remove field
-          </TextButton>
+          </HitTextButton>
         </BlockerRailCard>
       )}
       <RailCard>
@@ -613,305 +617,297 @@ export function ResponseSection({
   }
 
   return (
-    <div
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target instanceof HTMLElement) {
-          event.target.blur();
-        }
-      }}
+    <SectionPage
+      title="Response"
+      subtitle="How answers look, flow, and cite — per channel, at runtime."
+      pill={pill}
+      rail={rail}
     >
-      <SectionPage
-        title="Response"
-        subtitle="How answers look, flow, and cite — per channel, at runtime."
-        pill={pill}
-        rail={rail}
-      >
-        {/* PRESENTATION */}
-        <SectionGroup label="Presentation">
-          <GroupCard>
-            <CardHead>
-              <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
-              <CardTitleWrap>
-                <CardTitle>Presentation</CardTitle>
-                <CardSub>The shape of every answer before it reaches a channel.</CardSub>
-              </CardTitleWrap>
-            </CardHead>
-            <ControlRow>
-              <ControlText>
-                <ControlLabel>Output format</ControlLabel>
-                <ControlHelper>Markdown renders rich answers; plain text suits SMS and voice.</ControlHelper>
-              </ControlText>
+      {/* PRESENTATION */}
+      <SectionGroup label="Presentation">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
+            <CardTitleWrap>
+              <CardTitle>Presentation</CardTitle>
+              <CardSub>The shape of every answer before it reaches a channel.</CardSub>
+            </CardTitleWrap>
+          </CardHead>
+          <ControlRow>
+            <ControlText>
+              <ControlLabel>Output format</ControlLabel>
+              <ControlHelper>Markdown renders rich answers; plain text suits SMS and voice.</ControlHelper>
+            </ControlText>
+            <Segmented
+              ariaLabel="Output format"
+              value={policy.output_format}
+              onChange={(v: ResponseOutputFormat) => patch({ output_format: v })}
+              options={[
+                { value: 'markdown', label: 'Markdown' },
+                { value: 'plain', label: 'Plain text' },
+              ]}
+            />
+          </ControlRow>
+          <RowDivider />
+          <ControlRow>
+            <ControlText>
+              <ControlLabel>Citations</ControlLabel>
+              <ControlHelper>Source links under answers that used retrieved knowledge.</ControlHelper>
+            </ControlText>
+            <ControlRow $compact>
               <Segmented
-                ariaLabel="Output format"
-                value={policy.output_format}
-                onChange={(v: ResponseOutputFormat) => patch({ output_format: v })}
-                options={[
-                  { value: 'markdown', label: 'Markdown' },
-                  { value: 'plain', label: 'Plain text' },
-                ]}
+                ariaLabel="Citation style"
+                value={policy.citations_style}
+                onChange={(v: ResponseCitationsStyle) => patch({ citations_style: v })}
+                options={CITATIONS_STYLE_OPTIONS}
               />
-            </ControlRow>
-            <RowDivider />
-            <ControlRow>
-              <ControlText>
-                <ControlLabel>Citations</ControlLabel>
-                <ControlHelper>Source links under answers that used retrieved knowledge.</ControlHelper>
-              </ControlText>
-              <ControlRow $compact>
-                <Segmented
-                  ariaLabel="Citation style"
-                  value={policy.citations_style}
-                  onChange={(v: ResponseCitationsStyle) => patch({ citations_style: v })}
-                  options={CITATIONS_STYLE_OPTIONS}
-                />
-                <Segmented
-                  ariaLabel="Citations on or off"
-                  value={policy.citations_enabled ? 'on' : 'off'}
-                  onChange={(v: 'on' | 'off') => patch({ citations_enabled: v === 'on' })}
-                  options={[
-                    { value: 'on', label: 'On' },
-                    { value: 'off', label: 'Off' },
-                  ]}
-                />
-              </ControlRow>
-            </ControlRow>
-            <RowDivider />
-            <ControlRow>
-              <ControlText>
-                <ControlLabel>Streaming</ControlLabel>
-                <ControlHelper>Token-by-token delivery where the channel supports it.</ControlHelper>
-              </ControlText>
               <Segmented
-                ariaLabel="Streaming"
-                value={policy.streaming}
-                onChange={(v: ResponseStreaming) => patch({ streaming: v })}
+                ariaLabel="Citations on or off"
+                value={policy.citations_enabled ? 'on' : 'off'}
+                onChange={(v: 'on' | 'off') => patch({ citations_enabled: v === 'on' })}
                 options={[
-                  { value: 'auto', label: 'Auto' },
                   { value: 'on', label: 'On' },
                   { value: 'off', label: 'Off' },
                 ]}
               />
             </ControlRow>
-            <RowDivider />
-            <ControlRow>
-              <ControlText>
-                <ControlLabel>Length</ControlLabel>
-                <ControlHelper>Concise fits one screen; detailed adds structure on ask.</ControlHelper>
-              </ControlText>
-              <Segmented
-                ariaLabel="Length"
-                value={policy.length}
-                onChange={(v: ResponseLength) => patch({ length: v })}
-                options={LENGTH_OPTIONS}
-              />
-            </ControlRow>
-          </GroupCard>
-        </SectionGroup>
+          </ControlRow>
+          <RowDivider />
+          <ControlRow>
+            <ControlText>
+              <ControlLabel>Streaming</ControlLabel>
+              <ControlHelper>Token-by-token delivery where the channel supports it.</ControlHelper>
+            </ControlText>
+            <Segmented
+              ariaLabel="Streaming"
+              value={policy.streaming}
+              onChange={(v: ResponseStreaming) => patch({ streaming: v })}
+              options={[
+                { value: 'auto', label: 'Auto' },
+                { value: 'on', label: 'On' },
+                { value: 'off', label: 'Off' },
+              ]}
+            />
+          </ControlRow>
+          <RowDivider />
+          <ControlRow>
+            <ControlText>
+              <ControlLabel>Length</ControlLabel>
+              <ControlHelper>Concise fits one screen; detailed adds structure on ask.</ControlHelper>
+            </ControlText>
+            <Segmented
+              ariaLabel="Length"
+              value={policy.length}
+              onChange={(v: ResponseLength) => patch({ length: v })}
+              options={LENGTH_OPTIONS}
+            />
+          </ControlRow>
+        </GroupCard>
+      </SectionGroup>
 
-        {/* CHANNELS */}
-        <SectionGroup label="Channels">
-          <GroupCard>
-            <CardHead>
-              <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
-              <CardTitleWrap>
-                <CardTitle>Channels</CardTitle>
-                <CardSub>Per-channel overrides. Auto defers to these; buffered channels ignore streaming.</CardSub>
-              </CardTitleWrap>
-            </CardHead>
-            {CHANNEL_IDS.map((id, i) => {
-              const buffered = BUFFERED_CHANNELS.includes(id);
-              const fmt = channelFormat(policy, id);
-              return (
-                <div key={id}>
-                  {i > 0 && <RowDivider />}
-                  <ChannelRow>
-                    <ChannelText>
-                      <ControlLabel>{CHANNEL_LABELS[id]}</ControlLabel>
-                      <ControlHelper>{CHANNEL_HELPERS[id]}</ControlHelper>
-                    </ChannelText>
-                    <ControlRow $compact>
+      {/* CHANNELS */}
+      <SectionGroup label="Channels">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone="ok" aria-hidden="true">✓</CardIcon>
+            <CardTitleWrap>
+              <CardTitle>Channels</CardTitle>
+              <CardSub>Per-channel overrides. Auto defers to these; buffered channels ignore streaming.</CardSub>
+            </CardTitleWrap>
+          </CardHead>
+          {CHANNEL_IDS.map((id, i) => {
+            const buffered = BUFFERED_CHANNELS.includes(id);
+            const fmt = channelFormat(policy, id);
+            return (
+              <div key={id}>
+                {i > 0 && <RowDivider />}
+                <ChannelRow>
+                  <ChannelText>
+                    <ControlLabel>{CHANNEL_LABELS[id]}</ControlLabel>
+                    <ControlHelper>{CHANNEL_HELPERS[id]}</ControlHelper>
+                  </ChannelText>
+                  <ControlRow $compact>
+                    <Segmented
+                      ariaLabel={`${CHANNEL_LABELS[id]} format`}
+                      value={fmt}
+                      onChange={(v: ResponseOutputFormat) => setPolicy((prev) => withChannelFormat(prev, id, v))}
+                      options={[
+                        { value: 'markdown', label: 'MD' },
+                        { value: 'plain', label: 'Plain' },
+                      ]}
+                    />
+                    <DisabledVeil $disabled={buffered} aria-disabled={buffered}>
                       <Segmented
-                        ariaLabel={`${CHANNEL_LABELS[id]} format`}
-                        value={fmt}
-                        onChange={(v: ResponseOutputFormat) => setPolicy((prev) => withChannelFormat(prev, id, v))}
+                        ariaLabel={`${CHANNEL_LABELS[id]} streaming`}
+                        value={buffered ? 'off' : channelStreaming(policy, id)}
+                        onChange={(v: 'on' | 'off' | 'auto') => {
+                          if (buffered) return;
+                          setPolicy((prev) => withChannelStreaming(prev, id, v));
+                        }}
                         options={[
-                          { value: 'markdown', label: 'MD' },
-                          { value: 'plain', label: 'Plain' },
+                          { value: 'auto', label: 'Auto' },
+                          { value: 'on', label: 'On' },
+                          { value: 'off', label: 'Off' },
                         ]}
                       />
-                      <DisabledVeil $disabled={buffered} aria-disabled={buffered}>
-                        <Segmented
-                          ariaLabel={`${CHANNEL_LABELS[id]} streaming`}
-                          value={buffered ? 'off' : channelStreaming(policy, id) === 'auto' ? 'on' : channelStreaming(policy, id)}
-                          onChange={(v: 'on' | 'off') => {
-                            if (buffered) return;
-                            setPolicy((prev) => withChannelStreaming(prev, id, v));
-                          }}
-                          options={[
-                            { value: 'on', label: 'On' },
-                            { value: 'off', label: 'Off' },
-                          ]}
-                        />
-                      </DisabledVeil>
-                    </ControlRow>
-                  </ChannelRow>
-                </div>
-              );
-            })}
-            <ChannelFootnote>
-              Buffered channels compose the full answer first — streaming settings never apply.
-            </ChannelFootnote>
-          </GroupCard>
-        </SectionGroup>
+                    </DisabledVeil>
+                  </ControlRow>
+                </ChannelRow>
+              </div>
+            );
+          })}
+          <ChannelFootnote>
+            Buffered channels compose the full answer first — streaming settings never apply.
+          </ChannelFootnote>
+        </GroupCard>
+      </SectionGroup>
 
-        {/* GENERATION OVERRIDES */}
-        <SectionGroup label="Generation overrides">
-          <GroupCard>
-            <CardHead>
-              <CardIcon $tone={hasOverrides || legacyHit ? 'warning' : 'ok'} aria-hidden="true">
-                {hasOverrides || legacyHit ? '!' : '✓'}
-              </CardIcon>
-              <CardTitleWrap>
-                <CardTitle>Generation overrides</CardTitle>
-                <CardSub>Reasoning effort and top-p inherit from Model defaults unless overridden here.</CardSub>
-              </CardTitleWrap>
-              <Switch
-                checked={overridesOpen}
-                onChange={setOverridesOpen}
-                label={overridesOpen ? 'Overridden' : 'Inheriting'}
-              />
-            </CardHead>
-            {!overridesOpen ? (
-              <InheritRow>
+      {/* GENERATION OVERRIDES */}
+      <SectionGroup label="Generation overrides">
+        <GroupCard>
+          <CardHead>
+            <CardIcon $tone={hasOverrides || legacyHit ? 'warning' : 'ok'} aria-hidden="true">
+              {hasOverrides || legacyHit ? '!' : '✓'}
+            </CardIcon>
+            <CardTitleWrap>
+              <CardTitle>Generation overrides</CardTitle>
+              <CardSub>Reasoning effort and top-p inherit from Model defaults unless overridden here.</CardSub>
+            </CardTitleWrap>
+            <Switch
+              checked={overridesOpen}
+              onChange={setOverridesOpen}
+              label={overridesOpen ? 'Hide overrides' : 'Show overrides'}
+            />
+          </CardHead>
+          {!overridesOpen ? (
+            <InheritRow>
+              <ControlText>
+                <ControlLabel>{hasOverrides ? 'Overridden' : 'Inheriting'}</ControlLabel>
+                <ChipRow>
+                  <Chip>reasoning · {policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Medium'}</Chip>
+                  <Chip>top-p · {policy.top_p ?? '0.95'}</Chip>
+                </ChipRow>
+              </ControlText>
+              <HitTextButton type="button" onClick={goToModel}>
+                Edit in Model
+              </HitTextButton>
+            </InheritRow>
+          ) : (
+            <>
+              <ControlRow>
                 <ControlText>
-                  <ControlLabel>{hasOverrides ? 'Overridden' : 'Inheriting'}</ControlLabel>
-                  <ChipRow>
-                    <Chip>reasoning · {policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Medium'}</Chip>
-                    <Chip>top-p · {policy.top_p ?? '0.95'}</Chip>
-                  </ChipRow>
+                  <ControlLabel>Reasoning effort</ControlLabel>
+                  <ControlHelper>Only meaningful when the model supports reasoning.</ControlHelper>
                 </ControlText>
-                <TextButton type="button" onClick={goToModel}>
-                  Edit in Model
-                </TextButton>
-              </InheritRow>
-            ) : (
-              <>
-                <ControlRow>
-                  <ControlText>
-                    <ControlLabel>Reasoning effort</ControlLabel>
-                    <ControlHelper>Only meaningful when the model supports reasoning.</ControlHelper>
-                  </ControlText>
-                  <Segmented
-                    ariaLabel="Reasoning effort"
-                    value={policy.reasoning_effort ?? 'default'}
-                    onChange={(v: string) =>
-                      patch({ reasoning_effort: v === 'default' ? undefined : v })
-                    }
-                    options={[
-                      { value: 'default', label: 'Default' },
-                      ...EFFORT_ORDER.map((e) => ({ value: e, label: effortLabel(e) })),
-                    ]}
-                  />
-                </ControlRow>
-                {isCustomEffort(policy.reasoning_effort) && (
-                  <Whisper $tone="amber">
-                    Custom effort “{policy.reasoning_effort}” — pick a preset to replace it.
-                  </Whisper>
-                )}
-                <RowDivider />
-                <ControlRow>
-                  <ControlText>
-                    <ControlLabel>Top-p</ControlLabel>
-                    <ControlHelper>Lower = more focused, higher = more varied. Rarely needs changing.</ControlHelper>
-                  </ControlText>
-                  <TextInput
-                    aria-label="Top-p (0 to 1)"
-                    type="number"
-                    min={0.05}
-                    max={1}
-                    step={0.05}
-                    value={policy.top_p ?? ''}
-                    onChange={(event) => clampTopP(event.target.value)}
-                    placeholder="e.g. 0.9"
-                  />
-                </ControlRow>
-              </>
-            )}
-          </GroupCard>
-        </SectionGroup>
+                <Segmented
+                  ariaLabel="Reasoning effort"
+                  value={policy.reasoning_effort ?? 'default'}
+                  onChange={(v: string) =>
+                    patch({ reasoning_effort: v === 'default' ? undefined : v })
+                  }
+                  options={[
+                    { value: 'default', label: 'Default' },
+                    ...EFFORT_ORDER.map((e) => ({ value: e, label: effortLabel(e) })),
+                  ]}
+                />
+              </ControlRow>
+              {isCustomEffort(policy.reasoning_effort) && (
+                <Whisper $tone="amber">
+                  Custom effort “{policy.reasoning_effort}” — pick a preset to replace it.
+                </Whisper>
+              )}
+              <RowDivider />
+              <ControlRow>
+                <ControlText>
+                  <ControlLabel>Top-p</ControlLabel>
+                  <ControlHelper>Lower = more focused, higher = more varied. Rarely needs changing.</ControlHelper>
+                </ControlText>
+                <TextInput
+                  aria-label="Top-p (0.05 to 1)"
+                  inputMode="decimal"
+                  value={topPDraft.value}
+                  onChange={(event) => topPDraft.onChange(event.target.value)}
+                  onBlur={topPDraft.onBlur}
+                  onKeyDown={topPDraft.onKeyDown}
+                  placeholder="e.g. 0.9"
+                />
+              </ControlRow>
+            </>
+          )}
+        </GroupCard>
+      </SectionGroup>
 
-        {/* LEGACY BLOCKER */}
-        {legacyHit && (
-          <BlockerCard ref={blockerRef} role="alert">
-            <BlockerTitle>Legacy field blocks saving</BlockerTitle>
-            <BlockerMessage>max_context_tokens is no longer supported by the current plan.</BlockerMessage>
-            <BlockerButton type="button" onClick={removeLegacyField}>
-              Remove field
-            </BlockerButton>
-          </BlockerCard>
-        )}
+      {/* LEGACY BLOCKER */}
+      {legacyHit && (
+        <BlockerCard ref={blockerRef} role="alert">
+          <BlockerTitle>Legacy field blocks saving</BlockerTitle>
+          <BlockerMessage>max_context_tokens is no longer supported by the current plan.</BlockerMessage>
+          <BlockerButton type="button" onClick={removeLegacyField}>
+            Remove field
+          </BlockerButton>
+        </BlockerCard>
+      )}
 
-        <FieldHelper>{describePolicy(policy)}</FieldHelper>
+      <FieldHelper>{describePolicy(policy)}</FieldHelper>
 
-        {heldMessages
-          .filter((m) => !m.startsWith('Legacy field blocks saving'))
-          .map((message) => (
-            <Whisper key={message} $tone="red" role="alert">
-              {message} Autosave held — fix it and saving resumes on its own.
-            </Whisper>
-          ))}
-      </SectionPage>
+      {heldMessages
+        .filter((m) => !m.startsWith('Legacy field blocks saving'))
+        .map((message) => (
+          <Whisper key={message} $tone="red" role="alert">
+            {message} Autosave held — fix it and saving resumes on its own.
+          </Whisper>
+        ))}
 
       {conflict && (
-        <ConflictDialog
-          assistantId={assistantId}
-          attempted={conflict.attempted}
-          expectedHash={conflict.expectedHash}
-          currentHash={conflict.currentHash}
-          pending={pending}
-          onClose={() => setConflict(null)}
-          selectTheirs={(live) =>
-            JSON.stringify({ response_policy: live.response_policy, model_params: live.model_params })
-          }
-          onReloadTheirs={(theirs) => {
-            try {
-              const parsed = JSON.parse(theirs) as { response_policy?: unknown; model_params?: Record<string, unknown> };
-              const theirsParsed = parseResponsePolicy(parsed.response_policy);
-              const mps = parsed.model_params;
-              setPolicy(
-                readPolicy({
-                  ...definition,
-                  response_policy: theirsParsed,
-                  model_params: {
-                    ...definition.model_params,
-                    ...(typeof mps?.reasoning_effort === 'string'
-                      ? { reasoning_effort: mps.reasoning_effort as ReasoningEffort }
-                      : {}),
-                    ...(typeof mps?.top_p === 'number' ? { top_p: mps.top_p } : {}),
-                  },
-                }),
-              );
-            } catch {
-              // Unparseable theirs: leave local state, still refetch below.
-            }
-            setConflict(null);
-            setAdopting(theirs);
-            void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
-            toast('Reloaded their version — review it, then keep editing or close.');
-          }}
-          onSaveMine={(freshHash) => {
-            updateDraft.mutate(
-              { definition: conflict.attemptedDef, expectedHash: freshHash },
-              {
-                onSuccess: () => {
-                  toast.success('Saved over the latest version');
-                  setConflict(null);
+      <ConflictDialog
+        assistantId={assistantId}
+        attempted={conflict.attempted}
+        expectedHash={conflict.expectedHash}
+        currentHash={conflict.currentHash}
+        pending={pending}
+        onClose={() => setConflict(null)}
+        selectTheirs={(live) =>
+          JSON.stringify({ response_policy: live.response_policy, model_params: live.model_params })
+        }
+        onReloadTheirs={(theirs) => {
+          try {
+            const parsed = JSON.parse(theirs) as { response_policy?: unknown; model_params?: Record<string, unknown> };
+            const theirsParsed = parseResponsePolicy(parsed.response_policy);
+            const mps = parsed.model_params;
+            setPolicy(
+              readPolicy({
+                ...definition,
+                response_policy: theirsParsed,
+                model_params: {
+                  ...definition.model_params,
+                  ...(typeof mps?.reasoning_effort === 'string'
+                    ? { reasoning_effort: mps.reasoning_effort as ReasoningEffort }
+                    : {}),
+                  ...(typeof mps?.top_p === 'number' ? { top_p: mps.top_p } : {}),
                 },
-              },
+              }),
             );
-          }}
-        />
-      )}
-    </div>
+          } catch {
+            // Unparseable theirs: leave local state, still refetch below.
+          }
+          setConflict(null);
+          setAdopting(theirs);
+          void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
+          toast('Reloaded their version — review it, then keep editing or close.');
+        }}
+        onSaveMine={(freshHash) => {
+          updateDraft.mutate(
+            { definition: conflict.attemptedDef, expectedHash: freshHash },
+            {
+              onSuccess: () => {
+                toast.success('Saved over the latest version');
+                setConflict(null);
+              },
+            },
+          );
+        }}
+      />
+    )}
+    </SectionPage>
   );
 }

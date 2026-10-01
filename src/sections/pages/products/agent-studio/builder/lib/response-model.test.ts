@@ -7,6 +7,7 @@ import {
   channelStreaming,
   countChannelOverrides,
   findLegacyMaxContextTokens,
+  isDefaultPolicyState,
   isLegacyFieldRejection,
   removeLegacyMaxContextTokens,
   resolvePolicyState,
@@ -73,6 +74,26 @@ describe('channel overrides', () => {
     expect(channelHasOverride(state, 'email')).toBe(true);
   });
 
+  it("'auto' clears the streaming override and never stores 'auto'", () => {
+    let state = resolvePolicyState(undefined);
+    state = withChannelStreaming(state, 'email', 'off');
+    expect(channelHasOverride(state, 'email')).toBe(true);
+    state = withChannelStreaming(state, 'email', 'auto');
+    expect(channelStreaming(state, 'email')).toBe('auto');
+    expect(channelHasOverride(state, 'email')).toBe(false);
+    expect(state.channels).toEqual({});
+  });
+
+  it("'auto' keeps a co-existing format override", () => {
+    let state = resolvePolicyState(undefined);
+    state = withChannelFormat(state, 'email', 'plain');
+    state = withChannelStreaming(state, 'email', 'off');
+    state = withChannelStreaming(state, 'email', 'auto');
+    expect(channelStreaming(state, 'email')).toBe('auto');
+    expect(channelFormat(state, 'email')).toBe('plain');
+    expect(channelHasOverride(state, 'email')).toBe(true);
+  });
+
   it('buffered channels are sms and voice', () => {
     expect(BUFFERED_CHANNELS).toContain('sms');
     expect(BUFFERED_CHANNELS).toContain('voice');
@@ -82,12 +103,29 @@ describe('channel overrides', () => {
   });
 });
 
+describe('isDefaultPolicyState', () => {
+  it('is true for the resolved engine defaults', () => {
+    expect(isDefaultPolicyState(resolvePolicyState(undefined))).toBe(true);
+  });
+
+  it('is false when any presentation field differs', () => {
+    const state = resolvePolicyState(undefined);
+    expect(isDefaultPolicyState({ ...state, length: 'detailed' })).toBe(false);
+    expect(isDefaultPolicyState({ ...state, citations_style: 'footnotes' })).toBe(false);
+    expect(isDefaultPolicyState({ ...state, output_format: 'plain' })).toBe(false);
+  });
+
+  it('is false when a channel override is stored', () => {
+    const state = withChannelFormat(resolvePolicyState(undefined), 'sms', 'plain');
+    expect(isDefaultPolicyState(state)).toBe(false);
+  });
+});
+
 describe('findLegacyMaxContextTokens', () => {
   it('finds the key in model_params first', () => {
     const hit = findLegacyMaxContextTokens({
       model_params: { max_context_tokens: 1000 },
       response_policy: { max_context_tokens: 2000 },
-      context_policy: { max_context_tokens: 3000 },
     });
     expect(hit).toEqual({ location: 'model_params', path: 'model_params.max_context_tokens' });
   });
@@ -96,24 +134,20 @@ describe('findLegacyMaxContextTokens', () => {
     const hit = findLegacyMaxContextTokens({
       model_params: {},
       response_policy: { max_context_tokens: 2000 },
-      context_policy: null,
     });
     expect(hit?.location).toBe('response_policy');
   });
 
-  it('finds the key in context_policy', () => {
+  it('ignores max_context_tokens in context_policy (its current, engine-accepted home)', () => {
     const hit = findLegacyMaxContextTokens({
       model_params: {},
       response_policy: null,
-      context_policy: { max_context_tokens: 3000 },
     });
-    expect(hit?.path).toBe('context_policy.max_context_tokens');
+    expect(hit).toBeNull();
   });
 
   it('returns null when the key is absent everywhere', () => {
-    expect(
-      findLegacyMaxContextTokens({ model_params: {}, response_policy: null, context_policy: null }),
-    ).toBeNull();
+    expect(findLegacyMaxContextTokens({ model_params: {}, response_policy: null })).toBeNull();
   });
 });
 

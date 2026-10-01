@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 
 /**
  * Samples gallery — redesigned.
@@ -46,13 +46,19 @@ export const SampleRow = styled.button<{ $disabled?: boolean }>`
   }
 `;
 
-export const SampleDot = styled.span<{ $color: string }>`
+/** Provenance dot — tone-locked to theme tokens, never arbitrary hex. */
+export const SampleDot = styled.span<{ $tone: 'info' | 'success' | 'neutral' }>`
   width: ${({ theme }) => theme.spacing.px10};
   height: ${({ theme }) => theme.spacing.px10};
   flex: none;
   margin-top: ${({ theme }) => theme.spacing.s1};
   border-radius: ${({ theme }) => theme.radii.round};
-  background: ${({ $color }) => $color};
+  background: ${({ theme, $tone }) =>
+    $tone === 'info'
+      ? theme.app.status.info.fg
+      : $tone === 'success'
+        ? theme.app.status.success.fg
+        : theme.app.text.muted};
 `;
 
 export const SampleMain = styled.span`
@@ -119,10 +125,27 @@ export const Excerpt = styled.div`
   overflow: hidden;
 `;
 
-export const RowError = styled.div`
+export const RowError = styled.div.attrs({ role: 'alert' })`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.ghost};
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+`;
+
+const rowPulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+`;
+
+/** Loading row — flat pulse text, never the error style. Announced via
+ *  role="status"; motion-safe under prefers-reduced-motion. */
+export const RowLoading = styled.div.attrs({ role: 'status' })`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
+  animation: ${rowPulse} 1.6s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `;
 
 export const DeniedNote = styled.div`
@@ -175,6 +198,13 @@ export const SamplesBody = styled.div`
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.px10};
   margin-top: ${({ theme }) => theme.spacing.px10};
+`;
+
+/** Neutral empty — for "nothing here yet" states, never the error style. */
+export const RowEmpty = styled.div`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
 /** Inline text retry button for query-error rows — link treatment, no chrome. */

@@ -9,7 +9,12 @@ import styled from 'styled-components';
 export const InlineRetry = styled.button`
   background: none;
   border: none;
-  padding: 0;
+  padding: 0 4px;
+  /* 44px hit area without changing the link treatment — the text stays
+   * inline-size, vertically centered in the taller target. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font: inherit;
   cursor: pointer;
   color: ${({ theme }) => theme.app.text.link};

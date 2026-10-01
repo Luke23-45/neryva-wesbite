@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -17,14 +17,15 @@ import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
-import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import {
   BUDGET_BOUNDS,
   CAP_LABELS,
   PLATFORM_DEFAULTS,
+  describeCap,
   estimateRun,
   formatDollars,
   formatDuration,
+  formatEstimateDollars,
   type BudgetCapKey,
   type BudgetCaps,
 } from '../lib/budget-model';
@@ -61,6 +62,7 @@ import {
   RailCard,
   RailDot,
   RailLabel,
+  RailLoading,
   RailRow,
   RailTitle,
   RailValue,
@@ -96,11 +98,11 @@ function readBudget(definition: AgentDefinition): BudgetState {
 
 const CAP_KEYS: BudgetCapKey[] = ['max_cost_cents', 'max_total_tokens', 'max_tool_calls', 'max_model_calls', 'wall_clock_seconds'];
 
-/** A cap counts as "set" when the maker gave it a value (spend needs > 0). */
-function isCapSet(key: BudgetCapKey, value: number | undefined): boolean {
-  if (value === undefined) return false;
-  if (key === 'max_cost_cents') return value > 0;
-  return true;
+/** A cap counts as "set" only with a positive value — 0/unset serves the
+ *  platform default (describeCap), so the badge never claims a configured
+ *  cap the read views render as unset. */
+function isCapSet(value: number | undefined): boolean {
+  return value !== undefined && value > 0;
 }
 
 function formatCount(n: number): string {
@@ -137,7 +139,6 @@ export function BudgetSection({
   const [budget, setBudget] = useState<BudgetState>(() => (definition ? readBudget(definition) : {}));
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
-  const sendHashRef = useRef('');
 
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
@@ -183,19 +184,13 @@ export function BudgetSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
-  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
-  // nav badge grades `ready` even at engine defaults.
-  const confirmSection = useSectionConfirmationContext();
-
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
     if (isDraft && versionId && versionHash) {
-      sendHashRef.current = versionHash;
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => confirmSection('budget'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -215,7 +210,6 @@ export function BudgetSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => confirmSection('budget'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -223,7 +217,7 @@ export function BudgetSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
   useDraftAutosave(
     { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition },
@@ -244,7 +238,7 @@ export function BudgetSection({
 
   // ── Derived state for the SVG layout ──────────────────────────────────
 
-  const setCount = CAP_KEYS.filter((key) => isCapSet(key, budget[key])).length;
+  const setCount = CAP_KEYS.filter((key) => isCapSet(budget[key])).length;
   const spendUnset = budget.max_cost_cents === undefined || budget.max_cost_cents <= 0;
 
   const allowed = definition?.model_policy.allowed_models ?? [];
@@ -305,8 +299,14 @@ export function BudgetSection({
             <RailDot $tone={worstDollars !== null ? 'ok' : 'muted'} aria-hidden="true" />
             Estimate
           </RailLabel>
-          <RailValue>
-            {worstDollars !== null ? `$${worstDollars.toFixed(2)}` : '—'}
+          <RailValue aria-busy={costs.isPending || undefined}>
+            {costs.isPending ? (
+              <RailLoading>loading…</RailLoading>
+            ) : worstDollars !== null ? (
+              formatEstimateDollars(worstDollars)
+            ) : (
+              '—'
+            )}
           </RailValue>
         </RailRow>
         <RailRow>
@@ -322,28 +322,24 @@ export function BudgetSection({
         <RailRow>
           <RailLabel>Spend cap</RailLabel>
           <RailValue $tone={spendUnset ? 'warning' : undefined}>
-            {spendUnset ? 'unset' : formatDollars(budget.max_cost_cents as number)}
+            {describeCap('max_cost_cents', budget.max_cost_cents).state}
           </RailValue>
         </RailRow>
         <RailRow>
           <RailLabel>Total tokens</RailLabel>
-          <RailValue>{formatCount(budget.max_total_tokens ?? PLATFORM_DEFAULTS.max_total_tokens)}</RailValue>
+          <RailValue>{describeCap('max_total_tokens', budget.max_total_tokens).state}</RailValue>
         </RailRow>
         <RailRow>
           <RailLabel>Tool calls</RailLabel>
-          <RailValue>{budget.max_tool_calls ?? PLATFORM_DEFAULTS.max_tool_calls}</RailValue>
+          <RailValue>{describeCap('max_tool_calls', budget.max_tool_calls).state}</RailValue>
         </RailRow>
         <RailRow>
           <RailLabel>Model calls</RailLabel>
-          <RailValue>{budget.max_model_calls ?? PLATFORM_DEFAULTS.max_model_calls}</RailValue>
+          <RailValue>{describeCap('max_model_calls', budget.max_model_calls).state}</RailValue>
         </RailRow>
         <RailRow>
           <RailLabel>Wall clock</RailLabel>
-          <RailValue>
-            {budget.wall_clock_seconds !== undefined && budget.wall_clock_seconds > 0
-              ? formatDuration(budget.wall_clock_seconds)
-              : 'Not set'}
-          </RailValue>
+          <RailValue>{describeCap('wall_clock_seconds', budget.wall_clock_seconds).state}</RailValue>
         </RailRow>
       </RailCard>
       <RailCard>
@@ -380,7 +376,7 @@ export function BudgetSection({
                 {i > 0 && <RowDivider />}
                 <InfoRow>
                   <InfoLabel>{CAP_LABELS[key]}</InfoLabel>
-                  <InfoValue>{readOnlyCapValue(key, budget[key])}</InfoValue>
+                  <InfoValue>{describeCap(key, budget[key]).state}</InfoValue>
                 </InfoRow>
               </div>
             ))}
@@ -460,18 +456,18 @@ export function BudgetSection({
               <EstimateRow>
                 <EstimateLabel>Primary model</EstimateLabel>
                 <ModelChip>
-                  {primaryName} · ${ratePerMillion.toFixed(2)} / M
+                  {primaryName} · {formatEstimateDollars(ratePerMillion)} / M
                 </ModelChip>
               </EstimateRow>
               <RowDivider />
               <EstimateRow>
                 <EstimateLabel>Worst case per run · {formatCount(tokenCap)}-token cap</EstimateLabel>
-                <EstimateValue>${(worstDollars ?? 0).toFixed(2)}</EstimateValue>
+                <EstimateValue>{formatEstimateDollars(worstDollars ?? 0)}</EstimateValue>
               </EstimateRow>
               <RowDivider />
               <EstimateRow>
                 <EstimateLabel>At 1,000 runs</EstimateLabel>
-                <EstimateValue>${(thousandRuns ?? 0).toFixed(2)}</EstimateValue>
+                <EstimateValue>{formatEstimateDollars(thousandRuns ?? 0)}</EstimateValue>
               </EstimateRow>
             </>
           )}
@@ -565,27 +561,6 @@ export function BudgetSection({
       )}
     </SectionPage>
   );
-}
-
-function readOnlyCapValue(key: BudgetCapKey, value: number | undefined): string {
-  if (key === 'max_cost_cents') {
-    return value === undefined || value <= 0 ? 'No spend cap' : formatDollars(value);
-  }
-  if (value === undefined) {
-    switch (key) {
-      case 'max_total_tokens':
-        return formatCount(PLATFORM_DEFAULTS.max_total_tokens);
-      case 'max_tool_calls':
-        return String(PLATFORM_DEFAULTS.max_tool_calls);
-      case 'max_model_calls':
-        return String(PLATFORM_DEFAULTS.max_model_calls);
-      case 'wall_clock_seconds':
-        return 'Not set';
-    }
-  }
-  if (key === 'wall_clock_seconds') return formatDuration(value);
-  if (key === 'max_total_tokens') return formatCount(value);
-  return String(value);
 }
 
 const CAP_HELPERS: Record<BudgetCapKey, string> = {

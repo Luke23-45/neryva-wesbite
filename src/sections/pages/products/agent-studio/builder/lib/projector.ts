@@ -134,12 +134,12 @@ export interface ProjectorInput {
    */
   credentialsSummary?: { count: number; expired: number } | undefined;
   /**
-   * Samples summary. Undefined = ungradable: the samples gallery has no
-   * "configured" count in the contract (inserts are append-only instruction
-   * blocks, not a tracked collection) — counting gallery cards would invent
-   * agent state. The node renders info, the edge draws dim.
+   * Worst-case run estimate in micros (BDT-5) — primary model's list rate ×
+   * token cap, from the same cached costs read the Budget section owns.
+   * Undefined/null = unpriced (never a fake $0). Feeds gradeBudget's
+   * estimate branch so the graph node matches the Budget panel.
    */
-  samplesSummary?: { count: number } | undefined;
+  budgetEstimateMicros?: number | null;
   /**
    * Per-section confirmation (C-BUG4/M-BUG3, Option A). Set of section IDs
    * the user has explicitly saved. A confirmed section grades as `ready`
@@ -266,14 +266,20 @@ function contextPolicyIsDefault(definition: ConsumerDefinition): boolean {
   );
 }
 
-/** Engine default response_policy (validation.ts): absent/empty = markdown, citations on, streaming auto. */
+/** Engine default response_policy (validation.ts): absent/empty = markdown,
+ * citations on, streaming auto, citations inline, balanced length, no
+ * channel overrides. */
 function responsePolicyIsDefault(definition: ConsumerDefinition): boolean {
   const policy = definition.response_policy;
   if (!policy) return true;
+  const channels = policy.channels as Record<string, unknown> | undefined;
   return (
     (policy.output_format ?? 'markdown') === 'markdown' &&
     (policy.citations_enabled ?? true) === true &&
-    (policy.streaming ?? 'auto') === 'auto'
+    (policy.streaming ?? 'auto') === 'auto' &&
+    (policy.citations_style ?? 'inline') === 'inline' &&
+    (policy.length ?? 'balanced') === 'balanced' &&
+    (channels === undefined || Object.keys(channels).length === 0)
   );
 }
 
@@ -567,7 +573,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // — Kind nodes (fixed set, id = kind; grading is the pre-v10 truth) —
   const pinCount = definition?.context_policy.knowledge_sources.length ?? 0;
   const brandVoice = parseRoleTextFieldSafe(definition?.brand);
-  const budgetGrade = !locked && definition ? gradeBudget(definition.budget, null) : null;
+  const budgetGrade = !locked && definition ? gradeBudget(definition.budget, input.budgetEstimateMicros ?? null) : null;
 
   for (const kind of KIND_ORDER) {
     const meta = KIND_META[kind];
@@ -881,11 +887,12 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     LANE_NODES.role,
   );
 
-  // Samples (v10 §8.7): the gallery has no "configured" count in the
-  // contract, so without a summary this is untouched, never an invented
-  // number. 'info' would read as "all good" — the honest mark for an
-  // ungradable node is 'untouched' (not configured).
-  const samples = input.samplesSummary;
+  // Samples (v10 §8.7): honestly ungradable (SMP-3) — the gallery has no
+  // "configured" count in the contract. Inserts become indistinguishable
+  // instruction blocks with no provenance, so counting would invent agent
+  // state. The node renders 'untouched', never an invented number. 'info'
+  // would read as "all good" — the honest mark for an ungradable node is
+  // 'untouched' (not configured).
   push(
     'samples',
     {
@@ -893,15 +900,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'satellite',
       kind: null,
       title: LANE_NODES.samples.label,
-      subtitle: samples && samples.count > 0 ? `${samples.count} samples` : null,
-      hint: locked
-        ? 'Create the agent first'
-        : !samples
-          ? 'Configured in the Samples section'
-          : samples.count === 0
-            ? 'Add examples to steer replies'
-            : null,
-      status: locked ? 'locked' : !samples ? 'untouched' : samples.count === 0 ? 'untouched' : 'ready',
+      subtitle: null,
+      hint: locked ? 'Create the agent first' : 'Configured in the Samples section',
+      status: locked ? 'locked' : 'untouched',
       lock: false,
       color: LANE_NODES.samples.color,
       portColor: LANE_NODES.samples.color,
@@ -1048,16 +1049,15 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
     data: { variant: 'flow', lit: !locked && modelReady },
   });
 
-  // samples→instructions: samples steer the composer. When samples are
-  // ungradable the target degrades to model — the edge stays dim either
-  // way (no invented steering claimed).
-  const samplesTarget: LaneNodeId = samples ? 'instructions' : 'model';
+  // samples→model: samples steer the composer, but the samples node is
+  // honestly ungradable (SMP-3) — the edge targets model and stays dim
+  // (no invented steering claimed).
   edges.push({
-    id: `e:samples:${samplesTarget}`,
+    id: 'e:samples:model',
     source: 'samples',
-    target: samplesTarget,
+    target: 'model',
     type: 'data',
-    data: { variant: 'flow', lit: !locked && (samples?.count ?? 0) > 0 },
+    data: { variant: 'flow', lit: false },
   });
 
   // credentials→tools: BYOK keys are what let bound tools actually run.
