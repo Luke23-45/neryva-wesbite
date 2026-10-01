@@ -246,6 +246,25 @@ describe('ShipSection', () => {
     expect(screen.getByText('Evaluate this version →')).toBeTruthy();
   });
 
+  it('renders the demo publish refusal with its title and model fix — never an override', async () => {
+    await shell();
+    fireEvent.click(screen.getByText('Publish this draft'));
+    fireEvent.click(screen.getByText('Publish', { selector: 'button' }));
+    const onError = publishMutate.mock.calls[0]?.[1]?.onError as ((e: unknown) => void) | undefined;
+    expect(onError).toBeTruthy();
+    const { ApiError } = await import('@lib/engine/client');
+    act(() => {
+      onError?.(
+        new ApiError(422, 'unprocessable', 'This agent uses a demo model — select a real model to publish.', {
+          demo_model: true,
+        }),
+      );
+    });
+    expect(screen.getByText('Cannot publish a demo model')).toBeTruthy();
+    expect(screen.getByText(/This agent uses a demo model/)).toBeTruthy();
+    expect(screen.getByText('Choose a real model →')).toBeTruthy();
+  });
+
   it('renders the success receipt with exits after publish', async () => {
     await shell();
     fireEvent.click(screen.getByText('Publish this draft'));

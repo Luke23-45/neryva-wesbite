@@ -8,6 +8,11 @@ import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import { TRY_COPY, describeTryPrereqs } from '../lib/try-model';
 import { readTryParam, writeTryParam } from '../lib/try-thread-param';
+import {
+  DEMO_TRY_BANNER,
+  isDemoModelRef,
+  isDemoQuotaProduct,
+} from '../lib/demo-model';
 import { TraceDrawer, type TraceEditTarget } from './TraceDrawer';
 import { SkeletonRows } from './SkeletonRows';
 import { StreamingBubble, Note } from './TraceDrawer.styles';
@@ -16,6 +21,8 @@ import { TextButton } from './ToolsSection.styles';
 import {
   Bubble,
   BubbleMeta,
+  DemoBadge,
+  DemoBanner,
   DockRow,
   FieldBlock,
   FieldHead,
@@ -26,6 +33,10 @@ import {
   PrereqBlock,
   PrereqDetail,
   PrereqHeadline,
+  QuotaCtaRow,
+  QuotaPanel,
+  QuotaCopy,
+  QuotaTitle,
   Thread,
   TurnGroup,
 } from './TrySection.styles';
@@ -48,6 +59,51 @@ export interface TryConsoleProps {
   editMode: { kind: 'jump'; onEditJump: (target: TraceEditTarget) => void } | { kind: 'link'; builderHref: string };
   /** Optional header — the detail version picker lives here. */
   header?: ReactNode;
+}
+
+/**
+ * Limit-hit panel (build spec v3 §3): one code path for paid and demo
+ * quota exhaustion. The copy keys off the wire `product` — the demo
+ * product gets the demo explanation and the three demo CTAs; anything
+ * else gets the generic paid copy. Never a custom error code.
+ */
+function QuotaLimitPanel({
+  product,
+  editMode,
+}: {
+  product: string | null;
+  editMode: TryConsoleProps['editMode'];
+}) {
+  const demo = isDemoQuotaProduct(product);
+  const connectCta =
+    editMode.kind === 'jump' ? (
+      <TextButton onClick={() => editMode.onEditJump('model')}>
+        Connect a provider ›
+      </TextButton>
+    ) : (
+      <Link to={editMode.builderHref}>Connect a provider ›</Link>
+    );
+  return (
+    <QuotaPanel $demo={demo}>
+      <QuotaTitle>{demo ? 'Demo limit reached' : 'Usage limit reached'}</QuotaTitle>
+      <QuotaCopy>
+        {demo
+          ? 'You’ve used up the free demo allowance for this organization. The demo is heavily limited so it stays free — claim your free monthly credits, top up, or connect your own provider to keep testing with real models.'
+          : 'This organization’s usage limit was reached, so the run was refused.'}
+      </QuotaCopy>
+      <QuotaCtaRow>
+        {demo ? (
+          <>
+            <Link to="/platform/billing">Claim free credits</Link>
+            <Link to="/platform/billing">Top up</Link>
+            {connectCta}
+          </>
+        ) : (
+          <Link to="/platform/billing">Open billing</Link>
+        )}
+      </QuotaCtaRow>
+    </QuotaPanel>
+  );
 }
 
 /**
@@ -91,6 +147,17 @@ export function TryConsole({
   // refusal is the backstop meanwhile).
   const modelBlocked = usableCount === 0;
   const hasInstructions = (definition?.instructions ?? '').trim() !== '';
+
+  // Demo honesty (build spec v3 §6): the banner appears from wire evidence
+  // (a turn whose agent messages carried `synthetic: true`) OR when the
+  // demo is the only usable model on this version — both are server facts,
+  // never a client-side entitlement rule.
+  const demoOnly =
+    models !== undefined &&
+    allowed.length > 0 &&
+    allowed.some((ref) => usable.has(ref)) &&
+    allowed.every((ref) => !usable.has(ref) || isDemoModelRef(ref));
+  const demoRun = turns.some((t) => t.synthetic) || demoOnly;
 
   const prereqs = runnable
     ? describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: Math.max(usableCount, 0), hasInstructions })
@@ -172,9 +239,14 @@ export function TryConsole({
         // Finding 2 — the dead end reads as one coherent state: while no
         // usable model exists the thread area echoes the blocked copy
         // instead of inviting input that cannot run.
-        <EmptyState>{modelBlocked ? TRY_COPY.noUsableModel : 'Ask anything — the reply streams here with its trace.'}</EmptyState>
+        <>
+          {demoRun && <DemoBanner role="status">{DEMO_TRY_BANNER}</DemoBanner>}
+          <EmptyState>{modelBlocked ? TRY_COPY.noUsableModel : 'Ask anything — the reply streams here with its trace.'}</EmptyState>
+        </>
       ) : (
-        <Thread>
+        <>
+          {demoRun && <DemoBanner role="status">{DEMO_TRY_BANNER}</DemoBanner>}
+          <Thread>
           {turns.map((turn) => {
             const reply = turn.agentText !== '' ? turn.agentText : turn.liveText;
             const streaming = turn.status === 'streaming' || turn.status === 'accepted' || turn.status === 'sending';
@@ -186,16 +258,21 @@ export function TryConsole({
                 </Bubble>
                 {reply !== '' ? (
                   <Bubble $role="agent">
-                    <BubbleMeta>Assistant</BubbleMeta>
+                    <BubbleMeta>
+                      Assistant{turn.synthetic ? <> <DemoBadge>Demo</DemoBadge></> : null}
+                    </BubbleMeta>
                     {reply}
                     {streaming && turn.agentText === '' ? '▍' : ''}
                   </Bubble>
                 ) : streaming ? (
                   <Bubble $role="agent">
-                    <BubbleMeta>Assistant</BubbleMeta>
+                    <BubbleMeta>
+                      Assistant{turn.synthetic ? <> <DemoBadge>Demo</DemoBadge></> : null}
+                    </BubbleMeta>
                     <StreamingBubble />
                   </Bubble>
                 ) : null}
+                {turn.quota && <QuotaLimitPanel product={turn.quota.product} editMode={editMode} />}
                 {turn.notices.map((notice: RunNotice) => (
                   <NoticePill key={notice.id} $tone={notice.kind}>
                     {notice.text}
@@ -218,6 +295,7 @@ export function TryConsole({
             );
           })}
         </Thread>
+        </>
       )}
 
       {canRun ? (

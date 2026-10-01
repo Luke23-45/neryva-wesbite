@@ -17,13 +17,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { engine } from '@lib/engine/client';
+import { engine, ApiError } from '@lib/engine/client';
 import { describeEngineError, toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
 import { markActivation } from '@lib/engine/activation';
 import { useEventStream } from '@hooks/engine/useEventStream';
 import type { SseMessage } from '@lib/engine/sse';
 import { useTestRun } from './useAgentAuthoring';
+import { quotaProductFromDetails } from '../../sections/pages/products/agent-studio/builder/lib/demo-model';
 import {
   TRY_COPY,
   describeTryStop,
@@ -40,6 +41,11 @@ export interface ChatMessage {
   role: ChatRole;
   text: string;
   createdAt: string | null;
+  /**
+   * Wire honesty flag — true when the engine marks this message synthetic
+   * (demo-model content). Parsed verbatim; never inferred.
+   */
+  synthetic: boolean;
 }
 
 export interface RunSummary {
@@ -87,7 +93,9 @@ export function parseConversationMessages(raw: unknown): ChatMessage[] {
       const roleRaw = (str(item.role) ?? str(item.sender) ?? str(item.author) ?? 'agent').toLowerCase();
       const role: ChatRole = roleRaw.includes('user') || roleRaw.includes('human') ? 'user' : 'agent';
       const text = str(item.text) ?? textFromContent(item.content) ?? str(item.body) ?? '';
-      return { id, role, text, createdAt: str(item.created_at) } satisfies ChatMessage;
+      // Demo honesty flag (build spec v3 §2): the wire carries
+      // `synthetic: true` on demo-model messages — read it verbatim.
+      return { id, role, text, createdAt: str(item.created_at), synthetic: item.synthetic === true } satisfies ChatMessage;
     })
     .filter((m): m is ChatMessage => m !== null);
 }
@@ -129,6 +137,11 @@ export interface ParsedRunEvent {
   reason: string | null;
   terminal: boolean;
   failed: boolean;
+  /**
+   * Wire honesty flag — true when the event's model frame carries
+   * `synthetic: true` (demo-model run). Parsed verbatim; never inferred.
+   */
+  synthetic: boolean;
 }
 
 const TERMINAL_STATES = ['completed', 'succeeded', 'failed', 'cancelled', 'canceled', 'expired'];
@@ -178,6 +191,7 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
     reason: null,
     terminal: false,
     failed: false,
+    synthetic: false,
   };
 
   // Dotted terminal frames: event `run.completed` / `run.failed`.
@@ -224,8 +238,10 @@ export function parseRunEvent(message: SseMessage): ParsedRunEvent {
     case 'assistantChunk':
       return { ...base, kind: 'chunk', text: str(value.text) };
     case 'model':
-      // Model-call bookkeeping — not user-visible text.
-      return { ...base, kind: 'other', state: str(value.modelId) };
+      // Model-call bookkeeping — not user-visible text. The demo adapter
+      // marks its frames `synthetic: true` (build spec v3 §2); read it
+      // verbatim so the console can badge demo replies while streaming.
+      return { ...base, kind: 'other', state: str(value.modelId), synthetic: value.synthetic === true };
     case 'toolCall':
       return {
         ...base,
@@ -1091,6 +1107,18 @@ export interface TryTurn {
   rawEvents: string[];
   /** Seeded from `?try=` — prompt/texts fill from the server transcript. */
   restored: boolean;
+  /**
+   * Wire-asserted demo flag — true once any agent message or stream model
+   * frame on this turn carried `synthetic: true`. Never inferred from the
+   * selected model; the wire is the truth.
+   */
+  synthetic: boolean;
+  /**
+   * Set when the run POST is refused with `quota_exceeded` — the console
+   * renders the upgrade CTA panel from this (one code path for paid and
+   * demo exhaustion; demo copy keys off `product`).
+   */
+  quota: { product: string | null } | null;
 }
 
 const TRY_POLL_MS = 3000;
@@ -1124,6 +1152,8 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
             stop: null,
             rawEvents: [],
             restored: true,
+            synthetic: false,
+            quota: null,
           },
         ]
       : [],
@@ -1198,7 +1228,11 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
           const parsed = parseConversationMessages(raw);
           const agentText = parsed.filter((m) => m.role === 'agent' && m.text.trim() !== '').map((m) => m.text).join('\n\n');
           const userText = parsed.find((m) => m.role === 'user' && m.text.trim() !== '')?.text ?? '';
+          // Demo honesty flag: the transcript is authoritative — a turn is
+          // synthetic iff a wire message said so (never inferred).
+          const synthetic = parsed.some((m) => m.role === 'agent' && m.synthetic);
           patchTurn(key, {
+            synthetic,
             agentText: agentText !== '' ? agentText : turn.liveText,
             ...(userText !== '' ? { prompt: turn.prompt !== '' ? turn.prompt : userText } : {}),
           });
@@ -1234,6 +1268,10 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
         });
       } else if (event.kind === 'usage' && event.usage) {
         pushNotice(key, { id: message.id ?? `usage-${key}-${Date.now()}`, kind: 'usage', text: event.usage });
+      } else if (event.synthetic) {
+        // Demo honesty flag (build spec v3 §2): a model frame marked the
+        // run synthetic — badge the turn's reply while it streams.
+        patchTurn(key, { synthetic: true });
       } else if (event.terminal) {
         finalizeTurn(key, { failed: event.failed, state: event.state, reason: event.reason });
       }
@@ -1337,7 +1375,8 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
       .filter((m) => m.role === 'agent')
       .map((m) => m.text)
       .join('\n\n');
-    patchTurn(restoredKey, { prompt: userText, agentText });
+    const synthetic = restoredMessages.some((m) => m.role === 'agent' && m.synthetic);
+    patchTurn(restoredKey, { prompt: userText, agentText, synthetic });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restoredKey, messages.dataUpdatedAt]);
 
@@ -1359,7 +1398,7 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
     const key = nextTryKey();
     setTurns((prev) => [
       ...prev,
-      { key, prompt, conversationId: null, runId: null, liveText: '', agentText: '', notices: [], status: 'sending', stop: null, rawEvents: [], restored: false },
+      { key, prompt, conversationId: null, runId: null, liveText: '', agentText: '', notices: [], status: 'sending', stop: null, rawEvents: [], restored: false, synthetic: false, quota: null },
     ]);
     setActiveKey(key);
     void testRun
@@ -1403,7 +1442,14 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
         // typed ApiError honestly — never the generic "Internal error" the
         // old untyped downstream path leaked.
         pushNotice(key, { id: `try-post-${key}`, kind: 'error', text: describeEngineError(error).message });
-        patchTurn(key, { status: 'error' });
+        // Quota refusal (paid or demo): stash the wire product so the
+        // console renders the upgrade CTA panel — one code path for both,
+        // demo copy keys off `product`, never a custom code (spec v3 §3).
+        const quota =
+          error instanceof ApiError && error.code === 'quota_exceeded'
+            ? { product: quotaProductFromDetails(error.details) }
+            : null;
+        patchTurn(key, { status: 'error', ...(quota ? { quota } : {}) });
         setActiveKey((currentKey) => (currentKey === key ? null : currentKey));
       });
     return true;

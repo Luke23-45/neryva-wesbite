@@ -1,13 +1,21 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { ModelAvailability, ModelCost } from '@hooks/studio/useSetupModels';
+import { Tooltip } from '@components/common/ui/Tooltip';
 import { ENGINE_RANGES, humanizeReason, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
+import {
+  DEMO_DISPLAY_NAME,
+  DEMO_GROUP_LABEL,
+  DEMO_TOOLTIP,
+  isDemoProvider,
+} from '../lib/demo-model';
 import {
   CapChips,
   CapNote,
   CatalogList,
   CatalogRow,
   CountBadge,
+  DemoBadge,
   EmptyNote,
   FixButton,
   GroupLabel,
@@ -96,6 +104,9 @@ export function ModelPicker({
     return list.filter(
       (m) =>
         m.displayName.toLowerCase().includes(q) ||
+        // The demo row renders the pinned display name, which may differ
+        // from the engine's displayName — match against it too.
+        (isDemoProvider(m.provider) && DEMO_DISPLAY_NAME.toLowerCase().includes(q)) ||
         m.ref.toLowerCase().includes(q) ||
         m.provider.toLowerCase().includes(q),
     );
@@ -125,6 +136,11 @@ export function ModelPicker({
     const reason = model.usable ? null : (model.reasons[0] ?? 'unknown');
     const fix = reason ? reasonFix(reason) : null;
     const gated = reason === 'subscription_required';
+    // Demo row (build spec v3 §1/§6): the engine declares the demo as an
+    // ordinary availability row — the picker renders the pinned copy so it
+    // can never be mistaken for a real model.
+    const demo = isDemoProvider(model.provider);
+    const name = demo ? DEMO_DISPLAY_NAME : model.displayName;
     return (
       <CatalogRow key={model.ref} $disabled={disabled} title={model.ref}>
         <input
@@ -132,11 +148,11 @@ export function ModelPicker({
           checked={inPipeline}
           disabled={disabled}
           onChange={() => onToggle(model.ref)}
-          aria-label={`${model.displayName}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
+          aria-label={`${name}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
         />
         <RowMain>
           <RowName>
-            {model.displayName}
+            {name}
             {inPipeline && <InPipelineBadge>In pipeline</InPipelineBadge>}
           </RowName>
           <RowMeta>
@@ -218,14 +234,30 @@ export function ModelPicker({
       )}
 
       <CatalogList>
-        {groups.map((group) => (
-          <div key={group.provider}>
-            <GroupLabel>
-              {providerLabel(group.provider)} · {group.models.length}
-            </GroupLabel>
-            {group.models.map((model) => renderRow(model))}
-          </div>
-        ))}
+        {groups.map((group) => {
+          // Demo group (build spec v3 §6): its own labeled group with an
+          // info tooltip — never folded into a provider's list.
+          const demoGroup = isDemoProvider(group.provider);
+          return (
+            <div key={group.provider}>
+              <GroupLabel>
+                {demoGroup ? (
+                  <>
+                    {DEMO_GROUP_LABEL} · {group.models.length}{' '}
+                    <Tooltip label={DEMO_TOOLTIP}>
+                      <DemoBadge>Demo</DemoBadge>
+                    </Tooltip>
+                  </>
+                ) : (
+                  <>
+                    {providerLabel(group.provider)} · {group.models.length}
+                  </>
+                )}
+              </GroupLabel>
+              {group.models.map((model) => renderRow(model))}
+            </div>
+          );
+        })}
       </CatalogList>
 
       {capped && canAuthor && <CapNote>{ENGINE_RANGES.allowedModelsMax}-model cap — remove one to add another.</CapNote>}

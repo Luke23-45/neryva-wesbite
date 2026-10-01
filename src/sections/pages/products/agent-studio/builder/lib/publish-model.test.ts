@@ -81,13 +81,30 @@ describe('classifyPublishRefusal', () => {
     expect(classifyPublishRefusal(null)).toBe('unknown');
   });
 
+  it('classifies the 422 demo publish gate as demo-model (build spec v3 §5)', () => {
+    // The 422 status is pinned and unambiguous — it wins over any
+    // message-prefix or details-key match.
+    expect(classifyPublishRefusal(apiError(422, 'This agent uses a demo model — select a real model to publish.'))).toBe('demo-model');
+    expect(
+      classifyPublishRefusal(apiError(422, 'some other wording', { model_policy: { allowed_models: ['mock/neryva/demo'] } })),
+    ).toBe('demo-model');
+  });
+
   it('every kind has a fix with a label (no dead branches)', () => {
-    const kinds = ['no-op', 'blocked-content', 'failed-content', 'required-checks', 'degraded', 'status', 'payload', 'models', 'tools', 'instructions', 'unknown'] as const;
+    const kinds = ['no-op', 'blocked-content', 'failed-content', 'required-checks', 'degraded', 'status', 'payload', 'models', 'tools', 'instructions', 'demo-model', 'unknown'] as const;
     for (const kind of kinds) {
       const fix = refusalFix(kind);
       expect(fix.title.length).toBeGreaterThan(0);
       expect(fix.fixLabel.length).toBeGreaterThan(0);
     }
+  });
+
+  it('demo-model fix routes to the Model section — never an override', () => {
+    const fix = refusalFix('demo-model');
+    expect(fix.title).toBe('Cannot publish a demo model');
+    expect(fix.fixLabel).toBe('Choose a real model');
+    expect(fix.editTarget).toBe('model');
+    expect(fix.fixRoute).toBe('/agent-studio/models');
   });
 
 describe('evaluateRequiredGate', () => {

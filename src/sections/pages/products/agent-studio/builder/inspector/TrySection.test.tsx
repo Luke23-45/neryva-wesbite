@@ -95,6 +95,8 @@ const DONE_TURN: TryTurn = {
   stop: null,
   rawEvents: [],
   restored: false,
+  synthetic: false,
+  quota: null,
 };
 
 beforeEach(() => {
@@ -235,5 +237,55 @@ describe('TrySection (builder response spine)', () => {
     await shell();
     expect(screen.getByText(/recorded in audit/)).toBeTruthy();
     expect(screen.getByText(/Open Audit/)).toBeTruthy();
+  });
+});
+
+describe('TrySection demo honesty (build spec v3 §2/§3/§6)', () => {
+  const DEMO_MODELS = [
+    { provider: 'mock', model: 'neryva/demo', ref: 'mock/neryva/demo', usable: true },
+  ];
+
+  function demoDefinition() {
+    const def = defaultConsumer();
+    def.model_policy.allowed_models = ['mock/neryva/demo'];
+    return { ...def, instructions: '## Role\nR.\n' };
+  }
+
+  it('shows the persistent banner and a Demo badge on synthetic turns', async () => {
+    sessionMock.turns = [{ ...DONE_TURN, synthetic: true, agentText: 'This is a canned demo reply.' }];
+    await shell();
+    expect(screen.getByText(/You're chatting with a demo model/)).toBeTruthy();
+    expect(screen.getByText('Demo')).toBeTruthy();
+    expect(screen.getByText('This is a canned demo reply.')).toBeTruthy();
+  });
+
+  it('shows the banner when the demo is the only usable allowed model (no turns yet)', async () => {
+    sessionMock.turns = [];
+    await shell({ definition: demoDefinition(), models: DEMO_MODELS as never });
+    expect(screen.getByText(/You're chatting with a demo model/)).toBeTruthy();
+  });
+
+  it('shows no banner and no badge for real-model turns', async () => {
+    sessionMock.turns = [DONE_TURN];
+    await shell();
+    expect(screen.queryByText(/You're chatting with a demo model/)).toBeNull();
+    expect(screen.queryByText('Demo')).toBeNull();
+  });
+
+  it('renders the demo limit panel with the three demo CTAs', async () => {
+    sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: { product: 'agent_studio_demo' } }];
+    await shell();
+    expect(screen.getByText('Demo limit reached')).toBeTruthy();
+    expect(screen.getByText('Claim free credits')).toBeTruthy();
+    expect(screen.getByText('Top up')).toBeTruthy();
+    expect(screen.getByText(/Connect a provider/)).toBeTruthy();
+  });
+
+  it('renders the generic paid limit panel for other quota products', async () => {
+    sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: { product: 'agent_studio' } }];
+    await shell();
+    expect(screen.getByText('Usage limit reached')).toBeTruthy();
+    expect(screen.getByText('Open billing')).toBeTruthy();
+    expect(screen.queryByText('Demo limit reached')).toBeNull();
   });
 });

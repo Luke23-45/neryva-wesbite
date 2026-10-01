@@ -75,6 +75,26 @@ export const InPipelineBadge = styled.span`
   white-space: nowrap;
 `;
 
+/**
+ * Demo badge — marks the free demo model group/row. Same pill anatomy as
+ * the pipeline badge (flat theme colors, no gradients); the info tone
+ * reads "informational", never alarming.
+ */
+export const DemoBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${({ theme }) => theme.spacing.px8};
+  border-radius: ${({ theme }) => theme.radii.full};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.status.info.fg};
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
+  white-space: nowrap;
+`;
+
 export const CapChips = styled.span`
   display: flex;
   flex-wrap: wrap;

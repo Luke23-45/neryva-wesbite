@@ -157,3 +157,51 @@ describe('ModelPicker catalog', () => {
     expect(onToggle).toHaveBeenCalledWith('anthropic/claude-opus-4-5');
   });
 });
+
+describe('ModelPicker demo group (build spec v3 §1/§6)', () => {
+  const DEMO_ROW: ModelAvailability = {
+    provider: 'mock',
+    modelId: 'neryva/demo',
+    ref: 'mock/neryva/demo',
+    displayName: 'Neryva Demo',
+    contextWindowTokens: 8000,
+    maxOutputTokens: 1000,
+    capabilities: {},
+    residency: 'us',
+    usable: true,
+    reasons: [],
+    requiredProduct: null,
+    requiredProductLabel: null,
+  };
+
+  it('renders its own group with the pinned display name and a badge', async () => {
+    await act(async () => {
+      shell({ rows: [DEMO_ROW] });
+    });
+    // Group label is split across adjacent text nodes ("Free demo · 1") —
+    // match the joined direct-text content of the label element.
+    expect(screen.getByText(/Free demo · 1/)).toBeTruthy();
+    expect(screen.getByText('Free demo — mock responses, not AI')).toBeTruthy();
+    expect(screen.getByText('Demo')).toBeTruthy();
+  });
+
+  it('keeps the demo row selectable when usable', async () => {
+    let onToggle!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onToggle } = shell({ rows: [DEMO_ROW], pipelineRefs: [] }));
+    });
+    const box = screen.getByLabelText('Free demo — mock responses, not AI') as HTMLInputElement;
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    expect(onToggle).toHaveBeenCalledWith('mock/neryva/demo');
+  });
+
+  it('finds the demo row when searching the pinned name', async () => {
+    await act(async () => {
+      shell({ rows: [DEMO_ROW] });
+    });
+    const search = screen.getByLabelText('Search model catalog') as HTMLInputElement;
+    fireEvent.change(search, { target: { value: 'mock responses' } });
+    expect(screen.getByText('Free demo — mock responses, not AI')).toBeTruthy();
+  });
+});
