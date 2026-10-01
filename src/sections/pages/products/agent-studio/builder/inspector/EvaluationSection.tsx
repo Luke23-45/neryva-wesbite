@@ -22,11 +22,13 @@ import type { OrgRole } from '@/Context/OrgContext';
 import { useOrg } from '@/Context/OrgContext';
 import {
   EVAL_COPY,
+  EVAL_ATTEMPTS_MIN,
   clampEvalAttempts,
   describeDatasetOrigin,
   isNoDatasetError,
   orderRunsNewestFirst,
 } from '../lib/eval-model';
+import { useStringDraft } from '../lib/use-string-draft';
 import { buildAgentDetailPath } from '../lib/slot-model';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { EvalNoDatasetFix } from './EvalNoDatasetFix';
@@ -41,6 +43,7 @@ import {
   FieldHead,
   FieldHelper,
   FieldTitle,
+  HitNavLink,
   InlineRetry,
   LinkRow,
   Muted,
@@ -80,8 +83,27 @@ export function EvaluationSection({
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   const [datasetId, setDatasetId] = useState('');
-  const [attempts, setAttempts] = useState('1');
   const [trackedRunId, setTrackedRunId] = useState<string | null>(null);
+  // EVL-1: set when the polling budget outlives the run — the section
+  // re-enables with an honest "still running" notice instead of wedging.
+  const [pollBudgetExpired, setPollBudgetExpired] = useState(false);
+
+  // EVL-3: commit-on-blur semantics (Model/RSP-2 precedent) — the raw
+  // text survives typing, clamping lands on the COMMITTED value with a
+  // visible note, never a silent rewrite at submit.
+  const [attemptsCommitted, setAttemptsCommitted] = useState(EVAL_ATTEMPTS_MIN);
+  const [attemptsNote, setAttemptsNote] = useState<string | null>(null);
+  const attemptsDraft = useStringDraft(attemptsCommitted, (value) => {
+    const next = clampEvalAttempts(value ?? EVAL_ATTEMPTS_MIN);
+    setAttemptsCommitted(next);
+    setAttemptsNote(
+      next !== Math.round(value ?? EVAL_ATTEMPTS_MIN)
+        ? `Clamped to ${next} — attempts per case is 1–5.`
+        : null,
+    );
+  }, {
+    onInvalid: () => setAttemptsNote(`Not a number — kept ${attemptsCommitted}.`),
+  });
 
   const versions = useAssistantVersions(assistantId);
   const runs = useEvalRuns();
@@ -114,7 +136,13 @@ export function EvaluationSection({
     ? (versionRuns.find((r) => r.id === trackedRunId) ?? versionRuns[0] ?? null)
     : (versionRuns[0] ?? null);
   const running = latest !== null && (latest.state === 'pending' || latest.state === 'running');
-  useEvalRunPolling(running, runs.refetch);
+  // EVL-1: poll to terminal state — the hook's absolute budget fires
+  // onBudgetExpired once instead of wedging `latest.state` at 'running'
+  // (which would disable "Evaluate version" forever). Gating `active`
+  // on the expiry restarts the budget cleanly for the next run.
+  useEvalRunPolling(running && !pollBudgetExpired, runs.refetch, {
+    onBudgetExpired: () => setPollBudgetExpired(true),
+  });
 
   const seededName = templateSlug && templateVersion ? `template:${templateSlug}@${templateVersion}` : null;
   const seededDataset = seededName ? ((datasets.data ?? []).find((d) => d.name === seededName) ?? null) : null;
@@ -140,11 +168,12 @@ export function EvaluationSection({
   const denied = setupDeniedCopy(role, 'setup:author');
   const mayRun = canAuthor && canSetup(role, 'setup:author');
   const versionLabel = `${isDraft ? 'Draft' : (versionStatus ?? 'Version')}${versionHash ? ` · ${versionHash.slice(0, 8)}` : ''}`;
-  const attemptsNumber = clampEvalAttempts(Number(attempts) || 1);
   const showFixPath = isNoDatasetError(evaluate.error);
 
   const start = (input: { datasetId?: string; attempts: number }) => {
     if (!versionId) return;
+    // A fresh run gets a fresh polling budget (EVL-1).
+    setPollBudgetExpired(false);
     evaluate.mutate(
       { versionId, ...(input.datasetId ? { datasetId: input.datasetId } : {}), attemptsPerCase: input.attempts },
       {
@@ -163,7 +192,7 @@ export function EvaluationSection({
   const reRun = () => {
     if (!latest?.datasetId) return;
     setDatasetId(latest.datasetId);
-    start({ datasetId: latest.datasetId, attempts: latest.attemptsPerCase ?? attemptsNumber });
+    start({ datasetId: latest.datasetId, attempts: latest.attemptsPerCase ?? attemptsCommitted });
   };
 
   const datasetNameFor = (run: EvalRun): string | null =>
@@ -176,7 +205,7 @@ export function EvaluationSection({
           <FieldTitle>Runs against</FieldTitle>
         </FieldHead>
         <FieldHelper>
-          {runnable ? `${versionLabel} — draft-pinned, snapshot synthesized.` : 'No DRAFT or PUBLISHED version to evaluate — retired versions never execute.'}
+          {runnable ? `${versionLabel} — draft-pinned, snapshot synthesized.` : 'No DRAFT or PUBLISHED version to evaluate — retired versions never execute, and a VALIDATING version is mid-validation.'}
         </FieldHelper>
       </FieldBlock>
 
@@ -223,24 +252,44 @@ export function EvaluationSection({
         {mayRun ? (
           <>
             <AttemptsWrap>
-              <TextInput label={EVAL_COPY.attemptsLabel} type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
+              <TextInput
+                label={EVAL_COPY.attemptsLabel}
+                type="number"
+                value={attemptsDraft.value}
+                min={1}
+                max={5}
+                onChange={(e) => {
+                  attemptsDraft.onChange(e.target.value);
+                  setAttemptsNote(null);
+                }}
+                onBlur={attemptsDraft.onBlur}
+                onKeyDown={attemptsDraft.onKeyDown}
+              />
+              {attemptsNote && <FieldHelper>{attemptsNote}</FieldHelper>}
             </AttemptsWrap>
             <ActionsRow>
               <ActionButton
-                size="sm"
-                disabled={!runnable || evaluate.isPending || running}
+                size="lg"
+                disabled={!runnable || evaluate.isPending || (running && !pollBudgetExpired)}
                 title={!runnable ? 'No DRAFT or PUBLISHED version to evaluate' : 'Start an eval run for this version'}
-                onClick={() => start({ ...(datasetId ? { datasetId } : {}), attempts: attemptsNumber })}
+                onClick={() => start({ ...(datasetId ? { datasetId } : {}), attempts: attemptsCommitted })}
               >
                 <FlaskConical size={13} strokeWidth={1.8} />
                 {evaluate.isPending ? 'Starting…' : 'Evaluate version'}
               </ActionButton>
               {latest?.datasetId && !running && (
-                <ActionButton size="sm" variant="secondary" onClick={reRun} title={`${EVAL_COPY.reRunSame} — same dataset, same attempts`}>
+                <ActionButton size="lg" variant="secondary" onClick={reRun} title={`${EVAL_COPY.reRunSame} — same dataset, same attempts`}>
                   {EVAL_COPY.reRunSame} ↻
                 </ActionButton>
               )}
             </ActionsRow>
+            {pollBudgetExpired && running && (
+              <FieldHelper>
+                Still running — polling stopped after 15 minutes, but the run
+                continues on the server. Check back or refresh; starting a new
+                evaluation is safe.
+              </FieldHelper>
+            )}
           </>
         ) : (
           <FieldHelper>Viewing only — {denied} Verdicts stay visible read-only.</FieldHelper>
@@ -280,7 +329,9 @@ export function EvaluationSection({
           <FieldTitle>Watching</FieldTitle>
         </FieldHead>
         {notificationsLoading ? (
-          <FieldHelper>Checking for drift signals…</FieldHelper>
+          <div aria-busy="true">
+            <SkeletonRows rows={3} />
+          </div>
         ) : latestDrift ? (
           <>
             <FieldHelper>
@@ -302,8 +353,8 @@ export function EvaluationSection({
       </FieldBlock>
 
       <LinkRow>
-        <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>{EVAL_COPY.evaluationsLink}</Link>
-        <Link to={buildAgentDetailPath(assistantId)}>Open publish gates ›</Link>
+        <HitNavLink to="/agent-studio/evaluations" search={{ returnTo: undefined }}>{EVAL_COPY.evaluationsLink}</HitNavLink>
+        <HitNavLink to={buildAgentDetailPath(assistantId)}>Open publish gates ›</HitNavLink>
       </LinkRow>
       <Note>{EVAL_COPY.latestWins} Test runs are recorded in audit. <Link to="/platform/audit">Open Audit →</Link></Note>
       {versionRuns.length > 1 && (

@@ -79,6 +79,9 @@ describe('EvalResults (shared truth — stale first, reported only)', () => {
     expect(alert.textContent).toContain('WARN');
     expect(alert.textContent).toMatch(/re-run/);
     expect(alert.textContent).not.toMatch(/a41f/);
+    // DS-6: exactly one re-run control per view — the banner keeps its
+    // informational job (role="alert"), the action lives in EvalActions.
+    expect(screen.getAllByText(/Re-run with same dataset/)).toHaveLength(1);
   });
 
   it('badges shadow rows as never-gating instead of grading them', () => {
@@ -100,6 +103,8 @@ describe('EvalResults (shared truth — stale first, reported only)', () => {
     shell(BASE_RUN, { versionUpdatedAt: null });
     expect(screen.getByText('Freshness unknown')).toBeTruthy();
     expect(screen.getByText(/Cannot prove this verdict is fresh/)).toBeTruthy();
+    // DS-7: the freshness banner is announced like the stale banner (D-BUG6 class).
+    expect(screen.getByRole('alert').textContent).toMatch(/Freshness unknown/);
   });
 
   it('offers re-run and provenance copy, hides re-run while busy', () => {

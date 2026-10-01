@@ -44,6 +44,8 @@ export const TRY_COPY = {
   noUsableModel: 'No usable model — connect a credential first.',
   activeRunConflict: 'A run is already active on this thread — wait for it or stop it, then re-ask.',
   threadKept: 'Thread kept in ?try= — reload restores it.',
+  /** Client poll budget exhausted — the turn never strands in 'accepted'. */
+  waitBudget: 'This is taking longer than usual — still waiting for the run’s terminal state.',
 } as const;
 
 export function validateTryPrompt(raw: string): { ok: true } | { ok: false; error: string } {
@@ -249,36 +251,4 @@ export function describeToolRow(row: ToolRow): string {
   if (row.result === 'shadow') parts.push('shadow — simulated, gated nothing');
   else if (row.result) parts.push(row.result);
   return parts.join(' · ');
-}
-
-export interface ResponseGrade {
-  subtitle: string | null;
-  hint: string;
-  status: 'locked' | 'untouched' | 'ready' | 'attention';
-}
-
-/**
- * Response-spine grade (usability only — try never gates publish).
- * `nowMs` is injected for purity; `lastTryAt` is an ISO timestamp or null.
- */
-export function gradeResponse(input: {
-  hasRunnableVersion: boolean;
-  lastTryAt: string | null;
-  lastTryFailed: boolean;
-  nowMs: number;
-}): ResponseGrade {
-  if (!input.hasRunnableVersion) {
-    return { subtitle: 'No runnable version', hint: 'Save a draft first', status: 'locked' };
-  }
-  if (input.lastTryAt === null) {
-    return { subtitle: null, hint: 'Not tried yet — run a prompt', status: 'untouched' };
-  }
-  if (input.lastTryFailed) {
-    return { subtitle: 'Last try stopped', hint: 'Open Try for the stop line', status: 'attention' };
-  }
-  const elapsedMs = input.nowMs - Date.parse(input.lastTryAt);
-  const elapsed = Number.isFinite(elapsedMs) && elapsedMs >= 0 ? elapsedMs : 0;
-  const subtitle =
-    elapsed < 60_000 ? 'Tried just now' : elapsed < 3_600_000 ? `Tried ${Math.floor(elapsed / 60_000)}m ago` : `Tried ${Math.floor(elapsed / 3_600_000)}h ago`;
-  return { subtitle, hint: 'Thread kept in Try', status: 'ready' };
 }

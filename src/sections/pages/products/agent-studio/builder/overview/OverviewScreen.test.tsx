@@ -61,6 +61,7 @@ function readiness(over: Partial<PublishReadiness> = {}): PublishReadiness {
     rows: [],
     verdict: 'unknown',
     publishable: false,
+    blockers: 0,
     needsAcknowledge: false,
     unresolvedSlugs: [],
     unreadySlugs: [],

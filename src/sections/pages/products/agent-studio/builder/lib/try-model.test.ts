@@ -8,7 +8,6 @@ import {
   describeTryStop,
   extractReportedHits,
   extractReportedVerdicts,
-  gradeResponse,
   validateTryPrompt,
 } from './try-model';
 
@@ -79,28 +78,6 @@ describe('extractReportedHits (render only what arrived)', () => {
     expect(extractReportedHits({ hits: [{ documentId: 'd1', chunkIndex: 4 }] })).toEqual([
       { title: 'd1', chunk: 'chunk 4', score: null },
     ]);
-  });
-});
-
-describe('gradeResponse (usability only — never gates publish)', () => {
-  const NOW = Date.parse('2026-09-18T12:00:00Z');
-  it('locks without a runnable version, ghosts until the first try', () => {
-    expect(gradeResponse({ hasRunnableVersion: false, lastTryAt: null, lastTryFailed: false, nowMs: NOW }).status).toBe('locked');
-    expect(gradeResponse({ hasRunnableVersion: true, lastTryAt: null, lastTryFailed: false, nowMs: NOW })).toMatchObject({
-      subtitle: null,
-      status: 'untouched',
-    });
-  });
-  it('grades tried/failed honestly with relative time', () => {
-    expect(
-      gradeResponse({ hasRunnableVersion: true, lastTryAt: '2026-09-18T11:59:30Z', lastTryFailed: false, nowMs: NOW }).subtitle,
-    ).toBe('Tried just now');
-    expect(
-      gradeResponse({ hasRunnableVersion: true, lastTryAt: '2026-09-18T11:30:00Z', lastTryFailed: false, nowMs: NOW }).subtitle,
-    ).toBe('Tried 30m ago');
-    expect(
-      gradeResponse({ hasRunnableVersion: true, lastTryAt: '2026-09-18T11:59:30Z', lastTryFailed: true, nowMs: NOW }).status,
-    ).toBe('attention');
   });
 });
 

@@ -24,7 +24,7 @@ function base(overrides: Partial<ProjectorInput> = {}): ProjectorInput {
     selectedId: null,
     modelLabel: (ref) => ref,
     models: undefined,
-    tryState: { hasRunnableVersion: true, lastTryAt: null, lastTryFailed: false },
+    tryState: { hasRunnableVersion: true, lastTryAt: null, lastTryFailed: false, restoredTryAt: null, restoredTryFailed: false },
     ...overrides,
   };
 }
@@ -293,7 +293,7 @@ describe('projector credentials node', () => {
 
 describe('projector try node', () => {
   it('locks without a runnable version, ghosts until the first try', () => {
-    const noVersion = nodeOf(base({ tryState: { hasRunnableVersion: false, lastTryAt: null, lastTryFailed: false } }), 'try');
+    const noVersion = nodeOf(base({ tryState: { hasRunnableVersion: false, lastTryAt: null, lastTryFailed: false, restoredTryAt: null, restoredTryFailed: false } }), 'try');
     expect(noVersion?.status).toBe('locked');
     expect(noVersion?.hint).toBe('Save a draft first');
     const untried = nodeOf(base(), 'try');
@@ -304,17 +304,44 @@ describe('projector try node', () => {
 
   it('grades tried and failed runs without timestamps', () => {
     const tried = nodeOf(
-      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: false } }),
+      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: false, restoredTryAt: null, restoredTryFailed: false } }),
       'try',
     );
     expect(tried?.status).toBe('ready');
     expect(tried?.subtitle).toBe('Last run ok');
     const failed = nodeOf(
-      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: true } }),
+      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: true, restoredTryAt: null, restoredTryFailed: false } }),
       'try',
     );
     expect(failed?.status).toBe('attention');
     expect(failed?.subtitle).toBe('Last run failed');
+  });
+
+  it('grades a restored-only try as honest history, never "Last run ok"', () => {
+    const restored = nodeOf(
+      base({ tryState: { hasRunnableVersion: true, lastTryAt: null, lastTryFailed: false, restoredTryAt: '2026-09-27T10:00:00Z', restoredTryFailed: false } }),
+      'try',
+    );
+    // No version pin on the restored thread: it must not read as a grade
+    // of the current draft.
+    expect(restored?.status).toBe('untouched');
+    expect(restored?.subtitle).toBe('Tried before');
+    expect(restored?.hint).toBe('Tried in a previous session — open Try to run this draft');
+  });
+
+  it('prefers the live try over the restored thread', () => {
+    const both = nodeOf(
+      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: false, restoredTryAt: '2026-09-27T10:00:00Z', restoredTryFailed: false } }),
+      'try',
+    );
+    expect(both?.status).toBe('ready');
+    expect(both?.subtitle).toBe('Last run ok');
+    const liveFailed = nodeOf(
+      base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: true, restoredTryAt: '2026-09-27T10:00:00Z', restoredTryFailed: false } }),
+      'try',
+    );
+    expect(liveFailed?.status).toBe('attention');
+    expect(liveFailed?.subtitle).toBe('Last run failed');
   });
 });
 
@@ -399,7 +426,7 @@ describe('projector edges', () => {
     expect(edge?.target).toBe('response');
     expect(edge?.data?.lit).toBe(false);
     expect(
-      litIds(base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: false } })),
+      litIds(base({ tryState: { hasRunnableVersion: true, lastTryAt: '2026-09-28T10:00:00Z', lastTryFailed: false, restoredTryAt: null, restoredTryFailed: false } })),
     ).toContain('e:try:response');
   });
 

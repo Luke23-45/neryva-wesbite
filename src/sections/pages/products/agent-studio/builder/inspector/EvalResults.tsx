@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
+import { ActionButton } from '@components/common/ui/ActionButton';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { parseEvalResults, type EvalRun } from '@hooks/studio/useSetupEval';
 import {
@@ -130,11 +131,10 @@ export function EvalResults({
         <StaleBanner role="alert">
           <StaleHeadline>{staleBanner.headline}</StaleHeadline>
           <StaleDetail>{staleBanner.detail}</StaleDetail>
-          {onReRun && <TextButton onClick={onReRun}>{EVAL_COPY.reRunSame} ↻</TextButton>}
         </StaleBanner>
       )}
       {freshness === 'unknown' && decided && !run.isShadow && (
-        <StaleBanner>
+        <StaleBanner role="alert">
           <StaleHeadline>Freshness unknown</StaleHeadline>
           <StaleDetail>{EVAL_COPY.unknownFreshness}</StaleDetail>
         </StaleBanner>
@@ -289,9 +289,9 @@ export function EvalResults({
 
       <EvalActions>
         {onReRun && (
-          <TextButton onClick={onReRun}>
+          <ActionButton size="lg" onClick={onReRun}>
             {EVAL_COPY.reRunSame} ↻
-          </TextButton>
+          </ActionButton>
         )}
       </EvalActions>
       <Note>{EVAL_COPY.latestWins}</Note>

@@ -36,6 +36,7 @@ const ROWS = (overrides: Partial<PublishReadiness> = {}) =>
     ],
     verdict: 'go',
     publishable: true,
+    blockers: 0,
     needsAcknowledge: false,
     unresolvedSlugs: [],
     unreadySlugs: [],
@@ -62,7 +63,7 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   };
 });
 
-async function shell() {
+async function shell(ack?: { acknowledge: boolean; onAcknowledge: (b: boolean) => void }) {
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -70,7 +71,14 @@ async function shell() {
     component: () => (
       <ThemeProvider theme={theme}>
         <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-          <ShipSection assistantId="agent-1" versionId="v7" role="owner" onEditJump={() => undefined} />
+          <ShipSection
+            assistantId="agent-1"
+            versionId="v7"
+            role="owner"
+            onEditJump={() => undefined}
+            acknowledge={ack?.acknowledge ?? false}
+            onAcknowledge={ack?.onAcknowledge ?? (() => undefined)}
+          />
         </QueryClientProvider>
       </ThemeProvider>
     ),
@@ -89,20 +97,36 @@ beforeEach(() => {
   publishMutate.mockReset();
 });
 
-/** Signal-driven shell: publishSignal is local state inside the route component, so bumps re-render ShipSection. */
+/** Signal-driven shell: publishSignal and the degraded ack are local state
+ *  inside the route component, mirroring the builder — the consume callback
+ *  resets the signal to 0 exactly like the real builder does. */
 async function shellWithSignal(role: 'owner' | 'developer' = 'owner') {
   let setSignal!: (n: number) => void;
+  const consumed = vi.fn();
   const rootRoute = createRootRoute();
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
     component: function SignalRoute() {
       const [signal, _setSignal] = useState(0);
+      const [ack, setAck] = useState(false);
       setSignal = _setSignal;
       return (
         <ThemeProvider theme={theme}>
           <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-            <ShipSection assistantId="agent-1" versionId="v7" role={role} onEditJump={() => undefined} publishSignal={signal} />
+            <ShipSection
+              assistantId="agent-1"
+              versionId="v7"
+              role={role}
+              onEditJump={() => undefined}
+              publishSignal={signal}
+              onPublishSignalConsumed={() => {
+                consumed();
+                _setSignal(0);
+              }}
+              acknowledge={ack}
+              onAcknowledge={setAck}
+            />
           </QueryClientProvider>
         </ThemeProvider>
       );
@@ -120,7 +144,7 @@ async function shellWithSignal(role: 'owner' | 'developer' = 'owner') {
       setSignal(signal);
     });
   };
-  return { bump };
+  return { bump, consumed };
 }
 
 describe('ShipSection', () => {
@@ -145,19 +169,54 @@ describe('ShipSection', () => {
     expect(publishMutate).not.toHaveBeenCalled();
   });
 
-  it('arms the degraded ack and publishes with the flag', async () => {
+  it('SHP-2: the degraded ack is builder-owned — checking the box calls onAcknowledge, and the confirm carries the flag', async () => {
     readiness = ROWS({
       verdict: 'conditional-go',
       publishable: true,
+      blockers: 0,
       needsAcknowledge: true,
       unresolvedSlugs: ['returns-2024'],
       rows: ROWS().rows.map((row) =>
         row.id === 'knowledge' ? { ...row, ok: false as const, detail: 'Unresolved: returns-2024.' } : row,
       ),
     });
-    await shell();
+    // Stateful ack shell mirroring the builder wiring (SHP-2).
+    let setAck!: (b: boolean) => void;
+    const onAcknowledge = vi.fn((b: boolean) => setAck(b));
+    const rootRoute = createRootRoute();
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: function AckRoute() {
+        const [ack, _setAck] = useState(false);
+        setAck = _setAck;
+        return (
+          <ThemeProvider theme={theme}>
+            <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+              <ShipSection
+                assistantId="agent-1"
+                versionId="v7"
+                role="owner"
+                onEditJump={() => undefined}
+                acknowledge={ack}
+                onAcknowledge={onAcknowledge}
+              />
+            </QueryClientProvider>
+          </ThemeProvider>
+        );
+      },
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    await act(async () => {
+      render(<RouterProvider router={router} />);
+    });
     expect(screen.getByText(/Conditional Go/)).toBeTruthy();
     fireEvent.click(screen.getByRole('checkbox'));
+    expect(onAcknowledge).toHaveBeenCalledWith(true);
+    // The lifted ack flows back in — publishing carries the flag.
     fireEvent.click(screen.getByText('Publish this draft'));
     expect(screen.getByText('Publish this draft?')).toBeTruthy();
     fireEvent.click(screen.getByText('Publish', { selector: 'button' }));
@@ -251,5 +310,49 @@ describe('ShipSection', () => {
     await bump(2);
     expect(screen.queryByText('Publish this draft?')).toBeNull();
     expect(publishMutate).not.toHaveBeenCalled();
+  });
+
+  it('SHP-1: the fired signal is consumed exactly once per increment — the consume re-render never re-fires', async () => {
+    const { bump, consumed } = await shellWithSignal();
+    await bump(1);
+    expect(screen.getByText('Publish', { selector: 'button' })).toBeTruthy();
+    // One fire, one consume: the signal-0 re-render from the consume must not
+    // fire again (the guard re-arms to 0, and 0 > 0 is false) — otherwise the
+    // section would loop or the next topbar click would dead-click.
+    expect(consumed).toHaveBeenCalledTimes(1);
+    expect(publishMutate).not.toHaveBeenCalled();
+  });
+
+  it('SHP-1: after the consume lands, the next increment still fires — no dead click', async () => {
+    const { bump, consumed } = await shellWithSignal();
+    await bump(1);
+    expect(consumed).toHaveBeenCalledTimes(1);
+    // Next bump re-arms (ref reset on signal 0) and fires again.
+    await bump(2);
+    expect(consumed).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Publish', { selector: 'button' })).toBeTruthy();
+  });
+
+  it('DS-16: clicking Publish while gates are still reading surfaces a notice, never a silent no-op', async () => {
+    readiness = ROWS({ isPending: true, publishable: false, blockers: 0, rows: [] });
+    await shell();
+    const btn = screen.getByText('Publish this draft');
+    expect(btn).toHaveAttribute('title', 'Checking gates…');
+    fireEvent.click(btn);
+    expect(screen.getByText(/Gates are still reading — the checks will land in a moment/)).toBeTruthy();
+    expect(publishMutate).not.toHaveBeenCalled();
+  });
+
+  it('DS-18: the publish button never announces disabled while it is clickable', async () => {
+    readiness = ROWS({
+      verdict: 'no-go',
+      publishable: false,
+      blockers: 1,
+      rows: ROWS().rows.map((row) => (row.id === 'models' ? { ...row, ok: false as const, detail: 'Unknown to the catalog: x/y.' } : row)),
+    });
+    await shell();
+    const btn = screen.getByText('Publish this draft');
+    expect(btn).not.toHaveAttribute('aria-disabled');
+    expect(btn.getAttribute('aria-describedby')).toContain('ship-publish-hint');
   });
 });

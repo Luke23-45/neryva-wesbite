@@ -101,9 +101,23 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const allVersions = useAssistantVersions(mode === 'build' ? (agentId ?? null) : null);
   // C14: shared publish-readiness derivation (same cache the Ship section
   // reads) for the working draft. Disabled in new mode — locked there.
+  // SHP-2: the degraded-knowledge ack is lifted here so the topbar badge,
+  // the graph node, and the Ship section all read the same ack-aware
+  // derivation — never three disagreeing counts.
+  const [degradedAck, setDegradedAck] = useState(false);
   const shipReadiness = usePublishReadiness(mode === 'build' ? (agentId ?? null) : null, form.data?.versionId ?? null, {
     enabled: mode === 'build',
+    acknowledged: degradedAck,
   });
+
+  // Per-version ceremony state resets with the working version (render-time
+  // adjustment — an effect here would cascade renders).
+  const [prevAckVersionId, setPrevAckVersionId] = useState<string | null>(null);
+  const workingVersionId = mode === 'build' ? (form.data?.versionId ?? null) : null;
+  if (prevAckVersionId !== workingVersionId) {
+    setPrevAckVersionId(workingVersionId);
+    setDegradedAck(false);
+  }
 
   const agentKey = mode === 'build' ? agentId : null;
 
@@ -199,10 +213,17 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
 
   // Try state for this load (C13): terminal turns report up from the Try
   // console; the response section grade reflects them, nothing else reads this.
+  // Restored turns (DS-3) report on a separate path: they carry no version
+  // pin, so they must never set the live lastTry (TRY-2).
   const [lastTry, setLastTry] = useState<{ at: string; failed: boolean } | null>(null);
+  const [restoredTry, setRestoredTry] = useState<{ at: string; failed: boolean } | null>(null);
 
-  const onTryEvent = useCallback((event: { at: string; failed: boolean }) => {
-    setLastTry(event);
+  const onTryEvent = useCallback((event: { at: string; failed: boolean; restored?: boolean }) => {
+    if (event.restored) {
+      setRestoredTry({ at: event.at, failed: event.failed });
+    } else {
+      setLastTry({ at: event.at, failed: event.failed });
+    }
   }, []);
 
   // Trace Edit jumps land on builder sections: every TraceEditTarget IS a
@@ -300,6 +321,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
             (hasDraft || form.data?.status === 'DRAFT' || form.data?.status === 'PUBLISHED'),
           lastTryAt: lastTry?.at ?? null,
           lastTryFailed: lastTry?.failed ?? false,
+          restoredTryAt: restoredTry?.at ?? null,
+          restoredTryFailed: restoredTry?.failed ?? false,
         },
         credentialsSummary: credentials.data ? { count: credentials.data.length, expired: 0 } : undefined,
         evalState: (() => {
@@ -311,7 +334,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
           mode === 'build' && shipReadiness.rows.length > 0
             ? {
                 verdict: shipReadiness.verdict,
-                blockers: shipReadiness.rows.filter((row) => row.ok === false).length,
+                // SHP-2: the canonical ack-aware count from the shared
+                // derivation — never a locally re-filtered second truth.
+                blockers: shipReadiness.blockers,
                 checking: false,
               }
             : mode === 'build' && shipReadiness.isPending
@@ -319,7 +344,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
               : undefined,
         confirmedSections,
       }),
-    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, budgetEstimateMicros, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.isPending, credentials.data, confirmedSections],
+    [mode, agentName, hasDraft, definition, librarySlugs, selectedId, modelLabel, models.data, budgetEstimateMicros, health.data, toolCatalog.data, form.data?.versionId, form.data?.status, lastTry, restoredTry, evalRuns.data, allVersions.data, shipReadiness.rows, shipReadiness.verdict, shipReadiness.blockers, shipReadiness.isPending, credentials.data, confirmedSections],
   );
 
   // The main pane's view: 'overview' or a section id. New mode is locked to
@@ -443,13 +468,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     return {
       configured,
       total: functional.length,
-      blockers: mode === 'build' ? shipReadiness.rows.filter((row) => row.ok === false).length : 0,
+      // SHP-2: ack-aware blocker count from the shared derivation — an
+      // acknowledged exception is no longer reported as a "blocking issue"
+      // by the topbar badge.
+      blockers: mode === 'build' ? shipReadiness.blockers : 0,
       // No defensible advisory count exists yet (the only candidate,
       // noChangeHint, is boolean) — omitted rather than invented (§8.11).
       suggestions: 0,
       nextStep: next ? { label: next.data.title, nodeId: next.id } : null,
     };
-  }, [projected.nodes, shipReadiness.rows, mode]);
+  }, [projected.nodes, shipReadiness.blockers, mode]);
 
   const bottomAction = useMemo(() => {
     // Knowledge attention (C05): the graded section's own verdict, computed
@@ -521,7 +549,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
 
   // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
   // on the ship section (the gate truth lives there); unblocked clicks
-  // increment the counter and the Ship section fires its publish flow.
+  // select the ship section and increment the counter — the Ship section
+  // fires its publish flow once per increment (SHP-1: the old bump-without-
+  // navigate dead-clicked from every other section, and the never-reset
+  // signal popped the confirm dialog unprompted on every later Ship visit).
   // P1-1 (T-01): gated on setup:govern, not setup:author — the engine's
   // publish endpoint requires owner/admin, so a developer must never bump
   // this signal into a confirm dialog that can only 403. The topbar button
@@ -534,8 +565,19 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
       select('ship');
       return;
     }
+    select('ship');
     setPublishSignal((s) => s + 1);
   }, [mode, canAuthor, canPublish, sectionHealth.blockers, select]);
+
+  /**
+   * SHP-1: the Ship section calls this after firing a signal increment —
+   * the signal is consumed idempotently back to idle (0), so a stale signal
+   * can never fire the confirm dialog unprompted on a later visit. The
+   * section re-arms its own seen mark when the consume lands (signal 0).
+   */
+  const consumePublishSignal = useCallback(() => {
+    setPublishSignal(0);
+  }, []);
 
   /**
    * Merged builder topbar (ledger T13): instead of a stacked 56px row,
@@ -686,10 +728,21 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
        * Manual publish counter (v10 §8.12 — topbar Publish). The Ship
        * section fires its publish flow when this increments; blocked
        * clicks never reach it — they select the ship section instead.
+       * The section consumes each increment back to 0 (SHP-1), so a stale
+       * signal can never fire unprompted.
        */
       publishSignal,
+      /** SHP-1: Ship calls this after firing a signal increment. */
+      onPublishSignalConsumed: consumePublishSignal,
+      /**
+       * Degraded-knowledge ack (SHP-2): lifted here so the topbar badge,
+       * the graph node, and the Ship section all read the same ack-aware
+       * derivation. Resets with the working version.
+       */
+      degradedAck,
+      onDegradedAck: setDegradedAck,
     }),
-    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, requestSave],
+    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, consumePublishSignal, degradedAck, requestSave],
   );
 
   // — Build-mode loading / not-found / fetch-error (firsthand states, never blank) —

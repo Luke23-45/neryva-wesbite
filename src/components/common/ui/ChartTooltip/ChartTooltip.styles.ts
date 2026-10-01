@@ -6,7 +6,7 @@ export const TooltipFrame = styled.div`
   border-radius: 8px;
   padding: 10px 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(${({ theme }) => theme.app.blur.md});
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   min-width: 140px;
 `;

@@ -104,6 +104,8 @@ const buildContext = (overrides: Partial<InspectorContext> = {}): InspectorConte
   onEditJump: () => undefined,
   saveSignal: 0,
   publishSignal: 0,
+  degradedAck: false,
+  onDegradedAck: () => undefined,
   requestSave: () => undefined,
   ...overrides,
 });

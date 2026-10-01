@@ -85,7 +85,7 @@ export interface InspectorContext {
   editPath: string | null;
   /** Canvas try state for this load (C13) + terminal-turn reporter. */
   tryState: { hasRunnableVersion: boolean; lastTryAt: string | null; lastTryFailed: boolean };
-  onTryEvent: (event: { at: string; failed: boolean }) => void;
+  onTryEvent: (event: { at: string; failed: boolean; restored?: boolean }) => void;
   /** Trace Edit jumps land on builder slots (detail surfaces link out instead). */
   onEditJump: (target: TraceEditTarget) => void;
   /**
@@ -112,6 +112,17 @@ export interface InspectorContext {
    * increment it and the Ship section fires its publish flow.
    */
   publishSignal: number;
+  /**
+   * SHP-1: the Ship section calls this after firing a signal increment —
+   * the counter returns to idle so a stale signal never fires unprompted.
+   */
+  onPublishSignalConsumed?: () => void;
+  /**
+   * Degraded-knowledge ack (SHP-2): lifted to the builder so the topbar
+   * badge, graph node, and Ship section share one ack-aware derivation.
+   */
+  degradedAck: boolean;
+  onDegradedAck: (acknowledged: boolean) => void;
 }
 
 interface SectionBodyProps {
@@ -469,6 +480,9 @@ export function SectionBody({
             versionId={context.versionId}
             role={context.role}
             publishSignal={context.publishSignal}
+            onPublishSignalConsumed={context.onPublishSignalConsumed}
+            acknowledge={context.degradedAck}
+            onAcknowledge={context.onDegradedAck}
             onEditJump={target => {
               if (context.onShipJump) {
                 context.onShipJump(target);

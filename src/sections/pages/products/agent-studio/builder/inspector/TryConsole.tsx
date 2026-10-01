@@ -43,7 +43,7 @@ export interface TryConsoleProps {
   models: ModelAvailability[] | undefined;
   modelsLoading: boolean;
   /** Builder canvas grade reporter — detail surfaces omit it. */
-  onTryEvent?: (event: { at: string; failed: boolean }) => void;
+  onTryEvent?: (event: { at: string; failed: boolean; restored?: boolean }) => void;
   /** Builder jumps select slots; detail links out to the builder. */
   editMode: { kind: 'jump'; onEditJump: (target: TraceEditTarget) => void } | { kind: 'link'; builderHref: string };
   /** Optional header — the detail version picker lives here. */
@@ -91,12 +91,15 @@ export function TryConsole({
     : describeTryPrereqs({ hasRunnableVersion: false, usableModelCount: Math.max(usableCount, 0), hasInstructions });
 
   // Report terminal turns once so the builder canvas grade reflects this load.
+  // Restored turns report once too, but on a distinct path (restored: true):
+  // they carry no version pin, so the canvas must never grade them as the
+  // current draft's "Last run ok" (TRY-2 keeps them out of the live lastTry).
   useEffect(() => {
     if (!onTryEvent) return;
     for (const turn of turns) {
       if ((turn.status === 'done' || turn.status === 'error') && !reportedRef.current.has(turn.key)) {
         reportedRef.current.add(turn.key);
-        onTryEvent({ at: new Date().toISOString(), failed: turn.status === 'error' });
+        onTryEvent({ at: new Date().toISOString(), failed: turn.status === 'error', ...(turn.restored ? { restored: true } : {}) });
       }
     }
   }, [turns, onTryEvent]);
@@ -212,24 +215,16 @@ export function TryConsole({
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
             placeholder="A customer asks… (1–8192)"
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                // Blur first: the builder window keymap would deselect the
-                // spine and strand the half-typed prompt.
-                e.currentTarget.blur();
-                e.stopPropagation();
-              }
-            }}
           />
           <DockRow>
             {isBusy ? (
-              <ActionButton size="sm" onClick={session.stop} title="Stop the running turn">
+              <ActionButton size="lg" onClick={session.stop} title="Stop the running turn">
                 <Square size={13} strokeWidth={1.8} />
                 Stop
               </ActionButton>
             ) : (
               <ActionButton
-                size="sm"
+                size="lg"
                 disabled={!runnable || prompt.trim() === ''}
                 title={!runnable ? TRY_COPY.noRunnableVersion : 'Run pinned to this version'}
                 onClick={send}
@@ -240,7 +235,7 @@ export function TryConsole({
             )}
             {turns.length > 0 && !isBusy && (
               <ActionButton
-                size="sm"
+                size="lg"
                 onClick={() => {
                   session.clearSession();
                   setTraceKey(null);

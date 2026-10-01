@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { createLink } from '@tanstack/react-router';
 
 /**
  * Publish success receipt — redesigned.
@@ -54,3 +55,18 @@ export const Footer = styled.div`
   color: ${({ theme }) => theme.app.text.muted};
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
+
+/**
+ * Footer navigation links (DS-21) — flow-critical exits on the publish
+ * receipt, so they get the 44px text-button treatment (Wave B InlineRetry
+ * precedent): inline-size text vertically centered in a 44px target, with
+ * the link treatment otherwise unchanged. Built with createLink rather than
+ * styled(Link): the styled() wrapper erases the route's search-param
+ * inference, so `search={{ agent }}` would lose type checking.
+ */
+const FooterAnchor = styled.a`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+`;
+export const FooterLink = createLink(FooterAnchor);

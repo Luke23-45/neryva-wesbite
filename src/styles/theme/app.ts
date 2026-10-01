@@ -47,6 +47,20 @@ export const app = {
     focus: 'rgba(147, 197, 253, 0.45)',    // focused input border
   },
 
+  /** Backdrop-blur ramp — every frosted surface reads from one scale. */
+  blur: {
+    sm: '6px',  // panels
+    md: '8px',  // chart tooltips
+    lg: '14px', // tooltips
+    xl: '24px', // drawers, modal scrims
+  },
+
+  /** Solid control fills — the primary action ramp. */
+  control: {
+    primary: '#f5f7fb',      // primary action fill, rest
+    primaryHover: '#ffffff', // primary action fill, hovered
+  },
+
   /** Text — one hue, stepped by alpha. */
   text: {
     primary: '#f5f7fb',                      // titles, values, key UI

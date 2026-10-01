@@ -9,23 +9,23 @@ const tripleFor = (tone: StatusTone, theme: DefaultTheme) =>
 export const Pill = styled.span<{ $tone: StatusTone }>`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: 999px;
+  gap: ${({ theme }) => theme.spacing.px6};
+  padding: ${({ theme }) => theme.spacing.px3} ${({ theme }) => theme.spacing.px9};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-family: ${({ theme }) => theme.typography.fonts.sans};
   font-size: ${({ theme }) => theme.app.type.micro};
-  font-weight: 500;
-  letter-spacing: -0.005em;
+  font-weight: ${({ theme }) => theme.typography.weights.medium};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
   white-space: nowrap;
   color: ${({ $tone, theme }) => tripleFor($tone, theme).fg};
   background: ${({ $tone, theme }) => tripleFor($tone, theme).bg};
   border: 1px solid ${({ $tone, theme }) => tripleFor($tone, theme).border};
 
   .dot {
-    width: 6px;
-    height: 6px;
+    width: ${({ theme }) => theme.spacing.px6};
+    height: ${({ theme }) => theme.spacing.px6};
     border-radius: 50%;
     background: currentColor;
-    box-shadow: 0 0 0 3px ${({ $tone, theme }) => tripleFor($tone, theme).bg};
+    box-shadow: 0 0 0 ${({ theme }) => theme.spacing.px3} ${({ $tone, theme }) => tripleFor($tone, theme).bg};
   }
 `;

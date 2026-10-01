@@ -163,12 +163,16 @@ describe('TrySection (builder response spine)', () => {
     replaceSpy.mockRestore();
   });
 
-  it('Escape blurs the dock instead of stranding the prompt', async () => {
+  it('Escape in the prompt field is a clean no-op — never strands the prompt (DS-2)', async () => {
     await shell();
     const input = screen.getByLabelText(/Test prompt/);
+    fireEvent.change(input, { target: { value: 'half-typed prompt' } });
     input.focus();
     fireEvent.keyDown(input, { key: 'Escape' });
-    expect(document.activeElement).not.toBe(input);
+    // The stale Escape→blur wrapper is gone: focus stays in the field, the
+    // text is untouched, and the builder keymap returns early inside fields.
+    expect(document.activeElement).toBe(input);
+    expect(input).toHaveValue('half-typed prompt');
   });
 
   it('reports terminal turns once for the canvas grade', async () => {
@@ -177,6 +181,14 @@ describe('TrySection (builder response spine)', () => {
     await shell({ onTryEvent });
     expect(onTryEvent).toHaveBeenCalledTimes(1);
     expect(onTryEvent).toHaveBeenCalledWith(expect.objectContaining({ failed: false }));
+  });
+
+  it('reports a restored turn distinctly — never as the live lastTry (TRY-2/DS-3)', async () => {
+    const onTryEvent = vi.fn();
+    sessionMock.turns = [{ ...DONE_TURN, key: 'restored-conv-9', restored: true }];
+    await shell({ onTryEvent });
+    expect(onTryEvent).toHaveBeenCalledTimes(1);
+    expect(onTryEvent).toHaveBeenCalledWith(expect.objectContaining({ failed: false, restored: true }));
   });
 
   it('states the audit truth with a link, never a pre-filter promise', async () => {

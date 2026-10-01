@@ -17,7 +17,7 @@ export interface TrySectionProps {
   models: ModelAvailability[] | undefined;
   modelsLoading: boolean;
   /** Reports terminal turns upward so the canvas grade reflects this load. */
-  onTryEvent: (event: { at: string; failed: boolean }) => void;
+  onTryEvent: (event: { at: string; failed: boolean; restored?: boolean }) => void;
   onEditJump: (target: TraceEditTarget) => void;
 }
 

@@ -105,8 +105,8 @@ const Bubble = styled(motion.div)<{ $side: Side }>`
   border-radius: 8px;
   background: rgba(15, 17, 22, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.10);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(${({ theme }) => theme.app.blur.lg});
+  -webkit-backdrop-filter: blur(${({ theme }) => theme.app.blur.lg});
   color: rgba(245, 247, 251, 0.95);
   font-size: 11.5px;
   font-weight: 500;

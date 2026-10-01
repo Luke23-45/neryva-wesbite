@@ -244,6 +244,45 @@ describe('useTrySession', () => {
     expect(turn.notices.some((n) => n.kind === 'error' && n.text.includes('budget_exceeded_wall_clock'))).toBe(true);
   });
 
+  it('times out a parked accepted turn after the poll budget — never strands', async () => {
+    // TRY-1: SSE dropped entirely — the transcript never gains an agent message.
+    engineMock.mockImplementation((url: string, options?: { method?: string }) => {
+      if (typeof url === 'string' && url.includes('/test-runs') && options?.method === 'POST') {
+        return Promise.resolve({ conversation_id: 'conv-t', message_id: 'm-t', run_id: 'run-t' });
+      }
+      if (typeof url === 'string' && url.includes('/messages')) {
+        return Promise.resolve({ messages: [{ id: 'u1', role: 'user', text: 'Where is my refund?', created_at: null }] });
+      }
+      return Promise.resolve({});
+    });
+    const { result } = renderHook(() => useTrySession('agent-1', 'v1', null), { wrapper: wrapper() });
+    await act(async () => {
+      result.current.send('Where is my refund?');
+    });
+    expect(result.current.turns[0].status).toBe('streaming');
+
+    // 15s of SSE silence parks the turn in 'accepted' — the stranded state.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(result.current.turns[0].status).toBe('accepted');
+    // Stop stays wired throughout the wait: the turn still holds the active key.
+    expect(result.current.isBusy).toBe(true);
+
+    // The full 30 × 3s poll budget with no reply: the absolute timeout
+    // names the wait, takes a final transcript read, and settles the turn.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+    });
+    const turn = result.current.turns[0];
+    // The turn left 'accepted' — the assertion the bug needs.
+    expect(turn.status).toBe('error');
+    expect(turn.notices.some((n) => n.kind === 'status' && n.text.includes('taking longer than usual'))).toBe(true);
+    expect(turn.notices.some((n) => n.kind === 'error' && n.text.includes('no reply in 90 seconds'))).toBe(true);
+    expect(turn.stop?.kind).toBe('failed');
+    expect(result.current.isBusy).toBe(false);
+  });
+
   it('surfaces tool and usage events as notices, never dropped', async () => {
     const { result } = renderHook(() => useTrySession('agent-1', 'v1', null), { wrapper: wrapper() });
     await act(async () => {

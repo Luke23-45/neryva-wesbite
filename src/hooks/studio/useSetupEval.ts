@@ -26,7 +26,7 @@
  * version, environment, seed), decision PASS|WARN|BLOCK|null,
  * release_policy_version}.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
@@ -262,21 +262,58 @@ export function useEvalRuns(datasetId?: string, options?: { enabled?: boolean })
   });
 }
 
+/** Poll cadence for in-flight eval runs (the EvaluatePanel pattern). */
+export const EVAL_POLL_INTERVAL_MS = 10_000;
 /**
- * Tracks an in-flight run to its terminal state (10s cadence, 3 min
- * budget — the EvaluatePanel pattern, shared so both surfaces poll the
- * same query once). `refetch` must be referentially stable.
+ * Absolute polling budget. Long evals outlive it, so the budget is
+ * generous and its expiry is a surfaceable event, never a silent wedge
+ * (EVL-1): the hook invokes `onBudgetExpired` once and the caller
+ * re-enables its surface with an honest "still running" notice.
  */
-export function useEvalRunPolling(active: boolean, refetch: () => void): void {
+export const EVAL_POLL_BUDGET_MS = 15 * 60_000;
+
+export interface EvalRunPollingOptions {
+  /** Absolute budget before polling stops (default: 15 min). */
+  budgetMs?: number;
+  /** Invoked once when the budget expires while still active. */
+  onBudgetExpired?: () => void;
+}
+
+/**
+ * Tracks an in-flight run to its terminal state (10s cadence, 15 min
+ * absolute budget — the EvaluatePanel pattern, shared so both surfaces
+ * poll the same query once). `refetch` must be referentially stable.
+ * Polling runs while `active` — both callers derive `active` from the
+ * pending/running state, so it stops on terminal; the budget only guards
+ * pathological runs, and expiry fires `onBudgetExpired` once so the
+ * caller can re-enable its controls honestly instead of wedging.
+ */
+export function useEvalRunPolling(active: boolean, refetch: () => void, options?: EvalRunPollingOptions): void {
+  // Read once per activation: a mid-flight budget change must not
+  // silently restart (or extend) the budget of a running poll.
+  const budgetRef = useRef(options?.budgetMs ?? EVAL_POLL_BUDGET_MS);
+  // Kept in a ref so the callback stays fresh without re-subscribing
+  // the interval on every render.
+  const expiredRef = useRef(options?.onBudgetExpired);
+  useEffect(() => {
+    expiredRef.current = options?.onBudgetExpired;
+  });
   useEffect(() => {
     if (!active) {
       return;
     }
-    const timer = window.setInterval(() => refetch(), 10_000);
-    const stop = window.setTimeout(() => window.clearInterval(timer), 180_000);
+    let expired = false;
+    const timer = window.setInterval(() => refetch(), EVAL_POLL_INTERVAL_MS);
+    const budget = window.setTimeout(() => {
+      window.clearInterval(timer);
+      if (!expired) {
+        expired = true;
+        expiredRef.current?.();
+      }
+    }, budgetRef.current);
     return () => {
       window.clearInterval(timer);
-      window.clearTimeout(stop);
+      window.clearTimeout(budget);
     };
   }, [active, refetch]);
 }

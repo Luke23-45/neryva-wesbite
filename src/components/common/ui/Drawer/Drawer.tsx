@@ -39,6 +39,9 @@ export function Drawer({ open, onClose, title, subtitle, children, footer, width
     panel?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Consume the key: the builder's global keymap (window) must not
+        // also fire and yank the user to Overview on the same press (DS-1).
+        e.stopPropagation();
         onClose();
         return;
       }
@@ -127,8 +130,8 @@ const Sheet = styled(motion.div)`
   background: rgba(15, 17, 22, 0.97);
   border-left: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: -32px 0 80px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(${({ theme }) => theme.app.blur.xl});
+  -webkit-backdrop-filter: blur(${({ theme }) => theme.app.blur.xl});
   max-width: calc(100vw - 48px);
   height: 100%;
   overflow: hidden;

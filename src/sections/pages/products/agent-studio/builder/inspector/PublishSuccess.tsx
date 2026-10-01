@@ -1,9 +1,9 @@
 import styled from 'styled-components';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { Check, Radio } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { PUBLISH_COPY, PUBLISH_FIX_ROUTES } from '../lib/publish-model';
-import { Exits, Footer, Headline, Lines, Mono, Receipt } from './PublishSuccess.styles';
+import { Exits, Footer, FooterLink, Headline, Lines, Mono, Receipt } from './PublishSuccess.styles';
 
 /**
  * Shared publish success receipt (C14 — the ship section and the detail
@@ -23,10 +23,11 @@ export interface PublishReceipt {
   degradedSlugs: string[];
 }
 
+/** DS-22: theme tokens, never arbitrary literals. */
 const ConnectIcon = styled.span`
   display: inline-flex;
-  vertical-align: -2px;
-  margin-right: 6px;
+  vertical-align: -${({ theme }) => theme.spacing.px2};
+  margin-right: ${({ theme }) => theme.spacing.px6};
 `;
 
 function short(iso: string | null): string {
@@ -79,7 +80,7 @@ export function PublishSuccess({
       </Lines>
       <Exits>
         <ActionButton
-          size="sm"
+          size="lg"
           title="Connect a platform with this agent preselected, then return here"
           onClick={() => navigate({ to: PUBLISH_FIX_ROUTES.channels, search: { returnTo, assistantId: agentId } })}
         >
@@ -89,7 +90,7 @@ export function PublishSuccess({
           Connect a channel →
         </ActionButton>
         <ActionButton
-          size="sm"
+          size="lg"
           variant="secondary"
           onClick={() => navigate({ to: '/agent-studio/agents/$agentId', params: { agentId } })}
         >
@@ -100,10 +101,10 @@ export function PublishSuccess({
         </ActionButton>
       </Exits>
       <Footer>
-        <Link to="/agent-studio/chat" search={{ agent: agentId }}>
+        <FooterLink to="/agent-studio/chat" search={{ agent: agentId }}>
           Test the live version →
-        </Link>
-        {' · '}{PUBLISH_COPY.auditPromise} <Link to={PUBLISH_FIX_ROUTES.audit}>Open Audit →</Link>
+        </FooterLink>
+        {' · '}{PUBLISH_COPY.auditPromise} <FooterLink to={PUBLISH_FIX_ROUTES.audit}>Open Audit →</FooterLink>
       </Footer>
     </Receipt>
   );

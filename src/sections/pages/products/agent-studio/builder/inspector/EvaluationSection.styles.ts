@@ -1,3 +1,4 @@
+import { createLink } from '@tanstack/react-router';
 import styled from 'styled-components';
 
 /**
@@ -21,7 +22,10 @@ export const DatasetLabel = styled.label`
 `;
 
 export const DatasetSelect = styled.select`
-  height: 40px;
+  /* DS-9: 44px hit target — no 44px spacing token exists, so a plain
+   * literal per the 44px-target rule (the only native select in the
+   * inspector that was under 44px). */
+  height: 44px;
   padding: 0 ${({ theme }) => theme.spacing.s3};
   border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.app.border.default};
@@ -54,6 +58,20 @@ export const LinkRow = styled.div`
   flex-wrap: wrap;
   align-items: center;
 `;
+
+/**
+ * DS-21: 44px hit area for flow-critical navigation links (Wave B
+ * HitTextButton/InlineRetry precedent) — the text keeps its inline-link
+ * treatment, vertically centered in the taller target. Built with
+ * createLink rather than styled(Link): the styled() wrapper erases the
+ * route's search-param inference.
+ */
+const HitNavAnchor = styled.a`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+`;
+export const HitNavLink = createLink(HitNavAnchor);
 
 export const FixBlock = styled.div`
   margin-top: ${({ theme }) => theme.spacing.s3};

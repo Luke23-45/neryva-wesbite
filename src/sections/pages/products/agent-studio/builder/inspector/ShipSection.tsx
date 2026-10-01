@@ -32,6 +32,7 @@ import {
   RefusalTitle,
   Sub,
   Verdict,
+  VisuallyHidden,
 } from './ShipSection.styles';
 
 export function ShipSection({
@@ -40,6 +41,9 @@ export function ShipSection({
   role,
   onEditJump,
   publishSignal = 0,
+  onPublishSignalConsumed,
+  acknowledge,
+  onAcknowledge,
 }: {
   assistantId: string;
   versionId: string | null;
@@ -51,10 +55,21 @@ export function ShipSection({
    * readiness/ack/confirm guards are never bypassed. 0 = idle.
    */
   publishSignal?: number;
+  /**
+   * SHP-1: called after a signal increment fires — the builder consumes
+   * the counter back to idle so a stale signal can never fire the confirm
+   * dialog unprompted on a later visit.
+   */
+  onPublishSignalConsumed?: () => void;
+  /**
+   * Degraded-knowledge ack (SHP-2): owned by the builder so the topbar
+   * badge, graph node, and this section share one ack-aware derivation.
+   */
+  acknowledge: boolean;
+  onAcknowledge: (acknowledged: boolean) => void;
 }) {
   const canPublish = canSetup(role, 'setup:govern');
   const publishDenied = setupDeniedCopy(role, 'setup:govern');
-  const [acknowledge, setAcknowledge] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [refusal, setRefusal] = useState<{ kind: PublishRefusalKind; message: string } | null>(null);
   const [success, setSuccess] = useState<PublishReceipt | null>(null);
@@ -92,6 +107,10 @@ export function ShipSection({
       if (first) {
         setNotice(`${first.title} — open the row to fix it.`);
         scrollToRow(first.id);
+      } else {
+        // DS-16: all rows still reading — the click is honest, never a
+        // silent no-op.
+        setNotice('Gates are still reading — the checks will land in a moment.');
       }
       return;
     }
@@ -109,18 +128,32 @@ export function ShipSection({
   });
   useEffect(() => {
     const signal = publishSignal ?? 0;
+    if (signal === 0) {
+      // SHP-1: the builder consumed the increment back to idle — re-arm the
+      // seen mark so the NEXT increment fires. Without this, the ref would
+      // stay at the fired value and the next bump (0 → 1) would compute
+      // 1 > 1 and dead-click.
+      lastPublishSignalRef.current = 0;
+      return;
+    }
     if (signal > lastPublishSignalRef.current) {
       lastPublishSignalRef.current = signal;
       publishClickRef.current();
+      // SHP-1: consume the increment idempotently — the builder resets the
+      // counter to 0, so remounting this section later can never fire the
+      // confirm dialog unprompted from a stale signal. StrictMode's
+      // double-effect is absorbed by the last-signal guard (the second
+      // invocation sees signal <= ref and skips).
+      onPublishSignalConsumed?.();
     }
-  }, [publishSignal]);
+  }, [publishSignal, onPublishSignalConsumed]);
 
   // Per-version ceremony state resets with the version (render-time
-  // adjustment — an effect here would cascade renders).
+  // adjustment — an effect here would cascade renders). The degraded ack is
+  // builder-owned (SHP-2) and resets there.
   const [prevVersionId, setPrevVersionId] = useState(versionId);
   if (prevVersionId !== versionId) {
     setPrevVersionId(versionId);
-    setAcknowledge(false);
     setRefusal(null);
     setSuccess(null);
     setNotice(null);
@@ -204,7 +237,7 @@ export function ShipSection({
       </div>
 
       {readiness.isError && (
-        <Notice>
+        <Notice $tone="error">
           Readiness reads failed — <FixLink type="button" onClick={() => readiness.retry()}>retry</FixLink>. Publish stays
           clickable; the server decides.
         </Notice>
@@ -225,7 +258,7 @@ export function ShipSection({
 
       {readiness.needsAcknowledge && (
         <AckLabel id="ship-degraded-ack" tabIndex={-1}>
-          <AckCheckbox type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} />
+          <AckCheckbox type="checkbox" checked={acknowledge} onChange={(e) => onAcknowledge(e.target.checked)} />
           <span>
             {PUBLISH_COPY.degradedAck} <Mono>assistant.publish_degraded_acknowledged</Mono>. {PUBLISH_COPY.degradedLifecycle}
           </span>
@@ -237,24 +270,41 @@ export function ShipSection({
       ) : (
         <PublishBlock>
           <ActionButton
-            size="sm"
+            size="lg"
             disabled={!canPublish || publish.isPending}
-            aria-disabled={!readiness.publishable}
-            aria-describedby={notice ? 'ship-publish-note' : undefined}
+            // DS-18: the button is genuinely clickable when enabled (click
+            // jumps to the first blocker), so it must never announce
+            // "disabled" via aria-disabled. The jump behavior is exposed to
+            // AT through the describedby hint below.
+            aria-describedby={
+              [
+                !readiness.publishable && !publish.isPending && blockers.length > 0 ? 'ship-publish-hint' : null,
+                notice ? 'ship-publish-note' : null,
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             title={
               publish.isPending
                 ? 'Publishing…'
-                : !readiness.publishable
-                  ? 'Open issues remain — click to jump to the first'
-                  : readiness.needsAcknowledge && !acknowledge
-                    ? 'Acknowledge degraded knowledge to proceed'
-                    : 'Publish this draft'
+                : readiness.isPending
+                  ? 'Checking gates…'
+                  : !readiness.publishable
+                    ? 'Open issues remain — click to jump to the first'
+                    : readiness.needsAcknowledge && !acknowledge
+                      ? 'Acknowledge degraded knowledge to proceed'
+                      : 'Publish this draft'
             }
             onClick={handlePublishClick}
           >
             <Rocket size={13} strokeWidth={1.8} />
             {publish.isPending ? 'Publishing…' : 'Publish this draft'}
           </ActionButton>
+          {!readiness.publishable && !publish.isPending && blockers.length > 0 && (
+            <VisuallyHidden id="ship-publish-hint">
+              Open issues remain — activate to jump to the first blocking row.
+            </VisuallyHidden>
+          )}
           {notice && (
             <Notice id="ship-publish-note" role="status">
               {notice}
@@ -276,7 +326,7 @@ export function ShipSection({
               <FixLink
                 type="button"
                 onClick={() => {
-                  setAcknowledge(true);
+                  onAcknowledge(true);
                   const el = document.getElementById('ship-degraded-ack');
                   el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
                   (el as HTMLElement | null)?.focus?.();

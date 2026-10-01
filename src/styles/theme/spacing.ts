@@ -25,6 +25,7 @@ export const spacing = {
   px14: '14px',
   px18: '18px',
   px20: '20px',
+  px22: '22px',
 } as const;
 
 export type Spacing = typeof spacing;

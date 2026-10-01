@@ -1132,6 +1132,8 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
   const [pollLeft, setPollLeft] = useState(0);
   const pollTimer = useRef<number | null>(null);
   const acceptedTimer = useRef<number | null>(null);
+  // Guards the absolute-timeout effect against double-settling one turn.
+  const timeoutFiredRef = useRef<Set<string>>(new Set());
   // Latest-ref so the parked SSE callback never closes over stale turns.
   const turnsRef = useRef(turns);
   useEffect(() => {
@@ -1284,6 +1286,45 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKey, pollLeft, orgId, queryClient]);
 
+  // Absolute client timeout (TRY-1): the poll budget is the last word. When
+  // it runs out with the turn still parked and no agent message, name the
+  // wait honestly, take one final transcript read, and settle the turn —
+  // the turn never strands in 'accepted' behind the StreamingBubble.
+  // Stop stays wired until this fires: activeKey is only cleared by a
+  // terminal settle, so isBusy (and the Stop button) holds throughout.
+  useEffect(() => {
+    if (!activeKey || pollLeft > 0) return;
+    const key = activeKey;
+    const turn = turnsRef.current.find((t) => t.key === key);
+    if (!turn || turn.restored || turn.status === 'done' || turn.status === 'error') return;
+    // The budget only starts when the POST lands ('streaming'); a 'sending'
+    // turn with pollLeft 0 is still awaiting the POST, never timed out.
+    if (turn.status !== 'streaming' && turn.status !== 'accepted') return;
+    if (timeoutFiredRef.current.has(key)) return;
+    timeoutFiredRef.current.add(key);
+    pushNotice(key, { id: `wait-${key}`, kind: 'status', text: TRY_COPY.waitBudget });
+    const conversationId = turn.conversationId;
+    if (!conversationId) {
+      finalizeTurn(key, { failed: true, state: 'failed', reason: 'no reply in 90 seconds — the client stopped waiting' });
+      return;
+    }
+    void queryClient
+      .refetchQueries({ queryKey: ['studio', 'chat-messages', orgId, conversationId] })
+      .then(() => {
+        const raw = queryClient.getQueryData(['studio', 'chat-messages', orgId, conversationId]);
+        if (parseConversationMessages(raw).some((m) => m.role === 'agent' && m.text.trim() !== '')) {
+          finalizeTurn(key, { failed: false, state: 'completed', reason: null });
+        } else {
+          // Honest terminal mapping for TryTurnStatus: 'error'. The reason
+          // names only what the client observed — 90s with no reply — never
+          // a claimed engine state (the watchdog outcome is conditional on
+          // the draft's pinned wall_clock_seconds and arrived over no SSE).
+          finalizeTurn(key, { failed: true, state: 'failed', reason: 'no reply in 90 seconds — the client stopped waiting' });
+        }
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey, pollLeft]);
+
   // A restored thread fills its texts from the server transcript once it loads.
   const restoredKey = turns.find((t) => t.restored && t.prompt === '')?.key ?? null;
   const restoredMessages = (messages.data ?? []).filter((m) => m.text.trim() !== '');
@@ -1367,6 +1408,7 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
 
   const clearSession = () => {
     clearTimers();
+    timeoutFiredRef.current.clear();
     setActiveKey(null);
     setPollLeft(0);
     setTurns([]);

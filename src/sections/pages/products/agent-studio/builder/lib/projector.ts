@@ -108,7 +108,7 @@ export interface ProjectorInput {
    * (pre-C13 placeholder copy); present = graded. Usability only — try
    * never gates publish, so no bottom-action input reads this.
    */
-  tryState?: { hasRunnableVersion: boolean; lastTryAt: string | null; lastTryFailed: boolean } | undefined;
+  tryState?: { hasRunnableVersion: boolean; lastTryAt: string | null; lastTryFailed: boolean; restoredTryAt: string | null; restoredTryFailed: boolean } | undefined;
   /**
    * Eval state for the evaluation-satellite grade (C10). Undefined =
    * unknown (ghost copy); present = graded. Gate SIGNAL only — C14 owns
@@ -958,7 +958,13 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // — Delivery lane —
   // Try (v10 §8.6 — the topbar "Test run" lands here): graded from try state
   // only. No timestamps anywhere (C2/A2) — the run's age is not a grade.
+  // DS-3: a restored thread (previous session, no version pin) never grades
+  // "Last run ok" for the current draft — the live try wins; a restored-only
+  // try reads as honest history, not a current-draft grade.
   const tryState = input.tryState;
+  const liveTryFailed = tryState?.lastTryFailed ?? false;
+  const liveTried = (tryState?.lastTryAt ?? null) !== null;
+  const restoredTried = !liveTried && (tryState?.restoredTryAt ?? null) !== null;
   push(
     'try',
     {
@@ -966,23 +972,25 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       nodeType: 'satellite',
       kind: null,
       title: LANE_NODES.try.label,
-      subtitle: tryState?.lastTryFailed ? 'Last run failed' : tryState?.lastTryAt ? 'Last run ok' : null,
+      subtitle: liveTryFailed ? 'Last run failed' : liveTried ? 'Last run ok' : restoredTried ? 'Tried before' : null,
       hint: locked
         ? 'Create the agent first'
         : !tryState?.hasRunnableVersion
           ? 'Save a draft first'
-          : tryState.lastTryFailed
+          : liveTryFailed
             ? 'Open Try for the stop line'
-            : tryState.lastTryAt
+            : liveTried
               ? null
-              : 'Not tried yet',
+              : restoredTried
+                ? 'Tried in a previous session — open Try to run this draft'
+                : 'Not tried yet',
       status: locked
         ? 'locked'
         : !tryState?.hasRunnableVersion
           ? 'locked'
-          : tryState.lastTryFailed
+          : liveTryFailed
             ? 'attention'
-            : tryState.lastTryAt
+            : liveTried
               ? 'ready'
               : 'untouched',
       lock: false,

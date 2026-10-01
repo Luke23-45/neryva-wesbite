@@ -201,6 +201,49 @@ function readinessInput(overrides: Partial<ReadinessInputs> = {}): ReadinessInpu
 }
 
 describe('derivePublishReadiness (single derivation)', () => {
+  it('SHP-3: a malformed model ref (no provider/) fails the models row with the format fix — never all-green pre-flight', () => {
+    const version = draftVersion();
+    version.definition.model_policy.allowed_models = ['gpt4'];
+    const derived = derivePublishReadiness(readinessInput({ version }));
+    const modelsRow = derived.rows.find((r) => r.id === 'models');
+    expect(modelsRow?.ok).toBe(false);
+    expect(modelsRow?.detail).toMatch(/provider\/model shape/);
+    expect(modelsRow?.detail).toContain('gpt4');
+    // B6 single ownership: the shape row must not double-count the same fact.
+    expect(derived.rows.find((r) => r.id === 'shape')?.ok).toBe(true);
+    expect(derived.verdict).toBe('no-go');
+    expect(derived.publishable).toBe(false);
+  });
+
+  it('SHP-3: well-formed refs keep the existing unknown/unusable precedence', () => {
+    const derived = derivePublishReadiness(readinessInput());
+    const modelsRow = derived.rows.find((r) => r.id === 'models');
+    expect(modelsRow?.ok).toBe(true);
+  });
+
+  it('SHP-2: blockers is the canonical ack-aware count every surface reads', () => {
+    // Base fixture: only the required row fails (not ackable) → 1 blocker.
+    const noAck = derivePublishReadiness(readinessInput());
+    expect(noAck.blockers).toBe(1);
+    // Acknowledging does not zero a non-ackable row.
+    expect(derivePublishReadiness(readinessInput({ acknowledged: true })).blockers).toBe(1);
+
+    // Degraded knowledge only: no-go unacked, conditional-go acked (PLAN §2 R2).
+    const degraded = readinessInput({
+      version: draftVersion('2026-09-18T13:00'),
+      evalRuns: [passRun()],
+      healthPins: [{ sourceSlug: 'returns-2024', resolved: false, state: 'error', embeddingComplete: false }],
+    });
+    const unacked = derivePublishReadiness(degraded);
+    expect(unacked.verdict).toBe('no-go');
+    expect(unacked.blockers).toBe(1);
+    expect(unacked.publishable).toBe(false);
+    const acked = derivePublishReadiness({ ...degraded, acknowledged: true });
+    expect(acked.verdict).toBe('conditional-go');
+    expect(acked.blockers).toBe(0);
+    expect(acked.publishable).toBe(true);
+  });
+
   it('fails required-but-absent while everything else passes', () => {
     const derived = derivePublishReadiness(readinessInput());
     expect(derived.rows).toHaveLength(6);

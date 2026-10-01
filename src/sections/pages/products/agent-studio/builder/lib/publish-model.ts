@@ -399,6 +399,9 @@ export interface DerivedReadiness {
   rows: PublishReadinessRow[];
   verdict: ReadinessVerdict;
   publishable: boolean;
+  /** Ack-aware blocker count — the one number every surface agrees on
+   *  (SHP-2: topbar badge, graph node, and section verdict read this). */
+  blockers: number;
   needsAcknowledge: boolean;
   unresolvedSlugs: string[];
   unreadySlugs: string[];
@@ -412,6 +415,7 @@ const READINESS_EMPTY: DerivedReadiness = {
   rows: [],
   verdict: 'unknown',
   publishable: false,
+  blockers: 0,
   needsAcknowledge: false,
   unresolvedSlugs: [],
   unreadySlugs: [],
@@ -484,8 +488,9 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
   // — Shape + instructions (checkDefinitionCaps: instructions, sizes, secrets) —
   {
     const capsIssues = checkDefinitionCaps(definition);
-    // B6: the dedicated `models` row owns the allowed_models fact — exclude
-    // it here so one fact isn't counted as two blockers.
+    // B6: the dedicated `models` row owns the whole allowed_models fact —
+    // collection count, per-item shape (SHP-3), catalog membership, usability.
+    // Exclude it here so one fact isn't counted as two blockers.
     const shapeIssues = capsIssues.filter((issue) => !issue.path.startsWith('model_policy.allowed_models'));
     rows.push({
       id: 'shape',
@@ -507,19 +512,30 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
     const usableByRef = new Map(input.models.map((m) => [m.ref, m.usable]));
     const unknownModels = allowed.filter((ref) => !usableByRef.has(ref));
     const unusableModels = allowed.filter((ref) => usableByRef.get(ref) === false);
+    // SHP-3: the models row owns the whole allowed_models fact — collection
+    // count AND per-item shape. A malformed ref (no '/') reads as the format
+    // fix, never as "unknown to the catalog": format is checked first so the
+    // maker gets the actionable copy for the one typo.
+    const malformedModels = allowed.filter((ref) => !ref.includes('/'));
     rows.push({
       id: 'models',
       title: 'Models in catalog + residency served',
       detail:
         allowed.length === 0
           ? 'No model yet — pick one before publishing.'
-          : unknownModels.length > 0
-            ? `Unknown to the catalog: ${unknownModels.join(', ')} — pick published models.`
-            : unusableModels.length > 0
-              ? `Unusable (credentials/enablement/residency): ${unusableModels.join(', ')} — see Models.`
-              : 'Every allowed model is usable at this org.',
+          : malformedModels.length > 0
+            ? `Use the provider/model shape (e.g. anthropic/claude-sonnet-4-5): ${malformedModels.join(', ')}.`
+            : unknownModels.length > 0
+              ? `Unknown to the catalog: ${unknownModels.join(', ')} — pick published models.`
+              : unusableModels.length > 0
+                ? `Unusable (credentials/enablement/residency): ${unusableModels.join(', ')} — see Models.`
+                : 'Every allowed model is usable at this org.',
       extra: null,
-      ok: allowed.length > 0 && unknownModels.length === 0 && unusableModels.length === 0,
+      ok:
+        allowed.length > 0 &&
+        malformedModels.length === 0 &&
+        unknownModels.length === 0 &&
+        unusableModels.length === 0,
       ackable: false,
       fix: refusalFix('models'),
     });
@@ -656,6 +672,9 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
     rows,
     verdict,
     publishable: verdict === 'go' || verdict === 'conditional-go',
+    // SHP-2: ack-aware blocker count — the canonical number for the topbar
+    // badge, the graph node, and the section verdict.
+    blockers: rows.filter((row) => row.ok === false && !(row.ackable && input.acknowledged)).length,
     needsAcknowledge: unresolvedSlugs.length + unreadySlugs.length > 0,
     unresolvedSlugs,
     unreadySlugs,

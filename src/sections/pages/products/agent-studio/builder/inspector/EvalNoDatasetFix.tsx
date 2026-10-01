@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { TextInput } from '@components/common/ui/TextInput';
 import { useCreateEvalDataset } from '@hooks/studio/useSetupEval';
@@ -7,7 +6,7 @@ import { EVAL_COPY } from '../lib/eval-model';
 import { Note } from './TraceDrawer.styles';
 import { Muted } from './TrySection.styles';
 import { Whisper } from './InstructionsSection.styles';
-import { FixBlock, FixField, FixForm, FixLinks, FixTitle } from './EvaluationSection.styles';
+import { FixBlock, FixField, FixForm, FixLinks, FixTitle, HitNavLink } from './EvaluationSection.styles';
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -63,7 +62,7 @@ export function EvalNoDatasetFix({
             <TextInput label="New dataset name" name="new-dataset-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. refund-regressions" />
           </FixField>
           <ActionButton
-            size="sm"
+            size="lg"
             disabled={name.trim() === '' || createDataset.isPending}
             onClick={submit}
           >
@@ -78,8 +77,8 @@ export function EvalNoDatasetFix({
         </Whisper>
       )}
       <FixLinks>
-        <Link to="/agent-studio/templates">Install a template →</Link>
-        <Link to="/agent-studio/datasets">Open Datasets →</Link>
+        <HitNavLink to="/agent-studio/templates">Install a template →</HitNavLink>
+        <HitNavLink to="/agent-studio/datasets">Open Datasets →</HitNavLink>
       </FixLinks>
       <Note>Datasets are org-shared — one suite can guard many versions.</Note>
     </FixBlock>

@@ -105,8 +105,8 @@ const Panel = styled(motion.div)`
     0 0 0 1px rgba(255, 255, 255, 0.04) inset,
     0 32px 80px rgba(0, 0, 0, 0.6),
     0 8px 24px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(${({ theme }) => theme.app.blur.xl});
+  -webkit-backdrop-filter: blur(${({ theme }) => theme.app.blur.xl});
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 48px);
   overflow: hidden;

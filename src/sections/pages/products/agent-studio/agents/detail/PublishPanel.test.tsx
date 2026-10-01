@@ -51,6 +51,7 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
         rows: ROWS(),
         verdict: 'go',
         publishable: true,
+        blockers: 0,
         needsAcknowledge: false,
         unresolvedSlugs: [],
         unreadySlugs: [],

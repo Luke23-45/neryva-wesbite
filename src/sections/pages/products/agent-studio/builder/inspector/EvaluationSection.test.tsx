@@ -24,6 +24,9 @@ const evaluateMutate = vi.fn();
 let evaluateError: unknown = null;
 let runsData: EvalRun[] = [];
 let versionsData: AgentVersion[] = [];
+// EVL-1: captures the polling hook's call so the budget-expiry path is
+// covered at the section level (no hook test file exists for useSetupEval).
+let pollingCapture: { active: boolean; options?: { budgetMs?: number; onBudgetExpired?: () => void } } | undefined;
 let datasetsData = [{ id: 'd1', name: 'template:support-concierge@3', description: null, createdAt: null }];
 let provenanceData: { template: { slug: string; version: string; definition_hash: string | null } | null } | null = {
   template: { slug: 'support-concierge', version: '3', definition_hash: null },
@@ -49,7 +52,9 @@ vi.mock('@hooks/studio/useSetupEval', async (importOriginal) => {
     ...actual,
     useEvalRuns: () => ({ data: runsData, refetch: vi.fn() }),
     useEvalDatasets: () => ({ data: datasetsData }),
-    useEvalRunPolling: () => undefined,
+    useEvalRunPolling: (active: boolean, _refetch: () => void, options?: { budgetMs?: number; onBudgetExpired?: () => void }) => {
+      pollingCapture = { active, options };
+    },
     useCreateEvalDataset: () => ({ mutate: vi.fn(), isPending: false }),
   };
 });
@@ -135,6 +140,7 @@ async function shell(props?: Partial<React.ComponentProps<typeof EvaluationSecti
 beforeEach(() => {
   evaluateMutate.mockReset();
   evaluateError = null;
+  pollingCapture = undefined;
   runsData = [];
   versionsData = [VERSION_ROW];
   datasetsData = [{ id: 'd1', name: 'template:support-concierge@3', description: null, createdAt: null }];
@@ -152,6 +158,9 @@ describe('EvaluationSection (builder Evaluator satellite)', () => {
   it('blocks without a runnable version, never offering a run', async () => {
     await shell({ versionId: null, isDraft: false, versionStatus: null });
     expect(screen.getByText(/retired versions never execute/)).toBeTruthy();
+    // DS-10: the helper names the true status story — VALIDATING is
+    // mid-validation, not retired.
+    expect(screen.getByText(/mid-validation/)).toBeTruthy();
     // The dock stays visible but disabled with the reason — never a dead click.
     expect(screen.getByTitle(/No DRAFT or PUBLISHED version to evaluate/)).toBeDisabled();
   });
@@ -199,6 +208,59 @@ describe('EvaluationSection (builder Evaluator satellite)', () => {
     await shell({ canAuthor: false, role: 'reader' });
     expect(screen.getByText(/Viewing only/)).toBeTruthy();
     expect(screen.queryByText(/Evaluate version/)).toBeNull();
+  });
+
+  it('clamps attempts on commit with a visible note — never a silent rewrite (EVL-3)', async () => {
+    await shell();
+    const input = screen.getByLabelText(/Attempts per case/) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '9' } });
+    expect(input.value).toBe('9');
+    fireEvent.blur(input);
+    // The committed (clamped) value is what the input shows…
+    expect(input.value).toBe('5');
+    // …and the clamp is named, not silent.
+    expect(screen.getByText(/Clamped to 5/)).toBeTruthy();
+    // The submitted value is the committed value.
+    fireEvent.click(screen.getByText(/Evaluate version/));
+    expect(evaluateMutate.mock.calls[0]?.[0]).toMatchObject({ versionId: 'v3', attemptsPerCase: 5 });
+  });
+
+  it('accepts in-range attempts without any clamp note (EVL-3)', async () => {
+    await shell();
+    const input = screen.getByLabelText(/Attempts per case/) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '3' } });
+    fireEvent.blur(input);
+    expect(input.value).toBe('3');
+    expect(screen.queryByText(/Clamped to/)).toBeNull();
+    fireEvent.click(screen.getByText(/Evaluate version/));
+    expect(evaluateMutate.mock.calls[0]?.[0]).toMatchObject({ attemptsPerCase: 3 });
+  });
+
+  it('treats a cleared field as 1 with no note (EVL-3)', async () => {
+    await shell();
+    const input = screen.getByLabelText(/Attempts per case/) as HTMLInputElement;
+    // type="number" sanitizes non-numeric keystrokes at the DOM level, so
+    // the reachable "invalid" shape here is the cleared field — the hook's
+    // own onInvalid path is covered in use-string-draft.test.ts.
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(input.value).toBe('1');
+    expect(screen.queryByText(/Clamped to|Not a number/)).toBeNull();
+    fireEvent.click(screen.getByText(/Evaluate version/));
+    expect(evaluateMutate.mock.calls[0]?.[0]).toMatchObject({ attemptsPerCase: 1 });
+  });
+
+  it('re-enables with an honest notice when polling outlives its budget (EVL-1)', async () => {
+    runsData = [{ ...PASS_RUN, state: 'running', decision: null, finishedAt: null }];
+    await shell();
+    expect(pollingCapture?.active).toBe(true);
+    expect(screen.getByText(/Evaluate version/).closest('button')).toBeDisabled();
+    await act(async () => {
+      pollingCapture?.options?.onBudgetExpired?.();
+    });
+    expect(screen.getByText(/polling stopped after 15 minutes/)).toBeTruthy();
+    // The section is usable again — never wedged on a stuck 'running'.
+    expect(screen.getByText(/Evaluate version/).closest('button')).not.toBeDisabled();
   });
 
   it('re-runs with the same dataset and attempts', async () => {

@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { Link } from '@tanstack/react-router';
+import { createLink } from '@tanstack/react-router';
 
 /**
  * Ship section — redesigned.
@@ -56,7 +56,13 @@ export const Sub = styled.div`
 export const FixLink = styled.button`
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 4px;
+  /* DS-14: 44px hit area without changing the visual design — the text
+   * stays body-size, vertically centered in the taller target (Wave B
+   * HitTextButton/InlineRetry precedent). */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font-size: ${({ theme }) => theme.app.type.body};
   cursor: pointer;
   color: ${({ theme }) => theme.app.text.primary};
@@ -64,9 +70,21 @@ export const FixLink = styled.button`
   text-underline-offset: ${({ theme }) => theme.spacing.px2};
 `;
 
-export const RefusalLink = styled(Link)`
+/**
+ * Refusal fix-jump links (DS-21) — the recovery path after a publish
+ * refusal, so they get the 44px text-button treatment (Wave B InlineRetry
+ * precedent): inline-size text vertically centered in a 44px target, with
+ * the link treatment otherwise unchanged. Built with createLink rather
+ * than styled(Link): the styled() wrapper erases the route's search-param
+ * inference.
+ */
+const RefusalAnchor = styled.a`
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: ${({ theme }) => theme.app.type.caption};
 `;
+export const RefusalLink = createLink(RefusalAnchor);
 
 export const Mono = styled.span`
   font-family: ${({ theme }) => theme.typography.fonts.mono};
@@ -97,11 +115,29 @@ export const RefusalFix = styled.div`
   margin-top: ${({ theme }) => theme.spacing.px10};
 `;
 
-export const Notice = styled.div`
+/**
+ * DS-17: read failures use the error tone (Evaluation's read-failure
+ * precedent); the default warning tone stays for neutral status notes.
+ */
+export const Notice = styled.div<{ $tone?: 'warning' | 'error' }>`
   font-size: ${({ theme }) => theme.app.type.body};
   margin-top: ${({ theme }) => theme.spacing.px10};
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
-  color: ${({ theme }) => theme.app.status.warning.fg};
+  color: ${({ $tone, theme }) =>
+    $tone === 'error' ? theme.app.status.error.fg : theme.app.status.warning.fg};
+`;
+
+/** Screen-reader-only text — layout never shifts for it. */
+export const VisuallyHidden = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 `;
 
 export const AckLabel = styled.label`

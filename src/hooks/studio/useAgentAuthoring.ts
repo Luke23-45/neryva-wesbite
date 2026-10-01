@@ -34,7 +34,7 @@ import { BUILT_IN_TOOLS, useToolCatalog } from './useSetupTools';
 import { useAssistantTemplate } from './useSetupTemplates';
 import { useEvalRuns } from './useSetupEval';
 import { useDocuments } from './useSetupKnowledge';
-import { describeRequiredCheck } from '@/sections/pages/products/agent-studio/builder/lib/eval-model';
+import { describeRequiredCheck, isNoDatasetError } from '@/sections/pages/products/agent-studio/builder/lib/eval-model';
 import { isLegacyFieldRejection } from '@/sections/pages/products/agent-studio/builder/lib/response-model';
 import {
   classifyPublishRefusal,
@@ -390,6 +390,9 @@ export interface PublishReadiness {
   verdict: ReadinessVerdict;
   /** True when every REQUIRED row passes (or the degraded one is acked). */
   publishable: boolean;
+  /** Ack-aware blocker count — the one number the topbar badge, graph node,
+   *  and Ship section agree on (SHP-2). */
+  blockers: number;
   needsAcknowledge: boolean;
   unresolvedSlugs: string[];
   unreadySlugs: string[];
@@ -794,10 +797,12 @@ export function usePublishVersion(assistantId: string | null) {
       // invalidation would leave them stale.
       void queryClient.invalidateQueries({ queryKey: ['studio', 'setup', 'eval'] });
     },
-    onError: (error) => {
-      if (classifyPublishRefusal(error) === 'unknown') {
-        toastEngineError(error, 'Could not publish the version');
-      }
+    onError: () => {
+      // SHP-4 (RSP-14 class): no mutation-level toast. Both callers
+      // (ShipSection, PublishPanel) set their refusal state in per-mutate
+      // onError and render the typed Refusal panel for every kind —
+      // including 'unknown'. The panel is the durable surface; a toast
+      // here would double-surface the same failure.
     },
   });
 }
@@ -871,7 +876,15 @@ export function useEvaluateVersion(assistantId: string | null) {
         idempotent: true,
       }),
     onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not start the evaluation'),
+    onError: (error) => {
+      // EVL-2: the no-dataset failure is surfaced by the section's
+      // EvalNoDatasetFix panel — a toast would be a redundant second
+      // surface for the same 400 (RSP-14 class). All other errors
+      // still toast.
+      if (!isNoDatasetError(error)) {
+        toastEngineError(error, 'Could not start the evaluation');
+      }
+    },
   });
 }
 

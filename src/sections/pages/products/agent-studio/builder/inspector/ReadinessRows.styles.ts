@@ -65,7 +65,13 @@ export const FixZone = styled.div`
 export const FixJump = styled.button`
   background: none;
   border: 0;
-  padding: 0;
+  padding: 0 4px;
+  /* DS-14: 44px hit area without changing the visual design — the text
+   * stays body-size, vertically centered in the taller target (Wave B
+   * HitTextButton/InlineRetry precedent). */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font-size: ${({ theme }) => theme.app.type.body};
   cursor: pointer;
   color: ${({ theme }) => theme.app.text.primary};
