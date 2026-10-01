@@ -3,12 +3,15 @@
  *
  * Replaces the section page in place — no modal scrim, no route change,
  * the right rail recedes. Sub-header (back link, block title, surface
- * switch, unsaved pill, view switch, Save & close), the surface
+ * switch, unsaved pill, view switch, Done), the surface
  * (Plain / Markdown / JSON), and a status bar with counts, autosave
  * state, and shortcuts.
  *
  * Drafts push to the parent every 2s of quiet (and on unmount), so the
- * back link is non-destructive; Save & close commits and returns.
+ * back link is non-destructive; Done stages the draft and returns — it
+ * does not persist to the server itself. The section's own save
+ * (autosave / topbar Save) is the commit; the label must not claim
+ * otherwise.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -53,7 +56,7 @@ interface BlockEditorProps {
   target: EditableBlock;
   /** 2s-quiet draft push — the parent applies it to its (autosaving) state. */
   onDraft: (saved: SavedBlock) => void;
-  /** Save & close — the parent commits and returns to the page. */
+  /** Done — the parent stages the draft and returns to the page. */
   onSave: (saved: SavedBlock) => void;
   /** Back link — non-destructive, the draft is already pushed. */
   onClose: () => void;
@@ -192,7 +195,7 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
     setWhisper(null);
   }, []);
 
-  const saveAndClose = useCallback(() => {
+  const stageAndClose = useCallback(() => {
     if (readOnly) {
       onClose();
       return;
@@ -222,7 +225,7 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
     onClose();
   }, [readOnly, onClose, target, surface, text, title, flush, onSave]);
 
-  // ⌘S flush, ⌘↵ save & close, ⌘[ / Esc back.
+  // ⌘S flush, ⌘↵ done, ⌘[ / Esc back.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -233,7 +236,7 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
       }
       if (mod && e.key === 'Enter') {
         e.preventDefault();
-        saveAndClose();
+        stageAndClose();
         return;
       }
       if ((mod && e.key === '[') || e.key === 'Escape') {
@@ -245,12 +248,12 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [flush, saveAndClose, onClose]);
+  }, [flush, stageAndClose, onClose]);
 
   const words = countWords(text);
   const tokens = estimateTokens(text.length);
-  // Fail-closed: while on the JSON surface with invalid JSON, Save & close
-  // is held disabled. The click-time guard in saveAndClose stays as defense
+  // Fail-closed: while on the JSON surface with invalid JSON, Done
+  // is held disabled. The click-time guard in stageAndClose stays as defense
   // in depth (it also covers the keyboard shortcut path).
   const jsonBlocked = surface === 'json' && !validateBlockJson(target.jsonKind, text).ok;
   // The raw-content cap applies to the raw and markdown surfaces only —
@@ -300,11 +303,11 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
         ) : null}
         <SaveCloseButton
           type="button"
-          onClick={saveAndClose}
+          onClick={stageAndClose}
           disabled={!readOnly && jsonBlocked}
           title={!readOnly && jsonBlocked ? 'Fix the JSON errors before saving' : undefined}
         >
-          {readOnly ? 'Close' : 'Save & close'}
+          {readOnly ? 'Close' : 'Done'}
         </SaveCloseButton>
       </SubHeader>
 
@@ -364,7 +367,7 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
         )}
         <StatusSpacer />
         <Shortcuts>
-          <kbd>{mod}S</kbd> save · <kbd>{mod}↵</kbd> save &amp; close · <kbd>{mod}[</kbd> back
+          <kbd>{mod}S</kbd> save · <kbd>{mod}↵</kbd> done · <kbd>{mod}[</kbd> back
         </Shortcuts>
       </StatusBar>
     </EditorWrap>

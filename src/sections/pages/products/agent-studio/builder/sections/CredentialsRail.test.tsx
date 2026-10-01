@@ -50,10 +50,11 @@ describe('CredentialsRail', () => {
     expect(screen.getByText('Neryva-managed')).toBeTruthy();
   });
 
-  it('reads "none" for an empty list — never a healthy zero', () => {
+  it('reads "0 configured" for an empty list — an honest zero, never "none"', () => {
     state({ creds: [], ent: false });
     renderRail(true);
-    expect(screen.getByText('none')).toBeTruthy();
+    expect(screen.getByText('0 configured')).toBeTruthy();
+    expect(screen.queryByText('none')).toBeNull();
   });
 
   it('reads "unavailable" on query error — never a fake empty', () => {

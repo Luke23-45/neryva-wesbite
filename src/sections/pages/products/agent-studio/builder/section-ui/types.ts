@@ -51,7 +51,7 @@ export interface EditableBlock {
   titleField?: { value: string; placeholder?: string };
 }
 
-/** What the editor hands back on draft pushes and Save & close. */
+/** What the editor hands back on draft pushes and Done. */
 export interface SavedBlock {
   block: ModalBlock;
   /** Present only when the target declared a titleField. */
@@ -73,7 +73,7 @@ export interface ValidatedJson {
 
 /**
  * Validate pasted JSON against the block's schema. Fail closed: any issue
- * means the editor holds Save & close until it is fixed.
+ * means the editor holds Done until it is fixed.
  */
 export function validateBlockJson(kind: BlockJsonKind, text: string): ValidatedJson {
   if (text.trim() === '') {

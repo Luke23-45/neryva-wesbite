@@ -3,7 +3,7 @@
  *
  * Paste JSON directly; it is validated against the block's schema
  * (text → JSON string, list → string array, any → any JSON) with errors
- * shown inline. Save & close stays held until the JSON is valid — the
+ * shown inline. Done stays held until the JSON is valid — the
  * editor fails closed. A parsed preview sits under the input.
  */
 

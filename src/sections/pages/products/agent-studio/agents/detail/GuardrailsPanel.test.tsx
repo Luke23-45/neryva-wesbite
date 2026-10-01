@@ -59,13 +59,14 @@ async function shell() {
 }
 
 describe('GuardrailsPanel', () => {
-  it('renders the logging badge with the no-refusal law, never implying blocks', async () => {
+  it('renders the logging badge with the screening law plus the deny exception, never a screening block', async () => {
     await shell();
-    expect(screen.getByText(/Logging — verdicts recorded, nothing refused/)).toBeTruthy();
+    expect(screen.getByText(/Logging — screening verdicts recorded; deny topics still refused/)).toBeTruthy();
     expect(screen.getByText(/strict — /)).toBeTruthy();
     // Blank output resolves to the engine default name, never empty.
     expect(screen.getByText(/brand-safe/)).toBeTruthy();
-    // Logging consequence promises recording, never refusal.
+    // Logging promises recording, never a screening block — but deny topics
+    // still refuse on contact, so "refused" may appear with the exception.
     expect(screen.queryByText(/refuses violating/)).toBeNull();
   });
 

@@ -125,8 +125,11 @@ describe('BudgetSection', () => {
     shell();
     // Badge + rail both show the token default.
     expect(screen.getAllByText('200,000').length).toBeGreaterThanOrEqual(1);
-    // Tool calls default 8, model calls default 16, wall clock default 120s.
+    // Tool calls default 8, model calls default 16, wall clock unset = no watchdog (not 120s).
     expect(screen.getByText('unchecked')).toBeTruthy();
+    // Rail row + whisper are honest when the wall clock is unset.
+    expect(screen.getAllByText('No watchdog').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/120s/)).toBeNull();
   });
 
   it('derives the estimate from the primary model list rate, never hardcoded', () => {

@@ -335,6 +335,88 @@ describe('useTrySession', () => {
     expect(result.current.isBusy).toBe(false);
   });
 
+  it('stop during the POST window: a late POST resolution must not resurrect the turn', async () => {
+    // Hold the test-run POST open so stop() fires while it is in flight.
+    let resolvePost!: (v: unknown) => void;
+    const postGate = new Promise((res) => { resolvePost = res; });
+    engineMock.mockImplementation((url: string, options?: { method?: string }) => {
+      if (typeof url === 'string' && url.includes('/test-runs') && options?.method === 'POST') {
+        return postGate;
+      }
+      if (typeof url === 'string' && url.includes('/messages')) {
+        return Promise.resolve(TRANSCRIPT);
+      }
+      return Promise.resolve({});
+    });
+    const { result } = renderHook(() => useTrySession('agent-1', 'v1', null), { wrapper: wrapper() });
+    await act(async () => {
+      result.current.send('Where is my refund?');
+    });
+    expect(result.current.turns[0].status).toBe('sending');
+    // Stop while the POST is still pending: no runId yet, so no cancel
+    // call — but the turn settles and the active key clears.
+    await act(async () => {
+      result.current.stop();
+    });
+    const stopped = result.current.turns[0];
+    expect(stopped.status).toBe('done');
+    expect(stopped.runId).toBeNull();
+    expect(stopped.notices.some((n) => n.text.includes('Stopped'))).toBe(true);
+    expect(result.current.isBusy).toBe(false);
+
+    // The POST now lands on a stopped turn: the resolution path must be a
+    // no-op — never a resurrection to 'streaming' with no active key,
+    // which the SSE tail, poll budget, and absolute timeout (all keyed on
+    // activeKey) could never settle.
+    await act(async () => {
+      resolvePost({ conversation_id: 'conv-late', message_id: 'm-late', run_id: 'run-late' });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const settled = result.current.turns[0];
+    expect(settled.status).toBe('done');
+    expect(settled.runId).toBeNull();
+    expect(settled.conversationId).toBeNull();
+    expect(result.current.isBusy).toBe(false);
+    // No poll budget or accepted timer re-armed: past the full 90s wait the
+    // settled turn must be untouched.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(120_000);
+    });
+    expect(result.current.turns[0].status).toBe('done');
+    expect(result.current.isBusy).toBe(false);
+  });
+
+  it('stop during the POST window: a POST failure must not flip the settled turn to error', async () => {
+    let rejectPost!: (e: unknown) => void;
+    const postGate = new Promise((_, rej) => { rejectPost = rej; });
+    engineMock.mockImplementation((url: string, options?: { method?: string }) => {
+      if (typeof url === 'string' && url.includes('/test-runs') && options?.method === 'POST') {
+        return postGate;
+      }
+      if (typeof url === 'string' && url.includes('/messages')) {
+        return Promise.resolve(TRANSCRIPT);
+      }
+      return Promise.resolve({});
+    });
+    const { result } = renderHook(() => useTrySession('agent-1', 'v1', null), { wrapper: wrapper() });
+    await act(async () => {
+      result.current.send('Where is my refund?');
+    });
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(result.current.turns[0].status).toBe('done');
+    await act(async () => {
+      rejectPost(new Error('network down'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    // The user stopped it: the turn stays honestly settled, not 'error'.
+    expect(result.current.turns[0].status).toBe('done');
+    expect(result.current.isBusy).toBe(false);
+  });
+
   it('restores a thread from ?try= with honest copy', async () => {
     const { result } = renderHook(() => useTrySession('agent-1', 'v1', 'conv-9'), { wrapper: wrapper() });
     expect(result.current.turns).toHaveLength(1);

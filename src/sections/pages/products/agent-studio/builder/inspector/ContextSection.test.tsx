@@ -89,6 +89,12 @@ afterEach(() => {
 });
 
 describe('ContextSection', () => {
+  it('renders the section title and subtitle above the editor', () => {
+    shell();
+    expect(screen.getByRole('heading', { name: 'Context' })).toBeTruthy();
+    expect(screen.getByText(/What the agent carries into each run/)).toBeTruthy();
+  });
+
   it('renders the single context_policy editor: history 1–20, 5 scope pills, summary toggle', () => {
     shell();
     const group = screen.getByRole('group', { name: 'Context scope' });
@@ -110,6 +116,11 @@ describe('ContextSection', () => {
     expect(screen.getByDisplayValue('19')).toBeTruthy();
     await act(async () => {
       fireEvent.change(screen.getByLabelText('History limit in messages'), { target: { value: '500' } });
+    });
+    // The draft holds raw text while typing; the clamp to 20 applies on commit (blur).
+    expect(screen.getByDisplayValue('500')).toBeTruthy();
+    await act(async () => {
+      fireEvent.blur(screen.getByLabelText('History limit in messages'));
     });
     expect(screen.getByDisplayValue('20')).toBeTruthy();
     await act(async () => {
@@ -325,6 +336,29 @@ describe('ContextSection', () => {
       shell();
       expect(screen.queryByText('Recent runs')).toBeNull();
     });
+  });
+
+  it('history stepper 19→20→19 round trip reads clean — no phantom unsaved changes (wave-3 P2)', async () => {
+    // Guards the Context dirty flag itself: returning to the source value
+    // must read clean. (The live "Unsaved changes" through the round trip
+    // was builder-level contamination from the Model response-format
+    // phantom — fixed at its root in ModelSection — not this section's
+    // dirty computation.)
+    const onDirtyChange = vi.fn();
+    await act(async () => {
+      shell({ onDirtyChange });
+    });
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Fewer history messages' }));
+    });
+    expect(screen.getByDisplayValue('19')).toBeTruthy();
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'More history messages' }));
+    });
+    expect(screen.getByDisplayValue('20')).toBeTruthy();
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
   });
 });
 

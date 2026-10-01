@@ -469,6 +469,10 @@ export function ToolsSection({
   }, [entries, rows]);
 
   const q = filter.trim().toLowerCase();
+  // The catalog empty state must distinguish the two causes: the filters hide
+  // every row, or there is genuinely nothing to show. The old copy always
+  // implied an empty catalog even when filters were the cause.
+  const filtersActive = q !== '' || effectFilter !== 'all' || approvalFilter !== 'any';
   const visibleCatalog = catalogItems.filter((item) => {
     if (q !== '' && !item.name.toLowerCase().includes(q)) return false;
     if (effectFilter === 'readonly' && item.effectful) return false;
@@ -996,7 +1000,11 @@ export function ToolsSection({
                     The catalog is unreachable — bound entries above still save; binding resumes on reload.
                   </Whisper>
                 ) : pagedCatalog.length === 0 ? (
-                  <EmptyNote>No catalog rows match — register one in the Tools library.</EmptyNote>
+                  <EmptyNote>
+                    {filtersActive
+                      ? 'No catalog rows match the current filters.'
+                      : 'No catalog rows yet — register one in the Tools library.'}
+                  </EmptyNote>
                 ) : (
                   <CatalogList>
                     {pagedCatalog.map((item) => {

@@ -120,9 +120,11 @@ describe('ResponseSection', () => {
 
   it('generation overrides toggle reveals reasoning effort and top-p, Edit in Model navigates', async () => {
     shell();
-    // Inheriting state: chips + Edit in Model link.
-    expect(screen.getByText(/reasoning · Medium/)).toBeTruthy();
-    expect(screen.getByText(/top-p · 0.95/)).toBeTruthy();
+    // Inheriting state: chips + Edit in Model link. Unset values read "default"
+    // (the honest Model-section language) — the console must not invent
+    // provider defaults the engine never defines.
+    expect(screen.getByText(/reasoning · default/)).toBeTruthy();
+    expect(screen.getByText(/top-p · default/)).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByText('Edit in Model'));
     });
@@ -140,30 +142,34 @@ describe('ResponseSection', () => {
     expect(card).toBeTruthy();
   });
 
-  it('top-p holds raw text while typing and commits the clamped value on blur', async () => {
+  it('top-p holds raw text while typing, snaps to the grid, and never silently clamps', async () => {
     shell();
     await act(async () => {
       fireEvent.click(screen.getByRole('switch'));
     });
     const input = screen.getByLabelText('Top-p (0.05 to 1)') as HTMLInputElement;
-    // No stored top_p: the field starts empty (the chip shows the inherited 0.95).
+    // No stored top_p: the field starts empty (the chip reads 'default').
     expect(input.value).toBe('');
     // Intermediate "0." is held as raw text, not parsed.
     await act(async () => {
       fireEvent.change(input, { target: { value: '0.' } });
     });
     expect(input.value).toBe('0.');
-    // Blur commits: "0." parses to 0, floors to the 0.05 minimum.
+    // Blur commits 0 as-is — no silent floor to 0.05. The setup-caps gate
+    // holds the save with the range message instead of dropping the input.
     await act(async () => {
       fireEvent.blur(input);
     });
-    expect(input.value).toBe('0.05');
-    // "0.93" snaps to the 0.05 grid → 0.95.
+    expect(input.value).toBe('0');
+    expect(screen.getByText(/Top-p must be above 0 and at most 1\./)).toBeTruthy();
+    expect(screen.getByText(/Autosave held — fix it and saving resumes on its own\./)).toBeTruthy();
+    // "0.93" snaps to the 0.05 grid → 0.95, clearing the hold.
     await act(async () => {
       fireEvent.change(input, { target: { value: '0.93' } });
       fireEvent.blur(input);
     });
     expect(input.value).toBe('0.95');
+    expect(screen.queryByText(/Top-p must be above 0 and at most 1\./)).toBeNull();
     // Non-numeric input is rejected: the draft reverts to the committed value.
     await act(async () => {
       fireEvent.change(input, { target: { value: 'abc' } });
@@ -176,6 +182,40 @@ describe('ResponseSection', () => {
       fireEvent.blur(input);
     });
     expect(input.value).toBe('');
+  });
+
+  it('out-of-range top-p commits dirty and holds the save with a range message (no silent drop)', async () => {
+    shell();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('switch'));
+    });
+    const input = screen.getByLabelText('Top-p (0.05 to 1)') as HTMLInputElement;
+    // "2" is above the valid range — it must NOT be silently clamped to 1.
+    // The value commits as-is (the field keeps showing "2") and the
+    // setup-caps gate holds the save with an inline message naming the valid
+    // range, mirroring the Knowledge chunk-size pattern.
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '2' } });
+      fireEvent.blur(input);
+    });
+    expect(input.value).toBe('2');
+    expect(screen.getByText(/Top-p must be above 0 and at most 1\./)).toBeTruthy();
+    expect(screen.getByText(/Autosave held — fix it and saving resumes on its own\./)).toBeTruthy();
+    // Fixing the value clears the hold and the message.
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '0.9' } });
+      fireEvent.blur(input);
+    });
+    expect(input.value).toBe('0.9');
+    expect(screen.queryByText(/Top-p must be above 0 and at most 1\./)).toBeNull();
+  });
+
+  it('the overrides switch carries an accessible name', () => {
+    shell();
+    // The shared Switch wires `label` to aria-label (no visible label text);
+    // the screen reader must announce "Show overrides, switch" — never a
+    // bare "switch".
+    expect(screen.getByRole('switch', { name: 'Show overrides' })).toBeTruthy();
   });
 
   it('channel streaming offers Auto and clears the override', async () => {

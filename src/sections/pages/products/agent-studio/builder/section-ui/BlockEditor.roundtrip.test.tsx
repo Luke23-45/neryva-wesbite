@@ -75,10 +75,10 @@ describe('BlockEditor JSON round-trip', () => {
     unmount();
   });
 
-  it('holds Save & close disabled while JSON is invalid', () => {
+  it('holds Done disabled while JSON is invalid', () => {
     renderEditor(target('any'));
     fireEvent.click(screen.getByRole('tab', { name: 'JSON' }));
-    const save = screen.getByRole('button', { name: 'Save & close' }) as HTMLButtonElement;
+    const save = screen.getByRole('button', { name: 'Done' }) as HTMLButtonElement;
     expect(save.disabled).toBe(true);
   });
 });

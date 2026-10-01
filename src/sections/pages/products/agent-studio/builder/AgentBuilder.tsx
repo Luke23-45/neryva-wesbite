@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import toast from 'react-hot-toast';
 import { useNavigate } from '@tanstack/react-router';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { canSetup } from '@lib/engine/capabilities';
@@ -258,10 +259,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     setBrandDirty(dirty);
   }, []);
 
-  // Dirty guard: new-mode Identity form + build-mode composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + role + budget.
+  // Dirty guard: Identity form (new-mode create + build-mode edit) + composer + brand voice + brain + model + knowledge + tools + guardrails + memory + context + response + role + budget.
   // (Selection is UI state — rebuilding it is free.)
   const { dialog: guardDialog } = useDirtyGuard(
-    (mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
+    formState.dirty || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty,
   );
 
   // A2-23: honest save readout — a draft write in flight must never display as "Saved".
@@ -350,6 +351,35 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   // The main pane's view: 'overview' or a section id. New mode is locked to
   // Identity until the agent is created.
   const view = mode === 'new' ? 'purpose' : (selectedId ?? OVERVIEW_ID);
+
+  // P1 flow-chrome: a section's dirty contribution must not outlive its
+  // unmount. Sections report dirty through useEffect with no unmount
+  // cleanup, so switching sections left the builder-level flag true after
+  // the unmount flush had already persisted (or discarded) the edits — the
+  // topbar kept showing "Unsaved changes" and Save fired a signal no
+  // mounted section could hear. The unmount flush (use-draft-autosave) runs
+  // in the section's cleanup before this parent effect, so retiring the
+  // flags here never drops an unsaved edit; the newly mounted section
+  // re-reports its own dirty on mount (its reporting effect runs first).
+  // In new mode the view is locked to 'purpose' — the Identity form stays
+  // mounted and its formState.dirty is untouched.
+  const prevViewRef = useRef(view);
+  useEffect(() => {
+    if (prevViewRef.current === view) return;
+    prevViewRef.current = view;
+    setComposerDirty(false);
+    setBrandDirty(false);
+    setBrainDirty(false);
+    setModelDirty(false);
+    setKnowledgeDirty(false);
+    setToolsDirty(false);
+    setGuardrailsDirty(false);
+    setMemoryDirty(false);
+    setContextDirty(false);
+    setResponseDirty(false);
+    setRoleDirty(false);
+    setBudgetDirty(false);
+  }, [view]);
 
   // Section navigation entries — the projector's honest per-section state.
   const sectionEntries = useMemo<SectionEntry[]>(
@@ -533,7 +563,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const syncing = assistant.isFetching || form.isFetching === true || models.isFetching || documents.isFetching;
   const saving = draftWritesInFlight > 0;
   const anySectionDirty =
-    composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty;
+    formState.dirty || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty;
   const saveState = mode === 'new' ? 'saved' : saving ? 'saving' : anySectionDirty ? 'unsaved' : syncing ? 'syncing' : 'saved';
 
   // Manual save signal (topbar Save button / Ctrl+S / ⌘S). Sections watch
@@ -541,11 +571,28 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   // listening, and doSave already guards on canAuthor/blocked/conflict.
   const [saveSignal, setSaveSignal] = useState(0);
   const requestSave = useCallback(() => {
-    if (mode === 'new' || !canAuthor || !anySectionDirty) return;
+    if (mode === 'new' || !canAuthor) return;
     // No editable section mounted (Overview) — no-op.
     if (view === OVERVIEW_ID) return;
+    // Identity saves through its own handle (the real identity PATCH), not
+    // the draft signal — the topbar Save / Ctrl+S is the same save as the
+    // section's "Save Identity" button. (formState.dirty true implies the
+    // Identity section is mounted: its unmount cleanup retires the flag.)
+    if (formState.dirty) {
+      purposeRef.current?.save();
+      return;
+    }
+    // Item 14: the per-section "Save {name}" button is always enabled for
+    // authors, so a clean mounted section used to swallow the click with no
+    // feedback at all — the signal never fired and nothing explained why.
+    // Say so instead; the topbar Save is already disabled when clean, so
+    // this path only fires from the section button or Ctrl+S.
+    if (!anySectionDirty) {
+      toast('No changes to save');
+      return;
+    }
     setSaveSignal((s) => s + 1);
-  }, [mode, canAuthor, anySectionDirty, view]);
+  }, [mode, canAuthor, anySectionDirty, view, formState.dirty]);
 
   // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
   // on the ship section (the gate truth lives there); unblocked clicks
@@ -653,7 +700,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
         // form (new mode), the composer, the voice, brain, model, knowledge, tools,
         // guardrails, memory, context, response, role, or budget while any is dirty.
         // Dirty surfaces blur instead (their own Esc handlers); the view stays.
-        if ((mode === 'new' && formState.dirty) || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
+        if (formState.dirty || composerDirty || brandDirty || brainDirty || modelDirty || knowledgeDirty || toolsDirty || guardrailsDirty || memoryDirty || contextDirty || responseDirty || roleDirty || budgetDirty) return;
         handleSelectSection(OVERVIEW_ID);
         return;
       }

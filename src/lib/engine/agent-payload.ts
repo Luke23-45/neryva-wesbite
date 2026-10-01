@@ -407,7 +407,7 @@ export interface ConsumerDefinition {
     pii_entities: PiiEntityType[];
     /** What redaction does to a detected entity — engine default 'token'. */
     pii_action: PiiAction;
-    /** Where redaction applies — engine default ['storage', 'logs']. */
+    /** Where redaction applies — the console pins ['storage'] (see cleanPiiSinks). */
     pii_applies_to: PiiSink[];
     /** Notify the agent owner on a screening hit — engine default false. */
     notify_owner: boolean;
@@ -559,7 +559,7 @@ export function defaultConsumer(): ConsumerDefinition {
       execution_mode: 'blocking',
       pii_entities: [...PII_ENTITY_TYPES],
       pii_action: 'token',
-      pii_applies_to: ['storage', 'logs'],
+      pii_applies_to: ['storage'],
       notify_owner: false,
       attach_to_trace: true,
       deny_topics: [],
@@ -881,11 +881,18 @@ function cleanPiiAction(value: unknown): PiiAction {
 }
 
 function cleanPiiSinks(value: unknown): PiiSink[] {
-  if (!Array.isArray(value)) return ['storage', 'logs'];
+  // P1 root cause: the runtime honors only the 'storage' sink — applyPiiPolicy
+  // is called only with 'storage' in both runtime lanes, and run events/OTel
+  // spans never carry raw content by design, so logs/traces scope was an
+  // inert control. A legacy ['logs']-only value would have silently
+  // disabled redaction on the committed result; the wire pins ['storage']
+  // so the payload always matches what the runtime actually redacts.
+  // An explicit [] stays [] (scope deliberately empty).
+  if (!Array.isArray(value)) return ['storage'];
   const kept = value.filter((v): v is PiiSink =>
     typeof v === 'string' && (PII_SINKS as readonly string[]).includes(v),
   );
-  return [...new Set(kept)];
+  return kept.length === 0 ? [] : ['storage'];
 }
 
 /**

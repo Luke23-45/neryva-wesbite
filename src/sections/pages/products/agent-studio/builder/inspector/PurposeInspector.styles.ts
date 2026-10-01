@@ -125,6 +125,16 @@ export const MetaButton = styled.button`
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.medium};
   color: ${({ theme }) => theme.app.text.muted};
+  /* The meta actions are SUPPOSED to look small (12px caption + 6px padding
+     ≈ 29px tall). The 44px hit box is an invisible ::after expansion —
+     visuals unchanged. inset -10px top/bottom -> ~49px hit box. */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.app.text.primary};
@@ -132,7 +142,7 @@ export const MetaButton = styled.button`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.status.info.fg};
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
     outline-offset: 2px;
   }
 `;

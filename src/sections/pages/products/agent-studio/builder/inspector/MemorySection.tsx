@@ -34,6 +34,7 @@ import {
   SwitchTitle,
   TextButton,
 } from './MemorySection.styles';
+import { PageHeader, PageSubtitle, PageTitle } from '../section-ui/SectionPage.styles';
 
 export interface MemorySectionProps {
   assistantId: string;
@@ -80,6 +81,10 @@ export function MemorySection({
   if (!definition) {
     return (
       <Wrap>
+        <PageHeader>
+          <PageTitle>Memory</PageTitle>
+          <PageSubtitle>What the agent recalls across runs — session policy, in-scope memories, and org defaults.</PageSubtitle>
+        </PageHeader>
         <EmptyState>Loading the draft…</EmptyState>
       </Wrap>
     );
@@ -110,6 +115,10 @@ export function MemorySection({
 
   return (
     <Wrap>
+      <PageHeader>
+        <PageTitle>Memory</PageTitle>
+        <PageSubtitle>What the agent recalls across runs — session policy, in-scope memories, and org defaults.</PageSubtitle>
+      </PageHeader>
       <NarrowMeasure>
       {/* Scope + history — owned by the Context node, reported here */}
       <FieldBlock>

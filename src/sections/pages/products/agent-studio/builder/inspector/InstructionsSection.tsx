@@ -59,6 +59,8 @@ import {
   AddRow,
   CounterRow,
   IconButton,
+  UndoToast,
+  UndoToastButton,
   Whisper,
 } from './InstructionsSection.styles';
 import {
@@ -163,7 +165,11 @@ export function InstructionsSection({
   const [putPending, setPutPending] = useState(false);
   const [creatingDraft, setCreatingDraft] = useState(false);
   const [editing, setEditing] = useState<EditingSession | null>(null);
-  const [samplesNonce, setSamplesNonce] = useState(0);
+  // I-BUG12: the "Use a sample" collapse state lives at the section root —
+  // above the BlockEditor early-return that remounts the whole page when a
+  // sub-editor closes. null = the maker hasn't touched the toggle yet, so
+  // the auto-open rule (empty doc → open) applies.
+  const [samplesOpen, setSamplesOpen] = useState<boolean | null>(null);
   const samplesRef = useRef<HTMLDivElement>(null);
   const previewSeqRef = useRef(0);
   const previewKeyRef = useRef('');
@@ -331,14 +337,77 @@ export function InstructionsSection({
     [],
   );
 
-  const removeRepeatable = useCallback((kind: RepeatableKind, id: string) => {
-    setDoc((prev) => {
-      if (!prev) return prev;
-      if (kind === 'rules') return { ...prev, rules: prev.rules.filter((b) => b.id !== id) };
-      if (kind === 'examples') return { ...prev, examples: prev.examples.filter((b) => b.id !== id) };
-      return { ...prev, custom: prev.custom.filter((b) => b.id !== id) };
-    });
-  }, []);
+  /** Re-insert a deleted repeatable block at its original position (undo). */
+  const restoreRepeatable = useCallback(
+    (kind: RepeatableKind, block: RepeatableBlock, index: number) => {
+      setDoc((prev) => {
+        if (!prev) return prev;
+        if (kind === 'rules') {
+          const rules = [...prev.rules];
+          rules.splice(Math.min(index, rules.length), 0, block);
+          return { ...prev, rules };
+        }
+        if (kind === 'examples') {
+          const examples = [...prev.examples];
+          examples.splice(Math.min(index, examples.length), 0, block as ExampleBlock);
+          return { ...prev, examples };
+        }
+        const custom = [...prev.custom];
+        custom.splice(Math.min(index, custom.length), 0, block);
+        return { ...prev, custom };
+      });
+    },
+    [],
+  );
+
+  const removeRepeatable = useCallback(
+    (kind: RepeatableKind, id: string) => {
+      // I-BUG10: deletes are STAGED — the server document is untouched
+      // until the section save (autosave / topbar Save), so the correct
+      // protection is reversibility, not a confirm gate. Snapshot the
+      // block first; the toast below restores it at its original index.
+      // One model for all three deletes (rule / example / custom text) —
+      // they all funnel through here.
+      const current = docRef.current;
+      const list: RepeatableBlock[] = !current
+        ? []
+        : kind === 'rules'
+          ? current.rules
+          : kind === 'examples'
+            ? current.examples
+            : current.custom;
+      const index = list.findIndex((b) => b.id === id);
+      const removed = index >= 0 ? list[index] : null;
+      setDoc((prev) => {
+        if (!prev) return prev;
+        if (kind === 'rules') return { ...prev, rules: prev.rules.filter((b) => b.id !== id) };
+        if (kind === 'examples') return { ...prev, examples: prev.examples.filter((b) => b.id !== id) };
+        return { ...prev, custom: prev.custom.filter((b) => b.id !== id) };
+      });
+      if (!removed) return;
+      const label = kind === 'rules' ? 'Rule' : kind === 'examples' ? 'Example' : 'Custom text';
+      toast(
+        (t) => (
+          <UndoToast>
+            <span>
+              {label} removed — still a draft until you save.
+            </span>
+            <UndoToastButton
+              type="button"
+              onClick={() => {
+                restoreRepeatable(kind, removed, index);
+                toast.dismiss(t.id);
+              }}
+            >
+              Undo
+            </UndoToastButton>
+          </UndoToast>
+        ),
+        { duration: 8000 },
+      );
+    },
+    [restoreRepeatable],
+  );
 
   const moveRule = useCallback((id: string, direction: -1 | 1) => {
     setDoc((prev) => {
@@ -482,11 +551,15 @@ export function InstructionsSection({
       }
       return next;
     });
-    // The toast lives in SamplesSection.insert — one surface, never two.
+    // The "every save is a version" toast fires on the real save (doSave),
+    // never at insert time — insert stays silent so the claim is only
+    // ever made after a save.
   }, []);
 
   const openSamples = useCallback(() => {
-    setSamplesNonce((n) => n + 1);
+    // "Browse examples" explicitly opens the gallery (the root state
+    // survives the sub-editor remount — no key-remount needed).
+    setSamplesOpen(true);
     window.setTimeout(() => {
       samplesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 60);
@@ -769,12 +842,17 @@ export function InstructionsSection({
   const customs = doc.custom;
 
   const singletonDone = SINGLETON_KINDS.map((kind) => (doc[kind]?.content.trim() ?? '') !== '');
-  const totalBlocks = SINGLETON_KINDS.length + rules.length + examples.length + customs.length;
+  // I-BUG13: the denominator is the FIXED block count (3 singletons + 3
+  // repeatable groups), never the current item count — "5 of 5" after
+  // deleting the only example was a lie. Groups grade exactly like the
+  // rail outline: done when at least one item is non-empty.
+  const groupDone = (list: Array<{ content: string }>) => list.some((b) => b.content.trim() !== '');
   const doneBlocks =
     singletonDone.filter(Boolean).length +
-    rules.filter((b) => b.content.trim() !== '').length +
-    examples.filter((b) => b.content.trim() !== '').length +
-    customs.filter((b) => b.content.trim() !== '').length;
+    (groupDone(rules) ? 1 : 0) +
+    (groupDone(examples) ? 1 : 0) +
+    (groupDone(customs) ? 1 : 0);
+  const totalBlocks = SINGLETON_KINDS.length + 3;
 
   const scrollToBlock = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1033,10 +1111,11 @@ export function InstructionsSection({
 
         <div ref={samplesRef}>
           <SamplesSection
-            key={samplesNonce}
             assistantId={assistantId}
             canAuthor
-            startOpen={samplesNonce > 0 || emptyDoc}
+            startOpen={emptyDoc}
+            open={samplesOpen ?? emptyDoc}
+            onOpenChange={setSamplesOpen}
             onInsert={appendSampleBlocks}
           />
         </div>

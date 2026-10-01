@@ -136,6 +136,13 @@ export const GroupRule = styled.span`
   background: ${({ theme }) => theme.app.border.default};
 `;
 
+export const GroupDescription = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.tertiary};
+  line-height: 1.5;
+`;
+
 /* ── Right rail cards ────────────────────────────────────────── */
 
 export const RailCard = styled.div`

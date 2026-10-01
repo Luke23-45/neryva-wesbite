@@ -9,7 +9,7 @@
  * bar kept reporting "Saved". The flush below makes a section switch persist
  * instead of discard, under the exact same gates as the timer.
  */
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { AUTOSAVE_MS } from './draft-save';
 
@@ -53,30 +53,67 @@ export function useDraftAutosave(
 
   const { canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition } = gates;
 
+  // The one shared flush — the debounce timer, the unmount cleanup, and the
+  // tab-close listeners below all funnel through here, so the gates (and
+  // the G-BUG7 pending coalescing they encode) stay single-sourced. Reads
+  // through the ref, so every trigger fires the latest closure even when the
+  // effect that registered it never re-ran.
+  const flush = useCallback(() => {
+    const { gates: g, doSave: save } = latest.current;
+    if (!shippable(g)) return;
+    save();
+  }, []);
+
   // While mounted: debounce the save. Reading doSave through the ref keeps
   // the timer firing the latest closure even if the callback identity lags
   // the effect's dependency snapshot.
   useEffect(() => {
     if (!shippable({ canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition })) return;
     const timer = window.setTimeout(() => {
-      latest.current.doSave();
+      flush();
     }, AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
     // resetDeps restarts the countdown on content change; doSave rides the ref.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, ...resetDeps]);
+  }, [canAuthor, dirty, blocked, conflict, adoptingActive, pending, definition, flush, ...resetDeps]);
 
-  // On unmount only (empty deps): flush a pending dirty edit instead of
+  // On unmount only (stable flush): flush a pending dirty edit instead of
   // dropping it. Section switches unmount the editor — without this, edits
   // typed inside the debounce window never reached the API. Effect re-runs
   // must NOT flush (that would defeat the debounce); only the unmount does.
   useEffect(() => {
     return () => {
-      const { gates: g, doSave: save } = latest.current;
-      if (!shippable(g)) return;
-      save();
+      flush();
     };
-  }, []);
+  }, [flush]);
+
+  // Tab close / reload / cross-document navigation: React never runs the
+  // unmount cleanup on page unload, so edits typed inside the 8s window
+  // would die silently. pagehide covers tab close, reload, and navigation
+  // on modern browsers; beforeunload is the legacy fallback for the same
+  // moment. Both fire on a desktop tab close, so the armed flag dedupes
+  // them into a single flush — a duplicate PUT would race the first and
+  // 412 against our own write (G-BUG7). pageshow re-arms after a bfcache
+  // restore so a second close still flushes.
+  const unloadArmed = useRef(true);
+  useEffect(() => {
+    const onUnload = () => {
+      if (!unloadArmed.current) return;
+      unloadArmed.current = false;
+      flush();
+    };
+    const onShow = () => {
+      unloadArmed.current = true;
+    };
+    window.addEventListener('pagehide', onUnload);
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('pageshow', onShow);
+    return () => {
+      window.removeEventListener('pagehide', onUnload);
+      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('pageshow', onShow);
+    };
+  }, [flush]);
 }
 
 /**
@@ -113,7 +150,20 @@ export function useManualSaveSignal(
   useEffect(() => {
     latest.current = { doSave, hold };
   });
+  // The signal counter outlives the mounted section (AgentBuilder owns it
+  // across section switches). A section that mounts when the counter is
+  // already N must not mistake that pre-existing value for a fresh save
+  // intent: without this guard, every navigation after the session's first
+  // save fired the newly-mounted section's doSave unprompted — a
+  // spontaneous PUT that, racing the previous section's in-flight
+  // draft-write (invisible to this section's pending hold), carried a stale
+  // If-Match and raised a false 412 ("Someone saved first") with no
+  // user-initiated save. Only a value that changes while this section is
+  // mounted is a real signal.
+  const seenSignal = useRef(saveSignal);
   useEffect(() => {
+    if (saveSignal === seenSignal.current) return;
+    seenSignal.current = saveSignal;
     if (saveSignal <= 0) return;
     const { doSave: save, hold: h } = latest.current;
     // Mirrors doSave's own guards: nothing to do when unauthorized, and an

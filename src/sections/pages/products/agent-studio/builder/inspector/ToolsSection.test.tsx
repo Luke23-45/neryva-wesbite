@@ -426,3 +426,87 @@ describe('ToolsSection roles', () => {
     expect(screen.queryByLabelText('Enable lookup_ticket')).toBeNull();
   });
 });
+
+describe('ToolsSection bind save path (wave 4 item 1)', () => {
+  it('bind stages without firing the save mutation synchronously — the shared 8s debounce persists it', async () => {
+    vi.useFakeTimers();
+    await act(async () => {
+      shell();
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Filter by name/), { target: { value: 'export_report' } });
+    fireEvent.click(screen.getByText('Bind'));
+    // Bind only stages the entry: nothing reaches the API until the shared
+    // autosave debounce fires — there is no bind-specific immediate save.
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(saveMutate).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const payload = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(payload.definition.tools.map((t) => t.name)).toContain('export_report');
+  });
+});
+
+describe('ToolsSection "+ Bind from catalog" (wave 4 item 2)', () => {
+  it('scrolls without flushing staged state — the staged unbind keeps its own autosave schedule', async () => {
+    vi.useFakeTimers();
+    // jsdom does not implement scrollIntoView; the button under test only scrolls.
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    await act(async () => {
+      shell();
+    });
+    // Stage an unbind — the 8s autosave is now armed.
+    fireEvent.click(screen.getByLabelText('More actions for lookup_ticket'));
+    fireEvent.click(screen.getByText('Unbind'));
+    expect(updateMutate).not.toHaveBeenCalled();
+    // The navigation/scroll button must never flush unrelated staged state.
+    fireEvent.click(screen.getByText('+ Bind from catalog'));
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(updateMutate).not.toHaveBeenCalled();
+    // The unbind's own autosave fires on schedule — exactly once.
+    await act(async () => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const payload = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(payload.definition.tools.map((t) => t.name)).toEqual(['refund_payment', 'sync_crm']);
+  });
+});
+
+describe('ToolsSection catalog empty states (wave 4 item 3)', () => {
+  it('says no rows match the current filters when the search hides everything', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.change(screen.getByPlaceholderText(/Filter by name/), { target: { value: 'zzz-no-such-tool' } });
+    expect(screen.getByText('No catalog rows match the current filters.')).toBeTruthy();
+    expect(screen.queryByText(/register one in the Tools library/)).toBeNull();
+  });
+
+  it('says no rows match the current filters for a combined search + approval filter', async () => {
+    await act(async () => {
+      shell();
+    });
+    // lookup_ticket matches the search but its approval is NONE; the approval
+    // filter hides it and the search hides everything else.
+    fireEvent.change(screen.getByPlaceholderText(/Filter by name/), { target: { value: 'lookup' } });
+    fireEvent.change(screen.getByLabelText('Filter by approval'), { target: { value: 'required' } });
+    expect(screen.getByText('No catalog rows match the current filters.')).toBeTruthy();
+    expect(screen.queryByText(/register one in the Tools library/)).toBeNull();
+  });
+
+  it('clearing the filters restores the catalog rows', async () => {
+    await act(async () => {
+      shell();
+    });
+    const input = screen.getByPlaceholderText(/Filter by name/) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'zzz-no-such-tool' } });
+    expect(screen.getByText('No catalog rows match the current filters.')).toBeTruthy();
+    fireEvent.change(input, { target: { value: '' } });
+    expect(screen.queryByText('No catalog rows match the current filters.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Expand lookup_ticket details' })).toBeTruthy();
+  });
+});

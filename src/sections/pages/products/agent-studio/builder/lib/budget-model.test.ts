@@ -23,7 +23,7 @@ describe('bounds + platform defaults (verified matrix)', () => {
     expect(BUDGET_BOUNDS.wall_clock_seconds).toEqual({ min: 0, max: 86_400 });
     expect(BUDGET_BOUNDS.max_tool_calls).toEqual({ min: 0, max: 1000 });
     expect(BUDGET_BOUNDS.max_model_calls).toEqual({ min: 1, max: 200 });
-    expect(PLATFORM_DEFAULTS).toEqual({ max_total_tokens: 200_000, max_model_calls: 16, max_tool_calls: 8, wall_clock_seconds: 120 });
+    expect(PLATFORM_DEFAULTS).toEqual({ max_total_tokens: 200_000, max_model_calls: 16, max_tool_calls: 8, wall_clock_seconds: 0 });
     expect(Object.keys(CAP_LABELS)).toHaveLength(5);
   });
 });
@@ -37,10 +37,16 @@ describe('describeCap (unset-vs-zero resolver)', () => {
     }
     expect(describeCap('max_cost_cents', 500)).toMatchObject({ state: '$5.00' });
   });
-  it('resolves 0 to defaults for wall and tools, never instant-fail', () => {
-    expect(describeCap('wall_clock_seconds', 0).state).toBe('Platform default (120s)');
+  it('resolves unset/0 wall to no watchdog, never instant-fail', () => {
+    // Unset wall clock = no deadline (product 43a464d removed the 120s lie).
+    for (const value of [undefined, 0] as const) {
+      const described = describeCap('wall_clock_seconds', value);
+      expect(described.state).toBe('No watchdog');
+      expect(described.whisper).not.toMatch(/120s/);
+      expect(described.whisper).toMatch(/no time limit/);
+    }
     expect(describeCap('wall_clock_seconds', 0).whisper).toMatch(/not an instant fail/);
-    expect(describeCap('wall_clock_seconds', undefined).state).toBe('Platform default (120s)');
+    expect(describeCap('wall_clock_seconds', 90).state).toBe('1 min 30s');
     expect(describeCap('max_tool_calls', 0).state).toBe('Platform default (8)');
     expect(describeCap('max_total_tokens', undefined).state).toBe('Platform default (200,000)');
     expect(describeCap('max_model_calls', undefined).whisper).toMatch(/16/);

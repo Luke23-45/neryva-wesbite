@@ -9,6 +9,12 @@
  *   storage+logs), notify_owner bool (default false), attach_to_trace bool
  *   (default true), deny_topics (max 50, deduped, default []),
  *   execution_mode blocking|logging (default blocking);
+ * - runtime sink truth (products/agent-studio packages/security + both
+ *   runtime lanes): the policy is applied only to the 'storage' sink —
+ *   applyPiiPolicy is called only with 'storage', and run events/OTel spans
+ *   never carry raw content by design (categories/codes only). The console
+ *   therefore pins pii_applies_to to ['storage']; the wire schema still
+ *   accepts the other sink strings.
  * - behavior resolver (engine/src/common/guardrails/moderation.ts):
  *   off|disabled|none → disabled; strict → strict;
  *   default|brand-safe|unknown → standard.
@@ -120,7 +126,7 @@ export function resolvePolicyBehavior(name: string, mode: GuardrailExecutionMode
       behavior: 'strict',
       consequence:
         mode === 'logging'
-          ? 'Screens everything — borderline verdicts recorded, nothing refused.'
+          ? 'Screens everything — borderline verdicts recorded; deny topics still refused on contact.'
           : 'Screens everything — also refuses borderline content.',
     };
   }
@@ -128,7 +134,7 @@ export function resolvePolicyBehavior(name: string, mode: GuardrailExecutionMode
     behavior: 'standard',
     consequence:
       mode === 'logging'
-        ? 'Screened — verdicts recorded, nothing refused.'
+        ? 'Screened — verdicts recorded; deny topics still refused on contact.'
         : 'Screened — refuses violating content.',
   };
 }
@@ -184,7 +190,7 @@ export function isGuardrailPolicyDefault(policy: GuardrailPolicyState): boolean 
     policy.pii_redaction !== false &&
     entities === [...PII_ENTITY_TYPES].sort().join(',') &&
     policy.pii_action === 'token' &&
-    sinks === ['logs', 'storage'].join(',') &&
+    sinks === 'storage' &&
     policy.notify_owner !== true &&
     policy.attach_to_trace !== false &&
     (policy.deny_topics ?? []).length === 0 &&
@@ -195,7 +201,7 @@ export function isGuardrailPolicyDefault(policy: GuardrailPolicyState): boolean 
 /**
  * Projector grading truth table (PLAN §6):
  * - no policy content at all → untouched (engine defaults are not user content);
- * - logging → attention (measuring, nothing refused);
+ * - logging → attention (measuring — screening verdicts recorded; deny topics still refuse);
  * - any direction off → attention naming the direction;
  * - deny topics present → ready (a hard refusal list is configured intent);
  * - else ready (PII-off stays ready with a stated whisper — deliberate, not broken).
@@ -234,7 +240,7 @@ export function gradeGuardrails(policy: GuardrailPolicyState): GuardrailGrade {
     subtitle: `Blocking · ${coverage} · PII ${policy.pii_redaction ? 'on' : 'off'}${topics > 0 ? ` · ${topics} ${topics === 1 ? 'deny topic' : 'deny topics'}` : ''}`,
     hint: policy.pii_redaction
       ? ''
-      : 'PII off — identifiers reach storage, logs, and the provider.',
+      : 'PII off — identifiers reach storage and the provider.',
   };
 }
 
@@ -274,12 +280,19 @@ export function parsePiiAction(raw: unknown): PiiAction {
   return raw === 'mask' || raw === 'token' || raw === 'drop' ? raw : 'token';
 }
 
-/** Garbage → the engine default (storage + logs); an explicit [] stays []. */
+/** Garbage → ['storage'] (the only sink the runtime honors); an explicit [] stays []. */
 export function parsePiiSinks(raw: unknown): PiiSink[] {
-  if (!Array.isArray(raw)) return ['storage', 'logs'];
-  return (raw as unknown[]).filter((v): v is PiiSink =>
+  if (!Array.isArray(raw)) return ['storage'];
+  const kept = (raw as unknown[]).filter((v): v is PiiSink =>
     typeof v === 'string' && (PII_SINKS as readonly string[]).includes(v),
   );
+  // Root cause (P1): the runtime applies the policy only to the 'storage'
+  // sink — applyPiiPolicy is called only with 'storage' in both runtime
+  // lanes, and run events/OTel spans never carry raw content by design, so
+  // logs/traces scope was an inert control. Collapse every legacy/mixed
+  // value to ['storage'] so the edit state matches what the runtime
+  // actually redacts; an explicit [] stays [] (scope deliberately empty).
+  return kept.length === 0 ? [] : ['storage'];
 }
 
 // ─── Deny topics ─────────────────────────────────────────────────────────────
@@ -318,15 +331,31 @@ export function validateDenyTopic(candidate: string, existing: readonly string[]
 
 export const MODE_COPY = {
   blocking: 'Blocking — violating content is refused.',
-  logging: 'Logging — verdicts recorded, nothing is refused.',
+  logging: 'Logging — screening verdicts recorded; deny topics still refused on contact.',
 } as const satisfies Record<GuardrailExecutionMode, string>;
 
 /** Versions are immutable: the policy is per-version truth (R3). */
 export const PII_NON_RETRO_COPY = 'Applies to new runs from publish — past runs keep what they stored.';
 
-export const PII_OFF_COPY = 'PII off — identifiers reach storage, logs, and the provider.';
+export const PII_OFF_COPY = 'PII off — identifiers reach storage and the provider.';
+
+/**
+ * Honest sink scope (P1): redaction runs only against the committed result.
+ * Run events and traces never carry raw content by design, so there is no
+ * logs/traces sink to select — the control is a statement, not a switch.
+ */
+export const PII_SINK_SCOPE_COPY =
+  'Committed run results (storage). Run events never carry raw content, so there is nothing to redact from logs or traces.';
 
 /** Engine law (validation.ts:98-108): the flip is a definition change. */
 export const FLIP_COPY = 'The flip ships as a new draft — auditable, never a silent toggle.';
 
 export const CUSTOM_NAME_COPY = 'A name you invent screens like Default — shown above, never hidden.';
+
+/**
+ * Paste overflow (Wave 4 item 8): the input's maxLength cuts pasted text
+ * silently at the browser level, before validateDenyTopic ever runs — name
+ * the cut at the point it happens so the shortened text never reads as the
+ * user's own wording.
+ */
+export const TOPIC_PASTE_TRUNCATED_COPY = 'Pasted text was cut to 200 characters.';

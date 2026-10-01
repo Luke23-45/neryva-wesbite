@@ -426,8 +426,11 @@ export function ResponseSection({
   // text while typing so intermediate states ("0.", "abc") never corrupt the
   // committed value and NaN can never enter state. Commit snaps to the 0.05
   // step grid and kills float artifacts (0.95 persists as 0.95, never
-  // 0.9500000000000001); floors at 0.05 — the engine rejects top_p <= 0, so
-  // 0 can never save. Empty commits to undefined (clears the key).
+  // 0.9500000000000001) — but never clamps: an out-of-range value commits
+  // as-is so the setup-caps gate holds the save with an inline range message
+  // ("Top-p must be above 0 and at most 1." + autosave-held, the Knowledge
+  // chunk-size pattern) instead of being silently dropped. Empty commits to
+  // undefined (clears the key).
   const topPDraft = useStringDraft(policy.top_p, (value) => {
     if (value === undefined) {
       setPolicy((prev) => {
@@ -437,8 +440,7 @@ export function ResponseSection({
       });
       return;
     }
-    const clamped = Math.min(1, Math.max(0.05, value));
-    patch({ top_p: Number((Math.round(clamped / 0.05) * 0.05).toFixed(2)) });
+    patch({ top_p: Number((Math.round(value / 0.05) * 0.05).toFixed(2)) });
   });
 
   const removeLegacyField = useCallback(() => {
@@ -785,8 +787,8 @@ export function ResponseSection({
               <ControlText>
                 <ControlLabel>{hasOverrides ? 'Overridden' : 'Inheriting'}</ControlLabel>
                 <ChipRow>
-                  <Chip>reasoning · {policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'Medium'}</Chip>
-                  <Chip>top-p · {policy.top_p ?? '0.95'}</Chip>
+                  <Chip>reasoning · {policy.reasoning_effort ? effortLabel(policy.reasoning_effort) : 'default'}</Chip>
+                  <Chip>top-p · {policy.top_p ?? 'default'}</Chip>
                 </ChipRow>
               </ControlText>
               <HitTextButton type="button" onClick={goToModel}>

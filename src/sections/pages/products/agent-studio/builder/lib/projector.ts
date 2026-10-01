@@ -892,7 +892,9 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
   // instruction blocks with no provenance, so counting would invent agent
   // state. The node renders 'untouched', never an invented number. 'info'
   // would read as "all good" — the honest mark for an ungradable node is
-  // 'untouched' (not configured).
+  // 'untouched' (not configured). The hint invites action instead of
+  // asserting configuration — a state-asserting hint would contradict the
+  // 'untouched' grade in the nav tooltip.
   push(
     'samples',
     {
@@ -901,7 +903,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       kind: null,
       title: LANE_NODES.samples.label,
       subtitle: null,
-      hint: locked ? 'Create the agent first' : 'Configured in the Samples section',
+      hint: locked ? 'Create the agent first' : 'Add examples to steer replies',
       status: locked ? 'locked' : 'untouched',
       lock: false,
       color: LANE_NODES.samples.color,
@@ -924,15 +926,17 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
       subtitle: creds ? `${creds.count} configured` : null,
       hint: locked
         ? 'Create the agent first'
-        : !definition
-          ? 'Configured in the Credentials section'
-          : !creds
-            ? 'Configured in the Credentials section'
-            : creds.expired > 0
-              ? `${creds.expired} expired — re-authenticate`
-              : creds.count === 0
-                ? 'No provider keys — connect one in the Credentials section'
-                : null,
+        : // No draft yet, or the summary is unreadable (CR-BUG1: the
+          // credential list 403s for reader/billing roles) — nothing is
+          // known about credential state, so the hint invites action
+          // instead of asserting configuration.
+          !definition || !creds
+          ? 'Connect provider keys in the Credentials section'
+          : creds.expired > 0
+            ? `${creds.expired} expired — re-authenticate`
+            : creds.count === 0
+              ? 'No provider keys — connect one in the Credentials section'
+              : null,
       status: locked
         ? 'locked'
         : !definition

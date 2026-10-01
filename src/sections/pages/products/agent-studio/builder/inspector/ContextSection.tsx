@@ -64,6 +64,7 @@ import {
   TokenValue,
 } from './ContextSection.styles';
 import { Minus, Plus } from 'lucide-react';
+import { PageHeader, PageSubtitle, PageTitle } from '../section-ui/SectionPage.styles';
 
 export interface ContextSectionProps {
   assistantId: string;
@@ -353,6 +354,10 @@ export function ContextSection({
   if (!definition) {
     return (
       <Wrap>
+        <PageHeader>
+          <PageTitle>Context</PageTitle>
+          <PageSubtitle>What the agent carries into each run — scope, history, and token budget.</PageSubtitle>
+        </PageHeader>
         <SkeletonRows rows={4} />
       </Wrap>
     );
@@ -364,6 +369,10 @@ export function ContextSection({
   if (!canAuthor) {
     return (
       <Wrap>
+        <PageHeader>
+          <PageTitle>Context</PageTitle>
+          <PageSubtitle>What the agent carries into each run — scope, history, and token budget.</PageSubtitle>
+        </PageHeader>
         <FieldBlock>
           <FieldHead>
             <FieldTitle>Context</FieldTitle>
@@ -410,6 +419,10 @@ export function ContextSection({
         }
       }}
     >
+      <PageHeader>
+        <PageTitle>Context</PageTitle>
+        <PageSubtitle>What the agent carries into each run — scope, history, and token budget.</PageSubtitle>
+      </PageHeader>
       {/* History */}
       <FieldBlock>
         <FieldHead>

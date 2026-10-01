@@ -58,6 +58,12 @@ function shell(props?: Partial<React.ComponentProps<typeof MemorySection>>) {
 }
 
 describe('MemorySection', () => {
+  it('renders the section title and subtitle above the read-only surface', () => {
+    shell();
+    expect(screen.getByRole('heading', { name: 'Memory' })).toBeTruthy();
+    expect(screen.getByText(/What the agent recalls across runs/)).toBeTruthy();
+  });
+
   it('reports scope, history, and context length read-only and points at the Context node', () => {
     shell();
     // No editing controls: scope pills, the history stepper, and the

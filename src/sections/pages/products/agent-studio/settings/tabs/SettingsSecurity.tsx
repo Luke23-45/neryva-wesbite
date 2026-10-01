@@ -81,6 +81,7 @@ export function SettingsSecurity() {
                 }
               }}
               disabled={mfa.isPending}
+              label="Two-factor authentication"
             />
           </TwoFaRow>
         </Panel>

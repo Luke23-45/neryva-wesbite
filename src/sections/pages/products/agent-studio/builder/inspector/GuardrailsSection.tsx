@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ban, EyeOff, ShieldCheck, Zap } from 'lucide-react';
@@ -15,7 +15,7 @@ import {
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import type { GuardrailExecutionMode, PiiAction, PiiEntityType, PiiSink } from '@lib/engine/agent-payload';
-import { PII_ENTITY_TYPES, PII_SINKS } from '@lib/engine/agent-payload';
+import { PII_ENTITY_TYPES } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
@@ -29,8 +29,9 @@ import {
   PII_ACTION_OPTIONS,
   PII_ENTITY_LABELS,
   PII_NON_RETRO_COPY,
+  PII_SINK_SCOPE_COPY,
   PII_OFF_COPY,
-  PII_SINK_LABELS,
+  TOPIC_PASTE_TRUNCATED_COPY,
   displayPolicyName,
   gradeGuardrails,
   matchSegment,
@@ -156,7 +157,9 @@ const EMPTY_POLICY: PolicyState = {
   execution_mode: 'blocking',
   pii_entities: [...PII_ENTITY_TYPES],
   pii_action: 'token',
-  pii_applies_to: ['storage', 'logs'],
+  // P1: the runtime honors only the 'storage' sink — see the payload pin
+  // below; 'logs'/'traces' are inert (events/traces never carry raw content).
+  pii_applies_to: ['storage'],
   notify_owner: false,
   attach_to_trace: true,
   deny_topics: [],
@@ -233,7 +236,11 @@ export function GuardrailsSection({
         execution_mode: policy.execution_mode,
         pii_entities: policy.pii_entities,
         pii_action: policy.pii_action,
-        pii_applies_to: policy.pii_applies_to,
+        // P1: the runtime honors only the 'storage' sink (applyPiiPolicy is
+        // called only with 'storage'; events/traces never carry raw
+        // content), so the payload pins ['storage'] — never a stale
+        // logs/traces selection that would silently disable redaction.
+        pii_applies_to: ['storage'],
         notify_owner: policy.notify_owner,
         attach_to_trace: policy.attach_to_trace,
         deny_topics: policy.deny_topics,
@@ -321,7 +328,7 @@ export function GuardrailsSection({
   }, []);
 
   const toggleListItem = useCallback(
-    <T extends string>(key: 'pii_entities' | 'pii_applies_to', item: T) => {
+    <T extends string>(key: 'pii_entities', item: T) => {
       setPolicy((prev) => {
         const list = prev[key] as readonly T[];
         const next = list.includes(item) ? list.filter((v) => v !== item) : [...list, item];
@@ -341,6 +348,26 @@ export function GuardrailsSection({
     setPolicy((prev) => ({ ...prev, deny_topics: [...prev.deny_topics, topicDraft.trim()] }));
     setTopicDraft('');
   }, [topicDraft, policy.deny_topics]);
+
+  /**
+   * Item 8: maxLength truncates an over-long paste silently at the browser
+   * level — before validateDenyTopic ever sees it — so intercept the paste,
+   * apply the same 200-char cut by hand, and surface it through the
+   * section's existing inline-error path (topicError → red Whisper).
+   */
+  const handleTopicPaste = useCallback((event: ClipboardEvent<HTMLInputElement>) => {
+    const pasted = event.clipboardData?.getData('text') ?? '';
+    if (pasted === '') return;
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const next = input.value.slice(0, start) + pasted + input.value.slice(end);
+    if (next.length > 200) {
+      event.preventDefault();
+      setTopicDraft(next.slice(0, 200));
+      setTopicError(TOPIC_PASTE_TRUNCATED_COPY);
+    }
+  }, []);
 
   const removeTopic = useCallback((topic: string) => {
     setPolicy((prev) => ({ ...prev, deny_topics: prev.deny_topics.filter((t) => t !== topic) }));
@@ -395,7 +422,7 @@ export function GuardrailsSection({
             <RailDot $tone={policy.deny_topics.length > 0 ? 'ok' : 'muted'} aria-hidden="true" />
             Deny topics
           </RailLabel>
-          <RailValue>{policy.deny_topics.length === 0 ? 'none' : `${policy.deny_topics.length}`}</RailValue>
+          <RailValue>{policy.deny_topics.length}</RailValue>
         </RailRow>
       </RailCard>
       <MicroTip>
@@ -429,7 +456,7 @@ export function GuardrailsSection({
           <GroupCard>
             <ReadRow>
               <ReadLabel>Execution mode</ReadLabel>
-              <ReadValue>{modeLabel} — {policy.execution_mode === 'logging' ? 'verdicts recorded, nothing refused' : 'violating content is refused'}</ReadValue>
+              <ReadValue>{modeLabel} — {policy.execution_mode === 'logging' ? 'verdicts recorded; deny topics still refused' : 'violating content is refused'}</ReadValue>
             </ReadRow>
             <RowDivider />
             <ReadRow>
@@ -444,7 +471,7 @@ export function GuardrailsSection({
             <RowDivider />
             <ReadRow>
               <ReadLabel>PII redaction</ReadLabel>
-              <ReadValue>{policy.pii_redaction ? `on — ${policy.pii_entities.map((e) => PII_ENTITY_LABELS[e]).join(', ')}` : 'off — identifiers reach storage, logs, and the provider'}</ReadValue>
+              <ReadValue>{policy.pii_redaction ? `on — ${policy.pii_entities.map((e) => PII_ENTITY_LABELS[e]).join(', ')}` : 'off — identifiers reach storage and the provider'}</ReadValue>
             </ReadRow>
             <RowDivider />
             <ReadRow>
@@ -567,7 +594,7 @@ export function GuardrailsSection({
               </CardIcon>
               <CardTitleWrap>
                 <CardTitle>PII redaction</CardTitle>
-                <CardSub>Identifiers are redacted before storage and logging.</CardSub>
+                <CardSub>Identifiers are redacted from committed run results.</CardSub>
               </CardTitleWrap>
               <Switch
                 checked={policy.pii_redaction}
@@ -601,20 +628,7 @@ export function GuardrailsSection({
                 ariaLabel="Redaction action"
               />
               <SubLabel id="guardrails-applies-to">Applies to</SubLabel>
-              <ChipRow role="group" aria-labelledby="guardrails-applies-to">
-                {PII_SINKS.map((sink) => (
-                  <SelectChip
-                    key={sink}
-                    type="button"
-                    $selected={policy.pii_applies_to.includes(sink)}
-                    aria-pressed={policy.pii_applies_to.includes(sink)}
-                    disabled={!policy.pii_redaction}
-                    onClick={() => toggleListItem('pii_applies_to', sink)}
-                  >
-                    {PII_SINK_LABELS[sink]}
-                  </SelectChip>
-                ))}
-              </ChipRow>
+              <FieldHelper>{PII_SINK_SCOPE_COPY}</FieldHelper>
             </SubControlBlock>
             <FieldHelper>{PII_NON_RETRO_COPY}</FieldHelper>
             {!policy.pii_redaction && (
@@ -719,6 +733,7 @@ export function GuardrailsSection({
                   setTopicDraft(event.target.value);
                   setTopicError(null);
                 }}
+                onPaste={handleTopicPaste}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') {
                     event.preventDefault();

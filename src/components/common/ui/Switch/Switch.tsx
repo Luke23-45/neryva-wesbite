@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
+import type { ButtonHTMLAttributes } from 'react';
 import { spring } from '@styles/motion';
 
 /**
@@ -11,19 +12,31 @@ import { spring } from '@styles/motion';
  * - Thumb scales slightly (0.94) while pressed, then bounces back.
  * - Focus brightens the track border (no glow ring).
  * - Disabled state: 0.4 opacity, `cursor: not-allowed`.
+ * - 44px invisible hit target via ::after — the visible track stays 38×22.
  *
- * Accessible: `role="switch"` + `aria-checked`, click & keyboard.
+ * One label, one place: the switch never renders visible label text. The
+ * `label` prop is the accessible name (aria-label) only — call sites own
+ * their visible titles. Extra button props (e.g. a directly-passed
+ * aria-label) are forwarded to the track.
+ *
+ * Accessible: `role="switch"` + `aria-checked` + accessible name, click & keyboard.
  */
 
 type Props = {
   checked: boolean;
   onChange: (next: boolean) => void;
+  /** Accessible name only — never rendered as visible text. */
   label?: string;
   disabled?: boolean;
   id?: string;
-};
+} & Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  // onDrag conflicts: React's DragEventHandler vs framer-motion's PanInfo handler.
+  // The switch never uses drag, so exclude it.
+  'onChange' | 'onClick' | 'onKeyDown' | 'onDrag' | 'tabIndex' | 'children' | 'role' | 'type'
+>;
 
-export function Switch({ checked, onChange, label, disabled, id }: Props) {
+export function Switch({ checked, onChange, label, disabled, id, ...rest }: Props) {
   return (
     <Root>
       <Track
@@ -31,6 +44,7 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
         role="switch"
         aria-checked={checked}
         aria-disabled={disabled || undefined}
+        aria-label={label}
         $checked={checked}
         onClick={() => !disabled && onChange(!checked)}
         tabIndex={disabled ? -1 : 0}
@@ -44,14 +58,10 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
         id={id}
         whileTap={!disabled ? { scale: 0.98 } : undefined}
         transition={spring.snap}
+        {...rest}
       >
         <Thumb $checked={checked} layout transition={spring.bouncy} />
       </Track>
-      {label && (
-        <Label htmlFor={id} $disabled={disabled}>
-          {label}
-        </Label>
-      )}
     </Root>
   );
 }
@@ -59,7 +69,6 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
 const Root = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 const Track = styled(motion.button)<{ $checked: boolean }>`
@@ -78,6 +87,13 @@ const Track = styled(motion.button)<{ $checked: boolean }>`
     border-color ${({ theme }) => theme.transitions.standard},
     box-shadow ${({ theme }) => theme.transitions.fast};
   padding: 0;
+
+  /* 44px hit target, visual-neutral — the visible track stays 38×22. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
 
   /* D-BUG1: focus brightens the border (f533658) — no glow ring. */
   &:focus-visible {
@@ -101,11 +117,4 @@ const Thumb = styled(motion.span)<{ $checked: boolean }>`
   border-radius: 50%;
   background: ${({ theme }) => theme.app.text.primary};
   box-shadow: ${({ theme }) => theme.shadows.sm};
-`;
-
-const Label = styled.label<{ $disabled?: boolean }>`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.secondary};
-  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  user-select: none;
 `;

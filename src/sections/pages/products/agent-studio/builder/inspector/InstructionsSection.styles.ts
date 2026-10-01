@@ -179,6 +179,16 @@ export const IconButton = styled.button`
   color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
 
+  /* I-BUG3: 44px invisible hit area, visuals unchanged. Renders 32×32
+     (iconSize.lg); the ::after expands the hit box 6px on every side. */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
+
   &:hover:not(:disabled) {
     background: ${({ theme }) => theme.app.surface.hover};
     color: ${({ theme }) => theme.app.text.primary};
@@ -254,6 +264,42 @@ export const CounterRow = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: ${({ theme }) => theme.app.numeric};
+`;
+
+/* ── Delete-undo toast (I-BUG10) ───────────────────────────────────
+ * Deletes are staged, never destructive at click time, so the section
+ * protects them with reversibility (undo), not a confirm gate. */
+
+export const UndoToast = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.s3};
+  min-width: 280px;
+  max-width: 420px;
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+export const UndoToastButton = styled.button`
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.status.info.fg};
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  flex: none;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 2px;
+  }
 `;
 
 export const BudgetBar = styled.div`

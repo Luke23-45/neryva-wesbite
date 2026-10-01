@@ -98,9 +98,9 @@ function readBudget(definition: AgentDefinition): BudgetState {
 
 const CAP_KEYS: BudgetCapKey[] = ['max_cost_cents', 'max_total_tokens', 'max_tool_calls', 'max_model_calls', 'wall_clock_seconds'];
 
-/** A cap counts as "set" only with a positive value — 0/unset serves the
- *  platform default (describeCap), so the badge never claims a configured
- *  cap the read views render as unset. */
+/** A cap counts as "set" only with a positive value — 0/unset is rendered
+ *  by describeCap (platform default or no watchdog), so the badge never
+ *  claims a configured cap the read views render as unset. */
 function isCapSet(value: number | undefined): boolean {
   return value !== undefined && value > 0;
 }
@@ -569,7 +569,7 @@ const CAP_HELPERS: Record<BudgetCapKey, string> = {
   max_total_tokens: 'Tokens per run — prompt plus completion.',
   max_tool_calls: 'Calls per run across every bound tool.',
   max_model_calls: 'Calls per run including retries and fallbacks.',
-  wall_clock_seconds: 'Seconds or minutes before the run is cut.',
+  wall_clock_seconds: 'Seconds or minutes before the run is cut — unset means no time limit.',
 };
 
 function CapField({
@@ -657,7 +657,7 @@ function CapField({
             min={bounds.min}
             {...('max' in bounds ? { max: bounds.max } : {})}
             step={bounds.step}
-            placeholder={isSpend ? 'No cap' : 'Default'}
+            placeholder={isSpend ? 'No cap' : isWallClock ? 'No limit' : 'Default'}
             onChange={(event) => handleChange(event.target.value)}
           />
         </CapInput>

@@ -34,6 +34,7 @@ import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useToolCatalog, BUILT_IN_TOOLS } from '@hooks/studio/useSetupTools';
 import { toEnginePayload, effectiveApproval, type GuardrailExecutionMode } from '@lib/engine/agent-payload';
 import { parseBrandVoice } from '@/sections/pages/products/agent-studio/builder/lib/brand-model';
+import { MODE_COPY } from '@/sections/pages/products/agent-studio/builder/lib/guardrails-model';
 import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
 import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-v1';
 import { checkDefinitionCaps, sectionOf } from '@lib/engine/setup-caps';
@@ -322,6 +323,7 @@ export function AgentEditor() {
                           <Switch
                             checked={effective.model_policy.fallback_enabled}
                             onChange={(next) => patch({ model_policy: { ...effective.model_policy, fallback_enabled: next } })}
+                            label="Allow fallback models"
                           />
                         </SwitchRow>
                         <FieldStack>
@@ -463,6 +465,7 @@ export function AgentEditor() {
                           <Switch
                             checked={effective.context_policy.summary_enabled}
                             onChange={(next) => patch({ context_policy: { ...effective.context_policy, summary_enabled: next } })}
+                            label="Summarize long histories"
                           />
                         </SwitchRow>
                         <KnowledgeMapping
@@ -520,11 +523,12 @@ export function AgentEditor() {
                         <SwitchRow>
                           <SwitchText>
                             <SwitchTitle>PII redaction</SwitchTitle>
-                            <SwitchSub>Personally identifiable information is redacted before storage and logging.</SwitchSub>
+                            <SwitchSub>Personally identifiable information is redacted from committed run results.</SwitchSub>
                           </SwitchText>
                           <Switch
                             checked={effective.guardrails.pii_redaction}
                             onChange={(next) => patch({ guardrails: { ...effective.guardrails, pii_redaction: next } })}
+                            label="PII redaction"
                           />
                         </SwitchRow>
                         <FieldLabel>Execution mode</FieldLabel>
@@ -533,12 +537,12 @@ export function AgentEditor() {
                           onChange={(e) => patch({ guardrails: { ...effective.guardrails, execution_mode: e.target.value as GuardrailExecutionMode } })}
                           aria-label="Guardrail execution mode"
                         >
-                          <option value="blocking">Blocking — violating content is refused</option>
-                          <option value="logging">Logging — verdicts recorded, nothing refused</option>
+                          <option value="blocking">{MODE_COPY.blocking}</option>
+                          <option value="logging">{MODE_COPY.logging}</option>
                         </EditorSelect>
                         <SwitchSub>
                           {effective.guardrails.execution_mode === 'logging'
-                            ? 'Logging records verdicts without severing — measure first, then flip.'
+                            ? 'Logging records screening verdicts; deny topics still refuse on contact — measure first, then flip.'
                             : 'Blocking refuses violating content at run time.'}{' '}
                           The flip ships as a new draft — auditable, never a silent toggle.
                         </SwitchSub>
@@ -592,6 +596,7 @@ export function AgentEditor() {
                           <Switch
                             checked={effective.knowledge_policy.retrieval_enabled}
                             onChange={(next) => patch({ knowledge_policy: { ...effective.knowledge_policy, retrieval_enabled: next } })}
+                            label="Knowledge retrieval"
                           />
                         </SwitchRow>
                         <FieldRow>

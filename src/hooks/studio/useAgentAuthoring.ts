@@ -185,6 +185,14 @@ export function useAssistantVersions(assistantId: string | null) {
   });
 }
 
+/** One resolution source of useAssistantDefinition — the maker-facing provenance of a version. */
+export interface AssistantDefinitionSource {
+  definition: AgentDefinition;
+  versionId: string | null;
+  hash: string | null;
+  status: string | null;
+}
+
 /** The editable definition: the DRAFT version when one exists, else the active version, else blank. */
 export function useAssistantDefinition(assistantId: string | null, opts?: { prefer?: 'draft' | 'active' }) {
   const versions = useAssistantVersions(assistantId);
@@ -201,6 +209,10 @@ export function useAssistantDefinition(assistantId: string | null, opts?: { pref
             // The detail view (read-only) must show what SERVES, not the draft.
             // The builder (editable) keeps the draft-preferred default.
             const source = opts?.prefer === 'active' ? (active ?? draft) : (draft ?? active);
+            const toSource = (v: AgentVersion | null): AssistantDefinitionSource | null =>
+              v
+                ? { definition: v.definition ?? defaultConsumer(), versionId: v.id, hash: v.hash, status: v.status }
+                : null;
             return {
               definition: source?.definition ?? defaultConsumer(),
               versionId: source?.id ?? null,
@@ -208,6 +220,11 @@ export function useAssistantDefinition(assistantId: string | null, opts?: { pref
               status: source?.status ?? null,
               isDraft: draft !== null,
               isLive: active !== null,
+              /** Both resolution sources (null when absent) — the org-samples
+               *  rows let the maker pick draft vs published explicitly, so
+               *  the provenance label always names what is about to be copied. */
+              activeSource: toSource(active),
+              draftSource: toSource(draft),
             };
           })(),
   };
@@ -617,7 +634,14 @@ export function useCreateAssistant() {
       await queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] });
       return result;
     },
-    onError: (error) => toastEngineError(error, 'Could not create the agent'),
+    onError: (error) => {
+      // A 409 (name taken in this organization) stays silent here — the
+      // caller shows the inline "name taken" recovery (TakenPanel), never
+      // a raw toast (C01 SPEC: 409-one-tap-rename). Same contract as the
+      // identity-update path below.
+      if (error instanceof ApiError && error.status === 409) return;
+      toastEngineError(error, 'Could not create the agent');
+    },
   });
 }
 

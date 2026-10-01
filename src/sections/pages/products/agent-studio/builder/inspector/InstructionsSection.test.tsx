@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -9,11 +10,23 @@ import toast from 'react-hot-toast';
 import { InstructionsSection } from './InstructionsSection';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 
-const { engineMock } = vi.hoisted(() => ({ engineMock: vi.fn() }));
+const { engineMock, toastFn } = vi.hoisted(() => {
+  // I-BUG10: the delete-undo affordance is a render-function toast, so the
+  // mock must be callable — success/error/dismiss ride on the same fn.
+  const t = vi.fn() as Mock & {
+    success: Mock;
+    error: Mock;
+    dismiss: Mock;
+  };
+  t.success = vi.fn();
+  t.error = vi.fn();
+  t.dismiss = vi.fn();
+  return { engineMock: vi.fn(), toastFn: t };
+});
 const saveMutate = vi.fn();
 
 vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
+  default: toastFn,
 }));
 
 vi.mock('@/Context/OrgContext', () => ({
@@ -42,16 +55,32 @@ vi.mock('@hooks/studio/useSetupTemplates', () => ({
 }));
 
 /** The samples gallery is covered by its own test file; here it is a stub
- *  that exposes the insert path the section must wire to a structured PUT. */
+ *  that exposes the insert path the section must wire to a structured PUT —
+ *  and the controlled open state the section root owns (I-BUG12). */
 vi.mock('./SamplesSection', () => ({
-  SamplesSection: ({ canAuthor, onInsert }: { canAuthor: boolean; onInsert: (blocks: unknown[], source: string) => void }) =>
+  SamplesSection: ({
+    canAuthor,
+    open,
+    onOpenChange,
+    onInsert,
+  }: {
+    canAuthor: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    onInsert: (blocks: unknown[], source: string) => void;
+  }) =>
     canAuthor ? (
-      <button
-        type="button"
-        onClick={() => onInsert([{ kind: 'rules', mode: 'markdown', content: 'Sample rule' }], 'test sample')}
-      >
-        insert-sample
-      </button>
+      <>
+        <button type="button" aria-expanded={open} onClick={() => onOpenChange?.(!open)}>
+          samples-toggle
+        </button>
+        <button
+          type="button"
+          onClick={() => onInsert([{ kind: 'rules', mode: 'markdown', content: 'Sample rule' }], 'test sample')}
+        >
+          insert-sample
+        </button>
+      </>
     ) : null,
 }));
 
@@ -127,8 +156,10 @@ function defaultEngine() {
 beforeEach(() => {
   engineMock.mockReset();
   saveMutate.mockReset();
+  toastFn.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
+  vi.mocked(toastFn.dismiss).mockReset();
   defaultEngine();
 });
 
@@ -168,12 +199,45 @@ function backToPage() {
   fireEvent.click(screen.getByRole('button', { name: 'Back to Instructions' }));
 }
 
-function saveAndClose() {
-  fireEvent.click(screen.getByRole('button', { name: 'Save & close' }));
+function doneEditing() {
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 }
 
 function putCalls() {
   return engineMock.mock.calls.filter(([, opts]) => (opts as { method?: string })?.method === 'PUT');
+}
+
+/** I-BUG3/4/5: the 44px invisible hit-box contract (mirrors the D-BUG2
+ *  pattern). These tests assert the hit box, never the visible size. */
+function injectedCss(): string {
+  return Array.from(document.head.querySelectorAll('style'))
+    .map((tag) => tag.textContent ?? '')
+    .join('\n');
+}
+
+function afterRuleFor(button: HTMLElement): string | null {
+  const css = injectedCss().replace(/\s+/g, '');
+  const classTokens = (button.getAttribute('class') ?? '')
+    .split(/\s+/)
+    .filter((t) => t && !t.startsWith('sc-'));
+  expect(classTokens.length).toBeGreaterThan(0);
+  return (
+    classTokens
+      .map((token) => {
+        const idx = css.indexOf(`.${token}::after{`);
+        return idx === -1 ? null : css.slice(idx, css.indexOf('}', idx) + 1);
+      })
+      .find((rule) => rule !== null) ?? null
+  );
+}
+
+function expectHitBox(button: HTMLElement, inset: string) {
+  expect(getComputedStyle(button).position).toBe('relative');
+  const rule = afterRuleFor(button);
+  expect(rule).toBeTruthy();
+  expect(rule).toMatch(/content:(""|'')/);
+  expect(rule).toContain('position:absolute');
+  expect(rule).toContain(`inset:${inset}`);
 }
 
 describe('InstructionsSection structured composer', () => {
@@ -185,9 +249,14 @@ describe('InstructionsSection structured composer', () => {
     // Card previews carry the saved content.
     expect(screen.getByText('Help guests.')).toBeTruthy();
     expect(screen.getByText('Be kind.')).toBeTruthy();
-    // Every area appears as a card and in the clickable outline.
-    for (const label of ['Objective', 'Rules', 'Output', 'Refusal', 'Examples', 'Custom text']) {
+    // Non-empty areas appear as a card and in the clickable outline.
+    // Empty groups (Examples, Custom) appear only in the outline — no card
+    // is rendered for an empty repeatable group.
+    for (const label of ['Objective', 'Rules', 'Output', 'Refusal']) {
       expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(2);
+    }
+    for (const label of ['Examples', 'Custom text']) {
+      expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -209,11 +278,11 @@ describe('InstructionsSection structured composer', () => {
     expect((previewCall![1] as { body: { instructions: typeof DOC } }).body.instructions.objective.content).toBe('Concierge.');
   });
 
-  it('PUTs the structured document with If-Match after Save & close and the autosave debounce', async () => {
+  it('PUTs the structured document with If-Match after Done and the autosave debounce', async () => {
     await bootWithDoc();
     openCard('Objective');
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
-    saveAndClose();
+    doneEditing();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -237,7 +306,7 @@ describe('InstructionsSection structured composer', () => {
     await bootWithDoc();
     openCard('Objective');
     fireEvent.change(screen.getByDisplayValue('Concierge.'), { target: { value: 'Concierge!!' } });
-    saveAndClose();
+    doneEditing();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -266,12 +335,13 @@ describe('InstructionsSection structured composer', () => {
       </ThemeProvider>,
     );
     // Versionless boots a local blank document — the Objective card is empty.
-    await screen.findByRole('button', { name: 'Edit Objective' });
+    // (The edit affordance appears in both the card and the section header.)
+    await screen.findAllByRole('button', { name: 'Edit Objective' });
     openCard('Objective');
     await screen.findByPlaceholderText('One breath.');
     withFakeTimers();
     fireEvent.change(screen.getByPlaceholderText('One breath.'), { target: { value: 'Hello.' } });
-    saveAndClose();
+    doneEditing();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -296,7 +366,12 @@ describe('InstructionsSection structured composer', () => {
       vi.advanceTimersByTime(2500);
     });
     backToPage();
-    expect(screen.getByText(/Not valid JSON/)).toBeTruthy();
+    // The blocker text is split across elements (label + message), so use a
+    // function matcher. Multiple ancestors match — assert at least one does.
+    const blockers = screen.getAllByText((_, el) =>
+      el?.textContent?.includes('Not valid JSON') ?? false
+    );
+    expect(blockers.length).toBeGreaterThan(0);
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -339,11 +414,12 @@ describe('InstructionsSection structured composer', () => {
     openCard('Objective');
     fireEvent.click(screen.getByRole('tab', { name: 'JSON' }));
     // 'Concierge.' is not valid JSON — the surface's inline warning shows.
-    expect(screen.getAllByText(/Not valid JSON/).length).toBeGreaterThanOrEqual(1);
+    // (V8's message is lowercase "not valid JSON"; match case-insensitively.)
+    expect(screen.getAllByText(/not valid json/i).length).toBeGreaterThanOrEqual(1);
     // Wrapping as a JSON string clears the hold.
     fireEvent.click(screen.getByText('Wrap as a JSON string'));
-    expect(screen.queryByText(/Not valid JSON/)).toBeNull();
-    saveAndClose();
+    expect(screen.queryByText(/not valid json/i)).toBeNull();
+    doneEditing();
     await act(async () => {
       vi.advanceTimersByTime(9000);
     });
@@ -416,5 +492,118 @@ describe('InstructionsSection structured composer', () => {
     expect(screen.queryByDisplayValue('Concierge.')).toBeNull();
     fireEvent.click(screen.getByText('Edit in a new draft'));
     expect(saveMutate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InstructionsSection wave-2: hit boxes, undo deletes, Done label, collapse state, fixed denominator', () => {
+  /** Boot with a doc carrying one example, so the example remove-X renders. */
+  async function bootWithExample() {
+    const docWithExample = {
+      ...DOC,
+      examples: [
+        { id: 'ins_example00001', mode: 'markdown', content: 'User: hi\nAssistant: hello', title: '' },
+      ],
+    };
+    engineMock.mockImplementation((path: string, opts: { method?: string } = {}) => {
+      if (opts.method === 'POST' && path.endsWith('/preview')) return Promise.resolve(PREVIEW_OK);
+      if (opts.method === 'PUT') return Promise.resolve(PUT_OK);
+      return Promise.resolve({ ...GET_OK, instructions: docWithExample });
+    });
+    return bootWithDoc();
+  }
+
+  it('I-BUG3: example remove-X (IconButton) has a 44px hit box via ::after', async () => {
+    await bootWithExample();
+    // IconButton renders 32×32 (iconSize.lg); inset -6px on every side → 44px.
+    expectHitBox(screen.getByRole('button', { name: 'Remove example 1' }), '-6px');
+  });
+
+  it('I-BUG4: rule move/delete (RowButton) has a 44px hit box via ::after', async () => {
+    await bootWithDoc();
+    // RowButton renders 26×26; inset -9px on every side → 44px.
+    expectHitBox(screen.getByRole('button', { name: 'Delete rule 1' }), '-9px');
+    expectHitBox(screen.getByRole('button', { name: 'Move rule 1 up' }), '-9px');
+  });
+
+  it('I-BUG5: AddButton ("Add example" / "Add custom text") has a 44px-tall hit box via ::after', async () => {
+    await bootWithDoc();
+    // AddButton renders ~31px tall (12px semibold + 7px padding each side);
+    // inset -7px top/bottom → ~45px. One shared root covers all three labels.
+    expectHitBox(screen.getByRole('button', { name: 'Add example' }), '-7px0');
+    expectHitBox(screen.getByRole('button', { name: 'Add custom text' }), '-7px0');
+  });
+
+  it('I-BUG10: deleting a rule stages an undo toast that restores the block at its index', async () => {
+    await bootWithDoc();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete rule 1' }));
+    expect(screen.queryByText('Be kind.')).toBeNull();
+    // The delete is staged — the server is untouched until the section save —
+    // so the protection is an undo affordance, not a confirm gate.
+    expect(toastFn).toHaveBeenCalled();
+    const renderToast = toastFn.mock.calls[toastFn.mock.calls.length - 1][0] as (t: { id: string }) => ReactElement;
+    expect(toastFn.mock.calls[toastFn.mock.calls.length - 1][1]).toEqual({ duration: 8000 });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const toastRender = render(
+      <ThemeProvider theme={theme}>{renderToast({ id: 'undo-toast-1' })}</ThemeProvider>,
+      { container: host },
+    );
+    fireEvent.click(toastRender.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByText('Be kind.')).toBeTruthy();
+    expect(vi.mocked(toastFn.dismiss)).toHaveBeenCalledWith('undo-toast-1');
+    toastRender.unmount();
+    document.body.removeChild(host);
+  });
+
+  it('I-BUG10: the example remove-X routes through the same undo model', async () => {
+    await bootWithExample();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove example 1' }));
+    expect(toastFn).toHaveBeenCalled();
+    const renderToast = toastFn.mock.calls[toastFn.mock.calls.length - 1][0] as (t: { id: string }) => ReactElement;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const toastRender = render(
+      <ThemeProvider theme={theme}>{renderToast({ id: 'undo-toast-2' })}</ThemeProvider>,
+      { container: host },
+    );
+    fireEvent.click(toastRender.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByText(/User: hi/)).toBeTruthy();
+    toastRender.unmount();
+    document.body.removeChild(host);
+  });
+
+  it('I-BUG11: the sub-editor commits to "Done" — the section save is the commit, not the editor', async () => {
+    await bootWithDoc();
+    openCard('Objective');
+    expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save & close' })).toBeNull();
+  });
+
+  it('I-BUG12: the collapsed samples panel survives a sub-editor open/close cycle', async () => {
+    await bootWithDoc();
+    // DOC is non-empty, so the gallery starts collapsed at the section root.
+    const toggle = screen.getByRole('button', { name: 'samples-toggle' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    // Opening a sub-editor unmounts the whole page; closing it remounts.
+    openCard('Objective');
+    backToPage();
+    // The collapse state lives at the root — the remount must not reset it.
+    expect(screen.getByRole('button', { name: 'samples-toggle' }).getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('I-BUG13: progress grades over the fixed six blocks, not the item count', async () => {
+    await bootWithDoc();
+    // DOC: objective ✓, output ✓, refusal ✗, rules group ✓, examples ✗, custom ✗ → 3 of 6.
+    expect(screen.getByText('3 of 6 complete')).toBeTruthy();
+  });
+
+  it('I-BUG13: the denominator stays 6 after deleting the only rule', async () => {
+    await bootWithDoc();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete rule 1' }));
+    // Deleting the last example/rule/custom must not shrink the denominator
+    // ("2 of 2" was the lie); the rules group now grades not-done.
+    expect(screen.getByText('2 of 6 complete')).toBeTruthy();
   });
 });

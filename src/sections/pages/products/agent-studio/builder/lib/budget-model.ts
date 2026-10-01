@@ -5,7 +5,9 @@
  * - bounds (`engine/src/modules/assistants/validation.ts:33-41`): tokens
  *   1000–2M; cost micros 0–1e12; wall 0–86400; tools 0–1000; models 1–200;
  * - served defaults (Studio compile `context-activities.ts:69-72` + live
- *   `inline-executor.ts:391-398`): tokens 200k; models 16; tools 8; wall 120s;
+ *   `inline-executor.ts:391-398`): tokens 200k; models 16; tools 8;
+ *   wall UNSET/0 = NO watchdog (no deadline; both lanes arm only on
+ *   `wallClockSeconds > 0`, product 43a464d removed the invented 120s);
  *   cost UNSET/0 = unenforced (`maxCostMicros > 0` gate, :930-934);
  * - fail-closed breach (`inline-executor.ts:926-947` + watchdog): FAILED +
  *   terminal event naming the dimension + quota release;
@@ -34,8 +36,8 @@ export const PLATFORM_DEFAULTS = {
   max_total_tokens: 200_000,
   max_model_calls: 16,
   max_tool_calls: 8,
-  /** Seconds. 0 = no watchdog (engine serves 0 when unset; the product's
-   *  120s is a runtime safety net, not a platform default). */
+  /** Seconds. 0 = no watchdog: engine and product serve 0 when unset,
+   *  so an unset wall clock means no deadline at all. */
   wall_clock_seconds: 0,
 } as const;
 
@@ -80,7 +82,12 @@ export function describeCap(key: BudgetCapKey, value: number | undefined): { sta
       return { state: `${value} calls`, whisper: 'Min 1 — a disable control cannot exist.' };
     case 'wall_clock_seconds':
       if (value === undefined || value === 0) {
-        return { state: 'Platform default (120s)', whisper: value === 0 ? '0 serves 120s — not an instant fail.' : 'Unset serves a 120s wall clock per run.' };
+        return {
+          state: 'No watchdog',
+          whisper: value === 0
+            ? '0 means no time limit — not an instant fail, but nothing cuts the run either.'
+            : 'Unset means no time limit — a runaway run is never cut. Set a wall clock to arm one.',
+        };
       }
       return { state: formatDuration(value), whisper: '' };
   }

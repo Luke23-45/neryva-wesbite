@@ -47,6 +47,26 @@ const Note = styled.p`
   opacity: 0.8;
 `;
 
+/**
+ * Inline switch + visible text pair — used where the switch's own label is
+ * the control's only visible label. The Switch component renders no visible
+ * label text (label prop = accessible name only), so the visible copy lives
+ * here. The text is a <label htmlFor> (sibling, never wrapping) so it stays
+ * clickable without double-activation.
+ */
+const SwitchPair = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const SwitchText = styled.label<{ $disabled?: boolean }>`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  user-select: none;
+`;
+
 const effectTone: Record<string, StatusTone> = {
   READ_ONLY: 'success',
   MUTATING: 'warning',
@@ -154,12 +174,15 @@ export function ToolsView() {
                 </select>
               </label>
               <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
-                <Switch
-                  checked={showDisabled}
-                  onChange={setShowDisabled}
-                  label="Show disabled tools"
-                  id="show-disabled-tools"
-                />
+                <SwitchPair>
+                  <Switch
+                    checked={showDisabled}
+                    onChange={setShowDisabled}
+                    label="Show disabled tools"
+                    id="show-disabled-tools"
+                  />
+                  <SwitchText htmlFor="show-disabled-tools">Show disabled tools</SwitchText>
+                </SwitchPair>
               </div>
             </div>
             <QueryView
@@ -223,22 +246,30 @@ export function ToolsView() {
                       </DataCell>
                       <DataCell $w="12%">
                         <span title={canGovern ? `Toggle ${tool.name}` : governDenied}>
-                          <Switch
-                            checked={tool.enabled === true}
-                            disabled={!canGovern || (setEnabled.isPending && pendingName === tool.name)}
-                            label={`Enable ${tool.name}`}
-                            id={`enable-${tool.name}`}
-                            onChange={(next) => {
-                              if (!next) {
-                                toast(`Disabling ${tool.name} breaks version pins referencing it — publish will refuse until re-pinned.`);
-                              }
-                              setPendingName(tool.name);
-                              setEnabled.mutate(
-                                { name: tool.name, enabled: next },
-                                { onSettled: () => setPendingName((prev) => (prev === tool.name ? null : prev)) },
-                              );
-                            }}
-                          />
+                          <SwitchPair>
+                            <Switch
+                              checked={tool.enabled === true}
+                              disabled={!canGovern || (setEnabled.isPending && pendingName === tool.name)}
+                              label={`Enable ${tool.name}`}
+                              id={`enable-${tool.name}`}
+                              onChange={(next) => {
+                                if (!next) {
+                                  toast(`Disabling ${tool.name} breaks version pins referencing it — publish will refuse until re-pinned.`);
+                                }
+                                setPendingName(tool.name);
+                                setEnabled.mutate(
+                                  { name: tool.name, enabled: next },
+                                  { onSettled: () => setPendingName((prev) => (prev === tool.name ? null : prev)) },
+                                );
+                              }}
+                            />
+                            <SwitchText
+                              htmlFor={`enable-${tool.name}`}
+                              $disabled={!canGovern || (setEnabled.isPending && pendingName === tool.name)}
+                            >
+                              Enable {tool.name}
+                            </SwitchText>
+                          </SwitchPair>
                         </span>
                       </DataCell>
                       <DataCell $w="12%">

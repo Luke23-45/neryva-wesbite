@@ -85,6 +85,19 @@ export const AddButton = styled.button`
   cursor: pointer;
   transition: filter ${({ theme }) => theme.transitions.fast};
 
+  /* I-BUG5: 44px-tall invisible hit area, visuals unchanged. Renders
+     ~31px tall (12px semibold + 7px padding each side); the ::after
+     expands the hit box 7px top/bottom → ~45px. Shared root: this one
+     component serves "Add rule", "Add example", "Add custom text", and
+     "Edit in a new draft". */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
+  }
+
   &:hover {
     filter: brightness(1.12);
   }
@@ -174,6 +187,16 @@ export const RowButton = styled.button`
   flex: 0 0 auto;
   transition: background ${({ theme }) => theme.transitions.fast},
     color ${({ theme }) => theme.transitions.fast};
+
+  /* I-BUG4: 44px invisible hit area, visuals unchanged. Renders 26×26;
+     the ::after expands the hit box 9px on every side. */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -9px;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.app.surface.hover};

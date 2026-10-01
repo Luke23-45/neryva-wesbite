@@ -12,13 +12,12 @@ import {
   Excerpt,
   RowError,
   SamplesBody,
-  SamplesMeta,
-  SamplesToggle,
   ToggleRow,
   ToggleSub,
   ToggleText,
   ToggleTitle,
 } from './SamplesSection.styles';
+import { VoiceSamplesMeta, VoiceSamplesToggle } from './BrandSection.styles';
 import { TypeBlurb, TypeDot, TypeLabel, TypeList, TypeMain, TypeNote, TypeRow } from './BuilderInspector.styles';
 
 /** Shared with the instructions gallery: one toggle, both galleries. */
@@ -45,7 +44,11 @@ function writeOptIn(orgId: string | null, on: boolean): void {
 interface BrandSamplesProps {
   assistantId: string;
   canAuthor: boolean;
-  startOpen: boolean;
+  /** Collapse state is owned by the section root: this gallery unmounts
+   *  whenever the focused sub-editor opens, so state held here would
+   *  reset to the default on every editor open/close. */
+  open: boolean;
+  onToggle: (open: boolean) => void;
   /** Replace-with-consent lives upstream (a voice is singular — PLAN.md §7). */
   onInsert: (text: string, source: string) => void;
 }
@@ -55,8 +58,7 @@ interface BrandSamplesProps {
  * (opt-in, capped), scaffold row pending review. Excerpts only — the section
  * owns replace-consent, this gallery only offers.
  */
-export function BrandSamples({ assistantId, canAuthor, startOpen, onInsert }: BrandSamplesProps) {
-  const [open, setOpen] = useState(startOpen);
+export function BrandSamples({ assistantId, canAuthor, open, onToggle, onInsert }: BrandSamplesProps) {
   const { orgId } = useOrg();
   const [orgOn, setOrgOn] = useState(() => readOptIn(orgId));
   const [orgFailures, setOrgFailures] = useState<string[]>([]);
@@ -87,10 +89,10 @@ export function BrandSamples({ assistantId, canAuthor, startOpen, onInsert }: Br
 
   return (
     <div>
-      <SamplesToggle type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <VoiceSamplesToggle type="button" onClick={() => onToggle(!open)} aria-expanded={open}>
         <span>{open ? '▾' : '▸'} Use a voice sample</span>
-        <SamplesMeta>3 sources · labeled</SamplesMeta>
-      </SamplesToggle>
+        <VoiceSamplesMeta>3 sources · labeled</VoiceSamplesMeta>
+      </VoiceSamplesToggle>
       {open && (
         <SamplesBody>
           {!canAuthor && (

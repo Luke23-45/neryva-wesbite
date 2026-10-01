@@ -36,7 +36,9 @@ export const SampleRow = styled.button<{ $disabled?: boolean }>`
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   opacity: ${({ $disabled }) => ($disabled ? 0.55 : 1)};
 
-  &:hover:not(:disabled) {
+  /* W-5: disabled rows are aria-disabled (still focusable/tooltip-capable),
+     so the hover affordance must exclude them too — never suggest action. */
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     border-color: ${({ theme }) => theme.app.border.hover};
   }
 
@@ -123,6 +125,15 @@ export const Excerpt = styled.div`
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+`;
+
+/** Right-aligned provenance choice above an org row that has both a
+ *  published and a draft version — flat, theme-owned, never a nested
+ *  button (the row itself is a button). */
+export const ProvenanceBar = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const RowError = styled.div.attrs({ role: 'alert' })`

@@ -68,6 +68,43 @@ export const DefaultNote = styled.div`
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
+/** "Use a voice sample" toggle — flat neutral card, never the blue info
+ *  tint (which read as a selection state). Collapsed, expanded, hover,
+ *  and focus all stay in the console's flat palette: hover brightens the
+ *  border, focus-visible keeps the standard token outline. */
+export const VoiceSamplesToggle = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.spacing.s3};
+  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
+  border-radius: ${({ theme }) => theme.radii.xl};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  color: ${({ theme }) => theme.app.text.primary};
+  font-size: ${({ theme }) => theme.app.type.title};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  letter-spacing: ${({ theme }) => theme.typography.letterSpacing.micro};
+  font-family: inherit;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.hover};
+  }
+
+  &:focus-visible {
+    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: ${({ theme }) => theme.spacing.px2};
+  }
+`;
+
+export const VoiceSamplesMeta = styled.span`
+  font-size: ${({ theme }) => theme.app.type.caption};
+  font-weight: ${({ theme }) => theme.typography.weights.regular};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
 /** Viewer: the voice as a reading card. */
 export const VoiceCard = styled.figure`
   margin: 0;

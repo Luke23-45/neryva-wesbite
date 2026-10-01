@@ -22,7 +22,7 @@ export function CredentialsRail({ canRead }: { canRead: boolean }) {
       : credCount === undefined
         ? '…'
         : credCount === 0
-          ? 'none'
+          ? '0 configured'
           : `${credCount} configured`;
   const keyMgmt = !canRead
     ? '—'

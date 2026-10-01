@@ -162,7 +162,7 @@ export function ShipSection({
   if (!versionId) {
     return (
       <Panel title="Ship" subtitle="Gates, then publish">
-        <Muted>No draft selected — save one in the editor first. Only DRAFT/VALID versions publish.</Muted>
+        <Muted>No draft selected — save one in the editor first. Only DRAFT, VALID, and VALIDATING versions publish.</Muted>
       </Panel>
     );
   }

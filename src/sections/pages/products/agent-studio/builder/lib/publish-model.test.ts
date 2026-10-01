@@ -246,12 +246,50 @@ describe('derivePublishReadiness (single derivation)', () => {
 
   it('fails required-but-absent while everything else passes', () => {
     const derived = derivePublishReadiness(readinessInput());
-    expect(derived.rows).toHaveLength(6);
+    expect(derived.rows).toHaveLength(7);
+    expect(derived.rows[0].id).toBe('status');
+    expect(derived.rows.find((r) => r.id === 'status')?.ok).toBe(true);
     expect(derived.rows.find((r) => r.id === 'required')?.ok).toBe(false);
     expect(derived.rows.find((r) => r.id === 'block')?.ok).toBe(true);
     expect(derived.rows.find((r) => r.id === 'knowledge')?.ok).toBe(true);
     expect(derived.verdict).toBe('no-go');
     expect(derived.publishable).toBe(false);
+  });
+
+  it('gates a non-publishable version status first — a PUBLISHED active row with no DRAFT reads No-Go, never "Go → confirm → 400"', () => {
+    const derived = derivePublishReadiness(
+      readinessInput({
+        version: { ...draftVersion('2026-09-18T13:00'), status: 'PUBLISHED' },
+        evalRuns: [passRun()],
+      }),
+    );
+    const statusRow = derived.rows.find((r) => r.id === 'status');
+    expect(statusRow?.ok).toBe(false);
+    // Honest copy names the actual status and which statuses can publish.
+    expect(statusRow?.detail).toContain('PUBLISHED');
+    expect(statusRow?.detail).toContain('DRAFT, VALID, and VALIDATING');
+    // The row rides the existing 'status' refusal fix (classifyPublishRefusal
+    // maps the engine 400's `status` details key to the same kind).
+    expect(statusRow?.fix).toEqual(refusalFix('status'));
+    // Server order: status refuses before any other gate.
+    expect(derived.rows[0].id).toBe('status');
+    expect(derived.verdict).toBe('no-go');
+    expect(derived.publishable).toBe(false);
+    expect(derived.blockers).toBe(1);
+  });
+
+  it('passes the status gate for every publishable status and fails a null one', () => {
+    for (const status of ['DRAFT', 'VALID', 'VALIDATING'] as const) {
+      const derived = derivePublishReadiness(readinessInput({ version: { ...draftVersion(), status } }));
+      const statusRow = derived.rows.find((r) => r.id === 'status');
+      expect(statusRow?.ok).toBe(true);
+      expect(statusRow?.detail).toContain(status);
+    }
+    const unknown = derivePublishReadiness(readinessInput({ version: { ...draftVersion(), status: null } }));
+    const statusRow = unknown.rows.find((r) => r.id === 'status');
+    expect(statusRow?.ok).toBe(false);
+    expect(statusRow?.detail).toContain('unknown');
+    expect(unknown.publishable).toBe(false);
   });
 
   it('goes green on a fresh PASS covering the draft', () => {

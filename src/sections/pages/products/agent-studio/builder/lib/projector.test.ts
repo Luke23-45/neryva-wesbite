@@ -266,7 +266,18 @@ describe('projector samples node', () => {
     const input = base({});
     expect(statusOf(input, 'samples')).toBe('untouched');
     expect(subtitleOf(input, 'samples')).toBeNull();
-    expect(nodeOf(input, 'samples')?.hint).toBe('Configured in the Samples section');
+    expect(nodeOf(input, 'samples')?.hint).toBe('Add examples to steer replies');
+  });
+
+  it('never contradicts its untouched status in the hint (nav tooltip)', () => {
+    // The nav rail renders statusText = subtitle ?? hint as the row
+    // tooltip next to the "Not configured" badge — a hint asserting
+    // configuration ("Configured in the Samples section") contradicted it.
+    const input = base({});
+    const node = nodeOf(input, 'samples');
+    expect(node?.status).toBe('untouched');
+    const description = (node?.subtitle as string | null) ?? node?.hint ?? '';
+    expect(description).not.toMatch(/configured/i);
   });
 });
 
@@ -276,7 +287,19 @@ describe('projector credentials node', () => {
     // absent summary graded 'info' spun the "Syncing" badge forever.
     const input = base({ credentialsSummary: undefined });
     expect(statusOf(input, 'credentials')).toBe('untouched');
-    expect(nodeOf(input, 'credentials')?.hint).toBe('Configured in the Credentials section');
+    expect(nodeOf(input, 'credentials')?.hint).toBe('Connect provider keys in the Credentials section');
+  });
+
+  it('never contradicts its untouched status in the hint (nav tooltip)', () => {
+    // Same contradiction class as the samples node: with no draft or an
+    // unreadable summary the nav tooltip must not claim configuration
+    // beside the "Not configured" badge.
+    for (const overrides of [{ credentialsSummary: undefined }, { definition: null }]) {
+      const node = nodeOf(base(overrides), 'credentials');
+      expect(node?.status).toBe('untouched');
+      const description = (node?.subtitle as string | null) ?? node?.hint ?? '';
+      expect(description).not.toMatch(/configured/i);
+    }
   });
 
   it('grades configured, empty, and expired', () => {

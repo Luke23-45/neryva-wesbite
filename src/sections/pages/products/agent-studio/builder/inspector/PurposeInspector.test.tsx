@@ -72,7 +72,10 @@ function shell(children: ReactNode) {
     routeTree: rootRoute.addChildren([indexRoute]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
-  return router.load().then(() => render(<RouterProvider router={router} />));
+  return router.load().then(() => {
+    render(<RouterProvider router={router} />);
+    return router;
+  });
 }
 
 describe('PurposeInspector (new mode)', () => {
@@ -89,13 +92,16 @@ describe('PurposeInspector (new mode)', () => {
         onFormState={onFormState}
       />,
     );
-    expect(screen.getByText(/needs 2–128/)).toBeTruthy();
+    expect(screen.getByText(/2–128 characters/)).toBeTruthy();
     expect(screen.getByText(/512/)).toBeTruthy();
     const name = screen.getByPlaceholderText('e.g. Billing concierge');
     fireEvent.change(name, { target: { value: 'A' } });
     expect(onFormState).toHaveBeenCalledWith(expect.objectContaining({ valid: false, dirty: true }));
+    // The 1-char name disables creation AND says why, inline.
+    expect(screen.getByText('Needs 2–128 characters')).toBeTruthy();
     fireEvent.change(name, { target: { value: 'Billing concierge' } });
     expect(onFormState).toHaveBeenCalledWith(expect.objectContaining({ valid: true, dirty: true }));
+    expect(screen.queryByText('Needs 2–128 characters')).toBeNull();
   });
 
   it('explains viewer denial instead of silently disabling', async () => {
@@ -128,7 +134,7 @@ describe('PurposeInspector (build mode)', () => {
       />,
     );
     expect(screen.getByText('Billing Support')).toBeTruthy();
-    expect(screen.getByText('No description yet.')).toBeTruthy();
+    expect(screen.getByText(/No description yet/)).toBeTruthy();
     // The rename lock is gone — authors get the pencil instead.
     expect(screen.queryByText(/no rename verb/)).toBeNull();
     expect(screen.getByRole('button', { name: /edit agent name and description/i })).toBeTruthy();
@@ -152,7 +158,7 @@ describe('PurposeInspector (build mode)', () => {
   });
 
   it('opens the shared clone picker instead of one-shot cloning', async () => {
-    await shell(
+    const router = await shell(
       <PurposeInspector
         mode="build"
         agentId="agent-1"
@@ -163,8 +169,10 @@ describe('PurposeInspector (build mode)', () => {
       />,
     );
     fireEvent.click(screen.getByText('Clone agent'));
-    expect(screen.getByText(/original is untouched/)).toBeTruthy();
-    expect(screen.getByDisplayValue('Billing Support (copy)')).toBeTruthy();
+    // The clone action navigates to the shared clone route (with the source
+    // pre-selected) — it does not clone inline.
+    expect(router.state.location.pathname).toBe('/agent-studio/agents/clone');
+    expect(router.state.location.search).toMatchObject({ sourceId: 'agent-1' });
   });
 
   it('enters edit mode with the identity prefilled and cancels cleanly', async () => {
@@ -183,9 +191,9 @@ describe('PurposeInspector (build mode)', () => {
     // Whole identity block is editable, prefilled from the saved values.
     expect(screen.getByDisplayValue('Billing Support')).toBeTruthy();
     expect(screen.getByDisplayValue('Handles billing questions')).toBeTruthy();
-    expect(screen.getByText(/needs 2–128/)).toBeTruthy();
+    expect(screen.getByText(/2–128 characters/)).toBeTruthy();
     // Save is disabled until something actually changes.
-    expect(screen.getByRole('button', { name: /^save$/i })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: /save changes/i })).toHaveProperty('disabled', true);
     // Cancel discards without calling the endpoint.
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(screen.getByText('Billing Support')).toBeTruthy();
@@ -209,10 +217,10 @@ describe('PurposeInspector (build mode)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /edit agent name and description/i }));
     fireEvent.change(screen.getByDisplayValue('Billing Support'), { target: { value: 'Billing Concierge' } });
-    fireEvent.change(screen.getByPlaceholderText('What this agent does'), {
+    fireEvent.change(screen.getByPlaceholderText('What does this agent do?'), {
       target: { value: 'Owns every billing conversation' },
     });
-    const save = screen.getByRole('button', { name: /^save$/i });
+    const save = screen.getByRole('button', { name: /save changes/i });
     expect(save).toHaveProperty('disabled', false);
     fireEvent.click(save);
     expect(updateIdentityMock.mutate).toHaveBeenCalledWith(
@@ -220,8 +228,8 @@ describe('PurposeInspector (build mode)', () => {
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
     );
     // Success exits edit mode back to the read rows.
-    expect(screen.getByText('No description yet.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /^save$/i })).toBeNull();
+    expect(screen.getByText(/No description yet/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
   });
 
   it('keeps save disabled for an invalid name in edit mode', async () => {
@@ -238,8 +246,38 @@ describe('PurposeInspector (build mode)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /edit agent name and description/i }));
     fireEvent.change(screen.getByDisplayValue('Billing Support'), { target: { value: 'x' } });
-    expect(screen.getByRole('button', { name: /^save$/i })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: /save changes/i })).toHaveProperty('disabled', true);
+    // The invalid name disables Save AND says why, inline.
+    expect(screen.getByText('Needs 2–128 characters')).toBeTruthy();
     expect(updateIdentityMock.mutate).not.toHaveBeenCalled();
+  });
+
+  it('reports dirty while the build-mode edit form holds unsaved changes', async () => {
+    const onFormState = vi.fn();
+    await shell(
+      <PurposeInspector
+        mode="build"
+        agentId="agent-1"
+        agentName="Billing Support"
+        description={null}
+        canAuthor
+        role="owner"
+        onFormState={onFormState}
+      />,
+    );
+    // Read state: nothing to save.
+    expect(onFormState).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false }));
+    fireEvent.click(screen.getByRole('button', { name: /edit agent name and description/i }));
+    onFormState.mockClear();
+    // Edit form opened, nothing typed yet — not dirty. The effect only
+    // re-fires on change, so we assert no dirty:true was reported (dirty
+    // was already false and stays false).
+    expect(onFormState).not.toHaveBeenCalledWith(expect.objectContaining({ dirty: true }));
+    fireEvent.change(screen.getByDisplayValue('Billing Support'), { target: { value: 'Billing Concierge' } });
+    expect(onFormState).toHaveBeenCalledWith(expect.objectContaining({ dirty: true }));
+    // Reverting to the saved value clears dirty again.
+    fireEvent.change(screen.getByDisplayValue('Billing Concierge'), { target: { value: 'Billing Support' } });
+    expect(onFormState).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: false }));
   });
 
   it('recovers inline from a 409 with the one-tap suggestion', async () => {
@@ -261,10 +299,10 @@ describe('PurposeInspector (build mode)', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /edit agent name and description/i }));
     fireEvent.change(screen.getByDisplayValue('Billing Support'), { target: { value: 'Taken Name' } });
-    fireEvent.click(screen.getByRole('button', { name: /^save$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     // Stays in edit mode with the inline name-taken recovery.
     expect(screen.getByText('That name is taken')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /^save$/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeTruthy();
     // One tap takes the suggested free name.
     fireEvent.click(screen.getByRole('button', { name: /use “taken name 2”/i }));
     expect(screen.getByDisplayValue('Taken Name 2')).toBeTruthy();
@@ -387,5 +425,55 @@ describe('PurposeInspector save handle (per-section "Save Identity")', () => {
       ref.current?.save();
     });
     expect(updateIdentityMock.mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('PurposeInspector MetaButton hit boxes', () => {
+  // The meta actions ("Clone agent", "Open in Engine Room") are SUPPOSED to
+  // look small (12px caption + 6px padding ≈ 29px tall). The requirement is
+  // a 44px *invisible hit area* with visuals unchanged, delivered via
+  // ::after expansion. These tests assert the hit-box contract, never the
+  // visible size.
+  function injectedCss(): string {
+    return Array.from(document.head.querySelectorAll('style'))
+      .map((tag) => tag.textContent ?? '')
+      .join('\n');
+  }
+
+  function afterRuleFor(button: HTMLElement): string | null {
+    const css = injectedCss().replace(/\s+/g, '');
+    const classTokens = (button.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter((t) => t && !t.startsWith('sc-'));
+    expect(classTokens.length).toBeGreaterThan(0);
+    return (
+      classTokens
+        .map((token) => {
+          const idx = css.indexOf(`.${token}::after{`);
+          return idx === -1 ? null : css.slice(idx, css.indexOf('}', idx) + 1);
+        })
+        .find((rule) => rule !== null) ?? null
+    );
+  }
+
+  it.each(['Clone agent', 'Open in Engine Room'])('%s has a 44px hit box via ::after', async (label) => {
+    await shell(
+      <PurposeInspector
+        mode="build"
+        agentId="agent-1"
+        agentName="Billing Support"
+        description={null}
+        canAuthor
+        role="owner"
+      />,
+    );
+    const button = screen.getByRole('button', { name: label });
+    // MetaButton renders ~29px tall; inset -10px top/bottom -> ~49px hit box.
+    expect(getComputedStyle(button).position).toBe('relative');
+    const rule = afterRuleFor(button);
+    expect(rule).toBeTruthy();
+    expect(rule).toMatch(/content:(""|'')/);
+    expect(rule).toContain('position:absolute');
+    expect(rule).toContain('inset:-10px0');
   });
 });

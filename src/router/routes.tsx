@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { createRoute, redirect } from '@tanstack/react-router';
 import { rootRoute } from './root';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 
 // Pages
 import HomePage from '@pages/home/HomePage';
@@ -350,6 +351,24 @@ export const verifyEmailRoute = createRoute({
 // All routes share a single dark chrome via the <AgentStudioShell/> layout
 // which renders the sidebar/topbar and an <Outlet/> for the page.
 
+/**
+ * P1 flow-chrome: shown while the shell's async beforeLoad gate runs. A
+ * cold unauthenticated load spends the silent-auth iframe window (up to
+ * ~12s on a dead session) inside requireEngineSession — with no pending UI
+ * the shell sat on a blank white page until the /auth redirect fired. Same
+ * skeleton the SessionGate renders while the session is unknown: loading
+ * chrome in the gate window, never blank.
+ */
+function AgentStudioGatePending() {
+  return (
+    <div style={{ padding: 24, maxWidth: 720 }} aria-label="Loading agent studio">
+      <Skeleton $h="22px" $w="240px" />
+      <Skeleton $h="14px" />
+      <Skeleton $h="14px" $w="70%" />
+    </div>
+  );
+}
+
 export const agentStudioRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/agent-studio',
@@ -360,6 +379,7 @@ export const agentStudioRoute = createRoute({
     await requireEngineSession();
     await requireOnboardedSession();
   },
+  pendingComponent: AgentStudioGatePending,
   component: AgentStudioShell,
 });
 

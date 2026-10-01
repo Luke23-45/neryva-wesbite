@@ -274,6 +274,25 @@ export const OverrideToggle = styled.div`
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
+/**
+ * Inline switch + visible text pair — used where the switch's own label is
+ * the control's only visible label. The Switch component renders no visible
+ * label text (label prop = accessible name only), so the visible copy lives
+ * here, styled to match the switch's former label treatment.
+ */
+export const SwitchLabelPair = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.px10};
+`;
+
+export const SwitchLabelText = styled.label`
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
+  cursor: pointer;
+  user-select: none;
+`;
+
 export const OverrideGrid = styled.div`
   display: flex;
   flex-direction: column;

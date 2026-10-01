@@ -17,6 +17,7 @@ import {
   MODE_COPY,
   PII_NON_RETRO_COPY,
   PII_OFF_COPY,
+  PII_SINK_SCOPE_COPY,
   type GuardrailPolicyState,
 } from './guardrails-model';
 
@@ -28,7 +29,7 @@ function fullPolicy(overrides?: Partial<GuardrailPolicyState>): GuardrailPolicyS
     execution_mode: 'blocking',
     pii_entities: ['email', 'phone', 'payment_card', 'government_id', 'api_keys', 'addresses'],
     pii_action: 'token',
-    pii_applies_to: ['storage', 'logs'],
+    pii_applies_to: ['storage'],
     notify_owner: false,
     attach_to_trace: true,
     deny_topics: [],
@@ -73,21 +74,22 @@ describe('resolvePolicyBehavior (engine resolver mirror)', () => {
     expect(resolvePolicyBehavior('disabled', 'logging').behavior).toBe('disabled');
     expect(resolvePolicyBehavior('none', 'logging').consequence).toMatch(/pass through/);
   });
-  it('strict blocks borderline only in blocking mode', () => {
+  it('strict blocks borderline only in blocking mode; logging states the deny exception', () => {
     expect(resolvePolicyBehavior('strict', 'blocking').consequence).toMatch(/refuses borderline/);
     const logging = resolvePolicyBehavior('strict', 'logging');
     expect(logging.behavior).toBe('strict');
-    expect(logging.consequence).toMatch(/nothing refused/);
+    expect(logging.consequence).toMatch(/deny topics still refused on contact/);
   });
   it('default, brand-safe, permissive, and unknown names all resolve standard', () => {
     for (const name of ['default', 'brand-safe', 'permissive', '', 'acme-custom']) {
       expect(resolvePolicyBehavior(name, 'blocking').behavior).toBe('standard');
     }
   });
-  it('standard in logging mode never promises refusal', () => {
+  it('standard in logging mode states the deny-topic exception, never a screening refusal', () => {
     const consequence = resolvePolicyBehavior('default', 'logging').consequence;
-    expect(consequence).toMatch(/nothing refused/);
-    expect(consequence).not.toMatch(/is refused/);
+    expect(consequence).toMatch(/verdicts recorded/);
+    expect(consequence).toMatch(/deny topics still refused on contact/);
+    expect(consequence).not.toMatch(/refuses violating/);
   });
   it('standard in blocking mode states refusal', () => {
     expect(resolvePolicyBehavior('default', 'blocking').consequence).toMatch(/refuses violating/);
@@ -156,9 +158,11 @@ describe('PII field parsers', () => {
     expect(parsePiiAction('shred')).toBe('token');
     expect(parsePiiAction(undefined)).toBe('token');
   });
-  it('parsePiiSinks defaults garbage to storage+logs, keeps explicit selections', () => {
-    expect(parsePiiSinks(undefined)).toEqual(['storage', 'logs']);
-    expect(parsePiiSinks(['traces', 'nope'])).toEqual(['traces']);
+  it('parsePiiSinks pins garbage and legacy values to storage (P1: logs/traces inert), keeps explicit []', () => {
+    expect(parsePiiSinks(undefined)).toEqual(['storage']);
+    expect(parsePiiSinks(['storage', 'logs'])).toEqual(['storage']);
+    expect(parsePiiSinks(['traces', 'nope'])).toEqual(['storage']);
+    expect(parsePiiSinks(['logs'])).toEqual(['storage']);
     expect(parsePiiSinks([])).toEqual([]);
   });
 });
@@ -185,8 +189,11 @@ describe('copy constants', () => {
     expect(PII_NON_RETRO_COPY).toMatch(/past runs keep/);
     expect(PII_OFF_COPY).toMatch(/reach storage/);
     expect(CUSTOM_NAME_COPY).toMatch(/screens like Default/);
-    expect(MODE_COPY.logging).toMatch(/nothing is refused/);
+    expect(MODE_COPY.logging).toMatch(/deny topics still refused on contact/);
     expect(MODE_COPY.blocking).toMatch(/is refused/);
+    // P1: the sink scope copy is storage-only and says so plainly.
+    expect(PII_SINK_SCOPE_COPY).toMatch(/Committed run results \(storage\)/);
+    expect(PII_SINK_SCOPE_COPY).toMatch(/nothing to redact from logs or traces/);
   });
 });
 

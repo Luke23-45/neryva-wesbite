@@ -130,8 +130,48 @@ describe('TrySection (builder response spine)', () => {
     const def = definitionWith('## Role\nR.\n');
     def.model_policy.allowed_models = ['a/bad'];
     await shell({ definition: def });
-    expect(screen.getByText(/No usable model/)).toBeTruthy();
+    // The prereq banner AND the empty-state echo read the same blocked copy
+    // (finding 2) — one coherent dead end.
+    expect(screen.getAllByText(/No usable model/)).toHaveLength(2);
     fireEvent.click(screen.getByText(/Fix in Model/));
+  });
+
+  it('disables the Run button and names the blocker when no allowed model is usable (TRY-M1/1a)', async () => {
+    const def = definitionWith('## Role\nR.\n');
+    def.model_policy.allowed_models = ['a/bad'];
+    await shell({ definition: def });
+    const input = screen.getByLabelText(/Test prompt/);
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    const button = screen.getByText(/Run test/).closest('button') as HTMLButtonElement;
+    // Typed prompt, still disarmed: the same usable-model signal as the
+    // prereq block wires into the button.
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('title')).toMatch(/No usable model/);
+    fireEvent.click(screen.getByText(/Run test/));
+    expect(sessionMock.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps the Run button armed when a usable model exists (TRY-M1/1a)', async () => {
+    await shell();
+    const input = screen.getByLabelText(/Test prompt/);
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    const button = screen.getByText(/Run test/).closest('button') as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('title')).toBe('Run pinned to this version');
+  });
+
+  it('renders a singular blocked state when no usable model exists (finding 2)', async () => {
+    const def = definitionWith('## Role\nR.\n');
+    def.model_policy.allowed_models = ['a/bad'];
+    await shell({ definition: def });
+    // The prompt field is disabled with the blocked copy — it must not
+    // invite input that cannot run.
+    const input = screen.getByLabelText(/Test prompt/) as HTMLTextAreaElement;
+    expect(input.disabled).toBe(true);
+    expect(input.getAttribute('placeholder')).toMatch(/No usable model/);
+    // The thread area echoes the blocked copy instead of the "Ask anything"
+    // invite — one coherent dead end, never two contradictory messages.
+    expect(screen.queryByText(/Ask anything/)).toBeNull();
   });
 
   it('renders viewers read-only with the role truth, never the dock', async () => {

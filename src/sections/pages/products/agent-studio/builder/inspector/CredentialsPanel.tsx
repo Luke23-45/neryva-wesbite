@@ -12,6 +12,7 @@ import {
 } from '@hooks/studio/useSetupProviders';
 import { useEnterpriseStatus } from '@hooks/engine/billing';
 import { SkeletonRows } from './SkeletonRows';
+import { InlineRetry } from './InlineRetry';
 import { EmptyState } from './InstructionsSection.styles';
 import {
   CheckRow,
@@ -54,6 +55,14 @@ export interface CredentialsPanelProps {
   connectOpen: boolean;
   onConnectOpenChange: (open: boolean) => void;
   onRevokeOpenChange: (id: string | null) => void;
+  /**
+   * Suppress the BYOK enterprise notice. The notice has one home — the
+   * Credentials section (CredentialsNode). Embedded mounts (the Model
+   * section's Credentials group) set this so non-enterprise orgs don't read
+   * the same paragraph twice; the enterprise connect/rotate/revoke flows are
+   * unaffected.
+   */
+  suppressEnterpriseNotice?: boolean;
 }
 
 /**
@@ -62,13 +71,19 @@ export interface CredentialsPanelProps {
  * compromised flag (proof-free, stated), history that is never deleted.
  * Reads stay open to permitted roles; every mutate control is governed.
  */
-export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highlightProvider, revokeOpenId, connectOpen, onConnectOpenChange, onRevokeOpenChange }: CredentialsPanelProps) {
+export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highlightProvider, revokeOpenId, connectOpen, onConnectOpenChange, onRevokeOpenChange, suppressEnterpriseNotice = false }: CredentialsPanelProps) {
   const credentials = useProviderCredentials({ enabled: canRead });
   // BYOK is enterprise-only at launch (user decision 2026-09-28). Non-enterprise
   // orgs use Neryva-managed platform credentials; the backend 403s BYOK creation
   // for them regardless of what the UI shows.
   const enterprise = useEnterpriseStatus({ enabled: canRead });
+  // Denial must be proven (loaded && data !== true): while the query is
+  // pending an enterprise owner would otherwise read the denied copy, and on
+  // failure the copy would be a lie. Pending renders a skeleton, failure an
+  // honest error with retry.
   const isEnterprise = enterprise.data === true;
+  const enterprisePending = enterprise.isPending;
+  const enterpriseFailed = !enterprise.isPending && enterprise.isError;
   const isEmpty =
     credentials.data !== undefined && !credentials.isError && credentials.data.length === 0;
 
@@ -101,13 +116,25 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
         />
       ))}
       {canGovern ? (
-        !isEnterprise ? (
-          <DeniedNote>
-            Bring Your Own API Key is an Enterprise feature. Your organization uses
-            Neryva-managed platform credentials — select any provider and model in the Model section
-            and Neryva handles billing. Contact sales to enable BYOK with an enterprise
-            commitment.
+        enterprisePending ? (
+          <SkeletonRows rows={2} />
+        ) : enterpriseFailed ? (
+          <DeniedNote role="alert">
+            Enterprise status couldn’t be checked — BYOK controls are hidden
+            until it loads.{' '}
+            <InlineRetry type="button" onClick={() => { void enterprise.refetch(); }}>
+              Try again
+            </InlineRetry>
           </DeniedNote>
+        ) : !isEnterprise ? (
+          suppressEnterpriseNotice ? null : (
+            <DeniedNote>
+              Bring Your Own API Key is an Enterprise feature. Your organization uses
+              Neryva-managed platform credentials — select any provider and model in the Model section
+              and Neryva handles billing. Contact sales to enable BYOK with an enterprise
+              commitment.
+            </DeniedNote>
+          )
         ) : connectOpen ? (
           <ConnectForm
             key={highlightProvider ?? 'none'}

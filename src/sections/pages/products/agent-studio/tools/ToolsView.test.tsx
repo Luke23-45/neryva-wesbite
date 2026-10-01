@@ -140,8 +140,9 @@ describe('ToolsView catalog (C06)', () => {
 
   it('toggles "Show disabled tools" exactly once per label click', async () => {
     await shell();
-    // The switch renders its own label; there must be no wrapping <label>
-    // that could double-activate the toggle in real browsers.
+    // The visible "Show disabled tools" text is a sibling <label htmlFor>
+    // (the switch itself renders no visible label text); it must not wrap
+    // the control, which would double-activate the toggle in real browsers.
     const toggle = screen.getByRole('switch', { name: 'Show disabled tools' });
     expect(toggle.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(screen.getByText('Show disabled tools'));

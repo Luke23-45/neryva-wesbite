@@ -23,11 +23,13 @@ export function isDescriptionValid(description: string): boolean {
   return description.trim().length <= DESCRIPTION_MAX;
 }
 
-/** One-tap rename recovery: "Billing" → "Billing 2" → "Billing 3" … */
+/** One-tap rename recovery: "Billing" → "Billing 2" → "Billing 3" … — never exceeds NAME_MAX. */
 export function suggestRename(name: string): string {
-  const match = /^(.*)\s(\d+)$/.exec(name.trim());
-  if (match) {
-    return `${match[1]} ${Number(match[2]) + 1}`;
-  }
-  return `${name.trim()} 2`;
+  const trimmed = name.trim();
+  const match = /^(.*)\s(\d+)$/.exec(trimmed);
+  const stem = match ? match[1] : trimmed;
+  const suffix = ` ${match ? Number(match[2]) + 1 : 2}`;
+  // A name already at NAME_MAX would overflow by appending — shorten the
+  // stem to fit the suffix instead of producing an invalid suggestion.
+  return `${stem.slice(0, NAME_MAX - suffix.length).trimEnd()}${suffix}`;
 }

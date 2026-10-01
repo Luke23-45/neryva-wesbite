@@ -50,7 +50,9 @@ const EmptyNote = styled.div`
  * builder guardrails satellite; this panel deep-links out and never forks it.
  *
  * Watch-out law: nothing here implies engine-side blocking for logging-mode
- * verdicts — logging rows state "recorded, nothing refused" explicitly.
+ * screening verdicts — logging rows state the screening law explicitly
+ * (verdicts recorded), with the deny-topic exception: deny topics still
+ * refuse on contact in any execution mode.
  */
 export function GuardrailsPanel({ agentId }: { agentId: string }) {
   const form = useAssistantDefinition(agentId, { prefer: 'active' });
@@ -95,7 +97,7 @@ export function GuardRows({
     <>
       <p style={{ margin: '0 0 8px' }}>
         <StatusPill tone={mode === 'logging' ? 'warning' : 'success'} dot={false}>
-          {mode === 'logging' ? 'Logging — verdicts recorded, nothing refused' : 'Blocking'}
+          {mode === 'logging' ? 'Logging — screening verdicts recorded; deny topics still refused' : 'Blocking'}
         </StatusPill>
       </p>
       <GuardList>
@@ -117,7 +119,7 @@ export function GuardRows({
           <StatusPill tone={pii ? 'success' : 'warning'} dot={false}>
             PII
           </StatusPill>
-          <span>{pii ? 'redaction on' : 'redaction off — identifiers reach storage, logs, and the provider'}</span>
+          <span>{pii ? 'redaction on' : 'redaction off — identifiers reach storage and the provider'}</span>
         </GuardItem>
       </GuardList>
       <Whisper>{PII_NON_RETRO_COPY}</Whisper>

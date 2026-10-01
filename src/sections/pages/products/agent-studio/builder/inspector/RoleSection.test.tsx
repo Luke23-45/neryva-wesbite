@@ -84,7 +84,7 @@ function backToPage() {
 }
 
 function saveAndClose() {
-  fireEvent.click(screen.getByRole('button', { name: 'Save & close' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
 }
 
 /** Switch the open editor's surface (Plain / Markdown / JSON). */
@@ -96,7 +96,9 @@ describe('RoleSection', () => {
   it('renders all six optional fields as cards with honest empty state — no invented persona', () => {
     shell();
     for (const name of ['Role', 'Goal', 'Traits', 'Communication style', 'Knowledge areas', 'Avoid']) {
-      expect(screen.getByRole('button', { name: `Edit ${name}` })).toBeInTheDocument();
+      // The edit affordance may appear in the card and the section header —
+      // assert it exists (at least once), never that it is unique.
+      expect(screen.getAllByRole('button', { name: `Edit ${name}` }).length).toBeGreaterThan(0);
     }
     expect(screen.getByText('No role yet')).toBeInTheDocument();
     // No fake persona anywhere on the page.
@@ -171,7 +173,7 @@ describe('RoleSection', () => {
     fireEvent.change(screen.getByLabelText('Role content (plain text)'), {
       target: { value: 'x'.repeat(201) },
     });
-    // Save & close is fail-closed on the cap, so push the draft and read the
+    // Done is fail-closed on the cap, so push the draft and read the
     // section-level hold.
     await pushDraft();
     backToPage();
@@ -251,7 +253,7 @@ describe('RoleSection', () => {
       fireEvent.keyDown(area, { key: 'Escape' });
     });
     // The editor closed — the card is back and nothing was pushed.
-    expect(screen.getByRole('button', { name: 'Edit Role' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Edit Role' }).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText('Role content (plain text)')).toBeNull();
   });
 

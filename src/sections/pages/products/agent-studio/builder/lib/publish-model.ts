@@ -344,7 +344,7 @@ export function gradeShip(input: {
   }
 }
 
-export type PublishGateId = 'shape' | 'models' | 'tools' | 'block' | 'required' | 'knowledge';
+export type PublishGateId = 'status' | 'shape' | 'models' | 'tools' | 'block' | 'required' | 'knowledge';
 
 export interface PublishReadinessRow {
   id: PublishGateId;
@@ -429,9 +429,9 @@ const READINESS_EMPTY: DerivedReadiness = {
  * The publish gate read, derived once (PLAN §5 — the hook feeds it query
  * data; the ship section and the detail panel share the hook's output,
  * never two derivations). Pre-flight mirrors the server order
- * (`assistants.service.ts:693-802`): shape → models → tools → BLOCK →
- * required → degraded. Composed reads only — no dedicated required-checks
- * endpoint exists (PLAN §8 D1).
+ * (`assistants.service.ts:1241-1243`): status → shape → models → tools →
+ * BLOCK → required → degraded. Composed reads only — no dedicated
+ * required-checks endpoint exists (PLAN §8 D1).
  */
 export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness {
   const { version } = input;
@@ -484,6 +484,29 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
   });
 
   const rows: PublishReadinessRow[] = [];
+
+  // — Version status (the FIRST server refusal: publish 400s
+  //   `{ status: 'version status X cannot be published' }` for anything not in
+  //   PUBLISHABLE_STATUSES — `assistants.service.ts:1241-1243`. The working
+  //   version falls back to the active row when no DRAFT exists
+  //   (`useAgentAuthoring.ts:189-208`), so a stale PUBLISHED row can arrive
+  //   here; it must read No-Go, never "Go → confirm → 400".)
+  {
+    const statusPublishable = isPublishableStatus(version.status);
+    rows.push({
+      id: 'status',
+      title: 'Version status publishes',
+      detail: statusPublishable
+        ? `Status ${version.status}: DRAFT, VALID, and VALIDATING versions publish.`
+        : version.status === null
+          ? 'The version status is unknown — only DRAFT, VALID, and VALIDATING versions publish. Save a fresh draft.'
+          : `Version status ${version.status} cannot publish — only DRAFT, VALID, and VALIDATING versions can. Save a fresh draft.`,
+      extra: null,
+      ok: statusPublishable,
+      ackable: false,
+      fix: refusalFix('status'),
+    });
+  }
 
   // — Shape + instructions (checkDefinitionCaps: instructions, sizes, secrets) —
   {

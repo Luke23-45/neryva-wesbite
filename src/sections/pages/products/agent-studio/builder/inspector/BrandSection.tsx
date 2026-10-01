@@ -142,6 +142,17 @@ export function BrandSection({
   const [pendingVoice, setPendingVoice] = useState<{ text: string; source: string } | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditingSession | null>(null);
+  /**
+   * "Use a voice sample" collapse state lives at the section root. The
+   * focused sub-editor swaps the whole page subtree for <BlockEditor/>,
+   * unmounting BrandSamples — collapse state held inside it reset to
+   * startOpen on every editor open/close (a collapsed panel re-expanded
+   * whenever the brand was empty). The root survives the swap, so an
+   * explicit user toggle is never lost. null = never toggled: fall back
+   * to the per-doc default. Reset per doc like the block state below.
+   */
+  const [samplesOpen, setSamplesOpen] = useState<boolean | null>(null);
+  const [samplesDocKey, setSamplesDocKey] = useState(initKey);
   const blockRef = useRef(block);
   useEffect(() => {
     blockRef.current = block;
@@ -158,6 +169,10 @@ export function BrandSection({
   if (docKey !== initKey) {
     setDocKey(initKey);
     if (!dirty) setBlock(source);
+  }
+  if (samplesDocKey !== initKey) {
+    setSamplesDocKey(initKey);
+    setSamplesOpen(null);
   }
 
   useEffect(() => {
@@ -329,7 +344,7 @@ export function BrandSection({
           </span>
           <span>~{estimateBrandTokens(chars).toLocaleString()} tokens (est.)</span>
         </CounterRow>
-        <BrandSamples assistantId={assistantId} canAuthor={false} startOpen={false} onInsert={() => undefined} />
+        <BrandSamples assistantId={assistantId} canAuthor={false} open={samplesOpen ?? false} onToggle={setSamplesOpen} onInsert={() => undefined} />
       </SectionPage>
     );
   }
@@ -427,7 +442,7 @@ export function BrandSection({
           </Whisper>
         ))}
 
-        <BrandSamples assistantId={assistantId} canAuthor startOpen={isBrandEmpty(block)} onInsert={applySample} />
+        <BrandSamples assistantId={assistantId} canAuthor open={samplesOpen ?? isBrandEmpty(block)} onToggle={setSamplesOpen} onInsert={applySample} />
       </SectionPage>
 
       {conflict && (

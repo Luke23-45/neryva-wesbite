@@ -114,7 +114,7 @@ export function PublishPanel({
         title="Publish"
         subtitle="Atomic pointer swing with every gate evaluated first — BLOCK, required checks, tool pins, models, knowledge. Nothing auto-publishes."
       >
-        <Muted>No publishable draft — save one in the editor first. Only DRAFT/VALID versions publish.</Muted>
+        <Muted>No publishable draft — save one in the editor first. Only DRAFT, VALID, and VALIDATING versions publish.</Muted>
       </Panel>
     );
   }

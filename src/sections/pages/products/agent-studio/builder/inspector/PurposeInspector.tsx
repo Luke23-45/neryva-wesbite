@@ -97,11 +97,11 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const nameValid = isNameValid(name);
   const descValid = isDescriptionValid(desc);
   const valid = nameValid && descValid;
-  const dirty = mode === 'new' && (name !== '' || desc !== '');
-
-  useEffect(() => {
-    onFormState?.({ dirty, valid });
-  }, [dirty, valid, onFormState]);
+  // Inline validation: the field explains itself once the maker has typed
+  // something invalid (pristine stays quiet — the helper carries the
+  // range). A disabled Save with no explanation is the defect this fixes.
+  const nameError =
+    name.length > 0 && !nameValid ? `Needs ${NAME_MIN}–${NAME_MAX} characters` : undefined;
 
   const submit = useCallback(() => {
     if (!valid || create.isPending) return;
@@ -154,6 +154,23 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const editValid = editNameValid && editDescValid;
   const editDirty =
     name.trim() !== (agentName ?? '').trim() || desc.trim() !== (description ?? '').trim();
+
+  // Identity-local dirty reporting (the onFormState channel): the new-mode
+  // form is dirty once anything is typed; the build-mode edit form is
+  // dirty only while it holds unsaved changes against the saved identity.
+  const dirty = mode === 'new' ? name !== '' || desc !== '' : editing && editDirty;
+
+  useEffect(() => {
+    onFormState?.({ dirty, valid });
+    return () => {
+      // The builder's dirty flag must not outlive this section: navigating
+      // away unmounts the edit form, so retire the flag on unmount. (The
+      // edits were local form state — the dirty guard already asked before
+      // leaving.) Without this, the topbar would report "Unsaved changes"
+      // for a section that no longer exists.
+      onFormState?.({ dirty: false, valid });
+    };
+  }, [dirty, valid, onFormState]);
 
   const saveIdentity = useCallback(() => {
     if (mode !== 'build' || !agentId || !editValid || !editDirty || updateIdentity.isPending) return;
@@ -224,6 +241,7 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
                 autoFocus
                 maxLength={NAME_MAX + 12}
                 aria-describedby="purpose-edit-name-counter purpose-edit-name-help"
+                error={nameError}
               />
               <Helper id="purpose-edit-name-help">
                 {NAME_MIN}–{NAME_MAX} characters. This is how your team finds the agent.
@@ -315,7 +333,12 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
           </IdentityMain>
           {agentId && canAuthor && (
             <CardActions>
-              <ActionButton size="sm" variant="secondary" onClick={enterEdit}>
+              <ActionButton
+                size="sm"
+                variant="secondary"
+                onClick={enterEdit}
+                aria-label="Edit agent name and description"
+              >
                 Edit
               </ActionButton>
             </CardActions>
@@ -382,6 +405,7 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
             autoFocus
             maxLength={NAME_MAX + 12}
             aria-describedby="purpose-name-counter purpose-name-help"
+            error={nameError}
           />
           <Helper id="purpose-name-help">
             {NAME_MIN}–{NAME_MAX} characters. Give it a name your team will recognize.

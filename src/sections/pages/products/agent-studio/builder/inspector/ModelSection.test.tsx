@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
@@ -290,6 +290,42 @@ describe('ModelSection policy', () => {
     expect(onDirtyChange).toHaveBeenLastCalledWith(true);
   });
 
+  it('response format Text→JSON→Text round trip reads clean — no phantom unsaved changes (wave-3 P2)', async () => {
+    let onDirtyChange!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onDirtyChange } = shell());
+    });
+    // The wire omits response_format: the section opens on the Text default, clean.
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+    const formatTabs = screen.getByRole('tablist', { name: 'Response format' });
+    const formatTab = (name: string) => within(formatTabs).getByRole('tab', { name });
+    fireEvent.click(formatTab('JSON'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    // Returning to the default must converge with the omitted source — the
+    // commit path writes unset for 'text', never the literal, so the dirty
+    // compare reads clean instead of phantoming until Reset all.
+    fireEvent.click(formatTab('Text'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("treats an explicit wire 'text' response_format as the unset default — clean on load and after a round trip", async () => {
+    let onDirtyChange!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onDirtyChange } = shell({
+        definition: { ...DEFINITION, model_params: { response_format: 'text' } },
+      }));
+    });
+    // Legacy explicit-'text' (written by older saves) normalizes to the
+    // omitted default on read — clean on load, not dirty.
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+    const formatTabs = screen.getByRole('tablist', { name: 'Response format' });
+    const formatTab = (name: string) => within(formatTabs).getByRole('tab', { name });
+    fireEvent.click(formatTab('JSON'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+    fireEvent.click(formatTab('Text'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+
   it('flushes pending edits on unmount instead of dropping them', async () => {
     withFakeTimers();
     let ui!: ReturnType<typeof render>;
@@ -355,8 +391,29 @@ describe('ModelSection policy', () => {
 
 describe('ModelSection manual save signal', () => {
   it('fires doSave exactly once when saveSignal increments', async () => {
+    let ui: ReturnType<typeof shell>['ui'];
     await act(async () => {
-      shell({ saveSignal: 1 });
+      ({ ui } = shell({ saveSignal: 0 }));
+    });
+    // A pre-existing signal on mount is stale (the 412 guard) — it must not fire.
+    expect(updateMutate).not.toHaveBeenCalled();
+    await act(async () => {
+      ui.rerender(
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <ModelSection
+              assistantId="agent-main"
+              definition={DEFINITION}
+              versionId="v1"
+              versionHash="h1"
+              isDraft
+              canAuthor
+              onDirtyChange={vi.fn()}
+              saveSignal={1}
+            />
+          </QueryClientProvider>
+        </ThemeProvider>,
+      );
     });
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const input = updateMutate.mock.calls[0][0] as { expectedHash: string };
@@ -369,5 +426,28 @@ describe('ModelSection manual save signal', () => {
     });
     expect(updateMutate).not.toHaveBeenCalled();
     expect(saveMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('ModelSection group headings', () => {
+  it('renders the four SectionGroup labels (not empty headings)', async () => {
+    await act(async () => {
+      shell();
+    });
+    // Labels may appear in both the group heading and descriptive copy —
+    // assert each is present (at least once), never an empty heading.
+    for (const label of ['Pipeline', 'Catalog', 'Defaults', 'Credentials']) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('renders the group descriptions under their headings', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText('The models that serve this agent, in order. Configure each one below.')).toBeTruthy();
+    expect(screen.getByText('Every model your organization can use. Locked rows name the subscription they need.')).toBeTruthy();
+    expect(screen.getByText('Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above.')).toBeTruthy();
+    expect(screen.getByText('Provider credentials in the vault. Fingerprints only — secrets never leave the vault.')).toBeTruthy();
   });
 });

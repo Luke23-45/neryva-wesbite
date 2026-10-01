@@ -17,6 +17,7 @@ import {
   BudgetRowValue,
   BudgetTotal,
   Group,
+  GroupDescription,
   GroupHead,
   GroupLabel,
   GroupRule,
@@ -88,13 +89,22 @@ export function SectionPage({ title, progress, pill, subtitle, headerControl, ra
 
 /* ── Field group ─────────────────────────────────────────────── */
 
-export function SectionGroup({ label, children }: { label: string; children: ReactNode }) {
+export function SectionGroup({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <Group>
       <GroupHead aria-hidden="true">
         <GroupLabel>{label}</GroupLabel>
         <GroupRule />
       </GroupHead>
+      {description ? <GroupDescription>{description}</GroupDescription> : null}
       {children}
     </Group>
   );

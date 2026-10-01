@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
 import { Switch } from '@components/common/ui/Switch';
+import { Segmented } from '@components/common/ui/Segmented';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
 import { useAssistantTemplates } from '@hooks/studio/useSetupTemplates';
@@ -12,6 +12,7 @@ import {
   Excerpt,
   Gallery,
   InlineRetry,
+  ProvenanceBar,
   RowEmpty,
   RowError,
   RowLoading,
@@ -33,6 +34,17 @@ import {
 
 /** Org-history cap (PLAN.md §7): bounded fan-out, stated in UI, never silent N+1. */
 const ORG_SAMPLE_CAP = 6;
+
+/**
+ * W-5: view-only rows point at the gallery's own notice, per button.
+ * A native `title` never renders as a tooltip on a `disabled` button
+ * (disabled controls fire no mouse events), and native-disabled buttons
+ * leave the tab order — so disabled sample rows use the aria-disabled
+ * pattern instead: still focusable and tooltip-capable, with `onClick`
+ * left undefined so the row does nothing and never fakes an action.
+ */
+const VIEW_ONLY_NOTE_ID = 'samples-viewonly-note';
+const VIEW_ONLY_TITLE = 'Viewing only — samples are browsable; insert from the Instructions section.';
 
 function readOptIn(orgId: string | null): boolean {
   try {
@@ -62,16 +74,30 @@ interface SamplesSectionProps {
   canAuthor: boolean;
   startOpen: boolean;
   onInsert: (blocks: NewInstructionBlock[], source: string) => void;
+  /**
+   * I-BUG12: optional controlled open state. The Instructions section
+   * drives this from its root so the collapse state survives the
+   * sub-editor remount (the whole page unmounts while a BlockEditor is
+   * open). Uncontrolled when omitted — startOpen seeds the initial state.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
  * Three-source sample gallery (C02 PLAN.md §7) with LOCKED provenance labels:
- * template starters (engine registry, real), org agents (opt-in, capped),
- * scaffold library (disabled until reviewed — zero placeholder text).
+ * template starters (engine registry, real), org agents (opt-in, capped,
+ * published-preferred — each row labels Draft/Published and the maker picks
+ * explicitly), scaffold library (disabled until reviewed — zero placeholder text).
  * Insert is append-only; the gallery never edits, deletes, or overwrites.
  */
-export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: SamplesSectionProps) {
-  const [open, setOpen] = useState(startOpen);
+export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert, open: controlledOpen, onOpenChange }: SamplesSectionProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(startOpen);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (onOpenChange) onOpenChange(next);
+    else setUncontrolledOpen(next);
+  };
   const { orgId } = useOrg();
   const [orgOn, setOrgOn] = useState(() => readOptIn(orgId));
   const [orgFailures, setOrgFailures] = useState<string[]>([]);
@@ -81,7 +107,9 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
   const insert = (blocks: NewInstructionBlock[], source: string) => {
     if (blocks.length === 0) return;
     onInsert(blocks, source);
-    toast.success('Inserted below your blocks — every save is a version.');
+    // The "every save is a version" toast fires on the real save (the
+    // section's doSave), never at insert time — the claim is only true
+    // after a save.
   };
 
   const templateCards = (templates.data ?? []).map((entry) => {
@@ -102,7 +130,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
 
   return (
     <div>
-      <SamplesToggle type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <SamplesToggle type="button" onClick={() => setOpen(!open)} aria-expanded={open}>
         <ToggleLabel>
           {open ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
           Use a sample
@@ -112,7 +140,7 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
       {open && (
         <Gallery>
           {!canAuthor && (
-            <DeniedNote>
+            <DeniedNote id={VIEW_ONLY_NOTE_ID}>
               Viewing only — samples are browsable; insert from the Instructions section.
             </DeniedNote>
           )}
@@ -130,13 +158,22 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
             {templates.data &&
               templateCards.map((card) => {
                 const hasText = card.text.trim() !== '';
+                const viewOnly = !canAuthor;
+                const rowDisabled = !hasText || viewOnly;
                 return (
                   <SampleRow
                     key={card.slug}
                     type="button"
-                    $disabled={!hasText || !canAuthor}
-                    disabled={!hasText || !canAuthor}
-                    title={hasText ? 'Append starter blocks' : 'This blueprint carries no starter text.'}
+                    $disabled={rowDisabled}
+                    aria-disabled={rowDisabled || undefined}
+                    title={
+                      viewOnly
+                        ? VIEW_ONLY_TITLE
+                        : hasText
+                          ? 'Append starter blocks'
+                          : 'This blueprint carries no starter text.'
+                    }
+                    aria-describedby={viewOnly ? VIEW_ONLY_NOTE_ID : undefined}
                     onClick={
                       hasText && canAuthor
                         ? () =>
@@ -206,7 +243,12 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
           )}
 
           <SourceList>
-            <SampleRow type="button" $disabled disabled title="Starter copy is unwritten — this row ships no text until reviewed.">
+            <SampleRow
+              type="button"
+              $disabled
+              aria-disabled="true"
+              title="Starter copy is unwritten — this row ships no text until reviewed."
+            >
               <SampleDot $tone="neutral" aria-hidden="true" />
               <SampleMain>
                 <SampleLabel>Reviewed starter set</SampleLabel>
@@ -221,7 +263,13 @@ export function SamplesSection({ assistantId, canAuthor, startOpen, onInsert }: 
   );
 }
 
-/** One lazy definition read per sibling (cached, capped upstream — no fan-out here). */
+/**
+ * One lazy definition read per sibling (cached, capped upstream — no fan-out
+ * here). Published-first: the row copies the serving definition, and the note
+ * names the provenance (Draft/Published) of whatever is about to be copied.
+ * When the sibling also holds an unpublished draft, the maker picks it
+ * explicitly — never silently.
+ */
 function OrgSampleRow({
   agentId,
   agentName,
@@ -235,8 +283,17 @@ function OrgSampleRow({
   onFailed: (id: string) => void;
   onInsert: (blocks: NewInstructionBlock[], source: string) => void;
 }) {
-  const form = useAssistantDefinition(agentId);
-  const text = form.data?.definition.instructions ?? '';
+  const form = useAssistantDefinition(agentId, { prefer: 'active' });
+  const [copyDraft, setCopyDraft] = useState(false);
+  const published = form.data?.activeSource ?? null;
+  const draft = form.data?.draftSource ?? null;
+  // The published (serving) version wins unless the maker explicitly picks the
+  // draft; a draft-only sibling has no published version to prefer.
+  const source = copyDraft && draft ? draft : (published ?? draft);
+  const text = source?.definition.instructions ?? '';
+  const provenance = source?.status === 'PUBLISHED' ? 'Published' : 'Draft';
+  const note = `From your org’s agents · ${provenance}`;
+  const both = published !== null && draft !== null;
 
   useEffect(() => {
     if (form.isError) onFailed(agentId);
@@ -250,42 +307,69 @@ function OrgSampleRow({
   }
   if (text.trim() === '') {
     return (
-      <SampleRow type="button" $disabled disabled title={`${agentName} has no instructions to reuse.`}>
+      <SampleRow
+        type="button"
+        $disabled
+        aria-disabled="true"
+        title={canAuthor ? `${agentName} has no instructions to reuse.` : VIEW_ONLY_TITLE}
+        aria-describedby={canAuthor ? undefined : VIEW_ONLY_NOTE_ID}
+      >
         <SampleDot $tone="success" aria-hidden="true" />
         <SampleMain>
           <SampleLabel>{agentName}</SampleLabel>
           <SampleBlurb>No instructions yet</SampleBlurb>
         </SampleMain>
-        <SampleNote>From your org’s agents</SampleNote>
+        <SampleNote>{note}</SampleNote>
       </SampleRow>
     );
   }
 
   const singleLine = !text.trim().includes('\n');
   return (
-    <SampleRow
-      type="button"
-      $disabled={!canAuthor}
-      disabled={!canAuthor}
-      title={canAuthor ? `Append ${agentName}’s prompt below your blocks` : 'Viewing only.'}
-      onClick={
-        canAuthor
-          ? () =>
-              onInsert(
-                singleLine
-                  ? [{ kind: 'rules', mode: 'markdown', content: text.trim() }]
-                  : [{ kind: 'custom', mode: 'markdown', content: text.trim() }],
-                `org agent ${agentName}`,
-              )
-          : undefined
-      }
-    >
-      <SampleDot $tone="success" aria-hidden="true" />
-      <SampleMain>
-        <SampleLabel>{agentName}</SampleLabel>
-        <Excerpt>{text.trim().slice(0, 140)}</Excerpt>
-      </SampleMain>
-      <SampleNote>From your org’s agents</SampleNote>
-    </SampleRow>
+    <div>
+      {both && (
+        <ProvenanceBar>
+          <Segmented
+            ariaLabel={`${agentName} prompt version to copy`}
+            value={copyDraft ? 'draft' : 'published'}
+            onChange={(v) => setCopyDraft(v === 'draft')}
+            options={[
+              { value: 'published', label: 'Published' },
+              { value: 'draft', label: 'Draft' },
+            ]}
+            size="sm"
+          />
+        </ProvenanceBar>
+      )}
+      <SampleRow
+        type="button"
+        $disabled={!canAuthor}
+        aria-disabled={!canAuthor || undefined}
+        title={
+          canAuthor
+            ? `Append ${agentName}’s ${provenance.toLowerCase()} prompt below your blocks`
+            : VIEW_ONLY_TITLE
+        }
+        aria-describedby={canAuthor ? undefined : VIEW_ONLY_NOTE_ID}
+        onClick={
+          canAuthor
+            ? () =>
+                onInsert(
+                  singleLine
+                    ? [{ kind: 'rules', mode: 'markdown', content: text.trim() }]
+                    : [{ kind: 'custom', mode: 'markdown', content: text.trim() }],
+                  `org agent ${agentName} · ${provenance.toLowerCase()}`,
+                )
+            : undefined
+        }
+      >
+        <SampleDot $tone="success" aria-hidden="true" />
+        <SampleMain>
+          <SampleLabel>{agentName}</SampleLabel>
+          <Excerpt>{text.trim().slice(0, 140)}</Excerpt>
+        </SampleMain>
+        <SampleNote>{note}</SampleNote>
+      </SampleRow>
+    </div>
   );
 }

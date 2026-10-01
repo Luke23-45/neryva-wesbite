@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { engine } from '@lib/engine/client';
-import { toastEngineError } from '@lib/engine/errors';
+import { describeEngineError, toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
 import { markActivation } from '@lib/engine/activation';
 import { useEventStream } from '@hooks/engine/useEventStream';
@@ -1365,10 +1365,21 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
     void testRun
       .mutateAsync({ versionId, text: prompt })
       .then((result) => {
+        // Stop-during-POST guard: the turn may have been stopped while the
+        // POST was in flight — finalizeTurn already settled it and cleared
+        // activeKey. Patching it back to 'streaming' would resurrect it with
+        // no active key, so the SSE tail, the poll effect, and the
+        // absolute-timeout effect (all keyed on activeKey) could never
+        // settle it: a permanent spinner. A POST resolution for a turn that
+        // is no longer 'sending' is a no-op.
+        const current = turnsRef.current.find((t) => t.key === key);
+        if (!current || current.status !== 'sending') {
+          return;
+        }
         if (!result.conversation_id) {
           patchTurn(key, { status: 'error' });
           pushNotice(key, { id: `noconv-${key}`, kind: 'error', text: 'The test run returned no conversation — try again.' });
-          setActiveKey((current) => (current === key ? null : current));
+          setActiveKey((currentKey) => (currentKey === key ? null : currentKey));
           return;
         }
         patchTurn(key, { conversationId: result.conversation_id, runId: result.run_id ?? null, status: 'streaming' });
@@ -1379,9 +1390,21 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
           setTurns((prev) => (prev.find((t) => t.key === key)?.status === 'streaming' ? prev.map((t) => (t.key === key ? { ...t, status: 'accepted' } : t)) : prev));
         }, 15_000);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        // Same stop-during-POST guard: a POST failure must not flip a turn
+        // the user already stopped into 'error'.
+        const current = turnsRef.current.find((t) => t.key === key);
+        if (!current || current.status !== 'sending') {
+          return;
+        }
+        // TRY-M1 — a refused POST (e.g. the engine's typed no-usable-model
+        // refusal) must name its cause on the turn, not strand it silent:
+        // the mutation already toasted, and describeEngineError maps the
+        // typed ApiError honestly — never the generic "Internal error" the
+        // old untyped downstream path leaked.
+        pushNotice(key, { id: `try-post-${key}`, kind: 'error', text: describeEngineError(error).message });
         patchTurn(key, { status: 'error' });
-        setActiveKey((current) => (current === key ? null : current));
+        setActiveKey((currentKey) => (currentKey === key ? null : currentKey));
       });
     return true;
   };

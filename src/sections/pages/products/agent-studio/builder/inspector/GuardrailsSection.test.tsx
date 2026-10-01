@@ -181,7 +181,7 @@ describe('GuardrailsSection', () => {
     await act(async () => {
       fireEvent.click(screen.getByLabelText('PII redaction'));
     });
-    expect(screen.getByText(/identifiers reach storage, logs, and the provider/)).toBeTruthy();
+    expect(screen.getByText(/identifiers reach storage and the provider/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(8000);
     });
@@ -205,29 +205,30 @@ describe('GuardrailsSection', () => {
     expect(sent.definition.guardrails.pii_entities).toContain('email');
   });
 
-  it('redaction action and applies-to scope write through', async () => {
+  it('redaction action writes through; applies-to is pinned to storage (P1)', async () => {
     shell();
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Drop sentence' }));
     });
-    const traces = screen.getByRole('button', { name: 'Traces' });
-    await act(async () => {
-      fireEvent.click(traces);
-    });
+    // P1: the inert Logs/Traces chips are gone — scope is a statement, not a switch.
+    expect(screen.queryByRole('button', { name: 'Traces' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Logs' })).toBeNull();
+    expect(screen.getByText(/nothing to redact from logs or traces/)).toBeTruthy();
     await act(async () => {
       vi.advanceTimersByTime(8000);
     });
     const sent = vi.mocked(updateMutate).mock.calls[0]?.[0] as { definition: AgentDefinition };
     expect(sent.definition.guardrails.pii_action).toBe('drop');
-    expect(sent.definition.guardrails.pii_applies_to).toContain('traces');
+    // Legacy ['storage','logs'] fixture collapses to the only real sink.
+    expect(sent.definition.guardrails.pii_applies_to).toEqual(['storage']);
   });
 
-  it('flipping to logging states the no-refusal law, updates the pill, and autosaves', async () => {
+  it('flipping to logging states the screening law plus the deny exception, updates the pill, and autosaves', async () => {
     shell();
     await act(async () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Logging' }));
     });
-    expect(screen.getByText(/Logging — verdicts recorded, nothing is refused/)).toBeTruthy();
+    expect(screen.getByText(/Logging — screening verdicts recorded; deny topics still refused on contact/)).toBeTruthy();
     expect(screen.getByText(/ships as a new draft/)).toBeTruthy();
     expect(screen.getByText(/Logging · 4 layers/)).toBeTruthy();
     await act(async () => {
@@ -308,6 +309,14 @@ describe('GuardrailsSection', () => {
     expect(screen.queryByRole('tablist', { name: 'input screening level' })).toBeNull();
     expect(screen.getByText(/Blocking · 4 layers/)).toBeTruthy();
   });
+
+  it('read-only logging mode states the deny-topic exception, never "nothing refused"', () => {
+    shell({ canAuthor: false, definition: definitionWith({ ...FULL_GUARDRAILS, execution_mode: 'logging' }) });
+    // The copy appears in the read-only summary and the rail — assert it is
+    // present (at least once) and the old "nothing refused" lie is gone.
+    expect(screen.getAllByText(/verdicts recorded; deny topics still refused/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/nothing refused/)).toBeNull();
+  });
 });
 
 describe('GuardrailsSection D-BUG2 deny-topic remove hit box', () => {
@@ -361,5 +370,59 @@ describe('GuardrailsSection D-BUG2 deny-topic remove hit box', () => {
     expect(row).toBeTruthy();
     const overflow = getComputedStyle(row as HTMLElement).overflow;
     expect(['visible', '']).toContain(overflow);
+  });
+});
+
+describe('GuardrailsSection switch label duplication', () => {
+  it('PII card shows no duplicate switch label — the switch keeps only its accessible name', () => {
+    shell();
+    // Visible "PII redaction" titles the section owns: the "On this page" rail
+    // row, the SectionGroup label, and the card title. The Switch must not add
+    // a fourth visible copy — its label prop is the accessible name only.
+    expect(screen.getAllByText('PII redaction')).toHaveLength(3);
+    const toggle = screen.getByRole('switch', { name: 'PII redaction' });
+    expect(toggle.getAttribute('aria-label')).toBe('PII redaction');
+  });
+});
+
+describe('GuardrailsSection rail deny-topic count (Wave 4 item 7)', () => {
+  function denyTopicRailRow() {
+    const card = screen.getByText('On this page').closest('div') as HTMLElement;
+    const label = within(card).getByText('Deny topics');
+    // RailLabel's parent is the RailRow; the count lives in its RailValue.
+    return (label.parentElement ?? label) as HTMLElement;
+  }
+
+  it('renders 0 — never "none" — when no deny topics exist', () => {
+    shell();
+    const row = denyTopicRailRow();
+    expect(within(row).getByText('0')).toBeTruthy();
+    expect(within(row).queryByText('none')).toBeNull();
+  });
+
+  it('renders the live count when deny topics exist', () => {
+    shell({ definition: definitionWith({ ...FULL_GUARDRAILS, deny_topics: ['legal advice', 'medical'] }) });
+    expect(within(denyTopicRailRow()).getByText('2')).toBeTruthy();
+  });
+});
+
+describe('GuardrailsSection deny-topic paste cap (Wave 4 item 8)', () => {
+  it('pasting more than 200 chars truncates with an inline message, never silently', async () => {
+    shell();
+    const input = screen.getByLabelText('New deny topic') as HTMLInputElement;
+    await act(async () => {
+      fireEvent.paste(input, { clipboardData: { getData: () => 'x'.repeat(250) } });
+    });
+    expect(screen.getByText('Pasted text was cut to 200 characters.')).toBeTruthy();
+    expect(input.value).toHaveLength(200);
+  });
+
+  it('pasting within the cap shows no truncation message', async () => {
+    shell();
+    const input = screen.getByLabelText('New deny topic');
+    await act(async () => {
+      fireEvent.paste(input, { clipboardData: { getData: () => 'short topic' } });
+    });
+    expect(screen.queryByText('Pasted text was cut to 200 characters.')).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { ThemeProvider } from 'styled-components';
@@ -20,9 +20,22 @@ vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
 
-// BYOK is enterprise-only: tests run as enterprise so the connect flow is visible.
+// BYOK is enterprise-only: the enterprise query is hoisted-mutable so the
+// pending / error / proven-denial states are testable.
+const enterpriseMockState = vi.hoisted(() => ({
+  data: true as boolean | undefined,
+  isPending: false,
+  isError: false,
+}));
+const enterpriseRefetch = vi.fn();
+
 vi.mock('@hooks/engine/billing', () => ({
-  useEnterpriseStatus: () => ({ data: true }),
+  useEnterpriseStatus: () => ({
+    data: enterpriseMockState.data,
+    isPending: enterpriseMockState.isPending,
+    isError: enterpriseMockState.isError,
+    refetch: enterpriseRefetch,
+  }),
 }));
 
 // D6: the credential list is hoisted-mutable so the empty state is testable.
@@ -170,6 +183,75 @@ describe('CredentialsPanel provider plane', () => {
     });
     expect(screen.getByText(/visible to owners, admins, and developers/)).toBeTruthy();
     expect(screen.queryByText(/prod/)).toBeNull();
+  });
+});
+
+describe('CredentialsPanel enterprise gate honesty', () => {
+  beforeEach(() => {
+    enterpriseMockState.data = true;
+    enterpriseMockState.isPending = false;
+    enterpriseMockState.isError = false;
+    enterpriseRefetch.mockClear();
+  });
+
+  it('shows a skeleton — not the denied copy — while enterprise status loads', async () => {
+    enterpriseMockState.data = undefined;
+    enterpriseMockState.isPending = true;
+    await act(async () => {
+      shell();
+    });
+    expect(screen.queryByText(/Bring Your Own API Key is an Enterprise feature/)).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeTruthy();
+    expect(screen.queryByText('Connect provider')).toBeNull();
+  });
+
+  it('shows an honest error with retry — not the denied copy — on failure', async () => {
+    enterpriseMockState.data = undefined;
+    enterpriseMockState.isError = true;
+    await act(async () => {
+      shell();
+    });
+    expect(screen.queryByText(/Bring Your Own API Key is an Enterprise feature/)).toBeNull();
+    expect(screen.getByText(/Enterprise status couldn’t be checked/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Try again'));
+    expect(enterpriseRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the denied copy only after a proven non-enterprise load', async () => {
+    enterpriseMockState.data = false;
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText(/Bring Your Own API Key is an Enterprise feature/)).toBeTruthy();
+    expect(screen.queryByText('Connect provider')).toBeNull();
+  });
+});
+
+describe('CredentialsPanel enterprise-notice single home', () => {
+  beforeEach(() => {
+    enterpriseMockState.data = true;
+    enterpriseMockState.isPending = false;
+    enterpriseMockState.isError = false;
+    enterpriseRefetch.mockClear();
+  });
+
+  it('suppresses the BYOK notice for embedded mounts — the vault list still renders', async () => {
+    enterpriseMockState.data = false;
+    await act(async () => {
+      shell({ suppressEnterpriseNotice: true });
+    });
+    expect(screen.queryByText(/Bring Your Own API Key is an Enterprise feature/)).toBeNull();
+    // The credential rows are untouched by the suppression.
+    expect(screen.getByText(/prod/)).toBeTruthy();
+  });
+
+  it('leaves the enterprise connect flow intact when suppression is on', async () => {
+    enterpriseMockState.data = true;
+    await act(async () => {
+      shell({ suppressEnterpriseNotice: true });
+    });
+    expect(screen.getByText('Connect provider')).toBeTruthy();
+    expect(screen.queryByText(/Bring Your Own API Key is an Enterprise feature/)).toBeNull();
   });
 });
 

@@ -92,6 +92,8 @@ import {
   SliderName,
   SliderRow,
   SliderValue,
+  SwitchLabelPair,
+  SwitchLabelText,
   VersionInput,
 } from './ModelSection.styles';
 
@@ -160,7 +162,13 @@ function readDefaults(definition: AgentDefinition | null): DefaultsDraft {
     ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
     ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
     ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
-    ...(params.response_format !== undefined ? { response_format: params.response_format } : {}),
+    // 'text' is the default and reads as omitted on the wire — an explicit
+    // 'text' (written by older saves) normalizes to unset here, so the
+    // dirty compare converges from any wire state instead of phantoming
+    // after a JSON→Text round trip.
+    ...(params.response_format !== undefined && params.response_format !== 'text'
+      ? { response_format: params.response_format }
+      : {}),
     ...(params.output_schema_name !== undefined ? { output_schema_name: params.output_schema_name } : {}),
   };
 }
@@ -858,14 +866,17 @@ export function ModelSection({
       {/* ---- PIPELINE ---- */}
       <div id="model-pipeline">
         <SectionGroup
-          title="Pipeline"
+          label="Pipeline"
           description="The models that serve this agent, in order. Configure each one below."
         >
           <PipelineCard>
             <PipelineHeader>
               <ServingOrderLabel>Serving order</ServingOrderLabel>
               {canAuthor && (
-                <Switch label="Fallback" checked={fallback} onChange={setFallback} id="model-fallback-switch" />
+                <SwitchLabelPair>
+                  <Switch label="Fallback" checked={fallback} onChange={setFallback} id="model-fallback-switch" />
+                  <SwitchLabelText htmlFor="model-fallback-switch">Fallback</SwitchLabelText>
+                </SwitchLabelPair>
               )}
             </PipelineHeader>
             {pipeline.length === 0 ? (
@@ -914,7 +925,7 @@ export function ModelSection({
       {/* ---- CATALOG ---- */}
       <div id="model-catalog">
         <SectionGroup
-          title="Catalog"
+          label="Catalog"
           description="Every model your organization can use. Locked rows name the subscription they need."
         >
           <ModelPicker
@@ -934,7 +945,7 @@ export function ModelSection({
       {/* ---- DEFAULTS ---- */}
       <div id="model-defaults">
         <SectionGroup
-          title="Defaults"
+          label="Defaults"
           description="Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above."
         >
           <DefaultsGrid>
@@ -1055,7 +1066,16 @@ export function ModelSection({
                   options={RESPONSE_FORMAT_OPTIONS}
                   value={responseFormat}
                   onChange={(value) =>
-                    setDefaults((prev) => ({ ...prev, response_format: value as ResponseFormat }))
+                    // 'text' is the default (the wire omits it) — selecting it
+                    // writes unset, mirroring the Reasoning effort
+                    // 'default'→undefined above. Storing the literal 'text'
+                    // would never equal the omitted source, phantoming
+                    // "Unsaved changes" after a JSON→Text round trip.
+                    setDefaults((prev) =>
+                      value === 'text'
+                        ? { ...prev, response_format: undefined }
+                        : { ...prev, response_format: value as ResponseFormat },
+                    )
                   }
                   size="sm"
                   ariaLabel="Response format"
@@ -1116,12 +1136,14 @@ export function ModelSection({
       {/* ---- CREDENTIALS ---- */}
       <div id="model-credentials" data-credentials-panel>
         <SectionGroup
-          title="Credentials"
+          label="Credentials"
           description="Provider credentials in the vault. Fingerprints only — secrets never leave the vault."
         >
           {credBlockers.length > 0 && (
             <HelperText>
-              Required by {credBlockers.map((b) => b.displayName).join(', ')} — connect {credBlockers.length === 1 ? 'a credential' : 'credentials'} below to unblock saving.
+              {isEnterprise
+                ? `Required by ${credBlockers.map((b) => b.displayName).join(', ')} — connect ${credBlockers.length === 1 ? 'a credential' : 'credentials'} below to unblock saving.`
+                : `Required by ${credBlockers.map((b) => b.displayName).join(', ')} — this org uses Neryva-managed credentials.`}
             </HelperText>
           )}
           <CredentialsPanel
@@ -1133,6 +1155,7 @@ export function ModelSection({
             connectOpen={connectOpen}
             onConnectOpenChange={setConnectOpen}
             onRevokeOpenChange={setRevokeCredentialId}
+            suppressEnterpriseNotice
           />
         </SectionGroup>
       </div>
@@ -1397,15 +1420,20 @@ function PipelineRow({
 
           <OverrideToggle>
             {canAuthor ? (
-              <Switch
-                label="Override defaults for this model"
-                checked={overrideOpen}
-                onChange={(checked) => {
-                  onToggleOverride();
-                  if (!checked) onPatchParams(null);
-                }}
-                id={`model-override-${index}`}
-              />
+              <SwitchLabelPair>
+                <Switch
+                  label="Override defaults for this model"
+                  checked={overrideOpen}
+                  onChange={(checked) => {
+                    onToggleOverride();
+                    if (!checked) onPatchParams(null);
+                  }}
+                  id={`model-override-${index}`}
+                />
+                <SwitchLabelText htmlFor={`model-override-${index}`}>
+                  Override defaults for this model
+                </SwitchLabelText>
+              </SwitchLabelPair>
             ) : (
               <ParamLabel>Per-model overrides</ParamLabel>
             )}

@@ -84,6 +84,12 @@ export function TryConsole({
   const allowed = definition?.model_policy.allowed_models ?? [];
   const usable = new Set((models ?? []).filter((m) => m.usable).map((m) => m.ref));
   const usableCount = models === undefined ? -1 : allowed.filter((ref) => usable.has(ref)).length;
+  // TRY-M1 — the run gate: the Run button arms only when at least one
+  // allowed model is usable for this org. usableCount is -1 while the
+  // availability read is in flight; only a loaded zero blocks — a
+  // still-loading read must not wedge the console (the engine's typed
+  // refusal is the backstop meanwhile).
+  const modelBlocked = usableCount === 0;
   const hasInstructions = (definition?.instructions ?? '').trim() !== '';
 
   const prereqs = runnable
@@ -114,6 +120,11 @@ export function TryConsole({
     editMode.kind === 'jump' ? { onEditJump: editMode.onEditJump } : { builderHref: editMode.builderHref };
 
   const send = () => {
+    // Belt-and-suspenders with the disabled Run button: the dock never
+    // posts a try prompt without a usable model (TRY-M1).
+    if (modelBlocked) {
+      return;
+    }
     if (session.send(prompt)) {
       setPrompt('');
     }
@@ -158,7 +169,10 @@ export function TryConsole({
       ))}
 
       {turns.length === 0 ? (
-        <EmptyState>Ask anything — the reply streams here with its trace.</EmptyState>
+        // Finding 2 — the dead end reads as one coherent state: while no
+        // usable model exists the thread area echoes the blocked copy
+        // instead of inviting input that cannot run.
+        <EmptyState>{modelBlocked ? TRY_COPY.noUsableModel : 'Ask anything — the reply streams here with its trace.'}</EmptyState>
       ) : (
         <Thread>
           {turns.map((turn) => {
@@ -214,7 +228,10 @@ export function TryConsole({
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             rows={3}
-            placeholder="A customer asks… (1–8192)"
+            // Finding 2 — the prompt field must not invite input that cannot
+            // run: disabled with the blocked copy while no usable model exists.
+            disabled={modelBlocked}
+            placeholder={modelBlocked ? TRY_COPY.noUsableModel : 'A customer asks… (1–8192)'}
           />
           <DockRow>
             {isBusy ? (
@@ -225,8 +242,17 @@ export function TryConsole({
             ) : (
               <ActionButton
                 size="lg"
-                disabled={!runnable || prompt.trim() === ''}
-                title={!runnable ? TRY_COPY.noRunnableVersion : 'Run pinned to this version'}
+                // TRY-M1 — finding 1a: the same usable-model signal as the
+                // prereq block wires into the button — it cannot arm with a
+                // typed prompt when no usable model exists.
+                disabled={!runnable || prompt.trim() === '' || modelBlocked}
+                title={
+                  !runnable
+                    ? TRY_COPY.noRunnableVersion
+                    : modelBlocked
+                      ? TRY_COPY.noUsableModel
+                      : 'Run pinned to this version'
+                }
                 onClick={send}
               >
                 <Play size={13} strokeWidth={1.8} />

@@ -139,6 +139,34 @@ describe('useManualSaveSignal (loud held saves)', () => {
     expect(toastError).not.toHaveBeenCalled();
   });
 
+  it('does not fire on mount when the signal predates the mount (stale signal from an earlier section)', () => {
+    // The counter survives section switches (AgentBuilder owns it). A
+    // section mounting after N saves must not treat the pre-existing value
+    // as a fresh save intent — that spontaneous PUT raced the previous
+    // section's in-flight draft-write with a stale If-Match and raised a
+    // false 412 ("Someone saved first") with no user-initiated save.
+    const doSave = vi.fn();
+    renderHook(() => useManualSaveSignal(3, doSave, hold()));
+    expect(doSave).not.toHaveBeenCalled();
+    expect(toastBase).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('fires only for a signal increment that happens while mounted', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(({ signal }) => useManualSaveSignal(signal, doSave, hold()), {
+      initialProps: { signal: 2 },
+    });
+    // Mount with a pre-existing value: no spontaneous save.
+    expect(doSave).not.toHaveBeenCalled();
+    // A genuine increment while mounted: fires exactly once.
+    rerender({ signal: 3 });
+    expect(doSave).toHaveBeenCalledTimes(1);
+    // Re-render with the same value: no duplicate.
+    rerender({ signal: 3 });
+    expect(doSave).toHaveBeenCalledTimes(1);
+  });
+
   it('toasts the hold reason instead of silently swallowing a held save', () => {
     const doSave = vi.fn();
     const { rerender } = renderHook(({ signal }) => useManualSaveSignal(signal, doSave, hold({ blocked: true })), {
@@ -196,5 +224,81 @@ describe('useManualSaveSignal (loud held saves)', () => {
     expect(doSave).not.toHaveBeenCalled();
     rerender({ signal: 2, pending: false });
     expect(doSave).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * P2 flow-chrome: closing the tab inside the 8s autosave window silently
+ * lost edits — React never runs the unmount cleanup on page unload. The
+ * pagehide/beforeunload flush below reuses the exact unmount-flush gates
+ * (no duplicated logic), so a tab close persists instead of discarding.
+ */
+describe('useDraftAutosave tab-close flush', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function pagehide() {
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+  }
+
+  function beforeunload() {
+    act(() => {
+      window.dispatchEvent(new Event('beforeunload'));
+    });
+  }
+
+  it('flushes a pending dirty edit on pagehide (tab close)', () => {
+    const doSave = vi.fn();
+    const { unmount } = renderHook(() => useDraftAutosave(shippable(), doSave, ['x']));
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(doSave).not.toHaveBeenCalled();
+    pagehide();
+    expect(doSave).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('dedupes beforeunload + pagehide into a single flush (no G-BUG7 duplicate PUT)', () => {
+    const doSave = vi.fn();
+    const { unmount } = renderHook(() => useDraftAutosave(shippable(), doSave, ['x']));
+    // Desktop tab close fires both events for the same unload.
+    beforeunload();
+    pagehide();
+    expect(doSave).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('re-arms on pageshow so a second close after bfcache restore still flushes', () => {
+    const doSave = vi.fn();
+    const { unmount } = renderHook(() => useDraftAutosave(shippable(), doSave, ['x']));
+    pagehide();
+    expect(doSave).toHaveBeenCalledTimes(1);
+    act(() => {
+      window.dispatchEvent(new Event('pageshow'));
+    });
+    pagehide();
+    expect(doSave).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  it.each([
+    ['blocked content', shippable({ blocked: true })],
+    ['clean state', shippable({ dirty: false })],
+    ['in-flight save', shippable({ pending: true })],
+    ['open conflict dialog', shippable({ conflict: { serverHash: 'a', localHash: 'b' } })],
+    ['no definition loaded', shippable({ definition: null })],
+  ])('does not flush on pagehide when %s', (_label, gates) => {
+    const doSave = vi.fn();
+    const { unmount } = renderHook(() => useDraftAutosave(gates, doSave, ['x']));
+    pagehide();
+    expect(doSave).not.toHaveBeenCalled();
+    unmount();
   });
 });
