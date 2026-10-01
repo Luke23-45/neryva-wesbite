@@ -10,7 +10,7 @@
     {
       "label": "Contact sales",
       "href": "/contact",
-      "variant": "black"
+      "variant": "link"
     }
   ]
 }

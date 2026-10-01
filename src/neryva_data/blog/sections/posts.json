@@ -35,6 +35,18 @@
       "featured": false,
       "colorTheme": "#0369A1",
       "seed": 707
+    },
+    {
+      "id": 4,
+      "slug": "separating-routing-organization-from-task-success",
+      "title": "Separating Routing Organization from Task Success",
+      "summary": "Trajectory-derived routing prototypes reorganize MoE experts without resolving task success — on measuring the two separately, and what the evidence actually shows.",
+      "category": "Research",
+      "date": "2026-09-28",
+      "author": "Neryva Lab",
+      "featured": false,
+      "colorTheme": "#2458D3",
+      "seed": 505
     }
   ],
   "categories": ["All", "Research", "Clinical AI", "Engineering"],

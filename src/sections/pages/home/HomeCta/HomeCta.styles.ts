@@ -80,12 +80,49 @@ export const Title = styled.h2`
 export const ButtonGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 28px;
 
   ${({ theme }) => theme.media.mobile} {
     width: 100%;
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 20px;
+  }
+`;
+
+/* Apple-style secondary action: no chrome, just a label + chevron. The quiet
+   treatment is what makes the filled primary read as primary — hierarchy
+   through de-emphasis. White on the signature orange, full opacity only on
+   hover so it rests below the button at a glance. */
+export const SecondaryLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: ${({ theme }) => theme.typography.fonts.sans};
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  cursor: pointer;
+  padding: 12px 0; /* matches the primary button's hit height */
+
+  svg {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:hover {
+    color: #ffffff;
+  }
+
+  &:hover svg {
+    transform: translateX(3px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.7);
+    outline-offset: 4px;
+    border-radius: 2px;
   }
 `;
 

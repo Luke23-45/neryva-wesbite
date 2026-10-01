@@ -1,0 +1,68 @@
+{
+  "id": 4,
+  "slug": "separating-routing-organization-from-task-success",
+  "title": "Separating Routing Organization from Task Success",
+  "summary": "Trajectory-derived routing prototypes reorganize MoE experts without resolving task success — on measuring the two separately, and what the evidence actually shows.",
+  "category": "Research",
+  "date": "2026-09-28",
+  "author": "Neryva Lab",
+  "featured": false,
+  "colorTheme": "#2458D3",
+  "seed": 505,
+  "readingTime": 4,
+  "sections": [
+    {
+      "type": "paragraph",
+      "text": "Mixture-of-experts policies live or die by their routing partitions. A natural idea is to initialize that partition from kinematic regimes discovered in the demonstrations. We tested exactly that, and the outcome splits cleanly in two. Routing organization moved decisively. Task success did not resolve."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Intervention"
+    },
+    {
+      "type": "paragraph",
+      "text": "Demonstrations were segmented with change-point detection and clustered into trajectory regimes. Stage-1 latent centroids grouped by those regimes then initialized the routing prototypes of a hard-routing MoE policy with six experts. The comparison isolates initialization and nothing else: trajectory-derived, rule-based, and random placement under matched conditions, margin loss disabled in every arm, same representation, experts, and optimizer."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Moved: Routing Organization"
+    },
+    {
+      "type": "paragraph",
+      "text": "Measured on validation demonstrations, trajectory-derived initialization reaches a mean phase-expert alignment (NMI) of 0.67 on Can and 0.51 on Square, against 0.07-0.09 for the random and rule-based controls. Routing-switch rates fall to 0.04 on Can and 0.07 on Square, against 0.10-0.11 for the controls. These are offline routing diagnostics, and they are not proxies for task success."
+    },
+    {
+      "type": "pullquote",
+      "text": "Routing organization moved decisively; task success did not resolve."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What Didn't Move: Task Success"
+    },
+    {
+      "type": "paragraph",
+      "text": "In closed-loop rollouts, trajectory-derived initialization records 76.0% success on Can against 73.3% and 68.7% for the random and rule-based arms, and 26.7% on Square against 28.0% and 31.3% — trailing both controls, a learned softmax gate at 35.3%, and a plain-encoder control at 32.0%. Across three independently trained seeds, none of the closed-loop comparisons is statistically resolved after Holm adjustment. ToolHang sits at 0% success for every evaluated method. A broader five-task sweep provides context, not a causal estimate."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Both Results Belong in One Story"
+    },
+    {
+      "type": "paragraph",
+      "text": "Reporting only the routing result would invite readers to assume the success result — precisely the conflation this study was built to avoid. Offline alignment measures agreement with a rule-derived phase vocabulary used in training supervision; it is not an independent measure of semantically meaningful specialization, and nothing in the design licenses treating it as a stand-in for closed-loop performance. What would resolve the open question is straightforward to state: larger multi-seed studies, and interventions that vary routing while holding expert behavior fixed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Paper and Code"
+    },
+    {
+      "type": "paragraph",
+      "text": "Full experimental details, ablations, and statistical tables are in the paper [ARXIV_LINK_TBD]. Reproduction code, sweep manifests, and analysis scripts are at [CODE_LINK_TBD]."
+    }
+  ]
+}

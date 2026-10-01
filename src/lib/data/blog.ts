@@ -3,9 +3,11 @@ import blogIndex from '@neryva_data/blog/sections/posts.json';
 
 // Detail data — one file per post slug
 import moePost from '@neryva_data/blog/posts/moe-routing-objectives-sparse-transformers.json';
+import phaseforgePost from '@neryva_data/blog/posts/separating-routing-organization-from-task-success.json';
 
 const blogPosts: Record<string, BlogPost> = {
   'moe-routing-objectives-sparse-transformers': moePost as BlogPost,
+  'separating-routing-organization-from-task-success': phaseforgePost as BlogPost,
 };
 
 /** All posts (index-level, for the grid) */

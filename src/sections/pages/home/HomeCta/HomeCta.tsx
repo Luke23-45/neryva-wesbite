@@ -6,9 +6,26 @@ import {
   TextColumn,
   Eyebrow,
   Title,
-  ButtonGroup
+  ButtonGroup,
+  SecondaryLink
 } from './HomeCta.styles';
 import CyclicNextButton from '@components/common/ui/CyclicNextButton/CyclicNextButton';
+
+// SF-chevron-style arrow for the secondary link — one path, inherits text
+// color, nudges right on hover via the SecondaryLink styles.
+function LinkChevron() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 2.5 8 6l-3.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 // Premium Hardware Entrance Easing
 const premiumEase = [0.16, 1, 0.3, 1] as const;
@@ -51,14 +68,18 @@ export function HomeCta() {
           viewport={{ once: true, margin: '-50px' }}
         >
           {ctaData.buttons.map((btn, i) => (
-            <motion.div key={i} variants={fadeUp} custom={3 + i} style={{ display: 'flex', width: '100%' }}>
-              <CyclicNextButton
-                label={btn.label}
-                onClick={() => { window.location.href = btn.href; }}
-                bgColor={btn.variant === 'white' ? '#ffffff' : '#090909'}
-                textColor={btn.variant === 'white' ? '#050505' : '#ffffff'}
-                borderRadius={4}
-              />
+            <motion.div key={i} variants={fadeUp} custom={3 + i} style={{ display: 'flex', alignItems: 'center' }}>
+              {btn.variant === 'link' ? (
+                <SecondaryLink href={btn.href}>{btn.label}<LinkChevron /></SecondaryLink>
+              ) : (
+                <CyclicNextButton
+                  label={btn.label}
+                  onClick={() => { window.location.href = btn.href; }}
+                  bgColor={btn.variant === 'white' ? '#ffffff' : '#090909'}
+                  textColor={btn.variant === 'white' ? '#050505' : '#ffffff'}
+                  borderRadius={4}
+                />
+              )}
             </motion.div>
           ))}
         </ButtonGroup>
