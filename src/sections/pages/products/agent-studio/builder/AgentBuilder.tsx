@@ -574,15 +574,20 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   usePublishBuilderTopbarSlots(topbarSlots);
 
   // Closed keyboard map (redesign): Esc, section keys, Ctrl/⌘+S.
-  // Never fires from inputs (except Escape, which only ever returns to the
-  // Overview, and Ctrl/⌘+S, the standard save shortcut — preventDefault
-  // stops the browser's own save dialog).
+  // Never fires from inputs (except Ctrl/⌘+S, the standard save shortcut —
+  // preventDefault stops the browser's own save dialog). Escape inside a
+  // field stays in the field; it never navigates away from under typing.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const inField =
         !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
       if (event.key === 'Escape') {
+        // Fields own their Escape: pressing it while typing must never yank
+        // the user out of the section. Components with local Esc behavior
+        // (blur, dismiss) handle it themselves; the global map stays out of
+        // the way so focus is never stolen from under the user.
+        if (inField) return;
         // Never strand unsaved input: Escape must not unmount the Identity
         // form (new mode), the composer, the voice, brain, model, knowledge, tools,
         // guardrails, memory, context, response, role, or budget while any is dirty.

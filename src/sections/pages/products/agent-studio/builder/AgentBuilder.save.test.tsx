@@ -229,3 +229,45 @@ describe('AgentBuilder manual save (roleDirty regression)', () => {
     expect(input.definition.role?.role?.content).toBe('Support lead');
   });
 });
+
+describe('AgentBuilder Escape key', () => {
+  beforeEach(() => {
+    // The selection lives in a module-level zustand store — a previous
+    // test's selection would otherwise suppress initialSlot handling.
+    useBuilderUI.getState().hydrate(null);
+  });
+
+  function guardrailsShell() {
+    return render(
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <BuilderTopbarSlotsProvider>
+            <AgentBuilder mode="build" agentId="agent-1" initialSlot="guardrails" />
+          </BuilderTopbarSlotsProvider>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+  }
+
+  it('Escape inside a text input keeps focus and never navigates to Overview', async () => {
+    await act(async () => {
+      guardrailsShell();
+    });
+    const input = (await screen.findByLabelText('New deny topic')) as HTMLElement;
+    input.focus();
+    fireEvent.keyDown(input, { key: 'Escape', bubbles: true });
+    // Focus stays in the field; the section view is untouched.
+    expect(document.activeElement).toBe(input);
+    expect(screen.getByLabelText('New deny topic')).toBeTruthy();
+  });
+
+  it('Escape outside a field still returns to Overview', async () => {
+    await act(async () => {
+      guardrailsShell();
+    });
+    await screen.findByLabelText('New deny topic');
+    fireEvent.keyDown(document.body, { key: 'Escape', bubbles: true });
+    // The builder navigated away — the guardrails view unmounted.
+    await waitFor(() => expect(screen.queryByLabelText('New deny topic')).toBeNull());
+  });
+});
