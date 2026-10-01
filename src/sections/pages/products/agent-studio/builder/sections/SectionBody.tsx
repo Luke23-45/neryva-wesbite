@@ -32,6 +32,7 @@ import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from '../inspector/TraceDrawer';
 import { sectionLabel, type SectionEntry } from '../nav/section-groups';
 import { SectionActions, SectionPane, SectionWrap, SaveButton } from './SectionBody.styles';
+import { CredentialsRail } from './CredentialsRail';
 
 /**
  * Sections with a real save affordance behind the header's "Save {name}"
@@ -152,6 +153,10 @@ interface SectionBodyProps {
 function CredentialsNode({ context }: { context: InspectorContext }) {
   const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  const canRead = canSetup(context.role, 'setup:author');
+  // CR-BUG3 rail: the same cached queries the panel reads — React Query
+  // dedupes by key, so this costs no extra fetch. Extracted to its own
+  // component so the section-mapping tests can mock it like CredentialsPanel.
   const pinnedProviders = useMemo(
     () => [
       ...new Set(
@@ -164,11 +169,12 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
     <SectionPage
       title="Credentials"
       subtitle="Provider API keys and Neryva-managed platform credentials this agent may use at runtime."
+      rail={<CredentialsRail canRead={canRead} />}
     >
       <CredentialsPanel
         pinnedProviders={pinnedProviders}
         canGovern={canSetup(context.role, 'setup:govern')}
-        canRead={canSetup(context.role, 'setup:author')}
+        canRead={canRead}
         highlightProvider={null}
         revokeOpenId={revokeCredentialId}
         connectOpen={connectOpen}

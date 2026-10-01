@@ -71,6 +71,9 @@ vi.mock('../inspector/BrandSection', () => ({
 vi.mock('../inspector/CredentialsPanel', () => ({
   CredentialsPanel: () => <div data-testid="section-credentials" />,
 }));
+vi.mock('./CredentialsRail', () => ({
+  CredentialsRail: () => <div data-testid="credentials-rail" />,
+}));
 vi.mock('../inspector/SamplesSection', () => ({
   SamplesSection: () => <div data-testid="section-samples" />,
 }));
