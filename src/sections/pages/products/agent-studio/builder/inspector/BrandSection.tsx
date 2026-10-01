@@ -265,6 +265,7 @@ export function BrandSection({
     canAuthor,
     blocked,
     conflict,
+    pending,
     holdReason: () => (secretHit ? 'This looks like a pasted credential — brand ships into every reply. Mention it, don’t paste it.' : (heldMessages[0] ?? null)),
   });
 

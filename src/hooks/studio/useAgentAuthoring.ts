@@ -576,9 +576,13 @@ export function diffDefinitions(from: AgentDefinition, to: AgentDefinition): Def
 
 function useInvalidateAuthoring() {
   const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] });
-  };
+  // Returned (not voided) so draft-write onSuccess callbacks can await the
+  // base-hash refresh: TanStack Query v5 awaits onSuccess before the
+  // mutation leaves the pending state, so the save stays "in flight" until
+  // the refetched version hash has actually landed. A follow-up save can
+  // therefore never fire with the pre-save If-Match hash — the stale-hash
+  // race that produced false 412s against our own write (G-BUG7).
+  return () => queryClient.invalidateQueries({ queryKey: [...AUTHORING_KEY] });
 }
 
 export interface CreateAssistantResult {
@@ -690,6 +694,9 @@ export function useSaveDraftVersion(assistantId: string | null, options?: DraftW
         body: toEnginePayload(definition),
         idempotent: true,
       }),
+    // G-BUG7: return the invalidation promise — the mutation stays pending
+    // until the new version hash lands, so no follow-up save can fire with
+    // the stale If-Match hash and 412 against our own write.
     onSuccess: () => invalidate(),
     onError: (error) => {
       // 409: every caller surfaces this per-mutate ("A draft opened elsewhere —
@@ -721,6 +728,9 @@ export function useUpdateDraftVersion(assistantId: string | null, versionId: str
         headers: { 'If-Match': input.expectedHash },
         idempotent: true,
       }),
+    // G-BUG7: return the invalidation promise — same stale-If-Match
+    // serialization as useSaveDraftVersion above: the mutation stays pending
+    // until the new version hash lands.
     onSuccess: () => invalidate(),
     // 412s are owned by the editor's merge-or-reload panel (both hashes +
     // diff); 400-legacy by the caller's humanized Fix toast when it opted in.

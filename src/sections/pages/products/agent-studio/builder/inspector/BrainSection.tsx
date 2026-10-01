@@ -219,6 +219,7 @@ export function BrainSection({
     canAuthor,
     blocked,
     conflict,
+    pending,
     holdReason: () => null,
   });
 

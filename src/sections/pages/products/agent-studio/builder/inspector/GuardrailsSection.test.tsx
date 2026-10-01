@@ -105,6 +105,36 @@ describe('GuardrailsSection', () => {
     expect(lastDirty()).toBe(false);
   });
 
+  it('deny-topic add-then-remove is a clean no-op: no save fires (G-BUG7)', async () => {
+    const onDirtyChange = vi.fn();
+    shell({ onDirtyChange });
+    const calls = vi.mocked(onDirtyChange).mock.calls;
+    const lastDirty = () => calls[calls.length - 1]?.[0];
+    await act(async () => {});
+    expect(lastDirty()).toBe(false);
+    const input = screen.getByLabelText('New deny topic');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'temp' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+    expect(screen.getByText('temp')).toBeTruthy();
+    expect(lastDirty()).toBe(true);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove deny topic temp' }));
+    });
+    expect(screen.queryByText('temp')).toBeNull();
+    // Net no-op under the canonical dirty comparison: clean again, and the
+    // debounce window must not produce a phantom save.
+    expect(lastDirty()).toBe(false);
+    await act(async () => {
+      vi.advanceTimersByTime(8000);
+    });
+    expect(updateMutate).not.toHaveBeenCalled();
+    expect(saveMutate).not.toHaveBeenCalled();
+  });
+
   it('renders the SectionPage header with a live mode pill and the four safeguard groups', () => {
     shell();
     expect(screen.getByRole('heading', { name: 'Guardrails' })).toBeTruthy();

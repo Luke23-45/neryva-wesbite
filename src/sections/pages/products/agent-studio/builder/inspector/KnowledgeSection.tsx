@@ -536,6 +536,7 @@ export function KnowledgeSection({
     canAuthor,
     blocked,
     conflict,
+    pending,
     holdReason: () => heldMessages[0] ?? null,
   });
 

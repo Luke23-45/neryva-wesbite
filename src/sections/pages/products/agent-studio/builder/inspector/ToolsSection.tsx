@@ -575,6 +575,7 @@ export function ToolsSection({
     canAuthor,
     blocked,
     conflict,
+    pending,
     holdReason: () => heldMessages[0] ?? null,
   });
 

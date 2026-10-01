@@ -668,6 +668,7 @@ export function InstructionsSection({
     canAuthor,
     blocked,
     conflict,
+    pending,
     holdReason: () =>
       secretHit !== null
         ? 'Looks like a pasted credential — secrets are refused at save. Mention it, don’t paste it.'

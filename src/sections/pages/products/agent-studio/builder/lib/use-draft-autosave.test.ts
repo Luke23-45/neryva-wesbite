@@ -5,11 +5,13 @@ import { useDraftAutosave, useManualSaveSignal, type DraftAutosaveGates } from '
 import { AUTOSAVE_MS } from './draft-save';
 import toast from 'react-hot-toast';
 
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock('react-hot-toast', () => {
+  const base = vi.fn();
+  return { default: Object.assign(base, { success: vi.fn(), error: vi.fn() }) };
+});
 
 const toastError = vi.mocked(toast.error);
+const toastBase = vi.mocked(toast);
 
 /**
  * A2-23 regression: inspector sections unmount when the user switches
@@ -114,6 +116,7 @@ describe('useManualSaveSignal (loud held saves)', () => {
       canAuthor: true,
       blocked: false as boolean | null | undefined,
       conflict: null as unknown,
+      pending: false,
       holdReason: () => 'Trim to save.',
       ...overrides,
     };
@@ -167,5 +170,31 @@ describe('useManualSaveSignal (loud held saves)', () => {
     rerender({ signal: 1 });
     expect(doSave).not.toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('coalesces the manual signal while a save is in flight instead of firing a duplicate PUT (G-BUG7)', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(({ signal }) => useManualSaveSignal(signal, doSave, hold({ pending: true })), {
+      initialProps: { signal: 0 },
+    });
+    rerender({ signal: 1 });
+    // No duplicate PUT — the in-flight save already covers the edits.
+    expect(doSave).not.toHaveBeenCalled();
+    // …but never silent: the hold is announced, not swallowed.
+    expect(toastBase).toHaveBeenCalledTimes(1);
+    expect(toastBase).toHaveBeenCalledWith(expect.stringContaining('already in progress'));
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('fires the manual signal once the in-flight save settles', () => {
+    const doSave = vi.fn();
+    const { rerender } = renderHook(
+      ({ signal, pending }) => useManualSaveSignal(signal, doSave, hold({ pending })),
+      { initialProps: { signal: 0, pending: true } },
+    );
+    rerender({ signal: 1, pending: true });
+    expect(doSave).not.toHaveBeenCalled();
+    rerender({ signal: 2, pending: false });
+    expect(doSave).toHaveBeenCalledTimes(1);
   });
 });

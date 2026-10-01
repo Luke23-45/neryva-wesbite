@@ -94,6 +94,15 @@ export function useManualSaveSignal(
     canAuthor: boolean;
     blocked: boolean | null | undefined;
     conflict: unknown;
+    /**
+     * A save is already in flight — or its base-hash refresh hasn't landed
+     * yet (draft-write mutations stay pending through the invalidating
+     * refetch, G-BUG7). Firing now would send a stale If-Match and 412
+     * against our own write, so the signal coalesces instead: the shared
+     * autosave re-fires on pending→false while still dirty, so nothing is
+     * lost.
+     */
+    pending: boolean;
     /** Human reason for the hold, surfaced when the user explicitly saves. */
     holdReason: () => string | null;
   },
@@ -112,6 +121,15 @@ export function useManualSaveSignal(
     if (!h.canAuthor || h.conflict) return;
     if (h.blocked) {
       toast.error(h.holdReason() ?? 'Save is held — fix the issue above and try again.');
+      return;
+    }
+    if (h.pending) {
+      // G-BUG7: never fire a duplicate PUT while the previous save (or its
+      // base-hash refresh) is still in flight — it would carry a stale
+      // If-Match and raise a false 412 against our own write. The in-flight
+      // save covers the current edits; anything newer re-saves via the
+      // autosave once pending clears.
+      toast('A save is already in progress — your changes will be saved automatically.');
       return;
     }
     save();
