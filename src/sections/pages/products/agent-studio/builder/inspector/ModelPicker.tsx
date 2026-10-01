@@ -247,8 +247,10 @@ export function ModelPicker({
                     {/* side="bottom": the catalog list scrolls (overflow-y),
                         so an upward bubble is clipped whenever the demo group
                         sits near the top of the scrollport. Below the badge
-                        there is always catalog content to overlay. */}
-                    <Tooltip label={DEMO_TOOLTIP} side="bottom">
+                        there is always catalog content to overlay.
+                        focusable: the badge is a plain span — without a tab
+                        stop keyboard users can never reveal the policy copy. */}
+                    <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
                       <DemoBadge>Demo</DemoBadge>
                     </Tooltip>
                   </>

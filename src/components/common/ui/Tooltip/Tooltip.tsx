@@ -28,9 +28,16 @@ type Props = {
   side?: Side;
   /** ms delay before show — defaults to 480, matches macOS tooltips. */
   delay?: number;
+  /**
+   * When true, the trigger is keyboard-focusable (tabIndex 0) so keyboard
+   * users can reveal the tooltip via the existing focus handler. Opt-in:
+   * most tooltip triggers are decorative affordances inside already-focusable
+   * controls, and an extra tab stop would be noise.
+   */
+  focusable?: boolean;
 };
 
-export function Tooltip({ label, children, side = 'top', delay = 480 }: Props) {
+export function Tooltip({ label, children, side = 'top', delay = 480, focusable = false }: Props) {
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const wrapperRef = useRef<HTMLSpanElement>(null);
@@ -69,6 +76,7 @@ export function Tooltip({ label, children, side = 'top', delay = 480 }: Props) {
       onMouseLeave={cancelShow}
       onFocus={scheduleShow}
       onBlur={cancelShow}
+      tabIndex={focusable ? 0 : undefined}
     >
       {children}
       <AnimatePresence>
