@@ -937,7 +937,11 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
         : !definition
           ? 'untouched'
           : !creds
-            ? 'info'
+            ? // CR-BUG1: an absent summary is ungradable — the credential
+              // list 403s for reader/billing roles (owner/admin/developer
+              // only). 'info' rendered the eternal "Syncing" spinner; the
+              // honest grade is untouched, like Samples (D5).
+              'untouched'
             : creds.expired > 0
               ? 'attention'
               : creds.count === 0

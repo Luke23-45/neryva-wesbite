@@ -5,11 +5,11 @@ import { spring } from '@styles/motion';
 /**
  * iOS-style switch — Apple-grade.
  *
- * - Track background crossfades with an expressive ease when toggling.
+ * - Track crossfades between the flat accent fill and the neutral well when toggling.
  * - Thumb translates with a `bouncy` spring (slight overshoot, just like
  *   the real iOS toggle — it "ticks" past the end then settles).
  * - Thumb scales slightly (0.94) while pressed, then bounces back.
- * - Focus ring uses a 3px outer ring with a soft accent halo.
+ * - Focus brightens the track border (no glow ring).
  * - Disabled state: 0.4 opacity, `cursor: not-allowed`.
  *
  * Accessible: `role="switch"` + `aria-checked`, click & keyboard.
@@ -34,7 +34,7 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
         $checked={checked}
         onClick={() => !disabled && onChange(!checked)}
         tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => {
+        onKeyDown={e => {
           if (disabled) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -45,11 +45,7 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
         whileTap={!disabled ? { scale: 0.98 } : undefined}
         transition={spring.snap}
       >
-        <Thumb
-          $checked={checked}
-          layout
-          transition={spring.bouncy}
-        />
+        <Thumb $checked={checked} layout transition={spring.bouncy} />
       </Track>
       {label && (
         <Label htmlFor={id} $disabled={disabled}>
@@ -63,33 +59,30 @@ export function Switch({ checked, onChange, label, disabled, id }: Props) {
 const Root = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: ${({ theme }) => theme.spacing.px10};
 `;
 
 const Track = styled(motion.button)<{ $checked: boolean }>`
   position: relative;
   width: 38px;
   height: 22px;
-  border-radius: 999px;
-  border: 1px solid ${({ $checked }) => ($checked ? 'transparent' : 'rgba(255, 255, 255, 0.10)')};
-  background: ${({ $checked }) =>
-    $checked
-      ? 'linear-gradient(135deg, #c084fc 0%, #2563eb 100%)'
-      : 'rgba(255, 255, 255, 0.10)'};
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.10),
-    0 0 0 0 rgba(147, 197, 253, 0);
+  border-radius: ${({ theme }) => theme.radii.pill};
+  border: 1px solid
+    ${({ theme, $checked }) => ($checked ? 'transparent' : theme.app.border.default)};
+  /* D-BUG1: flat accent fill when on — no gradient. */
+  background: ${({ theme, $checked }) =>
+    $checked ? theme.app.accentControl : theme.app.surface.active};
   cursor: pointer;
-  transition: background ${({ theme }) => theme.transitions.standard},
+  transition:
+    background ${({ theme }) => theme.transitions.standard},
     border-color ${({ theme }) => theme.transitions.standard},
     box-shadow ${({ theme }) => theme.transitions.fast};
   padding: 0;
 
+  /* D-BUG1: focus brightens the border (f533658) — no glow ring. */
   &:focus-visible {
     outline: none;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.10),
-      0 0 0 3px rgba(147, 197, 253, 0.32);
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 
   &:disabled {
@@ -106,15 +99,13 @@ const Thumb = styled(motion.span)<{ $checked: boolean }>`
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.30),
-    0 1px 3px rgba(0, 0, 0, 0.18);
+  background: ${({ theme }) => theme.app.text.primary};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
 const Label = styled.label<{ $disabled?: boolean }>`
-  font-size: 13px;
-  color: rgba(229, 231, 235, 0.85);
+  font-size: ${({ theme }) => theme.app.type.body};
+  color: ${({ theme }) => theme.app.text.secondary};
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   user-select: none;
 `;

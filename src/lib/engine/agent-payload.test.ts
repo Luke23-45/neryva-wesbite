@@ -526,3 +526,61 @@ describe('model pipeline + response_format wire contract', () => {
     expect(consumer.model_policy.pipeline).toEqual([{ ref: 'a/b' }]);
   });
 });
+
+describe('deny_topics wire contract (G-BUG1)', () => {
+  /**
+   * The engine zod schema (assistants/validation.ts guardrail schema) takes
+   * deny_topics as [{ topic: min(1).max(200) }], max 50, case-insensitive
+   * dedupe. The UI model stays string[]; the wire boundary converts.
+   */
+  it('emits the engine wire shape [{ topic }] on the write path', () => {
+    const def = defaultConsumer();
+    def.guardrails.deny_topics = ['Tax advice', 'Medical diagnosis'];
+    const wire = toEnginePayload(def);
+    expect(wire.guardrail_policy.deny_topics).toEqual([{ topic: 'Tax advice' }, { topic: 'Medical diagnosis' }]);
+  });
+
+  it('round-trips topics through wire and back without loss', () => {
+    const def = defaultConsumer();
+    def.guardrails.deny_topics = ['Tax advice', 'Medical diagnosis'];
+    const wire = toEnginePayload(def);
+    // Simulate the engine echoing the stored policy verbatim.
+    const back = fromEnginePayload({ guardrail_policy: wire.guardrail_policy });
+    expect(back.guardrails.deny_topics).toEqual(['Tax advice', 'Medical diagnosis']);
+  });
+
+  it('parses the engine { topic }[] shape on the read path', () => {
+    const back = fromEnginePayload({
+      guardrail_policy: { deny_topics: [{ topic: 'Legal Advice' }, { topic: 'Insider trading' }] },
+    });
+    expect(back.guardrails.deny_topics).toEqual(['Legal Advice', 'Insider trading']);
+  });
+
+  it('drops non-conforming entries on read instead of guessing', () => {
+    const back = fromEnginePayload({
+      guardrail_policy: {
+        deny_topics: [{ topic: '  ' }, { topic: 'x'.repeat(201) }, { nope: 1 }, null, 42, { topic: 'Real' }],
+      },
+    });
+    expect(back.guardrails.deny_topics).toEqual(['Real']);
+  });
+
+  it('dedupes case-insensitively and caps at 50 like the engine', () => {
+    const def = defaultConsumer();
+    def.guardrails.deny_topics = ['Legal Advice', 'legal advice', 'LEGAL ADVICE', 'Other'];
+    const wire = toEnginePayload(def);
+    expect(wire.guardrail_policy.deny_topics).toEqual([{ topic: 'Legal Advice' }, { topic: 'Other' }]);
+
+    const many = defaultConsumer();
+    many.guardrails.deny_topics = Array.from({ length: 60 }, (_, i) => `topic-${i}`);
+    expect(toEnginePayload(many).guardrail_policy.deny_topics).toHaveLength(50);
+  });
+
+  it('trims whitespace and keeps engine-shaped objects on the write path', () => {
+    const def = defaultConsumer();
+    // API-inserted engine-shaped values in a draft survive the wire boundary.
+    def.guardrails.deny_topics = ['  Padded  ', ''] as unknown as string[];
+    const wire = toEnginePayload(def);
+    expect(wire.guardrail_policy.deny_topics).toEqual([{ topic: 'Padded' }]);
+  });
+});

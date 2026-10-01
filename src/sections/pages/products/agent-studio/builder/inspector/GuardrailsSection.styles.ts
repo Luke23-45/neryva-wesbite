@@ -144,21 +144,33 @@ export const ChipRow = styled.div`
 export const SelectChip = styled.button<{ $selected: boolean }>`
   display: inline-flex;
   align-items: center;
+  position: relative;
   padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s3};
   border-radius: ${({ theme }) => theme.radii.pill};
-  border: 1px solid
-    ${({ theme, $selected }) => ($selected ? theme.app.accentControl : theme.app.border.default)};
-  background: ${({ theme, $selected }) => ($selected ? theme.app.accentControl : 'transparent')};
-  color: ${({ theme, $selected }) => ($selected ? '#ffffff' : theme.app.text.secondary)};
+  /* D-BUG3: selected is the neutral light pill (same-section Segmented
+     treatment) — never the blue accent fill (no-blue-selection rule). */
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme, $selected }) => ($selected ? theme.app.text.primary : 'transparent')};
+  color: ${({ theme, $selected }) =>
+    $selected ? theme.app.text.inverse : theme.app.text.secondary};
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: ${({ theme, $selected }) =>
     $selected ? theme.typography.weights.semibold : theme.typography.weights.medium};
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+
+  /* D-BUG2: 44px-tall hit area, visual-neutral — the visible chip is unchanged. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -7px 0;
+  }
 
   &:hover:not(:disabled) {
-    border-color: ${({ theme, $selected }) =>
-      $selected ? theme.app.accentControl : theme.app.text.tertiary};
+    border-color: ${({ theme }) => theme.app.border.hover};
   }
 
   &:disabled {
@@ -220,6 +232,7 @@ export const TopicCount = styled.span`
 
 export const TopicRemove = styled.button`
   flex: none;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -232,6 +245,13 @@ export const TopicRemove = styled.button`
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+
+  /* D-BUG2: 44px hit area, visual-neutral — the visible × stays 24px. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.app.status.error.bg};
@@ -267,7 +287,9 @@ export const TopicAddButton = styled.button`
   border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.app.accentControl};
   background: ${({ theme }) => theme.app.accentControl};
-  color: #ffffff;
+  /* D-BUG4: near-white token — the fill is the blue accent, so text.inverse
+     (#0b0d12) would fail contrast; text.primary is the light-on-fill token. */
+  color: ${({ theme }) => theme.app.text.primary};
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   cursor: pointer;

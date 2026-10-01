@@ -88,6 +88,23 @@ afterEach(() => {
 });
 
 describe('GuardrailsSection', () => {
+  it('PII off→on round-trip reports clean (G-BUG3 — value-based dirty, not interaction-based)', async () => {
+    const onDirtyChange = vi.fn();
+    shell({ onDirtyChange });
+    const lastDirty = () => vi.mocked(onDirtyChange).mock.calls.at(-1)?.[0];
+    await act(async () => {});
+    expect(lastDirty()).toBe(false);
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('PII redaction'));
+    });
+    expect(lastDirty()).toBe(true);
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('PII redaction'));
+    });
+    // Back to the loaded value: no unsaved changes, no phantom dirty.
+    expect(lastDirty()).toBe(false);
+  });
+
   it('renders the SectionPage header with a live mode pill and the four safeguard groups', () => {
     shell();
     expect(screen.getByRole('heading', { name: 'Guardrails' })).toBeTruthy();

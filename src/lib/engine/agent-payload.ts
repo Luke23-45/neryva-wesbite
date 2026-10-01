@@ -513,7 +513,23 @@ export interface EnginePayload {
       refresh_policy?: 'pin_version' | 'track_latest';
     };
   };
-  guardrail_policy: { input_policy: string; output_policy: string; pii_redaction: boolean; execution_mode: string };
+  guardrail_policy: {
+    input_policy: string;
+    output_policy: string;
+    pii_redaction: boolean;
+    execution_mode: string;
+    /**
+     * Guardrails redesign (v1.17) extensions — the engine's guardrail schema
+     * carries these on the same object. deny_topics is [{ topic }] on the
+     * wire (the engine zod schema validates objects, not strings).
+     */
+    pii_entities: string[];
+    pii_action: string;
+    pii_applies_to: string[];
+    notify_owner: boolean;
+    attach_to_trace: boolean;
+    deny_topics: Array<{ topic: string }>;
+  };
 }
 
 /** Safest publishable defaults: explicit where the engine needs values, empty where a maker choice is required. */
@@ -872,17 +888,35 @@ function cleanPiiSinks(value: unknown): PiiSink[] {
   return [...new Set(kept)];
 }
 
-/** Engine law: max 50 topics, no case-insensitive duplicates, 1–200 chars. */
+/**
+ * Engine law: max 50 topics, no case-insensitive duplicates, 1–200 chars.
+ * The wire shape is [{ topic }] — the engine zod schema
+ * (validation.ts guardrail schema) validates objects, not strings.
+ * The UI model stays string[]; conversion happens at the wire boundary.
+ */
 export const DENY_TOPICS_MAX = 50;
 
-function cleanDenyTopics(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
+/**
+ * Normalize one raw entry to a trimmed topic string, or null when it is
+ * unusable. Accepts the UI's plain strings and the engine's { topic }
+ * objects so API-inserted values survive the wire boundary.
+ */
+function cleanDenyTopic(raw: unknown): string | null {
+  const candidate =
+    typeof raw === 'string' ? raw : typeof raw === 'object' && raw !== null ? (raw as { topic?: unknown }).topic : null;
+  if (typeof candidate !== 'string') return null;
+  const topic = candidate.trim();
+  if (topic === '' || topic.length > 200) return null;
+  return topic;
+}
+
+function dedupeTopics(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const raw of value) {
-    if (typeof raw !== 'string') continue;
-    const topic = raw.trim();
-    if (topic === '' || topic.length > 200) continue;
+  for (const entry of raw) {
+    const topic = cleanDenyTopic(entry);
+    if (topic === null) continue;
     const key = topic.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -890,6 +924,19 @@ function cleanDenyTopics(value: unknown): string[] {
     if (out.length >= DENY_TOPICS_MAX) break;
   }
   return out;
+}
+
+/** Write path: emit the engine wire shape [{ topic }], deduped and capped. */
+export function cleanDenyTopics(value: unknown): Array<{ topic: string }> {
+  return dedupeTopics(value).map((topic) => ({ topic }));
+}
+
+/**
+ * Read path: parse the engine wire shape [{ topic }] back to the UI's
+ * string[] model. Non-conforming entries are dropped, never guessed.
+ */
+export function parseDenyTopics(value: unknown): string[] {
+  return dedupeTopics(value);
 }
 
 function obj(value: unknown): Record<string, unknown> {
@@ -1150,7 +1197,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
         : ['storage', 'logs'],
       notify_owner: guardrails.notify_owner === true,
       attach_to_trace: guardrails.attach_to_trace !== false,
-      deny_topics: cleanDenyTopics(guardrails.deny_topics),
+      // Read path: the engine wire shape is [{ topic }] — parse it back to
+      // the UI's string[] model; non-conforming entries are dropped.
+      deny_topics: parseDenyTopics(guardrails.deny_topics),
     },
     budget: {
       ...(typeof budget.max_model_calls === 'number' ? { max_model_calls: budget.max_model_calls } : {}),

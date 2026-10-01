@@ -3,7 +3,11 @@ import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
 import { canSetup } from '@lib/engine/capabilities';
-import { PurposeInspector, type PurposeFormState, type PurposeHandle } from '../inspector/PurposeInspector';
+import {
+  PurposeInspector,
+  type PurposeFormState,
+  type PurposeHandle,
+} from '../inspector/PurposeInspector';
 import { InstructionsSection } from '../inspector/InstructionsSection';
 import { BrandSection } from '../inspector/BrandSection';
 import { BrainSection } from '../inspector/BrainSection';
@@ -16,18 +20,18 @@ import { ResponseSection } from '../inspector/ResponseSection';
 import { RoleSection } from '../inspector/RoleSection';
 import { MemorySection } from '../inspector/MemorySection';
 import { BudgetSection } from '../inspector/BudgetSection';
+import { CredentialsPanel } from '../inspector/CredentialsPanel';
+import { SectionPage } from '../section-ui/SectionPage';
 import { TrySection } from '../inspector/TrySection';
 import { EvaluationSection } from '../inspector/EvaluationSection';
 import { ShipSection } from '../inspector/ShipSection';
-import { CredentialsPanel } from '../inspector/CredentialsPanel';
 import { SamplesSection } from '../inspector/SamplesSection';
 import { PurposeExtras, type PurposeNodeDatum } from '../inspector/PurposeExtras';
 import { LockedWrap } from '../inspector/BuilderInspector.styles';
 import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from '../inspector/TraceDrawer';
 import { sectionLabel, type SectionEntry } from '../nav/section-groups';
-import { SectionActions, SectionPane, SectionWrap } from './SectionBody.styles';
-import { ActionButton } from '@components/common/ui/ActionButton';
+import { SectionActions, SectionPane, SectionWrap, SaveButton } from './SectionBody.styles';
 
 /**
  * Sections with a real save affordance behind the header's "Save {name}"
@@ -149,20 +153,29 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
   const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
   const [connectOpen, setConnectOpen] = useState(false);
   const pinnedProviders = useMemo(
-    () => [...new Set((context.definition?.model_policy.allowed_models ?? []).map((ref) => ref.split('/')[0] ?? ref))],
-    [context.definition],
+    () => [
+      ...new Set(
+        (context.definition?.model_policy.allowed_models ?? []).map(ref => ref.split('/')[0] ?? ref)
+      ),
+    ],
+    [context.definition]
   );
   return (
-    <CredentialsPanel
-      pinnedProviders={pinnedProviders}
-      canGovern={canSetup(context.role, 'setup:govern')}
-      canRead={canSetup(context.role, 'setup:author')}
-      highlightProvider={null}
-      revokeOpenId={revokeCredentialId}
-      connectOpen={connectOpen}
-      onConnectOpenChange={setConnectOpen}
-      onRevokeOpenChange={setRevokeCredentialId}
-    />
+    <SectionPage
+      title="Credentials"
+      subtitle="Provider API keys and Neryva-managed platform credentials this agent may use at runtime."
+    >
+      <CredentialsPanel
+        pinnedProviders={pinnedProviders}
+        canGovern={canSetup(context.role, 'setup:govern')}
+        canRead={canSetup(context.role, 'setup:author')}
+        highlightProvider={null}
+        revokeOpenId={revokeCredentialId}
+        connectOpen={connectOpen}
+        onConnectOpenChange={setConnectOpen}
+        onRevokeOpenChange={setRevokeCredentialId}
+      />
+    </SectionPage>
   );
 }
 
@@ -416,7 +429,14 @@ export function SectionBody({
         // Browse-only gallery: the composer's own gallery (Instructions
         // section) keeps the working insert — a cross-section insert would
         // be new functionality. Inserting stays available in Instructions.
-        body = <SamplesSection assistantId={id} canAuthor={false} startOpen={false} onInsert={() => undefined} />;
+        body = (
+          <SamplesSection
+            assistantId={id}
+            canAuthor={false}
+            startOpen={false}
+            onInsert={() => undefined}
+          />
+        );
         break;
       case 'evaluation':
         body = (
@@ -438,7 +458,7 @@ export function SectionBody({
             versionId={context.versionId}
             role={context.role}
             publishSignal={context.publishSignal}
-            onEditJump={(target) => {
+            onEditJump={target => {
               if (context.onShipJump) {
                 context.onShipJump(target);
                 return;
@@ -469,7 +489,9 @@ export function SectionBody({
         );
         break;
       default:
-        body = <LockedWrap>Unknown section &ldquo;{sectionId}&rdquo; — nothing to configure.</LockedWrap>;
+        body = (
+          <LockedWrap>Unknown section &ldquo;{sectionId}&rdquo; — nothing to configure.</LockedWrap>
+        );
         break;
     }
   }
@@ -497,7 +519,7 @@ export function SectionBody({
         <SectionActions>
           {/* C-D2: the relationship is stated, not left to guess — this is
               the top bar's Save, surfaced here so the author doesn't scroll. */}
-          <ActionButton
+          <SaveButton
             size="sm"
             variant="secondary"
             onClick={handleSectionSave}
@@ -505,7 +527,7 @@ export function SectionBody({
             title={`Save ${title} — the same save as the top bar, right here`}
           >
             Save {title}
-          </ActionButton>
+          </SaveButton>
         </SectionActions>
       ) : null}
       <SectionPane>{body}</SectionPane>

@@ -38,6 +38,23 @@ export function parseGuardrailMode(raw: unknown): GuardrailExecutionMode {
   return raw === 'logging' ? 'logging' : 'blocking';
 }
 
+/**
+ * Canonical JSON for dirty comparison (G-BUG3): object keys are sorted
+ * recursively, so two semantically equal policies compare equal even if a
+ * patch ever writes keys in a different order or an unnormalized value.
+ * Arrays keep their order (entity/sink/topic order is significant).
+ */
+export function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (typeof value === 'object' && value !== null) {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([k, v]) => `${JSON.stringify(k)}:${stableStringify(v)}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
 export type PolicyDirection = 'input' | 'output';
 
 export const INPUT_PRESETS = ['default', 'strict', 'none'] as const;

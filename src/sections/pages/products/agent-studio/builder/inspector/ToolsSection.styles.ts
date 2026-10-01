@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { ChevronDown } from 'lucide-react';
 
 /**
  * Tools section — redesigned (bound tools with entry-local switches,
@@ -155,7 +156,8 @@ export const BoundList = styled.div`
 
 export const BoundRow = styled.div<{ $expanded?: boolean; $attention?: boolean }>`
   border: 1px solid
-    ${({ theme, $attention }) => ($attention ? theme.app.status.warning.border : theme.app.border.default)};
+    ${({ theme, $attention }) =>
+      $attention ? theme.app.status.warning.border : theme.app.border.default};
   background: ${({ theme }) => theme.app.bg.base};
   border-radius: ${({ theme }) => theme.radii.lg};
   overflow: hidden;
@@ -200,6 +202,14 @@ export const RowIcon = styled.span`
   border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ theme }) => theme.app.surface.subtle};
   color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+/* D-BUG4: chevron styling tokenized (was an inline style with a #9aa3ad literal). */
+export const RowChevron = styled(ChevronDown)<{ $open: boolean }>`
+  flex: none;
+  color: ${({ theme }) => theme.app.text.muted};
+  transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'none')};
+  transition: transform ${({ theme }) => theme.transitions.fast};
 `;
 
 export const RowText = styled.span`
@@ -259,6 +269,7 @@ export const EffectChip = styled.span<{ $variant: 'readonly' | 'ungated' | 'gate
 
 export const IconButton = styled.button`
   flex: none;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,6 +280,13 @@ export const IconButton = styled.button`
   border: none;
   color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
+
+  /* D-BUG2: 44px hit area, visual-neutral — the visible button stays 28px. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
 
   &:hover {
     background: ${({ theme }) => theme.app.surface.subtle};

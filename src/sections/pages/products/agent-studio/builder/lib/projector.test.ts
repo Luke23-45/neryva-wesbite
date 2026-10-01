@@ -253,9 +253,11 @@ describe('projector samples node', () => {
 });
 
 describe('projector credentials node', () => {
-  it('stays info when the summary is not readable (never invented)', () => {
+  it('stays untouched when the summary is not readable (never spins, never invented)', () => {
+    // CR-BUG1: the credential list 403s for reader/billing roles — an
+    // absent summary graded 'info' spun the "Syncing" badge forever.
     const input = base({ credentialsSummary: undefined });
-    expect(statusOf(input, 'credentials')).toBe('info');
+    expect(statusOf(input, 'credentials')).toBe('untouched');
     expect(nodeOf(input, 'credentials')?.hint).toBe('Configured in the Credentials section');
   });
 

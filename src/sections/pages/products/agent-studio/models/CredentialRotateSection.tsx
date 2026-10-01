@@ -20,19 +20,19 @@ import { SectionBackRow } from './SectionBackRow';
 import { validateCredentialSecret } from './ModelsView';
 
 const FieldLabel = styled.label`
-  font-size: 13px;
+  font-size: ${({ theme }) => theme.app.type.body};
   display: block;
 `;
 
 const FieldSelect = styled.select`
   display: block;
   width: 100%;
-  margin-top: 4px;
+  margin-top: ${({ theme }) => theme.spacing.s1};
   background: ${({ theme }) => theme.app.surface.tint};
   color: ${({ theme }) => theme.app.text.primary};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.px10};
   font-family: inherit;
   font-size: ${({ theme }) => theme.app.type.body};
 
@@ -45,8 +45,8 @@ const FieldSelect = styled.select`
 const ActionsRow = styled.div`
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: ${({ theme }) => theme.spacing.s2};
+  margin-top: ${({ theme }) => theme.spacing.s4};
 `;
 
 /**

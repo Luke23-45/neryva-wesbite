@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Check, ChevronDown, Circle, MoreHorizontal, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, Check, Circle, MoreHorizontal, Wrench, Zap } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
 import { Switch } from '@components/common/ui/Switch';
 import { Segmented } from '@components/common/ui/Segmented';
@@ -30,7 +30,6 @@ import {
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
-import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import {
   BUILTIN_TOOL_APPROVAL,
   approvalSourceLabel,
@@ -116,6 +115,7 @@ import {
   RailRow,
   RailValue,
   RowBar,
+  RowChevron,
   RowExpand,
   RowIcon,
   RowName,
@@ -525,10 +525,6 @@ export function ToolsSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
-  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
-  // nav badge grades `ready` even at engine defaults.
-  const confirmSection = useSectionConfirmationContext();
-
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
@@ -537,7 +533,6 @@ export function ToolsSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => confirmSection('tools'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -557,7 +552,6 @@ export function ToolsSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => confirmSection('tools'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -565,7 +559,7 @@ export function ToolsSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.
@@ -736,13 +730,6 @@ export function ToolsSection({
   const effectfulBoundCount = riskInputs.filter((r) => r.effectful).length;
 
   return (
-    <div
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target instanceof HTMLElement) {
-          event.target.blur();
-        }
-      }}
-    >
       <SectionPage
         title="Tools"
         subtitle="Bind catalog tools the agent may call — and gate the effectful ones."
@@ -812,16 +799,7 @@ export function ToolsSection({
                             </RowSub>
                           </RowText>
                           <EffectChip $variant={chipVariant}>{chipLabel}</EffectChip>
-                          <ChevronDown
-                            size={15}
-                            style={{
-                              flex: 'none',
-                              color: 'var(--muted, #9aa3ad)',
-                              transform: isOpen ? 'rotate(180deg)' : 'none',
-                              transition: 'transform 120ms ease',
-                            }}
-                            aria-hidden="true"
-                          />
+                          <RowChevron size={15} $open={isOpen} aria-hidden="true" />
                         </RowExpand>
                         {canAuthor && (
                           <Switch
@@ -1277,6 +1255,5 @@ export function ToolsSection({
           />
         )}
       </SectionPage>
-    </div>
   );
 }

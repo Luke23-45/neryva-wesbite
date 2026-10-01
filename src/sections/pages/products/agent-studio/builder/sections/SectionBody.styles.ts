@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { ActionButton } from '@components/common/ui/ActionButton';
 
 /**
  * SectionBody chrome (configure-first redesign).
@@ -55,4 +56,17 @@ export const SectionContent = styled.div<{ $wide?: boolean }>`
   flex-direction: column;
   gap: 32px;
   padding-top: 8px;
+`;
+
+/* D-BUG2: local 44px-tall hit area for the per-section Save button —
+   visual-neutral (the visible button keeps its sm size). Kept local:
+   ActionButton sm is shared with platform pages, so the global stays. */
+export const SaveButton = styled(ActionButton)`
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+  }
 `;

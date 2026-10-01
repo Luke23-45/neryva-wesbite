@@ -2,7 +2,6 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
-import { ActionButton } from '@components/common/ui/ActionButton';
 import {
   MODEL_PROVIDERS,
   useCreateProviderCredential,
@@ -30,6 +29,7 @@ import {
   RowActions,
   Select,
   SelectWrap,
+  SmButton,
   TextButton,
   Wrap,
 } from './CredentialsPanel.styles';
@@ -88,7 +88,7 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
         <SkeletonRows rows={3} />
       )}
       {credentials.isError && (
-        <DeniedNote>Credentials unreachable — retry the page. Model rows keep their last-known reasons.</DeniedNote>
+        <DeniedNote role="alert">Credentials unreachable — retry the page. Model rows keep their last-known reasons.</DeniedNote>
       )}
       {(credentials.data ?? []).map((cred) => (
         <CredentialRow
@@ -104,7 +104,7 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
         !isEnterprise ? (
           <DeniedNote>
             Bring Your Own API Key is an Enterprise feature. Your organization uses
-            Neryva-managed platform credentials — select any provider and model below
+            Neryva-managed platform credentials — select any provider and model in the Model section
             and Neryva handles billing. Contact sales to enable BYOK with an enterprise
             commitment.
           </DeniedNote>
@@ -124,15 +124,15 @@ export function CredentialsPanel({ pinnedProviders, canGovern, canRead, highligh
             Neryva handles billing. Connect a key only when you want to bring
             your own.
             <div>
-              <ActionButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
+              <SmButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
                 Connect provider
-              </ActionButton>
+              </SmButton>
             </div>
           </EmptyState>
         ) : (
-          <ActionButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
+          <SmButton size="sm" variant="secondary" onClick={() => onConnectOpenChange(true)}>
             Connect provider
-          </ActionButton>
+          </SmButton>
         )
       ) : (
         <DeniedNote>Connecting, rotating, and revoking need an owner or admin.</DeniedNote>
@@ -207,7 +207,7 @@ function CredentialRow({
           />
           <Counter>{secret.length} / {SECRET_MIN}–{SECRET_MAX} chars</Counter>
           <RowActions>
-            <ActionButton
+            <SmButton
               size="sm"
               disabled={!secretValid || rotate.isPending}
               onClick={() =>
@@ -218,7 +218,7 @@ function CredentialRow({
               }
             >
               Rotate with step-up
-            </ActionButton>
+            </SmButton>
           </RowActions>
           <FormNote>Rotation asks for a fresh authenticator code — the secret itself is never displayed.</FormNote>
         </InlineForm>
@@ -238,7 +238,7 @@ function CredentialRow({
             <span>Mark compromised — also page owners/admins. Use only for real incidents.</span>
           </CheckRow>
           <RowActions>
-            <ActionButton
+            <SmButton
               size="sm"
               variant="secondary"
               disabled={revoke.isPending || reason.length > REASON_MAX}
@@ -261,7 +261,7 @@ function CredentialRow({
               }
             >
               Revoke now
-            </ActionButton>
+            </SmButton>
           </RowActions>
           <FormNote>Revocation never waits on MFA — incident response first. History rows are never deleted.</FormNote>
         </InlineForm>
@@ -309,7 +309,7 @@ function ConnectForm({
       />
       <Counter>{secret.length} / {SECRET_MIN}–{SECRET_MAX} chars</Counter>
       <RowActions>
-        <ActionButton
+        <SmButton
           size="sm"
           disabled={!valid || create.isPending}
           onClick={() =>
@@ -320,7 +320,7 @@ function ConnectForm({
           }
         >
           Connect with step-up
-        </ActionButton>
+        </SmButton>
         <TextButton type="button" onClick={onCancel}>
           Cancel
         </TextButton>

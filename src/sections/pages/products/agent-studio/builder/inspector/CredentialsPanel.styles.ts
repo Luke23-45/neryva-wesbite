@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { ActionButton } from '@components/common/ui/ActionButton';
 
 /**
  * Credentials panel — redesigned.
@@ -189,4 +190,17 @@ export const SelectWrap = styled.label`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.spacing.px6};
+`;
+
+/* D-BUG2: local 44px-tall hit area for the small credentials buttons —
+   visual-neutral (the visible button keeps its sm size). Kept local:
+   ActionButton sm is shared with platform pages, so the global stays. */
+export const SmButton = styled(ActionButton)`
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+  }
 `;

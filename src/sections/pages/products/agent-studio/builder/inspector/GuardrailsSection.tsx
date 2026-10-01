@@ -19,9 +19,9 @@ import { PII_ENTITY_TYPES, PII_SINKS } from '@lib/engine/agent-payload';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
-import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import {
   CUSTOM_NAME_COPY,
+  DENY_TOPICS_MAX,
   FLIP_COPY,
   INPUT_SEGMENTS,
   OUTPUT_SEGMENTS,
@@ -40,6 +40,7 @@ import {
   parsePiiEntities,
   parsePiiSinks,
   resolvePolicyBehavior,
+  stableStringify,
   validateDenyTopic,
   type PolicyDirection,
 } from '../lib/guardrails-model';
@@ -124,12 +125,16 @@ interface PolicyState {
   deny_topics: string[];
 }
 
-function readPolicy(definition: AgentDefinition): PolicyState {
-  const g = definition.guardrails;
+/**
+ * G-BUG3: normalize a policy-shaped value through the same parse functions
+ * the read path uses, so the dirty check compares canonical values — never
+ * raw representations that can drift (key order, unnormalized patch values).
+ */
+function canonicalPolicy(g: PolicyState): PolicyState {
   return {
     input_policy: g.input_policy,
     output_policy: g.output_policy,
-    pii_redaction: g.pii_redaction,
+    pii_redaction: g.pii_redaction === true,
     execution_mode: parseGuardrailMode(g.execution_mode),
     pii_entities: parsePiiEntities(g.pii_entities),
     pii_action: parsePiiAction(g.pii_action),
@@ -138,6 +143,10 @@ function readPolicy(definition: AgentDefinition): PolicyState {
     attach_to_trace: g.attach_to_trace !== false,
     deny_topics: normalizeDenyTopics(g.deny_topics),
   };
+}
+
+function readPolicy(definition: AgentDefinition): PolicyState {
+  return canonicalPolicy(definition.guardrails);
 }
 
 const EMPTY_POLICY: PolicyState = {
@@ -198,8 +207,10 @@ export function GuardrailsSection({
   }, [telemetry.data]);
 
   const source = useMemo(() => (definition ? readPolicy(definition) : null), [definition]);
-  const current = useMemo(() => JSON.stringify(policy), [policy]);
-  const dirty = source !== null && current !== JSON.stringify(source);
+  // G-BUG3: canonical comparison — both sides normalized, keys sorted.
+  // A value round-trip (e.g. PII off→on) is clean; only real edits are dirty.
+  const current = useMemo(() => stableStringify(canonicalPolicy(policy)), [policy]);
+  const dirty = source !== null && current !== stableStringify(source);
 
   if (docKey !== sourceKey && !dirty) {
     setDocKey(sourceKey);
@@ -251,10 +262,6 @@ export function GuardrailsSection({
   );
   const adoptingActive = adopting !== null && sourcePolicyJson !== adopting;
 
-  // C-BUG4/M-BUG3 Option A: confirm the section when Save succeeds, so the
-  // nav badge grades `ready` even at engine defaults.
-  const confirmSection = useSectionConfirmationContext();
-
   const doSave = useCallback(() => {
     const next = buildNext();
     if (!canAuthor || !next || blocked || conflict) return;
@@ -263,7 +270,6 @@ export function GuardrailsSection({
       updateDraft.mutate(
         { definition: next, expectedHash: versionHash },
         {
-          onSuccess: () => confirmSection('guardrails'),
           onError: (error) => {
             if (error instanceof ApiError && error.status === 412) {
               const details =
@@ -283,7 +289,6 @@ export function GuardrailsSection({
       return;
     }
     saveDraft.mutate(next, {
-      onSuccess: () => confirmSection('guardrails'),
       onError: (error) => {
         if (error instanceof ApiError && error.status === 409) {
           void queryClient.invalidateQueries({ queryKey: ['studio', 'assistants'] });
@@ -291,7 +296,7 @@ export function GuardrailsSection({
         }
       },
     });
-  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient, confirmSection]);
+  }, [canAuthor, buildNext, blocked, conflict, isDraft, versionId, versionHash, updateDraft, saveDraft, queryClient]);
 
   // A2-23: shared autosave — 8s debounce plus an unmount flush so switching
   // sections persists pending edits instead of silently dropping them.
@@ -365,8 +370,7 @@ export function GuardrailsSection({
             Screening
           </RailLabel>
           <RailValue>
-            in {displayPolicyName(policy.input_policy, 'input')} / out{' '}
-            {displayPolicyName(policy.output_policy, 'output')}
+            {`in ${displayPolicyName(policy.input_policy, 'input')} / out ${displayPolicyName(policy.output_policy, 'output')}`}
           </RailValue>
         </RailRow>
         <RailRow>
@@ -457,13 +461,6 @@ export function GuardrailsSection({
   const directions: PolicyDirection[] = ['input', 'output'];
 
   return (
-    <div
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && event.target instanceof HTMLElement) {
-          event.target.blur();
-        }
-      }}
-    >
       <SectionPage
         title="Guardrails"
         subtitle="What the agent must never let through — and what happens when it tries."
@@ -742,6 +739,16 @@ export function GuardrailsSection({
             {topicError && (
               <Whisper $tone="red" role="alert">{topicError}</Whisper>
             )}
+            {/* G-BUG4: the 50-topic and 200-char caps are engine law — state
+                them visibly instead of letting Add silently disable at 50. */}
+            {/* G-BUG5: a failed telemetry fetch must read as unavailable —
+                never as "no refusals". Counts stay absent, never invented. */}
+            {telemetry.isError && (
+              <Whisper $tone="amber">Refusal counts are unavailable right now.</Whisper>
+            )}
+            <FieldHelper>
+              {policy.deny_topics.length} of {DENY_TOPICS_MAX} topics · 200 characters max per topic
+            </FieldHelper>
           </GroupCard>
         </SectionGroup>
 
@@ -798,6 +805,5 @@ export function GuardrailsSection({
           />
         )}
       </SectionPage>
-    </div>
   );
 }

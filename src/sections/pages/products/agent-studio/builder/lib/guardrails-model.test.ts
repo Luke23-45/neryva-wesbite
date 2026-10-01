@@ -12,6 +12,7 @@ import {
   parsePiiEntities,
   parsePiiSinks,
   resolvePolicyBehavior,
+  stableStringify,
   validateDenyTopic,
   MODE_COPY,
   PII_NON_RETRO_COPY,
@@ -186,5 +187,18 @@ describe('copy constants', () => {
     expect(CUSTOM_NAME_COPY).toMatch(/screens like Default/);
     expect(MODE_COPY.logging).toMatch(/nothing is refused/);
     expect(MODE_COPY.blocking).toMatch(/is refused/);
+  });
+});
+
+describe('stableStringify (G-BUG3)', () => {
+  it('sorts object keys so semantically equal policies compare equal', () => {
+    const a = { b: 1, a: { y: [1, 2], x: true } };
+    const b = { a: { x: true, y: [1, 2] }, b: 1 };
+    expect(stableStringify(a)).toBe(stableStringify(b));
+  });
+
+  it('keeps array order significant and distinguishes real edits', () => {
+    expect(stableStringify({ t: ['a', 'b'] })).not.toBe(stableStringify({ t: ['b', 'a'] }));
+    expect(stableStringify({ pii_redaction: true })).not.toBe(stableStringify({ pii_redaction: false }));
   });
 });
