@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { engine, ApiError } from '@lib/engine/client';
-import { describeEngineError, toastEngineError } from '@lib/engine/errors';
+import { describeEngineError, isDemoAllowanceRefusal, toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
 import { markActivation } from '@lib/engine/activation';
 import { useEventStream } from '@hooks/engine/useEventStream';
@@ -1119,6 +1119,13 @@ export interface TryTurn {
    * demo exhaustion; demo copy keys off `product`).
    */
   quota: { product: string | null } | null;
+  /**
+   * Set when the run POST is refused by the demo weekly-allowance 409.
+   * A policy refusal is designed behavior, not a run failure — the canvas
+   * grade must not flip to "Last run failed" for it. Derived only from
+   * the engine's typed refusal, never invented client-side.
+   */
+  policyRefused: boolean;
 }
 
 const TRY_POLL_MS = 3000;
@@ -1154,6 +1161,7 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
             restored: true,
             synthetic: false,
             quota: null,
+            policyRefused: false,
           },
         ]
       : [],
@@ -1398,7 +1406,7 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
     const key = nextTryKey();
     setTurns((prev) => [
       ...prev,
-      { key, prompt, conversationId: null, runId: null, liveText: '', agentText: '', notices: [], status: 'sending', stop: null, rawEvents: [], restored: false, synthetic: false, quota: null },
+      { key, prompt, conversationId: null, runId: null, liveText: '', agentText: '', notices: [], status: 'sending', stop: null, rawEvents: [], restored: false, synthetic: false, quota: null, policyRefused: false },
     ]);
     setActiveKey(key);
     void testRun
@@ -1440,8 +1448,12 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
         // refusal) must name its cause on the turn, not strand it silent:
         // the mutation already toasted, and describeEngineError maps the
         // typed ApiError honestly — never the generic "Internal error" the
-        // old untyped downstream path leaked.
-        pushNotice(key, { id: `try-post-${key}`, kind: 'error', text: describeEngineError(error).message });
+        // old untyped downstream path leaked. A demo weekly-allowance 409
+        // is designed behavior, not a run failure: the turn carries
+        // policyRefused so the canvas grade never reads it as "Last run
+        // failed" (the inline notice + toast still name the policy).
+        const demoRefused = isDemoAllowanceRefusal(error);
+        pushNotice(key, { id: `try-post-${key}`, kind: demoRefused ? 'status' : 'error', text: describeEngineError(error).message });
         // Quota refusal (paid or demo): stash the wire product so the
         // console renders the upgrade CTA panel — one code path for both,
         // demo copy keys off `product`, never a custom code (spec v3 §3).
@@ -1449,7 +1461,7 @@ export function useTrySession(assistantId: string | null, versionId: string | nu
           error instanceof ApiError && error.code === 'quota_exceeded'
             ? { product: quotaProductFromDetails(error.details) }
             : null;
-        patchTurn(key, { status: 'error', ...(quota ? { quota } : {}) });
+        patchTurn(key, { status: 'error', policyRefused: demoRefused, ...(quota ? { quota } : {}) });
         setActiveKey((currentKey) => (currentKey === key ? null : currentKey));
       });
     return true;

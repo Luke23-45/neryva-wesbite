@@ -33,6 +33,7 @@ import { useModelAvailability, useModelCosts, costLabel } from '@hooks/studio/us
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useToolCatalog, BUILT_IN_TOOLS } from '@hooks/studio/useSetupTools';
 import { toEnginePayload, effectiveApproval, type GuardrailExecutionMode } from '@lib/engine/agent-payload';
+import { humanizeReason } from '../../builder/lib/brain-model';
 import { parseBrandVoice } from '@/sections/pages/products/agent-studio/builder/lib/brand-model';
 import { MODE_COPY } from '@/sections/pages/products/agent-studio/builder/lib/guardrails-model';
 import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
@@ -348,7 +349,7 @@ export function AgentEditor() {
                                     $on={on}
                                     aria-pressed={on}
                                     disabled={disabled}
-                                    title={model.usable ? `${model.displayName}${priceNote}` : `${model.displayName} — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}
+                                    title={model.usable ? `${model.displayName}${priceNote}` : `${model.displayName} — unusable: ${model.reasons.map((r) => humanizeReason(r)).join(', ') || 'unknown reason'}`}
                                     onClick={() => {
                                       const allowed = on
                                         ? effective.model_policy.allowed_models.filter((m) => m !== model.ref)

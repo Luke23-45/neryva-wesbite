@@ -11,6 +11,20 @@
  */
 import toast from 'react-hot-toast';
 import { ApiError } from './client';
+import { DEMO_ALLOWANCE_EXHAUSTED } from '../../sections/pages/products/agent-studio/builder/lib/demo-model';
+
+/**
+ * True when the wire error is the engine's demo weekly-allowance refusal:
+ * the 409 no-usable-model gate whose `demo_reasons` detail carries
+ * `demo_conversation_limit_reached`. Uses only the engine's own judgment —
+ * never client-side entitlement math.
+ */
+export function isDemoAllowanceRefusal(error: unknown): boolean {
+  if (!(error instanceof ApiError) || error.code !== 'conflict') return false;
+  const details = error.details as { demo_reasons?: unknown } | null | undefined;
+  const reasons = details?.demo_reasons;
+  return Array.isArray(reasons) && reasons.includes('demo_conversation_limit_reached');
+}
 
 export type EngineErrorKind =
   | 'auth' // session dead — re-entry
@@ -161,6 +175,20 @@ export function describeEngineError(error: unknown): EngineErrorView {
     case 'conflict':
     case 'idempotency_conflict':
     case 'idempotency_in_flight':
+      // Demo weekly-allowance exhaustion is designed behavior, not a
+      // failure: the 409 names the policy instead of reading like a
+      // misconfiguration, and the tone stays warning (not error) so no
+      // surface frames it as something broken.
+      if (isDemoAllowanceRefusal(error)) {
+        return {
+          kind: 'input',
+          tone: 'warning',
+          title: 'Demo allowance used',
+          message: DEMO_ALLOWANCE_EXHAUSTED,
+          action: { label: 'Connect a provider', to: '/agent-studio/models' },
+          retryable: false,
+        };
+      }
       return {
         kind: 'input',
         tone: 'error',

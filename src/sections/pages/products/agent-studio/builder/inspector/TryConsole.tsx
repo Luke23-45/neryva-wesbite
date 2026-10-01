@@ -6,7 +6,7 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { useTrySession, type RunNotice } from '@hooks/studio/useChat';
 import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
-import { TRY_COPY, describeTryPrereqs } from '../lib/try-model';
+import { TRY_COPY, describeTryPrereqs, hasDemoLimitReason } from '../lib/try-model';
 import { readTryParam, writeTryParam } from '../lib/try-thread-param';
 import {
   DEMO_TRY_BANNER,
@@ -159,20 +159,38 @@ export function TryConsole({
     allowed.every((ref) => !usable.has(ref) || isDemoModelRef(ref));
   const demoRun = turns.some((t) => t.synthetic) || demoOnly;
 
+  // Weekly-allowance exhaustion is the engine's own judgment: the
+  // model-availability wire row for the demo carries
+  // `demo_conversation_limit_reached` in its reasons. Never inferred from
+  // counts client-side.
+  const demoLimitReached =
+    models !== undefined &&
+    allowed.some((ref) => {
+      const row = (models ?? []).find((m) => m.ref === ref);
+      return row !== undefined && isDemoModelRef(row.ref) && hasDemoLimitReason(row.reasons);
+    });
+
+  // The blocked copy names the policy when the engine says the weekly
+  // demo allowance is spent; otherwise the generic credential copy.
+  const blockedCopy = demoLimitReached ? TRY_COPY.demoAllowanceExhausted : TRY_COPY.noUsableModel;
+
   const prereqs = runnable
-    ? describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: Math.max(usableCount, 0), hasInstructions })
-    : describeTryPrereqs({ hasRunnableVersion: false, usableModelCount: Math.max(usableCount, 0), hasInstructions });
+    ? describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: Math.max(usableCount, 0), hasInstructions, demoLimitReached })
+    : describeTryPrereqs({ hasRunnableVersion: false, usableModelCount: Math.max(usableCount, 0), hasInstructions, demoLimitReached });
 
   // Report terminal turns once so the builder canvas grade reflects this load.
   // Restored turns report once too, but on a distinct path (restored: true):
   // they carry no version pin, so the canvas must never grade them as the
   // current draft's "Last run ok" (TRY-2 keeps them out of the live lastTry).
+  // A policy refusal (demo weekly-allowance 409) is designed behavior, not
+  // a run failure — it reports failed: false so the badge never reads
+  // "Needs attention / Last run failed" for it.
   useEffect(() => {
     if (!onTryEvent) return;
     for (const turn of turns) {
       if ((turn.status === 'done' || turn.status === 'error') && !reportedRef.current.has(turn.key)) {
         reportedRef.current.add(turn.key);
-        onTryEvent({ at: new Date().toISOString(), failed: turn.status === 'error', ...(turn.restored ? { restored: true } : {}) });
+        onTryEvent({ at: new Date().toISOString(), failed: turn.status === 'error' && !turn.policyRefused, ...(turn.restored ? { restored: true } : {}) });
       }
     }
   }, [turns, onTryEvent]);
@@ -204,13 +222,13 @@ export function TryConsole({
   // failure visibly instead of an empty restored turn.
   const restoreFailed = session.messages.isError && turns.some((t) => t.restored);
 
-  const fixLink = (kind: 'no-model' | 'instructions-advisory') =>
+  const fixLink = (kind: 'no-model' | 'no-model-demo-limit' | 'instructions-advisory') =>
     editMode.kind === 'jump' ? (
-      <TextButton onClick={() => editMode.onEditJump(kind === 'no-model' ? 'model' : 'purpose')}>
-        {kind === 'no-model' ? 'Fix in Model ›' : 'Edit in Purpose ›'}
+      <TextButton onClick={() => editMode.onEditJump(kind === 'instructions-advisory' ? 'purpose' : 'model')}>
+        {kind === 'instructions-advisory' ? 'Edit in Purpose ›' : 'Fix in Model ›'}
       </TextButton>
     ) : (
-      <Link to={editMode.builderHref}>{kind === 'no-model' ? 'Fix in Model ›' : 'Edit in Purpose ›'}</Link>
+      <Link to={editMode.builderHref}>{kind === 'instructions-advisory' ? 'Edit in Purpose ›' : 'Fix in Model ›'}</Link>
     );
 
   return (
@@ -230,7 +248,7 @@ export function TryConsole({
         <PrereqBlock key={prereq.kind} $tone={prereq.tone}>
           <PrereqHeadline $tone={prereq.tone}>{prereq.headline}</PrereqHeadline>
           <PrereqDetail>{prereq.detail}</PrereqDetail>
-          {prereq.kind === 'no-model' && !modelsLoading && fixLink('no-model')}
+          {(prereq.kind === 'no-model' || prereq.kind === 'no-model-demo-limit') && !modelsLoading && fixLink(prereq.kind)}
           {prereq.kind === 'instructions-advisory' && fixLink('instructions-advisory')}
         </PrereqBlock>
       ))}
@@ -241,7 +259,7 @@ export function TryConsole({
         // instead of inviting input that cannot run.
         <>
           {demoRun && <DemoBanner role="status">{DEMO_TRY_BANNER}</DemoBanner>}
-          <EmptyState>{modelBlocked ? TRY_COPY.noUsableModel : 'Ask anything — the reply streams here with its trace.'}</EmptyState>
+          <EmptyState>{modelBlocked ? blockedCopy : 'Ask anything — the reply streams here with its trace.'}</EmptyState>
         </>
       ) : (
         <>
@@ -309,7 +327,7 @@ export function TryConsole({
             // Finding 2 — the prompt field must not invite input that cannot
             // run: disabled with the blocked copy while no usable model exists.
             disabled={modelBlocked}
-            placeholder={modelBlocked ? TRY_COPY.noUsableModel : 'A customer asks… (1–8192)'}
+            placeholder={modelBlocked ? blockedCopy : 'A customer asks… (1–8192)'}
           />
           <DockRow>
             {isBusy ? (
@@ -328,7 +346,7 @@ export function TryConsole({
                   !runnable
                     ? TRY_COPY.noRunnableVersion
                     : modelBlocked
-                      ? TRY_COPY.noUsableModel
+                      ? blockedCopy
                       : 'Run pinned to this version'
                 }
                 onClick={send}

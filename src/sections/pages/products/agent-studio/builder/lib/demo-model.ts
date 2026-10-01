@@ -24,9 +24,18 @@ export const DEMO_QUOTA_PRODUCT = 'agent_studio_demo';
 export const DEMO_DISPLAY_NAME = 'Free demo — mock responses, not AI';
 export const DEMO_GROUP_LABEL = 'Free demo';
 export const DEMO_TOOLTIP =
-  'A free demo model with scripted responses — not AI-generated. Good for trying the builder end to end; usage is limited.';
+  'A free demo model with scripted responses — not AI-generated. Good for trying the builder end to end; 20 demo conversations per organization per rolling 7 days.';
 export const DEMO_TRY_BANNER =
   "You're chatting with a demo model — responses are simulated, not AI-generated.";
+/**
+ * Policy-exhaustion copy — the exact weekly-allowance sentence every
+ * surface renders when the engine refuses with
+ * `demo_conversation_limit_reached`. One definition; TRY_COPY and the
+ * engine-error mapper both reference it so the inline notice, toast,
+ * and prereq block can never drift.
+ */
+export const DEMO_ALLOWANCE_EXHAUSTED =
+  'Your organization has used its 20 free demo conversations for the current rolling 7-day window.';
 
 /** True for the demo adapter's provider id (pinned). */
 export function isDemoProvider(provider: string | null | undefined): boolean {

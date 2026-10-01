@@ -30,7 +30,7 @@ import { gradeBudget } from './budget-model';
 import { gradeEvaluation } from './eval-model';
 import type { VersionEvalState } from './eval-model';
 import { gradeShip } from './publish-model';
-import { firstBlocker, matchPreset, reasonFix, usableRefs, type CatalogRow } from './brain-model';
+import { firstBlocker, humanizeReason, matchPreset, reasonFix, usableRefs, type CatalogRow } from './brain-model';
 import {
   parseRoleTextField,
   roleListHasValue,
@@ -772,7 +772,7 @@ export function projectBuilderGraph(input: ProjectorInput): ProjectedGraph {
           : modelChecking
             ? 'Catalog still loading'
             : modelBlocker
-              ? (modelBlocker.reason === null ? 'Not in the catalog' : `unusable: ${modelBlocker.reason}`)
+              ? (modelBlocker.reason === null ? 'Not in the catalog' : `unusable: ${humanizeReason(modelBlocker.reason)}`)
               : null,
       status: locked
         ? 'locked'

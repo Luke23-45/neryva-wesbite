@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from './client';
-import { describeEngineError } from './errors';
+import { describeEngineError, isDemoAllowanceRefusal } from './errors';
 
 describe('describeEngineError', () => {
   it('maps past_due to the paywall panel with a billing way out', () => {
@@ -86,5 +86,27 @@ describe('describeEngineError', () => {
     const gone = describeEngineError(new ApiError(410, 'resource_purged', 'purged'));
     expect(gone.kind).toBe('gone');
     expect(gone.retryable).toBe(false);
+  });
+
+  it('maps the demo weekly-allowance 409 to the policy copy, not "conflicting change"', () => {
+    const error = new ApiError(409, 'conflict', 'no usable model on this version — the free demo is unavailable (weekly demo allowance used (20 conversations per week))', {
+      demo_reasons: ['demo_conversation_limit_reached'],
+    });
+    expect(isDemoAllowanceRefusal(error)).toBe(true);
+    const view = describeEngineError(error);
+    expect(view.tone).toBe('warning');
+    expect(view.title).toBe('Demo allowance used');
+    expect(view.message).toBe('Your organization has used its 20 free demo conversations for the current rolling 7-day window.');
+    expect(view.retryable).toBe(false);
+  });
+
+  it('does not mistake other conflicts for the demo allowance refusal', () => {
+    const plain = new ApiError(409, 'conflict', 'name taken');
+    expect(isDemoAllowanceRefusal(plain)).toBe(false);
+    expect(describeEngineError(plain).title).toBe('Conflicting change');
+    const otherDemo = new ApiError(409, 'conflict', 'demo unavailable', { demo_reasons: ['demo_provider_disabled'] });
+    expect(isDemoAllowanceRefusal(otherDemo)).toBe(false);
+    expect(describeEngineError(otherDemo).title).toBe('Conflicting change');
+    expect(isDemoAllowanceRefusal(new Error('boom'))).toBe(false);
   });
 });

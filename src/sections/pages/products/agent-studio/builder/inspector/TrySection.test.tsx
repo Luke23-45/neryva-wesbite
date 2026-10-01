@@ -97,6 +97,7 @@ const DONE_TURN: TryTurn = {
   restored: false,
   synthetic: false,
   quota: null,
+  policyRefused: false,
 };
 
 beforeEach(() => {

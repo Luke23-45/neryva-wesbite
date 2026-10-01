@@ -104,16 +104,22 @@ export type ModelReason =
   | 'provider_not_enabled'
   | 'residency_incompatible'
   | 'credential_compromised'
-  | 'subscription_required';
+  | 'subscription_required'
+  | 'demo_conversation_limit_reached';
 
 export type ReasonAction = 'connect' | 'enable' | 'profile' | 'incident' | 'billing';
 
-const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction }> = {
+const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction | null }> = {
   provider_credential_missing: { label: 'Connect a credential', action: 'connect' },
   provider_not_enabled: { label: 'Ask an admin to enable', action: 'enable' },
   residency_incompatible: { label: 'Switch profile', action: 'profile' },
   credential_compromised: { label: 'Rotate the key', action: 'incident' },
   subscription_required: { label: 'View subscription options', action: 'billing' },
+  // No console action exists — the allowance refreshes on a rolling weekly
+  // basis. action: null keeps the FixButton unrendered (ModelPicker gates
+  // on fix.action). The label is phrased to complete "No usable model — …"
+  // in the Ship/model subtitle.
+  demo_conversation_limit_reached: { label: 'demo allowance used — refreshes automatically', action: null },
 };
 
 /** SPEC inline fixes — unknown reasons degrade to a truthful label, never a guess. */
@@ -129,6 +135,7 @@ const REASON_LABEL: Record<ModelReason, string> = {
   residency_incompatible: 'residency incompatible',
   credential_compromised: 'credential_compromised (derived)',
   subscription_required: 'subscription required',
+  demo_conversation_limit_reached: 'demo allowance used (20 conversations per organization per rolling 7 days)',
 };
 
 /**

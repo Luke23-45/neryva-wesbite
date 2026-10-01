@@ -528,7 +528,7 @@ describe('projector model usability (C04)', () => {
     const input = base({ definition: def, models: catalog });
     expect(statusOf(input, 'model')).toBe('attention');
     expect(subtitleOf(input, 'model')).toBe('No usable model — Connect a credential');
-    expect(nodeOf(input, 'model')?.hint).toBe('unusable: provider_credential_missing');
+    expect(nodeOf(input, 'model')?.hint).toBe('unusable: credential missing');
   });
 
   it('grades a subscription-locked set as attention with the subscription fix', () => {
@@ -537,7 +537,7 @@ describe('projector model usability (C04)', () => {
     const input = base({ definition: def, models: catalog });
     expect(statusOf(input, 'model')).toBe('attention');
     expect(subtitleOf(input, 'model')).toBe('No usable model — View subscription options');
-    expect(nodeOf(input, 'model')?.hint).toBe('unusable: subscription_required');
+    expect(nodeOf(input, 'model')?.hint).toBe('unusable: subscription required');
   });
 
   it('names unknown models instead of guessing', () => {
