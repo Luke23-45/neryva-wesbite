@@ -244,7 +244,11 @@ export function ModelPicker({
                 {demoGroup ? (
                   <>
                     {DEMO_GROUP_LABEL} · {group.models.length}{' '}
-                    <Tooltip label={DEMO_TOOLTIP}>
+                    {/* side="bottom": the catalog list scrolls (overflow-y),
+                        so an upward bubble is clipped whenever the demo group
+                        sits near the top of the scrollport. Below the badge
+                        there is always catalog content to overlay. */}
+                    <Tooltip label={DEMO_TOOLTIP} side="bottom">
                       <DemoBadge>Demo</DemoBadge>
                     </Tooltip>
                   </>
