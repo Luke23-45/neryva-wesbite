@@ -92,6 +92,17 @@ export const TextButton = styled.button`
   cursor: pointer;
   padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.sm};
+  /* D-BUG2: 44px-tall invisible hit area, visuals unchanged. The text button
+     renders ~33px tall (13px body at 1.6 line-height + 6px padding each side);
+     the ::after expands the hit box by 6px top/bottom -> ~45px. DangerButton
+     inherits this via extension. */
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -6px -4px;
+  }
 
   &:hover:not(:disabled) {
     text-decoration: underline;
@@ -192,15 +203,17 @@ export const SelectWrap = styled.label`
   gap: ${({ theme }) => theme.spacing.px6};
 `;
 
-/* D-BUG2: local 44px-tall hit area for the small credentials buttons —
+/* D-BUG2: true 44px-tall hit area for the small credentials buttons —
    visual-neutral (the visible button keeps its sm size). Kept local:
-   ActionButton sm is shared with platform pages, so the global stays. */
+   ActionButton sm is shared with platform pages, so the global stays.
+   SmButton renders 24px tall (12px caption at line-height 1 + 6px padding
+   each side); inset -10px top/bottom -> 24 + 20 = 44px hit box. */
 export const SmButton = styled(ActionButton)`
   position: relative;
 
   &::after {
     content: '';
     position: absolute;
-    inset: -8px 0;
+    inset: -10px 0;
   }
 `;

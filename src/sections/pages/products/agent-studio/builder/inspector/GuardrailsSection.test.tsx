@@ -309,3 +309,57 @@ describe('GuardrailsSection', () => {
     expect(screen.getByText(/Blocking · 4 layers/)).toBeTruthy();
   });
 });
+
+describe('GuardrailsSection D-BUG2 deny-topic remove hit box', () => {
+  // The × glyph is SUPPOSED to look small (~16–20px rendered). The requirement is
+  // a 44px *invisible hit area* with visuals unchanged — delivered via a ::after
+  // expansion on the button. This test asserts the hit box, never the glyph size.
+  function injectedCss(): string {
+    return Array.from(document.head.querySelectorAll('style'))
+      .map((tag) => tag.textContent ?? '')
+      .join('\n');
+  }
+
+  it('remove button has a 44px hit box via ::after while the visible button stays 24px', () => {
+    shell({ definition: definitionWith({ ...FULL_GUARDRAILS, deny_topics: ['legal advice'] }) });
+    const button = screen.getByRole('button', { name: 'Remove deny topic legal advice' });
+
+    // Visible button: small by design (24px), positioned so the ::after anchors to it.
+    const style = getComputedStyle(button);
+    expect(style.width).toBe('24px');
+    expect(style.height).toBe('24px');
+    expect(style.position).toBe('relative');
+
+    // The hit area comes from the injected ::after rule, not from the button's
+    // own box and not from the glyph. Find the rule for this button's generated class.
+    const css = injectedCss().replace(/\s+/g, '');
+    const classTokens = (button.getAttribute('class') ?? '').split(/\s+/).filter((t) => t && !t.startsWith('sc-'));
+    expect(classTokens.length).toBeGreaterThan(0);
+    const afterRule = classTokens
+      .map((token) => {
+        const idx = css.indexOf(`.${token}::after{`);
+        return idx === -1 ? null : css.slice(idx, css.indexOf('}', idx) + 1);
+      })
+      .find((rule) => rule !== null);
+    expect(afterRule).toBeTruthy();
+    // Pseudo-element must exist (content), be absolutely positioned over the
+    // button, and expand the hit box by 10px on every side:
+    // 24px + 10px + 10px = 44px on both axes.
+    expect(afterRule).toMatch(/content:(""|'')/);
+    expect(afterRule).toContain('position:absolute');
+    expect(afterRule).toContain('inset:-10px');
+
+    // Guard against regression to a glyph-sized hit box: the button's own box is
+    // deliberately NOT 44px — if someone "fixes" the measurement by enlarging
+    // the visible button, this fails and the ::after contract must be revisited.
+    expect(style.width).not.toBe('44px');
+  });
+
+  it('the ::after expansion is not clipped by the topic row', () => {
+    shell({ definition: definitionWith({ ...FULL_GUARDRAILS, deny_topics: ['legal advice'] }) });
+    const row = screen.getByText('legal advice').closest('li');
+    expect(row).toBeTruthy();
+    const overflow = getComputedStyle(row as HTMLElement).overflow;
+    expect(['visible', '']).toContain(overflow);
+  });
+});

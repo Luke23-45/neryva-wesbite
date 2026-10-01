@@ -189,3 +189,64 @@ describe('CredentialsPanel empty state (D6)', () => {
     }
   });
 });
+
+describe('CredentialsPanel D-BUG2 action hit boxes', () => {
+  // The connect/rotate buttons are SUPPOSED to look small (sm/text treatment).
+  // The requirement is a 44px *invisible hit area* with visuals unchanged,
+  // delivered via ::after expansion. These tests assert the hit-box contract,
+  // never the visible size.
+  function injectedCss(): string {
+    return Array.from(document.head.querySelectorAll('style'))
+      .map((tag) => tag.textContent ?? '')
+      .join('\n');
+  }
+
+  function afterRuleFor(button: HTMLElement): string | null {
+    const css = injectedCss().replace(/\s+/g, '');
+    const classTokens = (button.getAttribute('class') ?? '')
+      .split(/\s+/)
+      .filter((t) => t && !t.startsWith('sc-'));
+    expect(classTokens.length).toBeGreaterThan(0);
+    return (
+      classTokens
+        .map((token) => {
+          const idx = css.indexOf(`.${token}::after{`);
+          return idx === -1 ? null : css.slice(idx, css.indexOf('}', idx) + 1);
+        })
+        .find((rule) => rule !== null) ?? null
+    );
+  }
+
+  it('Connect provider (SmButton) has a 44px hit box via ::after', async () => {
+    await act(async () => {
+      shell();
+    });
+    const button = screen.getByRole('button', { name: 'Connect provider' });
+    // SmButton renders 24px tall (12px caption at line-height 1 + 6px padding
+    // each side); inset -10px top/bottom -> 24 + 20 = 44px hit box.
+    expect(getComputedStyle(button).position).toBe('relative');
+    const rule = afterRuleFor(button);
+    expect(rule).toBeTruthy();
+    expect(rule).toMatch(/content:(""|'')/);
+    expect(rule).toContain('position:absolute');
+    expect(rule).toContain('inset:-10px0');
+  });
+
+  it('Rotate / Revoke (TextButton family) have a 44px hit box via ::after', async () => {
+    await act(async () => {
+      shell();
+    });
+    // TextButton renders ~33px tall (13px body at 1.6 line-height + 6px padding
+    // each side); inset -6px top/bottom -> ~45px hit box. DangerButton
+    // (Revoke) extends TextButton and inherits the expansion.
+    for (const name of ['Rotate', 'Revoke']) {
+      const button = screen.getByRole('button', { name });
+      expect(getComputedStyle(button).position).toBe('relative');
+      const rule = afterRuleFor(button);
+      expect(rule).toBeTruthy();
+      expect(rule).toMatch(/content:(""|'')/);
+      expect(rule).toContain('position:absolute');
+      expect(rule).toContain('inset:-6px-4px');
+    }
+  });
+});

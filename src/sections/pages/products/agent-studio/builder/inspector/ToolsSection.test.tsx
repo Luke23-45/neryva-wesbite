@@ -320,6 +320,62 @@ describe('ToolsSection catalog', () => {
     fireEvent.click(screen.getByText('Re-check'));
     expect(catalogRefetch).toHaveBeenCalledTimes(1);
   });
+
+  it('T-BUG1: catalog rows render working expand chevrons with aria-expanded', async () => {
+    await act(async () => {
+      shell();
+    });
+    const toggle = screen.getByRole('button', { name: 'Expand lookup_ticket details' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    // Chevron is present (the RowChevron icon inside the expand button).
+    expect(toggle.querySelector('svg')).toBeTruthy();
+    // aria-controls names the detail panel.
+    const panelId = toggle.getAttribute('aria-controls');
+    expect(panelId).toBeTruthy();
+    expect(document.getElementById(panelId as string)).toBeNull(); // collapsed: no panel yet
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Collapse lookup_ticket details');
+    const panel = document.getElementById(panelId as string);
+    expect(panel).toBeTruthy();
+    // Detail content is the catalog metadata, read-only.
+    expect(panel?.textContent).toMatch(/Ticket lookup/);
+    expect(panel?.textContent).toMatch(/version v3/);
+    expect(panel?.textContent).toMatch(/effect class READ_ONLY/);
+    expect(panel?.textContent).toMatch(/api\.crm\.example/);
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.getElementById(panelId as string)).toBeNull();
+  });
+
+  it('T-BUG1: expanding one catalog row leaves the others collapsed', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Expand refund_payment details' }));
+    expect(screen.getByRole('button', { name: 'Collapse refund_payment details' }).getAttribute('aria-expanded')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Expand lookup_ticket details' }).getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    // refund_payment has no description — panel still renders its metadata.
+    const panelId = screen
+      .getByRole('button', { name: 'Collapse refund_payment details' })
+      .getAttribute('aria-controls') as string;
+    expect(document.getElementById(panelId)?.textContent).toMatch(/version v2/);
+  });
+
+  it('T-BUG1: disabled catalog rows are not offered in the picker (A4-67 holds)', async () => {
+    await act(async () => {
+      shell();
+    });
+    // old_tool is enabled:false in the mock catalog — the bind picker lists
+    // enabled rows only, so there is no expand toggle for it.
+    expect(screen.queryByRole('button', { name: /old_tool details/ })).toBeNull();
+  });
 });
 
 describe('ToolsSection approvals', () => {

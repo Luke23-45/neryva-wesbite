@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -346,6 +346,8 @@ export function ToolsSection({
   const [effectFilter, setEffectFilter] = useState<'all' | 'readonly' | 'effectful'>('all');
   const [approvalFilter, setApprovalFilter] = useState<'any' | 'required' | 'optional'>('any');
   const [expanded, setExpanded] = useState<string | null>(null);
+  // T-BUG1: catalog rows expand independently of bound rows (separate key space).
+  const [expandedCatalog, setExpandedCatalog] = useState<string | null>(null);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [adopting, setAdopting] = useState<string | null>(null);
   const sendHashRef = useRef('');
@@ -997,39 +999,81 @@ export function ToolsSection({
                   <EmptyNote>No catalog rows match — register one in the Tools library.</EmptyNote>
                 ) : (
                   <CatalogList>
-                    {pagedCatalog.map((item) => (
-                      <CatalogRow key={item.key}>
-                        <CatalogStatus aria-hidden="true">
-                          {item.bound ? <Check size={15} color="currentColor" /> : <Circle size={14} />}
-                        </CatalogStatus>
-                        <CatalogName>{item.name}</CatalogName>
-                        <ChipRow>
-                          {item.executionEnvironment && (
-                            <Chip $tone="neutral">{item.executionEnvironment}</Chip>
+                    {pagedCatalog.map((item) => {
+                      // T-BUG1: catalog rows expand like bound rows (RowExpand +
+                      // RowChevron + aria-expanded); 38b0461 shipped them static.
+                      const catOpen = expandedCatalog === item.key;
+                      const panelId = `catalog-detail-${item.key}`;
+                      return (
+                        <Fragment key={item.key}>
+                          <CatalogRow>
+                            <RowExpand
+                              type="button"
+                              onClick={() => setExpandedCatalog(catOpen ? null : item.key)}
+                              aria-expanded={catOpen}
+                              aria-controls={panelId}
+                              aria-label={`${catOpen ? 'Collapse' : 'Expand'} ${item.name} details`}
+                            >
+                              <CatalogStatus aria-hidden="true">
+                                {item.bound ? <Check size={15} color="currentColor" /> : <Circle size={14} />}
+                              </CatalogStatus>
+                              <CatalogName>{item.name}</CatalogName>
+                              <RowChevron size={15} $open={catOpen} aria-hidden="true" />
+                            </RowExpand>
+                            <ChipRow>
+                              {item.executionEnvironment && (
+                                <Chip $tone="neutral">{item.executionEnvironment}</Chip>
+                              )}
+                              <Chip $tone="neutral">{item.egressDomains.length > 0 ? 'egress' : 'no egress'}</Chip>
+                              <Chip $tone={item.effectful ? 'warning' : 'success'}>
+                                {item.effectful ? 'effectful' : 'read-only'}
+                              </Chip>
+                              {item.approvalRequirement && (
+                                <Chip $tone={item.approvalRequirement === 'REQUIRED' ? 'warning' : 'neutral'}>
+                                  {item.approvalRequirement === 'REQUIRED' ? 'approval' : 'no approval'}
+                                </Chip>
+                              )}
+                            </ChipRow>
+                            <SourceLabel>{item.builtin ? 'built-in' : 'org'}</SourceLabel>
+                            {item.bound ? (
+                              <BoundLabel>Bound</BoundLabel>
+                            ) : (
+                              <BindAction
+                                type="button"
+                                onClick={() => (item.builtin ? bindBuiltin(item.name) : item.row && bindRow(item.row))}
+                              >
+                                Bind
+                              </BindAction>
+                            )}
+                          </CatalogRow>
+                          {catOpen && (
+                            <ExpandPanel id={panelId}>
+                              <PanelBlock>
+                                <PanelLabel>Details</PanelLabel>
+                                {item.row?.description && <SourceNote>{item.row.description}</SourceNote>}
+                                <SourceNote>
+                                  {item.version ? `version ${item.version}` : 'unversioned'}
+                                  {' · '}effect class {item.effectClass ?? '—'}
+                                  {' · '}approval{' '}
+                                  {item.approvalRequirement === 'REQUIRED'
+                                    ? 'required'
+                                    : item.approvalRequirement === 'NONE'
+                                      ? 'not required'
+                                      : '—'}
+                                  {' · '}environment {item.executionEnvironment ?? '—'}
+                                  {' · '}egress{' '}
+                                  {item.egressDomains.length > 0 ? item.egressDomains.join(', ') : 'none'}
+                                  {item.row?.bindingHost && <> · host {item.row.bindingHost}</>}
+                                  {item.row?.rateLimitPerRun != null && (
+                                    <> · rate limit {item.row.rateLimitPerRun}/run</>
+                                  )}
+                                </SourceNote>
+                              </PanelBlock>
+                            </ExpandPanel>
                           )}
-                          <Chip $tone="neutral">{item.egressDomains.length > 0 ? 'egress' : 'no egress'}</Chip>
-                          <Chip $tone={item.effectful ? 'warning' : 'success'}>
-                            {item.effectful ? 'effectful' : 'read-only'}
-                          </Chip>
-                          {item.approvalRequirement && (
-                            <Chip $tone={item.approvalRequirement === 'REQUIRED' ? 'warning' : 'neutral'}>
-                              {item.approvalRequirement === 'REQUIRED' ? 'approval' : 'no approval'}
-                            </Chip>
-                          )}
-                        </ChipRow>
-                        <SourceLabel>{item.builtin ? 'built-in' : 'org'}</SourceLabel>
-                        {item.bound ? (
-                          <BoundLabel>Bound</BoundLabel>
-                        ) : (
-                          <BindAction
-                            type="button"
-                            onClick={() => (item.builtin ? bindBuiltin(item.name) : item.row && bindRow(item.row))}
-                          >
-                            Bind
-                          </BindAction>
-                        )}
-                      </CatalogRow>
-                    ))}
+                        </Fragment>
+                      );
+                    })}
                   </CatalogList>
                 )}
                 {visibleCatalog.length > CATALOG_PAGE && (
