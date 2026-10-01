@@ -484,13 +484,16 @@ export function derivePublishReadiness(input: ReadinessInputs): DerivedReadiness
   // — Shape + instructions (checkDefinitionCaps: instructions, sizes, secrets) —
   {
     const capsIssues = checkDefinitionCaps(definition);
+    // B6: the dedicated `models` row owns the allowed_models fact — exclude
+    // it here so one fact isn't counted as two blockers.
+    const shapeIssues = capsIssues.filter((issue) => !issue.path.startsWith('model_policy.allowed_models'));
     rows.push({
       id: 'shape',
       title: 'Shape + instructions',
       detail:
-        capsIssues.length === 0 ? 'Caps pre-check passes locally (the engine re-validates).' : capsIssues[0].message,
+        shapeIssues.length === 0 ? 'Caps pre-check passes locally (the engine re-validates).' : shapeIssues[0].message,
       extra: null,
-      ok: capsIssues.length === 0,
+      ok: shapeIssues.length === 0,
       ackable: false,
       fix: refusalFix('payload'),
     });

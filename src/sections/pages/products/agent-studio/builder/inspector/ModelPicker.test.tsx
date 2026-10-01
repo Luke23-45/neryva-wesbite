@@ -39,6 +39,7 @@ function shell(props?: Partial<React.ComponentProps<typeof ModelPicker>>) {
         pipelineRefs={['anthropic/claude-sonnet-4-5']}
         credBlockedRefs={new Set()}
         canAuthor
+        isEnterprise
         onToggle={onToggle}
         onFixRequest={onFixRequest}
         {...props}
@@ -117,7 +118,7 @@ describe('ModelPicker catalog', () => {
       shell();
     });
     expect(screen.getByText(/Anthropic · 2/)).toBeTruthy();
-    expect(screen.getByText(/Openai · 1/)).toBeTruthy();
+    expect(screen.getByText(/OpenAI · 1/)).toBeTruthy();
     // Locked rows stay visible with the why inline.
     expect(screen.getByText('Claude Opus 4.5')).toBeTruthy();
     expect(screen.getByText(/residency incompatible/)).toBeTruthy();

@@ -36,6 +36,13 @@ export interface EditableBlock {
   block: ModalBlock;
   /** Placeholder for empty editor surfaces. */
   placeholder?: string;
+  /**
+   * D7: restrict the editing surfaces offered for this target. When a single
+   * surface is listed, the editor hides the surface switch and stays on it.
+   * Absent = all three surfaces (raw/markdown/json), the historical default.
+   * Used for JSON-schema targets where leaving the JSON surface is lossy.
+   */
+  surfaces?: Array<'raw' | 'markdown' | 'json'>;
   /** Parsed-value char cap, shown in the editor status bar. */
   cap?: number;
   /** Item cap for list kinds (shown in the editor status bar). */
@@ -127,7 +134,13 @@ function jsonSyntaxIssue(text: string, err: unknown): JsonIssue {
       column++;
     }
   }
-  return { message: `${prettifyJsonError(message)} (line ${line}, column ${column})`, line, column };
+  // B8: modern V8 embeds its own location ("at position N (line L column C)")
+  // in the message — strip it (and any trailing parenthesized location)
+  // before appending the canonical one, or the location reads twice.
+  const stripped = message
+    .replace(/\s*at position \d+\s*(\(line \d+ column \d+\))?/, '')
+    .replace(/\s*\(line \d+,? column \d+\)\s*$/, '');
+  return { message: `${prettifyJsonError(stripped)} (line ${line}, column ${column})`, line, column };
 }
 
 function prettifyJsonError(message: string): string {

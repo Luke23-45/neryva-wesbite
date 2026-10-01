@@ -102,6 +102,14 @@ vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
   };
 });
 
+vi.mock('@hooks/engine/billing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@hooks/engine/billing')>();
+  return {
+    ...actual,
+    useEnterpriseStatus: () => ({ data: true, isPending: false, isError: false }),
+  };
+});
+
 const DEFINITION: AgentDefinition = {
   ...defaultConsumer(),
   instructions: '## Role\nConcierge.\n',

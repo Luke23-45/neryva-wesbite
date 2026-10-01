@@ -38,11 +38,13 @@ import {
   type AgentDefinition,
 } from '@hooks/studio/useAgentAuthoring';
 import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
+import { useEnterpriseStatus } from '@hooks/engine/billing';
 import { checkDefinitionCaps } from '@lib/engine/setup-caps';
 import type { ModelPipelineEntry } from '@lib/engine/agent-payload';
 import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
-import { ENGINE_RANGES, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
+import { useStringDraft } from '../lib/use-string-draft';
+import { ENGINE_RANGES, formatStepValue, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
 import { BlockEditor } from '../section-ui/BlockEditor';
 import type { EditableBlock } from '../section-ui/types';
 import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
@@ -201,12 +203,20 @@ function fmtCtx(tokens: number | null | undefined): string | null {
 }
 
 function pricePerM(micros: number | null | undefined): string {
-  if (micros === null || micros === undefined) return 'unpriced';
+  if (micros === null || micros === undefined) return 'Pricing not listed';
   return `$${(micros / 1000).toFixed(2)}/1M`;
 }
 
 function providerLabel(provider: string): string {
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
+  // D3: proper casing for known providers ("openai" → "OpenAI", not "Openai").
+  const known: Record<string, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    mistral: 'Mistral',
+    cohere: 'Cohere',
+  };
+  return known[provider.toLowerCase()] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 interface ModelSectionProps {
@@ -245,6 +255,19 @@ export function ModelSection({
   const [fallback, setFallback] = useState(() => definition?.model_policy.fallback_enabled ?? false);
   const [defaults, setDefaults] = useState<DefaultsDraft>(() => readDefaults(definition));
 
+  // String-draft inputs (B3/B4/B5): numeric fields hold raw text while typing
+  // and commit on blur/Enter, so intermediate states ("0.", "abc") never
+  // corrupt the committed value and NaN can never enter state.
+  const topPDraft = useStringDraft(
+    defaults.top_p,
+    (value) => setDefaults((prev) => ({ ...prev, top_p: value })),
+  );
+  const maxOutputDraft = useStringDraft(
+    defaults.max_output_tokens,
+    (value) => setDefaults((prev) => ({ ...prev, max_output_tokens: value })),
+    { format: (v) => v.toLocaleString() },
+  );
+
   // ---- UI-only state ----
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [overrideOpen, setOverrideOpen] = useState<Record<string, boolean>>(() => {
@@ -274,6 +297,11 @@ export function ModelSection({
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
   const credentials = useProviderCredentials();
+  // B2: enterprise gating must agree on both sides of the connect flow.
+  // The CredentialsPanel form is enterprise-gated; the FixButton that
+  // triggers it must be enterprise-aware too, or the button is dead.
+  const enterprise = useEnterpriseStatus();
+  const isEnterprise = enterprise.data === true;
   const sendHashRef = useRef('');
 
   const source = useMemo(
@@ -412,16 +440,30 @@ export function ModelSection({
     );
   }, [buildNext]);
 
-  const heldMessages = useMemo(
-    () => [
-      ...credBlockers.map(
-        (b) => `No ${providerLabel(b.provider)} credential in vault — required by ${b.displayName}.`,
-      ),
-      ...paramIssues,
-      ...capsIssues.map((issue) => issue.message),
-    ],
-    [credBlockers, paramIssues, capsIssues],
-  );
+  const heldMessages = useMemo(() => {
+    // B6: single-owner dedupe — paramIssues owns the param gates; if
+    // checkDefinitionCaps emits the same message text for a model_params
+    // path, it is the same fact and must not double-count. Dedupe by
+    // message text so one fact = one blocker on every surface.
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const push = (message: string) => {
+      if (!seen.has(message)) {
+        seen.add(message);
+        out.push(message);
+      }
+    };
+    for (const b of credBlockers) {
+      push(`No ${providerLabel(b.provider)} credential in vault — required by ${b.displayName}.`);
+    }
+    for (const message of paramIssues) push(message);
+    for (const issue of capsIssues) {
+      // paramIssues owns model_params gates — skip the caps duplicate.
+      if (issue.path.startsWith('model_params.')) continue;
+      push(issue.message);
+    }
+    return out;
+  }, [credBlockers, paramIssues, capsIssues]);
   const blocked = heldMessages.length > 0;
   const pending = saveDraft.isPending || updateDraft.isPending;
 
@@ -542,6 +584,13 @@ export function ModelSection({
   const onFixRequest = useCallback(
     (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {
       if (action === 'connect') {
+        // B2: the connect form is enterprise-gated (CredentialsPanel) — do
+        // not open it for non-enterprise orgs. State the truth instead.
+        if (!isEnterprise) {
+          toast('Bring Your Own Key needs an enterprise commitment — this org uses Neryva-managed credentials.');
+          document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
+          return;
+        }
         setConnectProvider(ref.split('/')[0] ?? ref);
         setRevokeCredentialId(null);
         setConnectOpen(true);
@@ -569,12 +618,34 @@ export function ModelSection({
       // the builder links out instead of duplicating (dirty-guarded globally).
       navigate({ to: '/agent-studio/models' });
     },
-    [credentials.data, navigate],
+    [credentials.data, navigate, isEnterprise],
   );
 
   const scrollToGroup = useCallback((key: string) => {
     document.getElementById(`model-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
+
+  // B1: the "+ Add model from catalog" button performs a real add-or-guide
+  // flow — it is not a scroll anchor. If a usable catalog model exists and
+  // the pipeline is empty, add the first usable model directly (the row
+  // expands for configuration via addModel). Otherwise scroll to the catalog
+  // and state the true unblock step.
+  const handleAddModel = useCallback(() => {
+    const usable = (catalogRows ?? []).filter(
+      (row) => row.usable && !pipeline.some((entry) => entry.ref === row.ref),
+    );
+    if (usable.length > 0 && pipeline.length === 0) {
+      addModel(usable[0].ref);
+      return;
+    }
+    if (usable.length > 0) {
+      // Pipeline isn't empty — guide to the catalog to pick the next model.
+      scrollToGroup('catalog');
+      return;
+    }
+    scrollToGroup('catalog');
+    toast('No usable models yet — connect a provider credential below to unlock the catalog.');
+  }, [catalogRows, pipeline, addModel, scrollToGroup]);
 
   // Escape blurs number inputs so a half-typed value commits instead of
   // lingering in the field while autosave fires.
@@ -589,24 +660,35 @@ export function ModelSection({
   }, []);
 
   // ---- Output schema focused-editor session (19-12: never a raw textarea) ----
+  // B7: draft buffering — onDraft writes to a local buffer only; onSave
+  // validates then applies; onClose ("Back to Model") discards the buffer.
+  // Back never applies because the draft was never in section state.
+  const schemaDraftRef = useRef<{ block: { mode: string; content: string } } | null>(null);
   const [schemaEdit, setSchemaEdit] = useState<{
     target: EditableBlock;
     apply: (saved: { block: { mode: string; content: string } }) => void;
   } | null>(null);
 
   const openSchemaEditor = useCallback(() => {
+    schemaDraftRef.current = null;
     setSchemaEdit({
       target: {
         key: 'model:output-schema',
         sectionLabel: 'Model',
         title: 'Output schema',
         jsonKind: 'any',
+        // D7: a JSON schema is JSON-only — offering Plain/Markdown surfaces
+        // here is confusing and lossy (leaving JSON unwraps the string).
+        surfaces: ['json'],
         block: { mode: 'json', content: defaults.output_schema ?? '' },
         placeholder: '{"type": "object", "properties": { … }}',
         cap: ENGINE_RANGES.outputSchemaMax,
       },
       apply: (saved) => {
         const text = saved.block.content;
+        // Harden: reject invalid JSON regardless of caller — an invalid
+        // schema must never enter section state.
+        if (text.trim() !== '' && !validateOutputSchema(text).ok) return;
         setDefaults((prev) =>
           text.trim() === '' ? { ...prev, output_schema: undefined } : { ...prev, output_schema: text },
         );
@@ -630,8 +712,14 @@ export function ModelSection({
       <BlockEditor
         key={schemaEdit.target.key}
         target={schemaEdit.target}
-        onDraft={schemaEdit.apply}
-        onSave={schemaEdit.apply}
+        onDraft={(draft) => {
+          schemaDraftRef.current = draft.block;
+        }}
+        onSave={(saved) => {
+          schemaEdit.apply(saved);
+          schemaDraftRef.current = null;
+          setSchemaEdit(null);
+        }}
         onClose={() => setSchemaEdit(null)}
       />
     );
@@ -677,19 +765,27 @@ export function ModelSection({
     },
     {
       label: 'Credential for every model',
-      done: credBlockers.length === 0,
+      // D9: vacuously true on an empty pipeline — the row must not read
+      // "done" when there is nothing to credential.
+      done: pipeline.length > 0 && credBlockers.length === 0,
       meta:
         credBlockers.length > 0
           ? `${credBlockers.length} model${credBlockers.length === 1 ? '' : 's'} missing a credential`
           : pipeline.length === 0
-            ? 'No models yet'
+            ? 'No models yet — credentials attach when you add one'
             : 'All connected',
       fix: credBlockers.length > 0 ? () => scrollToGroup('pipeline') : undefined,
     },
     {
       label: 'Parameters within limits',
-      done: paramIssues.length === 0,
-      meta: paramIssues.length > 0 ? `${paramIssues.length} issue${paramIssues.length === 1 ? '' : 's'} to fix` : 'Within limits',
+      // D9: same vacuous-done shape as the credential row.
+      done: pipeline.length > 0 && paramIssues.length === 0,
+      meta:
+        pipeline.length === 0
+          ? 'No models yet'
+          : paramIssues.length > 0
+            ? `${paramIssues.length} issue${paramIssues.length === 1 ? '' : 's'} to fix`
+            : 'Within limits',
     },
     {
       label: 'Fallback policy set',
@@ -798,7 +894,7 @@ export function ModelSection({
               ))
             )}
             {canAuthor && (
-              <AddModelButton type="button" onClick={() => scrollToGroup('catalog')}>
+              <AddModelButton type="button" onClick={handleAddModel}>
                 + Add model from catalog
               </AddModelButton>
             )}
@@ -822,6 +918,7 @@ export function ModelSection({
             pipelineRefs={pipeline.map((entry) => entry.ref)}
             credBlockedRefs={credBlockedRefs}
             canAuthor={canAuthor}
+            isEnterprise={isEnterprise}
             onToggle={toggleModel}
             onFixRequest={onFixRequest}
           />
@@ -838,7 +935,12 @@ export function ModelSection({
             <SliderRow>
               <SliderHead>
                 <SliderName>Temperature</SliderName>
-                <SliderValue>{defaults.temperature ?? 'default'}</SliderValue>
+                {/* D4: quantize the readout — legacy drafts can hold float32 artifacts like 0.8999999761581421. */}
+                <SliderValue>
+                  {defaults.temperature === undefined
+                    ? 'default'
+                    : formatStepValue(defaults.temperature, ENGINE_RANGES.temperature.step)}
+                </SliderValue>
               </SliderHead>
               {canAuthor && (
                 <>
@@ -847,10 +949,13 @@ export function ModelSection({
                     min={ENGINE_RANGES.temperature.min}
                     max={ENGINE_RANGES.temperature.max}
                     step={ENGINE_RANGES.temperature.step}
-                    value={defaults.temperature ?? 1}
+                    value={formatStepValue(defaults.temperature ?? 1, ENGINE_RANGES.temperature.step)}
                     aria-label="Temperature"
                     onChange={(event) =>
-                      setDefaults((prev) => ({ ...prev, temperature: Number(event.target.value) }))
+                      setDefaults((prev) => ({
+                        ...prev,
+                        temperature: roundToStep(Number(event.target.value), ENGINE_RANGES.temperature.step),
+                      }))
                     }
                   />
                   <RangeEnds>
@@ -882,13 +987,10 @@ export function ModelSection({
                     <TextInput
                       aria-label="Top-p (above 0, at most 1)"
                       inputMode="decimal"
-                      value={defaults.top_p ?? ''}
-                      onChange={(event) => {
-                        const raw = event.target.value.trim();
-                        setDefaults((prev) =>
-                          raw === '' ? { ...prev, top_p: undefined } : { ...prev, top_p: Number(raw) },
-                        );
-                      }}
+                      value={topPDraft.value}
+                      onChange={(event) => topPDraft.onChange(event.target.value)}
+                      onBlur={topPDraft.onBlur}
+                      onKeyDown={topPDraft.onKeyDown}
                       placeholder="e.g. 0.95"
                     />
                   )}
@@ -902,13 +1004,10 @@ export function ModelSection({
                     <TextInput
                       aria-label="Max output tokens (1–200000)"
                       inputMode="numeric"
-                      value={defaults.max_output_tokens ?? ''}
-                      onChange={(event) => {
-                        const raw = event.target.value.trim();
-                        setDefaults((prev) =>
-                          raw === '' ? { ...prev, max_output_tokens: undefined } : { ...prev, max_output_tokens: Number(raw) },
-                        );
-                      }}
+                      value={maxOutputDraft.value}
+                      onChange={(event) => maxOutputDraft.onChange(event.target.value)}
+                      onBlur={maxOutputDraft.onBlur}
+                      onKeyDown={maxOutputDraft.onKeyDown}
                       placeholder="e.g. 4096"
                     />
                   )}
@@ -1158,6 +1257,17 @@ function PipelineRow({
 
   const selectedCred = providerCreds.find((c) => c.id === entry.credential_id) ?? null;
 
+  // String-draft inputs (B3/B4/B5): same pattern as the defaults above —
+  // raw text while typing, commit on blur/Enter, NaN can never enter state.
+  const overrideTopPDraft = useStringDraft(entry.params?.top_p, (value) =>
+    onPatchParams({ top_p: value }),
+  );
+  const overrideMaxOutputDraft = useStringDraft(
+    entry.params?.max_output_tokens,
+    (value) => onPatchParams({ max_output_tokens: value }),
+    { format: (v) => v.toLocaleString() },
+  );
+
   return (
     <PipelineRowShell>
       <PipelineRowHead>
@@ -1299,7 +1409,12 @@ function PipelineRow({
               <SliderRow>
                 <SliderHead>
                   <SliderName>Temperature</SliderName>
-                  <SliderValue>{entry.params?.temperature ?? 'default'}</SliderValue>
+                  {/* D4: quantize the readout — see the defaults slider above. */}
+                  <SliderValue>
+                    {entry.params?.temperature === undefined
+                      ? 'default'
+                      : formatStepValue(entry.params.temperature, ENGINE_RANGES.temperature.step)}
+                  </SliderValue>
                 </SliderHead>
                 {canAuthor && (
                   <RangeInput
@@ -1307,9 +1422,13 @@ function PipelineRow({
                     min={ENGINE_RANGES.temperature.min}
                     max={ENGINE_RANGES.temperature.max}
                     step={ENGINE_RANGES.temperature.step}
-                    value={entry.params?.temperature ?? 1}
+                    value={formatStepValue(entry.params?.temperature ?? 1, ENGINE_RANGES.temperature.step)}
                     aria-label={`${displayName} temperature override`}
-                    onChange={(event) => onPatchParams({ temperature: Number(event.target.value) })}
+                    onChange={(event) =>
+                      onPatchParams({
+                        temperature: roundToStep(Number(event.target.value), ENGINE_RANGES.temperature.step),
+                      })
+                    }
                   />
                 )}
               </SliderRow>
@@ -1322,11 +1441,10 @@ function PipelineRow({
                   <TextInput
                     aria-label={`${displayName} top-p override (above 0, at most 1)`}
                     inputMode="decimal"
-                    value={entry.params?.top_p ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      onPatchParams({ top_p: raw === '' ? undefined : Number(raw) });
-                    }}
+                    value={overrideTopPDraft.value}
+                    onChange={(event) => overrideTopPDraft.onChange(event.target.value)}
+                    onBlur={overrideTopPDraft.onBlur}
+                    onKeyDown={overrideTopPDraft.onKeyDown}
                     placeholder="e.g. 0.95"
                   />
                 )}
@@ -1340,11 +1458,10 @@ function PipelineRow({
                   <TextInput
                     aria-label={`${displayName} max output tokens override`}
                     inputMode="numeric"
-                    value={entry.params?.max_output_tokens ?? ''}
-                    onChange={(event) => {
-                      const raw = event.target.value.trim();
-                      onPatchParams({ max_output_tokens: raw === '' ? undefined : Number(raw) });
-                    }}
+                    value={overrideMaxOutputDraft.value}
+                    onChange={(event) => overrideMaxOutputDraft.onChange(event.target.value)}
+                    onBlur={overrideMaxOutputDraft.onBlur}
+                    onKeyDown={overrideMaxOutputDraft.onKeyDown}
                     placeholder="e.g. 4096"
                   />
                 )}

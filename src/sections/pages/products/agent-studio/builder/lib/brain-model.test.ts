@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   ENGINE_RANGES,
   firstBlocker,
+  formatStepValue,
   humanizeReason,
   matchPreset,
   MODEL_PRESETS,
   moveModel,
   reasonFix,
+  roundToStep,
   subscriptionGateCopy,
   usableRefs,
   validateOutputSchema,
@@ -103,5 +105,31 @@ describe('subscriptionGateCopy', () => {
     expect(subscriptionGateCopy({})).toBe(
       "Requires a subscription — you don't have that.",
     );
+  });
+});
+
+describe('slider step quantization (D4)', () => {
+  it('rounds float32 artifacts back to the step grid', () => {
+    expect(roundToStep(0.8999999761581421, 0.1)).toBe(0.9);
+    expect(roundToStep(1.0500000000000003, 0.05)).toBe(1.05);
+    expect(roundToStep(0.85, 0.1)).toBe(0.9);
+  });
+
+  it('passes clean values through', () => {
+    expect(roundToStep(1.2, 0.1)).toBe(1.2);
+    expect(roundToStep(0, 0.1)).toBe(0);
+    expect(roundToStep(2, 0.1)).toBe(2);
+  });
+
+  it('returns non-finite inputs untouched', () => {
+    expect(roundToStep(Number.NaN, 0.1)).toBeNaN();
+    expect(roundToStep(1, 0)).toBe(1);
+  });
+
+  it('formats stepped values without float noise', () => {
+    expect(formatStepValue(0.8999999761581421, 0.1)).toBe('0.9');
+    expect(formatStepValue(1, 0.1)).toBe('1');
+    expect(formatStepValue(0.95, 0.05)).toBe('0.95');
+    expect(formatStepValue(2, 1)).toBe('2');
   });
 });

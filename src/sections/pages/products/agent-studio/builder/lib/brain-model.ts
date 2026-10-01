@@ -55,6 +55,30 @@ export const ENGINE_RANGES = {
   allowedModelsMax: 20,
 } as const;
 
+/**
+ * D4: quantize a slider value to its step grid. Float32 writers (or legacy
+ * drafts) can store 0.8999999761581421 for 0.9 — the UI must neither display
+ * the artifact nor persist it forward on the next touch.
+ */
+export function roundToStep(value: number, step: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(step) || step <= 0) return value;
+  const decimals = step >= 1 ? 0 : Math.min(10, Math.ceil(-Math.log10(step)));
+  // toFixed snaps the multiply-back residue (12 * 0.1 !== 1.2 in doubles).
+  return Number((Math.round(value / step) * step).toFixed(decimals));
+}
+
+/**
+ * D4: display a stepped value with exactly the decimals the step implies
+ * (step 0.1 → "0.9"; a whole 1 renders "1", never "1.0"). Trailing zeros
+ * are stripped so the readout stays quiet.
+ */
+export function formatStepValue(value: number, step: number): string {
+  const quantized = roundToStep(value, step);
+  const decimals = step >= 1 ? 0 : Math.min(10, Math.ceil(-Math.log10(step)));
+  const fixed = quantized.toFixed(decimals);
+  return fixed.includes('.') ? fixed.replace(/0+$/, '').replace(/\.$/, '') : fixed;
+}
+
 /** Current params equal a preset (computed badge — never stored). */
 export function matchPreset(params: {
   temperature?: number;

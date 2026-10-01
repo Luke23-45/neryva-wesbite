@@ -201,7 +201,9 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
     if (surface === 'json') {
       const result = validateBlockJson(target.jsonKind, text);
       if (!result.ok) {
-        setWhisper(result.issues[0]?.message ?? 'Fix the JSON before saving.');
+        // B8: the inline aria-live issue list below already carries the
+        // detail — the whisper points at it instead of echoing the text.
+        setWhisper('Fix the JSON errors listed below before saving.');
         return;
       }
     }
@@ -266,17 +268,21 @@ export function BlockEditor({ target, onDraft, onSave, onClose, readOnly }: Bloc
         </BackLink>
         <SubDivider aria-hidden="true" />
         <BlockTitle>{target.title}</BlockTitle>
-        <Segmented
-          size="sm"
-          ariaLabel="Editing surface"
-          value={surface}
-          onChange={handleSurface}
-          options={[
-            { value: 'raw', label: 'Plain' },
-            { value: 'markdown', label: 'Markdown' },
-            { value: 'json', label: 'JSON' },
-          ]}
-        />
+        {/* D7: a target locked to a single surface (e.g. a JSON schema)
+            hides the switch — offering Plain/Markdown there is lossy. */}
+        {!(target.surfaces && target.surfaces.length === 1) && (
+          <Segmented
+            size="sm"
+            ariaLabel="Editing surface"
+            value={surface}
+            onChange={handleSurface}
+            options={[
+              { value: 'raw', label: 'Plain' },
+              { value: 'markdown', label: 'Markdown' },
+              { value: 'json', label: 'JSON' },
+            ]}
+          />
+        )}
         {dirty && !readOnly ? <UnsavedPill>Unsaved changes</UnsavedPill> : null}
         <SubSpacer />
         {surface === 'markdown' ? (

@@ -82,3 +82,35 @@ describe('BlockEditor JSON round-trip', () => {
     expect(save.disabled).toBe(true);
   });
 });
+
+describe('BlockEditor surface locking (D7)', () => {
+  function jsonLockedTarget(): EditableBlock {
+    return {
+      key: 'model:output-schema',
+      sectionLabel: 'Model',
+      title: 'Output schema',
+      jsonKind: 'any',
+      surfaces: ['json'],
+      block: { mode: 'json', content: '{"type":"object"}' },
+      placeholder: '{"type": "object"}',
+    };
+  }
+
+  it('hides the surface switch when the target locks to a single surface', () => {
+    const { unmount } = renderEditor(jsonLockedTarget());
+    expect(screen.queryByRole('tab', { name: 'Plain' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Markdown' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'JSON' })).toBeNull();
+    // The JSON surface itself still renders.
+    expect(screen.getByRole('textbox')).toBeTruthy();
+    unmount();
+  });
+
+  it('keeps the surface switch for unlocked targets', () => {
+    const { unmount } = renderEditor(target('any'));
+    expect(screen.getByRole('tab', { name: 'Plain' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Markdown' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'JSON' })).toBeTruthy();
+    unmount();
+  });
+});

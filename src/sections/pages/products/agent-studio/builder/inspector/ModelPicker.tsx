@@ -30,6 +30,8 @@ export interface ModelPickerProps {
   pipelineRefs: string[];
   credBlockedRefs: Set<string>;
   canAuthor: boolean;
+  /** B2: whether BYOK connect is available (enterprise-gated upstream). */
+  isEnterprise: boolean;
   /** Add to / remove from the pipeline (reorder lives on the pipeline rows). */
   onToggle: (ref: string) => void;
   /** Row-level fix requested (connect/enable/profile/incident) — owned upstream. */
@@ -43,7 +45,7 @@ function fmtCtx(tokens: number | null | undefined): string | null {
 }
 
 function pricePerM(micros: number | null | undefined): string {
-  if (micros === null || micros === undefined) return 'unpriced';
+  if (micros === null || micros === undefined) return 'Pricing not listed';
   return `$${(micros / 1000).toFixed(2)}/1M`;
 }
 
@@ -56,7 +58,15 @@ function capabilityChips(capabilities: Record<string, unknown>): string[] {
 }
 
 function providerLabel(provider: string): string {
-  return provider.charAt(0).toUpperCase() + provider.slice(1);
+  // D3: proper casing for known providers ("openai" → "OpenAI", not "Openai").
+  const known: Record<string, string> = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    mistral: 'Mistral',
+    cohere: 'Cohere',
+  };
+  return known[provider.toLowerCase()] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 /**
@@ -72,6 +82,7 @@ export function ModelPicker({
   pipelineRefs,
   credBlockedRefs,
   canAuthor,
+  isEnterprise,
   onToggle,
   onFixRequest,
 }: ModelPickerProps) {
@@ -156,14 +167,20 @@ export function ModelPicker({
                   {fix && fix.action && fix.action !== 'billing' && canAuthor && (
                     <>
                       {' · '}
-                      <FixButton
-                        type="button"
-                        onClick={() =>
-                          onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)
-                        }
-                      >
-                        {fix.label}
-                      </FixButton>
+                      {fix.action === 'connect' && !isEnterprise ? (
+                        // B2: BYOK is enterprise-gated — render truthful copy
+                        // instead of a button that opens nothing.
+                        <span>Neryva-managed credentials apply — no action needed</span>
+                      ) : (
+                        <FixButton
+                          type="button"
+                          onClick={() =>
+                            onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)
+                          }
+                        >
+                          {fix.label}
+                        </FixButton>
+                      )}
                     </>
                   )}
                 </>
@@ -184,8 +201,9 @@ export function ModelPicker({
           placeholder="Search catalog…"
           aria-label="Search model catalog"
         />
+        {/* B9: the badge states a count of a capped list — label it as such. */}
         <CountBadge aria-label={`${pipelineRefs.length} of ${ENGINE_RANGES.allowedModelsMax} models picked`}>
-          {pipelineRefs.length} / {ENGINE_RANGES.allowedModelsMax}
+          {pipelineRefs.length} / {ENGINE_RANGES.allowedModelsMax} picked
         </CountBadge>
       </PickerHead>
 
@@ -193,6 +211,10 @@ export function ModelPicker({
       {loadError && <EmptyNote>Catalog unreachable — retry the page. Saving without a picked model is refused.</EmptyNote>}
       {rows !== undefined && rows.length === 0 && !loadError && (
         <EmptyNote>No models in the platform catalog yet — nothing can ship until staff publishes entries.</EmptyNote>
+      )}
+      {/* D1: zero-match search gets an explicit empty state, not a blank list. */}
+      {rows !== undefined && rows.length > 0 && visible.length === 0 && !loadError && (
+        <EmptyNote>No models match “{query.trim()}” — try a different search.</EmptyNote>
       )}
 
       <CatalogList>
@@ -206,7 +228,7 @@ export function ModelPicker({
         ))}
       </CatalogList>
 
-      {capped && canAuthor && <CapNote>20-model cap — remove one to add another.</CapNote>}
+      {capped && canAuthor && <CapNote>{ENGINE_RANGES.allowedModelsMax}-model cap — remove one to add another.</CapNote>}
     </Wrap>
   );
 }
