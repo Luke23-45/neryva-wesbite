@@ -27,10 +27,12 @@ describe('checkDefinitionCaps', () => {
     expect(checkDefinitionCaps(withinEngineCeiling).some((i) => i.path === 'instructions')).toBe(false);
   });
 
-  it('bounds models 1–20 with provider/model shape', () => {
+  it('bounds models 0–20 with provider/model shape (empty pipeline is a valid draft)', () => {
     const none = shippable();
     none.model_policy.allowed_models = [];
-    expect(checkDefinitionCaps(none).some((i) => i.path === 'model_policy.allowed_models')).toBe(true);
+    // Draft path: an empty pipeline is work-in-progress, not a cap issue.
+    // The publish gate (not the draft save) refuses shipping without a model.
+    expect(checkDefinitionCaps(none).some((i) => i.path === 'model_policy.allowed_models')).toBe(false);
     const many = shippable();
     many.model_policy.allowed_models = Array.from({ length: 21 }, (_, i) => `a/m${i}`);
     expect(checkDefinitionCaps(many).some((i) => i.path === 'model_policy.allowed_models')).toBe(true);

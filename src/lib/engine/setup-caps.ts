@@ -6,11 +6,19 @@
  * is tighter and says so); re-verify if either moves.
  *
  * Bounds: instructions non-empty + ≤32,768 (engine zod, DB CHECK, contract
- * max_len — all three agree; aligned 19-08) · models 1–20 `provider/model` shape ·
+ * max_len — all three agree; aligned 19-08) · models 0–20 `provider/model` shape ·
  * tools ≤50 `{name ^[a-z0-9_]+$, access required, approval}` ·
  * history 1–100 · retrieval results 1–20 · budgets per §5 ·
  * context tokens 1,000–200,000 (engine context_policy.max_context_tokens, v1.15) ·
  * secret shapes rejected before persistence (mirrors validation.ts).
+ *
+ * Models 0–20 on the DRAFT path is deliberate: engine validation.ts allows
+ * an empty allowed_models on drafts (draft-model-gating.test.ts — "a maker
+ * must be able to save instructions, role, guardrails… before picking a
+ * model"), and publishing without a model is a typed refusal at the publish
+ * gate. A client-side min of 1 would block the legitimate empty-pipeline
+ * transition (e.g. removing the demo model) and strand the server-side
+ * model in place.
  */
 import type { ConsumerDefinition } from './agent-payload';
 import { ROLE_LIMITS } from './agent-payload';
@@ -29,7 +37,12 @@ export interface CapIssue {
 export const CAPS = {
   instructionsMax: 32_768,
   brandMax: 2_000,
-  modelsMin: 1,
+  // No modelsMin: the draft path allows an empty pipeline (0 models) — the
+  // maker may not have picked a model yet, or may be removing one (e.g. the
+  // demo model). The engine's draft validation agrees (empty allowed_models
+  // is valid on drafts); the publish gate is the completeness check that
+  // refuses shipping without a model. A min here would block saving the
+  // empty-pipeline transition and strand the server-side model.
   modelsMax: 20,
   toolsMax: 50,
   toolNamePattern: /^[a-z0-9_]+$/,
@@ -142,9 +155,9 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
   }
 
   const models = def.model_policy.allowed_models;
-  if (models.length < CAPS.modelsMin) {
-    issues.push({ path: 'model_policy.allowed_models', message: 'Pick at least one allowed model.' });
-  }
+  // No minimum on the draft path: an empty pipeline is a valid
+  // work-in-progress state (the publish gate refuses shipping without a
+  // model). A min here would block the empty-pipeline transition.
   if (models.length > CAPS.modelsMax) {
     issues.push({ path: 'model_policy.allowed_models', message: `At most ${CAPS.modelsMax} models per agent (currently ${models.length}).` });
   }
