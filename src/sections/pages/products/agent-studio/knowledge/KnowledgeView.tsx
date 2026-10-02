@@ -171,6 +171,30 @@ const HeroNote = styled.span`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
+const InfoButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: ${({ theme }) => theme.app.text.muted};
+  opacity: 0.6;
+  cursor: help;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.text.link};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+`;
+
 const HeroBody = styled.div`
   padding: 48px 24px;
   text-align: center;
@@ -341,6 +365,12 @@ const SearchComposer = styled.div`
 const SearchInputWrap = styled.div`
   position: relative;
   flex: 1;
+
+  /* Reserve right padding so long query text never runs underneath the
+     absolutely-positioned ⌘↵ hint. */
+  & input {
+    padding-right: 56px !important;
+  }
 `;
 
 const KbdHint = styled.kbd`
@@ -637,12 +667,14 @@ export function KnowledgeView() {
           </ViewSubtitle>
         </ViewHeader>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Link to="/agent-studio/integrations">
-            <ActionButton variant="secondary" size="sm">
-              <Plug size={13} strokeWidth={1.8} />
-              Connectors
-            </ActionButton>
-          </Link>
+          <ActionButton
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate({ to: '/agent-studio/integrations' })}
+          >
+            <Plug size={13} strokeWidth={1.8} />
+            Connectors
+          </ActionButton>
           <ActionButton size="sm" disabled={!canWrite} title={canWrite ? 'Upload a document' : writeDenied} onClick={() => {
             if (canWrite) {
               navigate({ to: '/agent-studio/knowledge/upload' });
@@ -723,10 +755,14 @@ export function KnowledgeView() {
           <HeroCard>
             <HeroHeader>
               <HeroTitle>Documents</HeroTitle>
-              <CountBadge>{docCount}</CountBadge>
-              <span title="Titles are display-only — pins bind to slugs, never titles.">
-                <Info size={14} style={{ opacity: 0.6 }} />
-              </span>
+              <CountBadge aria-label={`${docCount} documents`}>{docCount}</CountBadge>
+              <InfoButton
+                type="button"
+                aria-label="About pin addresses: Titles are display-only — pins bind to slugs, never titles."
+                title="Titles are display-only — pins bind to slugs, never titles."
+              >
+                <Info size={14} />
+              </InfoButton>
               <HeroNote>Titles are display-only · pins bind to slugs</HeroNote>
             </HeroHeader>
 
@@ -757,12 +793,14 @@ export function KnowledgeView() {
                         <UploadIcon size={14} strokeWidth={2} />
                         Upload a file
                       </ActionButton>
-                      <Link to="/agent-studio/integrations">
-                        <ActionButton variant="secondary" size="sm">
-                          <Plug size={13} strokeWidth={1.8} />
-                          Connect a source
-                        </ActionButton>
-                      </Link>
+                      <ActionButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate({ to: '/agent-studio/integrations' })}
+                      >
+                        <Plug size={13} strokeWidth={1.8} />
+                        Connect a source
+                      </ActionButton>
                     </CtaRow>
                   </HeroBody>
                 ) : (
