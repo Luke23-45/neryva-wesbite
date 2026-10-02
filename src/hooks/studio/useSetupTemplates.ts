@@ -7,8 +7,8 @@
  *   entry is {template (registry row), available (COMPATIBLE?), compatibility
  *   {status, reasons: [{code, detail}]}, installed, update_available
  *   major|minor|none}. Compatibility surfaces truth, never hiding —
- *   `required_tool_missing` rows block install at the engine TPL-2.2 gate;
- *   the other reason codes are advisory.
+ *   `required_tool_missing` and `legacy_agent_structure` rows block install
+ *   at the engine TPL-2.2 gate; the other reason codes are advisory.
  * - GET assistant-templates/:slug?version= → single registry row
  *   {slug, version, status, family, definition (pure 8-key engine payload),
  *   bindings, eval_ref, release_policy, hash, min_engine_schema}.
@@ -18,7 +18,9 @@
  *
  * Reason codes (exact): required_model_capability_missing |
  * required_tool_missing | knowledge_source_missing |
- * provider_credential_missing — each renders with its fix link.
+ * provider_credential_missing | legacy_agent_structure — each renders with
+ * its fix link (legacy_agent_structure has no self-service fix: the
+ * template predates structured instructions and must be re-released).
  */
 import { useQuery } from '@tanstack/react-query';
 import { engine } from '@lib/engine/client';
@@ -37,7 +39,8 @@ export type CompatibilityReasonCode =
   | 'required_model_capability_missing'
   | 'required_tool_missing'
   | 'knowledge_source_missing'
-  | 'provider_credential_missing';
+  | 'provider_credential_missing'
+  | 'legacy_agent_structure';
 
 export interface CompatibilityReason {
   code: string;
@@ -232,6 +235,8 @@ export function reasonLabel(code: string): string {
       return 'Missing knowledge';
     case 'provider_credential_missing':
       return 'Missing credential';
+    case 'legacy_agent_structure':
+      return 'Legacy template structure';
     default:
       return code.replace(/_/g, ' ');
   }
@@ -253,6 +258,11 @@ export function reasonFix(code: string): { label: string; to: string } | null {
       return { label: 'Map knowledge', to: '/agent-studio/knowledge' };
     case 'provider_credential_missing':
       return { label: 'Add credentials', to: '/agent-studio/models' };
+    case 'legacy_agent_structure':
+      // No self-service fix: a legacy-structure template cannot be
+      // installed until it is re-released as a v2 template. The engine
+      // detail carries the explanation; returning null renders no fix link.
+      return null;
     default:
       return null;
   }

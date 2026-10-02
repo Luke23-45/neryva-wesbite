@@ -113,7 +113,7 @@ function searchableText(entry: TemplateListEntry): string {
 
 /**
  * Which searchable fields matched the query (P3-7) — so a result like
- * "quote-builder" for the query "quote" explains itself instead of looking
+ * "lead-qualifier" for the query "lead" explains itself instead of looking
  * arbitrary. Returns display labels in field order.
  */
 function matchedFields(entry: TemplateListEntry, q: string): string[] {

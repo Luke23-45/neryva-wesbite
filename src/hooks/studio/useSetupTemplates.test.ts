@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTemplateList, reasonFix } from './useSetupTemplates';
+import { parseTemplateList, reasonFix, reasonLabel } from './useSetupTemplates';
 
 // Registry-shaped entry (cf. products/agent-studio/templates/registry.json).
 const ENTRY = {
@@ -110,5 +110,10 @@ describe('reasonFix', () => {
   it('links tool pins to the live catalog (and install checklist)', () => {
     expect(reasonFix('required_tool_missing')).toMatchObject({ to: '/agent-studio/tools' });
     expect(reasonFix('something_new')).toBeNull();
+  });
+
+  it('legacy_agent_structure has no self-service fix link', () => {
+    expect(reasonFix('legacy_agent_structure')).toBeNull();
+    expect(reasonLabel('legacy_agent_structure')).toBe('Legacy template structure');
   });
 });
