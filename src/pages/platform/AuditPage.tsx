@@ -92,13 +92,13 @@ export default function AuditPage() {
         action={
           <Toolbar>
             <ToolbarGroup>
-              <FilterSelect value={action} onChange={(e) => { setAction(e.target.value); resetPages(); }}>
+              <FilterSelect value={action} onChange={(e) => { setAction(e.target.value); resetPages(); }} aria-label="Filter by action">
                 <option value="">All actions</option>
                 {facets.data?.actions.map((a) => (
                   <option key={a} value={a}>{a}</option>
                 ))}
               </FilterSelect>
-              <FilterSelect value={resourceType} onChange={(e) => { setResourceType(e.target.value); resetPages(); }} title="Filters the loaded page">
+              <FilterSelect value={resourceType} onChange={(e) => { setResourceType(e.target.value); resetPages(); }} title="Filters the loaded page" aria-label="Filter by resource type">
                 <option value="">All resources</option>
                 {facets.data?.resourceTypes.map((r) => (
                   <option key={r} value={r}>{r}</option>
@@ -108,6 +108,7 @@ export default function AuditPage() {
                 type="date"
                 value={from}
                 onChange={(e) => { setFrom(e.target.value); resetPages(); }}
+                aria-label="Filter events from date"
                 style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}
               />
             </ToolbarGroup>
@@ -123,32 +124,33 @@ export default function AuditPage() {
           </Toolbar>
         }
       >
-        <QueryView query={audit} skeleton={<div style={{ padding: 20 }}>{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} $h="16px" />)}</div>}>
+        <QueryView
+          query={audit}
+          skeleton={<div style={{ padding: 20 }}>{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} $h="16px" />)}</div>}
+          isEmpty={() => events.length === 0}
+          empty={{ title: 'No events found', description: 'Try adjusting the filters or selecting a different date.' }}
+        >
           {() => (
             <>
               <DataTable>
-                <thead>
-                  <DataHead>
-                    <DataCell as="th">When</DataCell>
-                    <DataCell as="th">Actor</DataCell>
-                    <DataCell as="th">Action</DataCell>
-                    <DataCell as="th">Resource</DataCell>
-                  </DataHead>
-                </thead>
-                <tbody>
-                  {events.map((event: AuditEventRow) => (
-                    <DataRow key={event.id}>
-                      <DataCell><CellMeta>{new Date(event.created_at).toLocaleString()}</CellMeta></DataCell>
-                      <DataCell>
-                        <CellMono>{event.actor_type}:{event.actor_id?.slice(0, 8) ?? '—'}</CellMono>
-                      </DataCell>
-                      <DataCell><CellMono>{event.action}</CellMono></DataCell>
-                      <DataCell>
-                        <CellMono>{event.resource_type}{event.resource_id ? `/${event.resource_id.slice(0, 8)}` : ''}</CellMono>
-                      </DataCell>
-                    </DataRow>
-                  ))}
-                </tbody>
+                <DataHead>
+                  <DataCell as="th">When</DataCell>
+                  <DataCell as="th">Actor</DataCell>
+                  <DataCell as="th">Action</DataCell>
+                  <DataCell as="th">Resource</DataCell>
+                </DataHead>
+                {events.map((event: AuditEventRow) => (
+                  <DataRow key={event.id}>
+                    <DataCell><CellMeta>{new Date(event.created_at).toLocaleString()}</CellMeta></DataCell>
+                    <DataCell>
+                      <CellMono>{event.actor_type}:{event.actor_id?.slice(0, 8) ?? '—'}</CellMono>
+                    </DataCell>
+                    <DataCell><CellMono>{event.action}</CellMono></DataCell>
+                    <DataCell>
+                      <CellMono>{event.resource_type}{event.resource_id ? `/${event.resource_id.slice(0, 8)}` : ''}</CellMono>
+                    </DataCell>
+                  </DataRow>
+                ))}
               </DataTable>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', fontSize: 12, opacity: 0.7 }}>
                 <span>
@@ -161,6 +163,7 @@ export default function AuditPage() {
                     size="sm"
                     disabled={cursors.length <= 1}
                     onClick={() => setCursors((c) => c.slice(0, -1))}
+                    aria-label="Previous page"
                   >
                     <ChevronLeft size={13} />
                   </ActionButton>
@@ -169,6 +172,7 @@ export default function AuditPage() {
                     size="sm"
                     disabled={!nextCursor}
                     onClick={() => nextCursor && setCursors((c) => [...c, nextCursor])}
+                    aria-label="Next page"
                   >
                     <ChevronRight size={13} />
                   </ActionButton>
