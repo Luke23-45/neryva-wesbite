@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Zap } from 'lucide-react';
+import { Plus, Zap, Globe, UserRound, Image as ImageIcon, BookOpen, Clock, Wrench, Pin, Ban, FlaskConical } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
@@ -45,6 +45,183 @@ const Note = styled.p`
   font-size: 13px;
   line-height: 1.6;
   opacity: 0.8;
+`;
+
+/* ── Built-in tool chips ─────────────────────────────────────── */
+
+const BuiltInGrid = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+const BuiltInChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px 0 10px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.app.surface.base};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
+const BuiltInIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+/* ── Catalog hero card ───────────────────────────────────────── */
+
+const CatalogCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.app.surface.base};
+  overflow: hidden;
+`;
+
+const CatalogHeader = styled.div`
+  padding: 20px 24px 16px;
+`;
+
+const CatalogTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+`;
+
+const CatalogTitle = styled.h2`
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CountBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.app.surfaceActive};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const CatalogSubtitle = styled.p`
+  margin: 0;
+  font-size: 13px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const CatalogNote = styled.span`
+  margin-left: auto;
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+  white-space: nowrap;
+`;
+
+const CatalogBody = styled.div`
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+/* ── Empty state ─────────────────────────────────────────────── */
+
+const EmptyWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 56px 24px;
+  text-align: center;
+`;
+
+const EmptyIconWrap = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: ${({ theme }) => theme.app.surfaceActive};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  color: ${({ theme }) => theme.app.text.link};
+  margin-bottom: 20px;
+`;
+
+const EmptyTitle = styled.h3`
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const EmptyDesc = styled.p`
+  margin: 0 0 24px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.app.text.muted};
+  max-width: 420px;
+`;
+
+const CtaRow = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+`;
+
+/* ── Fact strip ──────────────────────────────────────────────── */
+
+const FactStrip = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  margin-top: 24px;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Fact = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+`;
+
+const FactIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surfaceActive};
+  color: ${({ theme }) => theme.app.text.muted};
+  flex-shrink: 0;
+`;
+
+const FactTitle = styled.h4`
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const FactDesc = styled.div`
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 /**
@@ -116,7 +293,7 @@ export function ToolsView() {
         <ViewHeader>
           <ViewTitle>Tools</ViewTitle>
           <ViewSubtitle>
-            The org tool catalog versions pin against — built-ins need no row, everything else pins an enabled entry by schema hash.
+            The org tool catalog that version pins resolve against — built-ins need no row; custom tools pin by schema hash.
           </ViewSubtitle>
         </ViewHeader>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -132,25 +309,41 @@ export function ToolsView() {
       </ViewHeaderRow>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel title="Built-in tools" subtitle="Platform-implemented — publish pin checks skip them, no catalog row needed.">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {BUILT_IN_TOOLS.map((name) => (
-              <StatusPill key={name} tone="neutral" dot={false}>
-                <Mono>{name}</Mono>
-              </StatusPill>
-            ))}
-          </div>
+        <Panel title="Built-in tools" subtitle="Platform-implemented — no catalog row, and publish pin checks skip them.">
+          <BuiltInGrid>
+            {BUILT_IN_TOOLS.map((name) => {
+              const Icon = {
+                web_search: Globe,
+                request_human_handoff: UserRound,
+                generate_image: ImageIcon,
+                search_knowledge: BookOpen,
+                search_memory: Clock,
+              }[name] ?? Wrench;
+              return (
+                <BuiltInChip key={name}>
+                  <BuiltInIcon>
+                    <Icon size={14} strokeWidth={1.8} />
+                  </BuiltInIcon>
+                  {name}
+                </BuiltInChip>
+              );
+            })}
+          </BuiltInGrid>
         </Panel>
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionGap>
-          <Panel title="Catalog" subtitle="Effect class is orthogonal to approval. Disabling breaks version pins referencing the row.">
-            <Note style={{ marginTop: 0 }}>
-              Lists the newest 200 rows — the name filter searches the loaded rows. There is no tool-scoped dry run:
-              a misconfigured binding (bad URL, wrong schema) surfaces only when an agent run tries to call it.
-              Tools can’t be deleted — disabling a tool is the only removal path.
-            </Note>
+          <CatalogCard>
+            <CatalogHeader>
+              <CatalogTitleRow>
+                <CatalogTitle>Catalog</CatalogTitle>
+                <CountBadge aria-label={`${catalog.data?.length ?? 0} tools`}>{catalog.data?.length ?? 0}</CountBadge>
+                <CatalogNote>Newest 200 rows loaded · name filter searches loaded rows</CatalogNote>
+              </CatalogTitleRow>
+              <CatalogSubtitle>Instantiate, configure, and disable the org's tools.</CatalogSubtitle>
+            </CatalogHeader>
+            <CatalogBody>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <div style={{ flex: '2 1 180px' }}>
                 <TextInput aria-label="Filter tools" placeholder="Filter by name…" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
@@ -185,12 +378,44 @@ export function ToolsView() {
                 </SwitchPair>
               </div>
             </div>
-            <QueryView
-              query={catalog}
-              isEmpty={(d) => d.length === 0}
-              empty={{ title: 'Catalog empty', description: 'Instantiate a prebuilt tool or register a custom one — version tool pins resolve against enabled rows.' }}
-            >
+            <QueryView query={catalog}>
               {(rows) => {
+                // Custom empty state (not QueryView's generic) — matches SVG.
+                if (rows.length === 0) {
+                  return (
+                    <EmptyWrap>
+                      <EmptyIconWrap>
+                        <Wrench size={24} strokeWidth={1.6} />
+                      </EmptyIconWrap>
+                      <EmptyTitle>Catalog empty</EmptyTitle>
+                      <EmptyDesc>
+                        Instantiate a prebuilt tool or register a custom one —
+                        version tool pins resolve against enabled rows.
+                      </EmptyDesc>
+                      <CtaRow>
+                        <ActionButton
+                          size="sm"
+                          disabled={!canWrite}
+                          title={canWrite ? 'Register a custom tool' : writeDenied}
+                          onClick={() => canWrite && navigate({ to: '/agent-studio/tools/new' })}
+                        >
+                          <Plus size={14} strokeWidth={2} />
+                          New tool
+                        </ActionButton>
+                        <ActionButton
+                          variant="secondary"
+                          size="sm"
+                          disabled={!canWrite}
+                          title={canWrite ? 'Instantiate a prebuilt tool' : writeDenied}
+                          onClick={() => canWrite && navigate({ to: '/agent-studio/tools/instantiate' })}
+                        >
+                          <Zap size={13} strokeWidth={1.8} />
+                          From template
+                        </ActionButton>
+                      </CtaRow>
+                    </EmptyWrap>
+                  );
+                }
                 const q = nameFilter.trim().toLowerCase();
                 const visible = rows.filter(
                   (tool) =>
@@ -303,21 +528,47 @@ export function ToolsView() {
                 );
               }}
             </QueryView>
-          </Panel>
+            </CatalogBody>
+          </CatalogCard>
         </SectionGap>
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
-        <SectionGap>
-          <Panel title="Pin discipline" subtitle="How versions stay reproducible.">
-            <Note>
-              Version tool entries carry{' '}<Mono>schema_hash</Mono>{' '}pins. Publish refuses entries referencing a missing or disabled
-              row, and stale hashes refuse with a re-pin flow — refresh the pin from the hash shown here. Effectful-without-approval
-              rows (MUTATING/DESTRUCTIVE with approval NONE) are legal but linted in the editor; approval REQUIRED on the catalog row
-              escalates at authorize time regardless of the version entry.
-            </Note>
-          </Panel>
-        </SectionGap>
+        <FactStrip>
+          <Fact>
+            <FactIcon>
+              <Pin size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>Schema-hash pins</FactTitle>
+              <FactDesc>
+                Publish refuses missing, disabled, or stale rows — refresh via the re-pin flow.
+              </FactDesc>
+            </div>
+          </Fact>
+          <Fact>
+            <FactIcon>
+              <Ban size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>Disable is removal</FactTitle>
+              <FactDesc>
+                Tools can't be deleted; disabling breaks version pins referencing the row.
+              </FactDesc>
+            </div>
+          </Fact>
+          <Fact>
+            <FactIcon>
+              <FlaskConical size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>No dry run</FactTitle>
+              <FactDesc>
+                Bad URLs or wrong schemas surface only when a run calls the tool.
+              </FactDesc>
+            </div>
+          </Fact>
+        </FactStrip>
       </motion.div>
     </ViewShell>
   );
