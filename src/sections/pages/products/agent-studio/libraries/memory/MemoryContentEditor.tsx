@@ -71,6 +71,17 @@ const JsonHint = styled.p`
   color: ${({ theme }) => theme.app.text.muted};
   margin: 8px 0 0;
   line-height: 1.5;
+  overflow-wrap: break-word;
+`;
+
+/**
+ * Full-width editor wrapper — the shared EditorWrap caps at 720px for the
+ * agent builder's narrower column, but the Memory composer sits in a wider
+ * Panel and the editor must align with the rows beneath it.
+ */
+const FullWidthEditorWrap = styled(EditorWrap)`
+  max-width: none;
+  width: 100%;
 `;
 
 interface MemoryContentEditorProps {
@@ -124,7 +135,7 @@ export function MemoryContentEditor({
   );
 
   const words = countWords(value);
-  const tokens = estimateTokens(value);
+  const tokens = estimateTokens(value.length);
 
   return (
     <div>
@@ -150,7 +161,7 @@ export function MemoryContentEditor({
         </div>
       </EditorHeader>
 
-      <EditorWrap>
+      <FullWidthEditorWrap>
         {mode === 'raw' && (
           <PlainTextarea
             id={textareaId}
@@ -180,12 +191,12 @@ export function MemoryContentEditor({
             onChange={onChange}
           />
         )}
-      </EditorWrap>
+      </FullWidthEditorWrap>
 
       <StatusLine>
-        <span>{words} {words === 1 ? 'word' : 'words'}</span>
+        <span>{`${words} ${words === 1 ? 'word' : 'words'}`}</span>
         <span>·</span>
-        <span>~{tokens} tokens</span>
+        <span>{`~${tokens} tokens`}</span>
         {mode === 'json' && !jsonValid && (
           <>
             <span>·</span>

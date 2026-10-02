@@ -171,8 +171,7 @@ export function MemoryComposerForm({
                 redaction markers can shift the final boundary a few characters
                 from this pre-scrub count. Say so — the old copy implied this
                 counter was the exact cut point. */}
-            {content.length.toLocaleString()} / {MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the
-            cap. The cap applies after PII redaction, so the stored text can land a few characters short of this count.
+            {`${content.length.toLocaleString()} / ${MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the cap. The cap applies after PII redaction, so the stored text can land a few characters short of this count.`}
           </p>
           {editing ? (
             <p style={{ fontSize: 12, opacity: 0.75 }}>
@@ -195,9 +194,9 @@ export function MemoryComposerForm({
               </div>
               <p style={{ fontSize: 12, opacity: 0.75 }}>
                 {scopeType === 'user'
-                  ? 'User memories resolve per account at run time — visible only to that account.'
-                  : 'Organization memories are retrievable by every run in the org.'}{' '}
-                Writes are scrubbed then embedded, TTL-defaulted, and audited.
+                  ? 'User memories resolve per account at run time — visible only to that account. '
+                  : 'Organization memories are retrievable by every run in the org. '
+                }Writes are scrubbed then embedded, TTL-defaulted, and audited.
               </p>
             </>
           )}
