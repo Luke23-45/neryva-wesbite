@@ -5,13 +5,13 @@ import styled from 'styled-components';
  * table in the apps. Pair with `<Panel flush>` so rows run edge to edge.
  */
 
-export const DataTable = styled.div`
+export const DataTable = styled.div.attrs({ role: 'table' })`
   display: flex;
   flex-direction: column;
   width: 100%;
 `;
 
-export const DataHead = styled.div`
+export const DataHead = styled.div.attrs({ role: 'row' })`
   display: flex;
   align-items: center;
   padding: 10px 22px;
@@ -25,7 +25,7 @@ export const DataHead = styled.div`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
-export const DataRow = styled.div<{ $interactive?: boolean; $clickable?: boolean }>`
+export const DataRow = styled.div.attrs({ role: 'row' })<{ $interactive?: boolean; $clickable?: boolean }>`
   display: flex;
   align-items: center;
   padding: 12px 22px;
@@ -52,7 +52,9 @@ export const DataRow = styled.div<{ $interactive?: boolean; $clickable?: boolean
   }
 `;
 
-export const DataCell = styled.div<{
+export const DataCell = styled.div.attrs<{ as?: string }>((props) => ({
+  role: props.as === 'th' ? 'columnheader' : 'cell',
+}))<{
   $w?: string;
   $align?: 'left' | 'right' | 'center';
 }>`
