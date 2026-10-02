@@ -113,7 +113,7 @@ export function useResendInvite() {
 export function useExtendInvite() {
   return useEngineMutation<{ inviteId: string; days: number }, unknown>(
     (orgId, input) => ({ path: `/console/org/${orgId}/invites/${input.inviteId}/extend`, init: { method: 'POST', body: { days: input.days } } }),
-    ['invites'],
+    ['invites', 'org-summary'],
     'Invitation extended',
   );
 }

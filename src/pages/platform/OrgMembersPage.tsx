@@ -18,7 +18,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { UserPlus, Send, Clock, Ban, ShieldCheck, Mail, Link2 } from 'lucide-react';
+import { UserPlus, Send, Clock, Ban, ShieldCheck, Mail } from 'lucide-react';
 import { useMembers, useInvites, type MemberRow, type InviteRow } from '@hooks/engine/queries';
 import {
   useInviteMember, useResendInvite, useExtendInvite, useRevokeInvite,
@@ -39,7 +39,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { CopyButton } from '@components/common/ui/CopyButton';
 import { DataTable, DataHead, DataRow, DataCell, CellPrimary, CellMeta } from '@components/common/ui/DataTable';
-import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, SectionTitle, Toolbar, ToolbarGroup } from '@components/common/ui/ViewLayout';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, Toolbar, ToolbarGroup } from '@components/common/ui/ViewLayout';
 
 const ASSIGNABLE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
 
@@ -208,6 +208,8 @@ export default function OrgMembersPage() {
   const [resendDelivery, setResendDelivery] = useState<InviteDelivery>('email');
   const [resendTarget, setResendTarget] = useState<InviteRow | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MemberRow | null>(null);
+  const [dismissedInvites, setDismissedInvites] = useState<Set<string>>(new Set());
+  const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
 
   const members = useMembers({ q: search || undefined, limit: 100 });
   // B1: the invites endpoint is owner/admin-only — the section below is
@@ -394,7 +396,7 @@ export default function OrgMembersPage() {
                     <DataRow key={member.accountId}>
                       <DataCell>
                         <CellPrimary>{member.displayName ?? member.email.split('@')[0]}</CellPrimary>
-                        <CellMeta>{member.email}{member.emailVerified ? ' ✓' : ''}{isSelf ? ' (you)' : ''}</CellMeta>
+                        <CellMeta title={member.email}>{member.email}{member.emailVerified ? ' ✓' : ''}{isSelf ? ' (you)' : ''}</CellMeta>
                       </DataCell>
                       <DataCell>
                         {canChangeThis ? (
@@ -447,8 +449,7 @@ export default function OrgMembersPage() {
           see the member inventory only, never a 403 error panel. */}
       {canManageMembers && (
         <>
-          <SectionTitle>Pending invitations</SectionTitle>
-          <Panel flush>
+          <Panel title="Pending invitations" flush>
             <QueryView query={invites} isEmpty={(d) => d.invites.length === 0} empty={{ title: 'No invitations', description: 'Invite teammates from the button above.' }}>
               {(data) => (
                 <DataTable>
@@ -462,7 +463,7 @@ export default function OrgMembersPage() {
                     </DataHead>
                   </thead>
                   <tbody>
-                    {data.invites.map((inviteRow: InviteRow) => (
+                    {data.invites.filter((inviteRow: InviteRow) => !dismissedInvites.has(inviteRow.id)).map((inviteRow: InviteRow) => (
                       <DataRow key={inviteRow.id}>
                     <DataCell><CellPrimary>{inviteRow.email}</CellPrimary></DataCell>
                     <DataCell>{ROLE_LABELS[inviteRow.role as OrgRole] ?? inviteRow.role}</DataCell>
@@ -471,14 +472,26 @@ export default function OrgMembersPage() {
                         {inviteRow.status}
                       </StatusPill>
                     </DataCell>
-                    <DataCell><RelativeTime>{new Date(inviteRow.expiresAt).toLocaleDateString()}</RelativeTime></DataCell>
                     <DataCell>
-                      {inviteRow.status === 'pending' && (
+                      <RelativeTime title={new Date(inviteRow.expiresAt).toLocaleString()}>
+                        {new Date(inviteRow.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </RelativeTime>
+                    </DataCell>
+                    <DataCell>
+                      {inviteRow.status === 'pending' ? (
                         <>
                           <ActionButton variant="ghost" size="sm" onClick={() => { setResendDelivery('email'); setResendTarget(inviteRow); }}><Send size={12} /> Resend</ActionButton>
-                          <ActionButton variant="ghost" size="sm" onClick={() => extend.mutate({ inviteId: inviteRow.id, days: 7 })}><Clock size={12} /> +7d</ActionButton>
-                          <ActionButton variant="ghost" size="sm" onClick={() => revoke.mutate({ inviteId: inviteRow.id })}><Ban size={12} /> Revoke</ActionButton>
+                          <ActionButton variant="ghost" size="sm" onClick={() => extend.mutate({ inviteId: inviteRow.id, days: 7 })} title="Extend expiry by 7 days"><Clock size={12} /> +7d</ActionButton>
+                          <ActionButton variant="ghost" size="sm" onClick={() => setRevokeTarget(inviteRow)}><Ban size={12} /> Revoke</ActionButton>
                         </>
+                      ) : (
+                        <ActionButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDismissedInvites((prev) => new Set(prev).add(inviteRow.id))}
+                        >
+                          Dismiss
+                        </ActionButton>
                       )}
                     </DataCell>
                   </DataRow>
@@ -523,8 +536,36 @@ export default function OrgMembersPage() {
               Copy is not re-offered on stored rows: rotation-only re-access.
             </OnceText>
             <OnceLinkRow>
-              <OnceLinkField readOnly value={manualResult.accept_url} aria-label="One-time invitation link" onFocus={(e) => e.target.select()} />
-              <CopyButton value={manualResult.accept_url} label="Copy link" />
+              <OnceLinkField
+                readOnly
+                value={(() => {
+                  try {
+                    const url = new URL(manualResult.accept_url);
+                    // P0: server generates localhost:3000 links; rewrite to the
+                    // actual deployment origin so the link works for recipients.
+                    url.protocol = window.location.protocol;
+                    url.host = window.location.host;
+                    return url.toString();
+                  } catch {
+                    return manualResult.accept_url;
+                  }
+                })()}
+                aria-label="One-time invitation link"
+                onFocus={(e) => e.target.select()}
+              />
+              <CopyButton
+                value={(() => {
+                  try {
+                    const url = new URL(manualResult.accept_url);
+                    url.protocol = window.location.protocol;
+                    url.host = window.location.host;
+                    return url.toString();
+                  } catch {
+                    return manualResult.accept_url;
+                  }
+                })()}
+                label="Copy link"
+              />
             </OnceLinkRow>
             <OnceActions>
               <ActionButton
@@ -533,9 +574,6 @@ export default function OrgMembersPage() {
                 onClick={() => { window.location.href = manualMailto; }}
               >
                 <Mail size={12} /> Compose email
-              </ActionButton>
-              <ActionButton variant="ghost" size="sm" onClick={closeInvite}>
-                <Link2 size={12} /> Done
               </ActionButton>
             </OnceActions>
             <FieldHint>
@@ -625,7 +663,7 @@ export default function OrgMembersPage() {
               disabled={resend.isPending || !resendTarget}
               onClick={() => { if (resendTarget) sendResend(resendTarget, resendDelivery); }}
             >
-              {resendDelivery === 'manual' ? 'Rotate + show link' : 'Re-send email'}
+              {resendDelivery === 'manual' ? 'Rotate + show link' : 'Resend email'}
             </ActionButton>
           </>
         }
@@ -658,6 +696,21 @@ export default function OrgMembersPage() {
           setRemoveTarget(null);
         }}
         onCancel={() => setRemoveTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={revokeTarget !== null}
+        title={`Revoke invitation for ${revokeTarget?.email ?? 'this address'}?`}
+        message="The invitation link dies immediately and cannot be used. This cannot be undone."
+        confirmLabel="Revoke invitation"
+        destructive
+        onConfirm={() => {
+          if (revokeTarget) {
+            revoke.mutate({ inviteId: revokeTarget.id });
+          }
+          setRevokeTarget(null);
+        }}
+        onCancel={() => setRevokeTarget(null)}
       />
     </ViewShell>
   );
