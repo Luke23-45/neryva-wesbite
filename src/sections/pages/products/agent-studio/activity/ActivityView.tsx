@@ -384,7 +384,6 @@ export function ActivityView() {
                 value={fromParam}
                 max={toParam || undefined}
                 onChange={e => setFromParam(e.target.value)}
-                aria-label="From date"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   color: 'inherit',
@@ -410,7 +409,6 @@ export function ActivityView() {
                 value={toParam}
                 min={fromParam || undefined}
                 onChange={e => setToParam(e.target.value)}
-                aria-label="To date"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   color: 'inherit',
