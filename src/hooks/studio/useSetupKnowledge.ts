@@ -387,6 +387,36 @@ export function useMemories(scopeType?: string, scopeId?: string, limit = 100) {
   });
 }
 
+/** Library scope-tab counts — non-deleted items per scope for the org. */
+export function useMemoryCounts() {
+  const { orgId } = useOrg();
+  return useQuery({
+    queryKey: [...KNOWLEDGE_KEY, orgId, 'memories', 'counts'],
+    queryFn: () =>
+      engine<{ counts: { organization: number; user: number; assistant: number } }>(
+        `/console/org/${orgId}/memories/counts`,
+      ),
+    enabled: !!orgId,
+    staleTime: 15_000,
+    select: (data) => data.counts,
+  });
+}
+
+/** Expire a memory immediately — retrieval stops seeing it, history stays answerable. */
+export function useExpireMemory() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (memoryId: string) =>
+      engine(`/console/org/${orgId}/memories/${memoryId}/expire`, {
+        method: 'POST',
+        idempotent: true,
+      }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: [...KNOWLEDGE_KEY, orgId, 'memories'] }),
+    onError: (error) => toastEngineError(error, 'Could not expire the memory'),
+  });
+}
+
 export function useCreateMemory() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();

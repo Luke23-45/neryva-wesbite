@@ -17,6 +17,7 @@ import { MemoryView } from './MemoryView';
 let mockRole: string | null = 'owner';
 const deleteMutate = vi.fn();
 const purgeMutate = vi.fn();
+const expireMutate = vi.fn();
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: mockRole }),
@@ -41,7 +42,15 @@ vi.mock('@hooks/studio/useSetupKnowledge', async (importOriginal) => {
     }),
     useCreateMemory: () => ({ mutate: vi.fn(), isPending: false }),
     useDeleteMemory: () => ({ mutate: deleteMutate, isPending: false }),
+    useExpireMemory: () => ({ mutate: expireMutate, isPending: false }),
     usePurgeMemories: () => ({ mutate: purgeMutate, isPending: false }),
+    useMemoryCounts: () => ({
+      data: { organization: 1, user: 1, assistant: 1 },
+      isPending: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }),
     useOrgMemoryPolicy: () => ({ policy: { scrub: 'redact', ttlSeconds: 2_592_000 }, isPending: false, isError: false }),
   };
 });
@@ -94,18 +103,27 @@ beforeEach(() => {
   mockRole = 'owner';
   deleteMutate.mockReset();
   purgeMutate.mockReset();
+  expireMutate.mockReset();
   window.history.replaceState(null, '', '/');
 });
 
 describe('MemoryView library page (C08)', () => {
-  it('renders the policy strip and org rows with relative dates', async () => {
+  it('renders the policy strip and org rows with TTL pills', async () => {
     await shell();
-    expect(screen.getByText(/PII scrubbed before embedding/)).toBeTruthy();
-    expect(screen.getByText(/Default TTL: 30 days/)).toBeTruthy();
+    expect(screen.getAllByText(/PII scrubbed before embedding/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/30 days/).length).toBeGreaterThan(0);
     expect(screen.getByText(/Ships on Fridays/)).toBeTruthy();
-    expect(screen.getByText(/in 27 days/)).toBeTruthy();
+    // 27-day TTL renders as a pill (in 27d, or in 26d at the day boundary).
+    expect(screen.getByText(/in 2[67]d/)).toBeTruthy();
     // Other scopes stay behind their own filter.
     expect(screen.queryByText(/morning standup/)).toBeNull();
+  });
+
+  it('shows scope counts on the tabs', async () => {
+    await shell();
+    expect(screen.getByRole('tab', { name: /Organization · 1/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /User · 1/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /Assistant · 1/ })).toBeTruthy();
   });
 
   it('searches content with an empty-state on no match', async () => {
@@ -120,13 +138,18 @@ describe('MemoryView library page (C08)', () => {
     expect(screen.getByText(/No memories match this search/)).toBeTruthy();
   });
 
-  it('Detail navigates to the dedicated section (no modal)', async () => {
-    const router = await shell();
+  it('expands a row to show the detail panel with actions', async () => {
+    await shell();
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Detail' }));
+      fireEvent.click(screen.getByText(/Ships on Fridays/));
     });
-    expect(router.state.location.pathname).toBe('/agent-studio/memory/m1');
-    expect(screen.getByText('memory detail section')).toBeTruthy();
+    // Detail panel shows scope, visibility, author, source.
+    expect(screen.getByText(/SCOPE/)).toBeTruthy();
+    expect(screen.getByText(/VISIBILITY/)).toBeTruthy();
+    // Row actions are in the expanded panel.
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Expire now' })).toBeTruthy();
   });
 
   it('New memory navigates to the composer section (no modal)', async () => {
@@ -148,6 +171,10 @@ describe('MemoryView library page (C08)', () => {
 
   it('deletes one row at a time with an audited confirm', async () => {
     await shell();
+    // Expand the row to reveal the Delete action.
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Ships on Fridays/));
+    });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     });
@@ -157,6 +184,36 @@ describe('MemoryView library page (C08)', () => {
     });
     expect(deleteMutate).toHaveBeenCalledTimes(1);
     expect(vi.mocked(deleteMutate).mock.calls[0]?.[0]).toBe('m1');
+  });
+
+  it('expires a memory immediately with a confirm', async () => {
+    await shell();
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Ships on Fridays/));
+    });
+    const expireButtons = screen.getAllByRole('button', { name: 'Expire now' });
+    await act(async () => {
+      fireEvent.click(expireButtons[0]);
+    });
+    expect(screen.getByText(/Expire this memory now/)).toBeTruthy();
+    // The confirm dialog has its own Expire now button.
+    const confirmButtons = screen.getAllByRole('button', { name: 'Expire now' });
+    await act(async () => {
+      fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+    });
+    expect(expireMutate).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(expireMutate).mock.calls[0]?.[0]).toBe('m1');
+  });
+
+  it('selects rows and exports them as JSON', async () => {
+    await shell();
+    const checkboxes = screen.getAllByRole('checkbox');
+    // First checkbox is "select all" — click it.
+    await act(async () => {
+      fireEvent.click(checkboxes[0]);
+    });
+    expect(screen.getByText(/1 selected/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Export/ })).toBeTruthy();
   });
 
   it('purges by text with bounds, then reports the tombstoned count', async () => {
@@ -188,7 +245,11 @@ describe('MemoryView library page (C08)', () => {
     mockRole = 'reader';
     await shell();
     expect(screen.getByRole('button', { name: /Purge by text/ })).toHaveProperty('disabled', true);
-    const row = screen.getByText(/Ships on Fridays/).parentElement?.parentElement as HTMLElement;
-    expect(within(row).getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', true);
+    // Expand the row — the Delete action in the panel is disabled for readers.
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Ships on Fridays/));
+    });
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Expire now' })).toHaveProperty('disabled', true);
   });
 });
