@@ -7,7 +7,11 @@ import { Plus, Users, Mail, Clock, ShieldCheck, RefreshCw, Power, Trash2 } from 
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { StyledActionButton } from '@components/common/ui/ActionButton/ActionButton.styles';
+import {
+  actionButtonCss,
+  type ActionSize,
+  type ActionVariant,
+} from '@components/common/ui/ActionButton/ActionButton.styles';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
@@ -112,7 +116,7 @@ export function TeamsView() {
           </ViewSubtitle>
         </ViewHeader>
         {canManageMembers && (
-          <ActionButtonLink as={Link} to="/agent-studio/teams/invite" $size="sm" $variant="primary">
+          <ActionButtonLink to="/agent-studio/teams/invite" $size="sm" $variant="primary">
             <Plus size={14} strokeWidth={2} />
             Invite member
           </ActionButtonLink>
@@ -121,35 +125,43 @@ export function TeamsView() {
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <QueryView query={summary} skeleton={<Skeleton $h="120px" $r="12px" />}>
-          {(data) => (
+          {(data) => {
+            const seatLabel = seat?.seats ? `${seat.activeMembers}/${seat.seats}` : `${data.members.total}`;
+            const seatMeta = seat?.seats ? 'utilization' : 'total members';
+            return (
             <TotalsGrid>
-              <TotalCard>
+              {/* Each stat is a named group with an explicitly computed
+                  accessible name — the name comes from the attribute, not
+                  from text-node serialization, so assistive tech always
+                  gets the value even across re-renders. */}
+              <TotalCard role="group" aria-label={`Seats: ${seatLabel} ${seatMeta}`}>
                 <TotalLabel>Seats</TotalLabel>
-                <TotalValue>{seat?.seats ? `${seat.activeMembers}/${seat.seats}` : data.members.total}</TotalValue>
-                <TotalMeta>{seat?.seats ? 'utilization' : 'total members'}</TotalMeta>
+                <TotalValue>{seatLabel}</TotalValue>
+                <TotalMeta>{seatMeta}</TotalMeta>
               </TotalCard>
-              <TotalCard>
+              <TotalCard role="group" aria-label={`Active members: ${data.members.active}, ${data.members.suspended} suspended`}>
                 <TotalLabel>Active members</TotalLabel>
                 <TotalValue $tone="success">{data.members.active}</TotalValue>
                 <TotalMeta>{data.members.suspended} suspended</TotalMeta>
               </TotalCard>
-              <TotalCard>
+              <TotalCard role="group" aria-label={`Pending invites: ${data.pendingInvites} awaiting accept`}>
                 <TotalLabel>Pending invites</TotalLabel>
                 <TotalValue $tone="warning">{data.pendingInvites}</TotalValue>
                 <TotalMeta>awaiting accept</TotalMeta>
               </TotalCard>
-              <TotalCard>
+              <TotalCard role="group" aria-label={`Service accounts: ${data.serviceAccounts.total}, ${data.serviceAccounts.active} active`}>
                 <TotalLabel>Service accounts</TotalLabel>
                 <TotalValue>{data.serviceAccounts.total}</TotalValue>
                 <TotalMeta>{data.serviceAccounts.active} active</TotalMeta>
               </TotalCard>
-              <TotalCard>
+              <TotalCard role="group" aria-label={`Groups: ${data.groups} RBAC containers`}>
                 <TotalLabel>Groups</TotalLabel>
                 <TotalValue>{data.groups}</TotalValue>
                 <TotalMeta>RBAC containers</TotalMeta>
               </TotalCard>
             </TotalsGrid>
-          )}
+            );
+          }}
         </QueryView>
       </motion.div>
 
@@ -252,7 +264,8 @@ function shortDate(iso: string): string {
   if (Number.isNaN(at)) {
     return iso;
   }
-  return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' });
+  // 4-digit year — "Oct 2, 26" is ambiguous (P3).
+  return new Date(at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // ─── Pending invites (owner/admin only, server-side; the query stays ──────
@@ -390,7 +403,7 @@ function GroupsSection() {
           <ShieldCheck size={14} strokeWidth={1.7} />
           Groups
           {canManageMembers && (
-            <ActionButtonLink as={Link} to="/agent-studio/teams/groups/new" $size="sm" $variant="secondary">
+            <ActionButtonLink to="/agent-studio/teams/groups/new" $size="sm" $variant="secondary">
               <Plus size={13} strokeWidth={2} />
               New group
             </ActionButtonLink>
@@ -488,7 +501,7 @@ function ServiceAccountsSection() {
           <Clock size={14} strokeWidth={1.7} />
           Service accounts
           {canManageMembers && (
-            <ActionButtonLink as={Link} to="/agent-studio/teams/service-accounts/new" $size="sm" $variant="secondary">
+            <ActionButtonLink to="/agent-studio/teams/service-accounts/new" $size="sm" $variant="secondary">
               <Plus size={13} strokeWidth={2} />
               New service account
             </ActionButtonLink>
@@ -647,12 +660,14 @@ function ServiceAccountsSection() {
 // ─── local styled additions ──────────────────────────────────────────
 
 /**
- * Router link with the ActionButton look — list → section navigation.
- * ActionButton itself is button-only (no `as` polymorphism), so the styled
- * base is reused here; the anchor underline is removed and the polymorphic
- * `as` prop is supplied at each call site (`as={Link}`).
+ * Router link with the ActionButton look — list → section navigation
+ * (Invite member / New group / New service account).
+ * Renders TanStack Router's Link directly (not via the polymorphic `as`
+ * prop on a styled button) so its element semantics can never flip
+ * between <button> and <a> across renders.
  */
-const ActionButtonLink = styled(StyledActionButton)`
+const ActionButtonLink = styled(Link)<{ $size: ActionSize; $variant: ActionVariant }>`
+  ${actionButtonCss}
   text-decoration: none;
 `;
 const IconGhostBtn = styled.button`

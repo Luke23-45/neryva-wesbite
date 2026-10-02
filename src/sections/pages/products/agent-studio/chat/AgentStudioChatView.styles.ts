@@ -8,7 +8,10 @@ export const ViewRoot = styled.div`
   min-height: 0;
 `;
 
-export const ChatArea = styled.main`
+/* NOTE (a11y): a <div>, not a <main>. The StudioShell content area and the
+   router root already provide the page's single <main> landmark — a nested
+   <main> here would break landmark navigation for assistive tech. */
+export const ChatArea = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;

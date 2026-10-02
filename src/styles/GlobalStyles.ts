@@ -77,6 +77,16 @@ export const GlobalStyles = createGlobalStyle`
     outline-offset: 2px;
   }
 
+  /* The console (app shell) renders on near-black chrome, where the brand
+   * azure above (#1E40AF, tuned for light marketing pages) is nearly
+   * invisible as a focus ring. Inside .app-shell, use the dark-surface
+   * focus token so keyboard focus is clearly visible. This override wins
+   * over the base rule above (later in source order, equal specificity)
+   * and loses to any component's own more-specific :focus-visible rule. */
+  :where(.app-shell) :focus-visible {
+    outline-color: ${({ theme }) => theme.app.border.focus};
+  }
+
   /* Selection */
   ::selection {
     background-color: ${({ theme }) => theme.colors.accent.azure};

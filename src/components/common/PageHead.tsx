@@ -16,7 +16,11 @@ export function PageHead({ title, description, canonicalPath }: PageHeadProps) {
   const canonical = canonicalPath ? `${BASE_URL}${canonicalPath}` : BASE_URL;
 
   return (
-    <Helmet>
+    /* defer={false}: react-helmet-async defers DOM updates via
+       requestAnimationFrame by default, which leaves the document title
+       showing the previous route's title until a later frame — the title
+       must update synchronously with the route change. */
+    <Helmet defer={false}>
       <title>{pageTitle}</title>
       <meta name="description" content={desc} />
       <link rel="canonical" href={canonical} />

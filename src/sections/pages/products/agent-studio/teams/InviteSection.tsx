@@ -227,8 +227,8 @@ export function InviteSection() {
               <InviteLabel>
                 Delivery
                 <RoleSelect value={delivery} onChange={(e) => setDelivery(e.target.value as 'email' | 'manual')} aria-label="Delivery method">
-                  <option value="manual">Manual / copy-link (primary)</option>
-                  <option value="email">Email (engine sends)</option>
+                  <option value="manual">Manual link</option>
+                  <option value="email">Email invitation</option>
                 </RoleSelect>
               </InviteLabel>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
@@ -236,7 +236,7 @@ export function InviteSection() {
                   Cancel
                 </ActionButton>
                 <ActionButton disabled={invite.isPending} onClick={send}>
-                  {delivery === 'manual' ? 'Create link' : 'Send invite'}
+                  {delivery === 'manual' ? 'Create invite link' : 'Send invite'}
                 </ActionButton>
               </div>
             </InviteForm>

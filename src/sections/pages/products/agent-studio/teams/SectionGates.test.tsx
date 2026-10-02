@@ -132,7 +132,7 @@ describe('Invite shown-once link', () => {
     fireEvent.change(screen.getByPlaceholderText('teammate@company.com'), {
       target: { value: 'teammate@company.com' },
     });
-    fireEvent.click(screen.getByText('Create link'));
+    fireEvent.click(screen.getByText('Create invite link'));
     expect(inviteMutate).toHaveBeenCalled();
     expect(sessionStorage.getItem('teams:invite:revealed')).toBe('teammate@company.com');
     expect((screen.getByLabelText('One-time invitation link') as HTMLInputElement).value).toBe(

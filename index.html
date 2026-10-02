@@ -67,9 +67,66 @@
       "foundingDate": "2024"
     }
     </script>
+    <!-- ── Boot splash: immediate loading feedback before the JS bundle
+         loads. Path-aware (dark for console routes, light for marketing).
+         React clears it on mount; main.tsx removes it as a fallback.
+         Flat colors only — no gradients. ── -->
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        z-index: 2147483647;
+      }
+      #boot-splash[data-theme="dark"] { background: #0b0d12; }
+      .boot-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .boot-mark { font-size: 22px; font-weight: 600; letter-spacing: 0.01em; color: #1a1a1a; }
+      #boot-splash[data-theme="dark"] .boot-mark { color: #f5f7fb; }
+      .boot-spinner {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 3px solid rgba(127, 127, 127, 0.25);
+        border-top-color: #7c3aed;
+        animation: boot-spin 0.9s linear infinite;
+      }
+      #boot-splash[data-theme="dark"] .boot-spinner { border-top-color: #9aa3b8; }
+      .boot-text { font-size: 13px; color: #6b7280; }
+      #boot-splash[data-theme="dark"] .boot-text { color: #8b93a7; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-spinner { animation: none; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash" role="status" aria-label="Loading Neryva">
+        <div class="boot-inner">
+          <div class="boot-mark">Neryva</div>
+          <div class="boot-spinner" aria-hidden="true"></div>
+          <div class="boot-text">Loading&hellip;</div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        var p = window.location.pathname || '';
+        if (p.indexOf('/agent-studio') === 0 || p.indexOf('/platform') === 0) {
+          var el = document.getElementById('boot-splash');
+          if (el) el.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
     <noscript>
       <div style="padding: 40px; font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h1>Neryva — AI Research Lab</h1>

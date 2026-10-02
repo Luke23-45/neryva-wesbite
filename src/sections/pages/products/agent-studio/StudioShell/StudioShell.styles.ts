@@ -527,7 +527,7 @@ export const IconAction = styled.a`
   }
 `;
 
-export const ContentArea = styled.main`
+export const ContentArea = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -538,6 +538,10 @@ export const ContentArea = styled.main`
      with unconstrained height nothing clips. */
   overflow: hidden;
 `;
+/* NOTE (a11y): this is a <div>, not a <main>. The router root
+   (src/router/root.tsx) already renders the page's single <main>
+   landmark (MainContent) around the outlet — a nested <main> here
+   would break landmark navigation for assistive tech. */
 
 export const BannerSlot = styled.div`
   padding: 0 24px;

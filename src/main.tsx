@@ -11,6 +11,7 @@ import { GlobalStyles } from '@styles/GlobalStyles';
 import { theme } from '@styles/theme';
 import { queryClient } from '@lib/queryClient';
 import { OrgProvider } from '@/Context/OrgContext';
+import { BootSplashCleaner } from '@components/common/BootSplashCleaner';
 
 router.update({
   context: {
@@ -57,6 +58,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <GlobalStyles />
+          <BootSplashCleaner />
           <OrgProvider>
         <RouterProvider router={router} />
       </OrgProvider>

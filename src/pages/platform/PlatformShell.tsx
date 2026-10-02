@@ -103,7 +103,10 @@ const AccountChip = styled.div`
   color: rgba(236, 238, 244, 0.7);
 `;
 
-const Content = styled.main`
+/* NOTE (a11y): a <div>, not a <main>. The router root renders the page's
+   single <main> landmark around the outlet — a nested <main> here would
+   break landmark navigation for assistive tech. */
+const Content = styled.div`
   flex: 1;
   padding: 28px 32px;
   max-width: 1200px;

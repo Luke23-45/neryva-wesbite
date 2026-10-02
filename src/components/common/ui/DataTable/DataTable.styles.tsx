@@ -1,3 +1,5 @@
+import type { HTMLAttributes, ReactNode } from 'react';
+import { Children, cloneElement, isValidElement } from 'react';
 import styled from 'styled-components';
 
 /**
@@ -11,7 +13,7 @@ export const DataTable = styled.div.attrs({ role: 'table' })`
   width: 100%;
 `;
 
-export const DataHead = styled.div.attrs({ role: 'row' })`
+const DataHeadRoot = styled.div.attrs({ role: 'row' })`
   display: flex;
   align-items: center;
   padding: 10px 22px;
@@ -24,6 +26,27 @@ export const DataHead = styled.div.attrs({ role: 'row' })`
   text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.faint};
 `;
+
+/**
+ * Header row — automatically renders its DataCell children as <th>
+ * (role="columnheader"). Column headers must never be plain cells:
+ * screen readers cannot associate headers with data cells otherwise.
+ * The `as` override is applied at clone time so every table gets this
+ * right without per-page repetition; a child with an explicit `as`
+ * prop keeps its own value.
+ */
+export function DataHead({ children, ...rest }: HTMLAttributes<HTMLDivElement> & { children?: ReactNode }) {
+  return (
+    <DataHeadRoot {...rest}>
+      {Children.map(children, (child) => {
+        if (isValidElement<{ as?: string }>(child) && child.props.as === undefined) {
+          return cloneElement(child, { as: 'th' });
+        }
+        return child;
+      })}
+    </DataHeadRoot>
+  );
+}
 
 export const DataRow = styled.div.attrs({ role: 'row' })<{ $interactive?: boolean; $clickable?: boolean }>`
   display: flex;

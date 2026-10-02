@@ -45,7 +45,14 @@ const variantStyles: Record<ActionVariant, ReturnType<typeof css>> = {
   `,
 };
 
-export const StyledActionButton = styled.button<{
+/**
+ * Shared button chrome — extracted so link-styled actions (which must
+ * render a real <a>, never a polymorphic button) can reuse the exact
+ * same visuals without duplicating the CSS. StyledActionButton stays
+ * the button-only component; see ActionButtonLink in TeamsView for the
+ * anchor counterpart.
+ */
+export const actionButtonCss = css<{
   $variant: ActionVariant;
   $size: ActionSize;
 }>`
@@ -87,4 +94,11 @@ export const StyledActionButton = styled.button<{
     opacity: 0.45;
     cursor: not-allowed;
   }
+`;
+
+export const StyledActionButton = styled.button<{
+  $variant: ActionVariant;
+  $size: ActionSize;
+}>`
+  ${actionButtonCss}
 `;
