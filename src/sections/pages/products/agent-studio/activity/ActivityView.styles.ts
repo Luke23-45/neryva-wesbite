@@ -6,6 +6,9 @@ export const FilterBar = styled.div`
   gap: 6px;
   align-items: center;
   margin-bottom: 14px;
+  min-width: 0;
+  /* P1-2: chips must wrap, never overflow the card and clip */
+  overflow-x: clip;
   /* P8-I03: programmatic scroll-into-view must never park these controls
      beneath the sticky topbar, where clicks get intercepted. */
   scroll-margin-top: 76px;

@@ -224,7 +224,7 @@ export function ActivityView() {
     void navigate({ search: (() => updated) as never, replace: true });
   };
 
-  const facetActions = (facets.data?.actions ?? []).slice(0, 6);
+  const facetActions = facets.data?.actions ?? [];
 
   const rows = useMemo(() => {
     const events = audit.data?.events ?? [];
@@ -557,7 +557,7 @@ export function ActivityView() {
                       </Group>
                     ))
                   )}
-                  {data.events.length >= PAGE_SIZE && (
+                  {data.events.length >= PAGE_SIZE && !query && (
                     <div style={{ padding: '12px 22px', fontSize: 12, opacity: 0.55 }}>
                       {rangeActive
                         ? `Showing the ${PAGE_SIZE} most recent events in the selected range — use the export for the full trail.`
