@@ -137,7 +137,7 @@ export function LibrariesMemoryDetailSection() {
             {rendered ? (
               <MarkdownText text={item.content ?? ''} />
             ) : (
-              <p style={{ fontSize: 13, lineHeight: 1.6 }}>{item.content ?? '—'}</p>
+              <p style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>{item.content ?? '—'}</p>
             )}
             <DetailGrid>
               <DetailKey>Scope</DetailKey>

@@ -7,7 +7,7 @@ import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { Segmented } from '@components/common/ui/Segmented';
 import { pageItem } from '@styles/motion';
-import { useCreateMemory, useUpdateMemory } from '@hooks/studio/useSetupKnowledge';
+import { useCreateMemory, useUpdateMemory, useOrgMemoryPolicy } from '@hooks/studio/useSetupKnowledge';
 import { MEMORY_CONTENT_MAX } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from '../SectionBackRow';
@@ -58,6 +58,7 @@ export function MemoryComposerForm({
   const navigate = useNavigate();
   const createMemory = useCreateMemory();
   const updateMemory = useUpdateMemory();
+  const { policy: memoryPolicy } = useOrgMemoryPolicy();
   const editing = mode === 'edit' ? initial : null;
 
   const [content, setContent] = useState(editing?.content ?? '');
@@ -138,6 +139,15 @@ export function MemoryComposerForm({
 
   const title = editing ? 'Edit memory' : 'New memory';
 
+  // Scrub copy must match the org's actual policy (P2-2): the list shows
+  // "Scrub: Off — memories store verbatim" when policy.scrub is 'off',
+  // so the composer must not claim "scrubbed then embedded" unconditionally.
+  const scrubAction = !memoryPolicy || memoryPolicy.scrub === 'redact'
+    ? { new: 'scrubbed then embedded', edit: 're-scrubbed, re-embedded' }
+    : memoryPolicy.scrub === 'block'
+      ? { new: 'PII-screened then embedded', edit: 're-screened then re-embedded' }
+      : { new: 'stored verbatim', edit: 'stored verbatim' };
+
   return (
     <ViewShell>
       {dirtyDialog}
@@ -149,8 +159,8 @@ export function MemoryComposerForm({
           <ViewTitle ref={headingRef} tabIndex={-1}>{title}</ViewTitle>
           <ViewSubtitle>
             {editing
-              ? 'Correct the stored content — re-scrubbed, re-embedded, and audited.'
-              : 'What your agents should remember — scrubbed then embedded, TTL-defaulted, and audited.'}
+              ? `Correct the stored content — ${scrubAction.edit}, and audited.`
+              : `What your agents should remember — ${scrubAction.new}, TTL-defaulted, and audited.`}
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>
@@ -175,8 +185,7 @@ export function MemoryComposerForm({
           </p>
           {editing ? (
             <p style={{ fontSize: 12, opacity: 0.75 }}>
-              Scope and TTL are not editable — this only corrects the content. The entry is re-scrubbed,
-              re-embedded, and the change is audited.
+              {`Scope and TTL are not editable — this only corrects the content. The entry is ${scrubAction.edit}, and the change is audited.`}
             </p>
           ) : (
             <>
@@ -193,10 +202,10 @@ export function MemoryComposerForm({
                 />
               </div>
               <p style={{ fontSize: 12, opacity: 0.75 }}>
-                {scopeType === 'user'
+                {`${scopeType === 'user'
                   ? 'User memories resolve per account at run time — visible only to that account. '
                   : 'Organization memories are retrievable by every run in the org. '
-                }Writes are scrubbed then embedded, TTL-defaulted, and audited.
+                }Writes are ${scrubAction.new}, TTL-defaulted, and audited.`}
               </p>
             </>
           )}
