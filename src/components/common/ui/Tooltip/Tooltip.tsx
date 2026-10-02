@@ -35,9 +35,15 @@ type Props = {
    * controls, and an extra tab stop would be noise.
    */
   focusable?: boolean;
+  /**
+   * When true, the bubble wraps to a max width instead of forcing a single
+   * line — for sentence-length explanations. Opt-in: the default nowrap
+   * suits the short labels most call sites use.
+   */
+  wrap?: boolean;
 };
 
-export function Tooltip({ label, children, side = 'top', delay = 480, focusable = false }: Props) {
+export function Tooltip({ label, children, side = 'top', delay = 480, focusable = false, wrap = false }: Props) {
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const wrapperRef = useRef<HTMLSpanElement>(null);
@@ -84,6 +90,7 @@ export function Tooltip({ label, children, side = 'top', delay = 480, focusable 
           <Bubble
             role="tooltip"
             $side={side}
+            $wrap={wrap}
             initial={{ opacity: 0, scale: 0.92, y: side === 'top' ? 4 : -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: side === 'top' ? 2 : -2 }}
@@ -103,7 +110,7 @@ const Wrap = styled.span`
   position: relative;
 `;
 
-const Bubble = styled(motion.div)<{ $side: Side }>`
+const Bubble = styled(motion.div)<{ $side: Side; $wrap: boolean }>`
   position: absolute;
   ${({ $side }) => ($side === 'top' ? 'bottom: calc(100% + 8px);' : 'top: calc(100% + 8px);')}
   left: 50%;
@@ -119,7 +126,7 @@ const Bubble = styled(motion.div)<{ $side: Side }>`
   font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0;
-  white-space: nowrap;
+  ${({ $wrap }) => ($wrap ? 'white-space: normal; max-width: 260px; min-width: 180px; text-align: left; line-height: 1.45;' : 'white-space: nowrap;')}
   pointer-events: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   /* GPU layer hint */

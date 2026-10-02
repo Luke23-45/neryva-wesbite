@@ -367,6 +367,29 @@ export const UserTier = styled.span`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
+/**
+ * The entitlement label as a billing action (states that need attention:
+ * no active plan, past due, suspended, expired). Same quiet micro type as
+ * UserTier; the tooltip on the trigger explains the state and the action.
+ */
+export const UserTierLink = styled(Link)`
+  font-size: ${({ theme }) => theme.app.type.micro};
+  color: ${({ theme }) => theme.app.text.muted};
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  border-radius: 4px;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.secondary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+`;
+
 export const UpgradeCard = styled.div`
   display: flex;
   align-items: center;

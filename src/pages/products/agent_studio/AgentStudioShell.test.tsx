@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planLabelForEntitlement } from './entitlementPlanLabel';
+import { planLabelForEntitlement, entitlementLabelInfo } from './entitlementPlanLabel';
 import type { EntitlementState } from '@/Context/OrgContext';
 
 /**
@@ -15,7 +15,8 @@ describe('planLabelForEntitlement', () => {
     ['past_due', 'Past due'],
     ['suspended', 'Suspended'],
     ['expired', 'Expired'],
-    ['none', 'Not enabled'],
+    // "Not enabled" was cryptic — the label names the actual state.
+    ['none', 'No active plan'],
   ] as Array<[EntitlementState, string]>)('maps %s to %s', (state, label) => {
     expect(planLabelForEntitlement(state)).toBe(label);
   });
@@ -24,6 +25,23 @@ describe('planLabelForEntitlement', () => {
     const states: EntitlementState[] = ['none', 'trial', 'active', 'past_due', 'suspended', 'expired'];
     for (const state of states) {
       expect(planLabelForEntitlement(state)).not.toBe('Pro');
+    }
+  });
+
+  it('explains states that need attention with a billing action', () => {
+    const states: EntitlementState[] = ['none', 'past_due', 'suspended', 'expired'];
+    for (const state of states) {
+      const info = entitlementLabelInfo(state);
+      expect(info.hint).toBeTruthy();
+      expect(info.billingAction).toBe(true);
+    }
+  });
+
+  it('stays quiet for healthy states', () => {
+    for (const state of ['trial', 'active'] as EntitlementState[]) {
+      const info = entitlementLabelInfo(state);
+      expect(info.hint).toBeNull();
+      expect(info.billingAction).toBe(false);
     }
   });
 });

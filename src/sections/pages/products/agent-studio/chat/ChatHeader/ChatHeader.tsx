@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, Bot, ChevronLeft, Pencil, Trash2, Cpu } from 'lucide-react';
 import styled from 'styled-components';
+import { displayConversationTitle } from '@/lib/conversationTitles';
 import {
   Bar,
   LeftCluster,
@@ -87,7 +88,14 @@ const NewThreadButton = styled.button`
 `;
 
 type Props = {
+  /**
+   * The raw server title — the rename draft and the rename mutation always
+   * use this, never the disambiguated display form (display-only rule: the
+   * "· <relative time>" suffix must never be persisted server-side).
+   */
   title: string;
+  /** Updated-at for disambiguating generic titles at render time. */
+  updatedAt: string | null;
   /** Present when a real thread is open — enables rename + delete. */
   conversationId: string | null;
   agentName: string | null;
@@ -110,6 +118,7 @@ type Props = {
 
 export function ChatHeader({
   title,
+  updatedAt,
   conversationId,
   agentName,
   agentModel,
@@ -190,7 +199,7 @@ export function ChatHeader({
               maxLength={120}
             />
           ) : (
-            <Crumb>{title}</Crumb>
+            <Crumb>{displayConversationTitle(title, updatedAt)}</Crumb>
           )}
         </Crumbs>
 

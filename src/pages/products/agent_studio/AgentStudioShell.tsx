@@ -18,7 +18,7 @@ import { StepUpModal } from '@components/platform/StepUpModal';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { useSessionStore } from '@lib/engine/auth';
 import { useOrg } from '@/Context/OrgContext';
-import { planLabelForEntitlement } from './entitlementPlanLabel';
+import { planLabelForEntitlement, entitlementLabelInfo } from './entitlementPlanLabel';
 import { useConversations } from '@hooks/studio/useStudioConversations';
 import { StatusBanner } from '@/sections/pages/products/agent-studio/StatusBanner';
 import navData from '@neryva_data/products/agent_studio/nav.json';
@@ -71,7 +71,10 @@ export default function AgentStudioShellPage() {
     name: orgName ?? data.workspace.name,
     // Real entitlement state from /console/home. null until the org (and
     // its products) resolves — never a fictional tier in the meantime.
+    // planInfo carries the state's explanation + billing action for the
+    // sidebar footer (states that need attention link to billing).
     plan: orgId ? planLabelForEntitlement(entitlementState('agent_studio')) : null,
+    planInfo: orgId ? entitlementLabelInfo(entitlementState('agent_studio')) : null,
   };
 
   if (status === 'authenticated' && !orgId) {

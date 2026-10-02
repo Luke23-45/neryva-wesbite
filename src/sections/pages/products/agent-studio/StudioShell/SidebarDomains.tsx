@@ -48,6 +48,12 @@ export function SidebarDomains({ config, activeKey, badges, query, role, onNavig
             to={domain.landing}
             $active={active}
             aria-current={active ? 'page' : undefined}
+            // The label is display:none in collapsed (icon-only) mode, which
+            // removes it from the accessible-name computation — the explicit
+            // label keeps the link named for AT, and `title` gives sighted
+            // users a hover tooltip on the icon-only row.
+            aria-label={domain.label}
+            title={domain.label}
             onClick={onNavigate}
           >
             <NavItemIcon $active={active}>
@@ -77,7 +83,11 @@ export function SidebarDomains({ config, activeKey, badges, query, role, onNavig
                 to={item.to}
                 $active={false}
                 aria-disabled={denied || undefined}
-                title={denied ? deniedCopy(item.roles ?? []) : undefined}
+                aria-label={`${item.label} · ${domain.label}`}
+                // Denied rows keep their role explanation as the hover text;
+                // reachable rows name their destination (the visible label is
+                // display:none in collapsed icon-only mode).
+                title={denied ? deniedCopy(item.roles ?? []) : `${item.label} · ${domain.label}`}
                 onClick={denied ? (e) => e.preventDefault() : onNavigate}
               >
                 <NavItemIcon $active={false}>

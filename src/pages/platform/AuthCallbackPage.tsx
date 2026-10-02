@@ -19,6 +19,14 @@ import { ErrorState } from '@components/common/ui/AsyncStates';
 
 const SILENT_MESSAGE = 'neryva:silent-auth';
 
+/**
+ * The exchange + post-login navigation must not hang forever: a stalled
+ * network (or a hung OP) would otherwise leave the skeleton on screen with
+ * no recourse. Past this deadline the page flips to the error state, whose
+ * retry restarts the login.
+ */
+const CALLBACK_TIMEOUT_MS = 45_000;
+
 function isInIframe(): boolean {
   try {
     return window.parent !== window;
@@ -58,6 +66,14 @@ export default function AuthCallbackPage() {
     if (!exchangeRef.current || exchangeRef.current.search !== search) {
       exchangeRef.current = { search, promise: handleAuthCallback(search) };
     }
+    // Hang guard: if the exchange or the post-login resolution never
+    // settles, surface the error state (with retry) instead of the
+    // skeleton forever. Cleared on settle and on unmount.
+    const hangTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setError('The sign-in is taking longer than expected — the request may be stalled. Check your connection and try again.');
+      }
+    }, CALLBACK_TIMEOUT_MS);
     exchangeRef.current.promise
       .then(async (target) => {
         if (cancelled) {
@@ -95,9 +111,13 @@ export default function AuthCallbackPage() {
         if (!cancelled) {
           setError(err.message);
         }
+      })
+      .finally(() => {
+        window.clearTimeout(hangTimer);
       });
     return () => {
       cancelled = true;
+      window.clearTimeout(hangTimer);
     };
   }, [navigate]);
 

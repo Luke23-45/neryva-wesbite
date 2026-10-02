@@ -104,6 +104,11 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
 
   useEffect(() => {
     if (!open) return;
+    const select = (item: CommandItem) => {
+      if (item.onSelect) item.onSelect();
+      else navigate({ to: item.to });
+      onClose();
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -117,16 +122,32 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
       } else if (e.key === 'Enter') {
         e.preventDefault();
         const item = flat[active];
-        if (item) {
-          if (item.onSelect) item.onSelect();
-          else navigate({ to: item.to });
-          onClose();
+        if (item) select(item);
+      } else if (
+        // Single-key item shortcuts (the kbd chips rendered beside items).
+        // They fire only when the palette is at rest: no search text (typing
+        // always wins — the input keeps every keystroke) and the keydown
+        // target is not an editable element. Only currently visible
+        // (filtered) items are eligible.
+        e.key.length === 1 &&
+        query.trim() === '' &&
+        !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName ?? '') &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
+        const match = flat.find((it) =>
+          it.shortcut?.some((k) => k.toLowerCase() === e.key.toLowerCase()),
+        );
+        if (match) {
+          e.preventDefault();
+          select(match);
         }
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open, flat, active, navigate, onClose]);
+  }, [open, flat, active, navigate, onClose, query]);
 
   return (
     <AnimatePresence>

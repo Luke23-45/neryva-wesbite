@@ -167,7 +167,10 @@ export function AgentStudioChatView() {
   const record = conversationRecord(conversation.data);
   const threadAssistantId = strField(record, ['assistantId', 'assistant_id', 'agentId', 'agent_id']);
   const threadAgentId = boundAgentId ?? threadAssistantId;
+  // Raw server title (rename source of truth) + updated-at for the
+  // header's display-only disambiguation of generic titles.
   const threadTitle = strField(record, ['title', 'name', 'summary']) ?? (conversationId ? 'Untitled conversation' : 'New thread');
+  const threadUpdatedAt = strField(record, ['updated_at', 'updatedAt']);
   const threadStatus = strField(record, ['status']);
 
   const agentName = assistants.data?.find((a) => a.id === threadAgentId)?.name ?? null;
@@ -312,6 +315,7 @@ export function AgentStudioChatView() {
     <ViewRoot>
       <ChatHeader
         title={threadTitle}
+        updatedAt={threadUpdatedAt}
         conversationId={conversationId}
         agentName={agentName}
         agentModel={agentModel}

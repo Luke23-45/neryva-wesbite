@@ -46,7 +46,13 @@ export function SidebarSection({ domain, activeTo, badges, query, role, onNaviga
         $active={active}
         aria-current={active ? 'page' : undefined}
         aria-disabled={denied || undefined}
-        title={denied ? deniedCopy(item.roles ?? []) : undefined}
+        // The label is display:none in collapsed (icon-only) mode, which
+        // removes it from the accessible-name computation — the explicit
+        // label keeps the link named for AT, and `title` gives sighted
+        // users a hover tooltip on the icon-only row. Denied rows keep
+        // their role explanation as the hover text instead.
+        aria-label={item.label}
+        title={denied ? deniedCopy(item.roles ?? []) : item.label}
         onClick={denied ? (e) => e.preventDefault() : onNavigate}
       >
         <NavItemIcon $active={active}>

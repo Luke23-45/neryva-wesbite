@@ -122,7 +122,7 @@ describe('NotificationsPopover', () => {
     renderPopover();
     fireEvent.click(await screen.findByRole('button', { name: /^Notifications/ }));
     expect(await screen.findByText('Scheduled maintenance')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss announcement: Scheduled maintenance' }));
     expect(screen.queryByText('Scheduled maintenance')).not.toBeInTheDocument();
     const dismissed = JSON.parse(window.localStorage.getItem('neryva.announcements.dismissed') ?? '[]');
     expect(dismissed).toEqual(['a1']);

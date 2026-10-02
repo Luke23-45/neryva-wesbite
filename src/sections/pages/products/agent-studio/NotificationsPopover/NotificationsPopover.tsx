@@ -202,8 +202,8 @@ export function NotificationsPopover() {
                   </AnnouncementIcon>
                   <AnnouncementBody>
                     <AnnouncementLabel>Announcement</AnnouncementLabel>
-                    <AnnouncementTitle>{a.title}</AnnouncementTitle>
-                    {a.message && <AnnouncementMessage>{a.message}</AnnouncementMessage>}
+                    <AnnouncementTitle title={a.title}>{a.title}</AnnouncementTitle>
+                    {a.message && <AnnouncementMessage title={a.message}>{a.message}</AnnouncementMessage>}
                     {/* NG-ANN-LINK: link affordance only when the engine
                         carries one — no placeholder when absent. */}
                     {a.link && (
@@ -260,8 +260,11 @@ export function NotificationsPopover() {
                     aria-hidden="true"
                   />
                   <NotifBody>
-                    <NotifTitle $unread={!item.read}>{item.title}</NotifTitle>
-                    {item.message && <NotifDetail>{item.message}</NotifDetail>}
+                    {/* Titles/details are line-clamped visually; the full
+                        text stays available via the row's aria-label (AT)
+                        and the native title tooltip (sighted users). */}
+                    <NotifTitle $unread={!item.read} title={item.title}>{item.title}</NotifTitle>
+                    {item.message && <NotifDetail title={item.message}>{item.message}</NotifDetail>}
                     <NotifTime>
                       {relativeTime(item.createdAt) ?? item.category ?? ''}
                     </NotifTime>

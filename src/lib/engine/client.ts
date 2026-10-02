@@ -104,6 +104,14 @@ export interface EngineRequestInit {
   orgId?: string | null;
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+  /**
+   * Request deadline in ms (default 60s; 0 disables). A stalled connection
+   * must surface as a retryable `network_error`, never hang a skeleton
+   * forever — React Query's bounded retries and the QueryView error states
+   * only run on *failure*, not on a hang. Long-lived transports (SSE in
+   * sse.ts, blob downloads in engineDownload) don't go through here.
+   */
+  timeoutMs?: number;
 }
 
 function buildUrl(path: string, query?: EngineRequestInit['query']): string {
@@ -216,6 +224,9 @@ function isTransientAuthError(err: unknown): boolean {
   return err instanceof Error && err.name === 'TransientAuthError';
 }
 
+/** Default JSON-API deadline: slow engine, not a hang. */
+const DEFAULT_TIMEOUT_MS = 60_000;
+
 async function execute<T>(path: string, init: EngineRequestInit, retryOn401: boolean): Promise<T> {
   const headers: Record<string, string> = { accept: 'application/json' };
   if (init.body !== undefined) {
@@ -241,13 +252,45 @@ async function execute<T>(path: string, init: EngineRequestInit, retryOn401: boo
     }
   }
 
-  const response = await fetch(buildUrl(path, init.query), {
-    method: init.method ?? 'GET',
-    headers,
-    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-    credentials: 'include',
-    signal: init.signal,
-  });
+  const timeoutMs = init.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // Combine the caller's signal (user-initiated aborts stay AbortErrors)
+  // with the deadline: a timeout surfaces as a retryable network_error.
+  let signal = init.signal;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+  if (timeoutMs > 0 && typeof AbortController !== 'undefined') {
+    const ctrl = new AbortController();
+    if (init.signal) {
+      if (init.signal.aborted) {
+        ctrl.abort(init.signal.reason);
+      } else {
+        init.signal.addEventListener('abort', () => ctrl.abort(init.signal?.reason), { once: true });
+      }
+    }
+    timer = globalThis.setTimeout(() => {
+      timedOut = true;
+      ctrl.abort(new DOMException('The request timed out', 'TimeoutError'));
+    }, timeoutMs);
+    signal = ctrl.signal;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, init.query), {
+      method: init.method ?? 'GET',
+      headers,
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+      credentials: 'include',
+      signal,
+    });
+  } catch (err) {
+    if (timer !== undefined) globalThis.clearTimeout(timer);
+    if (timedOut) {
+      throw new ApiError(0, 'network_error', 'The request timed out — the engine did not respond in time.');
+    }
+    throw err;
+  }
+  if (timer !== undefined) globalThis.clearTimeout(timer);
 
   if (response.status === 401 && retryOn401 && tokenSource) {
     if (!refreshInFlight) {

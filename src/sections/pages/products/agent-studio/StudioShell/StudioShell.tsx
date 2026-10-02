@@ -26,6 +26,7 @@ import {
   UserMeta,
   UserName,
   UserTier,
+  UserTierLink,
   ShellBody,
   Topbar,
   TopbarLeft,
@@ -70,6 +71,8 @@ import {
 } from 'lucide-react';
 import { NotificationsPopover } from '../NotificationsPopover';
 import { AccountMenu } from '../AccountMenu';
+import { Tooltip } from '@/components/common/ui/Tooltip';
+import type { EntitlementLabelInfo } from '@/pages/products/agent_studio/entitlementPlanLabel';
 import { CommandPalette, type CommandItem } from '@/sections/common/CommandPalette';
 import { useCan } from '@lib/engine/capabilities';
 import { useAssistants } from '@hooks/studio/useAssistants';
@@ -88,48 +91,24 @@ import { SidebarSection } from './SidebarSection';
 import { useNavBadges } from './useNavBadges';
 import { useSidebarPrefs } from './useSidebarPrefs';
 import { useBuilderTopbarSlots } from '../builder/topbar/BuilderTopbarSlots';
+import {
+  displayConversationTitle,
+  formatConversationRelativeDate,
+  isGenericConversationTitle,
+} from '@/lib/conversationTitles';
 
 export type RecentChat = { id: string; title: string; to: string; updatedAt: string | null };
-
-/**
- * Check if a chat title is a generic placeholder (e.g., "Untitled conversation").
- * Generic titles get a relative date suffix to disambiguate them in the sidebar.
- */
-const isGenericTitle = (title: string): boolean => {
-  const normalized = title.toLowerCase().trim();
-  return normalized === 'untitled conversation' || normalized === 'untitled' || normalized === '';
-};
-
-/**
- * Format an ISO date as a relative time (e.g., "Today · 2:14 PM", "Yesterday · 9:41 AM").
- * Apple-style: concise, human-readable, no unnecessary precision.
- * The time is always included: several untitled conversations created on the
- * same day would otherwise render identically in the sidebar (P3-8).
- */
-const formatRelativeDate = (isoDate: string): string => {
-  const date = new Date(isoDate);
-  const now = new Date();
-  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays < 0) return `Just now · ${time}`;
-  if (diffDays === 0) return `Today · ${time}`;
-  if (diffDays === 1) return `Yesterday · ${time}`;
-  if (diffDays < 7) return `${diffDays}d ago · ${time}`;
-  if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7);
-    return `${weeks === 1 ? '1w' : `${weeks}w`} ago · ${time}`;
-  }
-  return `${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`;
-};
 
 type Props = {
   /** v2 domain config (SIDEBAR_LEDGER.md §2 — single source of truth). */
   nav: NavConfig;
   user: { initials: string; name: string; email: string };
-  /** `plan` is the real entitlement-state label; null while the org has not resolved. */
-  workspace: { name: string; plan: string | null };
+  /**
+   * `plan` is the real entitlement-state label; null while the org has not
+   * resolved. `planInfo` carries the state's explanation + billing action
+   * for states that need attention (null alongside a null plan).
+   */
+  workspace: { name: string; plan: string | null; planInfo: EntitlementLabelInfo | null };
   searchPlaceholder: string;
   /** Real recent conversations; null while the list is still loading. */
   recentChats: RecentChat[] | null;
@@ -318,7 +297,9 @@ export function StudioShell({
     for (const conversation of (conversations.data ?? []).slice(0, 8)) {
       items.push({
         id: `conversation-${conversation.id}`,
-        title: conversation.title,
+        // Untitled threads are disambiguated with their relative time so
+        // several don't render as identical rows in the palette.
+        title: displayConversationTitle(conversation.title, conversation.updatedAt),
         subtitle: 'Conversation',
         to: `/agent-studio/conversations?chat=${encodeURIComponent(conversation.id)}`,
         section: 'Conversations',
@@ -453,8 +434,8 @@ export function StudioShell({
                   {filteredRecents.map((c) => (
                     <RecentItemLink key={c.id} to={c.to} onClick={closeMobile}>
                       <RecentItemTitle>{c.title}</RecentItemTitle>
-                      {isGenericTitle(c.title) && c.updatedAt && (
-                        <RecentItemDate>{formatRelativeDate(c.updatedAt)}</RecentItemDate>
+                      {isGenericConversationTitle(c.title) && c.updatedAt && (
+                        <RecentItemDate>{formatConversationRelativeDate(c.updatedAt)}</RecentItemDate>
                       )}
                     </RecentItemLink>
                   ))}
@@ -471,7 +452,19 @@ export function StudioShell({
               <UserAvatar aria-hidden="true">{user.initials}</UserAvatar>
               <UserMeta>
                 <UserName title={workspace.name}>{workspace.name}</UserName>
-                {workspace.plan ? <UserTier>{workspace.plan}</UserTier> : null}
+                {/* The entitlement state is specific, not cryptic: states
+                    that need attention ("No active plan", "Past due", …)
+                    link to the real billing route, with a tooltip that
+                    explains the state and the action to take. The Link is
+                    already keyboard-focusable, so the tooltip needs no
+                    extra tab stop. */}
+                {workspace.planInfo?.billingAction && workspace.planInfo.hint ? (
+                  <Tooltip label={workspace.planInfo.hint} side="top" wrap>
+                    <UserTierLink to="/agent-studio/settings/billing">{workspace.plan}</UserTierLink>
+                  </Tooltip>
+                ) : workspace.plan ? (
+                  <UserTier>{workspace.plan}</UserTier>
+                ) : null}
               </UserMeta>
             </UserCard>
           </SidebarFooter>

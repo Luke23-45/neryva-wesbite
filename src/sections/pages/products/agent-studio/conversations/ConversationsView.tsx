@@ -16,6 +16,7 @@ import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
 import { useConversationsPaged, type ConversationSummary } from '@hooks/studio/useStudioConversations';
+import { displayConversationTitle } from '@/lib/conversationTitles';
 import {
   useConversationMessages,
   useConversationRuns,
@@ -178,7 +179,7 @@ export function ConversationsView() {
                       >
                         <RowMain>
                           <RowTop>
-                            <RowUser>{c.title}</RowUser>
+                            <RowUser>{displayConversationTitle(c.title, c.updatedAt)}</RowUser>
                             <RowTime>{c.updatedAt ? relativeDay(c.updatedAt) : ''}</RowTime>
                           </RowTop>
                           <RowPreview>{c.agentName ?? 'Unassigned agent'}</RowPreview>
@@ -236,7 +237,7 @@ export function ConversationsView() {
       <ConfirmDialog
         open={archiveConfirm}
         title="Archive this conversation?"
-        message={active ? `"${active.title}" moves out of the active list. The transcript is kept.` : ''}
+        message={active ? `"${displayConversationTitle(active.title, active.updatedAt)}" moves out of the active list. The transcript is kept.` : ''}
         confirmLabel="Archive"
         onConfirm={() => {
           if (active) {
@@ -252,7 +253,7 @@ export function ConversationsView() {
       <ConfirmDialog
         open={restoreConfirm}
         title="Restore this conversation?"
-        message={active ? `"${active.title}" moves back to the active list.` : ''}
+        message={active ? `"${displayConversationTitle(active.title, active.updatedAt)}" moves back to the active list.` : ''}
         confirmLabel="Restore"
         onConfirm={() => {
           if (active) {
@@ -292,7 +293,7 @@ function ConversationDetail({
     <Panel
       title={
         <DetailTitle>
-          {conversation.title}
+          {displayConversationTitle(conversation.title, conversation.updatedAt)}
           {conversation.agentName && <DetailTitleAgent>· {conversation.agentName}</DetailTitleAgent>}
         </DetailTitle>
       }
