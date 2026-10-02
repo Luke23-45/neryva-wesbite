@@ -36,13 +36,14 @@ const ProductCard = styled.div`
   background: rgba(255, 255, 255, 0.02);
 `;
 
-const CardTitle = styled.div`
+const CardTitle = styled.h3`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   font-size: 14px;
   font-weight: 600;
+  margin: 0;
 `;
 
 const CardBrief = styled.p`
@@ -94,7 +95,11 @@ const toneFor = (state: string) => {
   return display === 'active' ? 'success' : display === 'past_due' ? 'warning' : display === 'suspended' ? 'error' : 'neutral';
 };
 
-const displayState = (state: string) => (state === 'trial' ? 'active' : state.replace('_', ' '));
+const displayState = (state: string) => {
+  if (state === 'trial') return 'active';
+  if (state === 'none') return 'Coming soon';
+  return state.replace('_', ' ');
+};
 
 interface HomeProduct {
   key: string;
@@ -214,14 +219,28 @@ export default function PlatformHomePage() {
                   <Panel title="Members" subtitle={`${data.members.active} active · ${data.members.suspended} suspended`}>
                     <div style={{ fontSize: 24, fontWeight: 700 }}>{data.members.total}</div>
                   </Panel>
-                  <Panel title="Pending invites" subtitle="Awaiting acceptance">
+                  <Panel
+                    title="Pending invites"
+                    subtitle={data.pendingInvites > 0 ? 'Awaiting acceptance' : 'No pending invites'}
+                  >
                     <div style={{ fontSize: 24, fontWeight: 700 }}>{data.pendingInvites}</div>
                   </Panel>
                   <Panel title="Service accounts" subtitle={`${data.serviceAccounts.active} active`}>
                     <div style={{ fontSize: 24, fontWeight: 700 }}>{data.serviceAccounts.total}</div>
                   </Panel>
                   {data.seats.length > 0 && (
-                    <Panel title="Seat utilization" subtitle={data.seats.map((s) => s.product).join(', ')}>
+                    <Panel
+                      title="Seat utilization"
+                      subtitle={data.seats
+                        .map((s) => {
+                          const names: Record<string, string> = {
+                            agent_studio: 'Agent Studio',
+                            agent_studio_demo: 'Agent Studio Demo',
+                          };
+                          return names[s.product] ?? s.product;
+                        })
+                        .join(', ')}
+                    >
                       <div style={{ fontSize: 24, fontWeight: 700 }}>
                         {data.seats[0].seats ? `${data.seats[0].activeMembers}/${data.seats[0].seats}` : '—'}
                       </div>
