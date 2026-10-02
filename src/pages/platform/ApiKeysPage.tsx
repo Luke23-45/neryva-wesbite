@@ -62,7 +62,7 @@ export default function ApiKeysPage() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState<(typeof ORG_KEY_ROLES)[number]>('operator');
-  const [scopes, setScopes] = useState('agent-studio:read');
+  const [scopes, setScopes] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [issued, setIssued] = useState<{ key: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -87,8 +87,8 @@ export default function ApiKeysPage() {
         title="Keys"
         flush
         action={canManage && !keysDisabled ? (
-          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setRole('operator'); setScopes('agent-studio:read'); setExpiresAt(''); setIssued(null); setOpen(true); }}>
-            <KeyRound size={13} /> Issue key
+          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setRole('operator'); setScopes(''); setExpiresAt(''); setIssued(null); setOpen(true); }}>
+            <KeyRound size={13} /> Issue API key
           </ActionButton>
         ) : undefined}
       >
@@ -153,7 +153,7 @@ export default function ApiKeysPage() {
               <ActionButton variant="ghost" onClick={() => setOpen(false)}>Cancel</ActionButton>
               <ActionButton
                 variant="primary"
-                disabled={name.trim().length < 1 || issue.isPending}
+                disabled={name.trim().length < 1 || scopes.trim().length < 1 || issue.isPending}
                 onClick={async () => {
                   let mfaProof: string;
                   try {
@@ -178,7 +178,7 @@ export default function ApiKeysPage() {
                   );
                 }}
               >
-                Issue key
+                Issue API key
               </ActionButton>
             </>
           )
@@ -208,7 +208,10 @@ export default function ApiKeysPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
             <TextInput label="Name" name="key-name" placeholder="ci-runner" value={name} onChange={(e) => setName(e.target.value)} />
             <div>
-              <select value={role} onChange={(e) => setRole(e.target.value as (typeof ORG_KEY_ROLES)[number])} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
+              <label htmlFor="key-role" style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'rgba(229, 231, 235, 0.78)', marginBottom: 6 }}>
+                Role
+              </label>
+              <select id="key-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ORG_KEY_ROLES)[number])} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
                 {ORG_KEY_ROLES.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
