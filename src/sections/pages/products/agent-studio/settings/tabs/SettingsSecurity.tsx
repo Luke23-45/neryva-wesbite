@@ -165,6 +165,10 @@ function PasswordFields() {
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
 
+  // P2-11: the button stays disabled until all three fields are dirty —
+  // clicking it with empty fields was a no-op that only flashed a toast.
+  const dirty = currentPwd !== '' && newPwd !== '' && confirmPwd !== '';
+
   const save = () => {
     if (!currentPwd || !newPwd) {
       toast.error('Enter your current and new password');
@@ -198,7 +202,7 @@ function PasswordFields() {
         <TextInput label="New password" type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" />
         <TextInput label="Confirm new password" type="password" value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} autoComplete="new-password" />
       </FieldRow>
-      <SaveRow onSave={save} saveLabel="Update password" disabled={change.isPending} />
+      <SaveRow onSave={save} saveLabel="Update password" disabled={change.isPending || !dirty} />
     </>
   );
 }

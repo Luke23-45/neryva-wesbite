@@ -74,6 +74,20 @@ function currentSessionUid(): string | null {
   }
 }
 
+/** P1-4: human-readable session time — never the raw engine ISO string. */
+function formatSessionTime(raw: string | null): string | null {
+  if (!raw) return null;
+  const at = Date.parse(raw);
+  if (Number.isNaN(at)) return raw;
+  return new Date(at).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function parseSessions(raw: unknown, currentUid?: string | null): SessionRow[] {
   const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   const list = Array.isArray(raw)
@@ -105,7 +119,12 @@ export function parseSessions(raw: unknown, currentUid?: string | null): Session
         (userAgent ? userAgent.split('(')[0].trim() : null) ??
         'Unknown device';
       const place = str(item.location) ?? str(item.ip);
-      const lastActive = str(item.last_seen_at) ?? str(item.lastSeenAt) ?? str(item.last_active_at) ?? str(item.last_used_at) ?? str(item.created_at);
+      // P1-4: the engine's raw timestamp (ISO with millis/offset) must never
+      // render verbatim — format it for humans, falling back to the raw
+      // string only when it can't be parsed.
+      const lastActiveRaw =
+        str(item.last_seen_at) ?? str(item.lastSeenAt) ?? str(item.last_active_at) ?? str(item.last_used_at) ?? str(item.created_at);
+      const lastActive = formatSessionTime(lastActiveRaw);
       const meta = [place, lastActive].filter((v): v is string => v !== null).join(' · ') || null;
       return {
         id,

@@ -215,7 +215,7 @@ export function CommandPalette({ open, onClose, items, brand, loading }: Props) 
             <Footer>
               <FooterLeft>
                 <span>
-                  <Kbd>esc</Kbd>to close
+                  <Kbd>esc</Kbd> to close
                 </span>
               </FooterLeft>
               <FooterRight>

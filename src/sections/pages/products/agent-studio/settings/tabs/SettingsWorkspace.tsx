@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, X as XIcon, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -92,8 +92,16 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // P1-3: the custom hex field must always reflect the workspace's current
+  // brand colour — same default as the swatch selection, and kept in sync
+  // when a preset swatch is picked.
   const [color, setColor] = useState<string>(brandingColor ?? '#c084fc');
-  const [customHex, setCustomHex] = useState<string>(brandingColor ?? '#0ea5e9');
+  const [customHex, setCustomHex] = useState<string>(brandingColor ?? '#c084fc');
+
+  const pickPreset = (hex: string) => {
+    setColor(hex);
+    setCustomHex(hex);
+  };
 
   const isCustom = !PRESETS.includes(color);
 
@@ -125,6 +133,24 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
     // Sending logo_dataurl: null on save deletes the engine key.
     setLogo(null);
   };
+
+  // P2-12: "Save changes" stays disabled until something actually differs
+  // from the loaded workspace — no-op saves on pristine load.
+  // (Memoized: readLegacyLogo hits localStorage, so don't run it per render.)
+  const initialLogo = useMemo(
+    () => resolveWorkspaceLogo(branding, readLegacyLogo(LOGO_KEY)),
+    // branding/data are stable for the form's lifetime (keyed by org id).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const dirty =
+    name !== data.org.name ||
+    region !== (data.org.region ?? '') ||
+    supportEmail !== (data.settings.supportEmail ?? '') ||
+    defaultProjectId !== (data.settings.defaultProjectId ?? '') ||
+    retention !== String(data.org.retentionDays ?? 30) ||
+    logo !== initialLogo ||
+    color !== (brandingColor ?? '#c084fc');
 
   const onDropKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -171,7 +197,7 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
         subtitle="Identity, region, and defaults for your team."
         action={
           canManage ? (
-            <SaveRow inline onSave={save} disabled={update.isPending} />
+            <SaveRow inline onSave={save} disabled={update.isPending || !dirty} />
           ) : (
             <InlineNote>Admins manage workspace settings</InlineNote>
           )
@@ -254,7 +280,7 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
                   type="button"
                   $on={color === hex}
                   aria-pressed={color === hex}
-                  onClick={() => setColor(hex)}
+                  onClick={() => pickPreset(hex)}
                   whileTap={{ scale: 0.92 }}
                   transition={spring.snap}
                   aria-label={`Brand color ${hex}`}

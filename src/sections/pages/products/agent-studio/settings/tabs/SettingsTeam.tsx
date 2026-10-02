@@ -85,7 +85,7 @@ export function SettingsTeam() {
 
       {canManageMembers && (
         <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
-          <PendingInvites invites={invites.data?.invites ?? []} />
+          <PendingInvites query={invites} />
         </motion.div>
       )}
     </>
@@ -428,14 +428,33 @@ function MemberMore({ member, canManage }: { member: MemberRow; canManage: boole
 }
 
 // ─── Pending invites ─────────────────────────────────────────────────
-function PendingInvites({ invites }: { invites: InviteRow[] }) {
-  // P5-T5: expired invites stay actionable — resend revives them server-side,
-  // so hiding them strands the invite. Show them labeled as expired.
-  const actionable = invites.filter((i) => i.status === 'pending' || i.status === 'expired');
+function PendingInvites({ query }: { query: ReturnType<typeof useInvites> }) {
   const resend = useResendInvite();
   const revoke = useRevokeInvite();
   const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
   const [resendTarget, setResendTarget] = useState<InviteRow | null>(null);
+
+  // P1-1: never render the card on stale cached invites during hydration —
+  // wait for a fresh fetch after mount so the "N awaiting acceptance" count
+  // can't flash from cache and then vanish when the real fetch settles.
+  // (The error branch runs first so a failed first fetch can't hang on the
+  // skeleton behind the gate.)
+  if (query.isPending) {
+    // Disabled query (fetchStatus idle) can never settle — don't hang on a skeleton.
+    if (query.fetchStatus === 'idle') return null;
+    return <Skeleton $h="84px" $r="12px" />;
+  }
+  if (query.isError) {
+    // Invites are auxiliary — the Members panel already surfaces query errors.
+    return null;
+  }
+  if (!query.isFetchedAfterMount) {
+    return <Skeleton $h="84px" $r="12px" />;
+  }
+
+  // P5-T5: expired invites stay actionable — resend revives them server-side,
+  // so hiding them strands the invite. Show them labeled as expired.
+  const actionable = (query.data?.invites ?? []).filter((i) => i.status === 'pending' || i.status === 'expired');
 
   if (actionable.length === 0) {
     return null;

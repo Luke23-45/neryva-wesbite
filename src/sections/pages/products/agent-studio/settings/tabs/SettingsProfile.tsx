@@ -43,6 +43,17 @@ function timezoneOptions(): string[] {
   return TIMEZONE_FALLBACK;
 }
 
+/** The viewer's real IANA timezone (Intl default), falling back to UTC. */
+function userTimeZone(): string {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (zone) return zone;
+  } catch {
+    /* older runtimes */
+  }
+  return 'UTC';
+}
+
 const LOCALES = ['en', 'en-US', 'en-GB', 'de', 'fr', 'es', 'pt-BR', 'ja', 'ko', 'zh-CN'];
 
 export function SettingsProfile() {
@@ -66,7 +77,10 @@ function ProfileForm({ info }: { info: AccountInfo }) {
   // P7-PF-08: timezone/locale/bio have no engine storage (the accounts table
   // and PATCH /auth/me accept only display_name). The controls are rendered
   // disabled with honest copy rather than silently discarding input.
-  const [tz] = useState(info.timezone ?? 'UTC');
+  // P2-6: default to the user's real timezone (not 'UTC', and never an empty
+  // engine string that matches no option and falls back to the first
+  // alphabetical entry).
+  const [tz] = useState(info.timezone?.trim() || userTimeZone());
   const [loc] = useState(info.locale ?? 'en');
 
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
@@ -255,9 +269,7 @@ function ProfileForm({ info }: { info: AccountInfo }) {
               {!changeRequested ? (
                 <>
                   <TheaterNote>
-                    Your email is your sign-in identity, so this step re-authenticates you: your current
-                    password is required when your account has one, and a live authenticator or recovery
-                    code when two-factor authentication is on.
+                    Your email is your sign-in identity, so this step re-authenticates you: your current password is required when your account has one, and a live authenticator or recovery code when two-factor authentication is on.
                   </TheaterNote>
                   <EmailChangeRow>
                     <div style={{ flex: 1 }}>
@@ -387,6 +399,7 @@ function LinkedIdentities() {
         <QueryView
           query={identities}
           skeleton={<Skeleton $h="72px" $r="10px" />}
+          isEmpty={(rows) => rows.length === 0}
           empty={{ title: 'No linked accounts', description: 'You sign in with your email. Social sign-in accounts you link appear here.' }}
         >
           {(rows) => (

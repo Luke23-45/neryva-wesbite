@@ -140,6 +140,9 @@ const MeterRow = styled.div`
 const MeterValue = styled.span`
   font-variant-numeric: tabular-nums;
   color: ${({ theme }) => theme.app.text.primary};
+  /* P2-7: the row capitalizes labels — the value must keep its own casing
+     ("(no cap)", not "(No Cap)"). */
+  text-transform: none;
 `;
 
 /**

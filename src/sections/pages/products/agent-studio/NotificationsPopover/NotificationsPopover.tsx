@@ -213,7 +213,7 @@ export function NotificationsPopover() {
                     )}
                     <AnnouncementTime>{relativeTime(a.createdAt) ?? 'Recently'}</AnnouncementTime>
                   </AnnouncementBody>
-                  <DismissButton type="button" aria-label="Dismiss announcement" onClick={() => dismissAnnouncement(a.id)}>
+                  <DismissButton type="button" aria-label={`Dismiss announcement: ${a.title}`} onClick={() => dismissAnnouncement(a.id)}>
                     <X size={13} strokeWidth={1.7} />
                   </DismissButton>
                 </AnnouncementRow>
