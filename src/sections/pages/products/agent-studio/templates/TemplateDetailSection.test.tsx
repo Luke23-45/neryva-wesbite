@@ -166,6 +166,32 @@ describe('TemplateDetailSection content', () => {
     expect(screen.getByText(/Definition \(engine payload\)/)).toBeTruthy();
   });
 
+  it('demotes rubric markdown headings under the Rubric section (no duplicate h1)', async () => {
+    templatesData = [
+      entry({
+        template: {
+          ...entry().template,
+          evalRef: {
+            evaluators: { evaluators: [] },
+            cases: [],
+            rubric_markdown: '# Evaluation rubric\n\n## Coverage\n\nBody text.',
+          },
+        },
+      }),
+    ];
+    // The Evaluation tab hosts the rubric section.
+    await routerAt(DETAIL);
+    fireEvent.click(screen.getByText('Evaluation', { selector: 'button' }));
+    // The rubric's authored `#` title must not emit a second page-level h1 —
+    // it is demoted to h4 under the section's own <h3>Rubric</h3>.
+    const headings = screen.getAllByRole('heading');
+    const rubricTitle = screen.getByRole('heading', { name: 'Evaluation rubric' });
+    expect(rubricTitle.tagName).toBe('H4');
+    const coverage = screen.getByRole('heading', { name: 'Coverage' });
+    expect(coverage.tagName).toBe('H5');
+    expect(headings.filter((h) => h.tagName === 'H1')).toHaveLength(1);
+  });
+
   it('disables Install for non-authors with the denied copy', async () => {
     await routerAt(DETAIL, 'reader');
     const install = screen.getByText('Install').closest('button')!;

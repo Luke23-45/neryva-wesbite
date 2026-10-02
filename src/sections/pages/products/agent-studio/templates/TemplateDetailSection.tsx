@@ -398,7 +398,10 @@ function EvaluationTab({ template, showAllCases, onToggleCases }: { template: Re
         <>
           <h3>Rubric</h3>
           <Rubric>
-            <MarkdownText text={ref.rubric_markdown} />
+            {/* The rubric is authored as a standalone doc (top-level `#`);
+                demote its headings so they nest under this section's h3
+                instead of emitting a second page-level h1. */}
+            <MarkdownText text={ref.rubric_markdown} headingShift={3} />
           </Rubric>
         </>
       )}

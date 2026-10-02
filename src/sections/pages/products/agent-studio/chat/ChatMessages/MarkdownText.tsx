@@ -1,4 +1,4 @@
-import { Children, isValidElement, memo, useRef, useState, type ReactNode } from 'react';
+import { Children, isValidElement, memo, useMemo, useRef, useState, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import styled from 'styled-components';
@@ -91,10 +91,29 @@ const components: Components = {
   ),
 };
 
-function MarkdownTextInner({ text }: { text: string }) {
+const HEADING_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
+
+/**
+ * `headingShift` demotes rendered headings by N levels (capped at h6).
+ * Template rubrics are authored as standalone documents starting at `#`,
+ * but they render inside a page section that already has its own headings
+ * (e.g. `<h3>Rubric</h3>`) — without the shift the rubric's `#` would emit
+ * a second page-level `<h1>` and skip levels.
+ */
+function MarkdownTextInner({ text, headingShift = 0 }: { text: string; headingShift?: 0 | 1 | 2 | 3 }) {
+  const shiftedComponents = useMemo<Components>(() => {
+    if (headingShift === 0) return components;
+    const next: Components = { ...components };
+    HEADING_TAGS.forEach((tag, i) => {
+      const level = Math.min(6, i + 1 + headingShift) as 1 | 2 | 3 | 4 | 5 | 6;
+      const Target = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+      next[tag] = ({ children }) => <Target>{children}</Target>;
+    });
+    return next;
+  }, [headingShift]);
   return (
     <MarkdownWrap>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={shiftedComponents}>
         {text}
       </ReactMarkdown>
     </MarkdownWrap>
