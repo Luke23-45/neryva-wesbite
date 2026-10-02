@@ -50,20 +50,30 @@ export default function StatusPage() {
       </ViewHeader>
 
       <QueryView query={status} skeleton={<Skeleton $h="120px" $r="12px" />}>
-        {(data) => (
+        {(data) => {
+          // The backend's overall status may not account for satellite
+          // liveness; if any satellite has never connected, the banner
+          // must not claim "All systems operational".
+          const anySatelliteDown = (data.satellites ?? []).some((s) => s.liveness === 'never');
+          const effectiveOverall = anySatelliteDown && data.overall === 'operational' ? 'degraded' : data.overall;
+          return (
           <>
-            <Banner $tone={data.overall === 'operational' ? 'success' : data.overall === 'degraded' ? 'warning' : 'error'}>
-              {data.overall === 'operational' ? <CheckCircle2 size={18} /> : data.overall === 'degraded' ? <AlertTriangle size={18} /> : <XCircle size={18} />}
-              All systems {data.overall === 'operational' ? 'operational' : data.overall}
+            <Banner $tone={effectiveOverall === 'operational' ? 'success' : effectiveOverall === 'degraded' ? 'warning' : 'error'}>
+              {effectiveOverall === 'operational' ? <CheckCircle2 size={18} /> : effectiveOverall === 'degraded' ? <AlertTriangle size={18} /> : <XCircle size={18} />}
+              All systems {effectiveOverall === 'operational' ? 'operational' : effectiveOverall}
+              {anySatelliteDown && data.overall === 'operational' ? ' — some satellites not connected' : ''}
             </Banner>
 
             <KpiGrid>
               <Panel title="Components" subtitle="Engine dependency checks">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
                   {data.components.map((component) => (
-                    <div key={component.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <div key={component.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                       <span style={{ opacity: 0.8 }}>{component.name}</span>
-                      {component.ok ? <CheckCircle2 size={15} color="#34d399" /> : <XCircle size={15} color="#f87171" />}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {component.ok ? <CheckCircle2 size={15} color="#34d399" aria-hidden="true" /> : <XCircle size={15} color="#f87171" aria-hidden="true" />}
+                        <span style={{ fontSize: 12, opacity: 0.7 }}>{component.ok ? 'Healthy' : 'Down'}</span>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -85,15 +95,12 @@ export default function StatusPage() {
             <SectionTitle>Announcements</SectionTitle>
             <Panel flush>
               <DataTable>
-                <thead>
-                  <DataHead>
-                    <DataCell as="th">Kind</DataCell>
-                    <DataCell as="th">Title</DataCell>
-                    <DataCell as="th">Window</DataCell>
-                  </DataHead>
-                </thead>
-                <tbody>
-                  {(data.announcements ?? []).map((announcement) => {
+                <DataHead>
+                  <DataCell as="th">Kind</DataCell>
+                  <DataCell as="th">Title</DataCell>
+                  <DataCell as="th">Window</DataCell>
+                </DataHead>
+                {(data.announcements ?? []).map((announcement) => {
                     const row = announcement as { id?: string; kind?: string; title?: string; body?: string; active_from?: string; active_until?: string | null };
                     return (
                       <DataRow key={row.id ?? row.title}>
@@ -111,7 +118,6 @@ export default function StatusPage() {
                       </DataRow>
                     );
                   })}
-                </tbody>
               </DataTable>
             </Panel>
             {(data.announcements ?? []).length === 0 && (
@@ -120,7 +126,8 @@ export default function StatusPage() {
               </div>
             )}
           </>
-        )}
+          );
+        }}
       </QueryView>
     </ViewShell>
   );
