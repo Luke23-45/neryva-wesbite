@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useId, type ReactNode, type KeyboardEvent } from 'react';
 import { SegRoot, SegButton, SegPill } from './Segmented.styles';
 import { spring } from '@styles/motion';
 
@@ -28,9 +28,22 @@ export function Segmented<T extends string>({
   ariaLabel,
 }: Props<T>) {
   const layoutId = useId();
+
+  const handleKeyDown = (e: KeyboardEvent, index: number) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const nextIndex = (index + dir + options.length) % options.length;
+      onChange(options[nextIndex].value);
+      // Focus the newly selected tab
+      const buttons = e.currentTarget.parentElement?.querySelectorAll('[role="tab"]');
+      (buttons?.[nextIndex] as HTMLElement)?.focus();
+    }
+  };
+
   return (
     <SegRoot $size={size} role="tablist" aria-label={ariaLabel}>
-      {options.map((opt) => {
+      {options.map((opt, index) => {
         const active = opt.value === value;
         return (
           <SegButton
@@ -38,9 +51,11 @@ export function Segmented<T extends string>({
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
             $size={size}
             $active={active}
             onClick={() => onChange(opt.value)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
             whileTap={{ scale: 0.96 }}
             transition={spring.snap}
           >
