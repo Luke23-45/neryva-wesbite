@@ -166,7 +166,7 @@ export function MemoryComposerForm({
       </ViewHeaderRow>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel title={title} subtitle="Memory content, plus scope for new memories.">
+        <Panel title={title} subtitle={editing ? "Memory content — scope and TTL are not editable." : "Memory content, plus scope for new memories."}>
           <MemoryContentEditor
             value={content}
             mode={contentMode}
@@ -181,7 +181,11 @@ export function MemoryComposerForm({
                 redaction markers can shift the final boundary a few characters
                 from this pre-scrub count. Say so — the old copy implied this
                 counter was the exact cut point. */}
-            {`${content.length.toLocaleString()} / ${MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the cap. The cap applies after PII redaction, so the stored text can land a few characters short of this count.`}
+            {`${content.length.toLocaleString()} / ${MEMORY_CONTENT_MAX.toLocaleString()} — the engine truncates past the cap.${
+              memoryPolicy?.scrub === 'off'
+                ? ' Scrub is off, so the stored text matches this count.'
+                : ' The cap applies after PII redaction, so the stored text can land a few characters short of this count.'
+            }`}
           </p>
           {editing ? (
             <p style={{ fontSize: 12, opacity: 0.75 }}>
