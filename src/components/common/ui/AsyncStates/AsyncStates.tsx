@@ -60,7 +60,7 @@ export function QueryView<T>({
 }: {
   query: UseQueryResult<T>;
   skeleton?: ReactNode;
-  empty?: { title: string; description?: string };
+  empty?: { title: string; description?: string; action?: ReactNode };
   isEmpty?: (data: T) => boolean;
   children: (data: T) => ReactNode;
 }) {
@@ -71,7 +71,7 @@ export function QueryView<T>({
     return <ErrorState message={(query.error as Error).message} onRetry={() => void query.refetch()} />;
   }
   if (isEmpty && isEmpty(query.data)) {
-    return <EmptyState icon={<RefreshCw size={18} opacity={0.5} />} title={empty?.title ?? 'Nothing here yet'} description={empty?.description} />;
+    return <EmptyState icon={<RefreshCw size={18} opacity={0.5} />} title={empty?.title ?? 'Nothing here yet'} description={empty?.description} action={empty?.action} />;
   }
   return <>{children(query.data)}</>;
 }

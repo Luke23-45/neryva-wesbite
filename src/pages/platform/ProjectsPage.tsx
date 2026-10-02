@@ -42,7 +42,13 @@ export default function ProjectsPage() {
         flush
         action={
           <>
-            <ActionButton variant="ghost" size="sm" onClick={() => setShowArchived((v) => !v)}>
+            <ActionButton
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchived((v) => !v)}
+              aria-pressed={showArchived}
+              title={showArchived ? 'Hide archived projects' : 'Show archived projects'}
+            >
               {showArchived ? 'Hide archived' : 'Show archived'}
             </ActionButton>
             {canManage && (
@@ -53,7 +59,26 @@ export default function ProjectsPage() {
           </>
         }
       >
-        <QueryView query={projects} isEmpty={(d) => d.projects.length === 0} empty={{ title: 'No projects', description: canManage ? 'Create the first project to scope keys and usage.' : 'Ask a developer or admin to create one.' }}>
+        <QueryView
+          query={projects}
+          isEmpty={(d) => d.projects.length === 0}
+          empty={
+            showArchived
+              ? {
+                  title: 'No archived projects',
+                  description: 'Projects you archive will appear here. Nothing is archived yet.',
+                }
+              : {
+                  title: 'No projects',
+                  description: canManage ? 'Create the first project to scope keys and usage.' : 'Ask a developer or admin to create one.',
+                  action: canManage ? (
+                    <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setDescription(''); setCreateOpen(true); }}>
+                      <FolderPlus size={13} /> Create project
+                    </ActionButton>
+                  ) : undefined,
+                }
+          }
+        >
           {(data) => (
             <DataTable>
               <thead>
