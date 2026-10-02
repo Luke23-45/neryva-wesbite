@@ -543,10 +543,11 @@ export default function OrgMembersPage() {
                     const url = new URL(manualResult.accept_url);
                     // P0: server generates localhost:3000 links; rewrite to the
                     // actual deployment origin so the link works for recipients.
-                    // Use hostname (not host) to strip the dev-server :3000 port;
-                    // recipients access via standard HTTPS.
+                    // Use hostname (not host) and explicitly clear the port;
+                    // setting host alone does NOT clear an existing port.
                     url.protocol = window.location.protocol;
-                    url.host = window.location.hostname;
+                    url.hostname = window.location.hostname;
+                    url.port = '';
                     return url.toString();
                   } catch {
                     return manualResult.accept_url;
@@ -560,7 +561,8 @@ export default function OrgMembersPage() {
                   try {
                     const url = new URL(manualResult.accept_url);
                     url.protocol = window.location.protocol;
-                    url.host = window.location.hostname;
+                    url.hostname = window.location.hostname;
+                    url.port = '';
                     return url.toString();
                   } catch {
                     return manualResult.accept_url;
