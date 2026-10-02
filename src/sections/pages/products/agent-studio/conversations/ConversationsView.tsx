@@ -88,6 +88,10 @@ export function ConversationsView() {
     return ['All', ...[...present].sort()];
   }, [serverRows]);
 
+  // Display labels: capitalize status values ("active" → "Active") for HIG polish.
+  // The underlying filter value stays as-is so the comparison still matches.
+  const statusLabel = (s: string) => (s === 'All' ? s : s.charAt(0).toUpperCase() + s.slice(1));
+
   const list = useMemo(() => {
     return serverRows.filter((c) => {
       if (statusFilter !== 'All' && c.status !== statusFilter) return false;
@@ -104,7 +108,8 @@ export function ConversationsView() {
 
   const openConversation = (id: string | null) => {
     // Route search schemas aren't declared per-route — contained cast (see useUrlState).
-    navigate({ search: (() => ({ chat: id })) as never, replace: true });
+    // Omit the param entirely when closing (id === null) — never write the literal string "null".
+    navigate({ search: (id === null ? {} : { chat: id }) as never, replace: true });
   };
 
   // QueryView only reads isPending/isError/data/refetch — flatten the
@@ -127,7 +132,7 @@ export function ConversationsView() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 aria-label="Filter by status"
               >
-                {statuses.map((s) => <option key={s}>{s}</option>)}
+                {statuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
               </FilterSelect>
               <SearchField
                 value={query}
