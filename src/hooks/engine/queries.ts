@@ -451,9 +451,13 @@ const EMPTY_QUOTA_SIGNAL: QuotaSignal = {
 };
 
 function meterLabelFromKey(key: string): string {
+  // Title-case at the source so labels are correct everywhere — visible
+  // rows (also CSS-capitalized, harmless), aria-labels, and tooltips.
   return key
     .replace(/_/g, ' ')
-    .replace(/\b(monthly|events|spend|usd)\b/gi, m => (m.toUpperCase() === 'USD' ? 'USD' : m))
+    .split(' ')
+    .map((w) => (w.toLowerCase() === 'usd' ? 'USD' : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ')
     .trim();
 }
 

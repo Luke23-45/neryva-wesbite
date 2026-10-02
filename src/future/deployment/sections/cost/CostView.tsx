@@ -92,9 +92,10 @@ export function CostView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <ProgressBar
               value={budgetPct}
+              label="Budget actual spend"
               tone={budgetPct > 85 ? 'amber' : budgetPct > 70 ? 'azure' : 'emerald'}
             />
-            <ProgressBar value={forecastPct} tone="lilac" />
+            <ProgressBar value={forecastPct} label="Budget forecast spend" tone="lilac" />
           </div>
           <BudgetMeta style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span>actual</span>

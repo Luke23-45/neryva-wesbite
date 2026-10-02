@@ -60,6 +60,7 @@ import {
   Wrench,
   ShieldCheck,
   BarChart3,
+  Gauge,
   Plug,
   Sparkles,
   Code2,
@@ -100,24 +101,27 @@ const isGenericTitle = (title: string): boolean => {
 };
 
 /**
- * Format an ISO date as a relative time (e.g., "2d ago", "Yesterday").
+ * Format an ISO date as a relative time (e.g., "Today · 2:14 PM", "Yesterday · 9:41 AM").
  * Apple-style: concise, human-readable, no unnecessary precision.
+ * The time is always included: several untitled conversations created on the
+ * same day would otherwise render identically in the sidebar (P3-8).
  */
 const formatRelativeDate = (isoDate: string): string => {
   const date = new Date(isoDate);
   const now = new Date();
+  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays < 0) return 'Just now';
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 0) return `Just now · ${time}`;
+  if (diffDays === 0) return `Today · ${time}`;
+  if (diffDays === 1) return `Yesterday · ${time}`;
+  if (diffDays < 7) return `${diffDays}d ago · ${time}`;
   if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7);
-    return weeks === 1 ? '1w ago' : `${weeks}w ago`;
+    return `${weeks === 1 ? '1w' : `${weeks}w`} ago · ${time}`;
   }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`;
 };
 
 type Props = {
@@ -159,7 +163,7 @@ const STATIC_NAV_ITEMS: CommandItem[] = [
   { id: 'templates', title: 'Templates', subtitle: 'Pre-built agent templates', to: '/agent-studio/templates', section: 'Navigate', icon: <Sparkles size={14} strokeWidth={1.7} /> },
   { id: 'api', title: 'API explorer', subtitle: 'Interactive API reference', to: '/agent-studio/api', section: 'Navigate', icon: <Code2 size={14} strokeWidth={1.7} /> },
   { id: 'teams', title: 'Teams', subtitle: 'Members, invites, service accounts', to: '/agent-studio/teams', section: 'Navigate', icon: <Users size={14} strokeWidth={1.7} /> },
-  { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <ActivityIcon size={14} strokeWidth={1.7} /> },
+  { id: 'usage', title: 'Usage', subtitle: 'Tokens, cost, quota', to: '/agent-studio/usage', section: 'Navigate', icon: <Gauge size={14} strokeWidth={1.7} /> },
   { id: 'evaluations', title: 'Evaluations', subtitle: 'Eval runs and datasets', to: '/agent-studio/evaluations', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
   { id: 'compliance', title: 'Compliance', subtitle: 'Certifications and audit log', to: '/agent-studio/compliance', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'settings', title: 'Settings', subtitle: 'Workspace, team, billing', to: '/agent-studio/settings/profile', section: 'Navigate', icon: <SettingsIcon size={14} strokeWidth={1.7} />, shortcut: [','] },
@@ -478,7 +482,7 @@ export function StudioShell({
       )}
 
       <ShellBody>
-        <Topbar $builder={isBuilder}>
+        <Topbar $builder={isBuilder} as="header">
           <TopbarLeft>
             <MobileMenuButton
               $variant="menu"
@@ -552,7 +556,10 @@ export function StudioShell({
           </TopbarRight>
         </Topbar>
         {banner && <BannerSlot>{banner}</BannerSlot>}
-        <ContentArea>{children}</ContentArea>
+        {/* P3-7: the page's single <main> — the router root no longer wraps
+            app-shell routes in a landmark, so the sidebar nav and topbar
+            header are siblings of main, not nested inside it. */}
+        <ContentArea as="main">{children}</ContentArea>
       </ShellBody>
       <CommandPalette
         open={paletteOpen}

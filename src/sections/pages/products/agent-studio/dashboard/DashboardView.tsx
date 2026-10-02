@@ -323,7 +323,7 @@ function DashboardContent() {
                       <span style={{ opacity: 0.4 }}>—</span>
                     )}
                   </KpiCardValue>
-                  {meter && meter.limit !== null && <ProgressBar value={pct} tone={pct > 85 ? 'amber' : 'azure'} />}
+                  {meter && meter.limit !== null && <ProgressBar value={pct} label={`${meter.label} quota usage`} tone={pct > 85 ? 'amber' : 'azure'} />}
                   <KpiCardMeta><Link to="/agent-studio/usage">Usage →</Link></KpiCardMeta>
                 </KpiCardWrap>
               );

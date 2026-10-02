@@ -160,6 +160,7 @@ export function ComplianceView() {
                   </div>
                   <ProgressBar
                     value={pct}
+                    label={`${f.name} controls passing`}
                     tone={pct === 100 ? 'emerald' : pct >= 90 ? 'azure' : 'amber'}
                   />
                 </div>

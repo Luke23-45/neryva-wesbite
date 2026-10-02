@@ -41,7 +41,7 @@ export function UsageView() {
     <ViewShell>
       <ViewHeader as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewTitle>Usage</ViewTitle>
-        <ViewSubtitle>Tokens, cost, and quota for your agents — metered by the engine on every run, including failed ones.</ViewSubtitle>
+        <ViewSubtitle>Tokens, cost, and quota for your agents — metered by the engine on every standard run, including failed ones. Test runs are never metered.</ViewSubtitle>
       </ViewHeader>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
@@ -78,7 +78,11 @@ export function UsageView() {
             No active plan — quota limits apply once this organization carries an active plan.
           </QuotaAlert>
         )}
-        {meters.length > 0 ? (
+        {limits.isPending ? (
+          <Panel>
+            <Skeleton $h="100px" $r="12px" />
+          </Panel>
+        ) : meters.length > 0 ? (
           <Panel>
             <QueryView query={limits} skeleton={<Skeleton $h="100px" $r="12px" />}>
               {() => (
@@ -98,7 +102,7 @@ export function UsageView() {
                             {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
                           </MeterValue>
                         </MeterRow>
-                        <ProgressBar value={pct} tone={over ? 'rose' : pct > 80 ? 'amber' : 'azure'} />
+                        <ProgressBar value={pct} label={`${meter.label} quota usage`} tone={over ? 'rose' : pct > 80 ? 'amber' : 'azure'} />
                       </div>
                     );
                   })}

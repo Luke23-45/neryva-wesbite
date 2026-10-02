@@ -197,7 +197,7 @@ export function SettingsBilling() {
                       </UsageValue>
                     </UsageRow>
                     {/* BUG-5: threshold unified with the platform surface (80). */}
-                    <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
+                    <ProgressBar value={pct} label={`${meter.label} usage`} tone={pct > 80 ? 'amber' : 'azure'} />
                   </div>
                 );
               })}

@@ -23,6 +23,19 @@ const MainContent = styled(motion.main)`
   flex-direction: column;
 `;
 
+/**
+ * App-shell content wrapper (P3-7): a plain <div>, not a <main>. The shells
+ * (Studio, Platform, Deploy) own their own <main> around page content so the
+ * sidebar <nav> and topbar <header> are sibling landmarks instead of being
+ * swallowed inside a single page-wide <main>. Same transition as marketing
+ * pages — only the landmark differs.
+ */
+const AppShellContent = styled(motion.div)`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+`;
+
 const pageVariants = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
@@ -47,17 +60,31 @@ export const rootRoute = createRootRouteWithContext<RouterContext>()({
         <PageHead />
         {!isAppShell && <Header />}
         <AnimatePresence mode="wait">
-          <MainContent
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransition}
-          >
-            <Suspense fallback={<div>Loading...</div>}>
-              <Outlet />
-            </Suspense>
-          </MainContent>
+          {isAppShell ? (
+            <AppShellContent
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={pageTransition}
+            >
+              <Suspense fallback={<div>Loading...</div>}>
+                <Outlet />
+              </Suspense>
+            </AppShellContent>
+          ) : (
+            <MainContent
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={pageTransition}
+            >
+              <Suspense fallback={<div>Loading...</div>}>
+                <Outlet />
+              </Suspense>
+            </MainContent>
+          )}
         </AnimatePresence>
         {!isAppShell && <Footer />}
         {/* {import.meta.env.DEV && <TanStackRouterDevtools />} */}

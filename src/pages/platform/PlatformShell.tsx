@@ -103,8 +103,8 @@ const AccountChip = styled.div`
   color: rgba(236, 238, 244, 0.7);
 `;
 
-/* NOTE (a11y): a <div>, not a <main>. The router root renders the page's
-   single <main> landmark around the outlet — a nested <main> here would
+/* NOTE (a11y): a <div>, not a <main>. This component renders Content as the
+   page's single <main> landmark (see below) — a nested <main> here would
    break landmark navigation for assistive tech. */
 const Content = styled.div`
   flex: 1;
@@ -165,7 +165,7 @@ export default function PlatformShell() {
         <Sidebar />
         <Main>
           <TopBar />
-          <Content>
+          <Content as="main">
             <Skeleton $h="32px" $w="220px" />
             <Skeleton $h="220px" $r="12px" />
           </Content>
@@ -186,7 +186,7 @@ export default function PlatformShell() {
         <Sidebar />
         <Main>
           <TopBar />
-          <Content>
+          <Content as="main">
             <Skeleton $h="32px" $w="220px" />
             <Skeleton $h="220px" $r="12px" />
           </Content>
@@ -202,7 +202,7 @@ export default function PlatformShell() {
           <TopBar>
             <Brand>Neryva Platform</Brand>
           </TopBar>
-          <Content>
+          <Content as="main">
             <h2 style={{ fontSize: 20, fontWeight: 600 }}>Sign in to the Neryva Platform</h2>
             <p style={{ fontSize: 14, opacity: 0.7, maxWidth: 460 }}>
               The console uses your Neryva Account — the same identity across the platform, studio, and billing.
@@ -268,7 +268,7 @@ export default function PlatformShell() {
             </button>
           </TopGroup>
         </TopBar>
-        <Content>
+        <Content as="main">
           <Outlet />
         </Content>
         <StepUpModal />

@@ -115,6 +115,23 @@ const ChartWrap = styled.div`
   padding: 14px;
 `;
 
+const ChartHead = styled.div`
+  margin-bottom: 10px;
+`;
+
+const ChartTitle = styled.h2`
+  margin: 0 0 2px;
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const ChartCaption = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
 const EmptyChart = styled.div`
   padding: 44px 16px;
   text-align: center;
@@ -189,8 +206,31 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
 
   const [exportError, setExportError] = useState<string | null>(null);
 
+  // P1: the engine returns a 0-byte body when there are no rows and
+  // engineDownload treats an empty payload as a failure — the button must
+  // not be clickable into that dead path. Disabled with an honest reason
+  // while the overview is loading and when the series proves the period is
+  // empty. (KPIs can exist with all-zero values, so the series points —
+  // the same metered events the export would return — are the source of
+  // truth, not the KPI count.)
+  const hasUsageRows =
+    series.isSuccess &&
+    chart.points.some((point) =>
+      chart.valueKeys.some((key) => {
+        const v = point[key];
+        return (typeof v === 'number' && v !== 0) || (typeof v === 'string' && v.trim() !== '' && Number(v) !== 0);
+      }),
+    );
+  const exportDisabledReason = !canExportUsage
+    ? `Exporting usage requires the billing role or above — your role is ${role ?? 'unknown'}.`
+    : overview.isPending || series.isPending
+      ? 'Loading usage…'
+      : !hasUsageRows
+        ? 'No usage rows in this period — nothing to export.'
+        : null;
+
   const exportCsv = () => {
-    if (!orgId) return;
+    if (!orgId || exportDisabledReason) return;
     setExportError(null);
     // P8-I01/P8-F01: success was silent — confirm the download started.
     void engineDownload(`/console/billing/org/${orgId}/usage/export`, {
@@ -200,7 +240,14 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
       .then(() => toast.success('Export started — check your downloads'))
       .catch((err: unknown) => {
         // Surface export failures instead of swallowing them — P6-AC-24.
-        setExportError(err instanceof Error ? err.message : 'Export failed');
+        // The engine's empty-payload signal means "no rows", not a crash —
+        // say so plainly instead of alarming the user.
+        const message = err instanceof Error ? err.message : 'Export failed';
+        setExportError(
+          message === 'Export returned no data'
+            ? 'No usage rows in this period — nothing to export.'
+            : `Export failed — ${message}`,
+        );
       });
   };
 
@@ -222,19 +269,15 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
           variant="secondary"
           size="sm"
           onClick={exportCsv}
-          disabled={!canExportUsage}
-          title={
-            canExportUsage
-              ? 'Download usage rows as NDJSON'
-              : `Exporting usage requires the billing role or above — your role is ${role ?? 'unknown'}.`
-          }
+          disabled={exportDisabledReason !== null}
+          title={exportDisabledReason ?? 'Download usage rows as NDJSON'}
         >
           <Download size={13} strokeWidth={1.8} />
           Export NDJSON
         </ActionButton>
         {exportError && (
           <span role="alert" style={{ color: '#f87171', fontSize: 12, marginLeft: 8 }}>
-            Export failed — {exportError}
+            {exportError}
           </span>
         )}
       </Toolbar>
@@ -253,9 +296,14 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
       </QueryView>
 
       <ChartWrap>
+        <ChartHead>
+          <ChartTitle>Usage over time</ChartTitle>
+          <ChartCaption>Metered events per day · {dates.from} to today</ChartCaption>
+        </ChartHead>
         {product === 'all' && (
           <p style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 8px' }}>
-            Showing Agent Studio usage. Select a specific product above to see its usage breakdown.
+            KPIs cover all products. The chart is per-product and shows Agent Studio —
+            select a specific product above for its daily breakdown.
           </p>
         )}
         {chart.valueKeys.length > 0 && chart.points.length > 0 ? (

@@ -173,7 +173,7 @@ function QuotaPanel() {
                           {meter.limit !== null ? ` / ${meter.limit.toLocaleString()}` : ' (no cap)'}
                         </MeterValue>
                       </MeterRow>
-                      <ProgressBar value={pct} tone={over ? 'rose' : pct > 80 ? 'amber' : 'azure'} />
+                      <ProgressBar value={pct} label={`${meter.label} quota usage`} tone={over ? 'rose' : pct > 80 ? 'amber' : 'azure'} />
                     </div>
                   );
                 })}
@@ -612,7 +612,7 @@ function BudgetsPanel() {
                       </BudgetMeta>
                       {budget.limitUsd !== null && budget.spentUsd !== null && (
                         <div style={{ marginTop: 8 }}>
-                          <ProgressBar value={pct} tone={pct > 80 ? 'amber' : 'azure'} />
+                          <ProgressBar value={pct} label={`${budget.name} budget usage`} tone={pct > 80 ? 'amber' : 'azure'} />
                         </div>
                       )}
                     </BudgetInfo>

@@ -39,7 +39,8 @@ describe('parseQuotaStatus', () => {
     const { meters } = parseQuotaStatus(wirePayload, 'agent_studio');
     const byLabel = new Map(meters.map((m) => [m.label, m]));
     expect(byLabel.get('USD')).toMatchObject({ used: 120, limit: 100 });
-    expect(byLabel.get('events')).toMatchObject({ used: 50, limit: 1000 });
+    // P3-4: labels are title-cased at the source ("events" → "Events").
+    expect(byLabel.get('Events')).toMatchObject({ used: 50, limit: 1000 });
   });
 
   it('keeps entitlement_state from the matching product entry', () => {
