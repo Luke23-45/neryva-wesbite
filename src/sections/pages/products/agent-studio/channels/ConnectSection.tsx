@@ -97,6 +97,7 @@ export function ConnectSection() {
   const [platform, setPlatform] = useState<ConnectablePlatform>('web');
   const [displayName, setDisplayName] = useState('');
   const [credentialValues, setCredentialValues] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
   const [assistantId, setAssistantId] = useState(incomingAssistantId ?? '');
   const [origins, setOrigins] = useState('');
   const [greeting, setGreeting] = useState('');
@@ -151,6 +152,7 @@ export function ConnectSection() {
   const problems = [nameProblem, assistantProblem, originsProblem, ...credentialProblems].filter((p): p is string => p !== null);
 
   const submit = () => {
+    setSubmitted(true);
     if (problems.length > 0 || create.isPending) {
       return;
     }
@@ -211,7 +213,7 @@ export function ConnectSection() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <Panel title="Details" subtitle="Name, credentials, and the assistant this channel serves.">
           <div>
-            <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Support WhatsApp" autoFocus error={nameProblem ?? undefined} />
+            <TextInput label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Support WhatsApp" autoFocus error={submitted ? nameProblem ?? undefined : undefined} />
           </div>
           {spec.fields.map((field) => (
             <div key={field.key} style={{ marginTop: 12 }}>
@@ -222,7 +224,7 @@ export function ConnectSection() {
                 onChange={(e) => setCredentialValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                 placeholder={field.placeholder}
                 hint={field.hint}
-                autoComplete="off"
+                autoComplete={field.secret === true ? 'new-password' : 'off'}
               />
             </div>
           ))}
@@ -238,7 +240,7 @@ export function ConnectSection() {
               ))}
             </FieldSelect>
           </FieldLabel>
-          {assistantProblem && <InlineError>{assistantProblem}</InlineError>}
+          {submitted && assistantProblem && <InlineError>{assistantProblem}</InlineError>}
           {returnTo && !assistantProblem && (
             <Hint>After connecting you return to the agent.</Hint>
           )}
@@ -251,7 +253,7 @@ export function ConnectSection() {
                   onChange={(e) => setOrigins(e.target.value)}
                   placeholder="https://acme.com, https://shop.acme.com"
                   hint="Exact scheme://host entries — CORS reflects ONLY these, never a wildcard."
-                  error={originsProblem ?? undefined}
+                  error={submitted ? originsProblem ?? undefined : undefined}
                 />
               </div>
               <div style={{ marginTop: 12 }}>
@@ -259,7 +261,7 @@ export function ConnectSection() {
               </div>
             </>
           )}
-          {problems.length > 0 && (
+          {submitted && problems.length > 0 && (
             <ProblemList>
               {problems.map((problem, i) => (
                 <li key={i}>{problem}</li>
