@@ -6,7 +6,7 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart';
 import { QueryView, ErrorState } from '@components/common/ui/AsyncStates';
 import { Segmented } from '@components/common/ui/Segmented';
-import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, KpiGrid, SectionTitle } from '@components/common/ui/ViewLayout';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, KpiGrid } from '@components/common/ui/ViewLayout';
 import {
   DataTable,
   DataHead,
@@ -111,7 +111,7 @@ export function AnalyticsView() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <Panel
           title="Usage over time"
-          subtitle="Metered events per day"
+          subtitle={`Metered events per day · ${dates.from} to today`}
           action={
             <Segmented options={rangeOptions} value={range} onChange={setRange} ariaLabel="Analytics range" />
           }
@@ -156,8 +156,7 @@ export function AnalyticsView() {
       </motion.div>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
-        <SectionTitle>Your agents</SectionTitle>
-        <Panel flush>
+        <Panel title="Your agents" flush>
           <QueryView
             query={assistants}
             skeleton={<Skeleton $h="160px" $r="12px" />}
@@ -184,7 +183,12 @@ export function AnalyticsView() {
                       {a.model ? <CellMono>{a.model}</CellMono> : <span style={{ opacity: 0.4 }}>—</span>}
                     </DataCell>
                     <DataCell $w="16%">
-                      <Link to="/agent-studio/agents/$agentId" params={{ agentId: a.id }} style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}>
+                      <Link
+                        to="/agent-studio/agents/$agentId"
+                        params={{ agentId: a.id }}
+                        aria-label={`Open ${a.name}`}
+                        style={{ fontSize: 13, color: '#8b8ff8', textDecoration: 'none' }}
+                      >
                         Open →
                       </Link>
                     </DataCell>
