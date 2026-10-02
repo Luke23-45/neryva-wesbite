@@ -350,6 +350,7 @@ export const UserMeta = styled.div`
   flex-direction: column;
   line-height: 1.2;
   min-width: 0;
+  flex: 1;
 `;
 
 export const UserName = styled.span`
@@ -447,6 +448,16 @@ export const TopbarTitle = styled.h1`
 export const TopbarSubtitle = styled.span`
   font-size: ${({ theme }) => theme.app.type.bodyLg};
   color: ${({ theme }) => theme.app.text.muted};
+`;
+
+export const TopbarCrumbLink = styled(Link)`
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    color: ${({ theme }) => theme.app.text.primary};
+    text-decoration: underline;
+  }
 `;
 
 export const TopbarSearchHint = styled.button<{ $builder?: boolean }>`

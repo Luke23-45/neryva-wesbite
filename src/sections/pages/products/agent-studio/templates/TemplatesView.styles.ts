@@ -6,10 +6,13 @@ import styled from 'styled-components';
  * itself is local. Colors resolve through theme.app.* tokens.
  */
 
-export const TemplateGrid = styled.div`
+export const TemplateGrid = styled.ul`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 
   @media (max-width: 1024px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -19,7 +22,7 @@ export const TemplateGrid = styled.div`
   }
 `;
 
-export const TemplateCard = styled.div`
+export const TemplateCard = styled.li`
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -63,7 +66,8 @@ export const FeaturedBadge = styled.span`
   font-weight: 600;
 `;
 
-export const Name = styled.div`
+export const Name = styled.h2`
+  margin: 0;
   font-size: ${({ theme }) => theme.app.type.bodyLg};
   font-weight: 500;
   color: ${({ theme }) => theme.app.text.primary};
@@ -251,7 +255,7 @@ export const Tab = styled.button<{ $on: boolean }>`
 export const DetailSection = styled.div`
   margin-bottom: 16px;
 
-  h4 {
+  h3 {
     margin: 0 0 6px;
     font-size: 13px;
     font-weight: 650;
@@ -272,6 +276,65 @@ export const DetailSection = styled.div`
 export const Rubric = styled.div`
   font-size: 13px;
   line-height: 1.65;
-  white-space: pre-wrap;
   word-break: break-word;
+
+  /* Markdown-rendered rubric (P2-2): reset the raw-text pre-wrap now that
+     the rubric goes through the shared MarkdownText renderer. */
+  p {
+    margin: 6px 0;
+  }
+  ul,
+  ol {
+    margin: 6px 0;
+    padding-left: 18px;
+  }
+  li {
+    margin: 2px 0;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-size: 13px;
+    font-weight: 650;
+    margin: 10px 0 4px;
+  }
+`;
+
+/**
+ * Card-shaped loading skeletons (P3-10) — mirror the TemplateCard layout
+ * (icon row, title bar, text lines, pill row, action row) so the gallery
+ * doesn't flash a single generic shimmer block on reload.
+ */
+export const SkeletonCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+`;
+
+export const SkeletonBar = styled.div<{ $w?: string; $h?: string }>`
+  border-radius: 6px;
+  width: ${({ $w }) => $w ?? '100%'};
+  height: ${({ $h }) => $h ?? '12px'};
+  background: ${({ theme }) => theme.app.surface.active};
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    opacity: 0.75;
+  }
 `;

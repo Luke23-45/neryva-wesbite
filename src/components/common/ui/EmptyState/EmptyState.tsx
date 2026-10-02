@@ -6,13 +6,18 @@ type Props = {
   title: string;
   description?: string;
   action?: ReactNode;
+  /**
+   * Heading level for the title (default 'h4'). Callers whose page outline
+   * needs the empty-state title higher pass 'h2' or 'h3'.
+   */
+  titleAs?: 'h2' | 'h3' | 'h4';
 };
 
-export function EmptyState({ icon, title, description, action }: Props) {
+export function EmptyState({ icon, title, description, action, titleAs = 'h4' }: Props) {
   return (
     <EmptyWrap>
       {icon && <IconWrap>{icon}</IconWrap>}
-      <Title>{title}</Title>
+      <Title as={titleAs}>{title}</Title>
       {description && <Description>{description}</Description>}
       {action && <Action>{action}</Action>}
     </EmptyWrap>

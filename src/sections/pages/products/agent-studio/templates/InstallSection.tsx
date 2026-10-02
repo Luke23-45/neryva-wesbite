@@ -12,7 +12,7 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { pageItem } from '@styles/motion';
 import { useCreateAssistant } from '@hooks/studio/useAgentAuthoring';
-import { TEMPLATES_QUERY_KEY, useAssistantTemplates, type TemplateListEntry } from '@hooks/studio/useSetupTemplates';
+import { TEMPLATES_QUERY_KEY, useAssistantTemplates, reasonLabel, type TemplateListEntry } from '@hooks/studio/useSetupTemplates';
 import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
@@ -312,7 +312,7 @@ function InstallForm({ entry, returnTo, autoLandBuilder }: { entry: TemplateList
               </BodyP>
               {!entry.compatible && (
                 <AdvisoryP>
-                  <AlertTriangle size={13} style={{ verticalAlign: -2 }} /> Incompatible at this org ({entry.reasons.map((r) => r.code).join(', ')}) —
+                  <AlertTriangle size={13} style={{ verticalAlign: -2 }} /> Incompatible at this org ({entry.reasons.map((r) => reasonLabel(r.code)).join(', ')}) —
                   unresolved tool pins block install; other rows are advisory. Resolve each row in the checklist, then install.
                 </AdvisoryP>
               )}

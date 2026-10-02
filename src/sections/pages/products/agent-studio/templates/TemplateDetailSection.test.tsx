@@ -145,7 +145,7 @@ describe('TemplateDetailSection content', () => {
     ];
     await routerAt(DETAIL);
     expect(screen.getByText('Compatibility')).toBeTruthy();
-    expect(screen.getByText('required_tool_missing')).toBeTruthy();
+    expect(screen.getByText('Missing tool')).toBeTruthy();
     expect(screen.getByText('lookup_order is not pinned')).toBeTruthy();
     const fix = screen.getByText(/Open tool catalog/);
     expect(fix.closest('a')).toHaveProperty('href', expect.stringContaining('/agent-studio/tools'));
@@ -161,7 +161,7 @@ describe('TemplateDetailSection content', () => {
     fireEvent.click(screen.getByText('Show all'));
     expect(screen.getByText('case 6')).toBeTruthy();
     fireEvent.click(screen.getByText('Release', { selector: 'button' }));
-    expect(screen.getByText(/regression_no_worse_than/)).toBeTruthy();
+    expect(screen.getByText(/Regression no worse than 0\.02/)).toBeTruthy();
     fireEvent.click(screen.getByText('Definition', { selector: 'button' }));
     expect(screen.getByText(/Definition \(engine payload\)/)).toBeTruthy();
   });

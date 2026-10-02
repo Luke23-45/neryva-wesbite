@@ -20,6 +20,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import {
   useAssistantTemplates,
   reasonFix,
+  reasonLabel,
   type TemplateListEntry,
 } from '@hooks/studio/useSetupTemplates';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
@@ -43,6 +44,8 @@ import {
   ReasonRow,
   ReasonCode,
   BlockedBanner,
+  SkeletonCard,
+  SkeletonBar,
 } from './TemplatesView.styles';
 import { pageItem } from '@styles/motion';
 
@@ -106,6 +109,55 @@ function searchableText(entry: TemplateListEntry): string {
   const knowledge = template.bindings.knowledge.required.join(' ');
   const evaluators = (template.evalRef?.evaluators?.evaluators ?? []).map((e) => `${e.name} ${e.checks.join(' ')}`).join(' ');
   return `${template.slug} ${template.family} ${tools} ${knowledge} ${evaluators}`.toLowerCase();
+}
+
+/**
+ * Which searchable fields matched the query (P3-7) — so a result like
+ * "quote-builder" for the query "quote" explains itself instead of looking
+ * arbitrary. Returns display labels in field order.
+ */
+function matchedFields(entry: TemplateListEntry, q: string): string[] {
+  if (!q) return [];
+  const template = entry.template;
+  const fields: Array<[string, string]> = [
+    ['name', template.slug],
+    ['family', template.family],
+    ['tools', template.bindings.tools.required.map((t) => t.name).join(' ')],
+    ['knowledge', template.bindings.knowledge.required.join(' ')],
+    ['evaluators', (template.evalRef?.evaluators?.evaluators ?? []).map((e) => `${e.name} ${e.checks.join(' ')}`).join(' ')],
+  ];
+  return fields.filter(([, text]) => text.toLowerCase().includes(q)).map(([label]) => label);
+}
+
+const ResultCount = styled.div`
+  margin-top: 10px;
+  font-size: ${({ theme }) => theme.app.type.caption};
+  color: ${({ theme }) => theme.app.text.muted};
+  font-variant-numeric: tabular-nums;
+`;
+
+/** Card-shaped loading skeleton (P3-10) — mirrors the TemplateCard layout. */
+function GallerySkeleton() {
+  return (
+    <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <SkeletonCard key={i}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <SkeletonBar $w="40px" $h="40px" />
+            <SkeletonBar $w="110px" $h="20px" />
+          </div>
+          <SkeletonBar $w="55%" $h="18px" />
+          <SkeletonBar $w="100%" />
+          <SkeletonBar $w="85%" />
+          <SkeletonBar $w="35%" $h="22px" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <SkeletonBar $w="84px" $h="32px" />
+            <SkeletonBar $w="84px" $h="32px" />
+          </div>
+        </SkeletonCard>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -184,27 +236,34 @@ export function TemplateGallery({ onInstall, detailReturnTo, detailAutoLandBuild
           </FilterPill>
         ))}
         <FilterPill type="button" $active={family === 'all'} aria-pressed={family === 'all'} onClick={() => setFamily('all')}>
-          Every family
+          All families
         </FilterPill>
         {families.map(([name, count]) => (
           <FilterPill key={name} type="button" $active={family === name} aria-pressed={family === name} onClick={() => setFamily(name)}>
-            {name}
+            {name.charAt(0).toUpperCase() + name.slice(1)}
             <Count $active={family === name}>{count}</Count>
           </FilterPill>
         ))}
       </FilterBar>
+      <ResultCount aria-live="polite">
+        {templates.isPending
+          ? 'Loading templates…'
+          : `${list.length} of ${(templates.data ?? []).length} templates`}
+      </ResultCount>
 
       <div style={{ marginTop: 12 }}>
         <QueryView
           query={templates}
           isEmpty={(d) => d.length === 0}
           empty={{ title: 'No templates in the registry', description: 'The template mirror is empty — the release job seeds it.' }}
+          skeleton={<GallerySkeleton />}
         >
           {(entries) =>
             list.length === 0 ? (
               <EmptyState
                 icon={<Sparkles size={26} strokeWidth={1.5} />}
                 title="No templates match"
+                titleAs="h2"
                 description={entries.length === 0 ? undefined : 'Try a different family, filter, or search term.'}
               />
             ) : (
@@ -221,6 +280,7 @@ export function TemplateGallery({ onInstall, detailReturnTo, detailAutoLandBuild
                     canInstall={canInstall}
                     installDenied={installDenied}
                     block={block}
+                    query={query.trim().toLowerCase()}
                     onDetail={() => openDetail(entry)}
                     onInstall={() => onInstall(entry)}
                   />
@@ -241,6 +301,7 @@ function TemplateGalleryCard({
   canInstall,
   installDenied,
   block,
+  query,
   onDetail,
   onInstall,
 }: {
@@ -249,6 +310,7 @@ function TemplateGalleryCard({
   canInstall: boolean;
   installDenied: string;
   block: ControlBlock | null;
+  query: string;
   onDetail: () => void;
   onInstall: () => void;
 }) {
@@ -268,9 +330,10 @@ function TemplateGalleryCard({
       : schemaTooNew
         ? `Needs console schema ${entry.template.minEngineSchema} — yours serves ${TEMPLATE_MAX_ENGINE_SCHEMA}`
         : 'Install as a draft (never live)';
+  const matches = matchedFields(entry, query);
 
   return (
-    <TemplateCard as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={index + 2}>
+    <TemplateCard as={motion.li} initial="hidden" animate="visible" variants={pageItem} custom={index + 2}>
       <CardTop>
         <IconBox $tone="lilac">
           <Icon size={18} strokeWidth={1.7} />
@@ -286,6 +349,9 @@ function TemplateGalleryCard({
       <Description>
         {formatTemplateCounts(counts)}
       </Description>
+      {matches.length > 0 && (
+        <Muted>Matches: {matches.join(', ')}</Muted>
+      )}
       {entry.updateAvailable !== 'none' && (
         <Description>
           ▲ {entry.updateAvailable} update — Install v{entry.template.version} as new →
@@ -304,9 +370,9 @@ function TemplateGalleryCard({
             const fix = reasonFix(reason.code);
             return (
               <ReasonRow key={reason.code}>
-                <ReasonCode>{reason.code}</ReasonCode>
+                <ReasonCode title={reason.code}>{reasonLabel(reason.code)}</ReasonCode>
                 {fix ? (
-                  <Link to={fix.to}>{fix.label} →</Link>
+                  <Link to={fix.to} aria-label={`${fix.label} for ${entry.template.slug}`}>{fix.label} →</Link>
                 ) : (
                   <Muted>resolve in the install checklist ↓</Muted>
                 )}
@@ -322,13 +388,14 @@ function TemplateGalleryCard({
         </BlockedBanner>
       )}
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <ActionButton variant="secondary" size="sm" onClick={onDetail}>
+        <ActionButton variant="secondary" size="sm" onClick={onDetail} aria-label={`Details for ${entry.template.slug}`}>
           Details
         </ActionButton>
         <ActionButton
           size="sm"
           disabled={installDisabled}
           title={installTitle}
+          aria-label={`Install ${entry.template.slug} as draft`}
           onClick={onInstall}
         >
           Install

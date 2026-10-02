@@ -218,6 +218,26 @@ export function useAssistantTemplate(slug: string | null, version?: string) {
 }
 
 /**
+ * Human-readable label per compatibility reason code (P3-4). The raw
+ * snake_case code stays in the `title` attribute for technical reference;
+ * the visible pill uses plain language.
+ */
+export function reasonLabel(code: string): string {
+  switch (code) {
+    case 'required_model_capability_missing':
+      return 'Missing model capability';
+    case 'required_tool_missing':
+      return 'Missing tool';
+    case 'knowledge_source_missing':
+      return 'Missing knowledge';
+    case 'provider_credential_missing':
+      return 'Missing credential';
+    default:
+      return code.replace(/_/g, ' ');
+  }
+}
+
+/**
  * Fix per compatibility reason code (ledger F-B1 — each row links its fix).
  * Tool pins additionally resolve inside the install checklist (live catalog
  * state); unresolved pins block install at the engine TPL-2.2 gate, so the

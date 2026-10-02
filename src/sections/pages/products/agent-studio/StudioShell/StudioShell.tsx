@@ -31,6 +31,7 @@ import {
   TopbarLeft,
   TopbarTitle,
   TopbarSubtitle,
+  TopbarCrumbLink,
   TopbarBackLink,
   TopbarDivider,
   TopbarSearchHint,
@@ -282,6 +283,7 @@ export function StudioShell({
   useEffect(() => {
     if (mobileOpen || showLevel1 || isBuilder) return;
     const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
       const tag = (e.target as HTMLElement)?.tagName ?? '';
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
       e.preventDefault();
@@ -464,7 +466,7 @@ export function StudioShell({
             <UserCard>
               <UserAvatar aria-hidden="true">{user.initials}</UserAvatar>
               <UserMeta>
-                <UserName>{workspace.name}</UserName>
+                <UserName title={workspace.name}>{workspace.name}</UserName>
                 {workspace.plan ? <UserTier>{workspace.plan}</UserTier> : null}
               </UserMeta>
             </UserCard>
@@ -503,8 +505,13 @@ export function StudioShell({
             )}
             {!isBuilder && activeDomain !== null && (
               <TopbarSubtitle>
-                {activeDomain.label}
-                {activeItem !== null ? ` / ${activeItem.label}` : ''}
+                <TopbarCrumbLink to={activeDomain.landing}>{activeDomain.label}</TopbarCrumbLink>
+                {activeItem !== null && (
+                  <>
+                    {' / '}
+                    <TopbarCrumbLink to={activeItem.to} aria-current="page">{activeItem.label}</TopbarCrumbLink>
+                  </>
+                )}
               </TopbarSubtitle>
             )}
             {topbarExtra}
