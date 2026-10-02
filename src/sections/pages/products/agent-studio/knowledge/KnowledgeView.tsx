@@ -200,7 +200,7 @@ const EmptyPlus = styled.span`
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.app.accent.primary};
+  background: ${({ theme }) => theme.app.text.link};
   border: 2px solid ${({ theme }) => theme.app.surface.base};
   color: white;
 `;
@@ -325,12 +325,12 @@ const EvalBadge = styled.span`
   height: 20px;
   padding: 0 10px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.app.accent.primary}1f;
-  border: 1px solid ${({ theme }) => theme.app.accent.primary}59;
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.8px;
-  color: ${({ theme }) => theme.app.accent.primary};
+  color: ${({ theme }) => theme.app.status.info.fg};
 `;
 
 const SearchComposer = styled.div`
@@ -393,7 +393,7 @@ const ChipSelect = styled.select`
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.accent.primary};
+    outline: 2px solid ${({ theme }) => theme.app.text.link};
     outline-offset: 1px;
   }
 `;
@@ -472,9 +472,9 @@ const MemoryIcon = styled.span`
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: ${({ theme }) => theme.app.accent.primary}1f;
-  border: 1px solid ${({ theme }) => theme.app.accent.primary}40;
-  color: ${({ theme }) => theme.app.accent.primary};
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
+  color: ${({ theme }) => theme.app.status.info.fg};
   flex-shrink: 0;
 `;
 
@@ -502,7 +502,7 @@ const MemoryLink = styled.span`
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: ${({ theme }) => theme.app.accent.primary};
+  color: ${({ theme }) => theme.app.text.link};
   white-space: nowrap;
 `;
 
@@ -730,7 +730,7 @@ export function KnowledgeView() {
               <HeroTitle>Documents</HeroTitle>
               <CountBadge>{docCount}</CountBadge>
               <span title="Titles are display-only — pins bind to slugs, never titles.">
-                <Info size={14} style={{ color: 'var(--app-text-muted)', opacity: 0.6 }} />
+                <Info size={14} style={{ opacity: 0.6 }} />
               </span>
               <HeroNote>Titles are display-only · pins bind to slugs</HeroNote>
             </HeroHeader>
@@ -744,7 +744,7 @@ export function KnowledgeView() {
                 docs.length === 0 && filter.trim() === '' ? (
                   <HeroBody>
                     <EmptyIconWrap>
-                      <FileText size={28} strokeWidth={1.3} style={{ color: 'var(--app-accent-primary)' }} />
+                      <FileText size={28} strokeWidth={1.3} style={{ color: '#93c5fd' }} />
                       <EmptyPlus>
                         <Plus size={12} strokeWidth={2.5} />
                       </EmptyPlus>
