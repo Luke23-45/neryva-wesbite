@@ -141,7 +141,7 @@ export function BuyCreditsPanel() {
               <Row>
                 <Field>
                   <Label>Auto-recharge</Label>
-                  <Switch checked={enabled} onChange={setRechargeEnabled} aria-label="Auto-recharge enabled" />
+                  <Switch checked={enabled} onChange={setRechargeEnabled} aria-label="Auto-recharge" />
                 </Field>
                 <Field>
                   <Label htmlFor="recharge-threshold">When balance falls below (credits)</Label>

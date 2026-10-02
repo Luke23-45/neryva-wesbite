@@ -137,8 +137,7 @@ export function CreditHistoryPanel() {
                   <DataCell>Date</DataCell>
                 </DataRow>
               </DataHead>
-              <tbody>
-                {movements.map((m) => (
+              {movements.map((m) => (
                   <>
                     <DataRow key={m.id}>
                       <DataCell>
@@ -172,7 +171,6 @@ export function CreditHistoryPanel() {
                     )}
                   </>
                 ))}
-              </tbody>
             </DataTable>
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <ActionButton disabled={cursors.length === 0} onClick={goBack}>

@@ -273,10 +273,21 @@ function ledgerRows(raw: unknown): LedgerRowView[] {
       continue;
     }
     const v = value as Record<string, unknown>;
+    // Format ledger fields in human-readable form, skipping internal keys.
+    const FIELD_LABELS: Record<string, string> = {
+      entitlement_status: 'Status',
+      plan: 'Plan',
+      period_cost_usd: 'Period cost',
+      events: 'Events',
+    };
     const detail = Object.entries(v)
       .filter(([k, val]) => k !== 'product' && (typeof val === 'number' || typeof val === 'string'))
       .slice(0, 5)
-      .map(([k, val]) => `${k.replace(/_/g, ' ')}: ${typeof val === 'number' && k.includes('usd') ? formatUsd(val) : String(val)}`)
+      .map(([k, val]) => {
+        const label = FIELD_LABELS[k] ?? k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        const display = typeof val === 'number' && k.includes('usd') ? formatUsd(val) : String(val);
+        return `${label}: ${display}`;
+      })
       .join(' · ');
     if (detail) {
       // The engine returns ledgers as an array of per-product objects
