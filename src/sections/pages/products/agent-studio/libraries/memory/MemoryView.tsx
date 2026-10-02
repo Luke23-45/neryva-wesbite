@@ -148,10 +148,10 @@ export function MemoryView() {
 
       <PolicyStrip>
         <span>
-          Scrub: {policy.policy ? SCRUB_COPY[policy.policy.scrub] : 'loading…'}
+          Scrub: {policy.policy ? SCRUB_COPY[policy.policy.scrub] : '—'}
         </span>
         <span>
-          Default TTL: {policy.policy ? describeTtl(policy.policy.ttlSeconds) : 'loading…'}
+          Default TTL: {policy.policy ? describeTtl(policy.policy.ttlSeconds) : '—'}
         </span>
         <Link to="/agent-studio/settings/workspace">Workspace settings →</Link>
       </PolicyStrip>
@@ -242,7 +242,7 @@ export function MemoryView() {
                     <DataCell $w="40%">{truncated}</DataCell>
                     <DataCell $w="14%">
                       <StatusPill tone={m.visibility === 'organization' ? 'info' : 'warning'} dot={false}>
-                        {m.visibility ?? 'organization'}
+                        {m.visibility === 'private' ? 'User' : (m.visibility ?? 'organization')}
                       </StatusPill>
                     </DataCell>
                     <DataCell $w="16%" title={m.expiresAt ?? undefined}>
