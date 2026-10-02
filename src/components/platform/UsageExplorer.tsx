@@ -178,7 +178,13 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
   }));
 
   const setProduct = (next: string) => {
+    setExportError(null);
     setProductParam(next === 'all' ? '' : next);
+  };
+
+  const setRangeAndClearError = (next: string) => {
+    setExportError(null);
+    setRange(next);
   };
 
   const [exportError, setExportError] = useState<string | null>(null);
@@ -210,7 +216,7 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </ProductSelect>
-        <Segmented options={RANGE_OPTIONS} value={rangeValue} onChange={setRange} ariaLabel="Usage range" />
+        <Segmented options={RANGE_OPTIONS} value={rangeValue} onChange={setRangeAndClearError} ariaLabel="Usage range" />
         <Spacer />
         <ActionButton
           variant="secondary"
@@ -228,7 +234,7 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
         </ActionButton>
         {exportError && (
           <span role="alert" style={{ color: '#f87171', fontSize: 12, marginLeft: 8 }}>
-            Export failed: {exportError}
+            Export failed — {exportError}
           </span>
         )}
       </Toolbar>
@@ -249,7 +255,7 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
       <ChartWrap>
         {product === 'all' && (
           <p style={{ fontSize: '12px', opacity: 0.7, margin: '0 0 8px' }}>
-            Chart shows Agent Studio only — the series endpoint is per-product. KPIs above are per-product slices, not cross-product totals.
+            Showing Agent Studio usage. Select a specific product above to see its usage breakdown.
           </p>
         )}
         {chart.valueKeys.length > 0 && chart.points.length > 0 ? (
