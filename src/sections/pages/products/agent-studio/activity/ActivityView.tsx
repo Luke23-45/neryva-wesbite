@@ -482,41 +482,47 @@ export function ActivityView() {
                               animate="visible"
                               variants={pageItem}
                               custom={i}
-                              onClick={() => setExpanded(isOpen ? null : e.id)}
-                              style={{ cursor: 'pointer' }}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={ev => {
-                                if (ev.key === 'Enter' || ev.key === ' ') {
-                                  ev.preventDefault();
-                                  setExpanded(isOpen ? null : e.id);
-                                }
-                              }}
                             >
-                              <RowTime>{timeLabel(e.created_at)}</RowTime>
-                              <RowDot $tone={toneFor(e.action)} aria-hidden="true" />
-                              <RowMain>
-                                <RowTitle>{e.action}</RowTitle>
-                                <RowDetail>
-                                  {e.resource_type}
-                                  {e.resource_id ? (
-                                    <span
-                                      title={e.resource_id}
-                                      style={{ fontFamily: 'monospace', fontSize: '0.9em' }}
-                                    >
-                                      {' · '}
-                                      {e.resource_id}
-                                    </span>
-                                  ) : (
-                                    ''
-                                  )}
-                                </RowDetail>
-                                <RowMeta>
-                                  <span>{e.actor_type}</span>
-                                  {e.actor_id ? (
-                                    isOpen ? (
-                                      <FullId id={e.actor_id} label="Actor" />
+                              <button
+                                type="button"
+                                onClick={() => setExpanded(isOpen ? null : e.id)}
+                                aria-expanded={isOpen}
+                                aria-label={`${e.action} event, ${isOpen ? 'collapse' : 'expand'} details`}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  width: '100%',
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  margin: 0,
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  font: 'inherit',
+                                  color: 'inherit',
+                                }}
+                              >
+                                <RowTime>{timeLabel(e.created_at)}</RowTime>
+                                <RowDot $tone={toneFor(e.action)} aria-hidden="true" />
+                                <RowMain>
+                                  <RowTitle>{e.action}</RowTitle>
+                                  <RowDetail>
+                                    {e.resource_type}
+                                    {e.resource_id ? (
+                                      <span
+                                        title={e.resource_id}
+                                        style={{ fontFamily: 'monospace', fontSize: '0.9em' }}
+                                      >
+                                        {' · '}
+                                        {e.resource_id}
+                                      </span>
                                     ) : (
+                                      ''
+                                    )}
+                                  </RowDetail>
+                                  <RowMeta>
+                                    <span>{e.actor_type}</span>
+                                    {e.actor_id ? (
                                       <span
                                         title={e.actor_id}
                                         style={{
@@ -529,28 +535,33 @@ export function ActivityView() {
                                           ? `${e.actor_id.slice(0, 24)}…`
                                           : e.actor_id}
                                       </span>
-                                    )
-                                  ) : null}
-                                  {isOpen && <span aria-hidden="true">·</span>}
-                                  {isOpen && (
-                                    <code
-                                      style={{
-                                        fontSize: 'inherit',
-                                        wordBreak: 'break-all',
-                                        whiteSpace: 'pre-wrap',
-                                      }}
-                                    >
-                                      {formatDetails(e.details)}
-                                    </code>
-                                  )}
-                                  {!isOpen && (
-                                    <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />
-                                  )}
-                                  {isOpen && (
-                                    <ChevronUp size={11} strokeWidth={1.7} aria-hidden="true" />
-                                  )}
-                                </RowMeta>
-                              </RowMain>
+                                    ) : null}
+                                    {!isOpen && (
+                                      <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />
+                                    )}
+                                    {isOpen && (
+                                      <ChevronUp size={11} strokeWidth={1.7} aria-hidden="true" />
+                                    )}
+                                  </RowMeta>
+                                </RowMain>
+                              </button>
+                              {isOpen && (
+                                <div style={{ padding: '8px 0 0 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8 }}>
+                                  <FullId id={e.actor_id} label="Actor" />
+                                  <code
+                                    style={{
+                                      display: 'block',
+                                      fontSize: '12px',
+                                      wordBreak: 'break-all',
+                                      whiteSpace: 'pre-wrap',
+                                      marginTop: 8,
+                                      opacity: 0.8,
+                                    }}
+                                  >
+                                    {formatDetails(e.details)}
+                                  </code>
+                                </div>
+                              )}
                             </Row>
                           );
                         })}
