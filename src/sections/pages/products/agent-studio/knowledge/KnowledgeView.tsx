@@ -171,29 +171,8 @@ const HeroNote = styled.span`
   color: ${({ theme }) => theme.app.text.muted};
 `;
 
-const InfoButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: none;
-  padding: 0;
-  color: ${({ theme }) => theme.app.text.muted};
-  opacity: 0.6;
-  cursor: help;
-
-  &:hover {
-    opacity: 1;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.text.link};
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-`;
+// InfoButton removed: the pin-addresses info is now a non-interactive icon
+// (the text is already in HeroNote; a dead button was a P2 a11y issue).
 
 const HeroBody = styled.div`
   padding: 48px 24px;
@@ -756,13 +735,13 @@ export function KnowledgeView() {
             <HeroHeader>
               <HeroTitle>Documents</HeroTitle>
               <CountBadge aria-label={`${docCount} documents`}>{docCount}</CountBadge>
-              <InfoButton
-                type="button"
-                aria-label="About pin addresses: Titles are display-only — pins bind to slugs, never titles."
+              <span
                 title="Titles are display-only — pins bind to slugs, never titles."
+                aria-hidden="true"
+                style={{ display: 'inline-flex', opacity: 0.6 }}
               >
                 <Info size={14} />
-              </InfoButton>
+              </span>
               <HeroNote>Titles are display-only · pins bind to slugs</HeroNote>
             </HeroHeader>
 
@@ -1029,7 +1008,7 @@ export function KnowledgeView() {
                 <EvalBadge>EVALUATION MODE</EvalBadge>
               </span>
             }
-            subtitle="Unconstrained hybrid retrieval across every document — a workbench for testing recall, not runtime truth."
+            subtitle={`Unconstrained ${SEARCH_MODES.find((m) => m.value === searchMode)?.label.toLowerCase() ?? 'hybrid'} retrieval across every document — a workbench for testing recall, not runtime truth.`}
           >
             <SearchComposer>
               <SearchInputWrap>

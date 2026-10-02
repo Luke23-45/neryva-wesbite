@@ -191,7 +191,7 @@ export function IntegrationsView() {
                   </Icon>
                   <div style={{ minWidth: 0 }}>
                     <CardName>{spec.label}</CardName>
-                    <CardCategory>{byProvider.get(spec.provider) ?? 0} linked</CardCategory>
+                    <CardCategory>{byProvider.get(spec.provider) ?? 0}&nbsp;linked</CardCategory>
                   </div>
                 </CardHead>
                 <CardDescription>{spec.blurb}</CardDescription>
