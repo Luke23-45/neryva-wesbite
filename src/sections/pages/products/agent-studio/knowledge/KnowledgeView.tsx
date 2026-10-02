@@ -3,7 +3,25 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Search, Database, Plug, Eye, Trash2, X, History } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Search,
+  Plug,
+  Eye,
+  Trash2,
+  X,
+  History,
+  Upload as UploadIcon,
+  FileText,
+  Filter,
+  ChevronDown,
+  ArrowRight,
+  Activity,
+  Ban,
+  SlidersHorizontal,
+  Info,
+} from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { Modal } from '@components/common/ui/Modal';
@@ -27,6 +45,7 @@ import {
   useRenameDocumentSlug,
   useDeleteDocument,
   useKnowledgeSearch,
+  type KnowledgeSearchMode,
 } from '@hooks/studio/useSetupKnowledge';
 import { checkSourceSlug } from '@lib/engine/setup-caps';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
@@ -108,15 +127,299 @@ const IconBtn = styled.button`
   }
 `;
 
-const SearchRow = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  margin-bottom: 14px;
+/* ── Hero Documents Card ─────────────────────────────────────── */
 
-  & > *:first-child {
-    flex: 1;
+const HeroCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.app.surface.base};
+  overflow: hidden;
+`;
+
+const HeroHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+const HeroTitle = styled.h2`
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CountBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  font-size: 11px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const HeroNote = styled.span`
+  margin-left: auto;
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const HeroBody = styled.div`
+  padding: 48px 24px;
+  text-align: center;
+`;
+
+const EmptyIconWrap = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  margin-bottom: 20px;
+  position: relative;
+`;
+
+const EmptyPlus = styled.span`
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.app.accent.primary};
+  border: 2px solid ${({ theme }) => theme.app.surface.base};
+  color: white;
+`;
+
+const EmptyTitle = styled.h3`
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const EmptyDesc = styled.p`
+  margin: 0 0 24px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const CtaRow = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+`;
+
+/* ── How-it-works strip ──────────────────────────────────────── */
+
+const HowStrip = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
   }
+`;
+
+const HowStep = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 20px 24px;
+
+  & + & {
+    border-left: 1px solid ${({ theme }) => theme.app.border.default};
+
+    @media (max-width: 720px) {
+      border-left: none;
+      border-top: 1px solid ${({ theme }) => theme.app.border.default};
+    }
+  }
+`;
+
+const HowIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.active};
+  color: ${({ theme }) => theme.app.text.muted};
+  flex-shrink: 0;
+`;
+
+const HowTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin-bottom: 2px;
+`;
+
+const HowDesc = styled.div`
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+/* ── Fact strip ──────────────────────────────────────────────── */
+
+const FactStrip = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  margin: 32px 0;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Fact = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+`;
+
+const FactIcon = styled.span`
+  color: ${({ theme }) => theme.app.text.muted};
+  flex-shrink: 0;
+  margin-top: 2px;
+`;
+
+const FactTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin-bottom: 4px;
+`;
+
+const FactDesc = styled.div`
+  font-size: 12px;
+  line-height: 1.55;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+/* ── Search console ──────────────────────────────────────────── */
+
+const EvalBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.app.accent.primary}1f;
+  border: 1px solid ${({ theme }) => theme.app.accent.primary}59;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: ${({ theme }) => theme.app.accent.primary};
+`;
+
+const SearchComposer = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+`;
+
+const SearchInputWrap = styled.div`
+  position: relative;
+  flex: 1;
+`;
+
+const KbdHint = styled.kbd`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  font-family: inherit;
+  font-size: 11px;
+  color: ${({ theme }) => theme.app.text.muted};
+  pointer-events: none;
+`;
+
+const ChipRow = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+`;
+
+const ChipSelectWrap = styled.label`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+`;
+
+const ChipSelect = styled.select`
+  appearance: none;
+  height: 28px;
+  padding: 0 28px 0 12px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.strong};
+    color: ${({ theme }) => theme.app.text.secondary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.accent.primary};
+    outline-offset: 1px;
+  }
+`;
+
+const ChipChevron = styled.span`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${({ theme }) => theme.app.text.muted};
+  pointer-events: none;
+  display: flex;
+`;
+
+const ChipNote = styled.span`
+  margin-left: auto;
+  font-size: 11.5px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const ResultsWell = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  padding: 32px 24px;
+  text-align: center;
 `;
 
 const HitCard = styled.div`
@@ -124,6 +427,8 @@ const HitCard = styled.div`
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 8px;
+  text-align: left;
+  background: ${({ theme }) => theme.app.surface.base};
 `;
 
 const HitMeta = styled.div`
@@ -140,6 +445,65 @@ const HitText = styled.div`
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+`;
+
+/* ── Memory redirect row ─────────────────────────────────────── */
+
+const MemoryRow = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.app.surface.base};
+  text-decoration: none;
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.strong};
+  }
+`;
+
+const MemoryIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.app.accent.primary}1f;
+  border: 1px solid ${({ theme }) => theme.app.accent.primary}40;
+  color: ${({ theme }) => theme.app.accent.primary};
+  flex-shrink: 0;
+`;
+
+const MemoryText = styled.span`
+  flex: 1;
+`;
+
+const MemoryTitle = styled.span`
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin-bottom: 2px;
+`;
+
+const MemoryDesc = styled.span`
+  display: block;
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const MemoryLink = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.accent.primary};
+  white-space: nowrap;
 `;
 
 const SectionGap = styled.div`
@@ -159,6 +523,14 @@ const DOCUMENTS_CAP = 200;
 
 const TERMINAL_UPLOAD = new Set<AttachmentStatus>(['ready', 'failed', 'quarantined']);
 
+const SEARCH_MODES: { value: KnowledgeSearchMode; label: string }[] = [
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'semantic', label: 'Semantic' },
+  { value: 'keyword', label: 'Keyword' },
+];
+
+const TOP_K_OPTIONS = [4, 8, 12, 16, 20];
+
 export function KnowledgeView() {
   const { role } = useOrg();
   const canWrite = canSetup(role, 'setup:author');
@@ -175,8 +547,13 @@ export function KnowledgeView() {
   const [renameTarget, setRenameTarget] = useState<{ id: string; slug: string } | null>(null);
   const [renameSlug, setRenameSlug] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; slug: string } | null>(null);
+
+  // Search workbench state
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<KnowledgeSearchMode>('hybrid');
+  const [searchTopK, setSearchTopK] = useState(8);
+  const [searchScope, setSearchScope] = useState<string>('all');
 
   // Inline rename: a typed-but-unsaved slug is unsent content — leaving
   // the page discards it.
@@ -218,7 +595,17 @@ export function KnowledgeView() {
     );
   };
 
-  const search = useKnowledgeSearch(searchQuery, 5, { enabled: searchQuery.trim().length > 0 });
+  const runSearch = () => {
+    if (searchInput.trim()) {
+      setSearchQuery(searchInput);
+    }
+  };
+
+  const search = useKnowledgeSearch(searchQuery, searchTopK, {
+    enabled: searchQuery.trim().length > 0,
+    mode: searchMode,
+    documentId: searchScope === 'all' ? undefined : searchScope,
+  });
 
   const finishedUploads = uploads.filter((u) => TERMINAL_UPLOAD.has(u.status));
   const clearFinished = () => {
@@ -238,6 +625,8 @@ export function KnowledgeView() {
     );
   }, [documents.data, filter]);
 
+  const docCount = documents.data?.length ?? 0;
+
   // Coverage is per-agent-pin, not per-document (C05) — the library states
   // this instead of faking a coverage column it cannot compute.
   const unsettled = (documents.data ?? []).some((d) => d.state === 'processing' || d.state === 'failed');
@@ -249,7 +638,7 @@ export function KnowledgeView() {
         <ViewHeader>
           <ViewTitle>Knowledge base</ViewTitle>
           <ViewSubtitle>
-            Documents your agents retrieve — uploads, connector syncs, and the pin addresses versions bind to.
+            Every document your agents retrieve — uploads and connector syncs — and the pinned versions they bind to.
           </ViewSubtitle>
         </ViewHeader>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -333,186 +722,368 @@ export function KnowledgeView() {
         </motion.div>
       )}
 
+      {/* ── Documents hero card ── */}
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
         <SectionGap>
-          <Panel
-            title="Documents"
-            subtitle="Slug is the pin address versions bind; title is display only. Rename never rewrites history."
-            action={
-              <TextInput
-                aria-label="Filter documents"
-                placeholder="Filter by slug, title, state…"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-            }
-            flush
-          >
+          <HeroCard>
+            <HeroHeader>
+              <HeroTitle>Documents</HeroTitle>
+              <CountBadge>{docCount}</CountBadge>
+              <span title="Titles are display-only — pins bind to slugs, never titles.">
+                <Info size={14} style={{ color: 'var(--app-text-muted)', opacity: 0.6 }} />
+              </span>
+              <HeroNote>Titles are display-only · pins bind to slugs</HeroNote>
+            </HeroHeader>
+
             <QueryView
               query={documents}
               isEmpty={(d) => d.length === 0 && filter.trim() === ''}
-              empty={{ title: 'No documents yet', description: 'Upload a file or link a connector — mapped slugs become retrievable pins.' }}
+              empty={{ title: '', description: '' }}
             >
               {(docs) =>
-                rows.length === 0 ? (
-                  <EmptyState
-                    icon={<Database size={18} opacity={0.5} />}
-                    title={docs.length === 0 ? 'No documents yet' : 'No documents match'}
-                    description={docs.length === 0 ? 'Upload a file or link a connector.' : 'Try a different filter.'}
-                  />
+                docs.length === 0 && filter.trim() === '' ? (
+                  <HeroBody>
+                    <EmptyIconWrap>
+                      <FileText size={28} strokeWidth={1.3} style={{ color: 'var(--app-accent-primary)' }} />
+                      <EmptyPlus>
+                        <Plus size={12} strokeWidth={2.5} />
+                      </EmptyPlus>
+                    </EmptyIconWrap>
+                    <EmptyTitle>No documents yet</EmptyTitle>
+                    <EmptyDesc>
+                      Upload a file or connect a source to build the pool<br />
+                      your agents retrieve from.
+                    </EmptyDesc>
+                    <CtaRow>
+                      <ActionButton
+                        size="sm"
+                        disabled={!canWrite}
+                        title={canWrite ? 'Upload a document' : writeDenied}
+                        onClick={() => canWrite && navigate({ to: '/agent-studio/knowledge/upload' })}
+                      >
+                        <UploadIcon size={14} strokeWidth={2} />
+                        Upload a file
+                      </ActionButton>
+                      <Link to="/agent-studio/integrations">
+                        <ActionButton variant="secondary" size="sm">
+                          <Plug size={13} strokeWidth={1.8} />
+                          Connect a source
+                        </ActionButton>
+                      </Link>
+                    </CtaRow>
+                  </HeroBody>
                 ) : (
-                  <DataTable>
-                    <DataHead>
-                      <DataCell $w="24%">Pin address</DataCell>
-                      <DataCell $w="24%">Title</DataCell>
-                      <DataCell $w="12%">State</DataCell>
-                      <DataCell $w="8%">Ver</DataCell>
-                      <DataCell $w="16%">Updated</DataCell>
-                      <DataCell $w="16%" $align="right">Actions</DataCell>
-                    </DataHead>
-                    {rows.map((doc, i) => (
-                      <DataRow key={doc.id} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 3} $interactive={false}>
-                        <DataCell $w="24%">
-                          {renameTarget?.id === doc.id ? (
-                            <div>
-                              <div style={{ fontSize: 12, opacity: 0.65, marginBottom: 6 }}>
-                                <Mono>{renameTarget.slug}</Mono> → <Mono>{renameSlug.trim().toLowerCase() || '…'}</Mono>
-                              </div>
-                              <TextInput
-                                aria-label={`New pin address for ${renameTarget.slug}`}
-                                value={renameSlug}
-                                onChange={(e) => setRenameSlug(e.target.value)}
-                                placeholder="kebab-case, 3–64 chars"
-                                autoFocus
-                                error={renameSlug.trim() && !renameUnchanged ? (renameProblem ?? undefined) : undefined}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    saveRename();
-                                  } else if (e.key === 'Escape') {
-                                    cancelRename();
-                                  }
-                                }}
-                              />
-                              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                                <ActionButton
-                                  size="sm"
-                                  disabled={renameInvalid || renameUnchanged || rename.isPending}
-                                  title="Rename the pin address — history is never rewritten"
-                                  onClick={saveRename}
+                  <div style={{ padding: '0 0 8px' }}>
+                    <div style={{ padding: '16px 24px 0', display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ width: 280 }}>
+                        <TextInput
+                          aria-label="Filter documents"
+                          placeholder="Filter by slug, title, state…"
+                          value={filter}
+                          onChange={(e) => setFilter(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    {rows.length === 0 ? (
+                      <EmptyState
+                        icon={<Search size={18} opacity={0.5} />}
+                        title="No documents match"
+                        description="Try a different filter."
+                      />
+                    ) : (
+                      <DataTable>
+                        <DataHead>
+                          <DataCell $w="24%">Pin address</DataCell>
+                          <DataCell $w="24%">Title</DataCell>
+                          <DataCell $w="12%">State</DataCell>
+                          <DataCell $w="8%">Ver</DataCell>
+                          <DataCell $w="16%">Updated</DataCell>
+                          <DataCell $w="16%" $align="right">Actions</DataCell>
+                        </DataHead>
+                        {rows.map((doc) => (
+                          <DataRow key={doc.id} $interactive={false}>
+                            <DataCell $w="24%">
+                              {renameTarget?.id === doc.id ? (
+                                <div>
+                                  <div style={{ fontSize: 12, opacity: 0.65, marginBottom: 6 }}>
+                                    <Mono>{renameTarget.slug}</Mono> → <Mono>{renameSlug.trim().toLowerCase() || '…'}</Mono>
+                                  </div>
+                                  <TextInput
+                                    aria-label={`New pin address for ${renameTarget.slug}`}
+                                    value={renameSlug}
+                                    onChange={(e) => setRenameSlug(e.target.value)}
+                                    placeholder="kebab-case, 3–64 chars"
+                                    autoFocus
+                                    error={renameSlug.trim() && !renameUnchanged ? (renameProblem ?? undefined) : undefined}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        saveRename();
+                                      } else if (e.key === 'Escape') {
+                                        cancelRename();
+                                      }
+                                    }}
+                                  />
+                                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                                    <ActionButton
+                                      size="sm"
+                                      disabled={renameInvalid || renameUnchanged || rename.isPending}
+                                      title="Rename the pin address — history is never rewritten"
+                                      onClick={saveRename}
+                                    >
+                                      Save
+                                    </ActionButton>
+                                    <ActionButton variant="ghost" size="sm" onClick={cancelRename}>
+                                      Cancel
+                                    </ActionButton>
+                                  </div>
+                                  <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, lineHeight: 1.5 }}>
+                                    Existing pins referencing the old slug resolve visibly unresolved at next publish —
+                                    history is never rewritten. A collision refuses (409), never silent-renames.
+                                  </div>
+                                </div>
+                              ) : (
+                                <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
+                              )}
+                            </DataCell>
+                            <DataCell $w="24%">{doc.title ?? <Muted>—</Muted>}</DataCell>
+                            <DataCell $w="12%">
+                              <span title={docHint[doc.state] ?? doc.state}>
+                                <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
+                              </span>
+                            </DataCell>
+                            <DataCell $w="8%">{doc.latestVersion ?? <Muted>—</Muted>}</DataCell>
+                            <DataCell $w="16%">{doc.updatedAt ? doc.updatedAt.slice(0, 16).replace('T', ' ') : <Muted>—</Muted>}</DataCell>
+                            <DataCell $w="16%" $align="right">
+                              <RowActions>
+                                <IconBtn
+                                  type="button"
+                                  aria-label={`Preview ${doc.sourceSlug}`}
+                                  title="Preview the stored text agents retrieve"
+                                  onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/preview` })}
                                 >
-                                  Save
-                                </ActionButton>
-                                <ActionButton variant="ghost" size="sm" onClick={cancelRename}>
-                                  Cancel
-                                </ActionButton>
-                              </div>
-                              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, lineHeight: 1.5 }}>
-                                Existing pins referencing the old slug resolve visibly unresolved at next publish —
-                                history is never rewritten. A collision refuses (409), never silent-renames.
-                              </div>
-                            </div>
-                          ) : (
-                            <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
-                          )}
-                        </DataCell>
-                        <DataCell $w="24%">{doc.title ?? <Muted>—</Muted>}</DataCell>
-                        <DataCell $w="12%">
-                          <span title={docHint[doc.state] ?? doc.state}>
-                            <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
-                          </span>
-                        </DataCell>
-                        <DataCell $w="8%">{doc.latestVersion ?? <Muted>—</Muted>}</DataCell>
-                        <DataCell $w="16%">{doc.updatedAt ? doc.updatedAt.slice(0, 16).replace('T', ' ') : <Muted>—</Muted>}</DataCell>
-                        <DataCell $w="16%" $align="right">
-                          <RowActions>
-                            <IconBtn
-                              type="button"
-                              aria-label={`Preview ${doc.sourceSlug}`}
-                              title="Preview the stored text agents retrieve"
-                              onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/preview` })}
-                            >
-                              <Eye size={13} strokeWidth={1.7} />
-                            </IconBtn>
-                            <CopyButton value={doc.sourceSlug} label="Copy pin address" />
-                            <IconBtn
-                              type="button"
-                              aria-label={`Rename pin address of ${doc.sourceSlug}`}
-                              title={canWrite ? 'Rename pin address' : writeDenied}
-                              disabled={!canWrite || rename.isPending}
-                              onClick={() => startRename(doc.id, doc.sourceSlug)}
-                            >
-                              <Pencil size={13} strokeWidth={1.7} />
-                            </IconBtn>
-                            {doc.state !== 'retired' && (
-                              <IconBtn
-                                type="button"
-                                aria-label={`Upload new version of ${doc.sourceSlug}`}
-                                title={
-                                  canWrite
-                                    ? 'Upload a new version — the pin address stays the same; agents resolve the latest version at next publish'
-                                    : writeDenied
-                                }
-                                disabled={!canWrite}
-                                onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/versions/upload` })}
-                              >
-                                <History size={13} strokeWidth={1.7} />
-                              </IconBtn>
-                            )}
-                            {doc.state !== 'retired' && (
-                              <IconBtn
-                                type="button"
-                                aria-label={`Retire ${doc.sourceSlug}`}
-                                title={canWrite ? 'Retire document (tombstone — leaves retrieval, mapping kept)' : writeDenied}
-                                disabled={!canWrite || remove.isPending}
-                                onClick={() => setDeleteTarget({ id: doc.id, slug: doc.sourceSlug })}
-                              >
-                                <Trash2 size={13} strokeWidth={1.7} />
-                              </IconBtn>
-                            )}
-                          </RowActions>
-                        </DataCell>
-                      </DataRow>
-                    ))}
-                  </DataTable>
+                                  <Eye size={13} strokeWidth={1.7} />
+                                </IconBtn>
+                                <CopyButton value={doc.sourceSlug} label="Copy pin address" />
+                                <IconBtn
+                                  type="button"
+                                  aria-label={`Rename pin address of ${doc.sourceSlug}`}
+                                  title={canWrite ? 'Rename pin address' : writeDenied}
+                                  disabled={!canWrite || rename.isPending}
+                                  onClick={() => startRename(doc.id, doc.sourceSlug)}
+                                >
+                                  <Pencil size={13} strokeWidth={1.7} />
+                                </IconBtn>
+                                {doc.state !== 'retired' && (
+                                  <IconBtn
+                                    type="button"
+                                    aria-label={`Upload new version of ${doc.sourceSlug}`}
+                                    title={
+                                      canWrite
+                                        ? 'Upload a new version — the pin address stays the same; agents resolve the latest version at next publish'
+                                        : writeDenied
+                                    }
+                                    disabled={!canWrite}
+                                    onClick={() => navigate({ to: `/agent-studio/knowledge/${doc.id}/versions/upload` })}
+                                  >
+                                    <History size={13} strokeWidth={1.7} />
+                                  </IconBtn>
+                                )}
+                                {doc.state !== 'retired' && (
+                                  <IconBtn
+                                    type="button"
+                                    aria-label={`Retire ${doc.sourceSlug}`}
+                                    title={canWrite ? 'Retire document (tombstone — leaves retrieval, mapping kept)' : writeDenied}
+                                    disabled={!canWrite || remove.isPending}
+                                    onClick={() => setDeleteTarget({ id: doc.id, slug: doc.sourceSlug })}
+                                  >
+                                    <Trash2 size={13} strokeWidth={1.7} />
+                                  </IconBtn>
+                                )}
+                              </RowActions>
+                            </DataCell>
+                          </DataRow>
+                        ))}
+                      </DataTable>
+                    )}
+                  </div>
                 )
               }
             </QueryView>
-          </Panel>
+
+            <HowStrip>
+              <HowStep>
+                <HowIcon>
+                  <UploadIcon size={16} strokeWidth={1.8} />
+                </HowIcon>
+                <div>
+                  <HowTitle>Ingest</HowTitle>
+                  <HowDesc>Upload files or sync connector sources.</HowDesc>
+                </div>
+              </HowStep>
+              <HowStep>
+                <HowIcon>
+                  <Filter size={16} strokeWidth={1.8} />
+                </HowIcon>
+                <div>
+                  <HowTitle>Pin</HowTitle>
+                  <HowDesc>Slugs are stable addresses versions bind to.</HowDesc>
+                </div>
+              </HowStep>
+              <HowStep>
+                <HowIcon>
+                  <Search size={16} strokeWidth={1.8} />
+                </HowIcon>
+                <div>
+                  <HowTitle>Retrieve</HowTitle>
+                  <HowDesc>Agents pull pinned versions at runtime.</HowDesc>
+                </div>
+              </HowStep>
+            </HowStrip>
+          </HeroCard>
+
           {(documents.data?.length ?? 0) >= DOCUMENTS_CAP && (
             <PageNote>
               Showing the {DOCUMENTS_CAP} newest documents — the list is capped and not paginated; older documents are not listed.
             </PageNote>
           )}
-          <PageNote>
-            {unsettled
-              ? 'A source is still ingesting or failed — pin health and embedding coverage are per-agent: open the agent’s Knowledge section for the verdict. '
-              : 'Pin health and embedding coverage are per-agent — open the agent’s Knowledge section for the verdict. '}
-            {RETENTION_NOTE}
-          </PageNote>
         </SectionGap>
       </motion.div>
 
+      {/* ── Fact strip ── */}
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
+        <FactStrip>
+          <Fact>
+            <FactIcon>
+              <Activity size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>Health is per-agent</FactTitle>
+              <FactDesc>
+                Pin health and embedding coverage are scored per agent — open its Knowledge section.
+              </FactDesc>
+            </div>
+          </Fact>
+          <Fact>
+            <FactIcon>
+              <Ban size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>No delete verb</FactTitle>
+              <FactDesc>
+                The engine exposes no delete. Retired rows remain as upstream tombstones.
+              </FactDesc>
+            </div>
+          </Fact>
+          <Fact>
+            <FactIcon>
+              <SlidersHorizontal size={16} strokeWidth={1.8} />
+            </FactIcon>
+            <div>
+              <FactTitle>Unmap to stop serving</FactTitle>
+              <FactDesc>
+                Unmap a pin in the builder to stop serving. History stays intact.
+              </FactDesc>
+            </div>
+          </Fact>
+        </FactStrip>
+      </motion.div>
+
+      {/* ── Search console ── */}
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
         <SectionGap>
-          <Panel title="Search console" subtitle="Unconstrained hybrid retrieval — an evaluation workbench, not runtime truth (runtime retrieval is pin-constrained).">
-            <SearchRow>
-              <TextInput
-                label="Query"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="How do refunds work?"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setSearchQuery(searchInput);
-                  }
-                }}
-              />
-              <ActionButton size="sm" disabled={!searchInput.trim()} onClick={() => setSearchQuery(searchInput)}>
+          <Panel
+            title={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                Search console
+                <EvalBadge>EVALUATION MODE</EvalBadge>
+              </span>
+            }
+            subtitle="Unconstrained hybrid retrieval across every document — a workbench for testing recall, not runtime truth."
+          >
+            <SearchComposer>
+              <SearchInputWrap>
+                <TextInput
+                  aria-label="Search query"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="How do refunds work?"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      runSearch();
+                    }
+                  }}
+                />
+                <KbdHint>⌘↵</KbdHint>
+              </SearchInputWrap>
+              <ActionButton size="sm" disabled={!searchInput.trim()} onClick={runSearch}>
                 <Search size={13} strokeWidth={1.8} />
-                Search
+                Run search
               </ActionButton>
-            </SearchRow>
-            {searchQuery.trim() !== '' && (
+            </SearchComposer>
+
+            <ChipRow>
+              <ChipSelectWrap>
+                <ChipSelect
+                  aria-label="Search scope"
+                  value={searchScope}
+                  onChange={(e) => setSearchScope(e.target.value)}
+                >
+                  <option value="all">Scope: All documents</option>
+                  {(documents.data ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      Scope: {d.sourceSlug || d.title || d.id.slice(0, 8)}
+                    </option>
+                  ))}
+                </ChipSelect>
+                <ChipChevron>
+                  <ChevronDown size={14} strokeWidth={2} />
+                </ChipChevron>
+              </ChipSelectWrap>
+
+              <ChipSelectWrap>
+                <ChipSelect
+                  aria-label="Top K results"
+                  value={searchTopK}
+                  onChange={(e) => setSearchTopK(Number(e.target.value))}
+                >
+                  {TOP_K_OPTIONS.map((k) => (
+                    <option key={k} value={k}>
+                      Top K: {k}
+                    </option>
+                  ))}
+                </ChipSelect>
+                <ChipChevron>
+                  <ChevronDown size={14} strokeWidth={2} />
+                </ChipChevron>
+              </ChipSelectWrap>
+
+              <ChipSelectWrap>
+                <ChipSelect
+                  aria-label="Retrieval mode"
+                  value={searchMode}
+                  onChange={(e) => setSearchMode(e.target.value as KnowledgeSearchMode)}
+                >
+                  {SEARCH_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      Mode: {m.label}
+                    </option>
+                  ))}
+                </ChipSelect>
+                <ChipChevron>
+                  <ChevronDown size={14} strokeWidth={2} />
+                </ChipChevron>
+              </ChipSelectWrap>
+
+              <ChipNote>Queries the live index · results are not cached</ChipNote>
+            </ChipRow>
+
+            {searchQuery.trim() === '' ? (
+              <ResultsWell>
+                <Search size={20} strokeWidth={1.5} style={{ opacity: 0.4, marginBottom: 12 }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Results appear here</div>
+                <div style={{ fontSize: 12, opacity: 0.6 }}>Ranked chunks with scores, source document, and pin metadata.</div>
+              </ResultsWell>
+            ) : (
               <QueryView
                 query={search}
                 isEmpty={(d) => d.length === 0}
@@ -542,17 +1113,28 @@ export function KnowledgeView() {
         </SectionGap>
       </motion.div>
 
-      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={4}>
+      {/* ── Memory redirect ── */}
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={5}>
         <SectionGap>
-          <Panel
-            title="Long-term memories"
-            subtitle="Memories moved to their own surface — one surface remembers."
-          >
-            <Muted>
-              Browse, search, and manage memories in the <Link to="/agent-studio/memory">Memory library</Link> —
-              moved there from this page, not copied.
-            </Muted>
-          </Panel>
+          <MemoryRow to="/agent-studio/memory">
+            <MemoryIcon>
+              <FileText size={18} strokeWidth={1.8} />
+            </MemoryIcon>
+            <MemoryText>
+              <MemoryTitle>Long-term memories live in the Memory library</MemoryTitle>
+              <MemoryDesc>Moved there from this page — one surface remembers, nothing is copied.</MemoryDesc>
+            </MemoryText>
+            <MemoryLink>
+              Open Memory library
+              <ArrowRight size={14} strokeWidth={2} />
+            </MemoryLink>
+          </MemoryRow>
+          <PageNote>
+            {unsettled
+              ? 'A source is still ingesting or failed — pin health and embedding coverage are per-agent: open the agent’s Knowledge section for the verdict. '
+              : 'Pin health and embedding coverage are per-agent — open the agent’s Knowledge section for the verdict. '}
+            {RETENTION_NOTE}
+          </PageNote>
         </SectionGap>
       </motion.div>
 

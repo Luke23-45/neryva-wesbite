@@ -289,12 +289,28 @@ export function parseSearchHits(raw: unknown): KnowledgeHit[] {
 }
 
 /** Console search workbench (unconstrained by pins — evaluation surface, not runtime truth). */
-export function useKnowledgeSearch(query: string, limit: number, options?: { enabled?: boolean }) {
+export type KnowledgeSearchMode = 'hybrid' | 'semantic' | 'keyword';
+
+export function useKnowledgeSearch(
+  query: string,
+  limit: number,
+  options?: { enabled?: boolean; mode?: KnowledgeSearchMode; documentId?: string },
+) {
   const { orgId } = useOrg();
   const trimmed = query.trim();
+  const mode = options?.mode ?? 'hybrid';
+  const documentId = options?.documentId;
   return useQuery({
-    queryKey: [...KNOWLEDGE_KEY, orgId, 'search', trimmed, limit],
-    queryFn: () => engine<unknown>(`/console/org/${orgId}/documents/search`, { query: { query: trimmed, limit } }),
+    queryKey: [...KNOWLEDGE_KEY, orgId, 'search', trimmed, limit, mode, documentId ?? 'all'],
+    queryFn: () =>
+      engine<unknown>(`/console/org/${orgId}/documents/search`, {
+        query: {
+          query: trimmed,
+          limit,
+          mode,
+          ...(documentId ? { documentId } : {}),
+        },
+      }),
     enabled: (options?.enabled ?? true) && !!orgId && trimmed.length > 0,
     staleTime: 30_000,
     select: parseSearchHits,
