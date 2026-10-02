@@ -20,7 +20,7 @@ describe('MemoryContentEditor', () => {
         onModeChange={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText(/plain text/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^Memory content$/i)).toBeTruthy();
     expect(screen.getByText(/1 word/)).toBeTruthy();
   });
 

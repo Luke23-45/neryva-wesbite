@@ -169,7 +169,7 @@ export function MemoryContentEditor({
             placeholder={placeholder}
             readOnly={readOnly}
             spellCheck
-            aria-label="Memory content (plain text)"
+            aria-label="Memory content"
             onChange={(e) => onChange(e.target.value)}
           />
         )}

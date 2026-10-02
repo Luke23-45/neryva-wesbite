@@ -67,6 +67,13 @@ const FilterBar = styled.div`
   margin: 12px 0;
 `;
 
+const FilterActions = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+`;
+
 const FootNote = styled.p`
   font-size: 12px;
   opacity: 0.65;
@@ -163,7 +170,7 @@ export function MemoryView() {
               Agent {scopeId.slice(0, 8)}… · clear
             </ActionButton>
           ) : (
-            <span style={{ fontSize: 12, opacity: 0.7 }}>All assistants — arrive from an agent to narrow.</span>
+            <span style={{ fontSize: 12, opacity: 0.7 }}>All assistants — select an agent to narrow the list.</span>
           )
         )}
       </div>
@@ -181,23 +188,25 @@ export function MemoryView() {
 
       <FilterBar>
         <TextInput label="Search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search content…" />
-        <ActionButton
-          variant="secondary"
-          onClick={() => navigate({ to: LIBRARIES_MEMORY_NEW_ROUTE_ID })}
-          disabled={!canWrite}
-          title={canWrite ? 'Save a memory (audited)' : 'Saving memories needs owner, admin, or developer.'}
-        >
-          New memory
-        </ActionButton>
-        <ActionButton
-          variant="danger"
-          onClick={() => setPurgeOpen(true)}
-          disabled={!canGovern}
-          title={canGovern ? 'Purge memories by text (audited)' : 'Purging memories needs owner or admin.'}
-        >
-          <ShieldAlert size={13} strokeWidth={1.8} />
-          Purge by text…
-        </ActionButton>
+        <FilterActions>
+          <ActionButton
+            variant="secondary"
+            onClick={() => navigate({ to: LIBRARIES_MEMORY_NEW_ROUTE_ID })}
+            disabled={!canWrite}
+            title={canWrite ? 'Save a memory (audited)' : 'Saving memories needs owner, admin, or developer.'}
+          >
+            New memory
+          </ActionButton>
+          <ActionButton
+            variant="danger"
+            onClick={() => setPurgeOpen(true)}
+            disabled={!canGovern}
+            title={canGovern ? 'Purge memories by text (audited)' : 'Purging memories needs owner or admin.'}
+          >
+            <ShieldAlert size={13} strokeWidth={1.8} />
+            Purge by text…
+          </ActionButton>
+        </FilterActions>
       </FilterBar>
 
       <QueryView

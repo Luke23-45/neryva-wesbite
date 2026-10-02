@@ -154,7 +154,7 @@ export function LibrariesMemoryDetailSection() {
               <DetailKey>Valid</DetailKey>
               <DetailValue>
                 {item.validFrom ? relativeTime(item.validFrom) : '—'} →{' '}
-                {item.invalidAt ? relativeTime(item.invalidAt) : 'now'}
+                {item.invalidAt ? relativeTime(item.invalidAt) : 'present'}
               </DetailValue>
               <DetailKey>Expires</DetailKey>
               <DetailValue>{item.expiresAt ? `${relativeTime(item.expiresAt)} · ${item.expiresAt}` : 'no TTL — kept until deleted'}</DetailValue>
@@ -177,7 +177,7 @@ export function LibrariesMemoryDetailSection() {
               <DetailKey>Embedding</DetailKey>
               <DetailValue>{item.embeddingModel ?? 'legacy row (pre-model stamp)'}</DetailValue>
               <DetailKey>Updated</DetailKey>
-              <DetailValue>{item.updatedAt ? `${relativeTime(item.updatedAt)} · ${item.updatedAt}` : '—'}</DetailValue>
+              <DetailValue title={item.updatedAt ?? undefined}>{item.updatedAt ? relativeTime(item.updatedAt) : '—'}</DetailValue>
             </DetailGrid>
           </Panel>
         ) : isPending ? (

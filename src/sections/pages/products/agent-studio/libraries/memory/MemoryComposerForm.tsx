@@ -166,7 +166,7 @@ export function MemoryComposerForm({
       </ViewHeaderRow>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel title={title} subtitle={editing ? "Memory content — scope and TTL are not editable." : "Memory content, plus scope for new memories."}>
+        <Panel title="Content" subtitle={editing ? "Memory content — scope and TTL are not editable." : "Memory content, plus scope for new memories."}>
           <MemoryContentEditor
             value={content}
             mode={contentMode}
