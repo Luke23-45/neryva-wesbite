@@ -141,7 +141,7 @@ const EmptyWrap = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 56px 24px;
+  padding: 64px 24px;
   text-align: center;
 `;
 
@@ -344,48 +344,15 @@ export function ToolsView() {
               <CatalogSubtitle>Instantiate, configure, and disable the org's tools.</CatalogSubtitle>
             </CatalogHeader>
             <CatalogBody>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-              <div style={{ flex: '2 1 180px' }}>
-                <TextInput aria-label="Filter tools" placeholder="Filter by name…" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
-              </div>
-              <label style={{ fontSize: 13 }}>
-                Effect
-                <select value={effectFilter} onChange={(e) => setEffectFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                  <option value="">All effects</option>
-                  {TOOL_EFFECT_CLASSES.map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <label style={{ fontSize: 13 }}>
-                Approval
-                <select value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                  <option value="">All approvals</option>
-                  {TOOL_APPROVAL_REQUIREMENTS.map((value) => (
-                    <option key={value} value={value}>{value}</option>
-                  ))}
-                </select>
-              </label>
-              <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
-                <SwitchPair>
-                  <Switch
-                    checked={showDisabled}
-                    onChange={setShowDisabled}
-                    label="Show disabled tools"
-                    id="show-disabled-tools"
-                  />
-                  <SwitchText htmlFor="show-disabled-tools">Show disabled tools</SwitchText>
-                </SwitchPair>
-              </div>
-            </div>
             <QueryView query={catalog}>
               {(rows) => {
                 // Custom empty state (not QueryView's generic) — matches SVG.
+                // Filters are hidden when empty (nothing to filter).
                 if (rows.length === 0) {
                   return (
                     <EmptyWrap>
                       <EmptyIconWrap>
-                        <Wrench size={24} strokeWidth={1.6} />
+                        <Wrench size={28} strokeWidth={1.6} />
                       </EmptyIconWrap>
                       <EmptyTitle>Catalog empty</EmptyTitle>
                       <EmptyDesc>
@@ -416,18 +383,57 @@ export function ToolsView() {
                     </EmptyWrap>
                   );
                 }
-                const q = nameFilter.trim().toLowerCase();
-                const visible = rows.filter(
-                  (tool) =>
-                    (q === '' || tool.name.toLowerCase().includes(q) || (tool.description?.toLowerCase().includes(q) ?? false)) &&
-                    (effectFilter === '' || tool.effectClass === effectFilter) &&
-                    (approvalFilter === '' || tool.approvalRequirement === approvalFilter),
-                );
-                if (visible.length === 0) {
-                  return <Muted>No tools match — loosen the filters.</Muted>;
-                }
+                // Filters only render when there are rows to filter.
                 return (
-                <DataTable>
+                  <>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', padding: '16px 24px 0' }}>
+                      <div style={{ flex: '2 1 180px' }}>
+                        <TextInput aria-label="Filter tools" placeholder="Filter by name…" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
+                      </div>
+                      <label style={{ fontSize: 13 }}>
+                        Effect
+                        <select value={effectFilter} onChange={(e) => setEffectFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
+                          <option value="">All effects</option>
+                          {TOOL_EFFECT_CLASSES.map((value) => (
+                            <option key={value} value={value}>{value}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label style={{ fontSize: 13 }}>
+                        Approval
+                        <select value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
+                          <option value="">All approvals</option>
+                          {TOOL_APPROVAL_REQUIREMENTS.map((value) => (
+                            <option key={value} value={value}>{value}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
+                        <SwitchPair>
+                          <Switch
+                            checked={showDisabled}
+                            onChange={setShowDisabled}
+                            label="Show disabled tools"
+                            id="show-disabled-tools"
+                          />
+                          <SwitchText htmlFor="show-disabled-tools">Show disabled tools</SwitchText>
+                        </SwitchPair>
+                      </div>
+                    </div>
+                    {(() => {
+                      const q = nameFilter.trim().toLowerCase();
+                      const visible = rows.filter(
+                        (tool) =>
+                          (q === '' || tool.name.toLowerCase().includes(q) || (tool.description?.toLowerCase().includes(q) ?? false)) &&
+                          (effectFilter === '' || tool.effectClass === effectFilter) &&
+                          (approvalFilter === '' || tool.approvalRequirement === approvalFilter),
+                      );
+                      if (visible.length === 0) {
+                        return <div style={{ padding: '0 24px 24px' }}><Muted>No tools match — loosen the filters.</Muted></div>;
+                      }
+                      return (
+                        <div style={{ padding: '0 24px 24px' }}>
+                        <DataTable>
                   <DataHead>
                     <DataCell $w="18%">Name</DataCell>
                     <DataCell $w="8%">Version</DataCell>
@@ -525,6 +531,10 @@ export function ToolsView() {
                     );
                   })()}
                 </DataTable>
+                        </div>
+                      );
+                    })()}
+                  </>
                 );
               }}
             </QueryView>
