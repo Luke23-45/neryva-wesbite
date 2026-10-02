@@ -205,9 +205,9 @@ export function ExportNewSection() {
                         checked={checked}
                         onChange={() => toggle(c.id)}
                         disabled={!checked && selection.length >= MAX_EXPORT_CONVERSATIONS}
-                        aria-label={`Include ${c.title}`}
+                        aria-label={`Include conversation ${c.title} (${c.id.slice(0, 8)})`}
                       />
-                      <PickerTitle>{c.title}</PickerTitle>
+                      <PickerTitle>{c.title} <span style={{ opacity: 0.5, fontSize: '0.85em' }}>· {c.id.slice(0, 8)}</span></PickerTitle>
                       <PickerDate>{c.updatedAt?.slice(0, 10) ?? ''}</PickerDate>
                     </PickerRow>
                   );

@@ -786,7 +786,18 @@ function PurgePanel() {
             placeholder="Purge task id"
           />
         </div>
-        <ActionButton variant="secondary" size="sm" onClick={() => setTaskId(lookupId.trim() || null)}>
+        <ActionButton
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            const id = lookupId.trim();
+            if (!id) {
+              toast.error('Enter a purge task id to look up.');
+              return;
+            }
+            setTaskId(id);
+          }}
+        >
           Check
         </ActionButton>
       </div>
@@ -863,7 +874,11 @@ function TombstonePanel() {
   const [checking, setChecking] = useState(false);
 
   const check = async () => {
-    if (!orgId || resourceType.trim() === '' || resourceId.trim() === '') return;
+    if (!orgId) return;
+    if (resourceType.trim() === '' || resourceId.trim() === '') {
+      toast.error('Enter both a resource type and a resource id to look up.');
+      return;
+    }
     setChecking(true);
     try {
       setResult(await fetchTombstone(orgId, resourceType.trim(), resourceId.trim()));
