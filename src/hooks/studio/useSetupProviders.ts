@@ -217,7 +217,10 @@ export function useProviderEnablements(options?: { enabled?: boolean }) {
 
 export function useSetProviderEnablement() {
   const { orgId } = useOrg();
+  const queryClient = useQueryClient();
   const invalidate = useInvalidateProviders();
+  const queryKey = [...PROVIDERS_KEY, orgId, 'enablements'];
+
   return useMutation({
     mutationFn: async (input: { provider: string; enabled: boolean }) =>
       engine(`/console/org/${orgId}/provider-credentials/providers/${input.provider}`, {
@@ -225,7 +228,28 @@ export function useSetProviderEnablement() {
         body: { enabled: input.enabled },
         idempotent: true,
       }),
+    // Optimistic update: flip the toggle and count immediately so the
+    // AX tree (aria-checked, header count) stays in sync with the visual.
+    // Rolls back on error.
+    onMutate: async (input) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ProviderEnablement[]>(queryKey);
+      if (previous) {
+        queryClient.setQueryData<ProviderEnablement[]>(
+          queryKey,
+          previous.map((row) =>
+            row.provider === input.provider ? { ...row, enabled: input.enabled } : row,
+          ),
+        );
+      }
+      return { previous };
+    },
+    onError: (error, _input, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
+      toastEngineError(error, 'Could not change the provider enablement');
+    },
     onSuccess: () => invalidate(),
-    onError: (error) => toastEngineError(error, 'Could not change the provider enablement'),
   });
 }

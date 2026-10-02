@@ -110,6 +110,23 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
 const providerDisplayName = (slug: string): string =>
   PROVIDER_DISPLAY_NAMES[slug] ?? slug;
 
+const CountBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 16px;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surfaceActive};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  font-size: 10px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.muted};
+  vertical-align: 1px;
+`;
+
 /* ── Provider enablements hero card ──────────────────────────── */
 
 const EnablementsCard = styled.div`
@@ -426,7 +443,15 @@ export function ModelsView() {
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1} style={{ marginBottom: 14 }}>
         <Segmented
           options={[
-            { value: 'catalog' as const, label: `Catalog${total > 0 ? ` (${usable}/${total})` : ''}` },
+            {
+              value: 'catalog' as const,
+              label: (
+                <span>
+                  Catalog
+                  {total > 0 && <CountBadge>{usable}/{total}</CountBadge>}
+                </span>
+              ),
+            },
             { value: 'providers' as const, label: 'Providers' },
           ]}
           value={tab}
@@ -627,19 +652,18 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
                           <Mono>{provider}</Mono> · {source}
                         </ProviderMeta>
                       </ProviderInfo>
-                      <span title={canGovern ? `Toggle ${provider}` : governDenied}>
-                        <Switch
-                          checked={enabled}
-                          disabled={!canGovern || setEnablement.isPending}
-                          aria-label={`Enable ${providerDisplayName(provider)}`}
-                          onChange={(next) => {
-                            if (!next) {
-                              toast(`Disabling ${providerDisplayName(provider)} flips its models to provider_not_enabled.`);
-                            }
-                            setEnablement.mutate({ provider, enabled: next });
-                          }}
-                        />
-                      </span>
+                      <Switch
+                        checked={enabled}
+                        disabled={!canGovern || setEnablement.isPending}
+                        aria-label={`Enable ${providerDisplayName(provider)}`}
+                        title={canGovern ? `Toggle ${providerDisplayName(provider)}` : governDenied}
+                        onChange={(next) => {
+                          if (!next) {
+                            toast(`Disabling ${providerDisplayName(provider)} flips its models to provider_not_enabled.`);
+                          }
+                          setEnablement.mutate({ provider, enabled: next });
+                        }}
+                      />
                     </ProviderRow>
                   );
                 })}
@@ -772,7 +796,7 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
                 </PolicyIcon>
                 <div>
                   <PolicyTitle>MFA on create & rotate</PolicyTitle>
-                  <PolicyDesc>Revoke stays proof-free for incident response.</PolicyDesc>
+                  <PolicyDesc>Revocation never waits on MFA, so incident response stays fast.</PolicyDesc>
                 </div>
               </PolicyStep>
               <PolicyStep>
