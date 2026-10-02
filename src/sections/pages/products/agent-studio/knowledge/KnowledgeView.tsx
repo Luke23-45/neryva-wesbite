@@ -39,7 +39,6 @@ import {
 } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
 import { type AttachmentStatus } from '@hooks/studio/useAttachmentUpload';
-import { RETENTION_NOTE } from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
 import {
   useDocuments,
   useRenameDocumentSlug,
@@ -266,11 +265,11 @@ const HowIcon = styled.span`
   flex-shrink: 0;
 `;
 
-const HowTitle = styled.div`
+const HowTitle = styled.h4`
+  margin: 0 0 2px;
   font-size: 13px;
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.primary};
-  margin-bottom: 2px;
 `;
 
 const HowDesc = styled.div`
@@ -627,10 +626,6 @@ export function KnowledgeView() {
 
   const docCount = documents.data?.length ?? 0;
 
-  // Coverage is per-agent-pin, not per-document (C05) — the library states
-  // this instead of faking a coverage column it cannot compute.
-  const unsettled = (documents.data ?? []).some((d) => d.state === 'processing' || d.state === 'failed');
-
   return (
     <ViewShell>
       {renameDirtyDialog}
@@ -737,8 +732,6 @@ export function KnowledgeView() {
 
             <QueryView
               query={documents}
-              isEmpty={(d) => d.length === 0 && filter.trim() === ''}
-              empty={{ title: '', description: '' }}
             >
               {(docs) =>
                 docs.length === 0 && filter.trim() === '' ? (
@@ -1129,12 +1122,6 @@ export function KnowledgeView() {
               <ArrowRight size={14} strokeWidth={2} />
             </MemoryLink>
           </MemoryRow>
-          <PageNote>
-            {unsettled
-              ? 'A source is still ingesting or failed — pin health and embedding coverage are per-agent: open the agent’s Knowledge section for the verdict. '
-              : 'Pin health and embedding coverage are per-agent — open the agent’s Knowledge section for the verdict. '}
-            {RETENTION_NOTE}
-          </PageNote>
         </SectionGap>
       </motion.div>
 
