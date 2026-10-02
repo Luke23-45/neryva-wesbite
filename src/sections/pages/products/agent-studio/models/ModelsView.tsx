@@ -148,8 +148,9 @@ const EnablementsSummary = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.text.muted};
+  font-size: 13px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.secondary};
 `;
 
 const GreenDot = styled.span`
@@ -160,6 +161,25 @@ const GreenDot = styled.span`
   flex-shrink: 0;
 `;
 
+const EnablementsTableHead = styled.div`
+  display: flex;
+  padding: 10px 24px;
+  background: ${({ theme }) => theme.app.surfaceActive};
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+
+  span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: ${({ theme }) => theme.app.text.muted};
+  }
+
+  span:last-child {
+    margin-left: auto;
+  }
+`;
+
 const ProviderRow = styled.div`
   display: flex;
   align-items: center;
@@ -168,7 +188,7 @@ const ProviderRow = styled.div`
   border-top: 1px solid ${({ theme }) => theme.app.border.subtle};
 
   &:hover {
-    background: ${({ theme }) => theme.app.surface.subtle};
+    background: ${({ theme }) => theme.app.surfaceHover};
   }
 `;
 
@@ -193,9 +213,9 @@ const EnablementsFootnote = styled.div`
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 16px 24px;
+  padding: 20px 24px;
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
+  background: ${({ theme }) => theme.app.surfaceActive};
   font-size: 12px;
   line-height: 1.5;
   color: ${({ theme }) => theme.app.text.muted};
@@ -261,7 +281,7 @@ const PolicyStrip = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
+  background: ${({ theme }) => theme.app.surfaceActive};
 
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
@@ -427,36 +447,38 @@ export function ModelsView() {
               {(rows) => (
                 <DataTable>
                   <DataHead>
-                    <DataCell $w="24%">Model</DataCell>
-                    <DataCell $w="16%">Reference</DataCell>
-                    <DataCell $w="12%">Context / output</DataCell>
+                    <DataCell $w="28%">Model</DataCell>
+                    <DataCell $w="14%">Reference</DataCell>
+                    <DataCell $w="12%" $align="right">Context / output</DataCell>
                     <DataCell $w="10%">Residency</DataCell>
-                    <DataCell $w="12%">List price in/out</DataCell>
-                    <DataCell $w="26%">Availability</DataCell>
+                    <DataCell $w="14%" $align="right">Price in/out</DataCell>
+                    <DataCell $w="22%">Availability</DataCell>
                   </DataHead>
                   {rows.map((model, i) => (
-                    <DataRow key={model.ref} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 3} $interactive={false}>
-                      <DataCell $w="24%">{model.displayName}</DataCell>
-                      <DataCell $w="16%">
+                    <DataRow key={model.ref} as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={i + 3} $interactive={true}>
+                      <DataCell $w="28%">{model.displayName}</DataCell>
+                      <DataCell $w="14%">
                         <Mono>{model.ref}</Mono>
                       </DataCell>
-                      <DataCell $w="12%">
-                        {model.contextWindowTokens !== null ? `${(model.contextWindowTokens / 1000).toFixed(0)}k` : '—'}
-                        {' / '}
-                        {model.maxOutputTokens !== null ? `${(model.maxOutputTokens / 1000).toFixed(0)}k` : '—'}
+                      <DataCell $w="12%" $align="right">
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {model.contextWindowTokens !== null ? `${(model.contextWindowTokens / 1000).toFixed(0)}k` : '—'}
+                          {' / '}
+                          {model.maxOutputTokens !== null ? `${(model.maxOutputTokens / 1000).toFixed(0)}k` : '—'}
+                        </span>
                       </DataCell>
                       <DataCell $w="10%">{model.residency ? <Mono>{model.residency}</Mono> : <Muted>—</Muted>}</DataCell>
-                      <DataCell $w="12%">
+                      <DataCell $w="14%" $align="right">
                         {(() => {
                           const price = costByRef.get(model.ref);
-                          return price ? <span><Mono>{price.in}</Mono> / <Mono>{price.out}</Mono></span> : <Muted>unpriced</Muted>;
+                          return price ? <span style={{ fontVariantNumeric: 'tabular-nums' }}><Mono>{price.in}</Mono> / <Mono>{price.out}</Mono></span> : <Muted>unpriced</Muted>;
                         })()}
                       </DataCell>
-                      <DataCell $w="26%">
+                      <DataCell $w="22%">
                         {model.usable ? (
                           <StatusPill tone="success" dot={false}>usable</StatusPill>
                         ) : (
-                          <>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
                             <StatusPill tone="warning" dot={false}>unusable</StatusPill>
                             <ReasonList>
                               {model.reasons.map((reason) => (
@@ -464,10 +486,10 @@ export function ModelsView() {
                                   <Mono>{reason}</Mono>
                                   {reason === 'provider_credential_missing' &&
                                     (byokBlocked ? (
-                                      <>
+                                      <span style={{ display: 'block', marginTop: 4 }}>
                                         {' — BYOK is an Enterprise feature. '}
-                                        <Link to="/agent-studio/settings/billing">View subscription options →</Link>
-                                      </>
+                                        <Link to="/agent-studio/settings/billing" style={{ fontSize: 12 }}>View subscription options →</Link>
+                                      </span>
                                     ) : (
                                       ' — add BYOK in Providers.'
                                     ))}
@@ -485,7 +507,7 @@ export function ModelsView() {
                               ))}
                               {model.reasons.length === 0 && <li><Muted>no reason given</Muted></li>}
                             </ReasonList>
-                          </>
+                          </div>
                         )}
                       </DataCell>
                     </DataRow>
@@ -587,10 +609,10 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
           <QueryView query={enablements} skeleton={undefined} isEmpty={() => false} empty={{ title: '', description: '' }}>
             {() => (
               <div>
-                <div style={{ display: 'flex', padding: '8px 24px', background: 'var(--app-surface-subtle)', borderTop: '1px solid var(--app-border-default)' }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.8, color: 'var(--app-text-muted)' }}>PROVIDER</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, letterSpacing: 0.8, color: 'var(--app-text-muted)' }}>ENABLED</span>
-                </div>
+                <EnablementsTableHead>
+                  <span>PROVIDER</span>
+                  <span>ENABLED</span>
+                </EnablementsTableHead>
                 {MODEL_PROVIDERS.map((provider) => {
                   const enabled = enabledByProvider.get(provider) ?? true;
                   const cred = credentialByProvider.get(provider);
