@@ -529,7 +529,11 @@ export function StudioShell({
                 as="button"
                 type="button"
                 disabled
-                title="Chat isn’t available in this workspace right now — check your product entitlement or ask an owner for help."
+                title={
+                  role === 'owner' || role === 'admin'
+                    ? 'Chat isn’t available in this workspace right now — check your product entitlement in Billing →.'
+                    : 'Chat isn’t available in this workspace right now — check your product entitlement or ask an owner for help.'
+                }
                 aria-label="New chat (unavailable)"
                 style={{ cursor: 'not-allowed', opacity: 0.4 }}
               >
