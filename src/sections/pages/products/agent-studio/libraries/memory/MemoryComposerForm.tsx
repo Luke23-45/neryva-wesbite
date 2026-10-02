@@ -5,13 +5,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { TextArea } from '@components/common/ui/TextArea';
 import { Segmented } from '@components/common/ui/Segmented';
 import { pageItem } from '@styles/motion';
 import { useCreateMemory, useUpdateMemory } from '@hooks/studio/useSetupKnowledge';
 import { MEMORY_CONTENT_MAX } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from '../SectionBackRow';
+import { MemoryContentEditor, type MemoryContentMode } from './MemoryContentEditor';
 
 const ActionsRow = styled.div`
   display: flex;
@@ -61,6 +61,8 @@ export function MemoryComposerForm({
   const editing = mode === 'edit' ? initial : null;
 
   const [content, setContent] = useState(editing?.content ?? '');
+  const [contentMode, setContentMode] = useState<MemoryContentMode>('raw');
+  const [contentValid, setContentValid] = useState(true);
   const [scopeType, setScopeType] = useState<'organization' | 'user'>('organization');
   const headingRef = useRef<HTMLHeadingElement>(null);
 
@@ -71,7 +73,7 @@ export function MemoryComposerForm({
 
   const trimmed = content.trim();
   const overCap = content.length > MEMORY_CONTENT_MAX;
-  const valid = trimmed !== '' && !overCap;
+  const valid = trimmed !== '' && !overCap && contentValid;
   const saving = createMemory.isPending || updateMemory.isPending;
 
   // Dirty guard: block navigation while the form has unsent content.
@@ -79,11 +81,28 @@ export function MemoryComposerForm({
   // a saved memory there is nothing unsaved, so the post-submit landing
   // must not trip the leave dialog.
   const [submitted, setSubmitted] = useState(false);
-  const dirty = !submitted && (editing ? content !== editing.content : trimmed !== '');
+  const dirty =
+    !submitted &&
+    (editing
+      ? content !== editing.content || contentMode !== 'raw'
+      : trimmed !== '' || contentMode !== 'raw');
   const { dialog: dirtyDialog } = useDirtyGuard(
     dirty,
     'You have an unsaved memory. Leaving now discards it.',
   );
+
+  /** Resolve the storable text: JSON mode stores the parsed string, not the quotes. */
+  const storableContent = (): string => {
+    if (contentMode === 'json') {
+      try {
+        const parsed: unknown = JSON.parse(content);
+        if (typeof parsed === 'string') return parsed.trim().slice(0, MEMORY_CONTENT_MAX);
+      } catch {
+        // Invalid JSON — save is blocked by `valid`, this is a fallback.
+      }
+    }
+    return trimmed.slice(0, MEMORY_CONTENT_MAX);
+  };
 
   const save = () => {
     if (!valid || saving) {
@@ -93,9 +112,10 @@ export function MemoryComposerForm({
     // async success navigation must not trip the leave dialog. Re-armed on
     // failure so a failed save keeps protecting the draft.
     setSubmitted(true);
+    const finalContent = storableContent();
     if (editing) {
       updateMemory.mutate(
-        { memoryId: editing.id, content: trimmed.slice(0, MEMORY_CONTENT_MAX) },
+        { memoryId: editing.id, content: finalContent },
         {
           onSuccess: () => {
             navigate({ to: successTo });
@@ -105,7 +125,7 @@ export function MemoryComposerForm({
       );
     } else {
       createMemory.mutate(
-        { content: trimmed.slice(0, MEMORY_CONTENT_MAX), scopeType },
+        { content: finalContent, scopeType },
         {
           onSuccess: () => {
             navigate({ to: successTo });
@@ -137,12 +157,12 @@ export function MemoryComposerForm({
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel title={title} subtitle="Memory content, plus scope for new memories.">
-          <TextArea
-            label="Memory content"
-            id="memory-composer-content"
+          <MemoryContentEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
+            mode={contentMode}
+            onChange={setContent}
+            onModeChange={setContentMode}
+            onValidChange={setContentValid}
             placeholder="The org ships on Fridays; freeze Thursdays…"
           />
           <p style={{ fontSize: 12, opacity: 0.75 }}>
