@@ -170,7 +170,18 @@ export function ActivityView() {
   const verifyDeniedCopy = `Verifying the audit chain requires the billing role or above — your role is ${role ?? 'unknown'}.`;
   const params = useUrlSearchParams();
   const navigate = useNavigate();
+  // P0: URL-synced action filter had a race — navigate() is async and
+  // useSearch didn't update synchronously, so chips changed the URL but
+  // the feed didn't refetch until reload. Use local state as the source
+  // of truth for immediate UI response; sync to URL as a side effect
+  // for shareability (back/forward still work via URL on mount).
+  const [actionFilter, setActionFilter] = useState<string>(() => params.action ?? 'all');
   const [, setActionParam] = useUrlState('action', { default: 'all' });
+  // Sync local filter to URL (debounced by React batching; not blocking UI)
+  const setAction = (next: string) => {
+    setActionFilter(next);
+    setActionParam(next === 'all' ? '' : next);
+  };
   // Date-range picker (P6-AC-22): YYYY-MM-DD values synced to the URL so the
   // range is shareable and restored on reload, like every other filter here.
   const [fromParam, setFromParam] = useUrlState('from');
@@ -188,7 +199,6 @@ export function ActivityView() {
   const [verifyNote, setVerifyNote] = useState<string | null>(null);
   const [verifyOk, setVerifyOk] = useState<boolean | null>(null);
 
-  const actionFilter = params.action ?? 'all';
   const facets = useAuditFacets();
   // The engine filters server-side by action prefix — pass the selected chip
   // through instead of fetching everything and filtering client-side.
@@ -337,7 +347,7 @@ export function ActivityView() {
               type="button"
               $active={actionFilter === 'all'}
               aria-pressed={actionFilter === 'all'}
-              onClick={() => setActionParam('')}
+              onClick={() => setAction('')}
             >
               All
             </FilterChip>
@@ -347,7 +357,7 @@ export function ActivityView() {
                 type="button"
                 $active={actionFilter === action}
                 aria-pressed={actionFilter === action}
-                onClick={() => setActionParam(action)}
+                onClick={() => setAction(action)}
               >
                 {action}
               </FilterChip>
