@@ -198,10 +198,24 @@ export function IntegrationsView() {
                 <CardFoot>
                   <StatusText>{spec.credentials === 'dance-only' ? 'OAuth dance' : spec.credentials === 'none' ? 'Keyless' : 'Sealed secret'}</StatusText>
                   {canWrite ? (
-                    <Link to="/agent-studio/integrations/link/$provider" params={{ provider: spec.provider }} title={`Link a ${spec.label} account`}>
-                      <ActionButton size="sm" variant="secondary">
-                        Link
-                      </ActionButton>
+                    <Link
+                      to="/agent-studio/integrations/link/$provider"
+                      params={{ provider: spec.provider }}
+                      title={`Link a ${spec.label} account`}
+                      aria-label={`Link a ${spec.label} account`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '6px 12px',
+                        fontSize: '13px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--app-border-strong)',
+                        color: 'var(--app-text-secondary)',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Link
                     </Link>
                   ) : (
                     <ActionButton size="sm" variant="secondary" disabled title={writeDenied}>

@@ -127,6 +127,7 @@ export function LinkProviderSection() {
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
   const [credentials, setCredentials] = useState('');
   const [pageUrl, setPageUrl] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   // Focus the heading on mount (preventScroll) — matches shell announcement pattern.
   useEffect(() => {
@@ -182,6 +183,7 @@ export function LinkProviderSection() {
   const valid = displayName.trim() !== '' && missingConfig.length === 0 && !credentialsProblem;
 
   const submit = () => {
+    setSubmitted(true);
     if (!valid || link.isPending) {
       return;
     }
@@ -276,7 +278,7 @@ export function LinkProviderSection() {
                   onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
                   placeholder={field.placeholder}
                   hint={field.hint}
-                  error={field.required && !configValues[field.key]?.trim() ? 'Required for sync.' : undefined}
+                  error={submitted && field.required && !configValues[field.key]?.trim() ? 'Required for sync.' : undefined}
                 />
                 {overflowNote && <Hint>{overflowNote}</Hint>}
               </FieldBlock>
@@ -325,7 +327,7 @@ export function LinkProviderSection() {
               <ActionButton variant="secondary" onClick={() => navigate({ to: '/agent-studio/integrations' })} title={writeDenied}>
                 Cancel
               </ActionButton>
-              <ActionButton disabled={!valid || link.isPending} onClick={submit} title={canWrite ? `Link a ${spec.label} account` : writeDenied}>
+              <ActionButton disabled={link.isPending} onClick={submit} title={canWrite ? `Link a ${spec.label} account` : writeDenied}>
                 Link account
               </ActionButton>
             </ActionRow>
