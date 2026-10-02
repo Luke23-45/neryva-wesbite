@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from '@tanstack/react-router';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
-import { KeyRound, Trash2, RefreshCw } from 'lucide-react';
+import { KeyRound, Trash2, RefreshCw, Lock, Fingerprint, ShieldCheck, Info } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { Panel } from '@components/common/ui/Panel';
@@ -12,6 +12,7 @@ import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { QueryView } from '@components/common/ui/AsyncStates';
+import { Segmented } from '@components/common/ui/Segmented';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import {
   DataTable,
@@ -55,23 +56,6 @@ const ReasonList = styled.ul`
   font-size: 12px;
 `;
 
-const TabRow = styled.div`
-  display: flex;
-  gap: 6px;
-  margin-bottom: 14px;
-`;
-
-const Tab = styled.button<{ $on: boolean }>`
-  border: 1px solid ${({ $on, theme }) => ($on ? theme.app.status.lilac.border : theme.app.border.strong)};
-  background: ${({ $on, theme }) => ($on ? theme.app.status.lilac.bg : 'transparent')};
-  color: ${({ $on, theme }) => ($on ? theme.app.text.primary : theme.app.text.secondary)};
-  border-radius: 8px;
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-`;
-
 const Note = styled.p`
   font-size: 13px;
   line-height: 1.6;
@@ -108,6 +92,222 @@ const IconBtn = styled.button`
 `;
 
 type Tab = 'catalog' | 'providers';
+
+/** Display names for provider slugs (SVG reference). */
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  'openai': 'OpenAI',
+  'anthropic': 'Anthropic',
+  'google': 'Google',
+  'azure-openai': 'Azure OpenAI',
+  'amazon-bedrock': 'Amazon Bedrock',
+  'mistral': 'Mistral',
+  'xai': 'xAI',
+  'deepseek': 'DeepSeek',
+  'openrouter': 'OpenRouter',
+  'ollama': 'Ollama',
+};
+
+const providerDisplayName = (slug: string): string =>
+  PROVIDER_DISPLAY_NAMES[slug] ?? slug;
+
+/* ── Provider enablements hero card ──────────────────────────── */
+
+const EnablementsCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 14px;
+  background: ${({ theme }) => theme.app.surface.base};
+  overflow: hidden;
+`;
+
+const EnablementsHeader = styled.div`
+  padding: 20px 24px 16px;
+`;
+
+const EnablementsTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+`;
+
+const EnablementsTitle = styled.h2`
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const EnablementsSubtitle = styled.p`
+  margin: 0;
+  font-size: 13px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const EnablementsSummary = styled.span`
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const GreenDot = styled.span`
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34c759;
+  flex-shrink: 0;
+`;
+
+const ProviderRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid ${({ theme }) => theme.app.border.subtle};
+
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.subtle};
+  }
+`;
+
+const ProviderInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ProviderName = styled.div`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.primary};
+  margin-bottom: 2px;
+`;
+
+const ProviderMeta = styled.div`
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const EnablementsFootnote = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 16px 24px;
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+/* ── BYOK gate panel ─────────────────────────────────────────── */
+
+const GatePanel = styled.div`
+  padding: 48px 24px;
+  text-align: center;
+`;
+
+const GateIconWrap = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: ${({ theme }) => theme.app.surface.active};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  margin-bottom: 20px;
+  color: ${({ theme }) => theme.app.text.link};
+`;
+
+const GateTitle = styled.h3`
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const GateDesc = styled.p`
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
+
+const GateSub = styled.p`
+  margin: 0 0 20px;
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
+const EnterpriseBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: ${({ theme }) => theme.app.status.info.fg};
+`;
+
+/* ── Policy fact strip ───────────────────────────────────────── */
+
+const PolicyStrip = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-top: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const PolicyStep = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 20px 24px;
+
+  & + & {
+    border-left: 1px solid ${({ theme }) => theme.app.border.default};
+
+    @media (max-width: 720px) {
+      border-left: none;
+      border-top: 1px solid ${({ theme }) => theme.app.border.default};
+    }
+  }
+`;
+
+const PolicyIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.active};
+  color: ${({ theme }) => theme.app.text.muted};
+  flex-shrink: 0;
+`;
+
+const PolicyTitle = styled.h4`
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const PolicyDesc = styled.div`
+  font-size: 12px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.text.muted};
+`;
 
 /**
  * Gap #7 (console field audit): the engine sends `required_product(_label)` on
@@ -196,21 +396,25 @@ export function ModelsView() {
     <ViewShell>
       <ViewHeaderRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={0}>
         <ViewHeader>
-          <ViewTitle>Models</ViewTitle>
+          <ViewTitle>Providers & Models</ViewTitle>
           <ViewSubtitle>
-            Live catalog availability — usable rows are pickable in the editor; the rest state their reason. Drafts advise, publish enforces.
+            Live catalog availability and org-level provider control — drafts advise, publish enforces.
           </ViewSubtitle>
         </ViewHeader>
       </ViewHeaderRow>
 
-      <TabRow as={motion.div} initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Tab type="button" $on={tab === 'catalog'} onClick={() => setTab('catalog')}>
-          Catalog{total > 0 ? ` (${usable}/${total} usable)` : ''}
-        </Tab>
-        <Tab type="button" $on={tab === 'providers'} onClick={() => setTab('providers')}>
-          Providers
-        </Tab>
-      </TabRow>
+      <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1} style={{ marginBottom: 14 }}>
+        <Segmented
+          options={[
+            { value: 'catalog' as const, label: `Catalog${total > 0 ? ` (${usable}/${total})` : ''}` },
+            { value: 'providers' as const, label: 'Providers' },
+          ]}
+          value={tab}
+          onChange={setTab}
+          size="sm"
+          ariaLabel="Providers and models view"
+        />
+      </motion.div>
 
       {tab === 'catalog' ? (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
@@ -337,6 +541,23 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
     return map;
   }, [enablements.data]);
 
+  // Credential source per provider: BYOK fingerprint when a credential
+  // exists, otherwise Studio-managed.
+  const credentialByProvider = useMemo(() => {
+    const map = new Map<string, { fingerprint: string | null }>();
+    for (const cred of credentials.data ?? []) {
+      if (cred.status !== 'revoked') {
+        map.set(cred.provider, { fingerprint: cred.secretFingerprint });
+      }
+    }
+    return map;
+  }, [credentials.data]);
+
+  const enabledCount = useMemo(
+    () => MODEL_PROVIDERS.filter((p) => enabledByProvider.get(p) ?? true).length,
+    [enabledByProvider],
+  );
+
   if (!canWrite) {
     return (
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
@@ -349,143 +570,199 @@ function ProvidersTab({ canWrite, writeDenied, canGovern, governDenied, byokBloc
 
   return (
     <>
+      {/* ── Card A: Provider enablements (primary) ── */}
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={2}>
-        <Panel
-          title="Provider credentials (BYOK)"
-          subtitle="Fingerprint-only list. Create/rotate demand a fresh MFA proof; revoke stays proof-free so incident response never waits. There is no connection test — a mistyped or revoked key is discovered at run time when an agent tries to call the model."
-          action={
-            byokBlocked ? undefined : (
-              <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => navigate({ to: '/agent-studio/models/credentials/new' })}>
-                <KeyRound size={13} strokeWidth={1.8} />
-                Add credential
-              </ActionButton>
-            )
-          }
-        >
-          {/* P1-5: the gate is visible before any MFA step-up — the engine
-              403s BYOK create() for non-enterprise orgs regardless, so the
-              add flow is hidden and the billing path is stated. */}
-          {byokBlocked && (
-            <Note style={{ marginBottom: 12 }}>
-              BYOK requires an Enterprise subscription — this org has no active enterprise commitment, so the
-              add-credential flow is hidden instead of failing after an MFA step-up.
-              {' '}<Link to="/agent-studio/settings/billing">View subscription options →</Link>
-            </Note>
-          )}
-          <QueryView
-            query={credentials}
-            isEmpty={(d) => d.length === 0}
-            empty={
-              byokBlocked
-                ? { title: 'No BYOK credentials', description: 'BYOK is an Enterprise feature — see Settings → Billing.' }
-                : { title: 'No BYOK credentials', description: 'Models without provider keys surface provider_credential_missing in the catalog.' }
-            }
-          >
-            {(rows) => (
-              <DataTable>
-                <DataHead>
-                  <DataCell $w="18%">Provider</DataCell>
-                  <DataCell $w="20%">Label</DataCell>
-                  <DataCell $w="16%">Fingerprint</DataCell>
-                  <DataCell $w="12%">Status</DataCell>
-                  <DataCell $w="14%">Rotated</DataCell>
-                  <DataCell $w="20%" $align="right">Actions</DataCell>
-                </DataHead>
-                {rows.map((cred) => (
-                  <DataRow key={cred.id} $interactive={false}>
-                    <DataCell $w="18%">
-                      <Mono>{cred.provider}</Mono>
-                    </DataCell>
-                    <DataCell $w="20%">{cred.label}</DataCell>
-                    <DataCell $w="18%">
-                      <Mono>{cred.secretFingerprint ?? '—'}</Mono>
-                    </DataCell>
-                    <DataCell $w="12%">
-                      <StatusPill tone={cred.status === 'active' ? 'success' : cred.status === 'revoked' ? 'neutral' : ('warning' as StatusTone)} dot={false}>
-                        {cred.status ?? 'unknown'}
-                      </StatusPill>
-                    </DataCell>
-                    <DataCell $w="14%">{cred.rotatedAt ? cred.rotatedAt.slice(0, 10) : <Muted>never</Muted>}</DataCell>
-                    <DataCell $w="20%" $align="right">
-                      <RowActions>
-                        <IconBtn
-                          type="button"
-                          aria-label={`Rotate ${cred.label}`}
-                          title={canGovern ? 'Rotate (fresh MFA proof required)' : governDenied}
-                          disabled={!canGovern || cred.status === 'revoked'}
-                          onClick={() =>
-                            navigate({ to: '/agent-studio/models/credentials/$credentialId/rotate', params: { credentialId: cred.id } })
-                          }
-                        >
-                          <RefreshCw size={13} strokeWidth={1.7} />
-                        </IconBtn>
-                        <IconBtn
-                          type="button"
-                          aria-label={`Revoke ${cred.label}`}
-                          title={canGovern ? 'Revoke immediately (no MFA wait)' : governDenied}
-                          disabled={!canGovern || revokeCredential.isPending || cred.status === 'revoked'}
-                          onClick={() => setRevokeTarget({ id: cred.id, label: cred.label })}
-                        >
-                          <Trash2 size={13} strokeWidth={1.7} />
-                        </IconBtn>
-                      </RowActions>
-                    </DataCell>
-                  </DataRow>
-                ))}
-              </DataTable>
+        <EnablementsCard>
+          <EnablementsHeader>
+            <EnablementsTitleRow>
+              <EnablementsTitle>Provider enablements</EnablementsTitle>
+              <EnablementsSummary>
+                <GreenDot aria-hidden="true" />
+                {MODEL_PROVIDERS.length} providers · {enabledCount} enabled
+              </EnablementsSummary>
+            </EnablementsTitleRow>
+            <EnablementsSubtitle>Org-level availability switches for every model provider.</EnablementsSubtitle>
+          </EnablementsHeader>
+
+          <QueryView query={enablements} skeleton={undefined} isEmpty={() => false} empty={{ title: '', description: '' }}>
+            {() => (
+              <div>
+                <div style={{ display: 'flex', padding: '8px 24px', background: 'var(--app-surface-subtle)', borderTop: '1px solid var(--app-border-default)' }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.8, color: 'var(--app-text-muted)' }}>PROVIDER</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, letterSpacing: 0.8, color: 'var(--app-text-muted)' }}>ENABLED</span>
+                </div>
+                {MODEL_PROVIDERS.map((provider) => {
+                  const enabled = enabledByProvider.get(provider) ?? true;
+                  const cred = credentialByProvider.get(provider);
+                  const source = cred
+                    ? (cred.fingerprint ? `BYOK · ${cred.fingerprint.slice(0, 12)}…` : 'BYOK')
+                    : 'Studio-managed key';
+                  return (
+                    <ProviderRow key={provider}>
+                      <ProviderInfo>
+                        <ProviderName>{providerDisplayName(provider)}</ProviderName>
+                        <ProviderMeta>
+                          <Mono>{provider}</Mono> · {source}
+                        </ProviderMeta>
+                      </ProviderInfo>
+                      <span title={canGovern ? `Toggle ${provider}` : governDenied}>
+                        <Switch
+                          checked={enabled}
+                          disabled={!canGovern || setEnablement.isPending}
+                          aria-label={`Enable ${providerDisplayName(provider)}`}
+                          onChange={(next) => {
+                            if (!next) {
+                              toast(`Disabling ${providerDisplayName(provider)} flips its models to provider_not_enabled.`);
+                            }
+                            setEnablement.mutate({ provider, enabled: next });
+                          }}
+                        />
+                      </span>
+                    </ProviderRow>
+                  );
+                })}
+              </div>
             )}
           </QueryView>
-          {/* A4-81: honest disclosure — there is no credential connection
-              test. The engine never dials providers (the model gateway in
-              Agent Studio owns all provider HTTP, and the credential row
-              stores no endpoint), so a mistyped/revoked key surfaces at
-              run time. Stating it beats a fake "Test" button. */}
-          <Note style={{ marginTop: 12 }}>
-            No connection test is available for these credentials yet — a mistyped or revoked key is discovered
-            when a run calls the model. If a run fails on provider authentication, check the key at your
-            provider, then rotate the credential here.
-          </Note>
-        </Panel>
+
+          <EnablementsFootnote>
+            <Info size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
+              Providers without a row default to on. Disabling flips dependent models to provider_not_enabled — drafts advise, publish enforces.
+            </span>
+          </EnablementsFootnote>
+        </EnablementsCard>
       </motion.div>
 
+      {/* ── Card B: BYOK credentials ── */}
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={3}>
         <SectionGap>
-          <Panel title="Provider enablements" subtitle="Absent row = default on. Disabling flips dependent models to provider_not_enabled.">
-            <QueryView query={enablements} skeleton={undefined} isEmpty={() => false} empty={{ title: '', description: '' }}>
-              {() => (
-                <DataTable>
-                  <DataHead>
-                    <DataCell $w="50%">Provider</DataCell>
-                    <DataCell $w="50%">Enabled</DataCell>
-                  </DataHead>
-                  {MODEL_PROVIDERS.map((provider) => {
-                    const enabled = enabledByProvider.get(provider) ?? true;
-                    return (
-                      <DataRow key={provider} $interactive={false}>
-                        <DataCell $w="50%">
-                          <Mono>{provider}</Mono>
+          <Panel
+            title={
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                Provider credentials (BYOK)
+                <EnterpriseBadge>ENTERPRISE</EnterpriseBadge>
+              </span>
+            }
+            subtitle="Fingerprint-only keys that override Studio-managed credentials per provider."
+            action={
+              byokBlocked ? undefined : (
+                <ActionButton size="sm" disabled={!canGovern} title={canGovern ? 'Add a provider credential' : governDenied} onClick={() => navigate({ to: '/agent-studio/models/credentials/new' })}>
+                  <KeyRound size={13} strokeWidth={1.8} />
+                  Add credential
+                </ActionButton>
+              )
+            }
+          >
+            {byokBlocked ? (
+              <GatePanel>
+                <GateIconWrap>
+                  <Lock size={20} strokeWidth={1.6} />
+                </GateIconWrap>
+                <GateTitle>BYOK is an Enterprise feature</GateTitle>
+                <GateDesc>
+                  This org has no active enterprise commitment, so the add-credential flow is turned off.
+                </GateDesc>
+                <GateSub>Plan and billing details live in Settings → Billing.</GateSub>
+                <ActionButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => navigate({ to: '/agent-studio/settings/billing' })}
+                >
+                  View subscription options
+                </ActionButton>
+              </GatePanel>
+            ) : (
+              <QueryView
+                query={credentials}
+                isEmpty={(d) => d.length === 0}
+                empty={{ title: 'No BYOK credentials', description: 'Models without provider keys surface provider_credential_missing in the catalog.' }}
+              >
+                {(rows) => (
+                  <DataTable>
+                    <DataHead>
+                      <DataCell $w="18%">Provider</DataCell>
+                      <DataCell $w="20%">Label</DataCell>
+                      <DataCell $w="16%">Fingerprint</DataCell>
+                      <DataCell $w="12%">Status</DataCell>
+                      <DataCell $w="14%">Rotated</DataCell>
+                      <DataCell $w="20%" $align="right">Actions</DataCell>
+                    </DataHead>
+                    {rows.map((cred) => (
+                      <DataRow key={cred.id} $interactive={false}>
+                        <DataCell $w="18%">
+                          <Mono>{cred.provider}</Mono>
                         </DataCell>
-                        <DataCell $w="50%">
-                          <span title={canGovern ? `Toggle ${provider}` : governDenied}>
-                            <Switch
-                              checked={enabled}
-                              disabled={!canGovern || setEnablement.isPending}
-                              aria-label={`Enable ${provider}`}
-                              onChange={(next) => {
-                                if (!next) {
-                                  toast(`Disabling ${provider} flips its models to provider_not_enabled.`);
-                                }
-                                setEnablement.mutate({ provider, enabled: next });
-                              }}
-                            />
-                          </span>
+                        <DataCell $w="20%">{cred.label}</DataCell>
+                        <DataCell $w="18%">
+                          <Mono>{cred.secretFingerprint ?? '—'}</Mono>
+                        </DataCell>
+                        <DataCell $w="12%">
+                          <StatusPill tone={cred.status === 'active' ? 'success' : cred.status === 'revoked' ? 'neutral' : ('warning' as StatusTone)} dot={false}>
+                            {cred.status ?? 'unknown'}
+                          </StatusPill>
+                        </DataCell>
+                        <DataCell $w="14%">{cred.rotatedAt ? cred.rotatedAt.slice(0, 10) : <Muted>never</Muted>}</DataCell>
+                        <DataCell $w="20%" $align="right">
+                          <RowActions>
+                            <IconBtn
+                              type="button"
+                              aria-label={`Rotate ${cred.label}`}
+                              title={canGovern ? 'Rotate (fresh MFA proof required)' : governDenied}
+                              disabled={!canGovern || cred.status === 'revoked'}
+                              onClick={() =>
+                                navigate({ to: '/agent-studio/models/credentials/$credentialId/rotate', params: { credentialId: cred.id } })
+                              }
+                            >
+                              <RefreshCw size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                            <IconBtn
+                              type="button"
+                              aria-label={`Revoke ${cred.label}`}
+                              title={canGovern ? 'Revoke immediately (no MFA wait)' : governDenied}
+                              disabled={!canGovern || revokeCredential.isPending || cred.status === 'revoked'}
+                              onClick={() => setRevokeTarget({ id: cred.id, label: cred.label })}
+                            >
+                              <Trash2 size={13} strokeWidth={1.7} />
+                            </IconBtn>
+                          </RowActions>
                         </DataCell>
                       </DataRow>
-                    );
-                  })}
-                </DataTable>
-              )}
-            </QueryView>
+                    ))}
+                  </DataTable>
+                )}
+              </QueryView>
+            )}
+
+            <PolicyStrip>
+              <PolicyStep>
+                <PolicyIcon>
+                  <Fingerprint size={16} strokeWidth={1.8} />
+                </PolicyIcon>
+                <div>
+                  <PolicyTitle>Fingerprint-only</PolicyTitle>
+                  <PolicyDesc>The list shows fingerprints; secrets stay vaulted.</PolicyDesc>
+                </div>
+              </PolicyStep>
+              <PolicyStep>
+                <PolicyIcon>
+                  <ShieldCheck size={16} strokeWidth={1.8} />
+                </PolicyIcon>
+                <div>
+                  <PolicyTitle>MFA on create & rotate</PolicyTitle>
+                  <PolicyDesc>Revoke stays proof-free for incident response.</PolicyDesc>
+                </div>
+              </PolicyStep>
+              <PolicyStep>
+                <PolicyIcon>
+                  <Info size={16} strokeWidth={1.8} />
+                </PolicyIcon>
+                <div>
+                  <PolicyTitle>No connection test</PolicyTitle>
+                  <PolicyDesc>Bad keys surface at run time — rotate to recover.</PolicyDesc>
+                </div>
+              </PolicyStep>
+            </PolicyStrip>
           </Panel>
         </SectionGap>
       </motion.div>
