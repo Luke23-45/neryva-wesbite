@@ -27,8 +27,6 @@ import {
   usePurgeMemories,
 } from '@hooks/studio/useSetupKnowledge';
 import {
-  PURGE_SUBSTRING_MAX,
-  PURGE_SUBSTRING_MIN,
   SCRUB_COPY,
   describeTtl,
   filterMemories,
@@ -228,9 +226,11 @@ export function MemoryView() {
               </DataHead>
               {visible.map((m) => {
                 const deleting = deletingId === m.id;
+                const preview = m.content ?? '—';
+                const truncated = preview.length > 140 ? `${preview.slice(0, 140)}…` : preview;
                 return (
                   <DataRow key={m.id}>
-                    <DataCell $w="40%">{(m.content ?? '—').slice(0, 140)}</DataCell>
+                    <DataCell $w="40%">{truncated}</DataCell>
                     <DataCell $w="14%">
                       <StatusPill tone={m.visibility === 'organization' ? 'info' : 'warning'} dot={false}>
                         {m.visibility ?? 'organization'}
@@ -271,11 +271,11 @@ export function MemoryView() {
                             : 'Deleting memories needs owner, admin, or developer.'
                         }
                         onClick={() => {
-                          setDeletingId(m.id);
-                          setDeleteTarget({ id: m.id, preview: (m.content ?? '').slice(0, 80) });
+                          const content = m.content ?? '';
+                          setDeleteTarget({ id: m.id, preview: content.length > 80 ? `${content.slice(0, 80)}…` : content });
                         }}
                       >
-                        {deleting ? 'Deleting…' : 'Delete'}
+                        Delete
                       </ActionButton>
                     </DataCell>
                   </DataRow>
@@ -294,7 +294,7 @@ export function MemoryView() {
         scope — older entries are not listed, and search filters only what is loaded.
       </FootNote>
 
-      <MemoryPurgeModal open={purgeOpen} onClose={() => setPurgeOpen(false)} />
+      <MemoryPurgeModal open={purgeOpen} onClose={() => setPurgeOpen(false)} memories={memories.data ?? []} scope={scope} />
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -305,6 +305,7 @@ export function MemoryView() {
         onConfirm={() => {
           if (deleteTarget) {
             const id = deleteTarget.id;
+            setDeletingId(id);
             remove.mutate(id, {
               onSuccess: () => {
                 setDeleteTarget(null);
@@ -330,13 +331,17 @@ export function MemoryView() {
  * explicit commit. The count is reported after the run — no count endpoint
  * exists to preview it, and none is faked.
  */
-function MemoryPurgeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function MemoryPurgeModal({ open, onClose, memories, scope }: { open: boolean; onClose: () => void; memories: { content: string | null }[]; scope: string }) {
   const purge = usePurgeMemories();
   const [substring, setSubstring] = useState('');
   const [result, setResult] = useState<{ purged: number; truncated: boolean } | null>(null);
 
   const problem = validatePurgeSubstring(substring);
   const length = substring.trim().length;
+  const trimmed = substring.trim().toLowerCase();
+  const matchCount = trimmed.length >= 3
+    ? memories.filter((m) => (m.content ?? '').toLowerCase().includes(trimmed)).length
+    : 0;
 
   return (
     <Modal
@@ -386,9 +391,15 @@ function MemoryPurgeModal({ open, onClose }: { open: boolean; onClose: () => voi
         placeholder="acme-contract-2024"
       />
       <p style={{ fontSize: 12, opacity: 0.75 }}>
-        {length} / {PURGE_SUBSTRING_MIN} min – {PURGE_SUBSTRING_MAX} max, literal match (case-insensitive).
+        {length} / 128 characters (min 3), literal match (case-insensitive).
       </p>
       {problem && substring.trim() !== '' ? <ErrorText>{problem}</ErrorText> : null}
+      {trimmed.length >= 3 && problem === null && (
+        <p style={{ fontSize: 13, fontWeight: 600, color: matchCount > 0 ? '#d97706' : undefined }}>
+          {matchCount} {matchCount === 1 ? 'memory' : 'memories'} match in the {scope} view.
+          Purge affects every scope — verify the text carefully.
+        </p>
+      )}
       <p style={{ fontSize: 12, opacity: 0.85 }}>
         Every scope. Tombstoned — retrieval stops immediately. The query itself is never stored:
         the audit keeps a hash, the count, and the ids. <Link to="/platform/audit">Open Audit →</Link>
