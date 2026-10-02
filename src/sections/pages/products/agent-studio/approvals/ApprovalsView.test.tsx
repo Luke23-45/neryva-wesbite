@@ -120,23 +120,23 @@ describe('ApprovalsView (C15)', () => {
 
   it('writes the filter to ?state= so filtered views are shareable', async () => {
     const router = await shell();
-    fireEvent.click(screen.getByText('Expired'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Expired' }));
     expect((router.state.location.search as Record<string, unknown>).state).toBe('EXPIRED');
     await act(async () => {});
-    expect(screen.getByText('Expired', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Expired' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('omits ?state= for the default Pending filter (clean addresses)', async () => {
     const router = await shell('/?state=EXPIRED');
-    fireEvent.click(screen.getByText('Pending'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Pending' }));
     expect((router.state.location.search as Record<string, unknown>).state).toBeUndefined();
   });
 
   it('reads the initial filter from ?state=, unknown values fall back to Pending', async () => {
     await shell('/?state=DENIED');
-    expect(screen.getByText('Denied', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Denied' }).getAttribute('aria-selected')).toBe('true');
     cleanup();
     await shell('/?state=BOGUS');
-    expect(screen.getByText('Pending', { selector: 'button' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Pending' }).getAttribute('aria-selected')).toBe('true');
   });
 });

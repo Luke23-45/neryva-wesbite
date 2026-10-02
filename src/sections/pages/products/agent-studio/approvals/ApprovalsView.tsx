@@ -10,6 +10,7 @@ import { Modal } from '@components/common/ui/Modal';
 import { Drawer } from '@components/common/ui/Drawer';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { Segmented } from '@components/common/ui/Segmented';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import {
@@ -139,17 +140,12 @@ export function ApprovalsView() {
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          {STATE_FILTERS.map((option) => (
-            <ActionButton
-              key={option.value}
-              variant={filter === option.value ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setFilterParam(option.value)}
-              aria-pressed={filter === option.value}
-            >
-              {option.label}
-            </ActionButton>
-          ))}
+          <Segmented
+            options={STATE_FILTERS.map((f) => ({ value: f.value, label: f.label }))}
+            value={filter}
+            onChange={(v) => setFilterParam(v)}
+            ariaLabel="Approval state filter"
+          />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -164,7 +160,7 @@ export function ApprovalsView() {
           </Panel>
         ) : (
           <Panel
-            title={filter === 'ALL' ? 'All decisions' : `${filter.charAt(0)}${filter.slice(1).toLowerCase()} approvals`}
+            title={filter === 'ALL' ? 'All decisions' : filter.charAt(0) + filter.slice(1).toLowerCase()}
             subtitle="Newest first (cap 200). Expired items are flagged at read time. Polls while pending."
             flush
           >

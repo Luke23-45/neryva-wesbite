@@ -259,6 +259,6 @@ export const OPERATE_COPY = {
   killScopeNote: 'Day-1 emergency is exactly two toggles — pause the rollout, or disable the agent. Analytics, anomaly detection, and variant sliders are deferred.',
   approveRejectCopy: 'Deny requires a reason — the endpoint stores it with the decision. Approve executes inline; the run resumes.',
   missingRunCopy: 'This approval names a run the API no longer returns — open the audit trail instead of deciding blind.',
-  queuesSeparateNote: 'Runtime approvals live here. Memory proposals and escalations stay in their own destinations until their list reads exist — one visual pattern when they land.',
+  queuesSeparateNote: 'Only runtime tool approvals appear here. Memory proposals and escalations have their own queues.',
   lineageRootNote: 'First version — nothing before it.',
 } as const;
