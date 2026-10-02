@@ -135,15 +135,18 @@ export function ApiView() {
   const [bodyText, setBodyText] = useState<Record<string, string>>({});
   const [result, setResult] = useState<SendResult | null>(null);
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState('');
 
   const grouped = useMemo(() => {
     const out: Record<string, CatalogEndpoint[]> = {};
+    const q = search.trim().toLowerCase();
     for (const e of visibleEndpoints) {
+      if (q && !`${e.method} ${e.path} ${e.summary}`.toLowerCase().includes(q)) continue;
       if (!out[e.tag]) out[e.tag] = [];
       out[e.tag].push(e);
     }
     return out;
-  }, [visibleEndpoints]);
+  }, [visibleEndpoints, search]);
 
   const active: CatalogEndpoint | undefined =
     visibleEndpoints.find((e) => e.id === activeId) ?? visibleEndpoints[0];
@@ -254,6 +257,15 @@ export function ApiView() {
       <TwoColumn>
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
           <Sidebar>
+            <SearchWrap>
+              <SearchInput
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search endpoints…"
+                aria-label="Search endpoints"
+              />
+            </SearchWrap>
             {Object.entries(grouped).map(([group, list]) => (
               <SidebarSection key={group}>
                 <SidebarLabel>{group}</SidebarLabel>
@@ -263,6 +275,7 @@ export function ApiView() {
                     type="button"
                     $active={activeId === e.id}
                     aria-current={activeId === e.id ? 'true' : undefined}
+                    title={`${e.method.toUpperCase()} ${e.path}`}
                     onClick={() => {
                       setActiveId(e.id);
                       setTab('request');
@@ -275,6 +288,11 @@ export function ApiView() {
                 ))}
               </SidebarSection>
             ))}
+            {Object.keys(grouped).length === 0 && (
+              <div style={{ padding: '12px', fontSize: 13, opacity: 0.6 }}>
+                No endpoints match “{search}”.
+              </div>
+            )}
           </Sidebar>
         </motion.div>
 
@@ -354,6 +372,8 @@ export function ApiView() {
                 <ActionButton
                   variant="ghost"
                   size="sm"
+                  disabled={tab === 'response' && result === null}
+                  title={tab === 'response' && result === null ? 'No response to copy yet — send the request first' : undefined}
                   onClick={() => copyText(code, 'Copied to clipboard')}
                 >
                   Copy
@@ -492,4 +512,27 @@ const TryKeyInput = styled.input`
   color: ${({ theme }) => theme.app.text.primary};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.caption};
+`;
+
+const SearchWrap = styled.div`
+  padding: 0 4px 8px;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.strong};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.app.text.primary};
+  font-size: ${({ theme }) => theme.app.type.caption};
+  padding: 8px 12px;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.border.focus};
+    outline-offset: 1px;
+  }
+
+  &::placeholder {
+    color: ${({ theme }) => theme.app.text.ghost};
+  }
 `;

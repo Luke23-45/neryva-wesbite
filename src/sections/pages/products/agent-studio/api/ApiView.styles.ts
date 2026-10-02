@@ -20,13 +20,15 @@ export const SidebarSection = styled.div`
   margin-bottom: 8px;
 `;
 
-export const SidebarLabel = styled.div`
+export const SidebarLabel = styled.h3`
+  margin: 0;
   padding: 6px 12px;
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: ${({ theme }) => theme.app.type.micro};
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.faint};
+  font-weight: 500;
 `;
 
 export const SidebarItem = styled.button<{ $active: boolean }>`
