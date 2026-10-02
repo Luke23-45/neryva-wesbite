@@ -543,8 +543,10 @@ export default function OrgMembersPage() {
                     const url = new URL(manualResult.accept_url);
                     // P0: server generates localhost:3000 links; rewrite to the
                     // actual deployment origin so the link works for recipients.
+                    // Use hostname (not host) to strip the dev-server :3000 port;
+                    // recipients access via standard HTTPS.
                     url.protocol = window.location.protocol;
-                    url.host = window.location.host;
+                    url.host = window.location.hostname;
                     return url.toString();
                   } catch {
                     return manualResult.accept_url;
@@ -558,7 +560,7 @@ export default function OrgMembersPage() {
                   try {
                     const url = new URL(manualResult.accept_url);
                     url.protocol = window.location.protocol;
-                    url.host = window.location.host;
+                    url.host = window.location.hostname;
                     return url.toString();
                   } catch {
                     return manualResult.accept_url;
