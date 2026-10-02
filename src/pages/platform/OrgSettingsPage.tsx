@@ -338,7 +338,7 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState('agent-studio:read');
+  const [scopes, setScopes] = useState('');
   const [issued, setIssued] = useState<string | null>(null);
 
   return (
@@ -347,7 +347,7 @@ function ServiceAccountsTab({ canManage }: { canManage: boolean }) {
       <Panel
         flush
         action={canManage ? (
-          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setScopes('agent-studio:read'); setIssued(null); setCreateOpen(true); }}>
+          <ActionButton variant="primary" size="sm" onClick={() => { setName(''); setScopes(''); setIssued(null); setCreateOpen(true); }}>
             <Bot size={13} /> New service account
           </ActionButton>
         ) : undefined}
@@ -484,17 +484,23 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
       {isOwner && (
         <Form>
           <Panel title="Transfer ownership" subtitle="Promote another member to owner; you become an admin.">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <select value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)} style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
-                <option value="">Select the new owner…</option>
-                {(members.data?.members ?? []).filter((m) => m.status === 'active' && m.role !== 'owner').map((m) => (
-                  <option key={m.accountId} value={m.accountId}>{m.displayName ?? m.email} ({m.email})</option>
-                ))}
-              </select>
-              <ActionButton variant="secondary" disabled={!transferTarget || transfer.isPending} onClick={() => { void requestStepUp('Transfer ownership').then((mfaProof) => transfer.mutate({ targetAccountId: transferTarget, mfaProof })).catch(() => undefined); }}>
-                <Crown size={13} /> Transfer ownership
-              </ActionButton>
-            </div>
+            {(members.data?.members ?? []).filter((m) => m.status === 'active' && m.role !== 'owner').length === 0 ? (
+              <p style={{ fontSize: 13, opacity: 0.7, margin: 0 }}>
+                No other active members in this organization. Invite someone first to transfer ownership.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <select value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)} aria-label="Select the new owner" style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
+                  <option value="">Select the new owner…</option>
+                  {(members.data?.members ?? []).filter((m) => m.status === 'active' && m.role !== 'owner').map((m) => (
+                    <option key={m.accountId} value={m.accountId}>{m.displayName ?? m.email} ({m.email})</option>
+                  ))}
+                </select>
+                <ActionButton variant="secondary" disabled={!transferTarget || transfer.isPending} onClick={() => { void requestStepUp('Transfer ownership').then((mfaProof) => transfer.mutate({ targetAccountId: transferTarget, mfaProof })).catch(() => undefined); }}>
+                  <Crown size={13} /> Transfer ownership
+                </ActionButton>
+              </div>
+            )}
           </Panel>
           <Panel title="Delete organization" subtitle="Staged deletion: entitlements expire and keys revoke immediately; data is purged after a grace window.">
             {pending?.status === 'requested' ? (
