@@ -89,7 +89,7 @@ export const PipelineRowHead = styled.div`
 
     svg:last-child {
       flex-shrink: 0;
-      color: ${({ theme }) => theme.app.text.tertiary};
+      color: ${({ theme }) => theme.app.text.muted};
     }
   }
 `;
@@ -195,7 +195,7 @@ export const AddModelButton = styled.button`
 
   &:hover {
     color: ${({ theme }) => theme.app.text.primary};
-    border-color: ${({ theme }) => theme.app.text.tertiary};
+    border-color: ${({ theme }) => theme.app.text.muted};
     background: ${({ theme }) => theme.app.surface.subtle};
   }
 `;
@@ -203,7 +203,7 @@ export const AddModelButton = styled.button`
 export const HelperText = styled.p`
   margin: 0;
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.5;
 
   button {
@@ -232,7 +232,7 @@ export const ParamLabel = styled.label`
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const SelectWrap = styled.div`
@@ -264,7 +264,7 @@ export const VersionInput = styled.input`
   font-size: ${({ theme }) => theme.app.type.body};
 
   &::placeholder {
-    color: ${({ theme }) => theme.app.text.tertiary};
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 
@@ -367,13 +367,13 @@ export const RangeEnds = styled.div`
   display: flex;
   justify-content: space-between;
   font-size: ${({ theme }) => theme.app.type.micro};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const FormatHelp = styled.p`
   margin: ${({ theme }) => theme.spacing.s1} 0 0;
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 /* ── Schema card ───────────────────────────────────────────────── */
@@ -460,7 +460,7 @@ export const ReadinessLabel = styled.div`
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
@@ -500,7 +500,7 @@ export const ReadinessItem = styled.div<{ $done: boolean }>`
 
 export const ReadinessMeta = styled.div`
   font-size: ${({ theme }) => theme.app.type.micro};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
 `;
 
 export const HeldBox = styled.div`

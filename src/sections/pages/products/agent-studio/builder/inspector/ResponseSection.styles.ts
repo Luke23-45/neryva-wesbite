@@ -230,7 +230,7 @@ export const ReadValue = styled.span`
 
 export const RowDivider = styled.hr`
   border: 0;
-  border-top: 1px solid ${({ theme }) => theme.app.border.subtle};
+  border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
   margin: ${({ theme }) => theme.spacing.s1} 0;
 `;
 

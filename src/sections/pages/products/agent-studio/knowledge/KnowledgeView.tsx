@@ -131,7 +131,7 @@ const IconBtn = styled.button`
 const HeroCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 14px;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
   overflow: hidden;
 `;
 
@@ -203,7 +203,7 @@ const EmptyPlus = styled.span`
   height: 20px;
   border-radius: 50%;
   background: ${({ theme }) => theme.app.text.link};
-  border: 2px solid ${({ theme }) => theme.app.surface.base};
+  border: 2px solid ${({ theme }) => theme.app.surface.subtle};
   color: white;
 `;
 
@@ -436,7 +436,7 @@ const HitCard = styled.div`
   padding: 10px 12px;
   margin-bottom: 8px;
   text-align: left;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 const HitMeta = styled.div`
@@ -464,7 +464,7 @@ const MemoryRow = styled(Link)`
   padding: 16px 24px;
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 14px;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
   text-decoration: none;
   transition: border-color 0.15s;
 

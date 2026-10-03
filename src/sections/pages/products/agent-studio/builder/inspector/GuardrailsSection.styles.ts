@@ -69,7 +69,7 @@ export const ScreenLabel = styled.span`
 
 export const ScreenHelper = styled.span`
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
 `;
 
@@ -80,7 +80,7 @@ export const ScreenControl = styled.div`
 /** Hairline between screening rows. */
 export const RowDivider = styled.div`
   height: 1px;
-  background: ${({ theme }) => theme.app.border.subtle};
+  background: ${({ theme }) => theme.app.border.hairline};
   margin: ${({ theme }) => theme.spacing.s1} 0;
 `;
 
@@ -126,7 +126,7 @@ export const SubLabel = styled.span`
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   margin: ${({ theme }) => theme.spacing.s3} 0 ${({ theme }) => theme.spacing.s2};
 `;
 
@@ -203,7 +203,7 @@ export const TopicRow = styled.li`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.s3};
   padding: ${({ theme }) => theme.spacing.s2} 0;
-  border-bottom: 1px solid ${({ theme }) => theme.app.border.subtle};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
 
   &:last-child {
     border-bottom: 0;
@@ -225,7 +225,7 @@ export const TopicName = styled.span`
 export const TopicCount = styled.span`
   flex: none;
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   font-variant-numeric: ${({ theme }) => theme.app.numeric};
   white-space: nowrap;
 `;
@@ -241,7 +241,7 @@ export const TopicRemove = styled.button`
   border-radius: 50%;
   border: 0;
   background: transparent;
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -277,7 +277,7 @@ export const TopicInput = styled.input`
   font-size: ${({ theme }) => theme.app.type.body};
 
   &::placeholder {
-    color: ${({ theme }) => theme.app.text.tertiary};
+    color: ${({ theme }) => theme.app.text.ghost};
   }
 `;
 

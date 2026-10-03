@@ -62,7 +62,7 @@ const BuiltInChip = styled.span`
   height: 32px;
   padding: 0 14px 0 10px;
   border-radius: 9px;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   font-family: ${({ theme }) => theme.typography.fonts.mono};
   font-size: 12px;
@@ -81,7 +81,7 @@ const BuiltInIcon = styled.span`
 const CatalogCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 14px;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
   overflow: hidden;
 `;
 
@@ -111,7 +111,7 @@ const CountBadge = styled.span`
   height: 18px;
   padding: 0 7px;
   border-radius: 9px;
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   font-size: 11px;
   font-weight: 600;
@@ -152,7 +152,7 @@ const EmptyIconWrap = styled.div`
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   color: ${({ theme }) => theme.app.text.link};
   margin-bottom: 20px;
@@ -206,7 +206,7 @@ const FactIcon = styled.span`
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   color: ${({ theme }) => theme.app.text.muted};
   flex-shrink: 0;
 `;

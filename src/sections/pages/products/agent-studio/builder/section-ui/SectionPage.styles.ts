@@ -139,7 +139,7 @@ export const GroupRule = styled.span`
 export const GroupDescription = styled.p`
   margin: 0;
   font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.tertiary};
+  color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.5;
 `;
 

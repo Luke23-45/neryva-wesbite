@@ -119,7 +119,7 @@ const CountBadge = styled.span`
   padding: 0 6px;
   margin-left: 6px;
   border-radius: 8px;
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   border: 1px solid ${({ theme }) => theme.app.border.strong};
   font-size: 10px;
   font-weight: 600;
@@ -132,7 +132,7 @@ const CountBadge = styled.span`
 const EnablementsCard = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 14px;
-  background: ${({ theme }) => theme.app.surface.base};
+  background: ${({ theme }) => theme.app.surface.subtle};
   overflow: hidden;
 `;
 
@@ -181,7 +181,7 @@ const GreenDot = styled.span`
 const EnablementsTableHead = styled.div`
   display: flex;
   padding: 10px 24px;
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
   border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
 
@@ -202,10 +202,10 @@ const ProviderRow = styled.div`
   align-items: center;
   gap: 16px;
   padding: 14px 24px;
-  border-top: 1px solid ${({ theme }) => theme.app.border.subtle};
+  border-top: 1px solid ${({ theme }) => theme.app.border.hairline};
 
   &:hover {
-    background: ${({ theme }) => theme.app.surfaceHover};
+    background: ${({ theme }) => theme.app.surface.hover};
   }
 `;
 
@@ -232,7 +232,7 @@ const EnablementsFootnote = styled.div`
   align-items: flex-start;
   padding: 20px 24px;
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
   font-size: 12px;
   line-height: 1.5;
   color: ${({ theme }) => theme.app.text.muted};
@@ -298,7 +298,7 @@ const PolicyStrip = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   border-top: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surfaceActive};
+  background: ${({ theme }) => theme.app.surface.active};
 
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
