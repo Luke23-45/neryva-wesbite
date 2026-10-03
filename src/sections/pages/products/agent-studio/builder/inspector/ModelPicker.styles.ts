@@ -21,7 +21,7 @@ export const PickerHead = styled.div`
 
 export const CountBadge = styled.span`
   flex: none;
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-variant-numeric: ${({ theme }) => theme.app.numeric};
@@ -63,7 +63,7 @@ export const GroupLabel = styled.div`
 export const InPipelineBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 2px ${({ theme }) => theme.spacing.px8};
+  padding: 2px ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -83,7 +83,7 @@ export const InPipelineBadge = styled.span`
 export const DemoBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 2px ${({ theme }) => theme.spacing.px8};
+  padding: 2px ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -101,7 +101,7 @@ export const CapChips = styled.span`
   gap: ${({ theme }) => theme.spacing.px6};
 
   span {
-    padding: 2px ${({ theme }) => theme.spacing.px8};
+    padding: 2px ${({ theme }) => theme.spacing.s2};
     border-radius: ${({ theme }) => theme.radii.full};
     font-size: ${({ theme }) => theme.app.type.micro};
     color: ${({ theme }) => theme.app.text.secondary};

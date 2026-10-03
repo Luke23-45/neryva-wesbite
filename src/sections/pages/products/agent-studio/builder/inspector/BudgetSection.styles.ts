@@ -46,7 +46,7 @@ export const Pill = styled.span<{ $tone?: 'neutral' | 'warning' }>`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.px6};
-  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.px12};
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s3};
   border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -81,7 +81,7 @@ export const CapRowWrap = styled.div`
 export const CapText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px4};
+  gap: ${({ theme }) => theme.spacing.s1};
   min-width: 0;
   flex: 1 1 220px;
 `;
@@ -127,7 +127,7 @@ export const CardFootnote = styled.p`
 export const Badge = styled.span<{ $tone?: 'warning' | 'danger' | 'ok' | 'neutral' }>`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -159,14 +159,14 @@ export const Badge = styled.span<{ $tone?: 'warning' | 'danger' | 'ok' | 'neutra
 export const ChipRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.px8};
+  gap: ${({ theme }) => theme.spacing.s2};
   justify-content: flex-end;
 `;
 
 export const Chip = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
@@ -178,7 +178,7 @@ export const Chip = styled.span`
 export const ModelChip = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-family: ui-monospace, Menlo, monospace;

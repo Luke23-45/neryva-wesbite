@@ -109,7 +109,7 @@ export const DemoBanner = styled.div`
 export const DemoBadge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 1px ${({ theme }) => theme.spacing.px8};
+  padding: 1px ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};

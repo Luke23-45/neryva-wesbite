@@ -14,7 +14,7 @@ export const BlockerPill = styled.span`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.px6};
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -114,7 +114,7 @@ export const PipelineRowMeta = styled.div`
 export const PipelineRowActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.px4};
+  gap: ${({ theme }) => theme.spacing.s1};
   padding-right: ${({ theme }) => theme.spacing.s2};
 `;
 
@@ -161,8 +161,8 @@ export const ModelIcon = styled.span`
 export const CredBadge = styled.span<{ $tone: 'red' | 'green' }>`
   display: inline-flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.px4};
-  padding: 2px ${({ theme }) => theme.spacing.px8};
+  gap: ${({ theme }) => theme.spacing.s1};
+  padding: 2px ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -319,7 +319,7 @@ export const DefaultsGrid = styled.div`
     align-self: flex-start;
     background: none;
     border: none;
-    padding: ${({ theme }) => theme.spacing.px4} 0;
+    padding: ${({ theme }) => theme.spacing.s1} 0;
     color: ${({ theme }) => theme.app.text.secondary};
     font-size: ${({ theme }) => theme.app.type.caption};
     cursor: pointer;
@@ -371,7 +371,7 @@ export const RangeEnds = styled.div`
 `;
 
 export const FormatHelp = styled.p`
-  margin: ${({ theme }) => theme.spacing.px4} 0 0;
+  margin: ${({ theme }) => theme.spacing.s1} 0 0;
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.tertiary};
 `;
@@ -432,7 +432,7 @@ export const SchemaActions = styled.div`
 export const SchemaBadge = styled.span<{ $tone: 'green' | 'red' }>`
   display: inline-flex;
   align-items: center;
-  padding: 2px ${({ theme }) => theme.spacing.px8};
+  padding: 2px ${({ theme }) => theme.spacing.s2};
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -461,7 +461,7 @@ export const ReadinessLabel = styled.div`
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.tertiary};
-  margin-bottom: ${({ theme }) => theme.spacing.px4};
+  margin-bottom: ${({ theme }) => theme.spacing.s1};
 `;
 
 export const ReadinessItem = styled.div<{ $done: boolean }>`
@@ -520,7 +520,7 @@ export const HeldBox = styled.div`
 `;
 
 export const HeldItem = styled.div`
-  margin-top: ${({ theme }) => theme.spacing.px4};
+  margin-top: ${({ theme }) => theme.spacing.s1};
   line-height: 1.5;
 `;
 

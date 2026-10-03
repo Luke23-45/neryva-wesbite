@@ -31,7 +31,7 @@ export const Pill = styled.span<{ $tone?: 'neutral' | 'danger' }>`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.px6};
-  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.px12};
+  padding: ${({ theme }) => theme.spacing.px6} ${({ theme }) => theme.spacing.s3};
   border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
@@ -66,7 +66,7 @@ export const ControlRow = styled.div<{ $compact?: boolean }>`
 export const ControlText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px4};
+  gap: ${({ theme }) => theme.spacing.s1};
   min-width: 0;
   flex: 1 1 220px;
 `;
@@ -96,7 +96,7 @@ export const ChannelRow = styled.div`
 export const ChannelText = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px4};
+  gap: ${({ theme }) => theme.spacing.s1};
   min-width: 0;
   flex: 1 1 200px;
 `;
@@ -131,14 +131,14 @@ export const InheritRow = styled.div`
 export const ChipRow = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${({ theme }) => theme.spacing.px8};
+  gap: ${({ theme }) => theme.spacing.s2};
   margin-top: ${({ theme }) => theme.spacing.px6};
 `;
 
 export const Chip = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: ${({ theme }) => theme.spacing.px4} ${({ theme }) => theme.spacing.px10};
+  padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
   border-radius: ${({ theme }) => theme.radii.pill};
   border: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.subtle};
@@ -157,7 +157,7 @@ export const BlockerCard = styled.div`
   padding: ${({ theme }) => theme.spacing.s4};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.px8};
+  gap: ${({ theme }) => theme.spacing.s2};
 `;
 
 export const BlockerTitle = styled.h3`
@@ -182,7 +182,7 @@ export const BlockerPath = styled.code`
 export const BlockerButton = styled.button`
   align-self: flex-start;
   border-radius: ${({ theme }) => theme.radii.md};
-  padding: ${({ theme }) => theme.spacing.px8} ${({ theme }) => theme.spacing.px16};
+  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s4};
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   font-family: inherit;
@@ -213,7 +213,7 @@ export const ReadRow = styled.div`
   align-items: baseline;
   justify-content: space-between;
   gap: ${({ theme }) => theme.spacing.s3};
-  padding: ${({ theme }) => theme.spacing.px8} 0;
+  padding: ${({ theme }) => theme.spacing.s2} 0;
 `;
 
 export const ReadLabel = styled.span`
@@ -231,7 +231,7 @@ export const ReadValue = styled.span`
 export const RowDivider = styled.hr`
   border: 0;
   border-top: 1px solid ${({ theme }) => theme.app.border.subtle};
-  margin: ${({ theme }) => theme.spacing.px4} 0;
+  margin: ${({ theme }) => theme.spacing.s1} 0;
 `;
 
 /* ── Humanized save-failure toast ────────────────────────────────── */
@@ -262,6 +262,6 @@ export const SaveToastTitle = styled.span`
 export const SaveToastActions = styled.div`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.px4};
+  gap: ${({ theme }) => theme.spacing.s1};
   flex: none;
 `;
