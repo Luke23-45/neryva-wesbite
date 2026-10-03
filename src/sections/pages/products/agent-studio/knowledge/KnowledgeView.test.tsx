@@ -159,16 +159,17 @@ describe('KnowledgeView library page (C05)', () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/no delete verb/)).toBeTruthy();
-    expect(screen.getByText(/coverage.*per-agent/i)).toBeTruthy();
+    expect(screen.getByText(/no delete verb/i)).toBeTruthy();
+    expect(screen.getByText(/health is per-agent/i)).toBeTruthy();
+    expect(screen.getByText(/coverage/i)).toBeTruthy();
   });
 
   it('routes memories to the Memory library (C08 migration — moved, not copied)', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/moved there from this page, not copied/)).toBeTruthy();
-    expect(screen.getByText(/Memory library/).getAttribute('href')).toMatch(/memory/);
+    expect(screen.getByText(/moved there from this page/i)).toBeTruthy();
+    expect(screen.getByText('Open Memory library').closest('a')?.getAttribute('href')).toMatch(/memory/);
     expect(screen.queryByLabelText(/New memory/)).toBeNull();
   });
 

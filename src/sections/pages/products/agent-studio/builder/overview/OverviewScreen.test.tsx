@@ -152,7 +152,8 @@ describe('OverviewScreen', () => {
     // Agent group: purpose + instructions ready, role + brand untouched → 2 of 4.
     expect(screen.getByLabelText('Agent: 2 of 4 configured')).toBeInTheDocument();
     // Intelligence group: model is attention → the chevron jumps to model.
-    fireEvent.click(screen.getByLabelText('Intelligence: 0 of 2 configured'));
+    // (1 section since the 2026-09-30 brain soft-delete.)
+    fireEvent.click(screen.getByLabelText('Intelligence: 0 of 1 configured'));
     expect(onSelectSection).toHaveBeenCalledWith('model');
   });
 

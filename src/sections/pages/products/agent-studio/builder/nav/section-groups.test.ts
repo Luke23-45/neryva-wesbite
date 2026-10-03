@@ -5,7 +5,11 @@ import { SECTION_GROUPS, allGroupedSectionIds, sectionLabel } from './section-gr
 describe('section-groups', () => {
   it('covers every section id exactly once', () => {
     const grouped = allGroupedSectionIds();
-    expect([...grouped].sort()).toEqual([...LANE_NODE_IDS].sort());
+    // 'brain' is soft-deleted from the UI (2026-09-30): LANE_NODE_IDS keeps
+    // it for the canvas/v10 implementation, but section-groups must not
+    // navigate to it.
+    const navigable = LANE_NODE_IDS.filter((id) => id !== 'brain');
+    expect([...grouped].sort()).toEqual([...navigable].sort());
     expect(new Set(grouped).size).toBe(grouped.length);
   });
 

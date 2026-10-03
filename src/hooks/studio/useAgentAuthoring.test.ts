@@ -17,9 +17,9 @@ describe('parseKnowledgeHealth', () => {
     });
     expect(health.degraded).toBe(true);
     expect(health.pins).toEqual([
-      { sourceSlug: 'refund-policy', resolved: true, documentId: 'd1', state: 'ready', embeddingComplete: true },
-      { sourceSlug: 'faq-2026', resolved: true, documentId: 'd2', state: 'ready', embeddingComplete: false },
-      { sourceSlug: 'ghost', resolved: false, documentId: null, state: null, embeddingComplete: null },
+      { sourceSlug: 'refund-policy', resolved: true, documentId: 'd1', state: 'ready', embeddingComplete: true, stale: false, pinnedVersion: null, latestVersion: null },
+      { sourceSlug: 'faq-2026', resolved: true, documentId: 'd2', state: 'ready', embeddingComplete: false, stale: false, pinnedVersion: null, latestVersion: null },
+      { sourceSlug: 'ghost', resolved: false, documentId: null, state: null, embeddingComplete: null, stale: false, pinnedVersion: null, latestVersion: null },
     ]);
   });
 
@@ -27,7 +27,7 @@ describe('parseKnowledgeHealth', () => {
     const health = parseKnowledgeHealth({ degraded: false, pins: [{ source_slug: 'a' }, null, 42] });
     expect(health).toEqual({
       degraded: false,
-      pins: [{ sourceSlug: 'a', resolved: false, documentId: null, state: null, embeddingComplete: null }],
+      pins: [{ sourceSlug: 'a', resolved: false, documentId: null, state: null, embeddingComplete: null, stale: false, pinnedVersion: null, latestVersion: null }],
     });
     expect(parseKnowledgeHealth(null)).toEqual({ degraded: false, pins: [] });
   });

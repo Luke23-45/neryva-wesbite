@@ -88,9 +88,11 @@ describe('ImportPane (client-first, errors block, warnings ride)', () => {
 
   it('lists dotted-path errors and blocks send until fixed', async () => {
     await shell();
+    // >20 models violates the caps contract (3f264cb: an empty pipeline is a
+    // valid draft — the publish gate is the completeness check).
     fireEvent.change(
       screen.getByLabelText(/Exported definition JSON/),
-      { target: { value: JSON.stringify({ schema_version: 2, instructions: 'Hi', model_policy: { allowed_models: [], fallback_enabled: false } }) } },
+      { target: { value: JSON.stringify({ schema_version: 2, instructions: 'Hi', model_policy: { allowed_models: Array(21).fill('a/good'), fallback_enabled: false } }) } },
     );
     expect(screen.getByText(/1 ERROR/)).toBeTruthy();
     expect(screen.getByText(/model_policy.allowed_models/)).toBeTruthy();

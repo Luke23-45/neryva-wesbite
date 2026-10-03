@@ -30,10 +30,15 @@ export function readBrandBlock(value: unknown): BrandVoice | undefined {
   return readRoleBlock(value);
 }
 
-/** True when the block is absent or blank (blank in any mode). */
+/** True when the block is absent or blank (blank in any mode — a JSON
+ * `"\"\""` parses to the empty string, which is blank). Unparseable content
+ * is NOT empty: the user typed something, the caps layer flags the parse
+ * failure, and the empty state must not hide their content. */
 export function isBrandEmpty(value: unknown): boolean {
   const block = readBrandBlock(value);
-  return block === undefined || block.content.trim() === '';
+  if (block === undefined) return true;
+  const parsed = parseRoleTextField(block);
+  return parsed !== undefined && parsed.trim() === '';
 }
 
 /**

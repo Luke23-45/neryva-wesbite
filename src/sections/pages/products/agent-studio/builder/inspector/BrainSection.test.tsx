@@ -8,14 +8,33 @@ import { defaultConsumer } from '@lib/engine/agent-payload';
 import { ApiError } from '@lib/engine/client';
 import toast from 'react-hot-toast';
 import { BrainSection } from './BrainSection';
+import { OrgContext, type OrgContextValue } from '@/Context/OrgContext';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
 
 const saveMutate = vi.fn();
 const updateMutate = vi.fn();
 
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock('react-hot-toast', () => {
+  // The real default export is callable (toast('msg')) with .success/.error
+  // attached — the mock must be too, or bare toast() calls throw.
+  const toastFn = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
+  return { default: toastFn };
+});
+
+// BrainSection reads the org role for the denied-copy; the section under
+// test is authorable, so stub an owner role. No network: no queries fire
+// without an assistant fetch in this tree.
+const stubOrg: OrgContextValue = {
+  orgId: 'org-test',
+  orgs: [],
+  role: 'owner',
+  name: null,
+  setActive: () => {},
+  adoptOrg: () => {},
+  atLeast: () => true,
+  canManageMembers: true,
+  entitlementState: () => 'active',
+};
 
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();
@@ -44,24 +63,30 @@ const DEFINITION: AgentDefinition = {
   model_policy: { allowed_models: ['a/b'], fallback_enabled: false },
 };
 
-function shell(props?: Partial<React.ComponentProps<typeof BrainSection>>) {
-  return render(
+function tree(props?: Partial<React.ComponentProps<typeof BrainSection>>) {
+  return (
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <BrainSection
-          assistantId="agent-main"
-          definition={DEFINITION}
-          versionId="v1"
-          versionHash="h1"
-          isDraft
-          canAuthor
-          onDirtyChange={() => undefined}
-          saveSignal={0}
-          {...props}
-        />
+        <OrgContext.Provider value={stubOrg}>
+          <BrainSection
+            assistantId="agent-main"
+            definition={DEFINITION}
+            versionId="v1"
+            versionHash="h1"
+            isDraft
+            canAuthor
+            onDirtyChange={() => undefined}
+            saveSignal={0}
+            {...props}
+          />
+        </OrgContext.Provider>
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
+}
+
+function shell(props?: Partial<React.ComponentProps<typeof BrainSection>>) {
+  return render(tree(props));
 }
 
 beforeEach(() => {
@@ -131,7 +156,7 @@ describe('BrainSection profiles', () => {
         },
       });
     });
-    expect(screen.getByText('Matches current')).toBeTruthy();
+    expect(screen.getByText('Current')).toBeTruthy();
   });
 
   it('renders the 412 dialog and saves over fresh', async () => {
@@ -165,8 +190,15 @@ describe('BrainSection profiles', () => {
 
 describe('BrainSection manual save signal', () => {
   it('fires doSave exactly once when saveSignal increments', async () => {
+    // Mounting at a non-zero signal must NOT fire (G-BUG7: the counter
+    // outlives the section — only a change while mounted is a real signal).
+    let ui: ReturnType<typeof render>;
     await act(async () => {
-      shell({ saveSignal: 1 });
+      ui = render(tree({ saveSignal: 0 }));
+    });
+    expect(updateMutate).not.toHaveBeenCalled();
+    await act(async () => {
+      ui.rerender(tree({ saveSignal: 1 }));
     });
     expect(updateMutate).toHaveBeenCalledTimes(1);
     const input = updateMutate.mock.calls[0][0] as { expectedHash: string };

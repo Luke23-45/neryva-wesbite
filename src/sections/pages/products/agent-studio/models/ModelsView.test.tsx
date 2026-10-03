@@ -94,13 +94,14 @@ async function renderRouted() {
     history: createMemoryHistory({ initialEntries: ['/agent-studio/models'] }),
   });
   await router.load();
-  return render(
+  const result = render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <RouterProvider router={router} />
       </QueryClientProvider>
     </ThemeProvider>,
   );
+  return { router, ...result };
 }
 
 function billingLink() {
@@ -140,19 +141,22 @@ describe('ModelsView BYOK enterprise gate (P1-5)', () => {
 
   it('hides the add-credential flow before any MFA step-up for non-enterprise orgs', async () => {
     enterpriseState = false;
-    await renderRouted();
-    fireEvent.click(screen.getByRole('button', { name: 'Providers' }));
+    const { router } = await renderRouted();
+    fireEvent.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.queryByRole('button', { name: /add credential/i })).toBeNull();
-    expect(screen.getByText(/BYOK requires an Enterprise subscription/)).toBeTruthy();
-    expect(billingLink().closest('a')?.getAttribute('href')).toBe('/agent-studio/settings/billing');
+    expect(screen.getByText(/BYOK is an Enterprise feature/)).toBeTruthy();
+    // The Providers-tab gate CTA is a navigating button (not a link) —
+    // clicking it must land on billing.
+    fireEvent.click(screen.getByRole('button', { name: /view subscription options/i }));
+    expect(router.state.location.pathname).toBe('/agent-studio/settings/billing');
   });
 
   it('keeps the add-credential flow for enterprise orgs', async () => {
     enterpriseState = true;
     await renderRouted();
-    fireEvent.click(screen.getByRole('button', { name: 'Providers' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByRole('button', { name: /add credential/i })).toBeTruthy();
-    expect(screen.queryByText(/BYOK requires an Enterprise subscription/)).toBeNull();
+    expect(screen.queryByText(/BYOK is an Enterprise feature/)).toBeNull();
   });
 });
 

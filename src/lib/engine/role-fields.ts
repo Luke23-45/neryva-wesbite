@@ -34,8 +34,11 @@ export function defaultRoleFieldMode(isList: boolean): RoleFieldMode {
   return isList ? 'json' : 'raw';
 }
 
-/** Lenient block read: garbage shape → undefined (never a guess). */
+/** Lenient block read: garbage shape → undefined (never a guess).
+ * Legacy bare strings (pre-block brand/role values) resolve to raw mode —
+ * a bare string IS raw text, not a guess. */
 export function readRoleBlock(value: unknown): RoleFieldBlock | undefined {
+  if (typeof value === 'string') return { mode: 'raw', content: value };
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
   const b = value as { mode?: unknown; content?: unknown };
   if (typeof b.content !== 'string') return undefined;

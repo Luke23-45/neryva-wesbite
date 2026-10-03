@@ -50,10 +50,21 @@ describe('validateImportPayload (client-first, errors block, warnings ride)', ()
     expect(result.payload).toMatchObject({ instructions: 'You are helpful.' });
   });
   it('flags contract violations as errors with dotted paths', () => {
-    const result = validateImportPayload({ ...good, model_policy: { allowed_models: [], fallback_enabled: false } });
+    // >20 models violates the caps contract (setup-caps CAPS.modelsMax).
+    const result = validateImportPayload({
+      ...good,
+      model_policy: { allowed_models: Array(21).fill('a/good'), fallback_enabled: false },
+    });
     const errors = importErrors(result.issues);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors[0].path).toMatch(/model_policy/);
+  });
+  it('accepts an empty model pipeline on import (draft path allows it)', () => {
+    // 3f264cb: empty allowed_models is a valid draft — the engine's
+    // modelPolicySchema sets no array min and draft-model-gating accepts
+    // model-less drafts; the publish gate is the completeness check.
+    const result = validateImportPayload({ ...good, model_policy: { allowed_models: [], fallback_enabled: false } });
+    expect(importErrors(result.issues)).toEqual([]);
   });
   it('strips unknown and consumer-only keys as warnings, never blocks', () => {
     const result = validateImportPayload({ ...good, max_context_tokens: 5000, mystery_key: 1 });

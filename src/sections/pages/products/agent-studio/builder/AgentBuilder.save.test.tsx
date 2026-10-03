@@ -13,9 +13,12 @@ import { BuilderTopbarSlotsProvider, useBuilderTopbarSlots } from './topbar/Buil
 const saveMutate = vi.fn();
 const updateMutate = vi.fn();
 
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock('react-hot-toast', () => {
+  // The real default export is callable (toast('msg')) with .success/.error
+  // attached — the mock must be too, or bare toast() calls throw.
+  const toastFn = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
+  return { default: toastFn };
+});
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
@@ -218,7 +221,13 @@ describe('AgentBuilder manual save (roleDirty regression)', () => {
     expect(btn).toBeDisabled();
 
     // Role is the only dirty section — the save signal must still reach it.
-    fireEvent.change(await screen.findByLabelText('Role'), { target: { value: 'Support lead' } });
+    // The Role section is card-based: open the Role field card, edit the
+    // content, then Done to stage the draft back into the section.
+    fireEvent.click(screen.getAllByLabelText('Edit Role')[0]);
+    fireEvent.change(await screen.findByLabelText('Role content (plain text)'), {
+      target: { value: 'Support lead' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(btn).toBeEnabled());
     saveMutate.mockClear();
     updateMutate.mockClear();

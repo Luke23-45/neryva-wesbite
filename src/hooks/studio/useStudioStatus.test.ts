@@ -38,8 +38,8 @@ describe('parseStatus', () => {
       ],
     });
     expect(status.announcements).toEqual([
-      { id: 'a1', title: 'Scheduled maintenance', message: 'On Saturday', createdAt: '2026-09-05T10:00:00Z' },
-      { id: 'New region live|', title: 'New region live', message: null, createdAt: null },
+      { id: 'a1', title: 'Scheduled maintenance', message: 'On Saturday', createdAt: '2026-09-05T10:00:00Z', link: null },
+      { id: 'New region live|', title: 'New region live', message: null, createdAt: null, link: null },
     ]);
   });
 

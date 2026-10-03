@@ -177,15 +177,17 @@ describe('SectionBody section mapping', () => {
   });
 
   it('renders the section title in the pane header — no canvas chrome', async () => {
+    // The pane header is gone (the sidebar already says where the user is);
+    // the title now surfaces on the section wrap's accessible label.
     await shell({ sectionId: 'brain' });
-    expect(screen.getByRole('heading', { name: 'brain' })).toBeTruthy();
+    expect(screen.getByLabelText('brain section')).toBeTruthy();
     expect(screen.queryByText(/Node ID · brain ·/)).toBeNull();
     expect(screen.queryByText('READY')).toBeNull();
   });
 
   it('reads purpose as Identity in the header', async () => {
     await shell({ sectionId: 'purpose' });
-    expect(screen.getByRole('heading', { name: 'Identity' })).toBeTruthy();
+    expect(screen.getByLabelText('Identity section')).toBeTruthy();
   });
 
   it('keeps purpose identity-only: no instructions section under purpose', async () => {

@@ -10,7 +10,9 @@
 import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { theme } from '@styles/theme';
+import { OrgContext, type OrgContextValue } from '@/Context/OrgContext';
 import { ChatMessages, type Message } from './ChatMessages';
 import { safeLinkUrl } from './linkSafety';
 
@@ -19,11 +21,31 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
+// ChatMessages calls useMessageFeedback -> useOrg -> useQuery, so the render
+// needs both contexts. orgId is null (and no conversationId is passed), which
+// disables the feedback query — no network, no engine client involved.
+const stubOrg: OrgContextValue = {
+  orgId: null,
+  orgs: [],
+  role: null,
+  name: null,
+  setActive: () => {},
+  adoptOrg: () => {},
+  atLeast: () => false,
+  canManageMembers: false,
+  entitlementState: () => 'none',
+};
+
 function renderMessages(messages: Message[]) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <ThemeProvider theme={theme}>
-      <ChatMessages messages={messages} />
-    </ThemeProvider>,
+    <QueryClientProvider client={client}>
+      <OrgContext.Provider value={stubOrg}>
+        <ThemeProvider theme={theme}>
+          <ChatMessages messages={messages} />
+        </ThemeProvider>
+      </OrgContext.Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -85,13 +107,18 @@ describe('ChatMessages reply HTML safety', () => {
   });
 
   it('notices render as text as well', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { container } = render(
-      <ThemeProvider theme={theme}>
-        <ChatMessages
-          messages={[{ id: 'm8', role: 'user', text: 'hi' }]}
-          notices={[{ id: 'n1', kind: 'error', text: '<b>boom</b>' }]}
-        />
-      </ThemeProvider>,
+      <QueryClientProvider client={client}>
+        <OrgContext.Provider value={stubOrg}>
+          <ThemeProvider theme={theme}>
+            <ChatMessages
+              messages={[{ id: 'm8', role: 'user', text: 'hi' }]}
+              notices={[{ id: 'n1', kind: 'error', text: '<b>boom</b>' }]}
+            />
+          </ThemeProvider>
+        </OrgContext.Provider>
+      </QueryClientProvider>,
     );
     expect(container.querySelector('b')).toBeNull();
   });

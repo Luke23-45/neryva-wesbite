@@ -114,7 +114,7 @@ describe('ExportNewSection (X-1)', () => {
 
   it('requests the selected conversation ids and stays for the token', async () => {
     const router = await routerAt('/agent-studio/compliance/exports/new', 'exports');
-    fireEvent.click(screen.getByLabelText('Include Conversation 1'));
+    fireEvent.click(screen.getByLabelText('Include conversation Conversation 1 (conv-1)'));
     fireEvent.click(screen.getByRole('button', { name: /Request export \(1\)/ }));
     expect(requestMutate).toHaveBeenCalledWith({ conversationIds: ['conv-1'] }, expect.anything());
     // No token in the response: back to the list.
