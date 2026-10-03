@@ -110,7 +110,7 @@ export const DemoBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 1px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.04em;

@@ -180,10 +180,14 @@ export function checkDefinitionCaps(def: ConsumerDefinition): CapIssue[] {
   }
   // v1.15: the context token budget rides inside context_policy (the engine
   // validates int 1000–200000, default 32000 — this mirrors validation.ts).
+  // typeof-narrow first: Number.isInteger is not a type guard, so the
+  // optional field needs an explicit number check before comparing.
+  const maxCtx = def.context_policy.max_context_tokens;
   if (
-    !Number.isInteger(def.context_policy.max_context_tokens) ||
-    def.context_policy.max_context_tokens < CAPS.contextTokensMin ||
-    def.context_policy.max_context_tokens > CAPS.contextTokensMax
+    typeof maxCtx !== 'number' ||
+    !Number.isInteger(maxCtx) ||
+    maxCtx < CAPS.contextTokensMin ||
+    maxCtx > CAPS.contextTokensMax
   ) {
     issues.push({
       path: 'context_policy.max_context_tokens',

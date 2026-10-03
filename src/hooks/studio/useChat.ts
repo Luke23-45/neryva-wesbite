@@ -889,7 +889,9 @@ export function useChatSession(conversationId: string | null, agentId: string | 
     if (phase === 'streaming' || phase === 'sending' || phase === 'creating') {
       return;
     }
-    setLive({ user: { id: `live-${Date.now()}`, role: 'user', text, createdAt: null }, assistantText: '' });
+    // The live echo is the user's own just-typed text — not engine-marked
+    // demo content, so synthetic is honestly false (never inferred).
+    setLive({ user: { id: `live-${Date.now()}`, role: 'user', text, createdAt: null, synthetic: false }, assistantText: '' });
     setNotices([]);
     // A3-23 — a new send supersedes any failed one.
     failedSendRef.current = null;

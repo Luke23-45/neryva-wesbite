@@ -31,9 +31,12 @@ type Props = {
   id?: string;
 } & Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  // onDrag conflicts: React's DragEventHandler vs framer-motion's PanInfo handler.
-  // The switch never uses drag, so exclude it.
-  'onChange' | 'onClick' | 'onKeyDown' | 'onDrag' | 'tabIndex' | 'children' | 'role' | 'type'
+  // Handler conflicts: framer-motion redefines several DOM event handlers
+  // with its own signatures — onAnimationStart takes an AnimationDefinition
+  // (not React's AnimationEvent), and onDrag/onDragStart/onDragEnd take
+  // PanInfo (not React's DragEvent). The switch never uses drag or
+  // animation callbacks, so exclude the whole conflicting family.
+  'onChange' | 'onClick' | 'onKeyDown' | 'onAnimationStart' | 'onDrag' | 'onDragStart' | 'onDragEnd' | 'tabIndex' | 'children' | 'role' | 'type'
 >;
 
 export function Switch({ checked, onChange, label, disabled, id, ...rest }: Props) {

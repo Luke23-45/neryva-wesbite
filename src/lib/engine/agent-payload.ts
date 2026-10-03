@@ -341,6 +341,12 @@ export interface ConsumerDefinition {
     top_p?: number;
     reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
     output_schema?: string;
+    /**
+     * Legacy read key: max_context_tokens predates v1.15 inside model_params
+     * (it is wire-first-class in context_policy since v1.15). Present on old
+     * drafts; the Response section strips it on save (never re-emitted).
+     */
+    max_context_tokens?: number;
     /** Response format (Model section → Defaults): freeform, provider JSON
      * mode, or a validated JSON schema. Absent = engine default. */
     response_format?: 'text' | 'json' | 'schema';
@@ -1045,7 +1051,9 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       seen.add(ref);
       const paramsRaw = obj(entry.params);
       const effortRaw = str(paramsRaw.reasoning_effort);
-      const effort =
+      // Explicit union annotation: the spread below widens an inferred
+      // literal union back to `string`, which ModelPipelineEntry rejects.
+      const effort: 'minimal' | 'low' | 'medium' | 'high' | undefined =
         effortRaw === 'minimal' || effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high'
           ? effortRaw
           : undefined;
@@ -1168,8 +1176,8 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
       memory_scope: memoryScope,
       // v1.15 — wire-first-class inside context_policy. Garbage resolves to
       // the engine default (32000), never a guess; legacy rows without the
-      // key read the same default.
-      max_context_tokens: numOr(context.max_context_tokens, base.context_policy.max_context_tokens),
+      // key read the same default (base normalizes absent → 32000).
+      max_context_tokens: numOr(context.max_context_tokens, base.context_policy.max_context_tokens ?? 32_000),
     },
     // Garbage resolves to absent (engine defaults render), never a guess.
     ...(responsePolicy !== undefined ? { response_policy: responsePolicy } : {}),

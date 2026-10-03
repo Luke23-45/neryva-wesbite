@@ -39,7 +39,6 @@ const documentMockState = vi.hoisted(() => ({
     { id: 'd2', sourceSlug: 'faq-2026', title: 'FAQ 2026', state: 'ready', updatedAt: '2026-09-16T10:00:00Z', latestVersion: 1 },
   ] as Array<Record<string, unknown>>,
 }));
-const DOCS = documentMockState.list;
 
 vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useAgentAuthoring')>();

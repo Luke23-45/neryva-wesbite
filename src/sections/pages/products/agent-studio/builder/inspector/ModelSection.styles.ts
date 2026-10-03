@@ -15,7 +15,7 @@ export const BlockerPill = styled.span`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.px6};
   padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.status.error.fg};
@@ -49,7 +49,7 @@ export const ServingOrderLabel = styled.span`
   min-width: 22px;
   height: 22px;
   padding: 0 ${({ theme }) => theme.spacing.px6};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   color: ${({ theme }) => theme.app.text.secondary};
@@ -163,7 +163,7 @@ export const CredBadge = styled.span<{ $tone: 'red' | 'green' }>`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.s1};
   padding: 2px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.04em;
@@ -433,7 +433,7 @@ export const SchemaBadge = styled.span<{ $tone: 'green' | 'red' }>`
   display: inline-flex;
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.04em;

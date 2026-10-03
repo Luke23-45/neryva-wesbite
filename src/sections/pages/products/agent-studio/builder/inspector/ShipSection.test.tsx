@@ -255,7 +255,9 @@ describe('ShipSection', () => {
     const { ApiError } = await import('@lib/engine/client');
     act(() => {
       onError?.(
-        new ApiError(422, 'unprocessable', 'This agent uses a demo model — select a real model to publish.', {
+        // 422 from the engine is `validation_failed` (EngineErrorCode has no
+        // 'unprocessable' — that string was never a real engine code).
+        new ApiError(422, 'validation_failed', 'This agent uses a demo model — select a real model to publish.', {
           demo_model: true,
         }),
       );

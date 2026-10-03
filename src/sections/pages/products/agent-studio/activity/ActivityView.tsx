@@ -545,7 +545,9 @@ export function ActivityView() {
                               </button>
                               {isOpen && (
                                 <div style={{ padding: '8px 0 0 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8 }}>
-                                  <FullId id={e.actor_id} label="Actor" />
+                                  {e.actor_id ? (
+                                    <FullId id={e.actor_id} label="Actor" />
+                                  ) : null}
                                   <code
                                     style={{
                                       display: 'block',

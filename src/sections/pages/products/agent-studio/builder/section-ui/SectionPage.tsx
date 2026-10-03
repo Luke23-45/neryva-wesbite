@@ -197,9 +197,9 @@ export function ContextBudget({ title = 'Context budget', total, limit, rows, no
 
 /* ── Right rail: micro tip ───────────────────────────────────── */
 
-export function MicroTip({ children }: { children: ReactNode }) {
+export function MicroTip({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <TipCard>
+    <TipCard title={title}>
       <TipIcon aria-hidden="true">
         <Zap size={13} strokeWidth={2} />
       </TipIcon>

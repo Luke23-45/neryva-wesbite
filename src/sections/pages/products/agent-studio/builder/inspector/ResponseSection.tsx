@@ -453,7 +453,9 @@ export function ResponseSection({
     navigate({
       to: '/agent-studio/agents/$agentId/build',
       params: { agentId: assistantId },
-      search: { slot: 'model' },
+      // The build route's search schema declares both keys (setup is
+      // undefined outside the guided walkthrough) — pass it explicitly.
+      search: { slot: 'model', setup: undefined },
     });
   }, [navigate, assistantId]);
 

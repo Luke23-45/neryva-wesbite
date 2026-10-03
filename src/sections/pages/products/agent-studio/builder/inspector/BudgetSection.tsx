@@ -23,8 +23,6 @@ import {
   PLATFORM_DEFAULTS,
   describeCap,
   estimateRun,
-  formatDollars,
-  formatDuration,
   formatEstimateDollars,
   type BudgetCapKey,
   type BudgetCaps,

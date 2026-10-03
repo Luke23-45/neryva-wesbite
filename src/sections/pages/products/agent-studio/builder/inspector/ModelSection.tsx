@@ -47,7 +47,7 @@ import { useStringDraft } from '../lib/use-string-draft';
 import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ENGINE_RANGES, formatStepValue, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
 import { BlockEditor } from '../section-ui/BlockEditor';
-import type { EditableBlock } from '../section-ui/types';
+import type { EditableBlock, ModalBlock } from '../section-ui/types';
 import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
 import { SkeletonRows } from './SkeletonRows';
 import { ConflictDialog } from './ConflictDialog';
@@ -677,7 +677,8 @@ export function ModelSection({
   // B7: draft buffering — onDraft writes to a local buffer only; onSave
   // validates then applies; onClose ("Back to Model") discards the buffer.
   // Back never applies because the draft was never in section state.
-  const schemaDraftRef = useRef<{ block: { mode: string; content: string } } | null>(null);
+  // The buffer holds the block itself (ModalBlock), not a SavedBlock wrapper.
+  const schemaDraftRef = useRef<ModalBlock | null>(null);
   const [schemaEdit, setSchemaEdit] = useState<{
     target: EditableBlock;
     apply: (saved: { block: { mode: string; content: string } }) => void;
@@ -1237,7 +1238,7 @@ interface PipelineRowProps {
   total: number;
   row: { provider: string; modelId: string; displayName: string; contextWindowTokens: number | null; capabilities: Record<string, unknown>; usable: boolean } | undefined;
   cost: { costMicrosPer1kInput: number | null; costMicrosPer1kOutput: number | null } | undefined;
-  providerCreds: { id: string; label: string; secretFingerprint: string }[];
+  providerCreds: { id: string; label: string; secretFingerprint: string | null }[];
   credBlocked: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -1282,7 +1283,7 @@ function PipelineRow({
   const caps = row ? Object.entries(row.capabilities).filter(([, v]) => !!v).map(([k]) => k) : [];
   const capLabels = caps
     .map((c) => (c === 'vision' ? 'Vision' : c === 'tools' ? 'Tools' : c === 'reasoning' ? 'Reasoning' : null))
-    .filter((c): c is string => c !== null);
+    .filter((c): c is 'Vision' | 'Tools' | 'Reasoning' => c !== null);
 
   const selectedCred = providerCreds.find((c) => c.id === entry.credential_id) ?? null;
 
@@ -1362,7 +1363,8 @@ function PipelineRow({
                   <option value="">Select credential…</option>
                   {providerCreds.map((cred) => (
                     <option key={cred.id} value={cred.id}>
-                      {cred.label} ····{cred.secretFingerprint.slice(-4)}
+                      {cred.label}
+                      {cred.secretFingerprint ? ` ····${cred.secretFingerprint.slice(-4)}` : ''}
                     </option>
                   ))}
                 </select>

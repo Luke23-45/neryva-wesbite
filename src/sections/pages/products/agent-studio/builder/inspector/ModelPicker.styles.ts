@@ -22,7 +22,7 @@ export const PickerHead = styled.div`
 export const CountBadge = styled.span`
   flex: none;
   padding: ${({ theme }) => theme.spacing.s1} ${({ theme }) => theme.spacing.px10};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.caption};
   font-variant-numeric: ${({ theme }) => theme.app.numeric};
   color: ${({ theme }) => theme.app.text.secondary};
@@ -64,7 +64,7 @@ export const InPipelineBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.04em;
@@ -84,7 +84,7 @@ export const DemoBadge = styled.span`
   display: inline-flex;
   align-items: center;
   padding: 2px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.full};
+  border-radius: ${({ theme }) => theme.radii.pill};
   font-size: ${({ theme }) => theme.app.type.micro};
   font-weight: ${({ theme }) => theme.typography.weights.semibold};
   letter-spacing: 0.04em;
@@ -102,7 +102,7 @@ export const CapChips = styled.span`
 
   span {
     padding: 2px ${({ theme }) => theme.spacing.s2};
-    border-radius: ${({ theme }) => theme.radii.full};
+    border-radius: ${({ theme }) => theme.radii.pill};
     font-size: ${({ theme }) => theme.app.type.micro};
     color: ${({ theme }) => theme.app.text.secondary};
     background: ${({ theme }) => theme.app.surface.tint};

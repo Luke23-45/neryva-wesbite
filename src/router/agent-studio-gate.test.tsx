@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
+import type { JSX } from 'react';
 import { render, screen } from '@testing-library/react';
 import { agentStudioRoute } from './routes';
 

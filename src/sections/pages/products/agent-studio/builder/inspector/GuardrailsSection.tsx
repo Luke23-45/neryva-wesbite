@@ -327,16 +327,15 @@ export function GuardrailsSection({
     setPolicy((prev) => ({ ...prev, ...part }));
   }, []);
 
-  const toggleListItem = useCallback(
-    <T extends string>(key: 'pii_entities', item: T) => {
-      setPolicy((prev) => {
-        const list = prev[key] as readonly T[];
-        const next = list.includes(item) ? list.filter((v) => v !== item) : [...list, item];
-        return { ...prev, [key]: next };
-      });
-    },
-    [],
-  );
+  // PII entity chips only — key was always the 'pii_entities' literal, so the
+  // old generic indirection (with its unsound `as readonly T[]` cast) is gone.
+  const toggleListItem = useCallback((item: PiiEntityType) => {
+    setPolicy((prev) => {
+      const list = prev.pii_entities;
+      const next = list.includes(item) ? list.filter((v) => v !== item) : [...list, item];
+      return { ...prev, pii_entities: next };
+    });
+  }, []);
 
   const addTopic = useCallback(() => {
     const problem = validateDenyTopic(topicDraft, policy.deny_topics);
@@ -613,7 +612,7 @@ export function GuardrailsSection({
                     $selected={policy.pii_entities.includes(entity)}
                     aria-pressed={policy.pii_entities.includes(entity)}
                     disabled={!policy.pii_redaction}
-                    onClick={() => toggleListItem('pii_entities', entity)}
+                    onClick={() => toggleListItem(entity)}
                   >
                     {PII_ENTITY_LABELS[entity]}
                   </SelectChip>
