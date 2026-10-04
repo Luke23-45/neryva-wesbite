@@ -104,8 +104,14 @@ vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
   return {
     ...actual,
-    useModelCosts: () => ({ data: [], isPending: false, isFetching: false, isError: false }),
+    useModelCosts: () => ({ data: mockCosts.rows, isPending: false, isFetching: false, isError: false }),
   };
+});
+
+// Per-test cost override: `[]` = the catalog reports no prices.
+const mockCosts = vi.hoisted(() => {
+  const rows: { ref: string; costMicrosPer1kInput: number | null; costMicrosPer1kOutput: number | null }[] = [];
+  return { rows };
 });
 
 vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
@@ -175,6 +181,7 @@ beforeEach(() => {
   updateMutate.mockReset();
   vi.mocked(toast.success).mockReset();
   seedGrouped();
+  mockCosts.rows = [];
 });
 
 afterEach(() => {
@@ -514,5 +521,92 @@ describe('ModelSection group headings', () => {
       screen.getByText('Every model your organization can use, grouped by source. Locked rows name the subscription they need.'),
     ).toBeTruthy();
     expect(screen.getByText('Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above.')).toBeTruthy();
+  });
+});
+
+describe('ModelSection pipeline pricing (W18)', () => {
+  it('renders a single "Pricing not listed" when the catalog reports no cost — never suffixed', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getAllByText('Pricing not listed').length).toBeGreaterThan(0);
+    // The placeholder must never compose with the in/out suffixes.
+    expect(screen.queryByText(/Pricing not listed ?(in|out)/)).toBeNull();
+  });
+
+  it('renders priced in/out with their suffixes', async () => {
+    mockCosts.rows = [{ ref: 'a/b', costMicrosPer1kInput: 3000, costMicrosPer1kOutput: 15000 }];
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText('$3.00/1M in · $15.00/1M out')).toBeTruthy();
+  });
+
+  it('renders a half-priced row with a suffix only on the priced side', async () => {
+    mockCosts.rows = [{ ref: 'a/b', costMicrosPer1kInput: 3000, costMicrosPer1kOutput: null }];
+    await act(async () => {
+      shell();
+    });
+    expect(screen.getByText('$3.00/1M in')).toBeTruthy();
+    expect(screen.queryByText(/\$[0-9.]+..M out/)).toBeNull();
+    expect(screen.queryByText(/Pricing not listed ?(in|out)/)).toBeNull();
+  });
+});
+
+describe('ModelSection credential block exemption (W19)', () => {
+  it('serves a platform-pool row with no credential helper — "no credential needed"', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.click(screen.getByLabelText('Expand A B configuration'));
+    expect(screen.getByText('Served by platform pool — no credential needed')).toBeTruthy();
+    // The old copy ("No A credential connected. Connect A →") must be gone.
+    expect(screen.queryByText(/No A credential connected/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Connect A →' })).toBeNull();
+  });
+
+  it('exempts the demo row — never "No Mock credential connected"', async () => {
+    mockGrouped.rows = [
+      groupedRow('mock/neryva/demo', {
+        displayName: 'Free demo — mock responses, not AI',
+        providerDisplayName: 'mock',
+      }),
+    ];
+    await act(async () => {
+      shell({
+        definition: {
+          ...DEFINITION,
+          model_policy: { allowed_models: ['mock/neryva/demo'], fallback_enabled: false },
+        },
+      });
+    });
+    fireEvent.click(screen.getByLabelText('Expand Free demo — mock responses, not AI configuration'));
+    expect(screen.getByText('Served by platform pool — no credential needed')).toBeTruthy();
+    expect(screen.queryByText(/No Mock credential connected/)).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Connect Mock →' })).toBeNull();
+  });
+
+  it('still offers the connect helper for a genuine provider_credential_missing blocker', async () => {
+    mockGrouped.rows = [
+      groupedRow('c/d', {
+        displayName: 'C D',
+        providerDisplayName: 'C',
+        usable: false,
+        reasons: ['provider_credential_missing'],
+      }),
+    ];
+    await act(async () => {
+      shell({
+        definition: {
+          ...DEFINITION,
+          model_policy: { allowed_models: ['c/d'], fallback_enabled: false },
+        },
+      });
+    });
+    fireEvent.click(screen.getByLabelText('Expand C D configuration'));
+    // Not over-exempted: the readiness panel flags this row, so the row must
+    // still name the missing credential and the next step.
+    expect(screen.getByText(/Connect a C credential to serve this model/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Connect C →' })).toBeTruthy();
   });
 });

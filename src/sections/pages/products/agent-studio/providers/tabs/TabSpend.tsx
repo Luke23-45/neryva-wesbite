@@ -1,5 +1,5 @@
 /**
- * Providers Phase 7 — Wave W1: Tab D "Spend & budgets".
+ * Providers Phase 7 — Wave W1: Tab D "Spend & Budgets".
  *
  * Org spend overview (platform settled spend vs BYOK list-price equivalent —
  * the BYOK figure is ALWAYS labeled "list-price equivalent — not billed"),
@@ -86,7 +86,7 @@ export function TabSpend() {
 
   if (role === null) {
     return (
-      <section aria-label="Spend & budgets">
+      <section aria-label="Spend & Budgets">
         <p style={hintText}>Resolving your membership…</p>
       </section>
     );
@@ -94,9 +94,9 @@ export function TabSpend() {
 
   if (!canViewSpend) {
     return (
-      <section aria-label="Spend & budgets">
+      <section aria-label="Spend & Budgets">
         <div style={card}>
-          <h2 style={cardTitle}>Spend &amp; budgets</h2>
+          <h2 style={cardTitle}>Spend &amp; Budgets</h2>
           <p style={{ ...bodyText, marginTop: 8 }}>
             Spend data is visible to the owner, admin, and billing roles only. Ask
             an owner or admin for access.
@@ -107,13 +107,13 @@ export function TabSpend() {
   }
 
   return (
-    <section aria-label="Spend & budgets">
+    <section aria-label="Spend & Budgets">
       <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
           <h2
             style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text, letterSpacing: '-0.01em' }}
           >
-            Spend &amp; budgets
+            Spend &amp; Budgets
           </h2>
           <p style={{ ...hintText, marginTop: 4 }}>
             What your organization spent on model calls — platform-settled spend
@@ -412,10 +412,9 @@ function FeePanel({ data }: { data: SpendSummaryView }) {
           fee is deducted from your Neryva credit balance, not from your provider bill.
         </li>
         <li>
-          <span style={labelText}>Pay-as-you-go margin</span>
-          <p style={{ ...bodyText, marginTop: 4 }}>{fee.payg_margin_note}</p>
-          <p style={{ ...hintText, marginTop: 4 }}>
-            provisional — owner decision pending (PRV-008)
+          <span style={labelText}>Pay-As-You-Go Margin</span>
+          <p style={{ ...bodyText, marginTop: 4 }}>
+            {`Provisional — ${fee.payg_margin_note} Final margin pending plan decision.`}
           </p>
         </li>
       </ul>
@@ -490,7 +489,6 @@ function BudgetControls({
       <h3 style={sectionTitle}>Budget</h3>
 
       <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
-        <span style={labelText}>Monthly cap (USD)</span>
         <p style={bodyText}>
           {budget.cap_usd_cents == null ? (
             <>Unlimited — no cap is set.</>
@@ -528,8 +526,7 @@ function BudgetControls({
         )}
         {atCap && (
           <p style={{ ...noticeCallout, marginTop: 8 }}>
-            At or over the cap — the engine refuses new billable calls pre-call
-            until the next month.
+            At or over the cap — new billable calls are blocked until the next month.
           </p>
         )}
       </div>
@@ -543,7 +540,7 @@ function BudgetControls({
             setCapText(e.target.value);
             setCapError(null);
           }}
-          hint="Blank = unlimited. The engine refuses billable calls pre-call once the cap is reached."
+          hint="Leave blank for unlimited. Billable calls are blocked before they run once the cap is reached."
           error={capError ?? undefined}
           disabled={!editable || mutations.patchBudget.isPending}
           inputMode="decimal"
@@ -624,6 +621,12 @@ function ExportPanel({
         <p style={{ ...bodyText, marginTop: 8 }}>
           Audit export is available on the Enterprise plan.
         </p>
+        <a
+          href="/agent-studio/settings/pricing"
+          style={{ ...secondaryBtn, textDecoration: 'none', display: 'inline-block', marginTop: 12 }}
+        >
+          View plans
+        </a>
       </div>
     );
   }

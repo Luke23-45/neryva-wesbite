@@ -16,6 +16,14 @@ export interface ProviderDirectoryFilters {
 }
 
 /**
+ * Query-key prefix for the provider directory (N-4). The full key appends
+ * the filter object; invalidating by this prefix clears every filter
+ * variant (React Query matches by prefix).
+ */
+export const providerDirectoryKeyPrefix = (orgId: string) =>
+  ['org', orgId, 'providers', 'directory'] as const;
+
+/**
  * useProviderDirectory — react-query wrapper over N-4 `fetchProviderDirectory`.
  *
  * Thin by design: filtering beyond the query lives in the tab components so
@@ -33,10 +41,7 @@ export function useProviderDirectory(
 
   return useQuery({
     queryKey: [
-      'org',
-      orgId,
-      'providers',
-      'directory',
+      ...providerDirectoryKeyPrefix(orgId as string),
       { search: search ?? '', tier: tier ?? '', capability: capability ?? '' },
     ],
     queryFn: () => fetchProviderDirectory(orgId as string, { search, tier, capability }),

@@ -127,9 +127,9 @@ export default function AgentStudioProvidersCustomPage() {
             <GateTitle>Custom endpoints are an Enterprise feature</GateTitle>
             <GateCopy>
               Connecting private inference endpoints — vLLM, TGI, Ollama clusters, or
-              VPC gateways — needs enterprise egress controls, SSRF-hardened probing,
-              and compliance attestations. Talk to our team and we'll get your
-              workspace set up.
+              VPC gateways — needs enterprise egress controls, secure, hardened
+              connection checks, and compliance attestations. Talk to our team
+              and we'll get your workspace set up.
             </GateCopy>
             <GateActions>
               <GateLink to="/contact" $primary>

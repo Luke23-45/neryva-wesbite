@@ -45,6 +45,11 @@ export interface ModelPickerProps {
   canAuthor: boolean;
   /** Whether BYOK connect is available (enterprise-gated upstream). */
   isEnterprise: boolean;
+  /**
+   * W22 (doc 20 §3.4): this builder draft's path (buildAgentBuildPath) —
+   * the Providers link carries it as ?returnTo so the user lands back here.
+   */
+  returnTo: string;
   /** Add to / remove from the pipeline (reorder lives on the pipeline rows). */
   onToggle: (ref: string, credentialId: string | null) => void;
 }
@@ -101,6 +106,7 @@ export function ModelPicker({
   pinnedToolCount,
   canAuthor,
   isEnterprise,
+  returnTo,
   onToggle,
 }: ModelPickerProps) {
   const [query, setQuery] = useState('');
@@ -153,8 +159,19 @@ export function ModelPicker({
         subgroups: groupByProvider(credRows),
       });
     }
+    // W20: the BYOK supergroup always renders — when the loaded catalog holds
+    // no BYOK rows (no verified credentials), an empty state replaces the
+    // per-credential sections instead of the supergroup vanishing (Providers
+    // Tab C renders the same empty state). Gated on the loaded catalog so the
+    // skeleton phase never claims "no credentials"; a search that filters
+    // BYOK rows out simply shows no BYOK content, never the empty state.
+    const catalogLoaded = rows !== undefined;
+    const hasByokRows = catalogLoaded && rows.some((row) => row.supergroup === 'byok');
+    if (catalogLoaded && credOrder.length === 0 && !hasByokRows) {
+      result.push({ kind: 'byok', id: 'byok|empty', title: 'BYOK', subgroups: [] });
+    }
     return result;
-  }, [visible]);
+  }, [visible, rows]);
 
   const renderRow = (row: BuilderModelRow) => {
     const inPipeline = pipelineKeys.has(row.key);
@@ -220,9 +237,10 @@ export function ModelPicker({
           placeholder="Search catalog…"
           aria-label="Search model catalog"
         />
-        {/* B9: the badge states a count of a capped list — label it as such. */}
-        <CountBadge aria-label={`${pickedCount} of ${ENGINE_RANGES.allowedModelsMax} models picked`}>
-          {pickedCount} / {ENGINE_RANGES.allowedModelsMax} picked
+        {/* W17: the badge counts a capped pipeline — label it as such, never
+            as "N of M" where M reads like the catalog size. */}
+        <CountBadge aria-label={`${pickedCount} picked · max ${ENGINE_RANGES.allowedModelsMax}`}>
+          {pickedCount} picked · max {ENGINE_RANGES.allowedModelsMax}
         </CountBadge>
       </PickerHead>
 
@@ -240,44 +258,51 @@ export function ModelPicker({
         {sections.map((section) => (
           <div key={section.id}>
             <SupergroupHeader>{section.title}</SupergroupHeader>
-            {section.subgroups.map((group) => {
-              // Demo group (build spec v3 §6): its own labeled group with an
-              // info tooltip — never folded into a provider's list.
-              const demoGroup = isDemoProvider(group.provider);
-              return (
-                <div key={group.provider}>
-                  <GroupLabel>
-                    {demoGroup ? (
-                      <>
-                        {DEMO_GROUP_LABEL} · {group.rows.length}{' '}
-                        {/* side="bottom": the catalog list scrolls (overflow-y),
-                            so an upward bubble is clipped whenever the demo group
-                            sits near the top of the scrollport. Below the badge
-                            there is always catalog content to overlay.
-                            focusable: the badge is a plain span — without a tab
-                            stop keyboard users can never reveal the policy copy. */}
-                        <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
-                          <DemoBadge>Demo</DemoBadge>
-                        </Tooltip>
-                      </>
-                    ) : (
-                      <>
-                        {group.providerDisplayName} · {group.rows.length}
-                      </>
-                    )}
-                  </GroupLabel>
-                  {group.rows.map((row) => renderRow(row))}
-                </div>
-              );
-            })}
+            {section.kind === 'byok' && section.subgroups.length === 0 ? (
+              <EmptyNote>No connected credentials — connect a key to see its discovered models here.</EmptyNote>
+            ) : (
+              section.subgroups.map((group) => {
+                // Demo group (build spec v3 §6): its own labeled group with an
+                // info tooltip — never folded into a provider's list.
+                const demoGroup = isDemoProvider(group.provider);
+                return (
+                  <div key={group.provider}>
+                    <GroupLabel>
+                      {demoGroup ? (
+                        <>
+                          {DEMO_GROUP_LABEL} · {group.rows.length}{' '}
+                          {/* side="bottom": the catalog list scrolls (overflow-y),
+                              so an upward bubble is clipped whenever the demo group
+                              sits near the top of the scrollport. Below the badge
+                              there is always catalog content to overlay.
+                              focusable: the badge is a plain span — without a tab
+                              stop keyboard users can never reveal the policy copy. */}
+                          <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
+                            <DemoBadge>Demo</DemoBadge>
+                          </Tooltip>
+                        </>
+                      ) : (
+                        <>
+                          {group.providerDisplayName} · {group.rows.length}
+                        </>
+                      )}
+                    </GroupLabel>
+                    {group.rows.map((row) => renderRow(row))}
+                  </div>
+                );
+              })
+            )}
           </div>
         ))}
       </CatalogList>
 
-      {/* PRV-078: draft-safe via the existing autosave unmount flush —
-          no return-state machinery. */}
+      {/* W22 (doc 20 §3.4): draft-safe return — ?returnTo carries this
+          builder draft so the Providers surface can send the user back. */}
       <CapNote>
-        Need another model or endpoint? <Link to="/agent-studio/providers">Open Providers →</Link>
+        Need another model or endpoint?{' '}
+        <Link to="/agent-studio/providers" search={{ returnTo }}>
+          Open Providers →
+        </Link>
       </CapNote>
 
       {capped && canAuthor && <CapNote>{ENGINE_RANGES.allowedModelsMax}-model cap — remove one to add another.</CapNote>}

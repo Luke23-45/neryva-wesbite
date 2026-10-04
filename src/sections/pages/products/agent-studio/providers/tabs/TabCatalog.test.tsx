@@ -70,6 +70,17 @@ const ollama: ProviderDirectoryEntry = {
   min_required_product_label: 'Free',
 };
 
+const neryvaDemo: ProviderDirectoryEntry = {
+  provider: 'mock',
+  display_name: 'Neryva Demo',
+  model_count: 1,
+  models: [{ model_id: 'neryva/demo', display_name: 'Neryva Demo' }],
+  capabilities: ['tools'],
+  connection: { has_active_credential: false, enabled: false },
+  min_required_product: 'free',
+  min_required_product_label: 'Free',
+};
+
 const onConnectKey = vi.fn();
 
 async function renderRouted(providers: ProviderDirectoryEntry[] = [openai, anthropic, ollama]) {
@@ -315,5 +326,12 @@ describe('TabCatalog', () => {
     expect(
       screen.getByText(/available in development workspaces only/i),
     ).toBeTruthy();
+  });
+
+  it('gives the first-party Neryva Demo its own section, never Other Providers', async () => {
+    await renderRouted([neryvaDemo]);
+    expect(screen.getByRole('heading', { name: 'Neryva' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Other Providers' })).toBeNull();
+    expect(screen.getByText('Neryva Demo')).toBeTruthy();
   });
 });

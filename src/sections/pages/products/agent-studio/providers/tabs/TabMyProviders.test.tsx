@@ -113,12 +113,14 @@ beforeEach(() => {
 });
 
 describe('TabMyProviders', () => {
-  it('empty state shows both primary actions', () => {
+  it('empty state shows both actions with the same labels and emphasis as the header', () => {
     renderTab();
-    expect(screen.getByText('No API keys connected')).toBeTruthy();
+    expect(screen.getByText('No providers connected')).toBeTruthy();
     // Header action + empty-state action.
     expect(screen.getAllByRole('button', { name: 'Connect API Key' })).toHaveLength(2);
-    expect(screen.getByRole('link', { name: /Connect Custom Endpoint \(Enterprise\)/ })).toBeTruthy();
+    // Identical labels in both places: "Connect Custom Endpoint" + the Enterprise pill.
+    expect(screen.getAllByRole('link', { name: /Connect Custom Endpoint/ })).toHaveLength(2);
+    expect(screen.getAllByText('Enterprise')).toHaveLength(2);
   });
 
   it('free tier renders the nothing-to-manage note', () => {

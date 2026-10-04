@@ -18,6 +18,7 @@ import { Tooltip } from '@components/common/ui/Tooltip';
 // ---------------------------------------------------------------------------
 
 export type CatalogSectionKey =
+  | 'neryva'
   | 'frontier'
   | 'open-weight'
   | 'aggregators'
@@ -26,6 +27,7 @@ export type CatalogSectionKey =
   | 'other';
 
 const SECTION_LABELS: Record<CatalogSectionKey, string> = {
+  neryva: 'Neryva',
   frontier: 'Frontier Labs',
   'open-weight': 'Open-Weight Clouds',
   aggregators: 'Aggregators & Gateways',
@@ -35,6 +37,7 @@ const SECTION_LABELS: Record<CatalogSectionKey, string> = {
 };
 
 const SECTION_ORDER: CatalogSectionKey[] = [
+  'neryva',
   'frontier',
   'open-weight',
   'aggregators',
@@ -48,6 +51,9 @@ function normalizeSlug(provider: string): string {
 }
 
 const SECTION_BY_SLUG: Record<string, CatalogSectionKey> = {
+  // Neryva's own first-party free demo (engine provider slug `mock`,
+  // display name "Neryva Demo") gets its own section — never "Other Providers".
+  mock: 'neryva',
   // Frontier Labs
   openai: 'frontier',
   anthropic: 'frontier',
@@ -365,16 +371,6 @@ const ConnectLink = styled.button`
   }
 `;
 
-const TierBadge = styled.span<{ $tone: 'warn' | 'info' }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme, $tone }) =>
-    $tone === 'warn' ? theme.app.status.error.fg : theme.app.text.link};
-`;
-
 const UpgradeCta = styled(Link)`
   font-size: 12px;
   font-weight: 600;
@@ -594,11 +590,14 @@ function TierGate({ entry }: { entry: ProviderDirectoryEntry }) {
       </TierRow>
     );
   }
+  // One pill language: the same StatusPill geometry (1px border, 999px
+  // radius) as every other pill on the card — differentiated by tone
+  // fill and label only, never by border thickness or radius.
   return (
     <TierRow>
-      <TierBadge $tone={coverage === false ? 'warn' : 'info'}>
+      <StatusPill tone={coverage === false ? 'warning' : 'info'} dot={false}>
         {entry.min_required_product_label}
-      </TierBadge>
+      </StatusPill>
       {coverage === false && (
         <UpgradeCta to="/agent-studio/settings/pricing">Upgrade</UpgradeCta>
       )}
@@ -675,7 +674,7 @@ function ProviderCard({
 }
 
 export interface TabCatalogProps {
-  /** Navigate the shell to the "My providers" tab (connect-key flow). */
+  /** Navigate the shell to the "My Providers" tab (connect-key flow). */
   onConnectKey?: () => void;
 }
 
@@ -856,7 +855,7 @@ export default function TabCatalog({ onConnectKey }: TabCatalogProps) {
                 </CustomIcon>
                 <div>
                   <CardName>Connect custom endpoint</CardName>
-                  <CardSub>Enterprise — dedicated configuration page, no modals</CardSub>
+                  <CardSub>Enterprise — guided setup on a dedicated page</CardSub>
                 </div>
               </CustomCard>
             </SectionBlock>

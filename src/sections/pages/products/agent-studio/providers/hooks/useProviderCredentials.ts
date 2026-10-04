@@ -19,6 +19,8 @@ import {
   type CredentialUsageView,
   type ProviderCredentialView,
 } from '../api';
+import { groupedModelsKey } from './useGroupedModels';
+import { providerDirectoryKeyPrefix } from './useProviderDirectory';
 
 export const providerCredentialsKeys = {
   all: (orgId: string) => ['org', orgId, 'provider-credentials'] as const,
@@ -75,11 +77,21 @@ export interface CredentialMutations {
  * All credential mutations for one org. Each invalidates the list query on
  * success so every card reflects server state (no optimistic patching of
  * secrets-adjacent rows).
+ *
+ * W23: credential lifecycle changes (create/verify/rotate/revoke/patch) also
+ * reshape the N-4 provider directory (discovered-model counts) and the N-5
+ * grouped models (BYOK groups appear/disappear) — both queries are
+ * invalidated here so the Catalog and Models tabs can never serve stale
+ * counts after a credential change. The directory key is invalidated by
+ * prefix so every filter variant refetches.
  */
 export function useCredentialMutations(orgId: string): CredentialMutations {
   const queryClient = useQueryClient();
-  const invalidateList = () =>
+  const invalidateList = () => {
     queryClient.invalidateQueries({ queryKey: providerCredentialsKeys.list(orgId) });
+    queryClient.invalidateQueries({ queryKey: groupedModelsKey(orgId) });
+    queryClient.invalidateQueries({ queryKey: providerDirectoryKeyPrefix(orgId) });
+  };
 
   const create = useMutation({
     mutationFn: (input: CreateCredentialInput) => createCredential(orgId, input),

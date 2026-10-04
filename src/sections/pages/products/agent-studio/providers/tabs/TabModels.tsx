@@ -44,16 +44,35 @@ import { colors } from '../components/styles';
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
 
-/** Engine `reasons[]` codes rendered as human text (doc 19 §13). */
+/** Engine `reasons[]` codes rendered as human text (doc 19 §13).
+ * Keys are the engine's real reason vocabulary: availability/N-5
+ * (model-catalog.service.ts), template compatibility (templates.service.ts),
+ * and the free-demo judgments (demo-policy.service.ts). Unknown codes fall
+ * back to the raw snake_case words — never invented. */
 function humanizeReason(reason: string): string {
   const known: Record<string, string> = {
+    // Availability / N-5 (model-catalog.service.ts)
+    subscription_required:
+      'Not covered by your current plan — upgrade your plan to enable this model.',
+    provider_not_enabled:
+      'The provider behind this row is not enabled for your organization.',
+    residency_unknown:
+      'The data region for this model is not confirmed, so it stays unavailable until the region is known.',
+    residency_incompatible:
+      'This model is not available in your organization\u2019s data residency region.',
+    model_disabled_by_org:
+      'Disabled for this organization — turn the switch on to make it available again.',
+    // Template compatibility (templates.service.ts)
     provider_credential_missing:
       'No verified provider credential is attached — connect a key before enabling.',
-    credential_unverified: 'The credential behind this row is unverified and cannot serve traffic yet.',
-    credential_revoked: 'The credential behind this row was revoked.',
-    model_disabled: 'Disabled for this organization by an administrator.',
-    model_paywalled: 'Not covered by your current plan.',
-    model_not_found: 'Not present in the current catalog snapshot.',
+    // Free demo (demo-policy.service.ts)
+    demo_provider_disabled: 'The free demo is currently turned off.',
+    demo_conversation_limit_reached:
+      'The weekly demo conversation allowance for this organization is used up.',
+    demo_unavailable_with_credit_balance:
+      'Demo replies are only offered to organizations without a credit balance.',
+    demo_unavailable_with_provider_credential:
+      'Demo replies are not offered while a verified provider key is connected.',
   };
   return known[reason] ?? reason.replace(/_/g, ' ');
 }
@@ -311,6 +330,25 @@ const BudgetRange = styled.span`
   font-variant-numeric: tabular-nums;
 `;
 
+const LearnMoreButton = styled.button`
+  border: none;
+  background: none;
+  padding: 0;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(77, 159, 255, 0.9);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const AboutDetail = styled.div`
+  margin-top: 8px;
+`;
+
 const ErrorBox = styled.div`
   border: 1px solid rgba(248, 81, 73, 0.4);
   border-radius: 12px;
@@ -359,6 +397,7 @@ function TabModels() {
   const [blastTarget, setBlastTarget] = useState<BlastTarget | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [reasoningOpen, setReasoningOpen] = useState<Record<string, boolean>>({});
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   const groups: GroupedModels = useMemo(() => data ?? { platform: [], byok: [] }, [data]);
 
@@ -417,13 +456,17 @@ function TabModels() {
     const gated = covers === false;
     const disabled = gated || !model.usable;
     const price = priceLabel(model);
+    // Invariant: the switch can never render ON alongside a cannot-enable
+    // warning. The visual state derives from the same availability object
+    // that decides whether the warning row renders (`model.usable`).
+    const on = model.enabled && model.usable;
 
     const switchNode = (
       <Switch
-        checked={model.enabled}
+        checked={on}
         disabled={disabled}
         onChange={(next) => handleToggle(supergroup, group, model, next)}
-        label={`${model.enabled ? 'Disable' : 'Enable'} ${model.display_name} (${
+        label={`${on ? 'Disable' : 'Enable'} ${model.display_name} (${
           supergroup === 'byok' ? `BYOK${group.credential_label ? ` ${group.credential_label}` : ''}` : 'platform'
         })`}
       />
@@ -550,11 +593,27 @@ function TabModels() {
   return (
     <Root>
       <Lead>
-        Enable models org-wide. Platform-managed and BYOK sources are listed separately — the same
-        model from both is two distinct rows, so billing and routing stay unambiguous. Every model
-        is visible at every plan; models above your tier show an honest badge and an upgrade path
-        instead of being hidden.
+        Turn models on or off for your organization — platform and BYOK sources are listed
+        separately.
       </Lead>
+      <div>
+        <LearnMoreButton
+          type="button"
+          onClick={() => setAboutOpen((v) => !v)}
+          aria-expanded={aboutOpen}
+        >
+          {aboutOpen ? 'Hide details' : 'Learn more'}
+        </LearnMoreButton>
+        {aboutOpen && (
+          <AboutDetail>
+            <Lead>
+              The same model from both sources is two distinct rows, so billing and routing stay
+              unambiguous. Every model is visible at every plan; models above your tier show an
+              honest badge and an upgrade path instead of being hidden.
+            </Lead>
+          </AboutDetail>
+        )}
+      </div>
 
       <section aria-label="Platform Managed">
         <SectionHead>

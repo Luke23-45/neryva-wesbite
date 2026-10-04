@@ -268,12 +268,16 @@ describe('TabSpend cap editor', () => {
 });
 
 describe('TabSpend fee transparency', () => {
-  it('renders engine-truth fee numbers with the PRV-008 provisional label', async () => {
+  it('renders engine-truth fee numbers with the single provisional margin line', async () => {
     renderTab();
     expect(await screen.findByText('2 credits per BYOK call')).toBeTruthy();
     expect(screen.getByText(/42 BYOK calls this window/)).toBeTruthy();
     expect(screen.getByText(/30% margin on list cost for PAYG inference/)).toBeTruthy();
-    expect(screen.getByText(/provisional — owner decision pending \(PRV-008\)/)).toBeTruthy();
+    expect(
+      screen.getByText(/Provisional — .* Final margin pending plan decision\./),
+    ).toBeTruthy();
+    // No internal IDs in user-facing copy.
+    expect(document.body.textContent).not.toContain('PRV-008');
   });
 });
 

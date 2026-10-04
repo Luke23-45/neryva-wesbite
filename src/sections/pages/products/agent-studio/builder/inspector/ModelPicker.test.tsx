@@ -12,8 +12,25 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   return {
     ...actual,
     // Providers / billing links stand in as plain anchors — routing is out
-    // of scope for catalog tests; the href is what we assert.
-    Link: ({ children, to }: { children?: ReactNode; to?: string }) => <a href={to ?? '#'}>{children}</a>,
+    // of scope for catalog tests; the href is what we assert. `search` is
+    // serialized into the query string so returnTo-carrying links stay
+    // provable.
+    Link: ({
+      children,
+      to,
+      search,
+    }: {
+      children?: ReactNode;
+      to?: string;
+      search?: Record<string, string | undefined>;
+    }) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(search ?? {})) {
+        if (value !== undefined) params.set(key, value);
+      }
+      const query = params.toString();
+      return <a href={`${to ?? '#'}${query ? `?${query}` : ''}`}>{children}</a>;
+    },
   };
 });
 
@@ -172,6 +189,7 @@ function shell(props?: Partial<React.ComponentProps<typeof ModelPicker>>) {
         pinnedToolCount={0}
         canAuthor
         isEnterprise
+        returnTo="/agent-studio/agents/agent-1/build"
         onToggle={onToggle}
         {...props}
       />
@@ -222,6 +240,61 @@ describe('ModelPicker supergroups (PRV-075)', () => {
     expect(screen.queryByText('BYOK — Beta key')).toBeNull();
     expect(screen.getByText('GPT-4o')).toBeTruthy();
     expect(screen.queryByText('Claude Sonnet 4.5')).toBeNull();
+  });
+});
+
+describe('ModelPicker BYOK supergroup empty state (W20)', () => {
+  it('always renders the BYOK supergroup with an empty state when no verified credentials exist', async () => {
+    await act(async () => {
+      shell({ rows: [row()] });
+    });
+    expect(screen.getByText('Platform managed')).toBeTruthy();
+    expect(screen.getByText('BYOK')).toBeTruthy();
+    expect(
+      screen.getByText('No connected credentials — connect a key to see its discovered models here.'),
+    ).toBeTruthy();
+  });
+
+  it('shows no empty state when BYOK rows exist', async () => {
+    await act(async () => {
+      shell();
+    });
+    expect(
+      screen.queryByText('No connected credentials — connect a key to see its discovered models here.'),
+    ).toBeNull();
+  });
+
+  it('never claims "no credentials" when a search merely filters BYOK rows out', async () => {
+    await act(async () => {
+      shell();
+    });
+    fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'claude' } });
+    // BYOK rows exist in the catalog but match nothing — no per-credential
+    // sections, and no dishonest empty state either.
+    expect(screen.queryByText('BYOK — Acme key')).toBeNull();
+    expect(
+      screen.queryByText('No connected credentials — connect a key to see its discovered models here.'),
+    ).toBeNull();
+  });
+
+  it('keeps the empty state during search when no BYOK rows exist — the claim stays true', async () => {
+    await act(async () => {
+      shell({ rows: [row()] });
+    });
+    fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'claude' } });
+    expect(screen.getByText('BYOK')).toBeTruthy();
+    expect(
+      screen.getByText('No connected credentials — connect a key to see its discovered models here.'),
+    ).toBeTruthy();
+  });
+
+  it('does not claim "no credentials" while the catalog is still loading', async () => {
+    await act(async () => {
+      shell({ rows: undefined, loadError: false });
+    });
+    expect(
+      screen.queryByText('No connected credentials — connect a key to see its discovered models here.'),
+    ).toBeNull();
   });
 });
 
@@ -326,20 +399,22 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
       shell({ rows: [allowanceRow], pipelineKeys: new Set() });
     });
     expect(screen.getByText(/demo allowance used/)).toBeTruthy();
-    // The row itself must render no link — only the PRV-078 footer link
-    // exists elsewhere on the surface.
+    // The row itself must render no link — only the footer link exists
+    // elsewhere on the surface.
     const rowEl = (screen.getByText(/demo allowance used/) as HTMLElement).closest('label');
     expect(rowEl?.querySelectorAll('a')).toHaveLength(0);
   });
 });
 
 describe('ModelPicker footer, toggle, and gating', () => {
-  it('renders the PRV-078 footer link to Providers', async () => {
+  it('renders the W22 footer link to Providers with a draft-safe returnTo', async () => {
     await act(async () => {
       shell();
     });
     const link = screen.getByRole('link', { name: /open providers/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers');
+    const url = new URL(link.getAttribute('href')!, 'http://localhost');
+    expect(url.pathname).toBe('/agent-studio/providers');
+    expect(url.searchParams.get('returnTo')).toBe('/agent-studio/agents/agent-1/build');
     expect(screen.getByText(/Need another model or endpoint/)).toBeTruthy();
   });
 
@@ -393,11 +468,13 @@ describe('ModelPicker footer, toggle, and gating', () => {
     expect(screen.getAllByText('Pricing not listed').length).toBeGreaterThan(0);
   });
 
-  it('states the picked count, cap, and empty states honestly', async () => {
+  it('states the picked count and cap honestly — never as a catalog size (W17)', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/1 \/ 20 picked/)).toBeTruthy();
+    // The badge names the pipeline cap ("max 20"), not the catalog size.
+    expect(screen.getByText('1 picked · max 20')).toBeTruthy();
+    expect(screen.getByLabelText('1 picked · max 20').textContent).toBe('1 picked · max 20');
     expect(screen.queryByText(/model cap/)).toBeNull();
   });
 

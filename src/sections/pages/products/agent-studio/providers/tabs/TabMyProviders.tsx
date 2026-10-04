@@ -7,7 +7,7 @@
  * manage (platform keys) — the tab renders an honest note instead of the
  * management UI.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useOrg } from '@/Context/OrgContext';
 import { KeyCard } from '@/sections/pages/products/agent-studio/providers/components/KeyCard';
@@ -28,6 +28,48 @@ import {
   row,
   secondaryBtn,
 } from '@/sections/pages/products/agent-studio/providers/components/styles';
+
+const enterprisePill: CSSProperties = {
+  marginLeft: 8,
+  fontSize: 11,
+  fontWeight: 700,
+  background: 'rgba(255,255,255,0.2)',
+  borderRadius: 999,
+  padding: '2px 8px',
+};
+
+/**
+ * The two connect actions in one place: "Connect API Key" (secondary) and
+ * "Connect Custom Endpoint" (primary, with the Enterprise pill for
+ * non-enterprise orgs). Used identically by the top-right actions and the
+ * empty-state card so the labels and emphasis never drift apart.
+ */
+function ConnectActions({
+  showApiKey,
+  onConnectKey,
+  isEnterprise,
+}: {
+  showApiKey: boolean;
+  onConnectKey: () => void;
+  isEnterprise: boolean;
+}) {
+  return (
+    <>
+      {showApiKey && (
+        <button type="button" onClick={onConnectKey} style={secondaryBtn}>
+          Connect API Key
+        </button>
+      )}
+      <Link
+        to="/agent-studio/providers/custom/new"
+        style={{ ...primaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
+      >
+        Connect Custom Endpoint
+        {!isEnterprise && <span style={enterprisePill}>Enterprise</span>}
+      </Link>
+    </>
+  );
+}
 
 export function TabMyProviders() {
   const { orgId } = useOrg();
@@ -78,7 +120,7 @@ export function TabMyProviders() {
   };
 
   return (
-    <section aria-label="My providers">
+    <section aria-label="My Providers">
       <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text, letterSpacing: '-0.01em' }}>
@@ -90,31 +132,11 @@ export function TabMyProviders() {
           </p>
         </div>
         <div style={row}>
-          {!connectOpen && (
-            <button type="button" onClick={() => setConnectOpen(true)} style={secondaryBtn}>
-              Connect API Key
-            </button>
-          )}
-          <Link
-            to="/agent-studio/providers/custom/new"
-            style={{ ...primaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
-          >
-            Connect Custom Endpoint
-            {tier !== 'enterprise' && (
-              <span
-                style={{
-                  marginLeft: 8,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  background: 'rgba(255,255,255,0.2)',
-                  borderRadius: 999,
-                  padding: '2px 8px',
-                }}
-              >
-                Enterprise
-              </span>
-            )}
-          </Link>
+          <ConnectActions
+            showApiKey={!connectOpen}
+            onConnectKey={() => setConnectOpen(true)}
+            isEnterprise={tier === 'enterprise'}
+          />
         </div>
       </div>
 
@@ -141,22 +163,18 @@ export function TabMyProviders() {
       {!isLoading && !isError && credentials.length === 0 && !connectOpen && (
         <div style={{ ...card, textAlign: 'center', padding: '48px 24px' }}>
           <h3 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: colors.text }}>
-            No API keys connected
+            No providers connected
           </h3>
           <p style={{ ...bodyText, maxWidth: 480, margin: '0 auto 20px' }}>
             Connect your own provider keys to route traffic through your accounts and agreements,
             or point Neryva at a custom inference endpoint.
           </p>
           <div style={{ ...row, justifyContent: 'center' }}>
-            <button type="button" onClick={() => setConnectOpen(true)} style={primaryBtn}>
-              Connect API Key
-            </button>
-            <Link
-              to="/agent-studio/providers/custom/new"
-              style={{ ...secondaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
-            >
-              Connect Custom Endpoint (Enterprise)
-            </Link>
+            <ConnectActions
+              showApiKey
+              onConnectKey={() => setConnectOpen(true)}
+              isEnterprise={tier === 'enterprise'}
+            />
           </div>
         </div>
       )}

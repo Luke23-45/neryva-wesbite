@@ -52,6 +52,8 @@ import { useStringDraft } from '../lib/use-string-draft';
 import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ENGINE_RANGES, formatStepValue, humanizeReason, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
 import { pipelineEntryKey } from '../lib/entry-key';
+import { isDemoProvider } from '../lib/demo-model';
+import { buildAgentBuildPath } from '../lib/slot-model';
 import { useGroupedModels, type BuilderModelRow } from '../lib/useGroupedModels';
 import { ToolCompatGuard } from '../../providers/components/ToolCompatGuard';
 import { BlastRadiusConfirm, type BlastRadiusAffected } from '../../providers/components/BlastRadiusConfirm';
@@ -230,8 +232,13 @@ function fmtCtx(tokens: number | null | undefined): string | null {
   return `${tokens} ctx`;
 }
 
-function pricePerM(micros: number | null | undefined): string {
-  if (micros === null || micros === undefined) return 'Pricing not listed';
+/**
+ * W18: USD/1M for one side, or null when the catalog reports no price.
+ * Callers attach the in/out suffix only to a real price — the "not listed"
+ * placeholder never composes with a suffix.
+ */
+function pricePerM(micros: number | null | undefined): string | null {
+  if (micros === null || micros === undefined) return null;
   return `$${(micros / 1000).toFixed(2)}/1M`;
 }
 
@@ -1005,6 +1012,7 @@ export function ModelSection({
             pinnedToolCount={pinnedToolCount}
             canAuthor={canAuthor}
             isEnterprise={isEnterprise}
+            returnTo={buildAgentBuildPath(assistantId)}
             onToggle={toggleModel}
           />
           {/* PRV-076: warn, don't forbid — explicit confirmation to select a
@@ -1381,6 +1389,17 @@ function PipelineRow({
   // platform pool when unpinned, the named credential when pinned.
   const sourceLabel =
     row?.supergroup === 'byok' ? `BYOK · ${row.credentialLabel ?? 'unlabeled credential'}` : 'Platform';
+  // W18: the in/out suffixes attach only to real prices — an unpriced side
+  // contributes nothing, and a fully unpriced row reads "Pricing not listed"
+  // with no suffixes.
+  const inPerM = pricePerM(cost?.costMicrosPer1kInput);
+  const outPerM = pricePerM(cost?.costMicrosPer1kOutput);
+  const priceLine =
+    inPerM === null && outPerM === null
+      ? 'Pricing not listed'
+      : [inPerM === null ? null : `${inPerM} in`, outPerM === null ? null : `${outPerM} out`]
+          .filter((part): part is string => part !== null)
+          .join(' · ');
 
   const selectedCred = providerCreds.find((c) => c.id === entry.credential_id) ?? null;
 
@@ -1402,6 +1421,13 @@ function PipelineRow({
   // Unusable for a known reason — render the human text plus the Providers
   // deep-link (PRV-080). Unknown rows (no N-5 match) render nothing.
   const unusableReason = row && !row.usable ? (row.reasons[0] ?? 'unknown') : null;
+  // W19: credential-exempt rows — the demo provider, or platform-sourced
+  // rows the platform pool serves — never need an org credential. Keys off
+  // the same signal as the readiness panel: only a genuine
+  // provider_credential_missing blocker (credBlocked) may offer the
+  // connect-credential helper.
+  const credentialExempt =
+    !credBlocked && (isDemoProvider(row?.provider ?? provider) || row?.supergroup === 'platform');
 
   return (
     <PipelineRowShell>
@@ -1422,9 +1448,7 @@ function PipelineRow({
               {` · ${sourceLabel}`}
               {capLabels.length > 0 ? ` · ${capLabels.join(' ')}` : ''}
             </PipelineRowMeta>
-            <PipelineRowMeta>
-              {pricePerM(cost?.costMicrosPer1kInput)} in · {pricePerM(cost?.costMicrosPer1kOutput)} out
-            </PipelineRowMeta>
+            <PipelineRowMeta>{priceLine}</PipelineRowMeta>
             {unusableReason !== null && (
               <PipelineRowMeta>
                 unusable: {humanizeReason(unusableReason)} ·{' '}
@@ -1483,6 +1507,8 @@ function PipelineRow({
                   })),
                 ]}
               />
+            ) : credentialExempt ? (
+              <HelperText>Served by platform pool — no credential needed</HelperText>
             ) : (
               <HelperText>
                 {credBlocked ? (

@@ -119,6 +119,19 @@ function fixture(): GroupedModels {
             capabilities: caps({ reasoning: true }),
             pinned_by: [],
           },
+          {
+            // Stale stored flag: enabled=true while the engine says
+            // unusable — the switch must still render OFF (W1 invariant).
+            model_id: 'grok-heavy',
+            display_name: 'Grok Heavy',
+            required_product: 'enterprise',
+            required_product_label: 'Enterprise',
+            enabled: true,
+            usable: false,
+            reasons: ['subscription_required'],
+            capabilities: caps({ tools: true }),
+            pinned_by: [],
+          },
         ],
       },
     ],
@@ -237,6 +250,19 @@ describe('TabModels', () => {
     expect(
       screen.getByText('No verified provider credential is attached — connect a key before enabling.'),
     ).toBeTruthy();
+  });
+
+  it('never renders the switch ON alongside a cannot-enable warning (stale enabled flag)', () => {
+    renderTab();
+    // Grok Heavy: stored enabled=true, but the engine reports usable=false.
+    const sw = screen.getByRole('switch', { name: /Grok Heavy/ });
+    expect(sw).toHaveAttribute('aria-checked', 'false');
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    expect(
+      screen.getByText('Not covered by your current plan — upgrade your plan to enable this model.'),
+    ).toBeTruthy();
+    // Enable label, never "Disable", when unusable.
+    expect(sw.getAttribute('aria-label')).toMatch(/^Enable Grok Heavy/);
   });
 
   it('posts the exact N-6 payload when toggling a model on (platform: no credential_id)', () => {

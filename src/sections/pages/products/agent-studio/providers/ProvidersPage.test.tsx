@@ -87,44 +87,44 @@ beforeEach(() => {
 });
 
 describe('ProvidersPage tab visibility matrix', () => {
-  it('free tier: hides "My providers" (platform keys, nothing to manage)', async () => {
+  it('free tier: hides "My Providers" (platform keys, nothing to manage)', async () => {
     studioState = 'none';
     await renderShell(true);
 
-    expect(screen.queryByRole('tab', { name: 'My providers' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'My Providers' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Catalog' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Models' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Spend & budgets' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Spend & Budgets' })).toBeTruthy();
   });
 
-  it('payg tier: shows "My providers"', async () => {
+  it('payg tier: shows "My Providers"', async () => {
     studioState = 'active';
     await renderShell(true);
 
-    expect(screen.getByRole('tab', { name: 'My providers' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'My Providers' })).toBeTruthy();
   });
 
-  it('enterprise tier: shows "My providers"', async () => {
+  it('enterprise tier: shows "My Providers"', async () => {
     studioState = 'active';
     enterpriseProducts = [{ key: 'agent_studio_enterprise', entitlement_state: 'active' }];
     await renderShell(true);
 
-    expect(screen.getByRole('tab', { name: 'My providers' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'My Providers' })).toBeTruthy();
   });
 
   it('unknown tier (home still loading): renders the full set, server gates actions', async () => {
     studioState = 'active';
     await renderShell(false);
 
-    expect(screen.getByRole('tab', { name: 'My providers' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'My Providers' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Catalog' })).toBeTruthy();
   });
 
-  it('switching to My providers renders the tab surface', async () => {
+  it('switching to My Providers renders the tab surface', async () => {
     studioState = 'active';
     await renderShell(true);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'My providers' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'My Providers' }));
     await waitFor(() => {
       expect(screen.getByText('My providers surface')).toBeTruthy();
     });
@@ -140,11 +140,11 @@ describe('ProvidersPage tab visibility matrix', () => {
     });
   });
 
-  it('switching to Spend & budgets renders the spend surface (Phase 7: Tab D enabled)', async () => {
+  it('switching to Spend & Budgets renders the spend surface (Phase 7: Tab D enabled)', async () => {
     studioState = 'active';
     await renderShell(true);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Spend & budgets' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Spend & Budgets' }));
     await waitFor(() => {
       expect(screen.getByText('Spend surface')).toBeTruthy();
     });
