@@ -117,7 +117,7 @@ describe('MyProvidersPage', () => {
     renderPage();
     expect(screen.getByText('No providers connected')).toBeTruthy();
     // Header action + empty-state action.
-    expect(screen.getAllByRole('button', { name: 'Connect API Key' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: '+ Connect a key' })).toHaveLength(2);
     // Identical labels in both places: "Connect Custom Endpoint" + the Enterprise pill.
     expect(screen.getAllByRole('link', { name: /Connect Custom Endpoint/ })).toHaveLength(2);
     expect(screen.getAllByText('Enterprise')).toHaveLength(2);
@@ -127,7 +127,7 @@ describe('MyProvidersPage', () => {
     hoisted.tier = 'free';
     renderPage();
     expect(screen.getByText(/nothing to connect or manage here/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Connect API Key' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '+ Connect a key' })).toBeNull();
   });
 
   it('renders cards sorted by priority', () => {
@@ -148,9 +148,9 @@ describe('MyProvidersPage', () => {
     );
   });
 
-  it('opening Connect API Key shows the verify-first form', () => {
+  it('opening + Connect a key shows the verify-first form', () => {
     renderPage();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect API Key' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: '+ Connect a key' })[0]);
     expect(screen.getByLabelText('Connect API key form')).toBeTruthy();
     // Connect is disabled until a successful probe.
     expect(screen.getByRole('button', { name: 'Connect key' })).toBeDisabled();

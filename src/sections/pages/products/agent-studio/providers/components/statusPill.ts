@@ -31,8 +31,14 @@ export function statusPillFor(
       };
     case 'verifying':
       return { tone: 'info', text: 'Verifying…' };
-    case 'failed':
-      return { tone: 'error', text: lastError ? `Failed: ${lastError}` : 'Failed' };
+    case 'failed': {
+      // Founder key-cards design: amber "Failed: {code}" — the code is the
+      // leading 3-digit status from the most recent verify attempt's engine
+      // detail. No server-side failure reason exists, so without a recent
+      // local verify attempt the pill is a plain "Failed".
+      const code = lastError?.match(/^\d{3}/)?.[0];
+      return { tone: 'warning', text: code ? `Failed: ${code}` : 'Failed' };
+    }
     case 'revoked':
       return { tone: 'neutral', text: 'Revoked' };
     case 'unverified':

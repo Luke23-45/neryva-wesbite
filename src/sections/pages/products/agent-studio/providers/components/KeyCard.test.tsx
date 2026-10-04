@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 /**
- * Providers Phase 5 — Wave B: KeyCard targeted tests.
- * - status pill matrix (verified+latency / unverified / failed / revoked / verifying)
+ * Providers — KeyCard targeted tests (founder key-cards design).
+ * - status pill matrix (verified+latency / unverified / failed:code / revoked / verifying)
+ * - healthy card: header sub-line, priority row, fallback segmented,
+ *   applies-to chips, 30-day usage summary, agreement row
+ * - failed card: compact amber variant, error line with recency,
+ *   disabled toggle, Retry verify + Revoke
  * - unverified cards marked unroutable
- * - fallback selector writes
+ * - fallback segmented writes
  * - attestation writes
- * - N-7 pills render with labeled list-price
- * - enabled toggle + priority buttons
+ * - enabled toggle + priority buttons + drag-handle keyboard fallback
  * - blast-radius preview derived from N-5 pinned_by
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -61,6 +64,12 @@ vi.mock('@/sections/pages/products/agent-studio/providers/api', async (importOri
   return { ...original, fetchGroupedModels: hoisted.fetchGroupedModels };
 });
 
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, search, children }: { to: string; search?: Record<string, unknown>; children: React.ReactNode }) => (
+    <a href={search?.q ? `${to}?q=${encodeURIComponent(String(search.q))}` : to}>{children}</a>
+  ),
+}));
+
 function baseCredential(overrides: Partial<ProviderCredentialView> = {}): ProviderCredentialView {
   return {
     id: 'cred-1',
@@ -114,6 +123,15 @@ function renderCard(props: Partial<KeyCardProps> = {}) {
     isLast: true,
     onMoveUp: vi.fn(),
     onMoveDown: vi.fn(),
+    providerIndex: 0,
+    providerCount: 2,
+    groupIds: ['cred-1', 'cred-2'],
+    orgTier: 'payg',
+    dragSourceId: null,
+    dragTargetId: null,
+    onDragStart: vi.fn(),
+    onDragMove: vi.fn(),
+    onDragEnd: vi.fn(),
     ...props,
   };
   return {
@@ -146,13 +164,15 @@ describe('statusPillFor matrix', () => {
     expect(pill.text).toBe('Unverified');
     expect(pill.tone).toBe('warning');
   });
-  it('renders Failed with engine detail', () => {
+  it('renders Failed with the code from the verify detail', () => {
     const pill = statusPillFor(baseCredential({ verification_status: 'failed' }), '401 Invalid Key');
-    expect(pill.text).toBe('Failed: 401 Invalid Key');
-    expect(pill.tone).toBe('error');
+    expect(pill.text).toBe('Failed: 401');
+    expect(pill.tone).toBe('warning');
   });
   it('renders Failed without detail', () => {
-    expect(statusPillFor(baseCredential({ verification_status: 'failed' })).text).toBe('Failed');
+    const pill = statusPillFor(baseCredential({ verification_status: 'failed' }));
+    expect(pill.text).toBe('Failed');
+    expect(pill.tone).toBe('warning');
   });
   it('renders Revoked and Verifying', () => {
     expect(statusPillFor(baseCredential({ verification_status: 'revoked' })).text).toBe('Revoked');
@@ -164,8 +184,41 @@ describe('KeyCard rendering', () => {
   it('shows the pill, masked fingerprint, and label', () => {
     renderCard();
     expect(screen.getByText('Verified (124ms)')).toBeTruthy();
-    expect(screen.getByText('sk-…8f9a')).toBeTruthy();
+    expect(screen.getByText(/sk-…8f9a/)).toBeTruthy();
     expect(screen.getByLabelText('API key: Production Key')).toBeTruthy();
+  });
+
+  it('renders the priority row with provider position', () => {
+    renderCard();
+    expect(screen.getByText(/1 of 2 OpenAI keys/)).toBeTruthy();
+    expect(screen.getByText(/drag to reorder/)).toBeTruthy();
+  });
+
+  it('renders applies-to chips with assistant scope', () => {
+    renderCard();
+    expect(screen.getByText('gpt-4o')).toBeTruthy();
+    expect(screen.getByText(/All assistants/)).toBeTruthy();
+  });
+
+  it('collapses extra models behind a "+ N more" chip', () => {
+    renderCard({
+      credential: baseCredential({
+        discovered_models: [
+          { id: 'gpt-4o' },
+          { id: 'gpt-4o-mini' },
+          { id: 'o1' },
+          { id: 'o3-mini' },
+        ],
+      }),
+    });
+    expect(screen.getByText('+ 2 more')).toBeTruthy();
+  });
+
+  it('renders the agreement summary row with attestation', () => {
+    renderCard({ credential: baseCredential({ zdr_attestation: 'account_zdr', region_attestation: 'eu' }) });
+    expect(screen.getByText(/ZDR: My account has ZDR/)).toBeTruthy();
+    expect(screen.getByText(/Region: EU/)).toBeTruthy();
+    expect(screen.getByText(/attested by owner@example.com/)).toBeTruthy();
   });
 
   it('marks unverified cards unroutable with a verify action', () => {
@@ -207,22 +260,26 @@ describe('KeyCard rendering', () => {
   });
 });
 
-describe('fallback selector writes', () => {
-  it('patches shared_capacity_fallback on change', () => {
+describe('fallback segmented writes', () => {
+  it('patches shared_capacity_fallback on segment change', () => {
     renderCard();
-    fireEvent.click(screen.getByRole('button', { name: 'Shared capacity fallback' }));
-    fireEvent.click(screen.getByRole('option', { name: /Never for this provider/ }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Never for provider' }));
     expect(hoisted.patchMutate).toHaveBeenCalledWith(
       { id: 'cred-1', patch: { shared_capacity_fallback: 'never_for_provider' } },
       expect.anything(),
     );
+  });
+
+  it('marks the current value selected', () => {
+    renderCard({ credential: baseCredential({ shared_capacity_fallback: 'never_for_covered_models' }) });
+    expect(screen.getByRole('tab', { name: 'Never for these models' }).getAttribute('aria-selected')).toBe('true');
   });
 });
 
 describe('attestation writes', () => {
   it('patches zdr_attestation on change', () => {
     renderCard();
-    fireEvent.click(screen.getByRole('button', { name: /compliance attestations/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit attestations' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zero data retention (ZDR)' }));
     fireEvent.click(screen.getByRole('option', { name: /No ZDR/ }));
     expect(hoisted.patchMutate).toHaveBeenCalledWith(
@@ -233,25 +290,62 @@ describe('attestation writes', () => {
 
   it('shows actor and timestamp when attested', () => {
     renderCard();
-    fireEvent.click(screen.getByRole('button', { name: /compliance attestations/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit attestations' }));
     expect(screen.getByText(/Attested by owner@example.com/)).toBeTruthy();
   });
 });
 
-describe('N-7 observability pills', () => {
+describe('30-day usage summary', () => {
   it('renders requests, spend, and labeled list-price equivalent', () => {
     renderCard();
-    expect(screen.getByText('1,200')).toBeTruthy();
-    expect(screen.getByText('$4.20')).toBeTruthy();
-    expect(screen.getByText(/list-price equivalent \$12\.34 — not billed/)).toBeTruthy();
+    expect(screen.getByText(/1,200 requests/)).toBeTruthy();
+    expect(screen.getByText(/\$4\.20/)).toBeTruthy();
+    expect(screen.getByText(/list-price equivalent — not billed/)).toBeTruthy();
   });
 
-  it('renders the 401/403/429/5xx error breakdown', () => {
+  it('renders the non-zero error counts with the 429 highlighted', () => {
     renderCard();
-    expect(screen.getByText('401: 3')).toBeTruthy();
-    expect(screen.getByText('403: 0')).toBeTruthy();
-    expect(screen.getByText('429: 1')).toBeTruthy();
-    expect(screen.getByText('5xx: 0')).toBeTruthy();
+    expect(screen.getByText('401 ×3')).toBeTruthy();
+    expect(screen.getByText('429 ×1')).toBeTruthy();
+  });
+});
+
+describe('failed compact card', () => {
+  it('renders the amber Failed:code pill, disabled toggle, and retry actions', () => {
+    renderCard({ credential: baseCredential({ verification_status: 'failed' }) });
+    expect(screen.getByText('Failed')).toBeTruthy();
+    expect(screen.getByText(/run Retry verify to re-probe this key/)).toBeTruthy();
+    expect(screen.getByRole('switch').getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Retry verify' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBeTruthy();
+    // Compact: no priority / fallback / usage rows.
+    expect(screen.queryByText('Priority')).toBeNull();
+    expect(screen.queryByText('Fallback')).toBeNull();
+    expect(screen.queryByText('30-day use')).toBeNull();
+  });
+
+  it('shows the verify error with recency after a failed retry', async () => {
+    hoisted.verifyMutate.mockImplementation((_id: string, opts: { onError: (e: Error) => void }) => {
+      opts.onError(new Error('401 Invalid Key'));
+    });
+    renderCard({ credential: baseCredential({ verification_status: 'failed' }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry verify' }));
+    await waitFor(() => expect(screen.getByText('Failed: 401')).toBeTruthy());
+    expect(screen.getByText(/401 Invalid Key/)).toBeTruthy();
+    expect(screen.getByText(/at verify,/)).toBeTruthy();
+  });
+});
+
+describe('drag reorder', () => {
+  it('arrow keys on the drag handle move the card', () => {
+    const onMoveUp = vi.fn();
+    const onMoveDown = vi.fn();
+    renderCard({ onMoveUp, onMoveDown });
+    const handle = screen.getByRole('button', { name: /Reorder Production Key/ });
+    fireEvent.keyDown(handle, { key: 'ArrowUp' });
+    fireEvent.keyDown(handle, { key: 'ArrowDown' });
+    expect(onMoveUp).toHaveBeenCalledTimes(1);
+    expect(onMoveDown).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -282,7 +376,7 @@ describe('blast-radius preview', () => {
       ],
     });
     renderCard();
-    fireEvent.click(screen.getByRole('button', { name: /scope filters/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit scope filters' }));
     await waitFor(() => expect(hoisted.fetchGroupedModels).toHaveBeenCalled());
     // Restrict: uncheck "All discovered models", then uncheck gpt-4o.
     fireEvent.click(screen.getByRole('checkbox', { name: 'All discovered models' }));

@@ -18,6 +18,7 @@ import {
   useCredentials,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials';
 import { useOrgTier } from '@/sections/pages/products/agent-studio/providers/hooks/useOrgTier';
+import type { ProviderCredentialView } from '@/sections/pages/products/agent-studio/providers/api';
 import {
   bodyText,
   card,
@@ -40,9 +41,9 @@ const enterprisePill: CSSProperties = {
 };
 
 /**
- * The two connect actions in one place: "Connect API Key" (secondary) and
- * "Connect Custom Endpoint" (primary, with the Enterprise pill for
- * non-enterprise orgs). Used identically by the top-right actions and the
+ * The two connect actions in one place: "+ Connect a key" (primary, opens
+ * the inline key form) and "Connect Custom Endpoint" (secondary, routed —
+ * Enterprise). Used identically by the top-right actions and the
  * empty-state card so the labels and emphasis never drift apart.
  */
 function ConnectActions({
@@ -56,18 +57,18 @@ function ConnectActions({
 }) {
   return (
     <>
-      {showApiKey && (
-        <button type="button" onClick={onConnectKey} style={secondaryBtn}>
-          Connect API Key
-        </button>
-      )}
       <Link
         to="/agent-studio/providers/custom/new"
-        style={{ ...primaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
+        style={{ ...secondaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
       >
         Connect Custom Endpoint
         {!isEnterprise && <span style={enterprisePill}>Enterprise</span>}
       </Link>
+      {showApiKey && (
+        <button type="button" onClick={onConnectKey} style={primaryBtn}>
+          + Connect a key
+        </button>
+      )}
     </>
   );
 }
@@ -88,6 +89,21 @@ export function MyProvidersPage() {
         (a.created_at ?? '').localeCompare(b.created_at ?? ''),
     );
   }, [data]);
+
+  // Provider groups back the "N of M {Provider} keys" label and constrain
+  // drag-to-reorder drops to the same provider.
+  const groups = useMemo(() => {
+    const map = new Map<string, ProviderCredentialView[]>();
+    for (const c of credentials) {
+      const list = map.get(c.provider) ?? [];
+      list.push(c);
+      map.set(c.provider, list);
+    }
+    return map;
+  }, [credentials]);
+
+  // Pointer-drag state: { sourceId, targetId } while a drag is in flight.
+  const [drag, setDrag] = useState<{ sourceId: string; targetId: string | null } | null>(null);
 
   if (!orgId) return null;
 
@@ -110,11 +126,10 @@ export function MyProvidersPage() {
     );
   }
 
-  const move = (index: number, direction: 'up' | 'down') => {
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= credentials.length) return;
-    const a = credentials[index];
-    const b = credentials[target];
+  const swapPriorities = (aId: string, bId: string) => {
+    const a = credentials.find((c) => c.id === aId);
+    const b = credentials.find((c) => c.id === bId);
+    if (!a || !b || a.id === b.id) return;
     // Swap priorities so ordering stays a strict sequence.
     mutations.patch.mutate(
       { id: a.id, patch: { priority: b.priority } },
@@ -125,13 +140,18 @@ export function MyProvidersPage() {
     );
   };
 
+  const move = (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= credentials.length) return;
+    swapPriorities(credentials[index].id, credentials[target].id);
+  };
+
   return (
     <ViewShell>
       <ViewHeader>
         <ViewTitle>My Providers</ViewTitle>
         <ViewSubtitle>
-          Your connected API keys and custom endpoints. Keys are verified before they can serve
-          traffic.
+          Your organization’s connected keys — verify, order, scope, and rotate them here.
         </ViewSubtitle>
       </ViewHeader>
       <div style={{ ...row, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: 16 }}>
@@ -182,18 +202,40 @@ export function MyProvidersPage() {
       )}
 
       <div style={{ display: 'grid', gap: 16 }}>
-        {credentials.map((cred, index) => (
-          <KeyCard
-            key={cred.id}
-            credential={cred}
-            orgId={orgId}
-            isFirst={index === 0}
-            isLast={index === credentials.length - 1}
-            onMoveUp={() => move(index, 'up')}
-            onMoveDown={() => move(index, 'down')}
-          />
-        ))}
+        {credentials.map((cred, index) => {
+          const group = groups.get(cred.provider) ?? [];
+          return (
+            <KeyCard
+              key={cred.id}
+              credential={cred}
+              orgId={orgId}
+              isFirst={index === 0}
+              isLast={index === credentials.length - 1}
+              onMoveUp={() => move(index, 'up')}
+              onMoveDown={() => move(index, 'down')}
+              providerIndex={group.findIndex((c) => c.id === cred.id)}
+              providerCount={group.length}
+              groupIds={group.map((c) => c.id)}
+              orgTier={tier}
+              dragSourceId={drag?.sourceId ?? null}
+              dragTargetId={drag?.targetId ?? null}
+              onDragStart={(id) => setDrag({ sourceId: id, targetId: null })}
+              onDragMove={(id) => setDrag((d) => (d ? { ...d, targetId: id } : d))}
+              onDragEnd={(sourceId, targetId) => {
+                setDrag(null);
+                if (targetId && targetId !== sourceId) swapPriorities(sourceId, targetId);
+              }}
+            />
+          );
+        })}
       </div>
+
+      {!isLoading && !isError && credentials.length > 0 && (
+        <p style={{ ...hintText, marginTop: 20 }}>
+          Keys are org-scoped and sealed · rotation keeps card identity · revocation is instant and
+          audited
+        </p>
+      )}
     </ViewShell>
   );
 }
