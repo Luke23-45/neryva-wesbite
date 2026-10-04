@@ -11,8 +11,9 @@
  * toggle with its honest explanation, engine-truth fee transparency, and
  * Enterprise audit export.
  *
- * Honest omissions (Law VII): the SVG's PER-MODEL table and on-breach
- * behavior radios have no backing API — they are not rendered.
+ * Honest omissions (Law VII): the SVG's on-breach behavior radios have no
+ * backing API — they are not rendered. The PER-MODEL table is backed by
+ * GET /console/org/:orgId/spend/models.
  *
  * Tier/role gating (display-only; the server gates every action):
  * - spend data is owner/admin/billing only
@@ -24,7 +25,7 @@
  * no content modals, no invented numbers — every figure is engine-rendered
  * or absent.
  */
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import styled from 'styled-components';
 import { useQueries } from '@tanstack/react-query';
 import { useOrg } from '@/Context/OrgContext';
@@ -44,9 +45,18 @@ import {
 import {
   fetchCredentialUsage,
   type CredentialUsageView,
+  type ModelSpendResponse,
   type SpendSummaryView,
   type SpendWindow,
 } from '@/sections/pages/products/agent-studio/providers/api';
+import { useModelSpend } from '@/sections/pages/products/agent-studio/providers/hooks/useModelSpend';
+import {
+  describeVsPrior,
+  formatTokens,
+  groupModelSpendByProvider,
+  spendSharePct,
+  topModelSummary,
+} from '@/sections/pages/products/agent-studio/providers/lib/model-spend';
 import {
   bodyText,
   card,
@@ -90,6 +100,7 @@ export function SpendPage() {
   const isFree = tier === 'free';
 
   const summary = useSpendSummary(orgId, window, canViewSpend && role !== null);
+  const modelSpend = useModelSpend(orgId, window, canViewSpend && role !== null);
   const mutations = useSpendMutations(orgId ?? '');
 
   if (!orgId) return null;
@@ -160,9 +171,10 @@ export function SpendPage() {
       )}
       {summary.data && (
         <>
-          <OverviewCards data={summary.data} />
+          <OverviewCards data={summary.data} modelSpend={modelSpend.data} />
           <BreakdownList data={summary.data} />
           {!isFree && <CredentialSpendList orgId={orgId} window={window} />}
+          {!isFree && <ModelSpendList query={modelSpend} window={window} />}
           <FeePanel data={summary.data} />
           {isFree ? (
             <div style={{ ...card, marginTop: 16 }}>
@@ -202,7 +214,7 @@ export function SpendPage() {
 /* Overview cards                                                      */
 /* ------------------------------------------------------------------ */
 
-function OverviewCards({ data }: { data: SpendSummaryView }) {
+function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpend?: ModelSpendResponse }) {
   const platform = formatUsd(data.platform_spend_usd);
   const byok = formatUsd(data.byok.list_price_equivalent_usd);
   const budget = data.budget;
@@ -211,6 +223,10 @@ function OverviewCards({ data }: { data: SpendSummaryView }) {
   const pct =
     capUsd != null && capUsd > 0 && Number.isFinite(used)
       ? Math.min(100, Math.round((used / capUsd) * 100))
+      : null;
+  const top =
+    modelSpend?.rows?.length
+      ? topModelSummary(modelSpend.rows, modelSpend.total_spend_usd)
       : null;
 
   return (
@@ -275,6 +291,21 @@ function OverviewCards({ data }: { data: SpendSummaryView }) {
           <p style={{ ...hintText, marginTop: 6 }}>No cap set</p>
         )}
       </div>
+      {top && modelSpend && (
+        <div style={card}>
+          <p style={labelText}>Top model · {modelSpend.window}</p>
+          <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
+            {top.model_display_name}
+          </p>
+          <p style={{ ...bodyText, fontWeight: 700, color: colors.text, marginTop: 6 }}>
+            {formatUsd(top.spend_usd) ?? '—'}
+          </p>
+          <p style={{ ...hintText, marginTop: 6 }}>
+            {top.sharePct === null ? '—' : `${Math.round(top.sharePct)}%`} of spend ·{' '}
+            {top.sourcesLabel}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -428,6 +459,19 @@ const ListBasisTag = styled.span`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
+/** Full-width provider sub-header row inside the per-model table body. */
+const ModelSubHeadCell = styled.td`
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.faint};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+  white-space: nowrap;
+`;
+
 function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWindow }) {
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
   const credentials = data?.credentials ?? [];
@@ -518,6 +562,172 @@ function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWi
               </SpendBodyRow>
             );
           })}
+        </tbody>
+      </StyledSpendTable>
+    </SpendTableWrap>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Per-model spend — GET /console/org/:orgId/spend/models                */
+/* ------------------------------------------------------------------ */
+
+export function ModelSpendList({
+  query,
+  window,
+}: {
+  query: ReturnType<typeof useModelSpend>;
+  window: SpendWindow;
+}) {
+  const { data, isLoading, isError, refetch } = query;
+
+  if (isLoading) return <p style={{ ...hintText, marginTop: 16 }}>Loading model spend…</p>;
+  if (isError) {
+    return (
+      <div style={{ ...errorCallout, marginTop: 16 }} role="alert">
+        Couldn&apos;t load model spend.{' '}
+        <button
+          type="button"
+          onClick={() => refetch()}
+          style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px' }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+  const rows = data?.rows ?? [];
+  if (rows.length === 0) {
+    return (
+      <div style={{ ...card, marginTop: 16 }}>
+        <h3 style={sectionTitle}>Per-model spend</h3>
+        <p style={{ ...hintText, marginTop: 8 }}>No model spend in this window.</p>
+      </div>
+    );
+  }
+
+  const total = data?.total_spend_usd ?? '0';
+  const groups = groupModelSpendByProvider(rows);
+
+  return (
+    <SpendTableWrap>
+      <SpendTableHead>
+        <h3 style={sectionTitle}>Per-model spend · {window.toUpperCase()}</h3>
+        <p style={{ ...hintText, marginTop: 4 }}>
+          Share is the model&apos;s fraction of total spend in this window. BYOK
+          rows are list-price equivalents — not billed.
+        </p>
+      </SpendTableHead>
+      <StyledSpendTable>
+        <thead>
+          <tr>
+            <SpendHeadCell scope="col">Model</SpendHeadCell>
+            <SpendHeadCell scope="col">Source</SpendHeadCell>
+            <SpendHeadCell scope="col">Requests</SpendHeadCell>
+            <SpendHeadCell scope="col">Tokens</SpendHeadCell>
+            <SpendHeadCell scope="col">Spend</SpendHeadCell>
+            <SpendHeadCell scope="col">Share</SpendHeadCell>
+            <SpendHeadCell scope="col">Vs prior {window.toUpperCase()}</SpendHeadCell>
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group) => (
+            <Fragment key={`sub-${group.provider}`}>
+              <tr>
+                <ModelSubHeadCell colSpan={7}>
+                  {group.provider_display_name} · {group.rows.length}
+                </ModelSubHeadCell>
+              </tr>
+              {group.rows.map((row, i) => {
+                const share = spendSharePct(row.spend_usd, total);
+                const clamped =
+                  share === null ? null : Math.min(100, Math.max(0, share));
+                const vs = describeVsPrior(row.vs_last_window_pct);
+                const vsColor =
+                  vs.kind === 'up'
+                    ? colors.error
+                    : vs.kind === 'down'
+                      ? colors.success
+                      : vs.kind === 'new'
+                        ? colors.accent
+                        : colors.textFaint;
+                return (
+                  <SpendBodyRow key={`${row.provider}/${row.model_id}/${row.source}/${i}`}>
+                    <SpendBodyCell>
+                      <CredName>{row.model_display_name}</CredName>
+                      <CredMeta>
+                        {row.provider} · {row.model_id}
+                        {row.source === 'byok' && row.credential_label
+                          ? ` · BYOK ${row.credential_label}`
+                          : ''}
+                      </CredMeta>
+                    </SpendBodyCell>
+                    <SpendBodyCell>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          border: `1px solid ${colors.borderSoft}`,
+                          borderRadius: 999,
+                          padding: '2px 8px',
+                          color: colors.textDim,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {row.source === 'byok' ? 'BYOK' : 'Platform'}
+                      </span>
+                      {row.pricing_basis === 'list' && (
+                        <ListBasisTag>{LIST_PRICE_LABEL}</ListBasisTag>
+                      )}
+                    </SpendBodyCell>
+                    <SpendBodyCell>{formatTokens(row.requests)}</SpendBodyCell>
+                    <SpendBodyCell>
+                      <span
+                        title={`${formatTokens(row.prompt_tokens)} prompt · ${formatTokens(row.completion_tokens)} completion`}
+                      >
+                        {formatTokens(row.total_tokens)}
+                      </span>
+                    </SpendBodyCell>
+                    <SpendBodyCell>{formatUsd(row.spend_usd) ?? '—'}</SpendBodyCell>
+                    <SpendBodyCell>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: 72,
+                            height: 6,
+                            borderRadius: 999,
+                            background: colors.bg,
+                            border: `1px solid ${colors.borderSoft}`,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: 'block',
+                              height: '100%',
+                              width: clamped === null ? '0%' : `${clamped}%`,
+                              background: colors.accent,
+                            }}
+                          />
+                        </span>
+                        {share === null ? '—' : `${Math.round(share)}%`}
+                      </span>
+                    </SpendBodyCell>
+                    <SpendBodyCell>
+                      <span style={{ color: vsColor }}>{vs.label}</span>
+                    </SpendBodyCell>
+                  </SpendBodyRow>
+                );
+              })}
+            </Fragment>
+          ))}
         </tbody>
       </StyledSpendTable>
     </SpendTableWrap>

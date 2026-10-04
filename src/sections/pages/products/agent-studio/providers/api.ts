@@ -521,3 +521,50 @@ export async function patchIncludeByokSpend(
 export async function downloadSpendExport(orgId: string, format: 'csv' | 'json'): Promise<void> {
   return engineDownload(`/console/org/${orgId}/spend/export`, { format });
 }
+
+// ---------------------------------------------------------------------------
+// Per-model spend (engine per-model spend API).
+//
+// Exact contract — do not guess shapes. Every money figure is an engine
+// string (USD); `spend_usd` is the settled USD for 'platform' rows and the
+// list-price equivalent (never billed) for 'byok' rows. `vs_last_window_pct`
+// is null when the model had no prior-window data ("new").
+// ---------------------------------------------------------------------------
+
+/** One model-spend row — mirrors the engine `ModelSpendRow` exactly. */
+export interface ModelSpendRow {
+  provider: string;
+  provider_display_name: string;
+  model_id: string;
+  model_display_name: string;
+  source: 'platform' | 'byok';
+  credential_id?: string | null;
+  credential_label?: string | null;
+  requests: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  /** Exact decimal string. Settled USD for platform; list-price equivalent for BYOK. */
+  spend_usd: string;
+  /** 'list' = BYOK list-price equivalent — never presented as billed. */
+  pricing_basis: 'settled' | 'list';
+  /** % change vs the prior window; null = new (no prior-window data). */
+  vs_last_window_pct: number | null;
+}
+
+/** Per-model spend for a window — mirrors the engine `ModelSpendResponse` exactly. Rows are sorted by spend desc. */
+export interface ModelSpendResponse {
+  window: '7d' | '30d';
+  /** Exact decimal string — the denominator for SHARE. */
+  total_spend_usd: string;
+  rows: ModelSpendRow[];
+}
+
+export async function fetchModelSpend(
+  orgId: string,
+  window: SpendWindow,
+): Promise<ModelSpendResponse> {
+  return engine<ModelSpendResponse>(`/console/org/${orgId}/spend/models`, {
+    query: { window },
+  });
+}

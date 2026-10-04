@@ -20,6 +20,8 @@ export const spendKeys = {
   root: (orgId: string) => ['org', orgId, 'spend'] as const,
   summary: (orgId: string, window: SpendWindow) =>
     [...spendKeys.root(orgId), 'summary', window] as const,
+  models: (orgId: string, window: SpendWindow) =>
+    [...spendKeys.root(orgId), 'models', window] as const,
 };
 
 export interface SpendMutations {
