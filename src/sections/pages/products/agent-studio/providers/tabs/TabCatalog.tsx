@@ -6,6 +6,7 @@ import { X, Search, SlidersHorizontal, Zap, Eye, DollarSign, ShieldCheck, Plus }
 import { useOrg } from '@/Context/OrgContext';
 import { useOrgTier, tierCovers } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
+import { isDemoProvider } from '@/sections/pages/products/agent-studio/builder/lib/demo-model';
 import type { ProviderDirectoryEntry } from '../api';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -371,6 +372,13 @@ const ConnectLink = styled.button`
   }
 `;
 
+// R2-4: the demo provider can never hold a credential — a "Connect key" CTA
+// would be a permanently impossible dead end. Honest static copy instead.
+const NoKeyText = styled.span`
+  font-size: 13px;
+  color: ${({ theme }) => theme.app.text.secondary};
+`;
+
 const UpgradeCta = styled(Link)`
   font-size: 12px;
   font-weight: 600;
@@ -618,6 +626,9 @@ function ProviderCard({
   const transport = transportLabel(entry.transport);
   const price = fromPrice(entry);
   const connected = entry.connection.has_active_credential;
+  // R2-4: the demo adapter takes no key — never render the connect CTA for
+  // it (a dead end: there is nothing to connect).
+  const demo = isDemoProvider(entry.provider);
 
   const handleKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -655,6 +666,8 @@ function ProviderCard({
         </Price>
         {connected ? (
           <StatusPill tone="success">Connected</StatusPill>
+        ) : demo ? (
+          <NoKeyText>No key needed</NoKeyText>
         ) : (
           <ConnectLink
             type="button"
@@ -893,6 +906,10 @@ export default function TabCatalog({ onConnectKey }: TabCatalogProps) {
                   <DetailLabel>Connection</DetailLabel>
                   {effectiveSelected.connection.has_active_credential ? (
                     <StatusPill tone="success">Connected</StatusPill>
+                  ) : isDemoProvider(effectiveSelected.provider) ? (
+                    // R2-4: same exemption as the card — the demo takes no
+                    // key, so the connect flow would be a dead end here too.
+                    <NoKeyText>No key needed</NoKeyText>
                   ) : (
                     <ConnectLink type="button" onClick={() => onConnectKey?.()}>
                       Connect key →

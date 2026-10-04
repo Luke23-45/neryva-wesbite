@@ -565,7 +565,7 @@ describe('ModelSection credential block exemption (W19)', () => {
     expect(screen.queryByRole('link', { name: 'Connect A →' })).toBeNull();
   });
 
-  it('exempts the demo row — never "No Mock credential connected"', async () => {
+  it('exempts the demo row — honest demo copy, never platform-pool copy', async () => {
     mockGrouped.rows = [
       groupedRow('mock/neryva/demo', {
         displayName: 'Free demo — mock responses, not AI',
@@ -581,7 +581,10 @@ describe('ModelSection credential block exemption (W19)', () => {
       });
     });
     fireEvent.click(screen.getByLabelText('Expand Free demo — mock responses, not AI configuration'));
-    expect(screen.getByText('Served by platform pool — no credential needed')).toBeTruthy();
+    // R2-2: the demo is served by the deterministic in-Studio mock adapter,
+    // never the platform pool — the copy must not claim platform serving.
+    expect(screen.getByText('Free demo — no credential needed')).toBeTruthy();
+    expect(screen.queryByText('Served by platform pool — no credential needed')).toBeNull();
     expect(screen.queryByText(/No Mock credential connected/)).toBeNull();
     expect(screen.queryByRole('link', { name: 'Connect Mock →' })).toBeNull();
   });

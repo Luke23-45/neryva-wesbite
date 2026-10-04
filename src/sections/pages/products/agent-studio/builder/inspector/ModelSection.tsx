@@ -407,11 +407,13 @@ export function ModelSection({
   }, [liveCreds]);
 
   // ---- Blocker validation (local-state-driven) ----
-  // Credential gate: a pipeline entry the grouped read confirms unusable for
-  // a missing credential, with no live credential for its provider, holds the
-  // save. Unknown catalog (still loading / fetch failed) is unknown, never
-  // known-bad — no blocker. Pinned entries name their credential, so the
-  // missing-credential reason can only fire on unpinned (platform) entries.
+  // Credential gate: an entry the grouped read marks unusable with a
+  // provider_credential_missing reason — and for whose provider the org has
+  // no live credential — holds the save. Unknown catalog (still loading /
+  // fetch failed) is unknown, never known-bad — no blocker. Pinned entries
+  // name their credential, so only unpinned entries reach this gate; whether
+  // an unpinned entry blocks is decided by the grouped read, not the pin
+  // state alone (post-E1 platform rows can serve without a BYOK credential).
   const credBlockers = useMemo(() => {
     if (groupedRows === undefined) return [];
     const out: { key: string; ref: string; provider: string; displayName: string }[] = [];
@@ -1426,8 +1428,11 @@ function PipelineRow({
   // the same signal as the readiness panel: only a genuine
   // provider_credential_missing blocker (credBlocked) may offer the
   // connect-credential helper.
-  const credentialExempt =
-    !credBlocked && (isDemoProvider(row?.provider ?? provider) || row?.supergroup === 'platform');
+  // R2-2: demo rows are exempt for a different reason than platform rows —
+  // the demo is served by the deterministic in-Studio mock adapter, never
+  // the platform pool — so the copy must not claim platform-pool serving.
+  const demoRow = isDemoProvider(row?.provider ?? provider);
+  const credentialExempt = !credBlocked && (demoRow || row?.supergroup === 'platform');
 
   return (
     <PipelineRowShell>
@@ -1508,7 +1513,12 @@ function PipelineRow({
                 ]}
               />
             ) : credentialExempt ? (
-              <HelperText>Served by platform pool — no credential needed</HelperText>
+              // R2-2: demo rows are served by the deterministic in-Studio
+              // mock adapter — the "platform pool" claim would be false for
+              // them. Platform rows keep the platform-pool copy.
+              <HelperText>
+                {demoRow ? 'Free demo — no credential needed' : 'Served by platform pool — no credential needed'}
+              </HelperText>
             ) : (
               <HelperText>
                 {credBlocked ? (

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
 import styled from 'styled-components';
+import { Link, useSearch } from '@tanstack/react-router';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Segmented } from '@components/common/ui/Segmented';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
@@ -38,9 +39,10 @@ const TabArea = styled.div`
 `;
 
 /**
- * Layout-mirroring loading skeleton for the providers surface: a search-bar
- * rectangle, a chip-row of pill rectangles, and card rectangles — the tab
- * chunk is loading, so we mirror the catalog layout the tab opens on.
+ * R2-6: layout-mirroring loading skeleton — a search-bar rectangle, a
+ * chip-row of pill rectangles, then one full-width card rectangle per
+ * expected row in a single column, mirroring the loaded Catalog's row
+ * layout. The tab chunk is loading, so we mirror what the tab opens on.
  */
 function ProvidersLoadingFallback() {
   return (
@@ -51,14 +53,7 @@ function ProvidersLoadingFallback() {
         <Skeleton $w="96px" $h="32px" $r="999px" />
         <Skeleton $w="128px" $h="32px" $r="999px" />
       </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: 12,
-          marginTop: 16,
-        }}
-      >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
         <Skeleton $h="150px" $r="14px" />
         <Skeleton $h="150px" $r="14px" />
         <Skeleton $h="150px" $r="14px" />
@@ -67,10 +62,40 @@ function ProvidersLoadingFallback() {
   );
 }
 
+// R2-3: the returnTo affordance mirrors ChannelsView's ReturnBanner — the
+// page renders standalone without the param, and the param is guarded to
+// /agent-studio/* paths (the InstallSection/ChannelsView guard).
+const ReturnBanner = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.status.info.border};
+  background: ${({ theme }) => theme.app.status.info.bg};
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  a {
+    font-weight: 600;
+    color: ${({ theme }) => theme.app.text.link};
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
 export function ProvidersPage() {
   const tier = useOrgTier();
   const tabs = visibleTabs(tier);
   const [active, setActive] = useState<TabKey>('catalog');
+
+  // R2-3: the builder's ModelPicker threads ?returnTo=<builder draft path>
+  // through its "Open Providers →" link so this page can send the user
+  // back. Guarded to /agent-studio/* (InstallSection/ChannelsView pattern)
+  // — anything else is treated as absent.
+  const search = useSearch({ strict: false }) as { returnTo?: unknown };
+  const returnTo =
+    typeof search.returnTo === 'string' && search.returnTo.startsWith('/agent-studio/')
+      ? search.returnTo
+      : null;
 
   // If the active tab disappears under the current tier, fall back to Catalog.
   const current: TabKey = tabs.includes(active) ? active : 'catalog';
@@ -99,6 +124,13 @@ export function ProvidersPage() {
           ariaLabel="Providers sections"
         />
       </div>
+
+      {returnTo && (
+        <ReturnBanner role="status">
+          You arrived from the agent builder — you can return to your draft at any time.{' '}
+          <Link to={returnTo}>← Back to builder</Link>
+        </ReturnBanner>
+      )}
 
       <TabArea>
         <Suspense fallback={<ProvidersLoadingFallback />}>

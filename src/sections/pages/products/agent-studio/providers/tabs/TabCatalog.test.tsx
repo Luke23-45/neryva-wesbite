@@ -334,4 +334,26 @@ describe('TabCatalog', () => {
     expect(screen.queryByRole('heading', { name: 'Other Providers' })).toBeNull();
     expect(screen.getByText('Neryva Demo')).toBeTruthy();
   });
+
+  it('R2-4: the demo card shows "No key needed" — never a Connect key dead end', async () => {
+    await renderRouted([neryvaDemo, anthropic]);
+
+    expect(screen.getByText('No key needed')).toBeTruthy();
+    // The demo provider can never hold a credential: no connect affordance.
+    expect(screen.queryByRole('button', { name: /connect a key for neryva demo/i })).toBeNull();
+    // Non-demo providers keep their CTA — the exemption is demo-only.
+    expect(screen.getByRole('button', { name: /connect a key for anthropic/i })).toBeTruthy();
+  });
+
+  it('R2-4: the demo drawer Connection row shows "No key needed", not "Connect key →"', async () => {
+    await renderRouted([neryvaDemo]);
+
+    fireEvent.click(screen.getByRole('button', { name: /view neryva demo details/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Neryva Demo details')).toBeTruthy();
+    });
+    // Both the card and the drawer's Connection row render the honest copy.
+    expect(screen.getAllByText('No key needed')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Connect key →' })).toBeNull();
+  });
 });

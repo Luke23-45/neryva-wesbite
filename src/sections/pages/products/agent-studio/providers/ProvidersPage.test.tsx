@@ -47,7 +47,7 @@ vi.mock('@/Context/OrgContext', () => ({
  * is seeded like OrgProvider would; omit the seed to simulate the still-loading
  * 'unknown' tier.
  */
-async function renderShell(seedHome: boolean) {
+async function renderShell(seedHome: boolean, initialEntry = '/agent-studio/providers') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   if (seedHome) {
     client.setQueryData(['org', 'home'], {
@@ -65,7 +65,7 @@ async function renderShell(seedHome: boolean) {
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([providersRoute]),
-    history: createMemoryHistory({ initialEntries: ['/agent-studio/providers'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
   await router.load();
   const result = render(
@@ -148,5 +148,37 @@ describe('ProvidersPage tab visibility matrix', () => {
     await waitFor(() => {
       expect(screen.getByText('Spend surface')).toBeTruthy();
     });
+  });
+});
+
+describe('ProvidersPage ?returnTo (R2-3)', () => {
+  it('renders a "Back to builder" affordance pointing at the guarded returnTo path', async () => {
+    studioState = 'none';
+    await renderShell(true, '/agent-studio/providers?returnTo=/agent-studio/agents/abc/build');
+
+    const back = screen.getByRole('link', { name: '← Back to builder' });
+    expect(back).toBeTruthy();
+    expect(back.getAttribute('href')).toBe('/agent-studio/agents/abc/build');
+  });
+
+  it('renders no affordance when ?returnTo is absent', async () => {
+    studioState = 'none';
+    await renderShell(true);
+
+    expect(screen.queryByRole('link', { name: '← Back to builder' })).toBeNull();
+  });
+
+  it('ignores a ?returnTo that escapes /agent-studio/* (open-redirect guard)', async () => {
+    studioState = 'none';
+    await renderShell(true, '/agent-studio/providers?returnTo=https://evil.example/x');
+
+    expect(screen.queryByRole('link', { name: '← Back to builder' })).toBeNull();
+  });
+
+  it('ignores a ?returnTo on a non-studio path', async () => {
+    studioState = 'none';
+    await renderShell(true, '/agent-studio/providers?returnTo=/settings/billing');
+
+    expect(screen.queryByRole('link', { name: '← Back to builder' })).toBeNull();
   });
 });
