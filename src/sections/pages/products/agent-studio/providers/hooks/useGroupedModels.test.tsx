@@ -15,17 +15,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useGroupedModels,
   useModelToggles,
+  useModelDefault,
   applyToggles,
+  formatContextTokens,
   groupedModelsKey,
   type GroupedModels,
 } from './useGroupedModels';
 
 const fetchMock = vi.fn();
 const postMock = vi.fn();
+const setDefaultMock = vi.fn();
 
 vi.mock('../api', () => ({
   fetchGroupedModels: (...args: unknown[]) => fetchMock(...args),
   postModelToggles: (...args: unknown[]) => postMock(...args),
+  setModelDefault: (...args: unknown[]) => setDefaultMock(...args),
 }));
 
 const ORG = 'org-1';
@@ -108,6 +112,31 @@ describe('applyToggles', () => {
     expect(out.byok[0].models[0].enabled).toBe(false);
     expect(out.platform[0].models.find((m) => m.model_id === 'gpt-4o')?.enabled).toBe(true);
   });
+
+  it('preserves default_model untouched when toggles are applied', () => {
+    const prev: GroupedModels = {
+      ...fixture(),
+      default_model: { provider: 'openai', model_id: 'gpt-4o-mini' },
+    };
+    const out = applyToggles(prev, [
+      { supergroup: 'platform', provider: 'openai', model_id: 'gpt-4o', enabled: false },
+    ]);
+    expect(out.default_model).toEqual({ provider: 'openai', model_id: 'gpt-4o-mini' });
+  });
+});
+
+describe('formatContextTokens', () => {
+  it('formats round values compactly and renders unknown as —', () => {
+    expect(formatContextTokens(128000)).toBe('128K');
+    expect(formatContextTokens(200000)).toBe('200K');
+    expect(formatContextTokens(1000000)).toBe('1M');
+    expect(formatContextTokens(null)).toBe('—');
+    expect(formatContextTokens(undefined)).toBe('—');
+  });
+
+  it('falls back to a grouped number for non-round values, never invents', () => {
+    expect(formatContextTokens(32768)).toBe('32,768');
+  });
 });
 
 describe('useModelToggles', () => {
@@ -167,5 +196,68 @@ describe('useGroupedModels', () => {
     const { result } = renderHook(() => useGroupedModels(null), { wrapper: wrapper() });
     expect(result.current.isPending).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('useModelDefault', () => {
+  it('optimistically flips default_model on the grouped query, then posts the PUT', async () => {
+    setDefaultMock.mockReset();
+    setDefaultMock.mockResolvedValue({ default: { provider: 'openai', model_id: 'gpt-4o' } });
+    const seedClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    seedClient.setQueryData(groupedModelsKey(ORG), {
+      ...fixture(),
+      default_model: { provider: 'anthropic', model_id: 'claude-3-7-sonnet' },
+    });
+    function Seeded({ children }: { children: React.ReactNode }) {
+      return <QueryClientProvider client={seedClient}>{children}</QueryClientProvider>;
+    }
+
+    const { result } = renderHook(() => useModelDefault(ORG), { wrapper: Seeded });
+
+    await act(async () => {
+      await result.current.mutateAsync({ provider: 'openai', model_id: 'gpt-4o' });
+    });
+
+    expect(setDefaultMock).toHaveBeenCalledTimes(1);
+    expect(setDefaultMock).toHaveBeenCalledWith(ORG, {
+      provider: 'openai',
+      model_id: 'gpt-4o',
+    });
+    // The cache entry still carries the optimistic value (refetch on settle
+    // is fire-and-forget in this seeded client).
+    expect(seedClient.getQueryData<GroupedModels>(groupedModelsKey(ORG))?.default_model).toEqual({
+      provider: 'openai',
+      model_id: 'gpt-4o',
+    });
+  });
+
+  it('restores the previous default_model verbatim when the PUT fails (rollback)', async () => {
+    setDefaultMock.mockReset();
+    setDefaultMock.mockRejectedValueOnce(new Error('engine 422'));
+    const seedClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    seedClient.setQueryData(groupedModelsKey(ORG), {
+      ...fixture(),
+      default_model: { provider: 'anthropic', model_id: 'claude-3-7-sonnet' },
+    });
+    function Seeded({ children }: { children: React.ReactNode }) {
+      return <QueryClientProvider client={seedClient}>{children}</QueryClientProvider>;
+    }
+
+    const { result } = renderHook(() => useModelDefault(ORG), { wrapper: Seeded });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ provider: 'openai', model_id: 'gpt-4o' }),
+      ).rejects.toThrow('engine 422');
+    });
+
+    expect(seedClient.getQueryData<GroupedModels>(groupedModelsKey(ORG))?.default_model).toEqual({
+      provider: 'anthropic',
+      model_id: 'claude-3-7-sonnet',
+    });
   });
 });

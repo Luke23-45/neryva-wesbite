@@ -1,16 +1,19 @@
 /**
  * Providers — "Models" page (routed; the tab system is retired).
  *
- * Dense list per models-list-reference.svg: MODEL | CAPABILITIES | CONTEXT |
- * INPUT/1M | OUTPUT/1M | TIER | USED BY | ACCESS, grouped under
- * PLATFORM MANAGED and per-credential BYOK sections. All TabModels behavior
- * is preserved: N-6 toggles (optimistic + rollback), blast-radius confirm,
- * tier gating (disabled switch + upgrade CTA, never hidden), usable=false
- * reasons, display-only reasoning presets.
+ * Dense list per models-list-reference.svg: MODEL | CAPABILITIES |
+ * INPUT/1M | OUTPUT/1M | TIER | USED BY | DEFAULT | ACCESS, grouped under
+ * PLATFORM MANAGED and per-credential BYOK sections, with a provider
+ * sub-header (`{provider_display_name} · {n}`) inside each table body.
+ * The DEFAULT column is a real radio group bound to the N-5
+ * `default_model` (optimistic PUT + rollback; 422 → honest toast).
+ * All TabModels behavior is preserved: N-6 toggles (optimistic +
+ * rollback), blast-radius confirm, tier gating (disabled switch + upgrade
+ * CTA, never hidden), usable=false reasons, display-only reasoning presets.
  *
- * Honest gaps (Law VII): N-5 returns no context window per model, so CONTEXT
- * renders "—"; there is no org-default-model concept, so the SVG's DEFAULT
- * column is omitted rather than invented.
+ * Law VII notes: `context_window_tokens` is served by N-5 — when the row
+ * carries it the sub-line shows the compact form (128K/1M), otherwise "—";
+ * nothing is invented.
  */
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
@@ -26,16 +29,18 @@ import { Link } from '@tanstack/react-router';
 import { BlastRadiusConfirm } from '../components/BlastRadiusConfirm';
 import {
   CAPABILITY_LABELS,
+  formatContextTokens,
   humanizeReason,
   rowKey,
   useGroupedModels,
+  useModelDefault,
   useModelToggles,
   type GroupedModels,
   type ModelGroupView,
   type ModelRowView,
   type Supergroup,
 } from '../hooks/useGroupedModels';
-import { useOrgTier, tierCovers } from '../hooks/useOrgTier';
+import { useOrgTier, tierCovers, type OrgTier } from '../hooks/useOrgTier';
 
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
@@ -131,6 +136,62 @@ const HeadCell = styled.th`
   border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
   background: ${({ theme }) => theme.app.surface.tint};
   white-space: nowrap;
+`;
+
+/** Full-width provider sub-header row inside the table body. */
+const ProviderSubHeadCell = styled.td`
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.faint};
+  background: ${({ theme }) => theme.app.surface.tint};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+  white-space: nowrap;
+`;
+
+/**
+ * The DEFAULT column radio: a real <input type="radio"> (keyboard + screen
+ * reader semantics), custom-styled to the reference (outer ring, accent dot
+ * when checked) via appearance:none — never a native unstyled radio and
+ * never a div pretending to be one.
+ */
+const DefaultRadio = styled.input.attrs({ type: 'radio' })`
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid ${({ theme }) => theme.app.border.strong};
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  vertical-align: middle;
+  &:checked {
+    border-color: ${({ theme }) => theme.app.accentControl};
+  }
+  &:checked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.app.accentControl};
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.accentControl};
+    outline-offset: 2px;
+  }
 `;
 
 const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
@@ -371,6 +432,16 @@ function formatUsd(v: string): string | null {
   return Number.isFinite(n) ? `$${n.toFixed(2)}` : null;
 }
 
+/**
+ * Whether a row's DEFAULT radio is interactive (enabled + usable +
+ * tier-covered; unknown tier stays interactive — the server 422s when the
+ * model truly can't serve). Module-level so the checked-row resolution and
+ * the per-row disabled state use the identical rule.
+ */
+function isDefaultableModel(tier: OrgTier, model: ModelRowView): boolean {
+  return model.enabled && model.usable && tierCovers(tier, model.required_product) !== false;
+}
+
 interface BlastTarget {
   supergroup: Supergroup;
   group: ModelGroupView;
@@ -386,13 +457,39 @@ export function ModelsPage() {
   const tier = useOrgTier();
   const { data, isPending, isError, refetch } = useGroupedModels(orgId);
   const toggles = useModelToggles(orgId);
+  const defaultMut = useModelDefault(orgId);
 
   const [blastTarget, setBlastTarget] = useState<BlastTarget | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [reasoningOpen, setReasoningOpen] = useState<Record<string, boolean>>({});
   const [searchInput, setSearchInput] = useState('');
 
-  const groups: GroupedModels = useMemo(() => data ?? { platform: [], byok: [] }, [data]);
+  const groups: GroupedModels = useMemo(
+    () => data ?? { platform: [], byok: [], default_model: null },
+    [data],
+  );
+
+  /**
+   * The N-5 `default_model` — absent/null until the engine ships it, in
+   * which case every DEFAULT radio renders unchecked (never invented).
+   */
+  const defaultSel = groups.default_model ?? null;
+
+  const handleDefaultChange = (group: ModelGroupView, model: ModelRowView) => {
+    defaultMut.mutate(
+      { provider: group.provider, model_id: model.model_id },
+      {
+        onError: (err) => {
+          const status = (err as { status?: number } | null)?.status;
+          toast.error(
+            status === 422
+              ? "That model isn't available for your organization — the default was not changed."
+              : 'Could not save the default model — your previous default was restored.',
+          );
+        },
+      },
+    );
+  };
 
   const q = searchInput.trim().toLowerCase();
   const matches = (m: ModelRowView) =>
@@ -425,6 +522,32 @@ export function ModelsPage() {
     (n, g) => n + g.models.filter((m) => m.enabled && m.usable).length,
     0,
   );
+
+  /**
+   * The one checked radio: the FIRST usable matching row in display order
+   * (platform section renders before BYOK, so platform wins ties; when the
+   * platform row can't serve but a BYOK row can, the BYOK row is checked).
+   * `default_model` names only provider+model_id, so a model served by both
+   * doors matches twice. When no matching row is usable, the first match is
+   * still shown checked so the stored server state stays visible (disabled).
+   */
+  const defaultRowKey = useMemo(() => {
+    if (!defaultSel) return null;
+    const matches: Array<{ key: string; usable: boolean }> = [];
+    const collect = (supergroup: Supergroup, list: ModelGroupView[]) => {
+      for (const g of list) {
+        if (g.provider !== defaultSel.provider) continue;
+        for (const m of g.models) {
+          if (m.model_id !== defaultSel.model_id) continue;
+          matches.push({ key: rowKey(supergroup, g, m), usable: isDefaultableModel(tier, m) });
+        }
+      }
+    };
+    collect('platform', platformGroups);
+    collect('byok', byokGroups);
+    if (matches.length === 0) return null;
+    return (matches.find((r) => r.usable) ?? matches[0]).key;
+  }, [platformGroups, byokGroups, defaultSel, tier]);
 
   const commitToggle = (
     supergroup: Supergroup,
@@ -484,6 +607,39 @@ export function ModelsPage() {
     // warning. The visual state derives from the same availability object
     // that decides whether the warning row renders (`model.usable`).
     const on = model.enabled && model.usable;
+    // DEFAULT radio: only a defaultable model can become the org default.
+    // Unknown tier stays interactive — the server 422s when the model truly
+    // can't serve, and the page rolls back with a toast.
+    const defaultable = isDefaultableModel(tier, model);
+    const isDefault = defaultRowKey !== null && key === defaultRowKey;
+
+    const defaultCell = defaultable ? (
+      <DefaultRadio
+        name="org-default-model"
+        checked={isDefault}
+        disabled={defaultMut.isPending}
+        onChange={() => handleDefaultChange(group, model)}
+        aria-label={`Set ${model.display_name} as the default model for new assistants`}
+      />
+    ) : (
+      <Tooltip
+        label={
+          gated
+            ? `Requires ${model.required_product_label} for this model to be the default`
+            : 'Only enabled, usable models can be the default'
+        }
+      >
+        <span style={{ display: 'inline-block' }}>
+          <DefaultRadio
+            name="org-default-model"
+            checked={isDefault}
+            disabled
+            onChange={() => undefined}
+            aria-label={`${model.display_name} cannot be the default model`}
+          />
+        </span>
+      </Tooltip>
+    );
 
     const inputPrice = model.pricing ? formatUsd(model.pricing.input_per_1m) : null;
     const outputPrice = model.pricing ? formatUsd(model.pricing.output_per_1m) : null;
@@ -528,9 +684,9 @@ export function ModelsPage() {
       <BodyRow key={key} $dimmed={!on} $pending={pendingKey === key}>
         <BodyCell>
           <ModelName title={model.display_name}>{model.display_name}</ModelName>
-          <ModelId title={model.model_id}>
-            {model.model_id}
-            {supergroup === 'byok' ? ' · BYOK' : ''}
+          <ModelId title={`${group.provider} · ${model.model_id}`}>
+            {group.provider} · {model.model_id} ·{' '}
+            {formatContextTokens(model.context_window_tokens)}
           </ModelId>
           {!model.usable && model.reasons.length > 0 && (
             <Reasons aria-label="Why this model cannot be used">
@@ -580,11 +736,6 @@ export function ModelsPage() {
             )}
           </CapBadges>
         </BodyCell>
-        <BodyCell>
-          <Tooltip label="Per-model context windows are not published by the catalog API yet">
-            <DimText>—</DimText>
-          </Tooltip>
-        </BodyCell>
         <BodyCell>{priceCell(inputPrice)}</BodyCell>
         <BodyCell>{priceCell(outputPrice)}</BodyCell>
         <BodyCell>
@@ -603,9 +754,10 @@ export function ModelsPage() {
               </DimText>
             </Tooltip>
           ) : (
-            <DimText>—</DimText>
+            <DimText>0 assistants</DimText>
           )}
         </BodyCell>
+        <BodyCell>{defaultCell}</BodyCell>
         <BodyCell>
           {gated ? (
             <Tooltip label={`Requires ${model.required_product_label} plan to enable`}>
@@ -640,15 +792,29 @@ export function ModelsPage() {
                 <tr>
                   <HeadCell scope="col">Model</HeadCell>
                   <HeadCell scope="col">Capabilities</HeadCell>
-                  <HeadCell scope="col">Context</HeadCell>
                   <HeadCell scope="col">Input / 1M</HeadCell>
                   <HeadCell scope="col">Output / 1M</HeadCell>
                   <HeadCell scope="col">Tier</HeadCell>
                   <HeadCell scope="col">Used by</HeadCell>
+                  <HeadCell scope="col">Default</HeadCell>
                   <HeadCell scope="col">Access</HeadCell>
                 </tr>
               </thead>
-              <tbody>{group.models.map((m) => renderRow(supergroup, group, m))}</tbody>
+              <tbody>
+                {/*
+                 * Provider sub-header: groups are already one provider each
+                 * (platform groups are per-provider; a BYOK credential serves
+                 * one provider), so this is one full-width row per table.
+                 * Model rows carry no provider field, so no deeper
+                 * client-side split is possible — or needed.
+                 */}
+                <tr>
+                  <ProviderSubHeadCell colSpan={8}>
+                    {group.provider_display_name} · {group.models.length}
+                  </ProviderSubHeadCell>
+                </tr>
+                {group.models.map((m) => renderRow(supergroup, group, m))}
+              </tbody>
             </StyledTable>
           </TableWrap>
         </div>
@@ -695,7 +861,7 @@ export function ModelsPage() {
         <ViewTitle>Models</ViewTitle>
         <ViewSubtitle>
           Turn models on or off for your organization — platform and BYOK sources are listed
-          separately.
+          separately. Learn more
         </ViewSubtitle>
       </ViewHeader>
 
@@ -764,7 +930,7 @@ export function ModelsPage() {
 
           <Footnote>
             Toggles apply immediately · disabled models fail closed at publish and run time ·
-            same catalog for every workspace.
+            the default applies to new assistants
           </Footnote>
         </>
       )}

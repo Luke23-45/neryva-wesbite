@@ -57,6 +57,8 @@ import { buildAgentBuildPath } from '../lib/slot-model';
 import { useGroupedModels, type BuilderModelRow } from '../lib/useGroupedModels';
 import { ToolCompatGuard } from '../../providers/components/ToolCompatGuard';
 import { BlastRadiusConfirm, type BlastRadiusAffected } from '../../providers/components/BlastRadiusConfirm';
+import { useOrgDefaultModel } from '../../providers/hooks/useOrgDefaultModel';
+import { pickDefaultRow } from '../lib/default-model';
 import { BlockEditor } from '../section-ui/BlockEditor';
 import type { EditableBlock, ModalBlock } from '../section-ui/types';
 import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
@@ -263,6 +265,12 @@ interface ModelSectionProps {
   canAuthor: boolean;
   onDirtyChange: (dirty: boolean) => void;
   saveSignal: number;
+  /**
+   * Guided setup flow (new-agent creation walkthrough). The org default
+   * model pre-selects only here — the edit flow never pre-selects.
+   * Optional; absent means false (existing callers/tests unaffected).
+   */
+  isSetupFlow?: boolean;
 }
 
 export function ModelSection({
@@ -274,6 +282,7 @@ export function ModelSection({
   canAuthor,
   onDirtyChange,
   saveSignal,
+  isSetupFlow = false,
 }: ModelSectionProps) {
   const queryClient = useQueryClient();
 
@@ -731,6 +740,37 @@ export function ModelSection({
     scrollToGroup('catalog');
     toast('No usable models yet — visit Providers to connect a credential or enable models.');
   }, [groupedRows, pipeline, toggleModel, scrollToGroup]);
+
+  /**
+   * Org default model pre-selection — guided setup flow only (never edit).
+   *
+   * When the model step initializes with an empty pipeline and the org has
+   * a default, the default is added through the same `addModel` path as a
+   * manual pick: a normal, changeable selection, never a locked value.
+   *
+   * Guarded three ways: `isSetupFlow` excludes the edit flow; the
+   * once-only ref means a user's own pick (or a later removal) is never
+   * overridden; `pickDefaultRow` returns null when the default is null, the
+   * fetch failed, or the defaulted model isn't usable — all of which keep
+   * the existing empty-pipeline behavior.
+   */
+  const orgDefault = useOrgDefaultModel({ enabled: isSetupFlow === true });
+  const defaultAppliedRef = useRef(false);
+  // One-shot sync of local pipeline state with async query data (the org
+  // default + the grouped catalog arrive after mount). addModel is the same
+  // path as a manual pick; the once-only ref + empty-pipeline guard mean it
+  // can never cascade or override a user choice.
+  useEffect(() => {
+    if (isSetupFlow !== true || defaultAppliedRef.current) return;
+    if (pipeline.length > 0) return;
+    const def = orgDefault.data?.default ?? null;
+    if (!def || groupedRows === undefined) return;
+    const match = pickDefaultRow(groupedRows, def);
+    if (!match) return;
+    defaultAppliedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
+    addModel(match.ref, match.credentialId);
+  }, [isSetupFlow, orgDefault.data, groupedRows, pipeline.length, addModel]);
 
   // Escape blurs number inputs so a half-typed value commits instead of
   // lingering in the field while autosave fires.

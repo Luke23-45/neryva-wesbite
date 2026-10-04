@@ -790,8 +790,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
        */
       degradedAck,
       onDegradedAck: setDegradedAck,
+      /**
+       * Guided setup flow (?setup=1, build mode only): after "Create agent".
+       * Sections use it to distinguish new-agent creation from editing an
+       * existing agent — e.g. the model step pre-selects the org default
+       * model only here, never on edit.
+       */
+      isSetupFlow,
     }),
-    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, consumePublishSignal, degradedAck, requestSave],
+    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, consumePublishSignal, degradedAck, requestSave, isSetupFlow],
   );
 
   // — Build-mode loading / not-found / fetch-error (firsthand states, never blank) —

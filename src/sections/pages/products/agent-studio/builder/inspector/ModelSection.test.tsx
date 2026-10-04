@@ -100,6 +100,23 @@ vi.mock('../lib/useGroupedModels', () => ({
   }),
 }));
 
+// Per-test org-default override: `defaultValue` = the engine's default ref
+// (null = no default set), `isError` = the fetch failed. Defaults to "no
+// default" so the pre-existing tests never pre-select.
+const mockOrgDefault = vi.hoisted(() => ({
+  defaultValue: null as { provider: string; model_id: string } | null,
+  isError: false,
+}));
+
+vi.mock('../../providers/hooks/useOrgDefaultModel', () => ({
+  useOrgDefaultModel: () => ({
+    data: mockOrgDefault.isError ? undefined : { default: mockOrgDefault.defaultValue },
+    isError: mockOrgDefault.isError,
+    isPending: false,
+    isFetching: false,
+  }),
+}));
+
 vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
   return {
@@ -182,6 +199,8 @@ beforeEach(() => {
   vi.mocked(toast.success).mockReset();
   seedGrouped();
   mockCosts.rows = [];
+  mockOrgDefault.defaultValue = null;
+  mockOrgDefault.isError = false;
 });
 
 afterEach(() => {
@@ -611,5 +630,93 @@ describe('ModelSection credential block exemption (W19)', () => {
     // still name the missing credential and the next step.
     expect(screen.getByText(/Connect a C credential to serve this model/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Connect C →' })).toBeTruthy();
+  });
+});
+
+describe('ModelSection org default pre-selection (guided setup only)', () => {
+  const EMPTY_DEFINITION: AgentDefinition = {
+    ...DEFINITION,
+    model_policy: { allowed_models: [], fallback_enabled: false },
+  };
+
+  function pipelineScope() {
+    const el = document.getElementById('model-pipeline');
+    if (!el) throw new Error('#model-pipeline not rendered');
+    return within(el);
+  }
+
+  it('pre-selects the org default as a normal, changeable selection on setup-flow init', async () => {
+    mockOrgDefault.defaultValue = { provider: 'c', model_id: 'd' };
+    let onDirtyChange!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onDirtyChange } = shell({ isSetupFlow: true, definition: EMPTY_DEFINITION }));
+    });
+    // The defaulted model serves as the primary — a real pipeline entry.
+    expect(pipelineScope().getByText('C D')).toBeTruthy();
+    expect(pipelineScope().getByText('1')).toBeTruthy();
+    // Behaving exactly like a manual pick: the draft reads dirty.
+    expect(onDirtyChange).toHaveBeenCalledWith(true);
+  });
+
+  it('never pre-selects in the edit flow', async () => {
+    mockOrgDefault.defaultValue = { provider: 'c', model_id: 'd' };
+    await act(async () => {
+      shell({ definition: EMPTY_DEFINITION });
+    });
+    expect(pipelineScope().queryByText('C D')).toBeNull();
+    expect(expect(screen.getAllByText(/No models yet \u2014 add one from the catalog below/).length).toBeGreaterThanOrEqual(1)).toBeTruthy();
+  });
+
+  it('never overrides an explicit user choice in the setup flow', async () => {
+    mockOrgDefault.defaultValue = { provider: 'c', model_id: 'd' };
+    await act(async () => {
+      // DEFINITION already pins a/b — the default must not replace it.
+      shell({ isSetupFlow: true, definition: DEFINITION });
+    });
+    expect(pipelineScope().getByText('A B')).toBeTruthy();
+    expect(pipelineScope().queryByText('C D')).toBeNull();
+  });
+
+  it('keeps existing behavior when no default is set', async () => {
+    mockOrgDefault.defaultValue = null;
+    await act(async () => {
+      shell({ isSetupFlow: true, definition: EMPTY_DEFINITION });
+    });
+    expect(pipelineScope().queryByText('C D')).toBeNull();
+    expect(expect(screen.getAllByText(/No models yet \u2014 add one from the catalog below/).length).toBeGreaterThanOrEqual(1)).toBeTruthy();
+  });
+
+  it('keeps existing behavior when the default fetch fails', async () => {
+    mockOrgDefault.isError = true;
+    await act(async () => {
+      shell({ isSetupFlow: true, definition: EMPTY_DEFINITION });
+    });
+    expect(pipelineScope().queryByText('C D')).toBeNull();
+    expect(expect(screen.getAllByText(/No models yet \u2014 add one from the catalog below/).length).toBeGreaterThanOrEqual(1)).toBeTruthy();
+  });
+
+  it('keeps existing behavior when the defaulted model is not in the available list', async () => {
+    mockOrgDefault.defaultValue = { provider: 'x', model_id: 'y' };
+    await act(async () => {
+      shell({ isSetupFlow: true, definition: EMPTY_DEFINITION });
+    });
+    expect(expect(screen.getAllByText(/No models yet \u2014 add one from the catalog below/).length).toBeGreaterThanOrEqual(1)).toBeTruthy();
+  });
+
+  it('keeps existing behavior when the defaulted model is not usable', async () => {
+    mockOrgDefault.defaultValue = { provider: 'c', model_id: 'd' };
+    mockGrouped.rows = [
+      groupedRow('c/d', {
+        displayName: 'C D',
+        providerDisplayName: 'C',
+        usable: false,
+        reasons: ['model_disabled_by_org'],
+      }),
+    ];
+    await act(async () => {
+      shell({ isSetupFlow: true, definition: EMPTY_DEFINITION });
+    });
+    expect(pipelineScope().queryByText('C D')).toBeNull();
+    expect(expect(screen.getAllByText(/No models yet \u2014 add one from the catalog below/).length).toBeGreaterThanOrEqual(1)).toBeTruthy();
   });
 });

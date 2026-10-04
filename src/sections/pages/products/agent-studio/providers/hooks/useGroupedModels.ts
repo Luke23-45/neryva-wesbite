@@ -20,14 +20,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchGroupedModels,
   postModelToggles,
+  setModelDefault,
   type ModelGroupView,
   type ModelRowView,
   type ModelToggleInput,
+  type OrgDefaultModel,
   type Supergroup,
 } from '../api';
 
 // Re-export the N-5 view types so pages import from one module.
-export type { ModelGroupView, ModelRowView, Supergroup };
+export type { ModelGroupView, ModelRowView, OrgDefaultModel, Supergroup };
 
 /* ------------------------------------------------------------------ */
 /* Pure display helpers (moved from the retired TabModels — the tab    */
@@ -94,6 +96,22 @@ export function rowKey(
 export interface GroupedModels {
   platform: ModelGroupView[];
   byok: ModelGroupView[];
+  /**
+   * Mirrors the N-5 `default_model` — optional until the engine ships it
+   * (parallel team); absent/null = no default known, never invented.
+   */
+  default_model?: OrgDefaultModel | null;
+}
+
+/**
+ * `128000` → `"128K"`, `200000` → `"200K"`, `1000000` → `"1M"`;
+ * null/undefined/non-positive → `"—"`. Never invents a value.
+ */
+export function formatContextTokens(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n) || n <= 0) return '—';
+  if (n >= 1_000_000 && n % 1_000_000 === 0) return `${n / 1_000_000}M`;
+  if (n >= 1_000 && n % 1_000 === 0) return `${n / 1_000}K`;
+  return n.toLocaleString('en-US');
 }
 
 export const groupedModelsKey = (orgId: string) =>
@@ -137,6 +155,7 @@ export function applyToggles(data: GroupedModels, toggles: ModelToggleInput[]): 
       };
     });
   return {
+    ...data,
     platform: apply(data.platform, 'platform'),
     byok: apply(data.byok, 'byok'),
   };
@@ -163,6 +182,45 @@ export function useModelToggles(orgId: string | null) {
       const prev = queryClient.getQueryData<GroupedModels>(groupedModelsKey(orgId));
       if (prev) {
         queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), applyToggles(prev, toggles));
+      }
+      return { prev };
+    },
+    onError: (_error, _variables, context) => {
+      if (orgId === null || orgId === '' || !context?.prev) return;
+      queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), context.prev);
+    },
+    onSettled: () => {
+      if (orgId === null || orgId === '') return;
+      void queryClient.invalidateQueries({ queryKey: groupedModelsKey(orgId) });
+    },
+  });
+}
+
+/**
+ * useModelDefault — N-8 org default model write
+ * (`PUT /console/org/:orgId/models/default`).
+ *
+ * Optimistic update flips the grouped query's `default_model` only (the
+ * page derives every radio's checked state from it); on error the previous
+ * cache entry is restored verbatim; on settle the query refetches. The
+ * page owns the error copy (422 → "not available for your organization").
+ */
+export function useModelDefault(orgId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (def: OrgDefaultModel | null) => {
+      if (orgId === null || orgId === '') throw new Error('orgId is required');
+      return setModelDefault(orgId, def);
+    },
+    onMutate: async (def) => {
+      if (orgId === null || orgId === '') return { prev: undefined as GroupedModels | undefined };
+      await queryClient.cancelQueries({ queryKey: groupedModelsKey(orgId) });
+      const prev = queryClient.getQueryData<GroupedModels>(groupedModelsKey(orgId));
+      if (prev) {
+        queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), {
+          ...prev,
+          default_model: def,
+        });
       }
       return { prev };
     },

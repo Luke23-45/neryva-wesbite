@@ -84,7 +84,18 @@ export interface ModelRowView {
    * presented as a verified catalog price).
    */
   pricing_source?: 'catalog' | 'operator_declared';
+  /**
+   * Catalog context window, tokens. Served by N-5; absent/null = unknown —
+   * the console renders "—", never an invented value.
+   */
+  context_window_tokens?: number | null;
   pinned_by: Array<{ assistant_id: string; version: number }>;
+}
+
+/** The org's default model for new assistants (engine N-5/N-8). */
+export interface OrgDefaultModel {
+  provider: string;
+  model_id: string;
 }
 
 export interface ModelGroupView {
@@ -223,11 +234,51 @@ export async function setProviderEnabled(
 export async function fetchGroupedModels(
   orgId: string,
   supergroup?: Supergroup,
-): Promise<{ platform: ModelGroupView[]; byok: ModelGroupView[] }> {
-  return engine<{ platform: ModelGroupView[]; byok: ModelGroupView[] }>(
-    `/console/org/${orgId}/models/grouped`,
-    { query: supergroup ? { supergroup } : {} },
-  );
+): Promise<{
+  platform: ModelGroupView[];
+  byok: ModelGroupView[];
+  /**
+   * The org's default model for new assistants. Optional until the engine
+   * ships it (parallel team) — absent means "no default known", never
+   * "no default set"; the page renders all radios unchecked.
+   */
+  default_model?: OrgDefaultModel | null;
+}> {
+  return engine<{
+    platform: ModelGroupView[];
+    byok: ModelGroupView[];
+    default_model?: OrgDefaultModel | null;
+  }>(`/console/org/${orgId}/models/grouped`, { query: supergroup ? { supergroup } : {} });
+}
+
+// ---------------------------------------------------------------------------
+// N-8 org default model
+// ---------------------------------------------------------------------------
+
+/**
+ * The engine is adding `GET /models/default` in parallel — this wrapper
+ * matches that exact contract. The Models page reads `default_model` from
+ * the grouped payload instead; this stays for direct reads.
+ */
+export async function fetchModelDefault(
+  orgId: string,
+): Promise<{ default: OrgDefaultModel | null }> {
+  return engine<{ default: OrgDefaultModel | null }>(`/console/org/${orgId}/models/default`);
+}
+
+/**
+ * `PUT /console/org/:orgId/models/default` — body `{ default: {...} | null }`.
+ * 200 returns the same shape; 422 when the model isn't enabled+usable for
+ * the org (the page rolls back and toasts honestly on 422).
+ */
+export async function setModelDefault(
+  orgId: string,
+  def: OrgDefaultModel | null,
+): Promise<{ default: OrgDefaultModel | null }> {
+  return engine<{ default: OrgDefaultModel | null }>(`/console/org/${orgId}/models/default`, {
+    method: 'PUT',
+    body: { default: def },
+  });
 }
 
 // ---------------------------------------------------------------------------

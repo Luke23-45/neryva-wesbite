@@ -18,10 +18,15 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
+import toast from 'react-hot-toast';
 import { ModelsPage } from './ModelsPage';
 import type { GroupedModels } from '../hooks/useGroupedModels';
 
 const mutateMock = vi.hoisted(() => vi.fn());
+const defaultMutateMock = vi.hoisted(() => vi.fn());
+// Mutable grouped-models payload for tests that need a different fixture
+// than the default (vi.hoisted: the mock factory runs before module body).
+const fixtureOverrideRef = vi.hoisted(() => ({ current: null as GroupedModels | null }));
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-1' }),
@@ -39,12 +44,15 @@ vi.mock('../hooks/useOrgTier', () => ({
 
 vi.mock('../hooks/useGroupedModels', () => ({
   useGroupedModels: () => ({
-    data: fixture(),
+    data: fixtureOverrideRef.current ?? fixture(),
     isPending: false,
     isError: false,
     refetch: vi.fn(),
   }),
   useModelToggles: () => ({ mutate: mutateMock, isPending: false }),
+  useModelDefault: () => ({ mutate: defaultMutateMock, isPending: false }),
+  formatContextTokens: (n: number | null | undefined) =>
+    n === null || n === undefined ? '—' : n >= 1_000_000 ? `${n / 1_000_000}M` : `${n / 1_000}K`,
   CAPABILITY_LABELS: {
     tools: 'Tools',
     vision: 'Vision',
@@ -89,6 +97,7 @@ function fixture(): GroupedModels {
             reasons: [],
             capabilities: caps({ tools: true, vision: true }),
             pricing: { input_per_1m: '2.50', output_per_1m: '10.00' },
+            context_window_tokens: 128000,
             pinned_by: [],
           },
           {
@@ -100,6 +109,7 @@ function fixture(): GroupedModels {
             usable: true,
             reasons: [],
             capabilities: caps({ tools: true }),
+            context_window_tokens: 128000,
             pinned_by: [],
           },
         ],
@@ -118,6 +128,7 @@ function fixture(): GroupedModels {
             reasons: [],
             capabilities: caps({ tools: true, reasoning: true }),
             pricing: { input_per_1m: '3.00', output_per_1m: '15.00' },
+            context_window_tokens: 200000,
             pinned_by: [],
           },
         ],
@@ -135,6 +146,7 @@ function fixture(): GroupedModels {
             usable: false,
             reasons: ['provider_credential_missing'],
             capabilities: caps({ reasoning: true }),
+            context_window_tokens: null,
             pinned_by: [],
           },
           {
@@ -148,6 +160,7 @@ function fixture(): GroupedModels {
             usable: false,
             reasons: ['subscription_required'],
             capabilities: caps({ tools: true }),
+            context_window_tokens: 1000000,
             pinned_by: [],
           },
         ],
@@ -170,6 +183,7 @@ function fixture(): GroupedModels {
             usable: true,
             reasons: [],
             capabilities: caps({ tools: true, vision: true }),
+            context_window_tokens: 128000,
             pinned_by: [{ assistant_id: 'a-1', version: 3 }],
           },
           {
@@ -183,11 +197,13 @@ function fixture(): GroupedModels {
             capabilities: caps({ tools: true }),
             pricing: { input_per_1m: '0.35', output_per_1m: '0.4' },
             pricing_source: 'operator_declared',
+            context_window_tokens: null,
             pinned_by: [],
           },
         ],
       },
     ],
+    default_model: { provider: 'openai', model_id: 'gpt-4o' },
   };
 }
 
@@ -201,6 +217,9 @@ function renderPage() {
 
 beforeEach(() => {
   mutateMock.mockReset();
+  defaultMutateMock.mockReset();
+  vi.mocked(toast.error).mockReset();
+  fixtureOverrideRef.current = null;
 });
 
 describe('ModelsPage', () => {
@@ -219,22 +238,132 @@ describe('ModelsPage', () => {
     expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
   });
 
-  it('renders the table columns: capabilities, context, input/output, tier, used-by', () => {
+  it('renders the table columns: capabilities, input/output, tier, used-by, default', () => {
     renderPage();
     expect(screen.getAllByText('Capabilities').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Context').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Context')).toBeNull();
     expect(screen.getAllByText('Input / 1M').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Used by').length).toBeGreaterThan(0);
+    // The SVG's DEFAULT column is backed now — it renders between Used by and Access.
+    expect(screen.getAllByText('Default').length).toBeGreaterThan(0);
     // Priced platform row shows input + output cells.
     expect(screen.getByText('$2.50')).toBeTruthy();
     expect(screen.getByText('$10.00')).toBeTruthy();
     expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
     // Tool-less rows get the honest tag.
     expect(screen.getByText('No tools')).toBeTruthy();
-    // Pinned model shows its assistant count.
+    // Pinned model shows its assistant count; unpinned rows show "0 assistants".
     expect(screen.getByText('1 assistant')).toBeTruthy();
-    // The SVG's DEFAULT column has no backing concept — it must not render.
-    expect(screen.queryByText('Default')).toBeNull();
+    expect(screen.getAllByText('0 assistants').length).toBe(6);
+  });
+
+  it('renders provider sub-headers inside each table body', () => {
+    renderPage();
+    expect(screen.getByText('Anthropic · 1')).toBeTruthy();
+    expect(screen.getByText('xAI · 2')).toBeTruthy();
+    // OpenAI appears twice — once per supergroup.
+    expect(screen.getAllByText('OpenAI · 2')).toHaveLength(2);
+  });
+
+  it('shows context in the model sub-line; "—" when the catalog has no value', () => {
+    renderPage();
+    expect(screen.getAllByText('openai · gpt-4o · 128K')).toHaveLength(2);
+    expect(screen.getByText('anthropic · claude-3-7-sonnet · 200K')).toBeTruthy();
+    expect(screen.getByText('xai · grok-heavy · 1M')).toBeTruthy();
+    // Unknown context is honest, never invented.
+    expect(screen.getByText('xai · grok-reasoner · —')).toBeTruthy();
+  });
+
+  it('checks exactly one DEFAULT radio — the platform row wins over the BYOK duplicate', () => {
+    renderPage();
+    const radios = screen.getAllByRole('radio', {
+      name: 'Set GPT-4o as the default model for new assistants',
+    });
+    expect(radios).toHaveLength(2);
+    // DOM order is render order: platform table first.
+    expect((radios[0] as HTMLInputElement).checked).toBe(true);
+    expect((radios[1] as HTMLInputElement).checked).toBe(false);
+    // No other row is checked.
+    const allRadios = screen.getAllByRole('radio');
+    expect(allRadios.filter((r) => (r as HTMLInputElement).checked)).toHaveLength(1);
+  });
+
+  it('selecting a DEFAULT radio PUTs provider+model_id (no credential in the payload)', () => {
+    renderPage();
+    const radios = screen.getAllByRole('radio', {
+      name: 'Set GPT-4o as the default model for new assistants',
+    });
+    fireEvent.click(radios[1]);
+    expect(defaultMutateMock).toHaveBeenCalledTimes(1);
+    expect(defaultMutateMock.mock.calls[0][0]).toEqual({
+      provider: 'openai',
+      model_id: 'gpt-4o',
+    });
+  });
+
+  it('a 422 from the default PUT toasts honestly (no invented success)', () => {
+    renderPage();
+    defaultMutateMock.mockImplementationOnce((_def, opts?: { onError?: (e: unknown) => void }) =>
+      opts?.onError?.({ status: 422 }),
+    );
+    const radios = screen.getAllByRole('radio', {
+      name: 'Set GPT-4o as the default model for new assistants',
+    });
+    fireEvent.click(radios[1]);
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "That model isn't available for your organization — the default was not changed.",
+    );
+  });
+
+  it('tie-break: an unusable platform row yields the checked radio to the usable BYOK row', () => {
+    const f = fixture();
+    fixtureOverrideRef.current = {
+      ...f,
+      platform: f.platform.map((g) =>
+        g.provider === 'openai'
+          ? {
+              ...g,
+              models: g.models.map((m) =>
+                m.model_id === 'gpt-4o'
+                  ? { ...m, enabled: false, usable: false, reasons: ['model_disabled_by_org'] }
+                  : m,
+              ),
+            }
+          : g,
+      ),
+    };
+    renderPage();
+
+    // The platform row can't serve: disabled radio, never checked.
+    const platformRadio = screen.getByRole('radio', {
+      name: 'GPT-4o cannot be the default model',
+    });
+    expect(platformRadio).toBeDisabled();
+    expect((platformRadio as HTMLInputElement).checked).toBe(false);
+
+    // The usable BYOK row carries the single checked radio.
+    const byokRadios = screen.getAllByRole('radio', {
+      name: 'Set GPT-4o as the default model for new assistants',
+    });
+    expect(byokRadios).toHaveLength(1);
+    expect(byokRadios[0]).not.toBeDisabled();
+    expect((byokRadios[0] as HTMLInputElement).checked).toBe(true);
+
+    const allRadios = screen.getAllByRole('radio');
+    expect(allRadios.filter((r) => (r as HTMLInputElement).checked)).toHaveLength(1);
+  });
+
+  it('disables the DEFAULT radio for models that cannot serve as default', () => {
+    renderPage();
+    const grokRadio = screen.getByRole('radio', {
+      name: 'Grok Reasoner cannot be the default model',
+    });
+    expect(grokRadio).toBeDisabled();
+    // A disabled-by-toggle (not enabled) row is disabled too.
+    const miniRadio = screen.getByRole('radio', {
+      name: 'GPT-4o Mini cannot be the default model',
+    });
+    expect(miniRadio).toBeDisabled();
   });
 
   it('PRV-035: operator-declared prices are labeled, never presented as catalog prices', () => {
@@ -362,5 +491,6 @@ describe('ModelsPage', () => {
     renderPage();
     expect(screen.getByText(/Toggles apply immediately/)).toBeTruthy();
     expect(screen.getByText(/disabled models fail closed at publish and run time/)).toBeTruthy();
+    expect(screen.getByText(/the default applies to new assistants/)).toBeTruthy();
   });
 });

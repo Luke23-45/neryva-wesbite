@@ -57,6 +57,12 @@ const SECTION_SAVE_IDS: ReadonlySet<string> = new Set([
 
 export interface InspectorContext {
   mode: 'new' | 'build';
+  /**
+   * Guided setup flow (?setup=1, build mode only): the new-agent creation
+   * walkthrough. Optional — absent/undefined means an ordinary build-mode
+   * session (editing an existing agent), never the setup flow.
+   */
+  isSetupFlow?: boolean;
   agentId: string | null;
   agentName: string | null;
   description: string | null;
@@ -251,6 +257,7 @@ export function SectionBody({
             canAuthor={context.canAuthor}
             onDirtyChange={onModelDirty ?? (() => undefined)}
             saveSignal={context.saveSignal}
+            isSetupFlow={context.isSetupFlow ?? false}
           />
         );
         break;
