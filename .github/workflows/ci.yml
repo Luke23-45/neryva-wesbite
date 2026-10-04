@@ -3,6 +3,9 @@
 # Gates every push to the working branch and every pull request on:
 #   1. `npm ci`              — dependency install from the lockfile
 #   2. `npm run build`       — `tsc -b && vite build` (typecheck + production bundle)
+#      `npm run check:bundle` — bundle-size budget gate (scripts/check-bundle-budget.mjs);
+#                               fails the build if total JS or the largest chunk
+#                               exceeds budget. Budgets live in the script header.
 #   3. `npm run test`        — `vitest run` (full unit suite, non-watch)
 #
 # All three jobs are REQUIRED: no `continue-on-error`, so a red gate
@@ -42,6 +45,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # Bundle-size budget gate (remediation 4.6): fails if the production
+      # JS in dist/ exceeds the budgets in scripts/check-bundle-budget.mjs.
+      - run: npm run check:bundle
 
   test:
     name: vitest run

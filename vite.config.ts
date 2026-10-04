@@ -87,6 +87,11 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     minify: 'terser',
+    // Warn when any single chunk grows past the budget's per-chunk ceiling.
+    // 2026-10-04: largest chunk (index-*) is ~2.38 MiB; 2800 kB leaves
+    // headroom and keeps the warning meaningful. The hard gate is
+    // scripts/check-bundle-budget.mjs (runs in CI after the build).
+    chunkSizeWarningLimit: 2800,
     rollupOptions: {
       output: {
         manualChunks: {

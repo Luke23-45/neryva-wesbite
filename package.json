@@ -8,6 +8,7 @@
     "dev:tunnel": "node scripts/dev.mjs --tunnel",
     "dev:funnel": "node scripts/dev.mjs --tunnel funnel",
     "build": "tsc -b && vite build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
