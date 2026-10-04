@@ -269,9 +269,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const draftWritesInFlight = useIsMutating({ mutationKey: [...DRAFT_WRITE_MUTATION_KEY] });
 
   /**
-   * Provider-credential count for the credentials section (v10 §8.3). Same
-   * cached read the CredentialsPanel owns — React Query dedupes, so this is
-   * no extra network. Disabled in new mode (section is locked there anyway).
+   * Provider-credential count for the builder nav summary (Phase 6, doc 20
+   * §3.5: the builder's credential-management UI was deleted; this read-only
+   * count is the only credential data left here). Same cached read the
+   * Providers page owns — React Query dedupes, so this is no extra network.
    * ProviderCredential exposes no expiry field — expired stays 0 ("none
    * reported"), never invented.
    */

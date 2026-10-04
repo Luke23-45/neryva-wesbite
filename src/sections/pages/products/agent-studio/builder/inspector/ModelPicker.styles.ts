@@ -60,6 +60,37 @@ export const GroupLabel = styled.div`
   margin: ${({ theme }) => theme.spacing.px6} 0 ${({ theme }) => theme.spacing.px2};
 `;
 
+/**
+ * Supergroup header — "Platform managed" / "BYOK — <credentialLabel>".
+ * Flat surface treatment (no gradients): a quiet divider label, not a hero.
+ */
+export const SupergroupHeader = styled.h3`
+  font-size: ${({ theme }) => theme.app.type.body};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.text.primary};
+  margin: ${({ theme }) => theme.spacing.s3} 0 0;
+  padding-bottom: ${({ theme }) => theme.spacing.px6};
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+/**
+ * Tool-compatibility warning badge (PRV-076) — "Incompatible: no tool support".
+ * Same pill anatomy as the pipeline badge, in the existing amber warning
+ * tone (the exact tone ReasonText already uses for unusable rows).
+ */
+export const ToolWarnBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px ${({ theme }) => theme.spacing.s2};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  font-size: ${({ theme }) => theme.app.type.micro};
+  font-weight: ${({ theme }) => theme.typography.weights.semibold};
+  color: ${({ theme }) => theme.app.status.warning.fg};
+  background: ${({ theme }) => theme.app.status.warning.bg};
+  border: 1px solid ${({ theme }) => theme.app.status.warning.border};
+  white-space: nowrap;
+`;
+
 export const InPipelineBadge = styled.span`
   display: inline-flex;
   align-items: center;
@@ -175,27 +206,6 @@ export const ReasonText = styled.span<{ $tone: 'amber' | 'red' | 'muted' }>`
   line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
   color: ${({ theme, $tone }) =>
     $tone === 'amber' ? theme.app.status.warning.fg : $tone === 'red' ? theme.app.status.error.fg : theme.app.text.muted};
-`;
-
-export const FixButton = styled.button`
-  border: 0;
-  background: transparent;
-  color: ${({ theme }) => theme.app.status.info.fg};
-  font-size: ${({ theme }) => theme.app.type.caption};
-  font-weight: ${({ theme }) => theme.typography.weights.medium};
-  font-family: inherit;
-  cursor: pointer;
-  padding: ${({ theme }) => theme.spacing.px2} 0;
-  text-align: left;
-
-  &:hover {
-    text-decoration: underline;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
 `;
 
 export const CapNote = styled.div`

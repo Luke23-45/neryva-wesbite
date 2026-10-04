@@ -61,6 +61,7 @@ interface ParamDraft {
   max_output_tokens?: number;
   top_p?: number;
   reasoning_effort?: ReasoningEffort;
+  reasoning_budget_tokens?: number;
   output_schema?: string;
 }
 
@@ -71,6 +72,7 @@ function readParams(definition: AgentDefinition): ParamDraft {
     ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
     ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
     ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
+    ...(typeof params.reasoning_budget_tokens === 'number' ? { reasoning_budget_tokens: params.reasoning_budget_tokens } : {}),
     ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
   };
 }
@@ -146,6 +148,7 @@ export function BrainSection({
         ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
         ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
         ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
+        ...(params.reasoning_budget_tokens !== undefined ? { reasoning_budget_tokens: params.reasoning_budget_tokens } : {}),
         ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
       },
     });
@@ -227,8 +230,9 @@ export function BrainSection({
     (presetId: 'clerk' | 'scholar' | 'creator') => {
       const preset = MODEL_PRESETS.find((p) => p.id === presetId);
       if (!preset) return;
-      // Preset overwrites the four reasoning params; output_schema (edited in
-      // the Model node) rides along untouched from local state.
+      // Preset overwrites the four reasoning params; reasoning_budget_tokens
+      // (edited in the Model node) and output_schema ride along untouched
+      // from local state — the spread preserves both.
       setParams((prev) => ({
         ...prev,
         temperature: preset.params.temperature,
@@ -261,7 +265,7 @@ export function BrainSection({
           <FieldTitle>Reasoning profile</FieldTitle>
           <FieldHelper>
             How the model thinks — one tap sets temperature, top-p, max output, and reasoning effort.
-            Fine-tune the raw values in Model.
+            Fine-tune the raw values in Model; the thinking budget lives in Model → Advanced.
           </FieldHelper>
         </FieldHead>
         {!canAuthor && (
@@ -325,6 +329,7 @@ export function BrainSection({
                   ...(typeof mps.max_output_tokens === 'number' ? { max_output_tokens: mps.max_output_tokens } : {}),
                   ...(typeof mps.top_p === 'number' ? { top_p: mps.top_p } : {}),
                   ...(typeof mps.reasoning_effort === 'string' ? { reasoning_effort: mps.reasoning_effort as ReasoningEffort } : {}),
+                  ...(typeof mps.reasoning_budget_tokens === 'number' ? { reasoning_budget_tokens: mps.reasoning_budget_tokens } : {}),
                   ...(typeof mps.output_schema === 'string' ? { output_schema: mps.output_schema } : {}),
                 });
               }

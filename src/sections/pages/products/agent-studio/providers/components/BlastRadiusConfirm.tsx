@@ -28,6 +28,12 @@ export interface BlastRadiusConfirmProps {
   affected: BlastRadiusAffected[];
   /** e.g. "Disable model" — labels the destructive action. */
   actionLabel: string;
+  /**
+   * Override the default org-disable consequence copy. The builder (Phase 6)
+   * passes draft-pipeline-specific copy — removing from a draft never touches
+   * the org's enabled set. Tab C keeps the default.
+   */
+  message?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -76,14 +82,15 @@ const Invariant = styled.p`
   color: rgba(229, 231, 235, 0.62);
 `;
 
-export function BlastRadiusConfirm({ affected, actionLabel, onConfirm, onCancel }: BlastRadiusConfirmProps) {
+export function BlastRadiusConfirm({ affected, actionLabel, message, onConfirm, onCancel }: BlastRadiusConfirmProps) {
   const count = affected.length;
   const assistantNoun = count === 1 ? 'assistant' : 'assistants';
+  const defaultMessage = `${count} published ${assistantNoun} currently pin${count === 1 ? 's' : ''} this model. ${actionLabel}ing it removes it from the org's enabled set immediately.`;
   return (
     <ConfirmDialog
       open
       title={`${actionLabel} — ${count} pinned ${assistantNoun}`}
-      message={`${count} published ${assistantNoun} currently pin${count === 1 ? 's' : ''} this model. ${actionLabel}ing it removes it from the org's enabled set immediately.`}
+      message={message ?? defaultMessage}
       confirmLabel={actionLabel}
       cancelLabel="Keep enabled"
       destructive

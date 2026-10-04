@@ -158,7 +158,7 @@ export const ModelIcon = styled.span`
   border: 1px solid ${({ theme }) => theme.app.border.default};
 `;
 
-export const CredBadge = styled.span<{ $tone: 'red' | 'green' }>`
+export const CredBadge = styled.span<{ $tone: 'red' | 'green' | 'amber' }>`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.spacing.s1};
@@ -169,9 +169,12 @@ export const CredBadge = styled.span<{ $tone: 'red' | 'green' }>`
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].fg};
-  background: ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].bg};
-  border: 1px solid ${({ theme, $tone }) => theme.app.status[$tone === 'red' ? 'error' : 'success'].border};
+  color: ${({ theme, $tone }) =>
+    theme.app.status[$tone === 'red' ? 'error' : $tone === 'amber' ? 'warning' : 'success'].fg};
+  background: ${({ theme, $tone }) =>
+    theme.app.status[$tone === 'red' ? 'error' : $tone === 'amber' ? 'warning' : 'success'].bg};
+  border: 1px solid ${({ theme, $tone }) =>
+    theme.app.status[$tone === 'red' ? 'error' : $tone === 'amber' ? 'warning' : 'success'].border};
 `;
 
 export const EmptyPipeline = styled.div`

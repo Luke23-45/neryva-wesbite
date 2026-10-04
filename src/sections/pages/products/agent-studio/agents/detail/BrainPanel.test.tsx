@@ -116,13 +116,15 @@ describe('BrainPanel dedicated section', () => {
     expect(screen.getByText('Scholar')).toBeTruthy();
   });
 
-  it('shows credential status with fingerprints and deep-links out (never edits)', async () => {
+  it('shows credential status with key labels only (no fingerprints) and deep-links out (never edits)', async () => {
     await act(async () => {
       await shell();
     });
-    expect(screen.getByText(/\*\*\*\*9f2c/)).toBeTruthy();
+    expect(screen.getByText('prod')).toBeTruthy();
+    expect(screen.queryByText(/\*\*\*\*9f2c/)).toBeNull();
+    expect(screen.queryByText(/fingerprint/)).toBeNull();
     expect(screen.getByText(/Edit in builder/).closest('a')?.getAttribute('href')).toBe('/agent-studio/agents/agent-1/build');
-    expect(screen.getByText(/Manage in Models/).closest('a')?.getAttribute('href')).toBe('/agent-studio/models');
+    expect(screen.getByText(/Manage in Providers/).closest('a')?.getAttribute('href')).toBe('/agent-studio/providers');
     // No inputs anywhere on this panel — read-only by contract.
     expect(document.querySelector('input, textarea, select, button')).toBeNull();
   });

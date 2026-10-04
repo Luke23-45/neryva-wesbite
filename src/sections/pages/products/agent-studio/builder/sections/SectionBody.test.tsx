@@ -16,7 +16,7 @@ import type { PurposeHandle } from '../inspector/PurposeInspector';
 import type { RefObject } from 'react';
 
 /**
- * Mapping tests: the 18 section ids each mount their section in the main
+ * Mapping tests: the 17 section ids each mount their section in the main
  * pane. Sections are stubbed — the mapping is the unit under test;
  * PurposeExtras stays REAL (its copy is asserted here).
  */
@@ -67,12 +67,6 @@ vi.mock('../inspector/ShipSection', () => ({
 }));
 vi.mock('../inspector/BrandSection', () => ({
   BrandSection: () => <div data-testid="section-brand" />,
-}));
-vi.mock('../inspector/CredentialsPanel', () => ({
-  CredentialsPanel: () => <div data-testid="section-credentials" />,
-}));
-vi.mock('./CredentialsRail', () => ({
-  CredentialsRail: () => <div data-testid="credentials-rail" />,
 }));
 vi.mock('../inspector/SamplesSection', () => ({
   SamplesSection: () => <div data-testid="section-samples" />,
@@ -166,7 +160,6 @@ describe('SectionBody section mapping', () => {
     ['budget', 'section-budget'],
     ['evaluation', 'section-evaluation'],
     ['ship', 'section-ship'],
-    ['credentials', 'section-credentials'],
     ['samples', 'section-samples'],
     ['try', 'section-try'],
   ];
@@ -307,7 +300,7 @@ describe('SectionBody per-section Save', () => {
     expect(screen.getByRole('button', { name: label })).toBeTruthy();
   });
 
-  it.each(['credentials', 'samples', 'try', 'evaluation', 'ship'])(
+  it.each(['samples', 'try', 'evaluation', 'ship'])(
     'shows no Save button on the %s action surface — its own verbs stay',
     async (id) => {
       await shell({ sectionId: id });

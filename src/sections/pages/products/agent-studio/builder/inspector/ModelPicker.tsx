@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import type { ModelAvailability, ModelCost } from '@hooks/studio/useSetupModels';
 import { Tooltip } from '@components/common/ui/Tooltip';
 import { ENGINE_RANGES, humanizeReason, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
 import {
@@ -9,6 +8,7 @@ import {
   DEMO_TOOLTIP,
   isDemoProvider,
 } from '../lib/demo-model';
+import type { BuilderModelRow } from '../lib/useGroupedModels';
 import {
   CapChips,
   CapNote,
@@ -17,7 +17,6 @@ import {
   CountBadge,
   DemoBadge,
   EmptyNote,
-  FixButton,
   GroupLabel,
   InPipelineBadge,
   PickerHead,
@@ -26,24 +25,28 @@ import {
   RowMeta,
   RowName,
   SearchInput,
+  SupergroupHeader,
+  ToolWarnBadge,
   Wrap,
 } from './ModelPicker.styles';
 import { SkeletonRows } from './SkeletonRows';
 
 export interface ModelPickerProps {
-  rows: ModelAvailability[] | undefined;
+  /** N-5 grouped-model rows (undefined while loading). */
+  rows: BuilderModelRow[] | undefined;
   /** Catalog fetch failed — the list is unknown, not empty. */
   loadError?: boolean;
-  costsByRef: Map<string, ModelCost>;
-  pipelineRefs: string[];
-  credBlockedRefs: Set<string>;
+  /** Pipeline entry keys (`byok|<ref>|<credentialId>` / `platform|<ref>|`). */
+  pipelineKeys: Set<string>;
+  /** Entry keys with a credential blocker. */
+  credBlockedKeys: Set<string>;
+  /** Real pinned-tool count from the draft — 0 hides all tool warnings. */
+  pinnedToolCount: number;
   canAuthor: boolean;
-  /** B2: whether BYOK connect is available (enterprise-gated upstream). */
+  /** Whether BYOK connect is available (enterprise-gated upstream). */
   isEnterprise: boolean;
   /** Add to / remove from the pipeline (reorder lives on the pipeline rows). */
-  onToggle: (ref: string) => void;
-  /** Row-level fix requested (connect/enable/profile/incident) — owned upstream. */
-  onFixRequest: (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => void;
+  onToggle: (ref: string, credentialId: string | null) => void;
 }
 
 function fmtCtx(tokens: number | null | undefined): string | null {
@@ -52,12 +55,13 @@ function fmtCtx(tokens: number | null | undefined): string | null {
   return `${tokens} ctx`;
 }
 
-function pricePerM(micros: number | null | undefined): string {
-  if (micros === null || micros === undefined) return 'Pricing not listed';
-  return `$${(micros / 1000).toFixed(2)}/1M`;
+/** USD/1M pair straight from the row — absent when the engine sent none. */
+function priceLine(pricing: BuilderModelRow['pricing']): string {
+  if (!pricing) return 'Pricing not listed';
+  return `$${pricing.input_per_1m}/1M in · $${pricing.output_per_1m}/1M out`;
 }
 
-function capabilityChips(capabilities: Record<string, unknown>): string[] {
+function capabilityChips(capabilities: BuilderModelRow['capabilities']): string[] {
   const chips: string[] = [];
   if (capabilities.vision) chips.push('Vision');
   if (capabilities.tools) chips.push('Tools');
@@ -65,90 +69,113 @@ function capabilityChips(capabilities: Record<string, unknown>): string[] {
   return chips;
 }
 
-function providerLabel(provider: string): string {
-  // D3: proper casing for known providers ("openai" → "OpenAI", not "Openai").
-  const known: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    google: 'Google',
-    mistral: 'Mistral',
-    cohere: 'Cohere',
-  };
-  return known[provider.toLowerCase()] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
+interface ProviderSubgroup {
+  provider: string;
+  providerDisplayName: string;
+  rows: BuilderModelRow[];
+}
+
+interface SupergroupSection {
+  kind: 'platform' | 'byok';
+  /** React key: 'platform' or `byok|<credentialId>`. */
+  id: string;
+  title: string;
+  subgroups: ProviderSubgroup[];
 }
 
 /**
- * Catalog multi-pick — provider-grouped rows with search, capability chips,
- * per-1M pricing, and inline usability reasons. Unusable rows are DISABLED
- * (never hidden); pipeline rows stay removable. Viewer gets the same list
- * read-only. Reorder moved to the pipeline rows (no OrderStrip here).
+ * Catalog multi-pick on the N-5 grouped-model rows — supergroup sections
+ * (Platform managed / BYOK — <credentialLabel>) wrapping provider sub-groups,
+ * with search, capability chips, per-1M pricing, and inline usability
+ * reasons. Unusable rows are DISABLED (never hidden); pipeline rows stay
+ * removable. Viewer gets the same list read-only. Reorder moved to the
+ * pipeline rows (no OrderStrip here).
  */
 export function ModelPicker({
   rows,
   loadError,
-  costsByRef,
-  pipelineRefs,
-  credBlockedRefs,
+  pipelineKeys,
+  credBlockedKeys,
+  pinnedToolCount,
   canAuthor,
   isEnterprise,
   onToggle,
-  onFixRequest,
 }: ModelPickerProps) {
   const [query, setQuery] = useState('');
-  const capped = pipelineRefs.length >= ENGINE_RANGES.allowedModelsMax;
+  const pickedCount = pipelineKeys.size;
+  const capped = pickedCount >= ENGINE_RANGES.allowedModelsMax;
 
   const visible = useMemo(() => {
     const list = rows ?? [];
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
-      (m) =>
-        m.displayName.toLowerCase().includes(q) ||
+      (row) =>
+        row.displayName.toLowerCase().includes(q) ||
         // The demo row renders the pinned display name, which may differ
         // from the engine's displayName — match against it too.
-        (isDemoProvider(m.provider) && DEMO_DISPLAY_NAME.toLowerCase().includes(q)) ||
-        m.ref.toLowerCase().includes(q) ||
-        m.provider.toLowerCase().includes(q),
+        (isDemoProvider(row.provider) && DEMO_DISPLAY_NAME.toLowerCase().includes(q)) ||
+        row.ref.toLowerCase().includes(q) ||
+        row.provider.toLowerCase().includes(q) ||
+        (row.credentialLabel ?? '').toLowerCase().includes(q),
     );
   }, [rows, query]);
 
-  // Provider groups in catalog order (never alphabetical — the catalog's
-  // own ordering is the source of truth).
-  const groups = useMemo(() => {
-    const order: string[] = [];
-    const byProvider = new Map<string, ModelAvailability[]>();
-    for (const model of visible) {
-      if (!byProvider.has(model.provider)) {
-        byProvider.set(model.provider, []);
-        order.push(model.provider);
-      }
-      byProvider.get(model.provider)?.push(model);
+  // Supergroup sections in catalog order (never alphabetical — the catalog's
+  // own ordering is the source of truth): platform first, then BYOK groups
+  // in row order. Within each supergroup, provider sub-groups in row order.
+  const sections = useMemo<SupergroupSection[]>(() => {
+    const result: SupergroupSection[] = [];
+    const platform = visible.filter((row) => row.supergroup === 'platform');
+    if (platform.length > 0) {
+      result.push({ kind: 'platform', id: 'platform', title: 'Platform managed', subgroups: groupByProvider(platform) });
     }
-    return order.map((provider) => ({ provider, models: byProvider.get(provider) ?? [] }));
+    const byok = visible.filter((row) => row.supergroup === 'byok');
+    const credOrder: string[] = [];
+    const byCred = new Map<string, BuilderModelRow[]>();
+    for (const row of byok) {
+      const key = row.credentialId ?? '';
+      if (!byCred.has(key)) {
+        byCred.set(key, []);
+        credOrder.push(key);
+      }
+      byCred.get(key)?.push(row);
+    }
+    for (const key of credOrder) {
+      const credRows = byCred.get(key) ?? [];
+      const label = credRows[0]?.credentialLabel ?? key;
+      result.push({
+        kind: 'byok',
+        id: `byok|${key}`,
+        title: `BYOK — ${label}`,
+        subgroups: groupByProvider(credRows),
+      });
+    }
+    return result;
   }, [visible]);
 
-  const renderRow = (model: ModelAvailability) => {
-    const inPipeline = pipelineRefs.includes(model.ref);
-    const disabled = !canAuthor || (!model.usable && !inPipeline) || (!inPipeline && capped);
-    const cost = costsByRef.get(model.ref);
-    const ctx = fmtCtx(model.contextWindowTokens);
-    const chips = capabilityChips(model.capabilities);
-    const reason = model.usable ? null : (model.reasons[0] ?? 'unknown');
-    const fix = reason ? reasonFix(reason) : null;
-    const gated = reason === 'subscription_required';
+  const renderRow = (row: BuilderModelRow) => {
+    const inPipeline = pipelineKeys.has(row.key);
+    const disabled = !canAuthor || (!row.usable && !inPipeline) || (!inPipeline && capped);
+    const ctx = fmtCtx(row.contextWindowTokens);
+    const chips = capabilityChips(row.capabilities);
     // Demo row (build spec v3 §1/§6): the engine declares the demo as an
     // ordinary availability row — the picker renders the pinned copy so it
     // can never be mistaken for a real model.
-    const demo = isDemoProvider(model.provider);
-    const name = demo ? DEMO_DISPLAY_NAME : model.displayName;
+    const demo = isDemoProvider(row.provider);
+    const name = demo ? DEMO_DISPLAY_NAME : row.displayName;
+    // PRV-076: badge only — the confirm step mounts in ModelSection.
+    const showToolWarn = pinnedToolCount > 0 && row.capabilities.tools === false;
+    const byokSuffix = row.supergroup === 'byok' ? ` · BYOK · ${row.credentialLabel ?? 'unlabeled credential'}` : '';
     return (
-      <CatalogRow key={model.ref} $disabled={disabled} title={model.ref}>
+      <CatalogRow key={row.key} $disabled={disabled} title={row.ref}>
         <input
           type="checkbox"
+          key={row.key}
           checked={inPipeline}
           disabled={disabled}
-          onChange={() => onToggle(model.ref)}
-          aria-label={`${name}${model.usable ? '' : ` — unusable: ${model.reasons.join(', ') || 'unknown reason'}`}`}
+          onChange={() => onToggle(row.ref, row.credentialId)}
+          aria-label={`${name}${row.usable ? '' : ` — unusable: ${row.reasons.join(', ') || 'unknown reason'}`}`}
         />
         <RowMain>
           <RowName>
@@ -156,12 +183,11 @@ export function ModelPicker({
             {inPipeline && <InPipelineBadge>In pipeline</InPipelineBadge>}
           </RowName>
           <RowMeta>
-            {providerLabel(model.provider)} · {model.modelId}
+            {row.providerDisplayName} · {row.modelId}
             {ctx ? ` · ${ctx}` : ''}
+            {byokSuffix}
           </RowMeta>
-          <RowMeta>
-            {pricePerM(cost?.costMicrosPer1kInput)} in · {pricePerM(cost?.costMicrosPer1kOutput)} out
-          </RowMeta>
+          <RowMeta>{priceLine(row.pricing)}</RowMeta>
           {chips.length > 0 && (
             <CapChips>
               {chips.map((chip) => (
@@ -169,39 +195,14 @@ export function ModelPicker({
               ))}
             </CapChips>
           )}
-          {!model.usable && (
-            <ReasonText $tone={reason === 'credential_compromised' ? 'red' : 'amber'}>
-              {gated ? (
-                <>
-                  {subscriptionGateCopy(model)}{' '}
-                  <Link to="/agent-studio/settings/billing">View subscription options →</Link>
-                </>
-              ) : (
-                <>
-                  unusable: {humanizeReason(reason ?? 'unknown')}
-                  {credBlockedRefs.has(model.ref) && ' — credential required to serve'}
-                  {fix && fix.action && fix.action !== 'billing' && canAuthor && (
-                    <>
-                      {' · '}
-                      {fix.action === 'connect' && !isEnterprise ? (
-                        // B2: BYOK is enterprise-gated — render truthful copy
-                        // instead of a button that opens nothing.
-                        <span>Neryva-managed credentials apply — no action needed</span>
-                      ) : (
-                        <FixButton
-                          type="button"
-                          onClick={() =>
-                            onFixRequest(fix.action as 'connect' | 'enable' | 'profile' | 'incident', model.ref)
-                          }
-                        >
-                          {fix.label}
-                        </FixButton>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </ReasonText>
+          {showToolWarn && <ToolWarnBadge>Incompatible: no tool support</ToolWarnBadge>}
+          {!row.usable && (
+            <ReasonBlock
+              row={row}
+              credBlocked={credBlockedKeys.has(row.key)}
+              canAuthor={canAuthor}
+              isEnterprise={isEnterprise}
+            />
           )}
         </RowMain>
       </CatalogRow>
@@ -218,8 +219,8 @@ export function ModelPicker({
           aria-label="Search model catalog"
         />
         {/* B9: the badge states a count of a capped list — label it as such. */}
-        <CountBadge aria-label={`${pipelineRefs.length} of ${ENGINE_RANGES.allowedModelsMax} models picked`}>
-          {pipelineRefs.length} / {ENGINE_RANGES.allowedModelsMax} picked
+        <CountBadge aria-label={`${pickedCount} of ${ENGINE_RANGES.allowedModelsMax} models picked`}>
+          {pickedCount} / {ENGINE_RANGES.allowedModelsMax} picked
         </CountBadge>
       </PickerHead>
 
@@ -234,39 +235,137 @@ export function ModelPicker({
       )}
 
       <CatalogList>
-        {groups.map((group) => {
-          // Demo group (build spec v3 §6): its own labeled group with an
-          // info tooltip — never folded into a provider's list.
-          const demoGroup = isDemoProvider(group.provider);
-          return (
-            <div key={group.provider}>
-              <GroupLabel>
-                {demoGroup ? (
-                  <>
-                    {DEMO_GROUP_LABEL} · {group.models.length}{' '}
-                    {/* side="bottom": the catalog list scrolls (overflow-y),
-                        so an upward bubble is clipped whenever the demo group
-                        sits near the top of the scrollport. Below the badge
-                        there is always catalog content to overlay.
-                        focusable: the badge is a plain span — without a tab
-                        stop keyboard users can never reveal the policy copy. */}
-                    <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
-                      <DemoBadge>Demo</DemoBadge>
-                    </Tooltip>
-                  </>
-                ) : (
-                  <>
-                    {providerLabel(group.provider)} · {group.models.length}
-                  </>
-                )}
-              </GroupLabel>
-              {group.models.map((model) => renderRow(model))}
-            </div>
-          );
-        })}
+        {sections.map((section) => (
+          <div key={section.id}>
+            <SupergroupHeader>{section.title}</SupergroupHeader>
+            {section.subgroups.map((group) => {
+              // Demo group (build spec v3 §6): its own labeled group with an
+              // info tooltip — never folded into a provider's list.
+              const demoGroup = isDemoProvider(group.provider);
+              return (
+                <div key={group.provider}>
+                  <GroupLabel>
+                    {demoGroup ? (
+                      <>
+                        {DEMO_GROUP_LABEL} · {group.rows.length}{' '}
+                        {/* side="bottom": the catalog list scrolls (overflow-y),
+                            so an upward bubble is clipped whenever the demo group
+                            sits near the top of the scrollport. Below the badge
+                            there is always catalog content to overlay.
+                            focusable: the badge is a plain span — without a tab
+                            stop keyboard users can never reveal the policy copy. */}
+                        <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
+                          <DemoBadge>Demo</DemoBadge>
+                        </Tooltip>
+                      </>
+                    ) : (
+                      <>
+                        {group.providerDisplayName} · {group.rows.length}
+                      </>
+                    )}
+                  </GroupLabel>
+                  {group.rows.map((row) => renderRow(row))}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </CatalogList>
+
+      {/* PRV-078: draft-safe via the existing autosave unmount flush —
+          no return-state machinery. */}
+      <CapNote>
+        Need another model or endpoint? <Link to="/agent-studio/providers">Open Providers →</Link>
+      </CapNote>
 
       {capped && canAuthor && <CapNote>{ENGINE_RANGES.allowedModelsMax}-model cap — remove one to add another.</CapNote>}
     </Wrap>
+  );
+}
+
+/** Provider sub-groups in row order (never alphabetical). */
+function groupByProvider(list: BuilderModelRow[]): ProviderSubgroup[] {
+  const order: string[] = [];
+  const byProvider = new Map<string, BuilderModelRow[]>();
+  for (const row of list) {
+    if (!byProvider.has(row.provider)) {
+      byProvider.set(row.provider, []);
+      order.push(row.provider);
+    }
+    byProvider.get(row.provider)?.push(row);
+  }
+  return order.map((provider) => {
+    const rows = byProvider.get(provider) ?? [];
+    return {
+      provider,
+      providerDisplayName: rows[0]?.providerDisplayName ?? provider,
+      rows,
+    };
+  });
+}
+
+/**
+ * Inline usability reasons for an unusable row (PRV-080): every reasons[]
+ * code renders human-readable text plus the right next step. Subscription
+ * locks keep the billing link; every other fix action is a direct Link to
+ * the Providers surface (no fix-request callback — modals are banned).
+ */
+function ReasonBlock({
+  row,
+  credBlocked,
+  canAuthor,
+  isEnterprise,
+}: {
+  row: BuilderModelRow;
+  credBlocked: boolean;
+  canAuthor: boolean;
+  isEnterprise: boolean;
+}) {
+  const reasons = row.reasons.length > 0 ? row.reasons : ['unknown'];
+  const red = reasons.includes('credential_compromised');
+  return (
+    <ReasonText $tone={red ? 'red' : 'amber'}>
+      {reasons.map((reason, index) => (
+        <span key={reason}>
+          {index > 0 && ' · '}
+          {reason === 'subscription_required' ? (
+            <>
+              {subscriptionGateCopy(row)}{' '}
+              <Link to="/agent-studio/settings/billing">View subscription options →</Link>
+            </>
+          ) : (
+            <>
+              unusable: {humanizeReason(reason)}
+              {credBlocked && ' — credential required to serve'}
+              {canAuthor && <FixLink reason={reason} isEnterprise={isEnterprise} />}
+            </>
+          )}
+        </span>
+      ))}
+    </ReasonText>
+  );
+}
+
+/**
+ * Direct next-step link per fix action (PRV-080). `connect` on a
+ * non-enterprise workspace stays honest: Neryva-managed credentials apply,
+ * so there is no action to take — plain copy, not a dead link.
+ */
+function FixLink({ reason, isEnterprise }: { reason: string; isEnterprise: boolean }) {
+  const fix = reasonFix(reason);
+  if (!fix.action) {
+    // action: null (e.g. the demo allowance) — label text only, no link.
+    return null;
+  }
+  if (fix.action === 'connect' && !isEnterprise) {
+    return <span> · Neryva-managed credentials apply — no action needed</span>;
+  }
+  return (
+    <>
+      {' · '}
+      <Link to="/agent-studio/providers">
+        {fix.label} →
+      </Link>
+    </>
   );
 }

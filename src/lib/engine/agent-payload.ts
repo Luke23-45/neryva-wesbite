@@ -318,6 +318,8 @@ export interface ModelPipelineEntry {
     max_output_tokens?: number;
     top_p?: number;
     reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
+    /** PRV-073: per-entry thinking-budget override; same rules as global. */
+    reasoning_budget_tokens?: number;
     output_schema?: string;
   };
 }
@@ -340,6 +342,9 @@ export interface ConsumerDefinition {
     max_output_tokens?: number;
     top_p?: number;
     reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
+    /** PRV-073: explicit thinking budget in tokens (int 1..100000, engine-validated).
+     *  An explicit budget wins over the `reasoning_effort` tier at call time. */
+    reasoning_budget_tokens?: number;
     output_schema?: string;
     /**
      * Legacy read key: max_context_tokens predates v1.15 inside model_params
@@ -691,6 +696,16 @@ function cleanPipelineEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
     effortRaw === 'minimal' || effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high'
       ? effortRaw
       : undefined;
+  // PRV-073: per-entry thinking-budget override — int 1..100000, same rules
+  // as the global model_params field. Out-of-range values are dropped rather
+  // than shipped to a 400.
+  const budgetTokens =
+    typeof params?.reasoning_budget_tokens === 'number' &&
+    Number.isInteger(params.reasoning_budget_tokens) &&
+    params.reasoning_budget_tokens >= 1 &&
+    params.reasoning_budget_tokens <= 100_000
+      ? params.reasoning_budget_tokens
+      : undefined;
   const schemaRaw = typeof params?.output_schema === 'string' ? params.output_schema : undefined;
   const schema =
     schemaRaw !== undefined && schemaRaw.trim() !== '' && isEngineValidOutputSchema(schemaRaw) ? schemaRaw : undefined;
@@ -699,6 +714,7 @@ function cleanPipelineEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
     maxOutputTokens !== undefined ||
     topP !== undefined ||
     effort !== undefined ||
+    budgetTokens !== undefined ||
     schema !== undefined;
   return {
     ref: entry.ref,
@@ -711,6 +727,7 @@ function cleanPipelineEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
             ...(maxOutputTokens !== undefined ? { max_output_tokens: maxOutputTokens } : {}),
             ...(topP !== undefined ? { top_p: topP } : {}),
             ...(effort !== undefined ? { reasoning_effort: effort } : {}),
+            ...(budgetTokens !== undefined ? { reasoning_budget_tokens: budgetTokens } : {}),
             ...(schema !== undefined ? { output_schema: schema } : {}),
           },
         }
@@ -895,6 +912,8 @@ export function toEnginePayload(def: ConsumerDefinition): EnginePayload {
   if (def.model_params.max_output_tokens !== undefined) params.max_output_tokens = def.model_params.max_output_tokens;
   if (def.model_params.top_p !== undefined) params.top_p = def.model_params.top_p;
   if (def.model_params.reasoning_effort !== undefined) params.reasoning_effort = def.model_params.reasoning_effort;
+  if (def.model_params.reasoning_budget_tokens !== undefined)
+    params.reasoning_budget_tokens = def.model_params.reasoning_budget_tokens;
   if (nonBlank(def.model_params.output_schema ?? '') !== null) params.output_schema = (def.model_params.output_schema as string).trim();
   if (def.model_params.response_format !== undefined) params.response_format = def.model_params.response_format;
   if (nonBlank(def.model_params.output_schema_name ?? '') !== null)
@@ -1106,8 +1125,12 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
     for (const rawEntry of pipelineRaw) {
       const entry = obj(rawEntry);
       const ref = str(entry.ref);
-      if (!ref || seen.has(ref)) continue;
-      seen.add(ref);
+      const credentialId = str(entry.credential_id);
+      // Dedupe by (ref, credential_id): the same model may appear once per
+      // source (platform pool + BYOK pins) — ref alone is not the identity.
+      const key = credentialId ? `byok|${ref}|${credentialId}` : `platform|${ref}|`;
+      if (!ref || seen.has(key)) continue;
+      seen.add(key);
       const paramsRaw = obj(entry.params);
       const effortRaw = str(paramsRaw.reasoning_effort);
       // Explicit union annotation: the spread below widens an inferred
@@ -1116,7 +1139,8 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
         effortRaw === 'minimal' || effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high'
           ? effortRaw
           : undefined;
-      const credentialId = str(entry.credential_id);
+      const budgetRaw = paramsRaw.reasoning_budget_tokens;
+      const budgetTokens = typeof budgetRaw === 'number' ? budgetRaw : undefined;
       const versionPin = str(entry.version_pin);
       const schema = str(paramsRaw.output_schema);
       const params =
@@ -1124,12 +1148,14 @@ export function fromEnginePayload(raw: unknown): ConsumerDefinition {
         typeof paramsRaw.max_output_tokens === 'number' ||
         typeof paramsRaw.top_p === 'number' ||
         effort !== undefined ||
+        budgetTokens !== undefined ||
         schema
           ? {
               ...(typeof paramsRaw.temperature === 'number' ? { temperature: paramsRaw.temperature } : {}),
               ...(typeof paramsRaw.max_output_tokens === 'number' ? { max_output_tokens: paramsRaw.max_output_tokens } : {}),
               ...(typeof paramsRaw.top_p === 'number' ? { top_p: paramsRaw.top_p } : {}),
               ...(effort !== undefined ? { reasoning_effort: effort } : {}),
+              ...(budgetTokens !== undefined ? { reasoning_budget_tokens: budgetTokens } : {}),
               ...(schema ? { output_schema: schema } : {}),
             }
           : undefined;

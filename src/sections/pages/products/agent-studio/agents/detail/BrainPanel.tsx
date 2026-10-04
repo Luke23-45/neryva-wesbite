@@ -220,7 +220,7 @@ export function BrainPanel({ agentId }: { agentId: string }) {
                     {cred.provider}
                   </StatusPill>
                   <span>
-                    {cred.label} · {cred.secretFingerprint ?? 'no fingerprint'}
+                    {cred.label}
                     {cred.revocationReason ? ` — ${cred.revocationReason}` : ''}
                     {revoked ? ' — pinned models on this provider are unusable (derived)' : ''}
                   </span>
@@ -230,7 +230,7 @@ export function BrainPanel({ agentId }: { agentId: string }) {
           </CredList>
           <SectionNote>
             Keys rotate and revoke in the Models library — this panel never touches sealed material.{' '}
-            <Link to="/agent-studio/models">Manage in Models →</Link>
+            <Link to="/agent-studio/providers">Manage in Providers →</Link>
           </SectionNote>
         </>
       )}

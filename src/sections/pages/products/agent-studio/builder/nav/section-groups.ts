@@ -58,7 +58,7 @@ export const SECTION_GROUPS: SectionGroupDef[] = [
   {
     id: 'actions',
     label: 'Actions',
-    sections: ['tools', 'credentials'],
+    sections: ['tools'],
   },
   {
     id: 'safeguards',

@@ -7,8 +7,9 @@ describe('section-groups', () => {
     const grouped = allGroupedSectionIds();
     // 'brain' is soft-deleted from the UI (2026-09-30): LANE_NODE_IDS keeps
     // it for the canvas/v10 implementation, but section-groups must not
-    // navigate to it.
-    const navigable = LANE_NODE_IDS.filter((id) => id !== 'brain');
+    // navigate to it. 'credentials' moved to the Providers page (Phase 6,
+    // doc 20 §3.5): the dormant v10 lane spec keeps it, nav does not.
+    const navigable = LANE_NODE_IDS.filter((id) => id !== 'brain' && id !== 'credentials');
     expect([...grouped].sort()).toEqual([...navigable].sort());
     expect(new Set(grouped).size).toBe(grouped.length);
   });

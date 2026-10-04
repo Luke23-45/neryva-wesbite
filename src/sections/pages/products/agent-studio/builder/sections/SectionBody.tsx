@@ -1,8 +1,7 @@
-import { useMemo, useState, type ReactNode, type RefObject } from 'react';
+import { type ReactNode, type RefObject } from 'react';
 import type { ModelAvailability } from '@hooks/studio/useSetupModels';
 import type { ConsumerDefinition } from '@lib/engine/agent-payload';
 import type { OrgRole } from '@/Context/OrgContext';
-import { canSetup } from '@lib/engine/capabilities';
 import {
   PurposeInspector,
   type PurposeFormState,
@@ -20,7 +19,6 @@ import { ResponseSection } from '../inspector/ResponseSection';
 import { RoleSection } from '../inspector/RoleSection';
 import { MemorySection } from '../inspector/MemorySection';
 import { BudgetSection } from '../inspector/BudgetSection';
-import { CredentialsPanel } from '../inspector/CredentialsPanel';
 import { SectionPage } from '../section-ui/SectionPage';
 import { TrySection } from '../inspector/TrySection';
 import { EvaluationSection } from '../inspector/EvaluationSection';
@@ -32,7 +30,6 @@ import type { PublishEditTarget } from '../lib/publish-model';
 import type { TraceEditTarget } from '../inspector/TraceDrawer';
 import { sectionLabel, type SectionEntry } from '../nav/section-groups';
 import { SectionActions, SectionPane, SectionWrap, SaveButton } from './SectionBody.styles';
-import { CredentialsRail } from './CredentialsRail';
 
 /**
  * Sections with a real save affordance behind the header's "Save {name}"
@@ -155,48 +152,6 @@ interface SectionBodyProps {
 }
 
 /**
- * Credentials section mount: the panel's own home with the same wiring
- * ModelSection gives its embedded instance — pinned providers from the
- * saved draft's allowed models, role-derived read/govern gates, and local
- * dialog state. ModelSection keeps its embedded instance (its model fix
- * actions open the inline forms there) — both read the same cache.
- */
-function CredentialsNode({ context }: { context: InspectorContext }) {
-  const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
-  const canRead = canSetup(context.role, 'setup:author');
-  // CR-BUG3 rail: the same cached queries the panel reads — React Query
-  // dedupes by key, so this costs no extra fetch. Extracted to its own
-  // component so the section-mapping tests can mock it like CredentialsPanel.
-  const pinnedProviders = useMemo(
-    () => [
-      ...new Set(
-        (context.definition?.model_policy.allowed_models ?? []).map(ref => ref.split('/')[0] ?? ref)
-      ),
-    ],
-    [context.definition]
-  );
-  return (
-    <SectionPage
-      title="Credentials"
-      subtitle="Provider API keys and Neryva-managed platform credentials this agent may use at runtime."
-      rail={<CredentialsRail canRead={canRead} />}
-    >
-      <CredentialsPanel
-        pinnedProviders={pinnedProviders}
-        canGovern={canSetup(context.role, 'setup:govern')}
-        canRead={canRead}
-        highlightProvider={null}
-        revokeOpenId={revokeCredentialId}
-        connectOpen={connectOpen}
-        onConnectOpenChange={setConnectOpen}
-        onRevokeOpenChange={setRevokeCredentialId}
-      />
-    </SectionPage>
-  );
-}
-
-/**
  * Main-pane section mount (configure-first redesign).
  *
  * This is the section switch from the old right inspector, re-homed into
@@ -206,7 +161,7 @@ function CredentialsNode({ context }: { context: InspectorContext }) {
  * purpose → PurposeInspector (+ build-mode extras); instructions →
  * InstructionsSection; model → ModelSection; brain/knowledge/tools/memory/
  * guardrails/brand/budget/context/response/role → their sections;
- * credentials → CredentialsPanel; samples → SamplesSection; evaluation →
+ * samples → SamplesSection; evaluation →
  * EvaluationSection; ship → ShipSection; try → TrySection.
  */
 export function SectionBody({
@@ -438,9 +393,6 @@ export function SectionBody({
             saveSignal={context.saveSignal}
           />
         );
-        break;
-      case 'credentials':
-        body = <CredentialsNode context={context} />;
         break;
       case 'samples':
         // Browse-only gallery: the composer's own gallery (Instructions

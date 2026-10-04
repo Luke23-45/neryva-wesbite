@@ -3,16 +3,22 @@
  * per-model configuration, defaults, credentials").
  *
  * Four groups on the SectionPage shell:
- *   PIPELINE    — serving order with expandable per-model rows (credential,
- *                 version pin, param overrides), fallback policy, and the
+ *   PIPELINE    — serving order with expandable per-model rows (credential
+ *                 pin, version pin, param overrides), fallback policy, and the
  *                 availability helper.
- *   CATALOG     — provider-grouped model picker (search, capability chips,
- *                 per-1M pricing, subscription-locked rows).
+ *   CATALOG     — supergroup-grouped model picker (Platform managed / BYOK,
+ *                 search, capability chips, per-1M pricing, subscription-locked
+ *                 rows) plus the tool-compatibility guard and blast-radius
+ *                 preview.
  *   DEFAULTS    — generation defaults (temperature, advanced params) plus the
  *                 response format (Text / JSON / Schema) with the JSON schema
  *                 edited in the shared focused BlockEditor (never a raw
  *                 textarea — 19-12).
- *   CREDENTIALS — the vault panel plus per-model credential requirements.
+ *
+ * Credential management lives on the Providers page
+ * (/agent-studio/providers) — this section reads credential presence for the
+ * availability gate and the pin picker, and links out for everything else
+ * (doc 20 §3.5).
  *
  * Save machine (preserved from the pre-redesign section): 8s debounced
  * autosave + unmount flush + manual save signal + 409 adopt + 412 dialog,
@@ -22,7 +28,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { ChevronDown } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
@@ -30,9 +36,7 @@ import { Dropdown } from '@components/common/ui/Dropdown';
 import { Switch } from '@components/common/ui/Switch';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ApiError } from '@lib/engine/client';
-import { useCanSetup } from '@lib/engine/capabilities';
-import { useOrg } from '@/Context/OrgContext';
-import { useModelAvailability, useModelCosts } from '@hooks/studio/useSetupModels';
+import { useModelCosts } from '@hooks/studio/useSetupModels';
 import {
   useSaveDraftVersion,
   useUpdateDraftVersion,
@@ -46,13 +50,16 @@ import { buildDraftPayload } from '../lib/draft-save';
 import { useDraftAutosave, useManualSaveSignal } from '../lib/use-draft-autosave';
 import { useStringDraft } from '../lib/use-string-draft';
 import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
-import { ENGINE_RANGES, formatStepValue, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
+import { ENGINE_RANGES, formatStepValue, humanizeReason, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
+import { pipelineEntryKey } from '../lib/entry-key';
+import { useGroupedModels, type BuilderModelRow } from '../lib/useGroupedModels';
+import { ToolCompatGuard } from '../../providers/components/ToolCompatGuard';
+import { BlastRadiusConfirm, type BlastRadiusAffected } from '../../providers/components/BlastRadiusConfirm';
 import { BlockEditor } from '../section-ui/BlockEditor';
 import type { EditableBlock, ModalBlock } from '../section-ui/types';
 import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
 import { SkeletonRows } from './SkeletonRows';
 import { ConflictDialog } from './ConflictDialog';
-import { CredentialsPanel } from './CredentialsPanel';
 import { ModelPicker } from './ModelPicker';
 import {
   AddModelButton,
@@ -105,6 +112,8 @@ interface DefaultsDraft {
   max_output_tokens?: number;
   top_p?: number;
   reasoning_effort?: ReasoningEffort;
+  /** PRV-073: explicit thinking budget, int 1..100000 (engine-validated). */
+  reasoning_budget_tokens?: number;
   output_schema?: string;
   response_format?: ResponseFormat;
   output_schema_name?: string;
@@ -133,21 +142,28 @@ const RESPONSE_FORMAT_HELP: Record<ResponseFormat, string> = {
  * Reconcile the wire pipeline against the derived allowed_models. Garbage
  * resolves to absent (never a guess); unknown refs reconcile out; order
  * follows the pipeline, then any allowed_models entries it missed.
+ *
+ * Entries are keyed by (ref, credential_id) — the same model may appear once
+ * per source (platform pool + BYOK pins), so wire dedupe is by entry key
+ * while the allowed_models backfill is by ref (one unpinned entry per ref).
  */
 function readPipeline(definition: AgentDefinition | null): ModelPipelineEntry[] {
   if (!definition) return [];
   const allowed = definition.model_policy.allowed_models;
   const wire = definition.model_policy.pipeline ?? [];
-  const seen = new Set<string>();
+  const seenKeys = new Set<string>();
+  const seenRefs = new Set<string>();
   const entries: ModelPipelineEntry[] = [];
   for (const entry of wire) {
-    if (!allowed.includes(entry.ref) || seen.has(entry.ref)) continue;
-    seen.add(entry.ref);
+    const key = pipelineEntryKey(entry.ref, entry.credential_id);
+    if (!allowed.includes(entry.ref) || seenKeys.has(key)) continue;
+    seenKeys.add(key);
+    seenRefs.add(entry.ref);
     entries.push({ ...entry });
   }
   for (const ref of allowed) {
-    if (seen.has(ref)) continue;
-    seen.add(ref);
+    if (seenRefs.has(ref)) continue;
+    seenRefs.add(ref);
     entries.push({ ref });
   }
   return entries;
@@ -161,6 +177,7 @@ function readDefaults(definition: AgentDefinition | null): DefaultsDraft {
     ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
     ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
     ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
+    ...(typeof params.reasoning_budget_tokens === 'number' ? { reasoning_budget_tokens: params.reasoning_budget_tokens } : {}),
     ...(params.output_schema !== undefined ? { output_schema: params.output_schema } : {}),
     // 'text' is the default and reads as omitted on the wire — an explicit
     // 'text' (written by older saves) normalizes to unset here, so the
@@ -186,6 +203,7 @@ function normalizeEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
       params.max_output_tokens !== undefined ||
       params.top_p !== undefined ||
       params.reasoning_effort !== undefined ||
+      params.reasoning_budget_tokens !== undefined ||
       (params.output_schema ?? '').trim() !== '');
   return {
     ref: entry.ref,
@@ -201,7 +219,8 @@ function hasOverride(params: ModelPipelineEntry['params']): boolean {
     params.temperature !== undefined ||
     params.max_output_tokens !== undefined ||
     params.top_p !== undefined ||
-    params.reasoning_effort !== undefined
+    params.reasoning_effort !== undefined ||
+    params.reasoning_budget_tokens !== undefined
   );
 }
 
@@ -249,14 +268,16 @@ export function ModelSection({
   onDirtyChange,
   saveSignal,
 }: ModelSectionProps) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const canSetup = useCanSetup();
-  const canGovern = canSetup('setup:govern');
-  const { role } = useOrg();
-  const canReadCredentials = role === 'owner' || role === 'admin' || role === 'developer';
 
-  const availability = useModelAvailability();
+  // N-5 grouped models (Phase 6, doc 20 §3.1): the single serving-truth read
+  // for the picker, pipeline rows, and the availability gate — supergroup +
+  // credential identity, toggle-aware usability, probed-wins capabilities,
+  // and pinned_by for the blast-radius preview. /models survives only as
+  // context-window enrichment inside the hook (display-only).
+  const grouped = useGroupedModels();
+  const groupedRows = grouped.data;
+  const rowByKey = grouped.rowByKey;
   const costs = useModelCosts();
 
   // ---- Data state (the save machine owns this) ----
@@ -276,24 +297,34 @@ export function ModelSection({
     (value) => setDefaults((prev) => ({ ...prev, max_output_tokens: value })),
     { format: (v) => v.toLocaleString() },
   );
+  // PRV-073: thinking budget — raw text while typing, commits an int on
+  // blur/Enter; the paramIssues gate below holds out-of-range values.
+  const budgetDraft = useStringDraft(
+    defaults.reasoning_budget_tokens,
+    (value) => setDefaults((prev) => ({ ...prev, reasoning_budget_tokens: value })),
+    { format: (v) => v.toLocaleString() },
+  );
 
-  // ---- UI-only state ----
+  // ---- UI-only state (keys are pipeline entry keys: byok|<ref>|<id> / platform|<ref>|) ----
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [overrideOpen, setOverrideOpen] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    for (const entry of readPipeline(definition)) if (hasOverride(entry.params)) init[entry.ref] = true;
+    for (const entry of readPipeline(definition))
+      if (hasOverride(entry.params)) init[pipelineEntryKey(entry.ref, entry.credential_id)] = true;
     return init;
   });
   const [pinCustom, setPinCustom] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     for (const entry of readPipeline(definition)) {
-      if (entry.version_pin && entry.version_pin.trim() !== '') init[entry.ref] = true;
+      if (entry.version_pin && entry.version_pin.trim() !== '')
+        init[pipelineEntryKey(entry.ref, entry.credential_id)] = true;
     }
     return init;
   });
-  const [connectProvider, setConnectProvider] = useState<string | null>(null);
-  const [revokeCredentialId, setRevokeCredentialId] = useState<string | null>(null);
-  const [connectOpen, setConnectOpen] = useState(false);
+  // PRV-076: pending tool-compat confirmation (warn, don't forbid).
+  const [toolGuardPending, setToolGuardPending] = useState<{ ref: string; credentialId: string | null } | null>(null);
+  // PRV-077: pending blast-radius confirmation for a pinned-by-live removal.
+  const [blastPending, setBlastPending] = useState<{ key: string; affected: BlastRadiusAffected[] } | null>(null);
   const [conflict, setConflict] = useState<{
     expectedHash: string;
     currentHash: string | null;
@@ -306,9 +337,8 @@ export function ModelSection({
   const saveDraft = useSaveDraftVersion(canAuthor ? assistantId : null);
   const updateDraft = useUpdateDraftVersion(canAuthor ? assistantId : null, versionId);
   const credentials = useProviderCredentials();
-  // B2: enterprise gating must agree on both sides of the connect flow.
-  // The CredentialsPanel form is enterprise-gated; the FixButton that
-  // triggers it must be enterprise-aware too, or the button is dead.
+  // Enterprise gating for the connect affordances: non-enterprise orgs get
+  // truthful "Neryva-managed credentials apply" copy instead of a dead link.
   const enterprise = useEnterpriseStatus();
   const isEnterprise = enterprise.data === true;
   const sendHashRef = useRef('');
@@ -339,19 +369,20 @@ export function ModelSection({
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
 
-  // ---- Derived: catalog + credentials ----
-  const catalogRows = availability.data;
+  // ---- Derived: grouped rows + costs + credentials ----
   const catalogCosts = costs.data;
-  const catalogByRef = useMemo(() => {
-    const map = new Map<string, NonNullable<typeof catalogRows>[number]>();
-    for (const row of catalogRows ?? []) map.set(row.ref, row);
-    return map;
-  }, [catalogRows]);
   const costsByRef = useMemo(() => {
     const map = new Map<string, NonNullable<typeof catalogCosts>[number]>();
     for (const cost of catalogCosts ?? []) map.set(cost.ref, cost);
     return map;
   }, [catalogCosts]);
+
+  // Pinned (enabled) tools in the draft — the real count feeds the
+  // tool-compat guard (PRV-076). Zero hides every tool warning.
+  const pinnedToolCount = useMemo(
+    () => (definition?.tools ?? []).filter((t) => t.enabled).length,
+    [definition],
+  );
 
   const credRows = useMemo(() => credentials.data ?? [], [credentials.data]);
   const liveCreds = useMemo(
@@ -369,25 +400,31 @@ export function ModelSection({
   }, [liveCreds]);
 
   // ---- Blocker validation (local-state-driven) ----
-  // Credential gate: a pipeline entry the catalog confirms unusable for a
-  // missing credential, with no live credential selected for its provider,
-  // holds the save. Unknown catalog (still loading / fetch failed) is unknown,
-  // never known-bad — no blocker.
+  // Credential gate: a pipeline entry the grouped read confirms unusable for
+  // a missing credential, with no live credential for its provider, holds the
+  // save. Unknown catalog (still loading / fetch failed) is unknown, never
+  // known-bad — no blocker. Pinned entries name their credential, so the
+  // missing-credential reason can only fire on unpinned (platform) entries.
   const credBlockers = useMemo(() => {
-    if (catalogRows === undefined) return [];
-    const out: { ref: string; provider: string; displayName: string }[] = [];
+    if (groupedRows === undefined) return [];
+    const out: { key: string; ref: string; provider: string; displayName: string }[] = [];
     for (const entry of pipeline) {
       if (entry.credential_id) continue;
-      const row = catalogByRef.get(entry.ref);
+      const row = rowByKey.get(pipelineEntryKey(entry.ref, entry.credential_id));
       if (!row || row.usable) continue;
       if (!row.reasons.includes('provider_credential_missing')) continue;
       const providerCreds = liveCredsByProvider.get(row.provider) ?? [];
       if (providerCreds.length === 0) {
-        out.push({ ref: entry.ref, provider: row.provider, displayName: row.displayName });
+        out.push({
+          key: pipelineEntryKey(entry.ref, entry.credential_id),
+          ref: entry.ref,
+          provider: row.provider,
+          displayName: row.displayName,
+        });
       }
     }
     return out;
-  }, [pipeline, catalogRows, catalogByRef, liveCredsByProvider]);
+  }, [pipeline, groupedRows, rowByKey, liveCredsByProvider]);
 
   // Local param gates (caps doesn't cover temperature/top_p/schema).
   // NaN counts as invalid everywhere (typed garbage must hold, never ship).
@@ -403,12 +440,26 @@ export function ModelSection({
     };
     checkRange(defaults.temperature, '', (v) => v >= 0 && v <= 2, 'Temperature must be 0–2.');
     checkRange(defaults.top_p, '', (v) => v > 0 && v <= 1, 'Top-p must be above 0 and at most 1.');
+    // PRV-073: the engine validates reasoning_budget_tokens int 1..100000 —
+    // hold the save here instead of shipping to a 400.
+    checkRange(
+      defaults.reasoning_budget_tokens,
+      '',
+      (v) => Number.isInteger(v) && v >= 1 && v <= 100_000,
+      'Reasoning budget must be a whole number of tokens, 1–100000.',
+    );
     for (const entry of pipeline) {
       const ep = entry.params;
       if (!ep) continue;
-      const name = catalogByRef.get(entry.ref)?.displayName ?? entry.ref;
+      const name = rowByKey.get(pipelineEntryKey(entry.ref, entry.credential_id))?.displayName ?? entry.ref;
       checkRange(ep.temperature, `${name}: `, (v) => v >= 0 && v <= 2, 'temperature must be 0–2.');
       checkRange(ep.top_p, `${name}: `, (v) => v > 0 && v <= 1, 'top-p must be above 0 and at most 1.');
+      checkRange(
+        ep.reasoning_budget_tokens,
+        `${name}: `,
+        (v) => Number.isInteger(v) && v >= 1 && v <= 100_000,
+        'reasoning budget must be a whole number of tokens, 1–100000.',
+      );
     }
     if (defaults.output_schema !== undefined) {
       const check = validateOutputSchema(defaults.output_schema);
@@ -418,7 +469,7 @@ export function ModelSection({
       messages.push('Response format is Schema — add a valid JSON schema.');
     }
     return messages;
-  }, [defaults, pipeline, catalogByRef]);
+  }, [defaults, pipeline, rowByKey]);
 
   const buildNext = useCallback((): AgentDefinition | null => {
     if (!definition) return null;
@@ -433,6 +484,9 @@ export function ModelSection({
         ...(defaults.max_output_tokens !== undefined ? { max_output_tokens: defaults.max_output_tokens } : {}),
         ...(defaults.top_p !== undefined ? { top_p: defaults.top_p } : {}),
         ...(defaults.reasoning_effort !== undefined ? { reasoning_effort: defaults.reasoning_effort } : {}),
+        ...(defaults.reasoning_budget_tokens !== undefined
+          ? { reasoning_budget_tokens: defaults.reasoning_budget_tokens }
+          : {}),
         ...(defaults.output_schema !== undefined ? { output_schema: defaults.output_schema } : {}),
         ...(defaults.response_format !== undefined ? { response_format: defaults.response_format } : {}),
         ...(defaults.output_schema_name !== undefined ? { output_schema_name: defaults.output_schema_name } : {}),
@@ -463,7 +517,9 @@ export function ModelSection({
       }
     };
     for (const b of credBlockers) {
-      push(`No ${providerLabel(b.provider)} credential in vault — required by ${b.displayName}.`);
+      // PRV-080: the vault panel is gone — the blocker names the Providers
+      // page (the deep-link itself renders in the catalog rows below).
+      push(`No ${providerLabel(b.provider)} credential — required by ${b.displayName}. Connect one on the Providers page.`);
     }
     for (const message of paramIssues) push(message);
     for (const issue of capsIssues) {
@@ -544,16 +600,20 @@ export function ModelSection({
     holdReason: () => heldMessages[0] ?? null,
   });
 
-  // ---- Pipeline mutations ----
-  const patchEntry = useCallback((ref: string, patch: Partial<ModelPipelineEntry>) => {
-    setPipeline((prev) => prev.map((entry) => (entry.ref === ref ? normalizeEntry({ ...entry, ...patch }) : entry)));
+  // ---- Pipeline mutations (all keyed by entry key: byok|<ref>|<id> / platform|<ref>|) ----
+  const patchEntry = useCallback((key: string, patch: Partial<ModelPipelineEntry>) => {
+    setPipeline((prev) =>
+      prev.map((entry) =>
+        pipelineEntryKey(entry.ref, entry.credential_id) === key ? normalizeEntry({ ...entry, ...patch }) : entry,
+      ),
+    );
   }, []);
 
   const patchEntryParams = useCallback(
-    (ref: string, patch: Partial<NonNullable<ModelPipelineEntry['params']>> | null) => {
+    (key: string, patch: Partial<NonNullable<ModelPipelineEntry['params']>> | null) => {
       setPipeline((prev) =>
         prev.map((entry) => {
-          if (entry.ref !== ref) return entry;
+          if (pipelineEntryKey(entry.ref, entry.credential_id) !== key) return entry;
           if (patch === null) return normalizeEntry({ ...entry, params: undefined });
           const merged = { ...(entry.params ?? {}), ...patch };
           // Clearing a value back to undefined removes the key (no phantom writes).
@@ -567,21 +627,41 @@ export function ModelSection({
     [],
   );
 
-  const addModel = useCallback(
-    (ref: string) => {
-      setPipeline((prev) => (prev.some((entry) => entry.ref === ref) ? prev : [...prev, normalizeEntry({ ref })]));
-      setExpanded((prev) => ({ ...prev, [ref]: true }));
-    },
-    [],
-  );
-
-  const removeModel = useCallback((ref: string) => {
-    setPipeline((prev) => prev.filter((entry) => entry.ref !== ref));
+  const addModel = useCallback((ref: string, credentialId: string | null) => {
+    const key = pipelineEntryKey(ref, credentialId);
+    setPipeline((prev) =>
+      prev.some((entry) => pipelineEntryKey(entry.ref, entry.credential_id) === key)
+        ? prev
+        : [...prev, normalizeEntry(credentialId ? { ref, credential_id: credentialId } : { ref })],
+    );
+    setExpanded((prev) => ({ ...prev, [key]: true }));
   }, []);
 
-  const moveModel = useCallback((ref: string, direction: -1 | 1) => {
+  const removeModel = useCallback((key: string) => {
+    setPipeline((prev) => prev.filter((entry) => pipelineEntryKey(entry.ref, entry.credential_id) !== key));
+  }, []);
+
+  /**
+   * PRV-077: removing a model pinned by a live assistant's published pipeline
+   * requires explicit confirmation (blast-radius preview fed by N-5
+   * pinned_by[] — real data, never fabricated). Unpinned models remove
+   * directly.
+   */
+  const requestRemoveModel = useCallback(
+    (key: string) => {
+      const affected = rowByKey.get(key)?.pinnedBy ?? [];
+      if (affected.length === 0) {
+        removeModel(key);
+        return;
+      }
+      setBlastPending({ key, affected });
+    },
+    [rowByKey, removeModel],
+  );
+
+  const moveModel = useCallback((key: string, direction: -1 | 1) => {
     setPipeline((prev) => {
-      const index = prev.findIndex((entry) => entry.ref === ref);
+      const index = prev.findIndex((entry) => pipelineEntryKey(entry.ref, entry.credential_id) === key);
       const target = index + direction;
       if (index < 0 || target < 0 || target >= prev.length) return prev;
       const next = [...prev];
@@ -595,44 +675,26 @@ export function ModelSection({
     setDefaults({});
   }, []);
 
-  const onFixRequest = useCallback(
-    (action: 'connect' | 'enable' | 'profile' | 'incident', ref: string) => {
-      if (action === 'connect') {
-        // B2: the connect form is enterprise-gated (CredentialsPanel) — do
-        // not open it for non-enterprise orgs. State the truth instead.
-        if (!isEnterprise) {
-          toast('Bring Your Own Key needs an enterprise commitment — this org uses Neryva-managed credentials.');
-          document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
-          return;
-        }
-        setConnectProvider(ref.split('/')[0] ?? ref);
-        setRevokeCredentialId(null);
-        setConnectOpen(true);
-        document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
+  /**
+   * PRV-076: selecting a model without native tool calling while the draft
+   * has pinned tools warns (amber) and requires explicit confirmation — it
+   * never hard-blocks. Removing an entry goes through the blast-radius check.
+   */
+  const toggleModel = useCallback(
+    (ref: string, credentialId: string | null) => {
+      const key = pipelineEntryKey(ref, credentialId);
+      if (pipeline.some((entry) => pipelineEntryKey(entry.ref, entry.credential_id) === key)) {
+        requestRemoveModel(key);
         return;
       }
-      if (action === 'incident') {
-        // Revoke form opens against the provider's live credential (matched by
-        // provider below); absent credential → connect first, stated plainly.
-        const provider = ref.split('/')[0] ?? ref;
-        const match = (credentials.data ?? []).find((c) => c.provider === provider && c.revokedAt === null);
-        if (match) {
-          setRevokeCredentialId(match.id);
-          setConnectOpen(false);
-        } else {
-          setConnectProvider(provider);
-          setRevokeCredentialId(null);
-          setConnectOpen(true);
-          toast('No live credential for that provider — connect one first.');
-        }
-        document.querySelector('[data-credentials-panel]')?.scrollIntoView({ block: 'nearest' });
+      const row = rowByKey.get(key);
+      if (pinnedToolCount > 0 && row && row.capabilities.tools === false) {
+        setToolGuardPending({ ref, credentialId });
         return;
       }
-      // Enablement + residency pins live in the Models library (govern plane) —
-      // the builder links out instead of duplicating (dirty-guarded globally).
-      navigate({ to: '/agent-studio/models' });
+      addModel(ref, credentialId);
     },
-    [credentials.data, navigate, isEnterprise],
+    [pipeline, rowByKey, pinnedToolCount, requestRemoveModel, addModel],
   );
 
   const scrollToGroup = useCallback((key: string) => {
@@ -645,11 +707,11 @@ export function ModelSection({
   // expands for configuration via addModel). Otherwise scroll to the catalog
   // and state the true unblock step.
   const handleAddModel = useCallback(() => {
-    const usable = (catalogRows ?? []).filter(
-      (row) => row.usable && !pipeline.some((entry) => entry.ref === row.ref),
+    const usable = (groupedRows ?? []).filter(
+      (row) => row.usable && !pipeline.some((entry) => pipelineEntryKey(entry.ref, entry.credential_id) === row.key),
     );
     if (usable.length > 0 && pipeline.length === 0) {
-      addModel(usable[0].ref);
+      toggleModel(usable[0].ref, usable[0].credentialId);
       return;
     }
     if (usable.length > 0) {
@@ -658,8 +720,8 @@ export function ModelSection({
       return;
     }
     scrollToGroup('catalog');
-    toast('No usable models yet — connect a provider credential below to unlock the catalog.');
-  }, [catalogRows, pipeline, addModel, scrollToGroup]);
+    toast('No usable models yet — visit Providers to connect a credential or enable models.');
+  }, [groupedRows, pipeline, toggleModel, scrollToGroup]);
 
   // Escape blurs number inputs so a half-typed value commits instead of
   // lingering in the field while autosave fires.
@@ -713,6 +775,18 @@ export function ModelSection({
 
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  // Pipeline key sets + guard render state — hooks, so they must live above
+  // the early returns below.
+  const pipelineKeys = useMemo(
+    () => new Set(pipeline.map((entry) => pipelineEntryKey(entry.ref, entry.credential_id))),
+    [pipeline],
+  );
+  const credBlockedKeys = useMemo(() => new Set(credBlockers.map((b) => b.key)), [credBlockers]);
+  const pendingGuardRow =
+    toolGuardPending !== null
+      ? rowByKey.get(pipelineEntryKey(toolGuardPending.ref, toolGuardPending.credentialId))
+      : undefined;
+
   if (!definition) {
     return (
       <SectionPage title="Model" subtitle="Choose which models serve this agent, in order — and give each one what it needs.">
@@ -754,8 +828,8 @@ export function ModelSection({
     {
       key: 'catalog',
       label: 'Catalog',
-      meta: catalogRows === undefined ? 'Loading…' : `${catalogRows.length} models`,
-      done: catalogRows !== undefined,
+      meta: groupedRows === undefined ? 'Loading…' : `${groupedRows.length} models`,
+      done: groupedRows !== undefined,
     },
     {
       key: 'defaults',
@@ -763,15 +837,13 @@ export function ModelSection({
       meta: RESPONSE_FORMAT_OPTIONS.find((o) => o.value === responseFormat)?.label ?? 'Text',
       done: paramIssues.length === 0,
     },
-    {
-      key: 'credentials',
-      label: 'Credentials',
-      meta: `${liveCreds.length} connected`,
-      done: credBlockers.length === 0,
-    },
   ];
 
-  const primaryName = pipeline.length > 0 ? (catalogByRef.get(pipeline[0].ref)?.displayName ?? pipeline[0].ref) : null;
+  const primaryEntry = pipeline.length > 0 ? pipeline[0] : null;
+  const primaryName =
+    primaryEntry !== null
+      ? (rowByKey.get(pipelineEntryKey(primaryEntry.ref, primaryEntry.credential_id))?.displayName ?? primaryEntry.ref)
+      : null;
   const readinessItems = [
     {
       label: 'Primary model picked',
@@ -814,18 +886,10 @@ export function ModelSection({
     },
   ];
 
-  const pinnedProviders = [...new Set(pipeline.map((entry) => entry.ref.split('/')[0] ?? entry.ref))];
-  const credBlockedRefs = new Set(credBlockers.map((b) => b.ref));
-
-  const toggleModel = (ref: string) => {
-    if (pipeline.some((entry) => entry.ref === ref)) removeModel(ref);
-    else addModel(ref);
-  };
-
   return (
     <SectionPage
       title="Model"
-      subtitle="Which models serve this agent, in what order — and the credentials that unlock them."
+      subtitle="Which models serve this agent, in what order — and how each one is reached."
       pill={blocked ? <BlockerPill>{heldMessages.length} blocker{heldMessages.length === 1 ? '' : 's'}</BlockerPill> : undefined}
       rail={
         <>
@@ -885,31 +949,35 @@ export function ModelSection({
                 No models yet — add one from the catalog below. The first model you add becomes the primary.
               </EmptyPipeline>
             ) : (
-              pipeline.map((entry, index) => (
-                <PipelineRow
-                  key={entry.ref}
-                  entry={entry}
-                  index={index}
-                  total={pipeline.length}
-                  row={catalogByRef.get(entry.ref)}
-                  cost={costsByRef.get(entry.ref)}
-                  providerCreds={liveCredsByProvider.get(entry.ref.split('/')[0] ?? '') ?? []}
-                  credBlocked={credBlockedRefs.has(entry.ref)}
-                  expanded={expanded[entry.ref] ?? false}
-                  onToggleExpand={() => setExpanded((prev) => ({ ...prev, [entry.ref]: !(prev[entry.ref] ?? false) }))}
-                  overrideOpen={overrideOpen[entry.ref] ?? false}
-                  onToggleOverride={() => setOverrideOpen((prev) => ({ ...prev, [entry.ref]: !(prev[entry.ref] ?? false) }))}
-                  pinCustom={pinCustom[entry.ref] ?? false}
-                  onPinCustomChange={(custom) => setPinCustom((prev) => ({ ...prev, [entry.ref]: custom }))}
-                  canAuthor={canAuthor}
-                  onMoveUp={() => moveModel(entry.ref, -1)}
-                  onMoveDown={() => moveModel(entry.ref, 1)}
-                  onRemove={() => removeModel(entry.ref)}
-                  onPatchEntry={(patch) => patchEntry(entry.ref, patch)}
-                  onPatchParams={(patch) => patchEntryParams(entry.ref, patch)}
-                  onConnect={() => onFixRequest('connect', entry.ref)}
-                />
-              ))
+              pipeline.map((entry, index) => {
+                const key = pipelineEntryKey(entry.ref, entry.credential_id);
+                const row = rowByKey.get(key);
+                return (
+                  <PipelineRow
+                    key={key}
+                    entry={entry}
+                    index={index}
+                    total={pipeline.length}
+                    row={row}
+                    cost={costsByRef.get(entry.ref)}
+                    providerCreds={liveCredsByProvider.get(entry.ref.split('/')[0] ?? '') ?? []}
+                    credBlocked={credBlockedKeys.has(key)}
+                    toolWarn={pinnedToolCount > 0 && row !== undefined && row.capabilities.tools === false}
+                    expanded={expanded[key] ?? false}
+                    onToggleExpand={() => setExpanded((prev) => ({ ...prev, [key]: !(prev[key] ?? false) }))}
+                    overrideOpen={overrideOpen[key] ?? false}
+                    onToggleOverride={() => setOverrideOpen((prev) => ({ ...prev, [key]: !(prev[key] ?? false) }))}
+                    pinCustom={pinCustom[key] ?? false}
+                    onPinCustomChange={(custom) => setPinCustom((prev) => ({ ...prev, [key]: custom }))}
+                    canAuthor={canAuthor}
+                    onMoveUp={() => moveModel(key, -1)}
+                    onMoveDown={() => moveModel(key, 1)}
+                    onRemove={() => requestRemoveModel(key)}
+                    onPatchEntry={(patch) => patchEntry(key, patch)}
+                    onPatchParams={(patch) => patchEntryParams(key, patch)}
+                  />
+                );
+              })
             )}
             {canAuthor && (
               <AddModelButton type="button" onClick={handleAddModel}>
@@ -927,19 +995,45 @@ export function ModelSection({
       <div id="model-catalog">
         <SectionGroup
           label="Catalog"
-          description="Every model your organization can use. Locked rows name the subscription they need."
+          description="Every model your organization can use, grouped by source. Locked rows name the subscription they need."
         >
           <ModelPicker
-            rows={catalogRows}
-            loadError={availability.isError}
-            costsByRef={costsByRef}
-            pipelineRefs={pipeline.map((entry) => entry.ref)}
-            credBlockedRefs={credBlockedRefs}
+            rows={groupedRows}
+            loadError={grouped.isError}
+            pipelineKeys={pipelineKeys}
+            credBlockedKeys={credBlockedKeys}
+            pinnedToolCount={pinnedToolCount}
             canAuthor={canAuthor}
             isEnterprise={isEnterprise}
             onToggle={toggleModel}
-            onFixRequest={onFixRequest}
           />
+          {/* PRV-076: warn, don't forbid — explicit confirmation to select a
+              tool-less model while the draft has pinned tools. */}
+          {toolGuardPending !== null && pendingGuardRow !== undefined && (
+            <ToolCompatGuard
+              modelCapabilities={pendingGuardRow.capabilities}
+              pinnedToolCount={pinnedToolCount}
+              onConfirm={() => {
+                addModel(toolGuardPending.ref, toolGuardPending.credentialId);
+                setToolGuardPending(null);
+              }}
+              onCancel={() => setToolGuardPending(null)}
+            />
+          )}
+          {/* PRV-077: blast-radius preview before removing a model pinned by
+              a live assistant's published pipeline. */}
+          {blastPending !== null && (
+            <BlastRadiusConfirm
+              affected={blastPending.affected}
+              actionLabel="Remove model"
+              message={`${blastPending.affected.length} published ${blastPending.affected.length === 1 ? 'assistant' : 'assistants'} pin${blastPending.affected.length === 1 ? 's' : ''} this exact model. Removing it from this draft's pipeline does not touch their published versions — but the next publish will serve without it.`}
+              onConfirm={() => {
+                removeModel(blastPending.key);
+                setBlastPending(null);
+              }}
+              onCancel={() => setBlastPending(null)}
+            />
+          )}
         </SectionGroup>
       </div>
 
@@ -1055,6 +1149,31 @@ export function ModelSection({
                     <SliderValue>{defaults.reasoning_effort ?? 'default'}</SliderValue>
                   )}
                 </SliderRow>
+                <SliderRow>
+                  <SliderHead>
+                    <SliderName>Reasoning budget</SliderName>
+                    <SliderValue>
+                      {defaults.reasoning_budget_tokens === undefined
+                        ? 'default'
+                        : defaults.reasoning_budget_tokens.toLocaleString()}
+                    </SliderValue>
+                  </SliderHead>
+                  {canAuthor && (
+                    <TextInput
+                      aria-label="Reasoning budget tokens (whole number, 1–100000)"
+                      inputMode="numeric"
+                      value={budgetDraft.value}
+                      onChange={(event) => budgetDraft.onChange(event.target.value)}
+                      onBlur={budgetDraft.onBlur}
+                      onKeyDown={budgetDraft.onKeyDown}
+                      placeholder="e.g. 16000"
+                    />
+                  )}
+                </SliderRow>
+                <HelperText>
+                  Explicit thinking budget in tokens. An explicit budget wins over the reasoning
+                  effort tier at call time; unset means the provider default.
+                </HelperText>
               </div>
             )}
 
@@ -1134,33 +1253,6 @@ export function ModelSection({
         </SectionGroup>
       </div>
 
-      {/* ---- CREDENTIALS ---- */}
-      <div id="model-credentials" data-credentials-panel>
-        <SectionGroup
-          label="Credentials"
-          description="Provider credentials in the vault. Fingerprints only — secrets never leave the vault."
-        >
-          {credBlockers.length > 0 && (
-            <HelperText>
-              {isEnterprise
-                ? `Required by ${credBlockers.map((b) => b.displayName).join(', ')} — connect ${credBlockers.length === 1 ? 'a credential' : 'credentials'} below to unblock saving.`
-                : `Required by ${credBlockers.map((b) => b.displayName).join(', ')} — this org uses Neryva-managed credentials.`}
-            </HelperText>
-          )}
-          <CredentialsPanel
-            pinnedProviders={pinnedProviders}
-            canGovern={canGovern}
-            canRead={canReadCredentials}
-            highlightProvider={connectProvider}
-            revokeOpenId={revokeCredentialId}
-            connectOpen={connectOpen}
-            onConnectOpenChange={setConnectOpen}
-            onRevokeOpenChange={setRevokeCredentialId}
-            suppressEnterpriseNotice
-          />
-        </SectionGroup>
-      </div>
-
       {conflict && (
         <ConflictDialog
           assistantId={assistantId}
@@ -1236,10 +1328,12 @@ interface PipelineRowProps {
   entry: ModelPipelineEntry;
   index: number;
   total: number;
-  row: { provider: string; modelId: string; displayName: string; contextWindowTokens: number | null; capabilities: Record<string, unknown>; usable: boolean } | undefined;
+  row: BuilderModelRow | undefined;
   cost: { costMicrosPer1kInput: number | null; costMicrosPer1kOutput: number | null } | undefined;
-  providerCreds: { id: string; label: string; secretFingerprint: string | null }[];
+  providerCreds: { id: string; label: string }[];
   credBlocked: boolean;
+  /** PRV-076: draft has pinned tools but this model has no tool calling. */
+  toolWarn: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   overrideOpen: boolean;
@@ -1252,7 +1346,6 @@ interface PipelineRowProps {
   onRemove: () => void;
   onPatchEntry: (patch: Partial<ModelPipelineEntry>) => void;
   onPatchParams: (patch: Partial<NonNullable<ModelPipelineEntry['params']>> | null) => void;
-  onConnect: () => void;
 }
 
 function PipelineRow({
@@ -1263,6 +1356,7 @@ function PipelineRow({
   cost,
   providerCreds,
   credBlocked,
+  toolWarn,
   expanded,
   onToggleExpand,
   overrideOpen,
@@ -1275,7 +1369,6 @@ function PipelineRow({
   onRemove,
   onPatchEntry,
   onPatchParams,
-  onConnect,
 }: PipelineRowProps) {
   const provider = entry.ref.split('/')[0] ?? entry.ref;
   const displayName = row?.displayName ?? entry.ref;
@@ -1284,6 +1377,10 @@ function PipelineRow({
   const capLabels = caps
     .map((c) => (c === 'vision' ? 'Vision' : c === 'tools' ? 'Tools' : c === 'reasoning' ? 'Reasoning' : null))
     .filter((c): c is 'Vision' | 'Tools' | 'Reasoning' => c !== null);
+  // Supergroup serving label (doc 20 §5): the pin selects the source —
+  // platform pool when unpinned, the named credential when pinned.
+  const sourceLabel =
+    row?.supergroup === 'byok' ? `BYOK · ${row.credentialLabel ?? 'unlabeled credential'}` : 'Platform';
 
   const selectedCred = providerCreds.find((c) => c.id === entry.credential_id) ?? null;
 
@@ -1297,6 +1394,14 @@ function PipelineRow({
     (value) => onPatchParams({ max_output_tokens: value }),
     { format: (v) => v.toLocaleString() },
   );
+  const overrideBudgetDraft = useStringDraft(
+    entry.params?.reasoning_budget_tokens,
+    (value) => onPatchParams({ reasoning_budget_tokens: value }),
+    { format: (v) => v.toLocaleString() },
+  );
+  // Unusable for a known reason — render the human text plus the Providers
+  // deep-link (PRV-080). Unknown rows (no N-5 match) render nothing.
+  const unusableReason = row && !row.usable ? (row.reasons[0] ?? 'unknown') : null;
 
   return (
     <PipelineRowShell>
@@ -1312,15 +1417,23 @@ function PipelineRow({
           <div>
             <PipelineRowTitle>{displayName}</PipelineRowTitle>
             <PipelineRowMeta>
-              {providerLabel(provider)} · {row?.modelId ?? entry.ref}
+              {row?.providerDisplayName ?? providerLabel(provider)} · {row?.modelId ?? entry.ref}
               {ctx ? ` · ${ctx}` : ''}
+              {` · ${sourceLabel}`}
               {capLabels.length > 0 ? ` · ${capLabels.join(' ')}` : ''}
             </PipelineRowMeta>
             <PipelineRowMeta>
               {pricePerM(cost?.costMicrosPer1kInput)} in · {pricePerM(cost?.costMicrosPer1kOutput)} out
             </PipelineRowMeta>
+            {unusableReason !== null && (
+              <PipelineRowMeta>
+                unusable: {humanizeReason(unusableReason)} ·{' '}
+                <Link to="/agent-studio/providers">Open Providers →</Link>
+              </PipelineRowMeta>
+            )}
           </div>
           {credBlocked && <CredBadge $tone="red">Required</CredBadge>}
+          {!credBlocked && toolWarn && <CredBadge $tone="amber">No tool support</CredBadge>}
           {!credBlocked && entry.credential_id && selectedCred && <CredBadge $tone="green">Connected</CredBadge>}
           <ChevronDown size={16} strokeWidth={2} aria-hidden="true" />
         </button>
@@ -1360,10 +1473,13 @@ function PipelineRow({
                 }
                 disabled={!canAuthor}
                 items={[
-                  { value: '', label: 'Select credential…' },
+                  // PRV-024: unpinned resolves to the platform pool — the
+                  // label states the routing truth. Key labels only here;
+                  // fingerprints have no builder rendering (doc 20 §1.3).
+                  { value: '', label: 'Platform pool (no pin)' },
                   ...providerCreds.map((cred) => ({
                     value: cred.id,
-                    label: `${cred.label}${cred.secretFingerprint ? ` ····${cred.secretFingerprint.slice(-4)}` : ''}`,
+                    label: cred.label,
                   })),
                 ]}
               />
@@ -1375,12 +1491,10 @@ function PipelineRow({
                     serve this model.{' '}
                   </>
                 ) : (
-                  <>No {providerLabel(provider)} credential in the vault.{' '}</>
+                  <>No {providerLabel(provider)} credential connected.{' '}</>
                 )}
                 {canAuthor && (
-                  <button type="button" onClick={onConnect}>
-                    Connect {providerLabel(provider)}
-                  </button>
+                  <Link to="/agent-studio/providers">Connect {providerLabel(provider)} →</Link>
                 )}
               </HelperText>
             )}
@@ -1518,6 +1632,27 @@ function PipelineRow({
                   />
                 ) : (
                   <SliderValue>{entry.params?.reasoning_effort ?? 'default'}</SliderValue>
+                )}
+              </SliderRow>
+              <SliderRow>
+                <SliderHead>
+                  <SliderName>Reasoning budget</SliderName>
+                  <SliderValue>
+                    {entry.params?.reasoning_budget_tokens === undefined
+                      ? 'default'
+                      : entry.params.reasoning_budget_tokens.toLocaleString()}
+                  </SliderValue>
+                </SliderHead>
+                {canAuthor && (
+                  <TextInput
+                    aria-label={`${displayName} reasoning budget override (whole number, 1–100000)`}
+                    inputMode="numeric"
+                    value={overrideBudgetDraft.value}
+                    onChange={(event) => overrideBudgetDraft.onChange(event.target.value)}
+                    onBlur={overrideBudgetDraft.onBlur}
+                    onKeyDown={overrideBudgetDraft.onKeyDown}
+                    placeholder="e.g. 16000"
+                  />
                 )}
               </SliderRow>
             </OverrideGrid>

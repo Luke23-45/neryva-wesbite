@@ -44,7 +44,13 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
     useUpdateDraftVersion: () => ({ mutate: updateMutate, isPending: false }),
     useAssistantDefinition: () => ({
       data: {
-        definition: { ...defaultConsumer(), instructions: '## Role\nR.\n' },
+        // Live version for the 412 dialog: carries a thinking budget another
+        // tab set (Wave B proof target).
+        definition: {
+          ...defaultConsumer(),
+          instructions: '## Role\nR.\n',
+          model_params: { reasoning_budget_tokens: 7500 },
+        },
         versionId: 'v9',
         hash: 'h2',
         status: 'DRAFT',
@@ -211,5 +217,111 @@ describe('BrainSection manual save signal', () => {
     });
     expect(updateMutate).not.toHaveBeenCalled();
     expect(saveMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('BrainSection reasoning budget', () => {
+  it('round-trips reasoning_budget_tokens through readParams/buildNext', async () => {
+    let ui: ReturnType<typeof render>;
+    await act(async () => {
+      ui = render(
+        tree({
+          saveSignal: 0,
+          definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 5000 } },
+        }),
+      );
+    });
+    await act(async () => {
+      ui.rerender(
+        tree({
+          saveSignal: 1,
+          definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 5000 } },
+        }),
+      );
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(input.definition.model_params.reasoning_budget_tokens).toBe(5000);
+  });
+
+  it('keeps a previously-set budget when a preset applies', async () => {
+    withFakeTimers();
+    await act(async () => {
+      shell({
+        definition: {
+          ...DEFINITION,
+          model_params: {
+            temperature: 0.2,
+            top_p: 1,
+            max_output_tokens: 8000,
+            reasoning_effort: 'low',
+            reasoning_budget_tokens: 5000,
+          },
+        },
+      });
+    });
+    fireEvent.click(screen.getByText('Scholar'));
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(updateMutate).toHaveBeenCalledTimes(1);
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    // Preset params land…
+    expect(input.definition.model_params.temperature).toBe(0.7);
+    expect(input.definition.model_params.reasoning_effort).toBe('high');
+    expect(input.definition.model_params.max_output_tokens).toBe(16000);
+    // …while the thinking budget rides along untouched from local state.
+    expect(input.definition.model_params.reasoning_budget_tokens).toBe(5000);
+  });
+
+  it('adopts the live budget on conflict "reload theirs"', async () => {
+    withFakeTimers();
+    updateMutate.mockImplementationOnce((_input: unknown, opts?: { onError?: (e: unknown) => void }) => {
+      opts?.onError?.(new ApiError(412, 'precondition_failed', 'stale', { expected: 'h1', current: 'h2' }));
+    });
+    let ui: ReturnType<typeof render>;
+    await act(async () => {
+      ui = render(tree({ saveSignal: 0 }));
+    });
+    fireEvent.click(screen.getByText('Scholar'));
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(screen.getByText(/Someone saved first/)).toBeTruthy();
+    // The mocked live version carries reasoning_budget_tokens: 7500.
+    fireEvent.click(screen.getByText(/Reload theirs/));
+    expect(screen.queryByText(/Someone saved first/)).toBeNull();
+    await act(async () => {
+      ui.rerender(tree({ saveSignal: 1 }));
+    });
+    const calls = updateMutate.mock.calls;
+    expect(calls).toHaveLength(2);
+    const retry = calls[1][0] as { definition: AgentDefinition };
+    expect(retry.definition.model_params.reasoning_budget_tokens).toBe(7500);
+  });
+
+  it('passes out-of-range budget values through verbatim (engine validates)', async () => {
+    // The builder never clamps: 999999 exceeds the engine's 1–100000 range,
+    // and the payload must still carry it verbatim; the engine rejects it and
+    // the Model node's paramIssues gate holds the save.
+    let ui: ReturnType<typeof render>;
+    await act(async () => {
+      ui = render(
+        tree({
+          saveSignal: 0,
+          definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 999999 } },
+        }),
+      );
+    });
+    await act(async () => {
+      ui.rerender(
+        tree({
+          saveSignal: 1,
+          definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 999999 } },
+        }),
+      );
+    });
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(input.definition.model_params.reasoning_budget_tokens).toBe(999999);
   });
 });

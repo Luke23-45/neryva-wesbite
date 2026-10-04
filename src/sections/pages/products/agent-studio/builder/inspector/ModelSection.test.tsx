@@ -10,6 +10,7 @@ import { ApiError } from '@lib/engine/client';
 import toast from 'react-hot-toast';
 import { ModelSection } from './ModelSection';
 import type { AgentDefinition } from '@hooks/studio/useAgentAuthoring';
+import type { BuilderModelRow } from '../lib/useGroupedModels';
 
 const saveMutate = vi.fn();
 const updateMutate = vi.fn();
@@ -54,42 +55,55 @@ vi.mock('@hooks/studio/useAgentAuthoring', async (importOriginal) => {
   };
 });
 
-type CatalogRow = {
-  provider: string;
-  modelId: string;
-  ref: string;
-  displayName: string;
-  contextWindowTokens: null;
-  maxOutputTokens: null;
-  capabilities: Record<string, never>;
-  residency: null;
-  usable: boolean;
-  reasons: string[];
-  requiredProduct: string | null;
-  requiredProductLabel: string | null;
-};
+/** N-5 grouped rows (Phase 6): the picker's only source. Per-test override. */
+function groupedRow(ref: string, overrides: Partial<BuilderModelRow> = {}): BuilderModelRow {
+  const slash = ref.indexOf('/');
+  const provider = ref.slice(0, slash);
+  const modelId = ref.slice(slash + 1);
+  const credentialId = overrides.credentialId ?? null;
+  return {
+    key: credentialId ? `byok|${ref}|${credentialId}` : `platform|${ref}|`,
+    supergroup: credentialId ? 'byok' : 'platform',
+    provider,
+    providerDisplayName: provider,
+    credentialId,
+    credentialLabel: credentialId ? 'Test Key' : null,
+    modelId,
+    ref,
+    displayName: `${provider} ${modelId}`,
+    usable: true,
+    enabled: true,
+    reasons: [],
+    capabilities: { tools: true, vision: false, reasoning: false, structured_output: false },
+    requiredProduct: null,
+    requiredProductLabel: null,
+    pinnedBy: [],
+    contextWindowTokens: null,
+    ...overrides,
+  };
+}
 
-// Per-test catalog override: `undefined` = the catalog is still unresolved
-// (loading or fetch failed). Tests mutate `.rows` and restore it.
-const mockCatalog = vi.hoisted(() => {
-  const rows: CatalogRow[] = [
-    { provider: 'a', modelId: 'b', ref: 'a/b', displayName: 'A B', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: 'free', requiredProductLabel: 'Free' },
-    { provider: 'c', modelId: 'd', ref: 'c/d', displayName: 'C D', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: true, reasons: [], requiredProduct: null, requiredProductLabel: null },
-    { provider: 'e', modelId: 'f', ref: 'e/f', displayName: 'E F', contextWindowTokens: null, maxOutputTokens: null, capabilities: {}, residency: null, usable: false, reasons: ['subscription_required'], requiredProduct: 'payg', requiredProductLabel: 'Pay-as-you-go' },
-  ];
-  return { rows: rows as CatalogRow[] | undefined };
+// Per-test grouped override: `undefined` = the grouped read is still
+// unresolved (loading or fetch failed). Tests mutate `.rows` and restore it.
+const mockGrouped = vi.hoisted(() => {
+  const rows: BuilderModelRow[] = [];
+  return { rows: rows as BuilderModelRow[] | undefined, isError: false };
 });
+
+vi.mock('../lib/useGroupedModels', () => ({
+  useGroupedModels: () => ({
+    data: mockGrouped.rows,
+    rowByKey: new Map((mockGrouped.rows ?? []).map((r) => [r.key, r])),
+    isError: mockGrouped.isError,
+    isPending: false,
+    isFetching: false,
+  }),
+}));
 
 vi.mock('@hooks/studio/useSetupModels', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupModels')>();
   return {
     ...actual,
-    useModelAvailability: () => ({
-      data: mockCatalog.rows,
-      isPending: false,
-      isFetching: false,
-      isError: false,
-    }),
     useModelCosts: () => ({ data: [], isPending: false, isFetching: false, isError: false }),
   };
 });
@@ -98,10 +112,9 @@ vi.mock('@hooks/studio/useSetupProviders', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@hooks/studio/useSetupProviders')>();
   return {
     ...actual,
+    // Read hook only — management hooks must never be consumed in the builder
+    // (PRV-079 grep gate).
     useProviderCredentials: () => ({ data: [], isPending: false, isError: false }),
-    useCreateProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
-    useRotateProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
-    useRevokeProviderCredential: () => ({ mutate: vi.fn(), isPending: false }),
   };
 });
 
@@ -118,6 +131,22 @@ const DEFINITION: AgentDefinition = {
   instructions: '## Role\nConcierge.\n',
   model_policy: { allowed_models: ['a/b'], fallback_enabled: false },
 };
+
+function seedGrouped() {
+  mockGrouped.rows = [
+    groupedRow('a/b', { displayName: 'A B', providerDisplayName: 'A' }),
+    groupedRow('c/d', { displayName: 'C D', providerDisplayName: 'C' }),
+    groupedRow('e/f', {
+      displayName: 'E F',
+      providerDisplayName: 'E',
+      usable: false,
+      reasons: ['subscription_required'],
+      requiredProduct: 'payg',
+      requiredProductLabel: 'Pay-as-you-go',
+    }),
+  ];
+  mockGrouped.isError = false;
+}
 
 function shell(props?: Partial<React.ComponentProps<typeof ModelSection>>) {
   const onDirtyChange = vi.fn();
@@ -145,6 +174,7 @@ beforeEach(() => {
   saveMutate.mockReset();
   updateMutate.mockReset();
   vi.mocked(toast.success).mockReset();
+  seedGrouped();
 });
 
 afterEach(() => {
@@ -183,27 +213,27 @@ describe('ModelSection policy', () => {
     expect(screen.getByText('1')).toBeTruthy();
   });
 
-  it('treats an unresolved catalog as unknown — never a credential blocker', async () => {
-    const previous = mockCatalog.rows;
-    mockCatalog.rows = undefined;
+  it('treats an unresolved grouped read as unknown — never a credential blocker', async () => {
+    const previous = mockGrouped.rows;
+    mockGrouped.rows = undefined;
     try {
       await act(async () => {
         shell();
       });
-      // Unknown ≠ known-bad: no credential blocker while the catalog is
+      // Unknown ≠ known-bad: no credential blocker while the grouped read is
       // unresolved, and the pipeline row still renders (not hidden).
-      expect(screen.queryByText(/credential in vault/)).toBeNull();
+      expect(screen.queryByText(/No .* credential — required by/)).toBeNull();
       expect(screen.getAllByText('a/b').length).toBeGreaterThanOrEqual(1);
     } finally {
-      mockCatalog.rows = previous;
+      mockGrouped.rows = previous;
     }
   });
 
-  it('raises no credential blocker once the catalog confirms usability', async () => {
+  it('raises no credential blocker once the grouped read confirms usability', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.queryByText(/credential in vault/)).toBeNull();
+    expect(screen.queryByText(/No .* credential — required by/)).toBeNull();
     expect(screen.getAllByText('A B').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -246,6 +276,38 @@ describe('ModelSection policy', () => {
       vi.advanceTimersByTime(9000);
     });
     expect(updateMutate).not.toHaveBeenCalled();
+  });
+
+  it('holds save on an out-of-range reasoning budget with the named message (PRV-073)', async () => {
+    withFakeTimers();
+    await act(async () => {
+      shell({
+        definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 0 } },
+      });
+    });
+    expect(screen.getByText(/Reasoning budget must be a whole number of tokens, 1–100000/)).toBeTruthy();
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    expect(updateMutate).not.toHaveBeenCalled();
+  });
+
+  it('saves a valid reasoning budget through model_params (Phase 6 per-assistant persistence)', async () => {
+    withFakeTimers();
+    await act(async () => {
+      shell({
+        definition: { ...DEFINITION, model_params: { reasoning_budget_tokens: 16000 } },
+      });
+    });
+    fireEvent.click(screen.getByText(/Advanced/));
+    // The budget reads back formatted; the helper names the semantics.
+    expect(screen.getByDisplayValue('16,000')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Fallback'));
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+    });
+    const input = updateMutate.mock.calls[0][0] as { definition: AgentDefinition };
+    expect(input.definition.model_params.reasoning_budget_tokens).toBe(16000);
   });
 
   it('holds save on invalid schemas with the failure named', async () => {
@@ -430,15 +492,17 @@ describe('ModelSection manual save signal', () => {
 });
 
 describe('ModelSection group headings', () => {
-  it('renders the four SectionGroup labels (not empty headings)', async () => {
+  it('renders the three SectionGroup labels (not empty headings)', async () => {
     await act(async () => {
       shell();
     });
     // Labels may appear in both the group heading and descriptive copy —
     // assert each is present (at least once), never an empty heading.
-    for (const label of ['Pipeline', 'Catalog', 'Defaults', 'Credentials']) {
+    // (Phase 6: the Credentials group moved to the Providers page.)
+    for (const label of ['Pipeline', 'Catalog', 'Defaults']) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
+    expect(screen.queryByText('Credentials')).toBeNull();
   });
 
   it('renders the group descriptions under their headings', async () => {
@@ -446,8 +510,9 @@ describe('ModelSection group headings', () => {
       shell();
     });
     expect(screen.getByText('The models that serve this agent, in order. Configure each one below.')).toBeTruthy();
-    expect(screen.getByText('Every model your organization can use. Locked rows name the subscription they need.')).toBeTruthy();
+    expect(
+      screen.getByText('Every model your organization can use, grouped by source. Locked rows name the subscription they need.'),
+    ).toBeTruthy();
     expect(screen.getByText('Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above.')).toBeTruthy();
-    expect(screen.getByText('Provider credentials in the vault. Fingerprints only — secrets never leave the vault.')).toBeTruthy();
   });
 });

@@ -51,6 +51,8 @@ export const ENGINE_RANGES = {
   temperature: { min: 0, max: 2, step: 0.1 },
   topP: { min: 0, max: 1, exclusiveMin: true, step: 0.05 },
   maxOutputTokens: { min: 1, max: 200000 },
+  /** PRV-073: engine validates reasoning_budget_tokens int 1..100000. */
+  reasoningBudgetTokens: { min: 1, max: 100000 },
   outputSchemaMax: 16384,
   allowedModelsMax: 20,
 } as const;
@@ -105,6 +107,7 @@ export type ModelReason =
   | 'residency_incompatible'
   | 'credential_compromised'
   | 'subscription_required'
+  | 'model_disabled_by_org'
   | 'demo_conversation_limit_reached';
 
 export type ReasonAction = 'connect' | 'enable' | 'profile' | 'incident' | 'billing';
@@ -115,6 +118,10 @@ const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction | nu
   residency_incompatible: { label: 'Switch profile', action: 'profile' },
   credential_compromised: { label: 'Rotate the key', action: 'incident' },
   subscription_required: { label: 'View subscription options', action: 'billing' },
+  // N-6 org model toggles (Phase 6): the org disabled this model — re-enable
+  // it on the Providers page (Models tab). Same 'enable' action as
+  // provider_not_enabled: both deep-link Providers.
+  model_disabled_by_org: { label: 'Re-enable in Providers', action: 'enable' },
   // No console action exists — the allowance refreshes on a rolling weekly
   // basis. action: null keeps the FixButton unrendered (ModelPicker gates
   // on fix.action). The label is phrased to complete "No usable model — …"
@@ -135,6 +142,7 @@ const REASON_LABEL: Record<ModelReason, string> = {
   residency_incompatible: 'residency incompatible',
   credential_compromised: 'credential_compromised (derived)',
   subscription_required: 'subscription required',
+  model_disabled_by_org: 'disabled by organization',
   demo_conversation_limit_reached: 'demo allowance used (20 conversations per organization per rolling 7 days)',
 };
 
