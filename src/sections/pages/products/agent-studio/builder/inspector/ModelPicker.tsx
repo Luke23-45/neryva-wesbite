@@ -55,10 +55,12 @@ function fmtCtx(tokens: number | null | undefined): string | null {
   return `${tokens} ctx`;
 }
 
-/** USD/1M pair straight from the row — absent when the engine sent none. */
-function priceLine(pricing: BuilderModelRow['pricing']): string {
-  if (!pricing) return 'Pricing not listed';
-  return `$${pricing.input_per_1m}/1M in · $${pricing.output_per_1m}/1M out`;
+/** USD/1M pair straight from the row — absent when the engine sent none.
+ * Operator-declared prices (PRV-035) are labeled (Law VII). */
+function priceLine(row: BuilderModelRow): string {
+  if (!row.pricing) return 'Pricing not listed';
+  const base = `$${row.pricing.input_per_1m}/1M in · $${row.pricing.output_per_1m}/1M out`;
+  return row.pricingSource === 'operator_declared' ? `${base} (operator-declared)` : base;
 }
 
 function capabilityChips(capabilities: BuilderModelRow['capabilities']): string[] {
@@ -187,7 +189,7 @@ export function ModelPicker({
             {ctx ? ` · ${ctx}` : ''}
             {byokSuffix}
           </RowMeta>
-          <RowMeta>{priceLine(row.pricing)}</RowMeta>
+          <RowMeta>{priceLine(row)}</RowMeta>
           {chips.length > 0 && (
             <CapChips>
               {chips.map((chip) => (

@@ -27,18 +27,14 @@ import { useOrg } from '@/Context/OrgContext';
 
 const PROVIDERS_KEY = ['studio', 'setup', 'providers'] as const;
 
-export const MODEL_PROVIDERS = [
-  'openai',
-  'anthropic',
-  'google',
-  'azure-openai',
-  'amazon-bedrock',
-  'mistral',
-  'xai',
-  'deepseek',
-  'openrouter',
-  'ollama',
-] as const;
+/**
+ * PRV-014 (final review, 2026-10-04): the closed `MODEL_PROVIDERS`
+ * vocabulary lived here and is now deleted. Provider ids are dynamic
+ * (engine `isValidProviderId`: legacy ids + `custom:<slug>`); the provider
+ * directory comes from N-4 (`useProvidersDirectory`), never from a
+ * client-side list. A hardcoded client list cannot track weekly model
+ * releases and would drift from the engine truth.
+ */
 
 function str(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;

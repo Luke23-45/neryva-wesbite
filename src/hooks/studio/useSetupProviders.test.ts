@@ -1,12 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { parseProviderCredentials, parseProviderEnablements, MODEL_PROVIDERS } from './useSetupProviders';
+import { parseProviderCredentials, parseProviderEnablements } from './useSetupProviders';
 import { readEngineVocabulary } from '../../test-utils/readEngineVocabulary';
 
 describe('provider vocabulary', () => {
-  it('matches the engine closed vocabulary (read from the engine source at test time)', () => {
-    // Wave-7 NG-A2 follow-up: previously a frozen list — fixture camouflage.
-    // The vocabulary is read from the engine source so drift fails loudly.
-    expect([...MODEL_PROVIDERS].sort()).toEqual(readEngineVocabulary().sort());
+  it('engine legacy vocabulary still carries the ten original ids (migration compat)', () => {
+    // PRV-054: the closed vocabulary is gone by design; provider ids are
+    // dynamic. LEGACY_MODEL_PROVIDERS is the migration-compat promise —
+    // the ten original ids must keep passing engine validation unchanged.
+    // Read from the engine source at test time so drift fails loudly.
+    expect(readEngineVocabulary().sort()).toEqual(
+      [
+        'openai',
+        'anthropic',
+        'google',
+        'azure-openai',
+        'amazon-bedrock',
+        'mistral',
+        'xai',
+        'deepseek',
+        'openrouter',
+        'ollama',
+      ].sort(),
+    );
   });
 });
 

@@ -6,13 +6,13 @@
  * per doc 19 §8: 1) Endpoint & transport 2) Auth & custom headers
  * 3) Discovery 4) Governance. No modal anywhere on this surface.
  *
- * PRV-035 — manual model declarations: the engine N-2 body schema
- * (`provider-credentials.controller.ts`) has NO storage field for manual
- * model declarations, so the form collects them and keeps them in local
- * state, but Save is disabled with honest copy while any declaration
- * exists. User input is never silently dropped.
+ * PRV-035 — manual model declarations (doc 19 §4.B): the engine persists
+ * them on the credential row (N-2/N-3 `manual_model_declarations`,
+ * validated strictly server-side). Costs entered here are
+ * operator-claimed and served with `pricing_source: 'operator_declared'`
+ * — the Spend tab labels them, never presenting them as catalog prices.
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useOrg } from '@/Context/OrgContext';
 import { Dropdown } from '@/components/common/ui/Dropdown';
@@ -20,6 +20,7 @@ import { TextInput } from '@/components/common/ui/TextInput';
 import {
   probeCredential,
   type DiscoveredModel,
+  type ManualModelDeclarationInput,
   type ProbeResult,
   type ProviderCredentialView,
 } from '@/sections/pages/products/agent-studio/providers/api';
@@ -73,6 +74,7 @@ interface ManualModel {
   tools: boolean;
   vision: boolean;
   reasoning: boolean;
+  structuredOutput: boolean;
   inputCost: string;
   outputCost: string;
 }
@@ -84,9 +86,76 @@ const emptyManualModel = (): ManualModel => ({
   tools: false,
   vision: false,
   reasoning: false,
+  structuredOutput: false,
   inputCost: '',
   outputCost: '',
 });
+
+const MANUAL_MODEL_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
+
+/**
+ * PRV-035 — client-side validation mirroring the engine
+ * (`validateManualModelDeclarations`). The engine re-validates strictly;
+ * this only gates the Save buttons so the operator gets immediate,
+ * field-level feedback instead of a server round-trip.
+ */
+function manualModelError(m: ManualModel): string | null {
+  if (!MANUAL_MODEL_ID_RE.test(m.id.trim())) {
+    return 'Model ID: letters, digits, and . _ : / - (1–128 chars).';
+  }
+  if (m.displayName.trim().length === 0) {
+    return 'Display name is required.';
+  }
+  const ctx = Number(m.contextWindow);
+  if (!Number.isInteger(ctx) || ctx < 1 || ctx > 100_000_000) {
+    return 'Context window: an integer between 1 and 100,000,000.';
+  }
+  for (const [field, label] of [
+    ['inputCost', 'Input $ / 1M'],
+    ['outputCost', 'Output $ / 1M'],
+  ] as const) {
+    const raw = m[field].trim();
+    if (raw === '') continue;
+    const num = Number(raw);
+    if (!Number.isFinite(num) || num < 0 || num > 1_000_000) {
+      return `${label}: a non-negative number up to 1,000,000.`;
+    }
+  }
+  return null;
+}
+
+function manualModelToInput(m: ManualModel): ManualModelDeclarationInput {
+  const input: ManualModelDeclarationInput = {
+    id: m.id.trim(),
+    display_name: m.displayName.trim(),
+    context_window_tokens: Number(m.contextWindow),
+    capabilities: {
+      tools: m.tools,
+      vision: m.vision,
+      reasoning: m.reasoning,
+      structured_output: m.structuredOutput,
+    },
+  };
+  if (m.inputCost.trim() !== '') input.input_cost_per_1m_usd = String(Number(m.inputCost));
+  if (m.outputCost.trim() !== '') input.output_cost_per_1m_usd = String(Number(m.outputCost));
+  return input;
+}
+
+/** Engine view → form row (edit prefill; preserves all four capability flags). */
+function manualInputToModel(d: ManualModelDeclarationInput): ManualModel {
+  return {
+    id: d.id ?? '',
+    displayName: d.display_name ?? '',
+    contextWindow:
+      typeof d.context_window_tokens === 'number' ? String(d.context_window_tokens) : '',
+    tools: d.capabilities?.tools === true,
+    vision: d.capabilities?.vision === true,
+    reasoning: d.capabilities?.reasoning === true,
+    structuredOutput: d.capabilities?.structured_output === true,
+    inputCost: d.input_cost_per_1m_usd ?? '',
+    outputCost: d.output_cost_per_1m_usd ?? '',
+  };
+}
 
 function slugify(label: string): string {
   return label
@@ -126,6 +195,23 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const manualPrefilled = useRef(false);
+
+  // PRV-035 — prefill manual declarations on edit so the operator sees the
+  // current list and an edit never wipes it (the patch sends the full
+  // list; without this an untouched manual section would clear to []).
+  useEffect(() => {
+    if (editing && !manualPrefilled.current) {
+      manualPrefilled.current = true;
+      const existing = Array.isArray(editing.manual_model_declarations)
+        ? (editing.manual_model_declarations as ManualModelDeclarationInput[])
+        : [];
+      if (existing.length > 0) {
+        setManualModels(existing.map(manualInputToModel));
+        setDiscoveryMode('manual');
+      }
+    }
+  }, [editing]);
 
   const effectiveSlug = slugTouched ? slug : slugify(label);
   const urlCheck = useMemo(() => validateBaseUrl(baseUrl), [baseUrl]);
@@ -142,7 +228,12 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
     headers.filter((h) => h.name.trim()).length;
   const schemeHeaderValid = scheme === 'bearer' || schemeHeader.trim().length > 0;
   const urlOk = urlCheck.state === 'valid' || urlCheck.state === 'warning';
-  const manualBlocked = manualModels.length > 0;
+  // PRV-035 — manual declarations are validated client-side for immediate
+  // feedback; the engine re-validates strictly on write.
+  const manualErrors = manualModels.map(manualModelError);
+  const manualModelsValid = manualErrors.every((e) => e === null);
+  const manualIds = manualModels.map((m) => m.id.trim()).filter(Boolean);
+  const manualIdsUnique = new Set(manualIds).size === manualIds.length;
 
   const canSave =
     !!orgId &&
@@ -153,12 +244,15 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
     headerNamesUnique &&
     schemeHeaderValid &&
     (editing ? true : secret.trim().length > 0) &&
-    !manualBlocked &&
+    manualModelsValid &&
+    manualIdsUnique &&
     !saving &&
     !mutations.create.isPending &&
     !mutations.patch.isPending;
-  // "Save & Connect" additionally requires a live discovery probe in auto mode.
-  const canSaveAndConnect = canSave && (discoveryMode === 'manual' || probedOk);
+  // "Save & Connect" additionally requires a live discovery probe in auto
+  // mode, or ≥1 valid manual declaration in manual mode.
+  const canSaveAndConnect =
+    canSave && (discoveryMode === 'manual' ? manualModels.length > 0 : probedOk);
 
   const runProbe = async () => {
     if (!orgId || probing || !urlOk) return;
@@ -220,6 +314,14 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
       discoveryMode === 'auto' && checkedModels && checkedModels.length !== discovered.length
         ? checkedModels
         : undefined;
+    // PRV-035 — manual declarations ride the N-2/N-3 payload. On patch
+    // the semantics are replace; in auto mode the field is omitted so an
+    // edit that never touched the manual section preserves existing
+    // declarations (to clear them, switch to manual mode and remove all
+    // rows). Costs are operator-claimed; the engine labels them
+    // `pricing_source: 'operator_declared'`.
+    const manualDeclarations =
+      discoveryMode === 'manual' ? manualModels.map(manualModelToInput) : undefined;
     try {
       if (editing) {
         await mutations.patch.mutateAsync({
@@ -233,6 +335,9 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
             shared_capacity_fallback: fallback as ProviderCredentialView['shared_capacity_fallback'],
             zdr_attestation: zdr,
             region_attestation: residency,
+            ...(manualDeclarations !== undefined
+              ? { manual_model_declarations: manualDeclarations }
+              : {}),
           },
         });
         await navigate({ to: '/agent-studio/providers' });
@@ -249,6 +354,9 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           zdr_attestation: zdr,
           region_attestation: residency,
           enabled: mode === 'connect',
+          ...(manualDeclarations !== undefined
+            ? { manual_model_declarations: manualDeclarations }
+            : {}),
         });
         if (mode === 'connect') {
           // Re-verify server-side so the card lands verified (the probe above
@@ -556,16 +664,16 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           ) : (
             <div style={{ marginTop: 12 }}>
               <p style={{ ...noticeCallout, marginBottom: 12 }} role="note">
-                Manual model declarations are collected here, but the engine does not persist them
-                yet (PRV-035 — pending engine support). Your entries are kept in this form and never
-                silently dropped; <strong>Save is disabled</strong> while any declaration exists.
-                Remove them or switch to Auto-Discover to continue.
+                Declare models manually when the endpoint&apos;s discovery API is disabled or
+                requires elevated permissions. Declared costs are <strong>operator-claimed</strong> —
+                they appear in the Models tab and Spend views labeled as operator-declared, never as
+                verified catalog prices.
               </p>
               {manualModels.map((m, i) => (
                 <div
                   key={i}
                   style={{
-                    border: `1px solid ${colors.borderSoft}`,
+                    border: `1px solid ${manualErrors[i] ? colors.danger : colors.borderSoft}`,
                     borderRadius: 10,
                     padding: 12,
                     marginBottom: 8,
@@ -573,6 +681,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                     gap: 8,
                   }}
                 >
+                  {manualErrors[i] && (
+                    <p style={{ ...errorCallout, margin: 0 }} role="alert">
+                      {manualErrors[i]}
+                    </p>
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     <TextInput
                       label="Model ID"
@@ -627,12 +740,13 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       }
                     />
                   </div>
-                  <div style={{ ...row, gap: 16 }}>
+                  <div style={{ ...row, gap: 16, flexWrap: 'wrap' }}>
                     {(
                       [
                         ['tools', 'Tools / Function Calling'],
                         ['vision', 'Vision'],
                         ['reasoning', 'Reasoning / Thinking'],
+                        ['structuredOutput', 'Structured Output'],
                       ] as const
                     ).map(([key, capLabel]) => (
                       <label key={key} style={{ ...row, gap: 6, cursor: 'pointer' }}>
@@ -724,9 +838,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           title={
             !canSaveAndConnect && discoveryMode === 'auto' && !probedOk
               ? 'Run a successful discovery probe first'
-              : manualBlocked
-                ? 'Remove manual model declarations (PRV-035) to enable saving'
-                : undefined
+              : !canSaveAndConnect && discoveryMode === 'manual' && manualModels.length === 0
+                ? 'Add at least one manual model declaration'
+                : !manualModelsValid || !manualIdsUnique
+                  ? 'Fix the invalid manual model declarations above'
+                  : undefined
           }
           style={{ ...primaryBtn, ...(!canSaveAndConnect ? disabledBtn : {}) }}
         >
@@ -737,7 +853,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
             type="button"
             onClick={() => submit('inactive')}
             disabled={!canSave}
-            title={manualBlocked ? 'Remove manual model declarations (PRV-035) to enable saving' : undefined}
+            title={
+              !manualModelsValid || !manualIdsUnique
+                ? 'Fix the invalid manual model declarations above'
+                : undefined
+            }
             style={{ ...secondaryBtn, ...(!canSave ? disabledBtn : {}) }}
           >
             Save as Inactive
@@ -747,11 +867,9 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           Cancel
         </button>
       </div>
-      {manualBlocked && (
-        <p style={{ ...noticeCallout, marginTop: -8 }} role="note">
-          Saving is disabled: {manualModels.length} manual model declaration
-          {manualModels.length === 1 ? '' : 's'} can’t be persisted until the engine supports them
-          (PRV-035). Your entries are preserved above.
+      {!manualIdsUnique && (
+        <p style={{ ...errorCallout, marginTop: -8 }} role="alert">
+          Manual model declarations must have unique model IDs.
         </p>
       )}
     </div>

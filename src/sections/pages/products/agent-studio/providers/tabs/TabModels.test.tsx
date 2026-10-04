@@ -141,6 +141,19 @@ function fixture(): GroupedModels {
             capabilities: caps({ tools: true, vision: true }),
             pinned_by: [{ assistant_id: 'a-1', version: 3 }],
           },
+          {
+            model_id: 'llama-3.3-70b-instruct',
+            display_name: 'Llama 3.3 70B Instruct',
+            required_product: 'enterprise',
+            required_product_label: 'Enterprise',
+            enabled: true,
+            usable: true,
+            reasons: [],
+            capabilities: caps({ tools: true }),
+            pricing: { input_per_1m: '0.35', output_per_1m: '0.4' },
+            pricing_source: 'operator_declared',
+            pinned_by: [],
+          },
         ],
       },
     ],
@@ -182,6 +195,13 @@ describe('TabModels', () => {
     expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
     // Tool-less rows get the amber incompatibility badge.
     expect(screen.getByText('Incompatible: no tool support')).toBeTruthy();
+  });
+
+  it('PRV-035: operator-declared prices are labeled, never presented as catalog prices', () => {
+    renderTab();
+    expect(
+      screen.getByText('$0.35 / $0.4 per 1M tokens (operator-declared)'),
+    ).toBeTruthy();
   });
 
   it('tier-gates honestly: disabled switch + tooltip + Upgrade CTA, never hidden', async () => {

@@ -50,6 +50,8 @@ export interface BuilderModelRow {
   requiredProductLabel: string | null;
   /** Catalog list prices, USD/1M strings — absent when unpriced. */
   pricing?: { input_per_1m: string; output_per_1m: string };
+  /** PRV-035 — `operator_declared` prices are labeled in the picker (Law VII). */
+  pricingSource?: 'catalog' | 'operator_declared';
   /** Assistants whose LIVE published pipeline pins this exact triple. IDs only —
    *  the engine does not return names; never fabricated. */
   pinnedBy: Array<{ assistant_id: string; version: number }>;
@@ -88,6 +90,7 @@ function flattenGroup(
       requiredProduct: m.required_product ?? null,
       requiredProductLabel: m.required_product_label ?? null,
       ...(m.pricing !== undefined ? { pricing: { ...m.pricing } } : {}),
+      ...(m.pricing_source !== undefined ? { pricingSource: m.pricing_source } : {}),
       pinnedBy: m.pinned_by.map(p => ({ assistant_id: p.assistant_id, version: p.version })),
       contextWindowTokens: ctxByRef.get(ref) ?? null,
     });

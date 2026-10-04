@@ -58,10 +58,13 @@ function humanizeReason(reason: string): string {
   return known[reason] ?? reason.replace(/_/g, ' ');
 }
 
-/** `$2.50 / $10.00 per 1M tokens` — absent when the row is unpriced (never invented). */
+/** `$2.50 / $10.00 per 1M tokens` — absent when the row is unpriced (never invented).
+ * Operator-declared prices (PRV-035) are labeled as such, never presented
+ * as verified catalog prices (Law VII). */
 function priceLabel(model: ModelRowView): string | null {
   if (!model.pricing) return null;
-  return `$${model.pricing.input_per_1m} / $${model.pricing.output_per_1m} per 1M tokens`;
+  const base = `$${model.pricing.input_per_1m} / $${model.pricing.output_per_1m} per 1M tokens`;
+  return model.pricing_source === 'operator_declared' ? `${base} (operator-declared)` : base;
 }
 
 const CAPABILITY_LABELS = {

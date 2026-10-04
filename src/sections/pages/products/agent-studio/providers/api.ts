@@ -47,6 +47,12 @@ export interface ModelRowView {
   capabilities: Record<ProviderDirectoryCapability, boolean>;
   /** Catalog list prices, USD/1M — absent when unpriced. */
   pricing?: { input_per_1m: string; output_per_1m: string };
+  /**
+   * PRV-035 — where the pricing came from. `operator_declared` = the
+   * credential operator's manual declaration (Law VII: labeled, never
+   * presented as a verified catalog price).
+   */
+  pricing_source?: 'catalog' | 'operator_declared';
   pinned_by: Array<{ assistant_id: string; version: number }>;
 }
 
@@ -96,6 +102,12 @@ export interface ProviderCredentialView {
   verified_at: string | null;
   last_probe_latency_ms: number | null;
   discovered_models: unknown;
+  /**
+   * PRV-035 — operator-declared models (doc 19 §4.B), normalized on read.
+   * Costs inside are operator-claimed (N-5 serves `pricing_source:
+   * 'operator_declared'`).
+   */
+  manual_model_declarations: unknown;
   zdr_attestation: string | null;
   region_attestation: string | null;
   attested_by: string | null;
@@ -197,6 +209,26 @@ export interface CreateCredentialInput {
   shared_capacity_fallback?: ProviderCredentialView['shared_capacity_fallback'];
   zdr_attestation?: string;
   region_attestation?: string;
+  /**
+   * PRV-035 — operator-declared models (doc 19 §4.B). Validated strictly
+   * by the engine (`validateManualModelDeclarations`); costs are
+   * operator-claimed and served with `pricing_source: 'operator_declared'`.
+   */
+  manual_model_declarations?: ManualModelDeclarationInput[];
+}
+
+/**
+ * PRV-035 — wire shape for a manual model declaration (mirrors the engine
+ * `ManualModelDeclaration`; costs as decimal strings).
+ */
+export interface ManualModelDeclarationInput {
+  id: string;
+  display_name: string;
+  context_window_tokens: number;
+  max_output_tokens?: number;
+  capabilities: { tools: boolean; vision: boolean; reasoning: boolean; structured_output: boolean };
+  input_cost_per_1m_usd?: string;
+  output_cost_per_1m_usd?: string;
 }
 
 export async function createCredential(

@@ -6,7 +6,8 @@
  * - 401 probe failure shows the invalid-key copy
  * - probe cancel returns the form to idle
  * - successful probe enables Save & Connect and lists discovered models
- * - manual model declarations disable Save with honest PRV-035 copy
+ * - PRV-035 manual declarations persist: valid entries enable Save + ride the payload,
+ *   invalid entries show field errors, zero declarations keep Save & Connect disabled
  * - Save as Inactive works without a probe; Save & Connect verifies after create
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -247,7 +248,7 @@ describe('CustomProviderForm', () => {
     expect(hoisted.verifyMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('manual model declarations disable Save with honest PRV-035 copy', async () => {
+  it('PRV-035: manual declarations persist - valid entries enable Save and ride the create payload', async () => {
     renderForm();
     fillBasics();
     fireEvent.click(screen.getByRole('radio', { name: /Manual Declaration/ }));
@@ -255,13 +256,55 @@ describe('CustomProviderForm', () => {
     fireEvent.change(screen.getByLabelText('Model ID'), {
       target: { value: 'llama-3.3-70b-instruct' },
     });
-    expect(screen.getByText(/engine does not persist them yet \(PRV-035/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Display Name'), {
+      target: { value: 'Llama 3.3 70B Instruct' },
+    });
+    fireEvent.change(screen.getByLabelText('Context window (tokens)'), {
+      target: { value: '131072' },
+    });
+    fireEvent.change(screen.getByLabelText('Input $ / 1M'), {
+      target: { value: '0.35' },
+    });
+    // No "engine does not persist" copy anymore - declarations are stored.
+    expect(screen.queryByText(/engine does not persist them yet/)).toBeNull();
+    // Operator-claimed cost labeling is honest.
+    expect(screen.getByText(/operator-claimed/)).toBeTruthy();
+    const saveConnect = screen.getByRole('button', { name: /Save & Connect Provider/ });
+    expect(saveConnect).not.toBeDisabled();
+    fireEvent.click(saveConnect);
+    await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalled());
+    const payload = hoisted.createMutateAsync.mock.calls[0][0];
+    expect(payload.manual_model_declarations).toEqual([
+      {
+        id: 'llama-3.3-70b-instruct',
+        display_name: 'Llama 3.3 70B Instruct',
+        context_window_tokens: 131072,
+        capabilities: { tools: false, vision: false, reasoning: false, structured_output: false },
+        input_cost_per_1m_usd: '0.35',
+      },
+    ]);
+  });
+
+  it('PRV-035: invalid manual declarations show field errors and disable Save', () => {
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('radio', { name: /Manual Declaration/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add Custom Model Manually/ }));
+    // Empty row: id + display name + context window all invalid.
     expect(screen.getByRole('button', { name: /Save & Connect Provider/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Save as Inactive' })).toBeDisabled();
-    // The declaration itself is preserved in the form (never silently dropped).
-    expect((screen.getByLabelText('Model ID') as HTMLInputElement).value).toBe(
-      'llama-3.3-70b-instruct',
-    );
+    expect(screen.getByText(/Model ID: letters, digits/)).toBeTruthy();
+  });
+
+  it('PRV-035: manual mode with zero declarations keeps Save & Connect disabled', () => {
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('radio', { name: /Manual Declaration/ }));
+    const saveConnect = screen.getByRole('button', { name: /Save & Connect Provider/ });
+    expect(saveConnect).toBeDisabled();
+    expect(saveConnect.getAttribute('title')).toMatch(/at least one manual model declaration/);
+    // Save as Inactive stays available (declarations can be added on edit).
+    expect(screen.getByRole('button', { name: 'Save as Inactive' })).not.toBeDisabled();
   });
 
   it('header add/delete works and values stay editable pre-save', () => {
