@@ -625,34 +625,93 @@ function nonBlank(value: string): string | null {
 }
 
 /**
+ * Engine contract for pipeline entries — neryva-engine
+ * `src/modules/assistants/validation.ts` `pipelineEntrySchema` (contract
+ * v1.13) is the authority; these mirrors are kept in sync by
+ * `agent-payload.pipeline-contract.test.ts`, which validates the wire
+ * payload against the engine's live schema.
+ */
+const MODEL_REF_PATTERN = /^[a-z0-9-]+\/[a-z0-9._-]+(\/[a-z0-9._-]+)*$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Engine `output_schema` rule: ≤16384 chars and parses to a JSON object
+ * (never null, never an array).
+ */
+function isEngineValidOutputSchema(value: string): boolean {
+  if (value.length > 16_384) return false;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Pipeline entry cleaner for the wire — strips unknown keys, drops blank
- * optionals and empty param overrides so the payload carries only intent.
- * Blank version pins and credential ids are omitted (absent = latest /
+ * optionals and out-of-range param overrides so the payload carries only
+ * intent the engine schema will accept (absent = engine default).
+ *
+ * Structural violations are programmer errors — the section only offers
+ * catalog refs and engine-issued credential ids, and it gates param ranges
+ * — so they THROW here instead of producing a payload the engine 400s on
+ * save. Blank version pins and credential ids are omitted (absent = latest /
  * unselected); an all-empty params object is omitted entirely.
  */
 function cleanPipelineEntry(entry: ModelPipelineEntry): ModelPipelineEntry {
+  if (!MODEL_REF_PATTERN.test(entry.ref)) {
+    throw new Error(`model_policy.pipeline: invalid model ref "${entry.ref}" (must be provider/model)`);
+  }
+  if (entry.credential_id && !UUID_PATTERN.test(entry.credential_id)) {
+    throw new Error(`model_policy.pipeline: credential_id for "${entry.ref}" must be a UUID`);
+  }
+  if (entry.version_pin && entry.version_pin.trim() !== '' && entry.version_pin.length > 256) {
+    throw new Error(`model_policy.pipeline: version_pin for "${entry.ref}" exceeds 256 characters`);
+  }
   const params = entry.params;
+  // Range-align each override with the engine schema (temperature 0–2,
+  // max_output_tokens int 1–200000, top_p >0–1, output_schema JSON object
+  // ≤16384). Out-of-range values are dropped — absent means the engine
+  // default — rather than shipped to a 400.
+  const temperature =
+    typeof params?.temperature === 'number' && params.temperature >= 0 && params.temperature <= 2
+      ? params.temperature
+      : undefined;
+  const maxOutputTokens =
+    typeof params?.max_output_tokens === 'number' &&
+    Number.isInteger(params.max_output_tokens) &&
+    params.max_output_tokens >= 1 &&
+    params.max_output_tokens <= 200_000
+      ? params.max_output_tokens
+      : undefined;
+  const topP = typeof params?.top_p === 'number' && params.top_p > 0 && params.top_p <= 1 ? params.top_p : undefined;
+  const effortRaw = params?.reasoning_effort;
+  const effort: 'minimal' | 'low' | 'medium' | 'high' | undefined =
+    effortRaw === 'minimal' || effortRaw === 'low' || effortRaw === 'medium' || effortRaw === 'high'
+      ? effortRaw
+      : undefined;
+  const schemaRaw = typeof params?.output_schema === 'string' ? params.output_schema : undefined;
+  const schema =
+    schemaRaw !== undefined && schemaRaw.trim() !== '' && isEngineValidOutputSchema(schemaRaw) ? schemaRaw : undefined;
   const hasParams =
-    params !== undefined &&
-    (params.temperature !== undefined ||
-      params.max_output_tokens !== undefined ||
-      params.top_p !== undefined ||
-      params.reasoning_effort !== undefined ||
-      (params.output_schema ?? '').trim() !== '');
+    temperature !== undefined ||
+    maxOutputTokens !== undefined ||
+    topP !== undefined ||
+    effort !== undefined ||
+    schema !== undefined;
   return {
     ref: entry.ref,
     ...(entry.credential_id ? { credential_id: entry.credential_id } : {}),
     ...(entry.version_pin && entry.version_pin.trim() !== '' ? { version_pin: entry.version_pin } : {}),
-    ...(hasParams && params
+    ...(hasParams
       ? {
           params: {
-            ...(params.temperature !== undefined ? { temperature: params.temperature } : {}),
-            ...(params.max_output_tokens !== undefined ? { max_output_tokens: params.max_output_tokens } : {}),
-            ...(params.top_p !== undefined ? { top_p: params.top_p } : {}),
-            ...(params.reasoning_effort !== undefined ? { reasoning_effort: params.reasoning_effort } : {}),
-            ...(params.output_schema !== undefined && params.output_schema.trim() !== ''
-              ? { output_schema: params.output_schema }
-              : {}),
+            ...(temperature !== undefined ? { temperature } : {}),
+            ...(maxOutputTokens !== undefined ? { max_output_tokens: maxOutputTokens } : {}),
+            ...(topP !== undefined ? { top_p: topP } : {}),
+            ...(effort !== undefined ? { reasoning_effort: effort } : {}),
+            ...(schema !== undefined ? { output_schema: schema } : {}),
           },
         }
       : {}),

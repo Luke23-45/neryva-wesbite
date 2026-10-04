@@ -491,7 +491,9 @@ describe('model pipeline + response_format wire contract', () => {
       allowed_models: ['a/b', 'c/d'],
       fallback_enabled: true,
       pipeline: [
-        { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+        // credential_id is an engine-issued UUID on the wire (engine
+        // @IsUUID()); the fixture uses a real-shaped one.
+        { ref: 'a/b', version_pin: '2026-01-01', credential_id: '123e4567-e89b-12d3-a456-426614174000', params: { temperature: 0.5 } },
         { ref: 'c/d', version_pin: '', credential_id: '', params: {} },
       ],
     },
@@ -501,12 +503,12 @@ describe('model pipeline + response_format wire contract', () => {
   it('round-trips the pipeline, cleaning blanks (blank pin/credential drop, empty params collapse)', () => {
     const consumer = fromEnginePayload(PIPELINE_DRAFT);
     expect(consumer.model_policy.pipeline).toEqual([
-      { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+      { ref: 'a/b', version_pin: '2026-01-01', credential_id: '123e4567-e89b-12d3-a456-426614174000', params: { temperature: 0.5 } },
       { ref: 'c/d' },
     ]);
     const wire = toEnginePayload(consumer) as unknown as Record<string, Record<string, unknown>>;
     expect(wire.model_policy.pipeline).toEqual([
-      { ref: 'a/b', version_pin: '2026-01-01', credential_id: 'cred-1', params: { temperature: 0.5 } },
+      { ref: 'a/b', version_pin: '2026-01-01', credential_id: '123e4567-e89b-12d3-a456-426614174000', params: { temperature: 0.5 } },
       { ref: 'c/d' },
     ]);
     // allowed_models is derived from the pipeline refs on write.
