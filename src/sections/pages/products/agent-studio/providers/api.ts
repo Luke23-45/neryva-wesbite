@@ -9,7 +9,7 @@
  * Waves A/B/C/D all import from here — this file is the integration seam.
  */
 
-import { engine } from '@/lib/engine/client';
+import { engine, engineDownload } from '@/lib/engine/client';
 
 // ---------------------------------------------------------------------------
 // Shared types (engine DTO mirrors)
@@ -276,4 +276,107 @@ export async function fetchCredentialUsage(
   return engine<CredentialUsageView>(`/console/org/${orgId}/provider-credentials/${id}/usage`, {
     query: { window },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Tab D — Spend & budgets (Phase 7; engine waves E1/E2)
+//
+// Exact contract given to the engine waves — do not guess shapes. Every
+// money figure is an engine string (USD); nothing is invented client-side.
+// ---------------------------------------------------------------------------
+
+export type SpendWindow = '7d' | '30d';
+
+/**
+ * Per-provider spend breakdown — mirrors the engine `ProviderSpendBreakdown`
+ * (spend-budget.service.ts) exactly. `byok_list_price_equivalent_usd` is
+ * labeled list-price, never billed. Absent when the provider has no priced
+ * BYOK rows (never zero-invented).
+ */
+export interface SpendProviderBreakdown {
+  provider: string;
+  platform_spend_usd: string;
+  byok_settled_usd: string;
+  byok_list_price_equivalent_usd?: string;
+  pricing_basis: 'settled' | 'list';
+}
+
+export interface SpendBudgetView {
+  /** Integer cents; null = unlimited. */
+  cap_usd_cents: number | null;
+  used_usd: string;
+  include_byok_spend: boolean;
+}
+
+export interface SpendFeeConfig {
+  /** Engine truth — never hardcoded in the UI. */
+  byok_fee_credits_per_call: number;
+  /** Provisional policy copy — labeled as such wherever rendered. */
+  payg_margin_note: string;
+}
+
+/**
+ * Org spend summary — mirrors the engine `SpendSummaryView`
+ * (spend-budget.service.ts) exactly. The engine is the authority on shape;
+ * the nested `byok` object carries the labeled list-price equivalent and
+ * the actual fee settlement (calls × per_call_credits — no invented USD
+ * conversion).
+ */
+export interface SpendSummaryView {
+  window: '7d' | '30d';
+  requests: number;
+  /** Settled platform spend over the window, exact decimal string. */
+  platform_spend_usd: string;
+  byok: {
+    /** Settled BYOK spend (flat platform-fee settlements), exact decimal string. */
+    settled_usd: string;
+    calls: number;
+    /** Tokens × catalog list rates — 'list-price equivalent — not billed'. Absent when unpriced. */
+    list_price_equivalent_usd?: string;
+    /** The actual settlement math: calls × per_call_credits. */
+    fee: { calls: number; per_call_credits: number };
+  };
+  providers: SpendProviderBreakdown[];
+  budget: SpendBudgetView;
+  fee_config: SpendFeeConfig;
+}
+
+export async function fetchSpendSummary(
+  orgId: string,
+  window: SpendWindow,
+): Promise<SpendSummaryView> {
+  return engine<SpendSummaryView>(`/console/org/${orgId}/spend/summary`, {
+    query: { window },
+  });
+}
+
+export async function patchSpendBudget(
+  orgId: string,
+  cap_usd_cents: number | null,
+): Promise<{ cap_usd_cents: number | null }> {
+  return engine<{ cap_usd_cents: number | null }>(`/console/org/${orgId}/spend/budget`, {
+    method: 'PATCH',
+    body: { cap_usd_cents },
+  });
+}
+
+/**
+ * The include_byok_spend toggle rides the existing
+ * PATCH /console/org/:orgId/settings preferences (contract per E1 wave).
+ * The response is the org settings record; the summary query is the source
+ * of truth for the current toggle value.
+ */
+export async function patchIncludeByokSpend(
+  orgId: string,
+  include: boolean,
+): Promise<Record<string, unknown>> {
+  return engine<Record<string, unknown>>(`/console/org/${orgId}/settings`, {
+    method: 'PATCH',
+    body: { preferences: { include_byok_spend: include } },
+  });
+}
+
+/** Enterprise audit export — step-up auth is engine-enforced; the download streams via engineDownload. */
+export async function downloadSpendExport(orgId: string, format: 'csv' | 'json'): Promise<void> {
+  return engineDownload(`/console/org/${orgId}/spend/export`, { format });
 }

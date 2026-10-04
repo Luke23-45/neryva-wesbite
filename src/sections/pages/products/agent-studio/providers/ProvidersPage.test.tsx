@@ -27,6 +27,9 @@ vi.mock('@/sections/pages/products/agent-studio/providers/tabs/TabMyProviders', 
 vi.mock('@/sections/pages/products/agent-studio/providers/tabs/TabModels', () => ({
   default: () => <div>Models surface</div>,
 }));
+vi.mock('@/sections/pages/products/agent-studio/providers/tabs/TabSpend', () => ({
+  default: () => <div>Spend surface</div>,
+}));
 
 let studioState = 'none';
 let enterpriseProducts: Array<{ key: string; entitlement_state: string }> = [];
@@ -91,7 +94,7 @@ describe('ProvidersPage tab visibility matrix', () => {
     expect(screen.queryByRole('tab', { name: 'My providers' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Catalog' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Models' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /spend & budgets/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Spend & budgets' })).toBeTruthy();
   });
 
   it('payg tier: shows "My providers"', async () => {
@@ -137,17 +140,13 @@ describe('ProvidersPage tab visibility matrix', () => {
     });
   });
 
-  it('Spend & budgets is honestly disabled — clicking it never activates a tab', async () => {
+  it('switching to Spend & budgets renders the spend surface (Phase 7: Tab D enabled)', async () => {
     studioState = 'active';
     await renderShell(true);
 
-    const spend = screen.getByRole('button', { name: /spend & budgets/i });
-    expect(spend.getAttribute('disabled')).not.toBeNull();
-    fireEvent.click(spend);
-    // Still on the Catalog tab content (the empty-catalog state from the mock).
+    fireEvent.click(screen.getByRole('tab', { name: 'Spend & budgets' }));
     await waitFor(() => {
-      expect(screen.getByText('The provider catalog is empty.')).toBeTruthy();
+      expect(screen.getByText('Spend surface')).toBeTruthy();
     });
-    expect(screen.queryByText(/connected api keys/i)).toBeNull();
   });
 });
