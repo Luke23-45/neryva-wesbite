@@ -39,10 +39,13 @@ const TabArea = styled.div`
 `;
 
 /**
- * R2-6: layout-mirroring loading skeleton — a search-bar rectangle, a
- * chip-row of pill rectangles, then one full-width card rectangle per
- * expected row in a single column, mirroring the loaded Catalog's row
- * layout. The tab chunk is loading, so we mirror what the tab opens on.
+ * R2-6 (corrected round 3): layout-mirroring loading skeleton — a search-bar
+ * rectangle, a chip-row of pill rectangles, then card rectangles in the same
+ * responsive grid geometry as the loaded CardGrid
+ * (`repeat(auto-fill, minmax(250px, 1fr))`, 12px gap). The single-column
+ * variant was reverted: the "single column" premise was a sparse-content
+ * artifact (one provider per section), and TabCatalog's internal data
+ * skeleton already uses this grid — both phases must agree.
  */
 function ProvidersLoadingFallback() {
   return (
@@ -53,7 +56,14 @@ function ProvidersLoadingFallback() {
         <Skeleton $w="96px" $h="32px" $r="999px" />
         <Skeleton $w="128px" $h="32px" $r="999px" />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: 12,
+          marginTop: 16,
+        }}
+      >
         <Skeleton $h="150px" $r="14px" />
         <Skeleton $h="150px" $r="14px" />
         <Skeleton $h="150px" $r="14px" />
