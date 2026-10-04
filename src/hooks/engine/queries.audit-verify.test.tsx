@@ -21,7 +21,7 @@ import { useAuditVerify } from './queries';
  * property. The hook is the view's contract with that endpoint: disabled
  * by default (on-demand refetch), typed `{ ok, checked, first_break }`.
  */
-function wrapper({ children }: { children: ReactNode }) {
+function Wrapper({ children }: { children: ReactNode }) {
   // One client per hook mount — creating it inline would wipe the query
   // cache on every re-render and `result.current.data` would never settle.
   const [client] = useState(
@@ -37,13 +37,13 @@ describe('useAuditVerify', () => {
 
   it('does not fetch on mount (on-demand only)', () => {
     engineMock.mockResolvedValue({ ok: true, checked: 500, first_break: null });
-    renderHook(() => useAuditVerify(), { wrapper });
+    renderHook(() => useAuditVerify(), { wrapper: Wrapper });
     expect(engineMock).not.toHaveBeenCalled();
   });
 
   it('calls the verify endpoint for the active org on refetch', async () => {
     engineMock.mockResolvedValue({ ok: true, checked: 500, first_break: null });
-    const { result } = renderHook(() => useAuditVerify(), { wrapper });
+    const { result } = renderHook(() => useAuditVerify(), { wrapper: Wrapper });
 
     const res = await result.current.refetch();
 
@@ -54,7 +54,7 @@ describe('useAuditVerify', () => {
 
   it('surfaces a chain break with the first_break position', async () => {
     engineMock.mockResolvedValue({ ok: false, checked: 500, first_break: 'evt-abc123' });
-    const { result } = renderHook(() => useAuditVerify(), { wrapper });
+    const { result } = renderHook(() => useAuditVerify(), { wrapper: Wrapper });
 
     // The query is disabled by default: the view consumes the refetch
     // promise (see ActivityView), so the test asserts on that contract —
@@ -66,7 +66,7 @@ describe('useAuditVerify', () => {
 
   it('does not retry a failed verification', async () => {
     engineMock.mockRejectedValue(new Error('Forbidden'));
-    const { result } = renderHook(() => useAuditVerify(), { wrapper });
+    const { result } = renderHook(() => useAuditVerify(), { wrapper: Wrapper });
 
     const res = await result.current.refetch();
 

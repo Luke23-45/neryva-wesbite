@@ -709,14 +709,10 @@ export function KnowledgeSection({
     }
   }, []);
 
-  if (!definition) {
-    return (
-      <SectionPage title="Knowledge" subtitle="Ground answers in pinned sources.">
-        <SkeletonRows rows={4} />
-      </SectionPage>
-    );
-  }
-
+  // Hooks must run unconditionally on every render: the loading skeleton
+  // below used to return early before the staleSlugs memo. The derivations
+  // here are pure (no side effects), so computing them for the skeleton
+  // branch is harmless — the memo keeps identical semantics.
   const inventory = documents.data ?? [];
   const healthPins = health.data?.pins ?? [];
   const degraded = health.data?.degraded === true;
@@ -729,6 +725,14 @@ export function KnowledgeSection({
     () => new Set(healthPins.filter((p) => p.stale).map((p) => p.sourceSlug)),
     [healthPins],
   );
+
+  if (!definition) {
+    return (
+      <SectionPage title="Knowledge" subtitle="Ground answers in pinned sources.">
+        <SkeletonRows rows={4} />
+      </SectionPage>
+    );
+  }
 
   const indexedCount = inventory.filter((d) => d.state === 'ready').length;
   const indexingCount = inventory.filter((d) => d.state === 'processing').length;

@@ -357,16 +357,17 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   // cleanup, so switching sections left the builder-level flag true after
   // the unmount flush had already persisted (or discarded) the edits — the
   // topbar kept showing "Unsaved changes" and Save fired a signal no
-  // mounted section could hear. The unmount flush (use-draft-autosave) runs
-  // in the section's cleanup before this parent effect, so retiring the
-  // flags here never drops an unsaved edit; the newly mounted section
-  // re-reports its own dirty on mount (its reporting effect runs first).
-  // In new mode the view is locked to 'purpose' — the Identity form stays
-  // mounted and its formState.dirty is untouched.
-  const prevViewRef = useRef(view);
-  useEffect(() => {
-    if (prevViewRef.current === view) return;
-    prevViewRef.current = view;
+  // mounted section could hear. Retire the flags during render when the
+  // view changes (the documented "adjust state during render" pattern —
+  // an effect is the wrong tool here): the unmount flush
+  // (use-draft-autosave) reads the section's own dirty gate, not these
+  // indicator flags, so retiring them here never drops an unsaved edit;
+  // the newly mounted section re-reports its own dirty on mount. In new
+  // mode the view is locked to 'purpose' — the Identity form stays mounted
+  // and its formState.dirty is untouched.
+  const [prevView, setPrevView] = useState(view);
+  if (prevView !== view) {
+    setPrevView(view);
     setComposerDirty(false);
     setBrandDirty(false);
     setBrainDirty(false);
@@ -379,7 +380,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     setResponseDirty(false);
     setRoleDirty(false);
     setBudgetDirty(false);
-  }, [view]);
+  }
 
   // Section navigation entries — the projector's honest per-section state.
   const sectionEntries = useMemo<SectionEntry[]>(

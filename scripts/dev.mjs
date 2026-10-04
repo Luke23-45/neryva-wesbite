@@ -9,7 +9,10 @@ try {
     const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
     if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '');
   }
-} catch {}
+} catch {
+  // No .env file — environment-only config is fine; everything below reads
+  // process.env with tunnel-mode defaults.
+}
 
 // Usage:
 //   npm run dev                      -> vite, local only
@@ -39,10 +42,15 @@ function shutdown(code = 0) {
   if (funnelBin) {
     try {
       spawnSync(funnelBin, ['funnel', 'reset'], { stdio: 'ignore', shell: false });
-    } catch {}
+    } catch {
+      // Best-effort teardown during shutdown — a failed reset must not
+      // block process exit or mask the real exit code.
+    }
   }
   for (const c of children) {
-    try { c.kill(); } catch {}
+    // A child may already have exited on its own — kill() throws then, and
+    // that is fine during teardown.
+    try { c.kill(); } catch { /* already exited */ }
   }
   process.exit(code);
 }
@@ -76,7 +84,10 @@ function pickDomainFlag(bin) {
     const text = `${help.stdout || ''}\n${help.stderr || ''}`;
     if (/--url[\s=:}]/m.test(text)) return 'url';
     if (/--domain[\s=:}]/m.test(text)) return 'domain';
-  } catch {}
+  } catch {
+    // The --help probe failed (binary missing mid-run?) — fall through to
+    // the modern '--url' default below.
+  }
   return 'url';
 }
 
@@ -117,7 +128,10 @@ async function waitForVite(port, host = 'localhost') {
     try {
       const res = await fetch(`http://${host}:${port}/`);
       if (res.status < 500) return true;
-    } catch {}
+    } catch {
+      // Connection refused = vite hasn't bound the port yet. That is the
+      // expected state while it boots — keep polling until the deadline.
+    }
     await new Promise((r) => setTimeout(r, 500));
   }
   return vite.exitCode === null || vite.exitCode === undefined;
@@ -297,7 +311,10 @@ async function confirmFunnelOnline(bin) {
         console.log('[dev] (stable per machine — add it to the engine IDENTITY_EXTRA_REDIRECT_URIS once)');
         return;
       }
-    } catch {}
+    } catch {
+      // The status probe threw (daemon not responding yet) — retry on the
+      // next poll instead of failing the confirmation early.
+    }
     await new Promise((r) => setTimeout(r, 2000));
   }
   console.log('[dev] funnel URL not confirmed — run `tailscale funnel status` to inspect.');
@@ -330,7 +347,10 @@ async function confirmTunnelOnline(expectedUrl, agent) {
           console.log(`[dev] inspector:   http://127.0.0.1:${apiPort}`);
           return;
         }
-      } catch {}
+      } catch {
+        // Agent API not listening on this port yet — try the next one, and
+        // the whole sweep again on the next poll.
+      }
     }
     await new Promise((r) => setTimeout(r, 1000));
   }
