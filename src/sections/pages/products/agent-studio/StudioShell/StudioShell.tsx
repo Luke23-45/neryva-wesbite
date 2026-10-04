@@ -90,6 +90,7 @@ import { SidebarDomains } from './SidebarDomains';
 import { SidebarSection } from './SidebarSection';
 import { useNavBadges } from './useNavBadges';
 import { useSidebarPrefs } from './useSidebarPrefs';
+import { useOrgTier } from '../providers/hooks/useOrgTier';
 import { useBuilderTopbarSlots } from '../builder/topbar/BuilderTopbarSlots';
 import {
   displayConversationTitle,
@@ -131,7 +132,7 @@ const STATIC_NAV_ITEMS: CommandItem[] = [
   { id: 'datasets', title: 'Datasets', subtitle: 'Evaluation datasets', to: '/agent-studio/datasets', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
   { id: 'blocks', title: 'Blocks', subtitle: 'Governance kill switches', to: '/agent-studio/blocks', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
-  { id: 'models', title: 'Providers & models', subtitle: 'Providers, credentials, models', to: '/agent-studio/providers', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
+  { id: 'models', title: 'Providers & models', subtitle: 'Providers, credentials, models', to: '/agent-studio/providers/catalog', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
   { id: 'tools', title: 'Tools', subtitle: 'Tool catalog and bindings', to: '/agent-studio/tools', section: 'Navigate', icon: <Wrench size={14} strokeWidth={1.7} /> },
   { id: 'channels', title: 'Channels', subtitle: 'WhatsApp, Messenger, Telegram, widget', to: '/agent-studio/channels', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
   { id: 'approvals', title: 'Approvals', subtitle: 'Human review queue for tool calls', to: '/agent-studio/approvals', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
@@ -223,6 +224,19 @@ export function StudioShell({
   const level = resolveLevel(location.pathname, nav);
   const isBuilder = level.kind === 'builder';
   const domain = level.kind === 'section' ? level.domain : null;
+  // Per-tier visibility (providers redesign): free orgs don't get a
+  // "My Providers" row in the providers sub-nav — the same useOrgTier rule
+  // the old tab bar used. 'unknown' fails open; the server enforces.
+  const tier = useOrgTier();
+  const visibleDomain =
+    domain?.key === 'providers' && tier === 'free'
+      ? {
+          ...domain,
+          items: domain.items.filter(
+            (item) => item.to !== '/agent-studio/providers/my-providers',
+          ),
+        }
+      : domain;
   // The back-row pin shows level 1 on the SAME route (session chrome only).
   const showLevel1 = !isBuilder && (pinnedLevel1 || level.kind !== 'section' || level.level === 1);
   // Breadcrumb truth always follows the ROUTE (even under the level-1 pin —
@@ -411,7 +425,7 @@ export function StudioShell({
                   />
                 ) : (
                   <SidebarSection
-                    domain={domain}
+                    domain={visibleDomain ?? domain}
                     activeTo={activeItem?.to ?? null}
                     badges={badges}
                     query={query}

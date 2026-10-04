@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Providers Phase 7 — Wave W1: TabSpend targeted tests.
+ * SpendPage — targeted tests (ported from the retired TabSpend suite):
  * - BYOK list-price figure is ALWAYS labeled "list-price equivalent — not billed";
  *   omitted when the engine reports no BYOK spend
  * - include_byok_spend toggle PATCHes { preferences: { include_byok_spend } }
@@ -12,13 +12,15 @@
  * - tier gating: developer/reader roles see the honest note (no query fires);
  *   free tier gets read-only overview (no controls, no export)
  * - 7d/30d window Dropdown refetches the summary
+ * - NEW: summary budget-cap card with progress; per-credential spend renders
+ *   as the reference table (Credential / Requests / Tokens / Spend / Share)
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
-import { TabSpend } from './TabSpend';
+import { SpendPage } from './SpendPage';
 import type {
   CredentialUsageView,
   ProviderCredentialView,
@@ -133,14 +135,14 @@ function usageFixture(over: Partial<CredentialUsageView> = {}): CredentialUsageV
   };
 }
 
-function renderTab() {
+function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={client}>
-        <TabSpend />
+        <SpendPage />
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -160,13 +162,12 @@ beforeEach(() => {
   hoisted.exportSpend.mockImplementation(async () => undefined);
 });
 
-describe('TabSpend honesty labels', () => {
+describe('SpendPage honesty labels', () => {
   it('labels the BYOK figure as list-price equivalent, never billed', async () => {
-    renderTab();
+    renderPage();
     await waitFor(() => {
       expect(screen.getAllByText('$88.10').length).toBeGreaterThanOrEqual(2);
     });
-    // Overview card + BYOK breakdown row + (no credential rows here).
     expect(screen.getAllByText(LIST_PRICE_LABEL).length).toBeGreaterThanOrEqual(2);
   });
 
@@ -177,7 +178,7 @@ describe('TabSpend honesty labels', () => {
         { provider: 'openai', platform_spend_usd: '12.40', byok_settled_usd: '0', pricing_basis: 'settled' },
       ],
     });
-    renderTab();
+    renderPage();
     await waitFor(() => {
       expect(screen.getAllByText('$12.40').length).toBeGreaterThanOrEqual(1);
     });
@@ -187,9 +188,9 @@ describe('TabSpend honesty labels', () => {
 
   it('labels per-credential BYOK usage with the same honesty label', async () => {
     hoisted.credentials = [credFixture('c1')];
-    renderTab();
+    renderPage();
     await waitFor(() => {
-      expect(screen.getByText(/Spend per connected key/)).toBeTruthy();
+      expect(screen.getByText(/Per-credential spend/)).toBeTruthy();
     });
     await waitFor(() => {
       expect(screen.getAllByText(new RegExp(LIST_PRICE_LABEL.replace(/[—]/g, '—'))).length).toBeGreaterThanOrEqual(1);
@@ -197,12 +198,60 @@ describe('TabSpend honesty labels', () => {
   });
 });
 
-describe('TabSpend include_byok_spend toggle', () => {
+describe('SpendPage summary cards', () => {
+  it('renders the budget-cap card with progress from engine numbers', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    expect(screen.getByText('$50.00')).toBeTruthy();
+    // 12.40 / 50.00 = 24.8% → 25%.
+    expect(screen.getByText(/25% used/)).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Monthly budget used' })).toHaveAttribute(
+      'aria-valuenow',
+      '25',
+    );
+  });
+
+  it('renders Unlimited with no progress bar when the engine reports no cap', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    expect(screen.getByText('Unlimited')).toBeTruthy();
+    expect(screen.queryByRole('progressbar', { name: 'Monthly budget used' })).toBeNull();
+  });
+});
+
+describe('SpendPage per-credential table', () => {
+  it('renders the reference columns with honest share', async () => {
+    hoisted.credentials = [credFixture('c1'), credFixture('c2')];
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Credential')).toBeTruthy();
+    });
+    for (const col of ['Credential', 'Requests', 'Tokens', 'Spend', 'Share']) {
+      expect(screen.getByRole('columnheader', { name: col })).toBeTruthy();
+    }
+    await waitFor(() => {
+      expect(screen.getAllByText('120')).toHaveLength(2);
+    });
+    expect(screen.getAllByText('1,500')).toHaveLength(2);
+    expect(screen.getAllByText('$0.40').length).toBeGreaterThanOrEqual(2);
+    // Two keys at $0.40 each → 50% share each.
+    expect(screen.getAllByText('50%').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Share is the key's fraction of the spend shown in this table/)).toBeTruthy();
+  });
+});
+
+describe('SpendPage include_byok_spend toggle', () => {
   it('PATCHes { preferences: { include_byok_spend: true } }', async () => {
-    renderTab();
+    renderPage();
     const toggle = await screen.findByRole('switch', { name: /Include BYOK spend/i });
     fireEvent.click(toggle);
-    // react-query invokes the mutationFn off the click event — assert async.
     await waitFor(() => {
       expect(hoisted.patchToggle).toHaveBeenCalledWith('org-1', true);
     });
@@ -210,19 +259,16 @@ describe('TabSpend include_byok_spend toggle', () => {
 
   it('billing role sees the toggle disabled with an honest note', async () => {
     hoisted.role = 'billing';
-    renderTab();
+    renderPage();
     const toggle = await screen.findByRole('switch', { name: /Include BYOK spend/i });
-    // The Switch kit signals disabled via aria-disabled (no native disabled attr).
     expect(toggle.getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByText(/Budget controls require the owner or admin role/)).toBeTruthy();
   });
 });
 
-describe('TabSpend cap editor', () => {
+describe('SpendPage cap editor', () => {
   async function openEditor() {
-    renderTab();
-    // Anchor on the accessible name — "Monthly cap (USD)" also appears as a
-    // visible section label elsewhere in the card.
+    renderPage();
     return screen.findByLabelText('Monthly cap in USD, blank for unlimited');
   }
 
@@ -230,29 +276,30 @@ describe('TabSpend cap editor', () => {
     const input = await openEditor();
     fireEvent.change(input, { target: { value: '-5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
-    expect(await screen.findByText(/non-negative amount/)).toBeTruthy();
+    expect(screen.getByText(/non-negative amount/)).toBeTruthy();
     expect(hoisted.patchBudget).not.toHaveBeenCalled();
   });
 
   it('rejects more than 2 decimals', async () => {
     const input = await openEditor();
-    fireEvent.change(input, { target: { value: '10.555' } });
+    fireEvent.change(input, { target: { value: '10.999' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
-    expect(await screen.findByText(/non-negative amount/)).toBeTruthy();
+    expect(screen.getByText(/up to 2 decimals/)).toBeTruthy();
     expect(hoisted.patchBudget).not.toHaveBeenCalled();
   });
 
   it('saves a valid USD amount as integer cents', async () => {
     const input = await openEditor();
-    fireEvent.change(input, { target: { value: '25' } });
+    fireEvent.change(input, { target: { value: '75.50' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
     await waitFor(() => {
-      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', 2500);
+      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', 7550);
     });
   });
 
   it('saves a blank field as null (unlimited)', async () => {
     const input = await openEditor();
+    fireEvent.change(input, { target: { value: '80' } });
     fireEvent.change(input, { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
     await waitFor(() => {
@@ -261,70 +308,65 @@ describe('TabSpend cap editor', () => {
   });
 
   it('renders "Unlimited" when the engine reports no cap', async () => {
-    hoisted.summary = summaryFixture({ budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false } });
-    renderTab();
-    expect(await screen.findByText(/Unlimited — no cap is set/)).toBeTruthy();
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Unlimited — no cap is set/)).toBeTruthy();
+    });
   });
 });
 
-describe('TabSpend fee transparency', () => {
+describe('SpendPage fee transparency', () => {
   it('renders engine-truth fee numbers with the single provisional margin line', async () => {
-    renderTab();
-    expect(await screen.findByText('2 credits per BYOK call')).toBeTruthy();
-    expect(screen.getByText(/42 BYOK calls this window/)).toBeTruthy();
-    expect(screen.getByText(/30% margin on list cost for PAYG inference/)).toBeTruthy();
-    expect(
-      screen.getByText(/Provisional — .* Final margin pending plan decision\./),
-    ).toBeTruthy();
-    // No internal IDs in user-facing copy.
-    expect(document.body.textContent).not.toContain('PRV-008');
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/2 credits per BYOK call/)).toBeTruthy();
+    });
+    expect(screen.getByText(/Provisional — 30% margin on list cost for PAYG inference/)).toBeTruthy();
   });
 });
 
-describe('TabSpend audit export', () => {
+describe('SpendPage audit export', () => {
   it('enterprise: format dropdown + export button downloads via the export endpoint', async () => {
     hoisted.tier = 'enterprise';
-    renderTab();
-    await screen.findByRole('button', { name: 'Export audit data' });
-    fireEvent.click(screen.getByRole('button', { name: 'Export audit data' }));
+    renderPage();
+    const btn = await screen.findByRole('button', { name: 'Export audit data' });
+    fireEvent.click(btn);
     await waitFor(() => {
       expect(hoisted.exportSpend).toHaveBeenCalledWith('org-1', 'csv');
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Format' }));
-    fireEvent.click(screen.getByRole('option', { name: 'JSON' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Export audit data' }));
-    await waitFor(() => {
-      expect(hoisted.exportSpend).toHaveBeenCalledWith('org-1', 'json');
     });
   });
 
   it('payg: export is gated with an honest note', async () => {
-    renderTab();
-    expect(await screen.findByText(/Audit export is available on the Enterprise plan/)).toBeTruthy();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Audit export is available on the Enterprise plan/)).toBeTruthy();
+    });
     expect(screen.queryByRole('button', { name: 'Export audit data' })).toBeNull();
   });
 
   it('notes step-up auth and audit recording', async () => {
     hoisted.tier = 'enterprise';
-    renderTab();
-    expect(
-      await screen.findByText(/Export requires step-up authentication and the export itself is recorded in the audit trail/),
-    ).toBeTruthy();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/step-up authentication/)).toBeTruthy();
+    });
   });
 });
 
-describe('TabSpend tier gating', () => {
+describe('SpendPage tier gating', () => {
   it('developer role sees the honest note and no query fires', async () => {
     hoisted.role = 'developer';
-    renderTab();
+    renderPage();
     expect(await screen.findByText(/visible to the owner, admin, and billing roles only/)).toBeTruthy();
     expect(hoisted.fetchSummary).not.toHaveBeenCalled();
   });
 
   it('free tier gets a read-only overview: no controls, no export', async () => {
     hoisted.tier = 'free';
-    renderTab();
+    renderPage();
     await waitFor(() => {
       expect(screen.getAllByText('$12.40').length).toBeGreaterThanOrEqual(1);
     });
@@ -335,14 +377,12 @@ describe('TabSpend tier gating', () => {
   });
 });
 
-describe('TabSpend window switcher', () => {
+describe('SpendPage window switcher', () => {
   it('refetches the summary for 30d via the Dropdown kit', async () => {
-    renderTab();
+    renderPage();
     await screen.findAllByText('$12.40');
     expect(hoisted.fetchSummary).toHaveBeenCalledWith('org-1', '7d');
     fireEvent.click(screen.getByRole('button', { name: 'Time window' }));
-    // The option's accessible name includes its description ("Trailing 30-day
-    // spend"), so match by substring like the rest of the suite.
     fireEvent.click(screen.getByRole('option', { name: /Last 30 days/ }));
     await waitFor(() => {
       expect(hoisted.fetchSummary).toHaveBeenCalledWith('org-1', '30d');

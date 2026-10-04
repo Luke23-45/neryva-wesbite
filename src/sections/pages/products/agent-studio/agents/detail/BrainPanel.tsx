@@ -112,8 +112,8 @@ const EmptyNote = styled.div`
 /**
  * Dedicated Brain section on the agent detail page (C04 PLAN.md §4.9, approved
  * mock `design_brain_detail_dark.svg`): serving chain, params, costs, credential
- * status. READ-ONLY by contract — edits live in the builder Brain slot and the
- * Models library; this panel deep-links out and never forks them. Served-reality
+ * status. READ-ONLY by contract — edits live in the builder Brain slot and My
+ * Providers; this panel deep-links out and never forks them. Served-reality
  * counts are deliberately absent (no per-run model source exists — §12.4).
  */
 export function BrainPanel({ agentId }: { agentId: string }) {
@@ -229,8 +229,8 @@ export function BrainPanel({ agentId }: { agentId: string }) {
             })}
           </CredList>
           <SectionNote>
-            Keys rotate and revoke in the Models library — this panel never touches sealed material.{' '}
-            <Link to="/agent-studio/providers">Manage in Providers →</Link>
+            Keys rotate and revoke in My Providers — this panel never touches sealed material.{' '}
+            <Link to="/agent-studio/providers/my-providers">Manage in Providers →</Link>
           </SectionNote>
         </>
       )}

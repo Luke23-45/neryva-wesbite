@@ -300,7 +300,7 @@ export function ModelPicker({
           builder draft so the Providers surface can send the user back. */}
       <CapNote>
         Need another model or endpoint?{' '}
-        <Link to="/agent-studio/providers" search={{ returnTo }}>
+        <Link to="/agent-studio/providers/catalog" search={{ returnTo }}>
           Open Providers →
         </Link>
       </CapNote>
@@ -387,10 +387,17 @@ function FixLink({ reason, isEnterprise }: { reason: string; isEnterprise: boole
   if (fix.action === 'connect' && !isEnterprise) {
     return <span> · Neryva-managed credentials apply — no action needed</span>;
   }
+  // Routed providers surface: each fix action deep-links its own page.
+  const to =
+    fix.action === 'connect' || fix.action === 'incident'
+      ? '/agent-studio/providers/my-providers'
+      : fix.action === 'billing'
+        ? '/agent-studio/settings/pricing'
+        : '/agent-studio/providers/models';
   return (
     <>
       {' · '}
-      <Link to="/agent-studio/providers">
+      <Link to={to}>
         {fix.label} →
       </Link>
     </>

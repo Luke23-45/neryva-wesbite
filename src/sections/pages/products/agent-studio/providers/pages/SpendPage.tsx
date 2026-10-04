@@ -1,11 +1,18 @@
 /**
- * Providers Phase 7 — Wave W1: Tab D "Spend & Budgets".
+ * Providers — "Spend & Budgets" page (routed; the tab system is retired).
+ *
+ * Layout follows spend-list-reference.svg: summary cards (incl. budget cap
+ * with progress), PER-CREDENTIAL SPEND table, per-provider breakdown,
+ * BUDGET & CONTROLS, fee transparency, audit export.
  *
  * Org spend overview (platform settled spend vs BYOK list-price equivalent —
  * the BYOK figure is ALWAYS labeled "list-price equivalent — not billed"),
- * per-key/per-model 7d/30d breakdown, N-7 per-credential spend, monthly cap
- * editor, the include_byok_spend toggle with its honest explanation,
- * engine-truth fee transparency, and Enterprise audit export.
+ * N-7 per-credential spend, monthly cap editor, the include_byok_spend
+ * toggle with its honest explanation, engine-truth fee transparency, and
+ * Enterprise audit export.
+ *
+ * Honest omissions (Law VII): the SVG's PER-MODEL table and on-breach
+ * behavior radios have no backing API — they are not rendered.
  *
  * Tier/role gating (display-only; the server gates every action):
  * - spend data is owner/admin/billing only
@@ -13,17 +20,20 @@
  * - export is Enterprise + spend-visible roles
  * - Free tier gets a read-only overview (doc 19 §2) — no controls, no export.
  *
- * Design: Apple bar, flat colors, Dropdown kit (never native <select>), no
- * content modals, no invented numbers — every figure is engine-rendered or
- * absent.
+ * Design: flat theme.app.* colors, Dropdown kit (never native <select>),
+ * no content modals, no invented numbers — every figure is engine-rendered
+ * or absent.
  */
 import { useState } from 'react';
+import styled from 'styled-components';
+import { useQueries } from '@tanstack/react-query';
 import { useOrg } from '@/Context/OrgContext';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Dropdown } from '@/components/common/ui/Dropdown';
 import { Switch } from '@/components/common/ui/Switch';
 import { TextInput } from '@/components/common/ui/TextInput';
 import {
-  useCredentialUsage,
+  providerCredentialsKeys,
   useCredentials,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials';
 import { useOrgTier } from '@/sections/pages/products/agent-studio/providers/hooks/useOrgTier';
@@ -31,11 +41,11 @@ import {
   useSpendMutations,
   useSpendSummary,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useSpend';
-import type {
-  CredentialUsageView,
-  ProviderCredentialView,
-  SpendSummaryView,
-  SpendWindow,
+import {
+  fetchCredentialUsage,
+  type CredentialUsageView,
+  type SpendSummaryView,
+  type SpendWindow,
 } from '@/sections/pages/products/agent-studio/providers/api';
 import {
   bodyText,
@@ -69,7 +79,7 @@ function formatUsd(value: string | undefined): string | null {
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function TabSpend() {
+export function SpendPage() {
   const { orgId, role, atLeast } = useOrg();
   const tier = useOrgTier();
   const [window, setWindow] = useState<SpendWindow>('7d');
@@ -86,15 +96,23 @@ export function TabSpend() {
 
   if (role === null) {
     return (
-      <section aria-label="Spend & Budgets">
+      <ViewShell>
+        <ViewHeader>
+          <ViewTitle>Spend</ViewTitle>
+          <ViewSubtitle>Spend, budget &amp; controls.</ViewSubtitle>
+        </ViewHeader>
         <p style={hintText}>Resolving your membership…</p>
-      </section>
+      </ViewShell>
     );
   }
 
   if (!canViewSpend) {
     return (
-      <section aria-label="Spend & Budgets">
+      <ViewShell>
+        <ViewHeader>
+          <ViewTitle>Spend</ViewTitle>
+          <ViewSubtitle>Spend, budget &amp; controls.</ViewSubtitle>
+        </ViewHeader>
         <div style={card}>
           <h2 style={cardTitle}>Spend &amp; Budgets</h2>
           <p style={{ ...bodyText, marginTop: 8 }}>
@@ -102,24 +120,20 @@ export function TabSpend() {
             an owner or admin for access.
           </p>
         </div>
-      </section>
+      </ViewShell>
     );
   }
 
   return (
-    <section aria-label="Spend & Budgets">
+    <ViewShell>
+      <ViewHeader>
+        <ViewTitle>Spend</ViewTitle>
+        <ViewSubtitle>
+          What your organization spent on model calls — platform-settled spend
+          separate from BYOK list-price equivalents.
+        </ViewSubtitle>
+      </ViewHeader>
       <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
-        <div>
-          <h2
-            style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text, letterSpacing: '-0.01em' }}
-          >
-            Spend &amp; Budgets
-          </h2>
-          <p style={{ ...hintText, marginTop: 4 }}>
-            What your organization spent on model calls — platform-settled spend
-            separate from BYOK list-price equivalents.
-          </p>
-        </div>
         <div style={{ minWidth: 200 }}>
           <Dropdown
             variant="select"
@@ -171,13 +185,18 @@ export function TabSpend() {
               mutations={mutations}
             />
           )}
+          <p style={{ ...hintText, marginTop: 24, maxWidth: 860 }}>
+            Toggles apply immediately · budget caps are enforced before billable
+            calls run · every figure above is engine-rendered for the selected
+            window.
+          </p>
         </>
       )}
-    </section>
+    </ViewShell>
   );
 }
 
-export default TabSpend;
+
 
 /* ------------------------------------------------------------------ */
 /* Overview cards                                                      */
@@ -186,6 +205,13 @@ export default TabSpend;
 function OverviewCards({ data }: { data: SpendSummaryView }) {
   const platform = formatUsd(data.platform_spend_usd);
   const byok = formatUsd(data.byok.list_price_equivalent_usd);
+  const budget = data.budget;
+  const capUsd = budget.cap_usd_cents == null ? null : budget.cap_usd_cents / 100;
+  const used = Number(budget.used_usd);
+  const pct =
+    capUsd != null && capUsd > 0 && Number.isFinite(used)
+      ? Math.min(100, Math.round((used / capUsd) * 100))
+      : null;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
@@ -211,6 +237,43 @@ function OverviewCards({ data }: { data: SpendSummaryView }) {
           {data.byok.fee.calls.toLocaleString()}
         </p>
         <p style={{ ...hintText, marginTop: 6 }}>in this window</p>
+      </div>
+      <div style={card}>
+        <p style={labelText}>Budget cap</p>
+        <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
+          {capUsd == null ? 'Unlimited' : formatUsd(String(capUsd)) ?? '—'}
+        </p>
+        {pct !== null ? (
+          <div style={{ marginTop: 10 }}>
+            <div
+              style={{
+                height: 8,
+                borderRadius: 999,
+                background: colors.bg,
+                border: `1px solid ${colors.borderSoft}`,
+                overflow: 'hidden',
+              }}
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Monthly budget used"
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${pct}%`,
+                  background: pct >= 100 ? colors.error : colors.accent,
+                }}
+              />
+            </div>
+            <p style={{ ...hintText, marginTop: 6 }}>
+              {pct}% used{budget.include_byok_spend ? ' · BYOK counts toward the cap' : ''}
+            </p>
+          </div>
+        ) : (
+          <p style={{ ...hintText, marginTop: 6 }}>No cap set</p>
+        )}
       </div>
     </div>
   );
@@ -290,12 +353,92 @@ function BreakdownList({ data }: { data: SpendSummaryView }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* N-7 per-credential spend                                            */
+/* N-7 per-credential spend — table per the spend list reference        */
 /* ------------------------------------------------------------------ */
+
+const SpendTableWrap = styled.div`
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${({ theme }) => theme.app.surface.subtle};
+  margin-top: 16px;
+`;
+
+const SpendTableHead = styled.div`
+  padding: 12px 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+const StyledSpendTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+`;
+
+const SpendHeadCell = styled.th`
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.faint};
+  padding: 10px 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.tint};
+  white-space: nowrap;
+  &:not(:first-child) {
+    text-align: right;
+  }
+`;
+
+const SpendBodyRow = styled.tr`
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const SpendBodyCell = styled.td`
+  padding: 10px 12px;
+  vertical-align: middle;
+  color: ${({ theme }) => theme.app.text.primary};
+  &:not(:first-child) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+`;
+
+const CredName = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CredMeta = styled.div`
+  font-family: ${({ theme }) => theme.typography.fonts.mono};
+  font-size: 11.5px;
+  color: ${({ theme }) => theme.app.text.faint};
+  margin-top: 2px;
+`;
+
+const ListBasisTag = styled.span`
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: ${({ theme }) => theme.app.text.faint};
+`;
 
 function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWindow }) {
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
   const credentials = data?.credentials ?? [];
+
+  const usages = useQueries({
+    queries: credentials.map((c) => ({
+      queryKey: providerCredentialsKeys.usage(orgId, c.id, window),
+      queryFn: () => fetchCredentialUsage(orgId, c.id, window),
+      staleTime: 60_000,
+    })),
+  });
 
   if (isLoading) return <p style={{ ...hintText, marginTop: 16 }}>Loading credentials…</p>;
   if (isError) {
@@ -314,80 +457,70 @@ function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWi
   }
   if (credentials.length === 0) return null;
 
-  return (
-    <div style={{ ...card, marginTop: 16 }}>
-      <h3 style={sectionTitle}>Spend per connected key</h3>
-      <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-        {credentials.map((c) => (
-          <CredentialSpendRow key={c.id} orgId={orgId} credential={c} window={window} />
-        ))}
-      </div>
-    </div>
-  );
-}
+  // Share denominator: the spend figures shown in this table. Rows still
+  // loading are excluded — their cells read "—" until the data lands.
+  const spendOf = (u: CredentialUsageView | undefined): number | null => {
+    if (!u) return null;
+    const n = Number(u.spend_usd);
+    return Number.isFinite(n) ? n : null;
+  };
+  const total = usages.reduce<number>((sum, q) => {
+    const s = q.data ? spendOf(q.data) : null;
+    return s === null ? sum : sum + s;
+  }, 0);
 
-function CredentialSpendRow({
-  orgId,
-  credential,
-  window,
-}: {
-  orgId: string;
-  credential: ProviderCredentialView;
-  window: SpendWindow;
-}) {
-  const usage = useCredentialUsage(orgId, credential.id, window);
-  const u: CredentialUsageView | undefined = usage.data;
   return (
-    <div
-      style={{
-        border: `1px solid ${colors.borderSoft}`,
-        borderRadius: 10,
-        padding: '12px 14px',
-        background: colors.bg,
-      }}
-    >
-      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 0 }}>
-          <span style={{ ...bodyText, fontWeight: 600, color: colors.text }}>
-            {credential.provider}
-            <span style={{ color: colors.textFaint, fontWeight: 400 }}> — {credential.label}</span>
-          </span>
-          <span
-            style={{
-              ...hintText,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              marginLeft: 8,
-            }}
-          >
-            {credential.secret_fingerprint || 'no fingerprint'}
-          </span>
-        </div>
-        <div style={{ ...row, gap: 16 }}>
-          <SpendFigure label="Requests" value={u ? u.requests.toLocaleString() : '—'} />
-          <SpendFigure label="Tokens" value={u ? u.tokens.total.toLocaleString() : '—'} />
-          <SpendFigure
-            label="Spend"
-            value={u ? formatUsd(u.spend_usd) ?? '—' : '—'}
-            sub={
-              u && u.pricing_basis === 'list' && u.list_price_equivalent_usd
-                ? `${LIST_PRICE_LABEL} ($${u.list_price_equivalent_usd})`
-                : undefined
-            }
-          />
-        </div>
-      </div>
-      {usage.isLoading && <p style={{ ...hintText, marginTop: 6 }}>Loading usage…</p>}
-    </div>
-  );
-}
-
-function SpendFigure({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div>
-      <div style={{ ...hintText, fontSize: 11 }}>{label}</div>
-      <div style={{ ...bodyText, fontWeight: 700, fontSize: 15, color: colors.text }}>{value}</div>
-      {sub && <div style={{ ...hintText, fontSize: 11, marginTop: 2 }}>{sub}</div>}
-    </div>
+    <SpendTableWrap>
+      <SpendTableHead>
+        <h3 style={sectionTitle}>Per-credential spend</h3>
+        <p style={{ ...hintText, marginTop: 4 }}>
+          Share is the key&apos;s fraction of the spend shown in this table.
+        </p>
+      </SpendTableHead>
+      <StyledSpendTable>
+        <thead>
+          <tr>
+            <SpendHeadCell scope="col">Credential</SpendHeadCell>
+            <SpendHeadCell scope="col">Requests</SpendHeadCell>
+            <SpendHeadCell scope="col">Tokens</SpendHeadCell>
+            <SpendHeadCell scope="col">Spend</SpendHeadCell>
+            <SpendHeadCell scope="col">Share</SpendHeadCell>
+          </tr>
+        </thead>
+        <tbody>
+          {credentials.map((c, i) => {
+            const u = usages[i]?.data as CredentialUsageView | undefined;
+            const loading = usages[i]?.isLoading ?? false;
+            const spend = spendOf(u);
+            const share =
+              spend !== null && total > 0 ? `${Math.round((spend / total) * 100)}%` : '—';
+            return (
+              <SpendBodyRow key={c.id}>
+                <SpendBodyCell>
+                  <CredName>
+                    {c.provider} <span style={{ fontWeight: 400 }}>— {c.label}</span>
+                  </CredName>
+                  <CredMeta>{c.secret_fingerprint || 'no fingerprint'}</CredMeta>
+                  {u && u.pricing_basis === 'list' && u.list_price_equivalent_usd && (
+                    <ListBasisTag>
+                      {LIST_PRICE_LABEL} (${u.list_price_equivalent_usd})
+                    </ListBasisTag>
+                  )}
+                </SpendBodyCell>
+                <SpendBodyCell>{loading || !u ? '—' : u.requests.toLocaleString()}</SpendBodyCell>
+                <SpendBodyCell>
+                  {loading || !u ? '—' : u.tokens.total.toLocaleString()}
+                </SpendBodyCell>
+                <SpendBodyCell>
+                  {loading || !u ? '—' : (formatUsd(u.spend_usd) ?? '—')}
+                </SpendBodyCell>
+                <SpendBodyCell>{loading ? '—' : share}</SpendBodyCell>
+              </SpendBodyRow>
+            );
+          })}
+        </tbody>
+      </StyledSpendTable>
+    </SpendTableWrap>
   );
 }
 
@@ -486,7 +619,7 @@ function BudgetControls({
 
   return (
     <div style={{ ...card, marginTop: 16 }}>
-      <h3 style={sectionTitle}>Budget</h3>
+      <h3 style={sectionTitle}>Budget &amp; Controls</h3>
 
       <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
         <p style={bodyText}>

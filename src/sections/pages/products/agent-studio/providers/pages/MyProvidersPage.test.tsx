@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Providers Phase 5 — Wave B: TabMyProviders targeted tests.
+ * MyProvidersPage — targeted tests (ported from the retired TabMyProviders suite).
  * - empty state renders the two primary actions
  * - free tier renders the honest nothing-to-manage note
  * - cards render sorted by priority
@@ -11,7 +11,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
-import { TabMyProviders } from './TabMyProviders';
+import { MyProvidersPage } from './MyProvidersPage';
 import type { ProviderCredentialView } from '@/sections/pages/products/agent-studio/providers/api';
 
 const hoisted = vi.hoisted(() => ({
@@ -93,14 +93,14 @@ function cred(id: string, priority: number, overrides: Partial<ProviderCredentia
   };
 }
 
-function renderTab() {
+function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={client}>
-        <TabMyProviders />
+        <MyProvidersPage />
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -112,9 +112,9 @@ beforeEach(() => {
   hoisted.credentials = [];
 });
 
-describe('TabMyProviders', () => {
+describe('MyProvidersPage', () => {
   it('empty state shows both actions with the same labels and emphasis as the header', () => {
-    renderTab();
+    renderPage();
     expect(screen.getByText('No providers connected')).toBeTruthy();
     // Header action + empty-state action.
     expect(screen.getAllByRole('button', { name: 'Connect API Key' })).toHaveLength(2);
@@ -125,14 +125,14 @@ describe('TabMyProviders', () => {
 
   it('free tier renders the nothing-to-manage note', () => {
     hoisted.tier = 'free';
-    renderTab();
+    renderPage();
     expect(screen.getByText(/nothing to connect or manage here/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Connect API Key' })).toBeNull();
   });
 
   it('renders cards sorted by priority', () => {
     hoisted.credentials = [cred('c2', 1), cred('c1', 0)];
-    renderTab();
+    renderPage();
     const cards = screen.getAllByLabelText(/API key: Key /);
     expect(cards[0].getAttribute('aria-label')).toBe('API key: Key c1');
     expect(cards[1].getAttribute('aria-label')).toBe('API key: Key c2');
@@ -140,7 +140,7 @@ describe('TabMyProviders', () => {
 
   it('priority move swaps priorities via patch', () => {
     hoisted.credentials = [cred('c1', 0), cred('c2', 1)];
-    renderTab();
+    renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Move Key c1 down' }));
     expect(hoisted.patchMutate).toHaveBeenCalledWith(
       { id: 'c1', patch: { priority: 1 } },
@@ -149,7 +149,7 @@ describe('TabMyProviders', () => {
   });
 
   it('opening Connect API Key shows the verify-first form', () => {
-    renderTab();
+    renderPage();
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect API Key' })[0]);
     expect(screen.getByLabelText('Connect API key form')).toBeTruthy();
     // Connect is disabled until a successful probe.

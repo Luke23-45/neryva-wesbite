@@ -13,6 +13,10 @@ export interface ProviderDirectoryFilters {
   tier?: OrgModelTier;
   /** Capability pre-filter (server-side). */
   capability?: ProviderDirectoryCapability;
+  /** Max input price USD/1M (server-side). */
+  maxInputPricePer1m?: number;
+  /** ZDR-capable providers only (server-side). */
+  zdr?: boolean;
 }
 
 /**
@@ -38,13 +42,22 @@ export function useProviderDirectory(
   const search = filters.search?.trim() ? filters.search.trim() : undefined;
   const tier = filters.tier;
   const capability = filters.capability;
+  const maxInputPricePer1m = filters.maxInputPricePer1m;
+  const zdr = filters.zdr;
 
   return useQuery({
     queryKey: [
       ...providerDirectoryKeyPrefix(orgId as string),
-      { search: search ?? '', tier: tier ?? '', capability: capability ?? '' },
+      {
+        search: search ?? '',
+        tier: tier ?? '',
+        capability: capability ?? '',
+        maxInputPricePer1m: maxInputPricePer1m ?? '',
+        zdr: zdr ?? '',
+      },
     ],
-    queryFn: () => fetchProviderDirectory(orgId as string, { search, tier, capability }),
+    queryFn: () =>
+      fetchProviderDirectory(orgId as string, { search, tier, capability, maxInputPricePer1m, zdr }),
     enabled: orgId !== null && orgId !== '',
     staleTime: 30_000,
     retry: 1,

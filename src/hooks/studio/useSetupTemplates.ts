@@ -251,13 +251,13 @@ export function reasonLabel(code: string): string {
 export function reasonFix(code: string): { label: string; to: string } | null {
   switch (code) {
     case 'required_model_capability_missing':
-      return { label: 'Review models', to: '/agent-studio/providers' };
+      return { label: 'Review models', to: '/agent-studio/providers/models' };
     case 'required_tool_missing':
       return { label: 'Open tool catalog', to: '/agent-studio/tools' };
     case 'knowledge_source_missing':
       return { label: 'Map knowledge', to: '/agent-studio/knowledge' };
     case 'provider_credential_missing':
-      return { label: 'Add credentials', to: '/agent-studio/providers' };
+      return { label: 'Add credentials', to: '/agent-studio/providers/my-providers' };
     case 'legacy_agent_structure':
       // No self-service fix: a legacy-structure template cannot be
       // installed until it is re-released as a v2 template. The engine

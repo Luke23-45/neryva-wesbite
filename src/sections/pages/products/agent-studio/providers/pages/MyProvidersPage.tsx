@@ -1,15 +1,16 @@
 /**
- * Providers Phase 5 — Wave B: Tab B "My Providers".
+ * Providers — "My Providers" page (routed; the tab system is retired).
  *
  * Key-card list with "Connect API Key" + "Connect Custom Endpoint
  * (Enterprise)" actions, and an empty state with the same two primary
  * actions. Per-tier surface (doc 19 §2): the Free tier has nothing to
- * manage (platform keys) — the tab renders an honest note instead of the
+ * manage (platform keys) — the page renders an honest note instead of the
  * management UI.
  */
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useOrg } from '@/Context/OrgContext';
+import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { KeyCard } from '@/sections/pages/products/agent-studio/providers/components/KeyCard';
 import { ConnectKeyForm } from '@/sections/pages/products/agent-studio/providers/components/ConnectKeyForm';
 import {
@@ -71,7 +72,7 @@ function ConnectActions({
   );
 }
 
-export function TabMyProviders() {
+export function MyProvidersPage() {
   const { orgId } = useOrg();
   const tier = useOrgTier();
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
@@ -93,14 +94,19 @@ export function TabMyProviders() {
   // Free tier: platform keys only, nothing to manage (doc 19 §2).
   if (tier === 'free') {
     return (
-      <div style={card}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: colors.text }}>My Providers</h2>
-        <p style={{ ...bodyText, marginTop: 8 }}>
-          Your organization runs on Neryva’s Platform Managed keys — there is nothing to connect or
-          manage here. Bring your own API keys with a Pay-as-you-go plan, or a custom endpoint with
-          Enterprise.
-        </p>
-      </div>
+      <ViewShell>
+        <ViewHeader>
+          <ViewTitle>My Providers</ViewTitle>
+          <ViewSubtitle>Your connected API keys and custom endpoints.</ViewSubtitle>
+        </ViewHeader>
+        <div style={card}>
+          <p style={{ ...bodyText, margin: 0 }}>
+            Your organization runs on Neryva’s Platform Managed keys — there is nothing to connect
+            or manage here. Bring your own API keys with a Pay-as-you-go plan, or a custom endpoint
+            with Enterprise.
+          </p>
+        </div>
+      </ViewShell>
     );
   }
 
@@ -120,24 +126,20 @@ export function TabMyProviders() {
   };
 
   return (
-    <section aria-label="My Providers">
-      <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: colors.text, letterSpacing: '-0.01em' }}>
-            My Providers
-          </h2>
-          <p style={{ ...hintText, marginTop: 4 }}>
-            Your connected API keys and custom endpoints. Keys are verified before they can serve
-            traffic.
-          </p>
-        </div>
-        <div style={row}>
-          <ConnectActions
-            showApiKey={!connectOpen}
-            onConnectKey={() => setConnectOpen(true)}
-            isEnterprise={tier === 'enterprise'}
-          />
-        </div>
+    <ViewShell>
+      <ViewHeader>
+        <ViewTitle>My Providers</ViewTitle>
+        <ViewSubtitle>
+          Your connected API keys and custom endpoints. Keys are verified before they can serve
+          traffic.
+        </ViewSubtitle>
+      </ViewHeader>
+      <div style={{ ...row, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: 16 }}>
+        <ConnectActions
+          showApiKey={!connectOpen}
+          onConnectKey={() => setConnectOpen(true)}
+          isEnterprise={tier === 'enterprise'}
+        />
       </div>
 
       {connectOpen && (
@@ -192,8 +194,6 @@ export function TabMyProviders() {
           />
         ))}
       </div>
-    </section>
+    </ViewShell>
   );
 }
-
-export default TabMyProviders;

@@ -325,7 +325,7 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
     });
     expect(screen.getByText(/credential missing/)).toBeTruthy();
     const link = screen.getByRole('link', { name: /connect a credential/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers');
+    expect(link.getAttribute('href')).toBe('/agent-studio/providers/my-providers');
   });
 
   it('stays truthful for non-enterprise: no dead connect action', async () => {
@@ -341,7 +341,7 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
       shell();
     });
     const link = screen.getByRole('link', { name: /ask an admin to enable/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers');
+    expect(link.getAttribute('href')).toBe('/agent-studio/providers/models');
   });
 
   it('renders model_disabled_by_org with its label and a Providers link', async () => {
@@ -350,7 +350,7 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
     });
     expect(screen.getByText(/disabled by organization/)).toBeTruthy();
     const link = screen.getByRole('link', { name: /re-enable in providers/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers');
+    expect(link.getAttribute('href')).toBe('/agent-studio/providers/models');
   });
 
   it('explains a subscription lock with the product label and a billing link', async () => {
@@ -370,7 +370,7 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
     // theme.app.status.error.fg = #f87171.
     expect(window.getComputedStyle(el).color).toBe('rgb(248, 113, 113)');
     const link = screen.getByRole('link', { name: /rotate the key/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers');
+    expect(link.getAttribute('href')).toBe('/agent-studio/providers/my-providers');
   });
 
   it('renders non-red reasons in the amber tone', async () => {
@@ -413,7 +413,7 @@ describe('ModelPicker footer, toggle, and gating', () => {
     });
     const link = screen.getByRole('link', { name: /open providers/i }) as HTMLAnchorElement;
     const url = new URL(link.getAttribute('href')!, 'http://localhost');
-    expect(url.pathname).toBe('/agent-studio/providers');
+    expect(url.pathname).toBe('/agent-studio/providers/catalog');
     expect(url.searchParams.get('returnTo')).toBe('/agent-studio/agents/agent-1/build');
     expect(screen.getByText(/Need another model or endpoint/)).toBeTruthy();
   });

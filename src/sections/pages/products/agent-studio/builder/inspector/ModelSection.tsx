@@ -1457,7 +1457,7 @@ function PipelineRow({
             {unusableReason !== null && (
               <PipelineRowMeta>
                 unusable: {humanizeReason(unusableReason)} ·{' '}
-                <Link to="/agent-studio/providers">Open Providers →</Link>
+                <Link to="/agent-studio/providers/models">Open Providers →</Link>
               </PipelineRowMeta>
             )}
           </div>
@@ -1530,7 +1530,7 @@ function PipelineRow({
                   <>No {providerLabel(provider)} credential connected.{' '}</>
                 )}
                 {canAuthor && (
-                  <Link to="/agent-studio/providers">Connect {providerLabel(provider)} →</Link>
+                  <Link to="/agent-studio/providers/my-providers">Connect {providerLabel(provider)} →</Link>
                 )}
               </HelperText>
             )}

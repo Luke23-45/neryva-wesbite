@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /**
- * TabModels — targeted coverage:
- * - Both supergroups render; the same model id from Platform Managed AND a
- *   BYOK key is two distinct rows (grouped by source, never conflated).
+ * ModelsPage — targeted coverage (ported from the retired TabModels suite):
+ * - Both supergroups render as dense tables; the same model id from
+ *   Platform Managed AND a BYOK key is two distinct rows.
  * - Tier gating: models above the org tier keep the full row visible with a
  *   disabled switch + explanatory tooltip + Upgrade CTA (never hidden).
  * - usable=false rows show reasons[] as human text.
@@ -12,12 +12,13 @@
  *   platform, the key UUID for BYOK).
  * - Reasoning presets render display-only with honest "per-assistant in the
  *   builder" copy — no invented write path.
+ * - Search narrows the tables; the counts line stays honest.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
-import TabModels from './TabModels';
+import { ModelsPage } from './ModelsPage';
 import type { GroupedModels } from '../hooks/useGroupedModels';
 
 const mutateMock = vi.hoisted(() => vi.fn());
@@ -44,6 +45,23 @@ vi.mock('../hooks/useGroupedModels', () => ({
     refetch: vi.fn(),
   }),
   useModelToggles: () => ({ mutate: mutateMock, isPending: false }),
+  CAPABILITY_LABELS: {
+    tools: 'Tools',
+    vision: 'Vision',
+    reasoning: 'Reasoning',
+    structured_output: 'Structured output',
+  },
+  humanizeReason: (r: string) => r.replace(/_/g, ' '),
+  rowKey: (sg: string, g: { provider: string }, m: { model_id: string }) =>
+    `${sg}:${g.provider}:${m.model_id}`,
+}));
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -173,10 +191,10 @@ function fixture(): GroupedModels {
   };
 }
 
-function renderTab() {
+function renderPage() {
   return render(
     <ThemeProvider theme={theme}>
-      <TabModels />
+      <ModelsPage />
     </ThemeProvider>,
   );
 }
@@ -185,40 +203,50 @@ beforeEach(() => {
   mutateMock.mockReset();
 });
 
-describe('TabModels', () => {
+describe('ModelsPage', () => {
   it('renders both supergroups; the same model from both sources is two distinct rows', () => {
-    renderTab();
-    // 'Platform Managed' appears as both the section badge and the panel title.
-    expect(screen.getAllByText('Platform Managed')).toHaveLength(2);
-    // BYOK badge is the short label; the panel carries the full title.
-    expect(screen.getByText('BYOK & Custom')).toBeTruthy();
-    expect(screen.getByText('BYOK & Custom Endpoints')).toBeTruthy();
-    // BYOK group header: key label + fingerprint.
-    expect(screen.getByText('OpenAI — Production Key')).toBeTruthy();
+    renderPage();
+    expect(screen.getByText('Platform Managed')).toBeTruthy();
+    expect(screen.getByText('BYOK · your keys')).toBeTruthy();
+    // BYOK credential sub-header: key label + fingerprint.
+    expect(screen.getByRole('heading', { name: /BYOK · Production Key/ })).toBeTruthy();
     expect(screen.getByText('sk-…8f9a')).toBeTruthy();
     // Same model id, two distinct rows — one per supergroup.
     expect(screen.getAllByText('GPT-4o')).toHaveLength(2);
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ })).toBeTruthy();
+    // Counts line is honest.
+    expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
   });
 
-  it('renders capability, price, and tier badges on a model row', () => {
-    renderTab();
-    expect(screen.getByText('$2.50 / $10.00 per 1M tokens')).toBeTruthy();
+  it('renders the table columns: capabilities, context, input/output, tier, used-by', () => {
+    renderPage();
+    expect(screen.getAllByText('Capabilities').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Context').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Input / 1M').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Used by').length).toBeGreaterThan(0);
+    // Priced platform row shows input + output cells.
+    expect(screen.getByText('$2.50')).toBeTruthy();
+    expect(screen.getByText('$10.00')).toBeTruthy();
     expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
-    // Tool-less rows get the amber incompatibility badge.
-    expect(screen.getByText('Incompatible: no tool support')).toBeTruthy();
+    // Tool-less rows get the honest tag.
+    expect(screen.getByText('No tools')).toBeTruthy();
+    // Pinned model shows its assistant count.
+    expect(screen.getByText('1 assistant')).toBeTruthy();
+    // The SVG's DEFAULT column has no backing concept — it must not render.
+    expect(screen.queryByText('Default')).toBeNull();
   });
 
   it('PRV-035: operator-declared prices are labeled, never presented as catalog prices', () => {
-    renderTab();
-    expect(
-      screen.getByText('$0.35 / $0.4 per 1M tokens (operator-declared)'),
-    ).toBeTruthy();
+    renderPage();
+    expect(screen.getByText('$0.35')).toBeTruthy();
+    expect(screen.getAllByText('operator').length).toBeGreaterThan(0);
+    // BYOK rows without pricing show "Direct" (input + output), never an invented zero.
+    expect(screen.getAllByText('Direct')).toHaveLength(2);
   });
 
   it('tier-gates honestly: disabled switch + tooltip + Upgrade CTA, never hidden', async () => {
-    renderTab();
+    renderPage();
     // Grok Reasoner requires enterprise; the org is free. The kit's Switch
     // expresses disabled via aria-disabled + tabindex -1 (no native disabled).
     const grokSwitch = screen.getByRole('switch', { name: /Grok Reasoner/ });
@@ -236,7 +264,7 @@ describe('TabModels', () => {
       { timeout: 3000 },
     );
 
-    expect(screen.getByRole('link', { name: /Upgrade plan to enable Grok Reasoner/ })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'Upgrade →' }).length).toBeGreaterThan(0);
 
     // A free-tier model on a free org stays interactive.
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).not.toHaveAttribute(
@@ -246,27 +274,23 @@ describe('TabModels', () => {
   });
 
   it('shows usable=false reasons as human text', () => {
-    renderTab();
-    expect(
-      screen.getByText('No verified provider credential is attached — connect a key before enabling.'),
-    ).toBeTruthy();
+    renderPage();
+    expect(screen.getByText('provider credential missing')).toBeTruthy();
   });
 
   it('never renders the switch ON alongside a cannot-enable warning (stale enabled flag)', () => {
-    renderTab();
+    renderPage();
     // Grok Heavy: stored enabled=true, but the engine reports usable=false.
     const sw = screen.getByRole('switch', { name: /Grok Heavy/ });
     expect(sw).toHaveAttribute('aria-checked', 'false');
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    expect(
-      screen.getByText('Not covered by your current plan — upgrade your plan to enable this model.'),
-    ).toBeTruthy();
+    expect(screen.getByText('subscription required')).toBeTruthy();
     // Enable label, never "Disable", when unusable.
     expect(sw.getAttribute('aria-label')).toMatch(/^Enable Grok Heavy/);
   });
 
   it('posts the exact N-6 payload when toggling a model on (platform: no credential_id)', () => {
-    renderTab();
+    renderPage();
     fireEvent.click(screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ }));
     expect(mutateMock).toHaveBeenCalledTimes(1);
     expect(mutateMock.mock.calls[0][0]).toEqual([
@@ -281,7 +305,7 @@ describe('TabModels', () => {
   });
 
   it('requires the blast-radius confirm before toggling off a pinned model', () => {
-    renderTab();
+    renderPage();
     fireEvent.click(screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ }));
 
     // The confirm lists the affected assistant (ID — the engine N-5 payload
@@ -311,7 +335,7 @@ describe('TabModels', () => {
   });
 
   it('renders reasoning presets as display-only with honest per-assistant copy', () => {
-    const { container } = renderTab();
+    const { container } = renderPage();
     // Two reasoning-capable models in the fixture (Claude + Grok) — open the first.
     const presetButtons = screen.getAllByRole('button', { name: 'Reasoning presets' });
     expect(presetButtons).toHaveLength(2);
@@ -323,5 +347,20 @@ describe('TabModels', () => {
     expect(screen.getByText(/no engine field for an org-wide reasoning default/)).toBeTruthy();
     // No invented write path: no slider or input that could pretend to persist.
     expect(container.querySelector('input[type="range"]')).toBeNull();
+  });
+
+  it('search narrows the tables and the counts line follows', () => {
+    renderPage();
+    const search = screen.getByLabelText('Search models');
+    fireEvent.change(search, { target: { value: 'claude' } });
+    expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
+    expect(screen.queryByText('Grok Reasoner')).toBeNull();
+    expect(screen.getByText('1 of 7 models · 0 enabled')).toBeTruthy();
+  });
+
+  it('renders the footer copy from the reference', () => {
+    renderPage();
+    expect(screen.getByText(/Toggles apply immediately/)).toBeTruthy();
+    expect(screen.getByText(/disabled models fail closed at publish and run time/)).toBeTruthy();
   });
 });

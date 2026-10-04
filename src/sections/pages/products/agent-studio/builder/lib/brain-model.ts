@@ -119,7 +119,7 @@ const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction | nu
   credential_compromised: { label: 'Rotate the key', action: 'incident' },
   subscription_required: { label: 'View subscription options', action: 'billing' },
   // N-6 org model toggles (Phase 6): the org disabled this model — re-enable
-  // it on the Providers page (Models tab). Same 'enable' action as
+  // it on the Providers > Models page. Same 'enable' action as
   // provider_not_enabled: both deep-link Providers.
   model_disabled_by_org: { label: 'Re-enable in Providers', action: 'enable' },
   // No console action exists — the allowance refreshes on a rolling weekly
@@ -133,7 +133,7 @@ const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction | nu
 export function reasonFix(reason: string): { label: string; action: ReasonAction | null } {
   const hit = (REASON_FIX as Record<string, { label: string; action: ReasonAction }>)[reason];
   if (hit) return hit;
-  return { label: 'See Models library', action: null };
+  return { label: 'See Providers', action: null };
 }
 
 const REASON_LABEL: Record<ModelReason, string> = {

@@ -124,7 +124,7 @@ describe('BrainPanel dedicated section', () => {
     expect(screen.queryByText(/\*\*\*\*9f2c/)).toBeNull();
     expect(screen.queryByText(/fingerprint/)).toBeNull();
     expect(screen.getByText(/Edit in builder/).closest('a')?.getAttribute('href')).toBe('/agent-studio/agents/agent-1/build');
-    expect(screen.getByText(/Manage in Providers/).closest('a')?.getAttribute('href')).toBe('/agent-studio/providers');
+    expect(screen.getByText(/Manage in Providers/).closest('a')?.getAttribute('href')).toBe('/agent-studio/providers/my-providers');
     // No inputs anywhere on this panel — read-only by contract.
     expect(document.querySelector('input, textarea, select, button')).toBeNull();
   });

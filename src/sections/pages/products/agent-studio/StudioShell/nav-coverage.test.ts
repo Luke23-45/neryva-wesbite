@@ -63,25 +63,27 @@ const STUDIO_PREFIX = '/agent-studio';
 // - index redirects (component: () => null + redirect in beforeLoad)
 // - builder routes (full-bleed by lock, excluded from domain ownership)
 // - legacy redirects for the retired /models surface (B8 kill-switch, Phase 5):
-//   the routes render nothing and forward to /agent-studio/providers, so no
-//   domain owns them.
+//   the routes render nothing and forward to the routed providers pages, so
+//   no domain owns them.
 const NON_NAVIGABLE_EXACT = new Set([
   '/agent-studio',
   '/agent-studio/settings',
   '/agent-studio/models',
   '/agent-studio/models/credentials/new',
   '/agent-studio/models/credentials/$credentialId/rotate',
+  '/agent-studio/providers',
 ]);
 
 const config = navJson as unknown as NavConfig;
 
 describe('nav.json v2 shape', () => {
-  it('declares exactly the 7 locked domains', () => {
+  it('declares exactly the 8 locked domains', () => {
     expect(config.domains.map((d) => d.key)).toEqual([
       'dashboard',
       'chat',
       'agents',
       'libraries',
+      'providers',
       'insights',
       'platform',
       'settings',

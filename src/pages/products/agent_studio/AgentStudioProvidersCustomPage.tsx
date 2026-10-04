@@ -115,7 +115,7 @@ export default function AgentStudioProvidersCustomPage() {
         />
         <ViewShell>
           <BackRow>
-            <BackLink to="/agent-studio/providers">
+            <BackLink to="/agent-studio/providers/my-providers">
               <ArrowLeft size={15} aria-hidden="true" />
               Back to Providers
             </BackLink>
@@ -156,7 +156,7 @@ export default function AgentStudioProvidersCustomPage() {
       />
       <ViewShell>
         <BackRow>
-          <BackLink to="/agent-studio/providers">
+          <BackLink to="/agent-studio/providers/my-providers">
             <ArrowLeft size={15} aria-hidden="true" />
             Back to Providers
           </BackLink>

@@ -42,8 +42,20 @@
         { "label": "Documents", "to": "/agent-studio/knowledge", "icon": "knowledge", "badge": "attention" },
         { "label": "Memory", "to": "/agent-studio/memory", "icon": "chat" },
         { "label": "Datasets", "to": "/agent-studio/datasets", "icon": "evaluations" },
-        { "label": "Tools", "to": "/agent-studio/tools", "icon": "tools", "badge": "count" },
-        { "label": "Providers", "to": "/agent-studio/providers", "icon": "models" }
+        { "label": "Tools", "to": "/agent-studio/tools", "icon": "tools", "badge": "count" }
+      ]
+    },
+    {
+      "key": "providers",
+      "label": "Providers",
+      "subtitle": "Models, keys & budgets",
+      "icon": "models",
+      "landing": "/agent-studio/providers/catalog",
+      "items": [
+        { "label": "Catalog", "to": "/agent-studio/providers/catalog", "icon": "knowledge", "match": "/agent-studio/providers" },
+        { "label": "My Providers", "to": "/agent-studio/providers/my-providers", "icon": "api" },
+        { "label": "Models", "to": "/agent-studio/providers/models", "icon": "models" },
+        { "label": "Spend & Budgets", "to": "/agent-studio/providers/spend", "icon": "usage" }
       ]
     },
     {

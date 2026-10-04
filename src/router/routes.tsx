@@ -79,7 +79,10 @@ import AgentStudioKnowledgeUploadPage, {
 } from '@pages/products/agent_studio/AgentStudioKnowledgeUploadPage';
 import AgentStudioKnowledgeVersionUploadPage from '@pages/products/agent_studio/AgentStudioKnowledgeVersionUploadPage';
 import AgentStudioKnowledgePreviewPage from '@pages/products/agent_studio/AgentStudioKnowledgePreviewPage';
-import AgentStudioProvidersPage from '@pages/products/agent_studio/AgentStudioProvidersPage';
+import AgentStudioProvidersCatalogPage from '@pages/products/agent_studio/AgentStudioProvidersCatalogPage';
+import AgentStudioProvidersMyProvidersPage from '@pages/products/agent_studio/AgentStudioProvidersMyProvidersPage';
+import AgentStudioProvidersModelsPage from '@pages/products/agent_studio/AgentStudioProvidersModelsPage';
+import AgentStudioProvidersSpendPage from '@pages/products/agent_studio/AgentStudioProvidersSpendPage';
 import AgentStudioProvidersCustomPage from '@pages/products/agent_studio/AgentStudioProvidersCustomPage';
 import AgentStudioToolsPage, { AgentStudioToolsLayout } from '@pages/products/agent_studio/AgentStudioToolsPage';
 import AgentStudioToolsNewPage from '@pages/products/agent_studio/AgentStudioToolsNewPage';
@@ -659,13 +662,13 @@ export const agentStudioKnowledgePreviewRoute = createRoute({
 });
 
 // Old Models surface (B8 kill-switch, Phase 5): the three legacy routes are
-// redirects into the unified providers surface. Builder/agents-detail links
+// redirects into the routed providers surface. Builder/agents-detail links
 // that still point at the old paths land here and are forwarded.
 export const agentStudioModelsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models',
   beforeLoad: () => {
-    throw redirect({ to: '/agent-studio/providers' });
+    throw redirect({ to: '/agent-studio/providers/models' });
   },
   component: () => null,
 });
@@ -674,7 +677,7 @@ export const agentStudioModelsCredentialsNewRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models/credentials/new',
   beforeLoad: () => {
-    throw redirect({ to: '/agent-studio/providers' });
+    throw redirect({ to: '/agent-studio/providers/my-providers' });
   },
   component: () => null,
 });
@@ -683,18 +686,48 @@ export const agentStudioModelsCredentialsRotateRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models/credentials/$credentialId/rotate',
   beforeLoad: () => {
-    throw redirect({ to: '/agent-studio/providers' });
+    throw redirect({ to: '/agent-studio/providers/my-providers' });
   },
   component: () => null,
 });
 
-// Providers (Phase 5): unified catalog / my-providers / models / spend
-// surface. Direct children of agentStudioRoute (no layout) — each page is
-// self-contained; the custom form is a dedicated full page, never a modal.
+// Providers (routed, no tabs): each subsection is a dedicated page —
+// catalog, my-providers, models, spend — all direct children of
+// agentStudioRoute (no layout); each page is self-contained; the custom
+// form is a dedicated full page, never a modal.
 export const agentStudioProvidersRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/providers',
-  component: AgentStudioProvidersPage,
+  beforeLoad: ({ search }) => {
+    // Forward the query string — the builder's ModelPicker deep-links here
+    // with ?returnTo, and the catalog page honors it.
+    throw redirect({ to: '/agent-studio/providers/catalog', search });
+  },
+  component: () => null,
+});
+
+export const agentStudioProvidersCatalogRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/catalog',
+  component: AgentStudioProvidersCatalogPage,
+});
+
+export const agentStudioProvidersMyProvidersRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/my-providers',
+  component: AgentStudioProvidersMyProvidersPage,
+});
+
+export const agentStudioProvidersModelsRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/models',
+  component: AgentStudioProvidersModelsPage,
+});
+
+export const agentStudioProvidersSpendRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/spend',
+  component: AgentStudioProvidersSpendPage,
 });
 
 export const agentStudioProvidersCustomNewRoute = createRoute({
@@ -1075,6 +1108,10 @@ export const routeDefinitions = [
     agentStudioModelsCredentialsNewRoute,
     agentStudioModelsCredentialsRotateRoute,
     agentStudioProvidersRoute,
+    agentStudioProvidersCatalogRoute,
+    agentStudioProvidersMyProvidersRoute,
+    agentStudioProvidersModelsRoute,
+    agentStudioProvidersSpendRoute,
     agentStudioProvidersCustomNewRoute,
     agentStudioProvidersCustomEditRoute,
     agentStudioToolsRoute.addChildren([

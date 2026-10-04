@@ -20,6 +20,9 @@ export type Supergroup = 'platform' | 'byok';
 export type ProviderDirectoryCapability = 'tools' | 'vision' | 'reasoning' | 'structured_output';
 export type VerificationStatus = 'unverified' | 'verifying' | 'verified' | 'failed' | 'revoked';
 
+export type ProviderPricingMode = 'per_model' | 'varies' | 'custom' | 'pass_through';
+export type DataQuality = 'complete' | 'incomplete';
+
 export interface ProviderDirectoryEntry {
   provider: string;
   display_name: string;
@@ -28,6 +31,34 @@ export interface ProviderDirectoryEntry {
   models: Array<{ model_id: string; display_name: string }>;
   /** Min input price over the provider's models, USD/1M — absent when unpriced, never zero-invented. */
   from_price_per_1m?: string;
+  /** Min output price over the provider's models, USD/1M — absent when unpriced, never zero-invented. */
+  to_price_per_1m?: string;
+  /** Max context window over the provider's models — absent when unknown. */
+  max_context_tokens?: number;
+  /**
+   * Effective serving door for this org: 'byok' when the org holds a
+   * verified active credential for the provider, else 'platform'.
+   * The row's source line names this door.
+   */
+  door: 'platform' | 'byok';
+  /** BYOK door only: the serving credential's label + fingerprint (never secret material). */
+  credential_label?: string;
+  credential_fingerprint?: string;
+  /** Catalog section header — server-side grouping from the provider registry. */
+  section: string;
+  /** Pricing vocabulary for the row (registry-backed; default 'per_model'). */
+  pricing_mode: ProviderPricingMode;
+  /**
+   * 'incomplete' when data_quality_reasons is non-empty — the console
+   * renders the honest incomplete treatment, never as healthy.
+   */
+  data_quality: DataQuality;
+  data_quality_reasons: string[];
+  /**
+   * True when ≥1 of the provider's models is staff-attested ZDR-capable.
+   * Absent = unknown — never presented as incapable.
+   */
+  zdr_capable?: boolean;
   capabilities: ProviderDirectoryCapability[];
   connection: { has_active_credential: boolean; enabled: boolean };
   min_required_product: OrgModelTier;
@@ -147,15 +178,42 @@ export interface CredentialUsageView {
 
 export async function fetchProviderDirectory(
   orgId: string,
-  filters?: { search?: string; tier?: OrgModelTier; capability?: ProviderDirectoryCapability },
+  filters?: {
+    search?: string;
+    tier?: OrgModelTier;
+    capability?: ProviderDirectoryCapability;
+    /** Keep priced providers whose min input price (USD/1M) is at or under the cap. */
+    maxInputPricePer1m?: number;
+    /** Keep only providers with ≥1 staff-attested ZDR-capable model. */
+    zdr?: boolean;
+  },
 ): Promise<{ providers: ProviderDirectoryEntry[] }> {
   const query: Record<string, string> = {};
   if (filters?.search) query.search = filters.search;
   if (filters?.tier) query.tier = filters.tier;
   if (filters?.capability) query.capability = filters.capability;
+  if (filters?.maxInputPricePer1m !== undefined)
+    query.max_input_price_per_1m = String(filters.maxInputPricePer1m);
+  if (filters?.zdr !== undefined) query.zdr = filters.zdr ? 'true' : 'false';
   return engine<{ providers: ProviderDirectoryEntry[] }>(`/console/org/${orgId}/models/providers`, {
     query,
   });
+}
+
+/**
+ * Workspace access toggle for one provider row (the catalog's ACCESS column).
+ * Per-provider enablement — matches the SVG's one-toggle-per-row; the engine
+ * upserts the provider_enablement row (owner/admin only, audited).
+ */
+export async function setProviderEnabled(
+  orgId: string,
+  provider: string,
+  enabled: boolean,
+): Promise<{ enablement: { provider: string; enabled: boolean } }> {
+  return engine<{ enablement: { provider: string; enabled: boolean } }>(
+    `/console/org/${orgId}/provider-credentials/providers/${provider}`,
+    { method: 'POST', body: { enabled } },
+  );
 }
 
 // ---------------------------------------------------------------------------

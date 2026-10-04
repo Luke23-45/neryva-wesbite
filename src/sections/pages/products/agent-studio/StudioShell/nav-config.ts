@@ -16,6 +16,7 @@ export type DomainKey =
   | 'chat'
   | 'agents'
   | 'libraries'
+  | 'providers'
   | 'insights'
   | 'platform'
   | 'settings';

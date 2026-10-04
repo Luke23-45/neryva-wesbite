@@ -219,7 +219,7 @@ export function AgentsOverviewView() {
                     : `${modelStats.usable} of ${modelStats.total} usable${
                         modelStats.blockedReason ? ` — first gap: ${modelStats.blockedReason}` : ''
                       }.`}{' '}
-                  <Link to="/agent-studio/providers">Manage</Link>
+                  <Link to="/agent-studio/providers/models">Manage</Link>
                 </AsideBody>
               </AsideCard>
             </AsideGrid>

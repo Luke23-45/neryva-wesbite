@@ -21,9 +21,75 @@ import {
   fetchGroupedModels,
   postModelToggles,
   type ModelGroupView,
+  type ModelRowView,
   type ModelToggleInput,
   type Supergroup,
 } from '../api';
+
+// Re-export the N-5 view types so pages import from one module.
+export type { ModelGroupView, ModelRowView, Supergroup };
+
+/* ------------------------------------------------------------------ */
+/* Pure display helpers (moved from the retired TabModels — the tab    */
+/* system is gone, but the models page keeps the same vocabulary).      */
+/* ------------------------------------------------------------------ */
+
+/** Engine `reasons[]` codes rendered as human text (doc 19 §13).
+ * Keys are the engine's real reason vocabulary: availability/N-5
+ * (model-catalog.service.ts), template compatibility (templates.service.ts),
+ * and the free-demo judgments (demo-policy.service.ts). Unknown codes fall
+ * back to the raw snake_case words — never invented. */
+export function humanizeReason(reason: string): string {
+  const known: Record<string, string> = {
+    // Availability / N-5 (model-catalog.service.ts)
+    subscription_required:
+      'Not covered by your current plan — upgrade your plan to enable this model.',
+    provider_not_enabled:
+      'The provider behind this row is not enabled for your organization.',
+    residency_unknown:
+      'The data region for this model is not confirmed, so it stays unavailable until the region is known.',
+    residency_incompatible:
+      'This model is not available in your organization\u2019s data residency region.',
+    model_disabled_by_org:
+      'Disabled for this organization — turn the switch on to make it available again.',
+    // Template compatibility (templates.service.ts)
+    provider_credential_missing:
+      'No verified provider credential is attached — connect a key before enabling.',
+    // Free demo (demo-policy.service.ts)
+    demo_provider_disabled: 'The free demo is currently turned off.',
+    demo_conversation_limit_reached:
+      'The weekly demo conversation allowance for this organization is used up.',
+    demo_unavailable_with_credit_balance:
+      'Demo replies are only offered to organizations without a credit balance.',
+    demo_unavailable_with_provider_credential:
+      'Demo replies are not offered while a verified provider key is connected.',
+  };
+  return known[reason] ?? reason.replace(/_/g, ' ');
+}
+
+/** `$2.50 / $10.00 per 1M tokens` — absent when the row is unpriced (never invented).
+ * Operator-declared prices (PRV-035) are labeled as such, never presented
+ * as verified catalog prices (Law VII). */
+export function priceLabel(model: ModelRowView): string | null {
+  if (!model.pricing) return null;
+  const base = `$${model.pricing.input_per_1m} / $${model.pricing.output_per_1m} per 1M tokens`;
+  return model.pricing_source === 'operator_declared' ? `${base} (operator-declared)` : base;
+}
+
+export const CAPABILITY_LABELS = {
+  tools: 'Tools',
+  vision: 'Vision',
+  reasoning: 'Reasoning',
+  structured_output: 'Structured output',
+} as const;
+
+export function rowKey(
+  supergroup: Supergroup,
+  group: ModelGroupView,
+  model: ModelRowView,
+): string {
+  return `${supergroup}:${group.credential_id ?? 'platform'}:${group.provider}:${model.model_id}`;
+}
 
 export interface GroupedModels {
   platform: ModelGroupView[];
