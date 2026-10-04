@@ -43,7 +43,7 @@
         { "label": "Memory", "to": "/agent-studio/memory", "icon": "chat" },
         { "label": "Datasets", "to": "/agent-studio/datasets", "icon": "evaluations" },
         { "label": "Tools", "to": "/agent-studio/tools", "icon": "tools", "badge": "count" },
-        { "label": "Providers & Models", "to": "/agent-studio/models", "icon": "models", "badge": "attention" }
+        { "label": "Providers", "to": "/agent-studio/providers", "icon": "models" }
       ]
     },
     {

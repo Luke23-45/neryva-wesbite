@@ -79,9 +79,8 @@ import AgentStudioKnowledgeUploadPage, {
 } from '@pages/products/agent_studio/AgentStudioKnowledgeUploadPage';
 import AgentStudioKnowledgeVersionUploadPage from '@pages/products/agent_studio/AgentStudioKnowledgeVersionUploadPage';
 import AgentStudioKnowledgePreviewPage from '@pages/products/agent_studio/AgentStudioKnowledgePreviewPage';
-import AgentStudioModelsPage, { AgentStudioModelsLayout } from '@pages/products/agent_studio/AgentStudioModelsPage';
-import AgentStudioModelsCredentialsNewPage from '@pages/products/agent_studio/AgentStudioModelsCredentialsNewPage';
-import AgentStudioModelsCredentialsRotatePage from '@pages/products/agent_studio/AgentStudioModelsCredentialsRotatePage';
+import AgentStudioProvidersPage from '@pages/products/agent_studio/AgentStudioProvidersPage';
+import AgentStudioProvidersCustomPage from '@pages/products/agent_studio/AgentStudioProvidersCustomPage';
 import AgentStudioToolsPage, { AgentStudioToolsLayout } from '@pages/products/agent_studio/AgentStudioToolsPage';
 import AgentStudioToolsNewPage from '@pages/products/agent_studio/AgentStudioToolsNewPage';
 import AgentStudioToolsEditPage from '@pages/products/agent_studio/AgentStudioToolsEditPage';
@@ -659,28 +658,55 @@ export const agentStudioKnowledgePreviewRoute = createRoute({
   component: AgentStudioKnowledgePreviewPage,
 });
 
+// Old Models surface (B8 kill-switch, Phase 5): the three legacy routes are
+// redirects into the unified providers surface. Builder/agents-detail links
+// that still point at the old paths land here and are forwarded.
 export const agentStudioModelsRoute = createRoute({
   getParentRoute: () => agentStudioRoute,
   path: '/models',
-  component: AgentStudioModelsLayout,
-});
-
-export const agentStudioModelsIndexRoute = createRoute({
-  getParentRoute: () => agentStudioModelsRoute,
-  path: '/',
-  component: AgentStudioModelsPage,
+  beforeLoad: () => {
+    throw redirect({ to: '/agent-studio/providers' });
+  },
+  component: () => null,
 });
 
 export const agentStudioModelsCredentialsNewRoute = createRoute({
-  getParentRoute: () => agentStudioModelsRoute,
-  path: '/credentials/new',
-  component: AgentStudioModelsCredentialsNewPage,
+  getParentRoute: () => agentStudioRoute,
+  path: '/models/credentials/new',
+  beforeLoad: () => {
+    throw redirect({ to: '/agent-studio/providers' });
+  },
+  component: () => null,
 });
 
 export const agentStudioModelsCredentialsRotateRoute = createRoute({
-  getParentRoute: () => agentStudioModelsRoute,
-  path: '/credentials/$credentialId/rotate',
-  component: AgentStudioModelsCredentialsRotatePage,
+  getParentRoute: () => agentStudioRoute,
+  path: '/models/credentials/$credentialId/rotate',
+  beforeLoad: () => {
+    throw redirect({ to: '/agent-studio/providers' });
+  },
+  component: () => null,
+});
+
+// Providers (Phase 5): unified catalog / my-providers / models / spend
+// surface. Direct children of agentStudioRoute (no layout) — each page is
+// self-contained; the custom form is a dedicated full page, never a modal.
+export const agentStudioProvidersRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers',
+  component: AgentStudioProvidersPage,
+});
+
+export const agentStudioProvidersCustomNewRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/custom/new',
+  component: AgentStudioProvidersCustomPage,
+});
+
+export const agentStudioProvidersCustomEditRoute = createRoute({
+  getParentRoute: () => agentStudioRoute,
+  path: '/providers/custom/$credentialId/edit',
+  component: AgentStudioProvidersCustomPage,
 });
 
 export const agentStudioToolsRoute = createRoute({
@@ -1043,11 +1069,14 @@ export const routeDefinitions = [
       agentStudioKnowledgeVersionUploadRoute,
       agentStudioKnowledgePreviewRoute,
     ]),
-    agentStudioModelsRoute.addChildren([
-      agentStudioModelsIndexRoute,
-      agentStudioModelsCredentialsNewRoute,
-      agentStudioModelsCredentialsRotateRoute,
-    ]),
+    // Old Models surface (B8 kill-switch): direct redirects to the unified
+    // providers surface — no layout, no children.
+    agentStudioModelsRoute,
+    agentStudioModelsCredentialsNewRoute,
+    agentStudioModelsCredentialsRotateRoute,
+    agentStudioProvidersRoute,
+    agentStudioProvidersCustomNewRoute,
+    agentStudioProvidersCustomEditRoute,
     agentStudioToolsRoute.addChildren([
       agentStudioToolsIndexRoute,
       agentStudioToolsNewRoute,

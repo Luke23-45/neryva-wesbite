@@ -102,9 +102,9 @@ describe('parseTemplateList', () => {
 
 describe('reasonFix', () => {
   it('links models/knowledge/credentials to live routes', () => {
-    expect(reasonFix('required_model_capability_missing')).toMatchObject({ to: '/agent-studio/models' });
+    expect(reasonFix('required_model_capability_missing')).toMatchObject({ to: '/agent-studio/providers' });
     expect(reasonFix('knowledge_source_missing')).toMatchObject({ to: '/agent-studio/knowledge' });
-    expect(reasonFix('provider_credential_missing')).toMatchObject({ to: '/agent-studio/models' });
+    expect(reasonFix('provider_credential_missing')).toMatchObject({ to: '/agent-studio/providers' });
   });
 
   it('links tool pins to the live catalog (and install checklist)', () => {

@@ -62,7 +62,16 @@ const STUDIO_PREFIX = '/agent-studio';
 // Non-navigable studio paths, each with its reason (NOT silent exceptions):
 // - index redirects (component: () => null + redirect in beforeLoad)
 // - builder routes (full-bleed by lock, excluded from domain ownership)
-const NON_NAVIGABLE_EXACT = new Set(['/agent-studio', '/agent-studio/settings']);
+// - legacy redirects for the retired /models surface (B8 kill-switch, Phase 5):
+//   the routes render nothing and forward to /agent-studio/providers, so no
+//   domain owns them.
+const NON_NAVIGABLE_EXACT = new Set([
+  '/agent-studio',
+  '/agent-studio/settings',
+  '/agent-studio/models',
+  '/agent-studio/models/credentials/new',
+  '/agent-studio/models/credentials/$credentialId/rotate',
+]);
 
 const config = navJson as unknown as NavConfig;
 

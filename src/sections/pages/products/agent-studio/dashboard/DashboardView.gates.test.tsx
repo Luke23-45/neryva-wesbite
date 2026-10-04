@@ -71,7 +71,7 @@ const LINK_TARGETS = [
   '/agent-studio/agents',
   '/agent-studio/templates',
   '/agent-studio/knowledge',
-  '/agent-studio/models',
+  '/agent-studio/providers',
   '/agent-studio/channels',
   '/agent-studio/approvals',
 ];

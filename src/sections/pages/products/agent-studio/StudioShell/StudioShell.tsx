@@ -131,7 +131,7 @@ const STATIC_NAV_ITEMS: CommandItem[] = [
   { id: 'datasets', title: 'Datasets', subtitle: 'Evaluation datasets', to: '/agent-studio/datasets', section: 'Navigate', icon: <FlaskConical size={14} strokeWidth={1.7} /> },
   { id: 'blocks', title: 'Blocks', subtitle: 'Governance kill switches', to: '/agent-studio/blocks', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },
   { id: 'knowledge', title: 'Knowledge base', subtitle: 'Sources your agents reference', to: '/agent-studio/knowledge', section: 'Navigate', icon: <BookOpen size={14} strokeWidth={1.7} />, shortcut: ['K'] },
-  { id: 'models', title: 'Models', subtitle: 'AI models and routing', to: '/agent-studio/models', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
+  { id: 'models', title: 'Providers & models', subtitle: 'Providers, credentials, models', to: '/agent-studio/providers', section: 'Navigate', icon: <Cpu size={14} strokeWidth={1.7} /> },
   { id: 'tools', title: 'Tools', subtitle: 'Tool catalog and bindings', to: '/agent-studio/tools', section: 'Navigate', icon: <Wrench size={14} strokeWidth={1.7} /> },
   { id: 'channels', title: 'Channels', subtitle: 'WhatsApp, Messenger, Telegram, widget', to: '/agent-studio/channels', section: 'Navigate', icon: <MessageSquare size={14} strokeWidth={1.7} /> },
   { id: 'approvals', title: 'Approvals', subtitle: 'Human review queue for tool calls', to: '/agent-studio/approvals', section: 'Navigate', icon: <ShieldCheck size={14} strokeWidth={1.7} /> },

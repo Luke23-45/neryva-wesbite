@@ -185,7 +185,7 @@ export function describeEngineError(error: unknown): EngineErrorView {
           tone: 'warning',
           title: 'Demo allowance used',
           message: DEMO_ALLOWANCE_EXHAUSTED,
-          action: { label: 'Connect a provider', to: '/agent-studio/models' },
+          action: { label: 'Connect a provider', to: '/agent-studio/providers' },
           retryable: false,
         };
       }

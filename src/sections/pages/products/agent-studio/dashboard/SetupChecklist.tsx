@@ -140,7 +140,7 @@ export function SetupChecklist() {
           ? `${usableModels} usable model${usableModels === 1 ? '' : 's'}`
           : 'No usable models — add credentials or enable providers',
       done: usableModels > 0,
-      href: '/agent-studio/models',
+      href: '/agent-studio/providers',
       note: catalogEmpty ? 'Contact support if this persists — makers cannot ship without a published catalog.' : undefined,
     },
     {
