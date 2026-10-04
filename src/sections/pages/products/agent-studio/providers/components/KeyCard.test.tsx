@@ -98,6 +98,7 @@ function baseCredential(overrides: Partial<ProviderCredentialView> = {}): Provid
     region_attestation: 'global',
     attested_by: 'owner@example.com',
     attested_at: '2026-10-02T00:00:00Z',
+    manual_model_declarations: [],
     ...overrides,
   };
 }

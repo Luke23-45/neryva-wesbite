@@ -88,6 +88,7 @@ function cred(id: string, priority: number, overrides: Partial<ProviderCredentia
     region_attestation: null,
     attested_by: null,
     attested_at: null,
+    manual_model_declarations: [],
     ...overrides,
   };
 }

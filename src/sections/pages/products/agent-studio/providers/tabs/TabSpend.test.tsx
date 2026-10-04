@@ -116,6 +116,7 @@ function credFixture(id: string): ProviderCredentialView {
     region_attestation: null,
     attested_by: null,
     attested_at: null,
+    manual_model_declarations: [],
   };
 }
 
