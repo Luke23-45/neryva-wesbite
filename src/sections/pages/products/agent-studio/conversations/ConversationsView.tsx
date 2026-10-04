@@ -28,7 +28,6 @@ import {
   Layout,
   ListPane,
   Filters,
-  FilterSelect,
   List,
   Row,
   RowMain,
@@ -48,6 +47,7 @@ import {
   BubbleMeta,
   BubbleText,
 } from './ConversationsView.styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Conversations (ledger C-7) — real transcripts from the engine's
@@ -128,13 +128,15 @@ export function ConversationsView() {
         <Layout>
           <ListPane>
             <Filters>
-              <FilterSelect
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter by status"
-              >
-                {statuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
-              </FilterSelect>
+              <div style={{ width: 170 }}>
+                <Dropdown
+                  variant="select"
+                  value={statusFilter}
+                  onChange={(v) => setStatusFilter(v)}
+                  aria-label="Filter by status"
+                  items={statuses.map((s) => ({ value: s, label: statusLabel(s) }))}
+                />
+              </div>
               <SearchField
                 value={query}
                 onChange={setQuery}

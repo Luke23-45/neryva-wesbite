@@ -14,6 +14,7 @@ import { useAccount, useUpdateAccount, useRequestEmailVerification, useRequestEm
 import { useMfa } from '@hooks/studio/useMfa';
 import { spring, pageItem } from '@styles/motion';
 import { SaveRow } from './shared';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Settings → Profile (ledger T-1)
@@ -214,19 +215,23 @@ function ProfileForm({ info }: { info: AccountInfo }) {
             <TextInput label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
             {/* P7-PF-08: honestly disabled — the engine stores only display_name. */}
             <SelectField label="Timezone">
-              <ProfileSelect value={tz} aria-label="Timezone" disabled title="Timezone preferences are not configurable yet">
-                {timezoneOptions().map((zone) => (
-                  <option key={zone} value={zone}>{zone}</option>
-                ))}
-              </ProfileSelect>
+              <Dropdown
+                variant="select"
+                value={tz}
+                aria-label="Timezone"
+                disabled
+                items={timezoneOptions().map((zone) => ({ value: zone, label: zone }))}
+              />
               <TheaterNote>Not configurable yet — shown for reference only.</TheaterNote>
             </SelectField>
             <SelectField label="Locale">
-              <ProfileSelect value={loc} aria-label="Locale" disabled title="Locale preferences are not configurable yet">
-                {LOCALES.map((code) => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </ProfileSelect>
+              <Dropdown
+                variant="select"
+                value={loc}
+                aria-label="Locale"
+                disabled
+                items={LOCALES.map((code) => ({ value: code, label: code }))}
+              />
               <TheaterNote>Not configurable yet — shown for reference only.</TheaterNote>
             </SelectField>
           </FieldGrid>
@@ -559,32 +564,6 @@ const TheaterNote = styled.div`
   font-size: ${({ theme }) => theme.app.type.micro};
   color: ${({ theme }) => theme.app.text.faint};
   line-height: 1.4;
-`;
-
-const ProfileSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const EmailRow = styled.div`

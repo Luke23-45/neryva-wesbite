@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import {
   DataTable,
@@ -120,14 +121,13 @@ export function ObservePanel({ assistantId }: { assistantId: string }) {
       subtitle="Per-assistant daily rollups. Containment = completed ÷ (completed + escalated), null on empty — shown as insufficient data, never zero."
     >
       <Controls>
-        <label style={{ fontSize: 13 }}>
-          Kind
-          <select value={kind} onChange={(e) => setKind(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-            {ROLLUP_KINDS.map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-        </label>
+        <Dropdown
+          variant="select"
+          label="Kind"
+          value={kind}
+          onChange={setKind}
+          items={ROLLUP_KINDS.map((value) => ({ value, label: value }))}
+        />
         <label style={{ fontSize: 13 }}>
           Days (1–365)
           <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} style={{ display: 'block', marginTop: 4, width: 100 }} />

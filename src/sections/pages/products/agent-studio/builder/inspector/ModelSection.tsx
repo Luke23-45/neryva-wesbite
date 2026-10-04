@@ -26,6 +26,7 @@ import { useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { ChevronDown } from 'lucide-react';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Switch } from '@components/common/ui/Switch';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ApiError } from '@lib/engine/client';
@@ -86,7 +87,6 @@ import {
   SchemaCard,
   SchemaNameRow,
   SchemaPreview,
-  SelectWrap,
   ServingOrderLabel,
   SliderHead,
   SliderName,
@@ -1351,24 +1351,22 @@ function PipelineRow({
               Credential{credBlocked && <CredBadge $tone="red">Required</CredBadge>}
             </ParamLabel>
             {providerCreds.length > 0 ? (
-              <SelectWrap>
-                <select
-                  value={entry.credential_id ?? ''}
-                  onChange={(event) =>
-                    onPatchEntry({ credential_id: event.target.value === '' ? undefined : event.target.value })
-                  }
-                  aria-label={`Credential for ${displayName}`}
-                  disabled={!canAuthor}
-                >
-                  <option value="">Select credential…</option>
-                  {providerCreds.map((cred) => (
-                    <option key={cred.id} value={cred.id}>
-                      {cred.label}
-                      {cred.secretFingerprint ? ` ····${cred.secretFingerprint.slice(-4)}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </SelectWrap>
+              <Dropdown
+                variant="select"
+                aria-label={`Credential for ${displayName}`}
+                value={entry.credential_id ?? ''}
+                onChange={(v) =>
+                  onPatchEntry({ credential_id: v === '' ? undefined : v })
+                }
+                disabled={!canAuthor}
+                items={[
+                  { value: '', label: 'Select credential…' },
+                  ...providerCreds.map((cred) => ({
+                    value: cred.id,
+                    label: `${cred.label}${cred.secretFingerprint ? ` ····${cred.secretFingerprint.slice(-4)}` : ''}`,
+                  })),
+                ]}
+              />
             ) : (
               <HelperText>
                 {credBlocked ? (

@@ -21,29 +21,13 @@ import {
 } from '../../builder/lib/publish-model';
 import { EmptyNote } from '../AgentDetailView.styles';
 import { SectionBackRow } from '../SectionBackRow';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const FieldLabel = styled.label`
   font-size: 13px;
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const CopyLine = styled.div`
   font-size: 12px;
@@ -232,13 +216,19 @@ export function RollbackSection() {
             <>
               <FieldLabel>
                 Restore
-                <FieldSelect value={target?.id ?? ''} onChange={(e) => pickTarget(e.target.value)} aria-label="Restore">
-                  {candidates.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      v{c.version}{c.publishedAt ? ` · ${c.publishedAt.slice(0, 16).replace('T', ' ')}` : ''}{c.hash ? ` · ${c.hash.slice(0, 12)}` : ''}
-                    </option>
-                  ))}
-                </FieldSelect>
+                <div style={{ marginTop: 4 }}>
+                  <Dropdown
+                    variant="select"
+                    aria-label="Restore"
+                    value={target?.id ?? ''}
+                    onChange={(v) => pickTarget(v)}
+                    placeholder="Select a version…"
+                    items={candidates.map((c) => ({
+                      value: c.id,
+                      label: `v${c.version}${c.publishedAt ? ` · ${c.publishedAt.slice(0, 16).replace('T', ' ')}` : ''}${c.hash ? ` · ${c.hash.slice(0, 12)}` : ''}`,
+                    }))}
+                  />
+                </div>
               </FieldLabel>
               <CopyLine style={{ marginTop: 8 }}>
                 {PUBLISH_COPY.rollbackCreatesNew} {PUBLISH_COPY.rollbackNoTouch}

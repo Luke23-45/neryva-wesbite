@@ -123,13 +123,13 @@ import {
   RowText,
   SourceLabel,
   SourceNote,
-  StyledSelect,
   TextButton,
   ToggleLabel,
   ToggleRow,
   UngatedList,
   UngatedRow,
 } from './ToolsSection.styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 export interface ToolsSectionProps {
   assistantId: string;
@@ -973,24 +973,32 @@ export function ToolsSection({
                       placeholder="Filter by name, effect, approval…"
                     />
                   </FilterInputWrap>
-                  <StyledSelect
-                    aria-label="Filter by effect"
-                    value={effectFilter}
-                    onChange={(event) => setEffectFilter(event.target.value as 'all' | 'readonly' | 'effectful')}
-                  >
-                    <option value="all">Effect · All</option>
-                    <option value="readonly">Effect · Read-only</option>
-                    <option value="effectful">Effect · Effectful</option>
-                  </StyledSelect>
-                  <StyledSelect
-                    aria-label="Filter by approval"
-                    value={approvalFilter}
-                    onChange={(event) => setApprovalFilter(event.target.value as 'any' | 'required' | 'optional')}
-                  >
-                    <option value="any">Approval · Any</option>
-                    <option value="required">Approval · Required</option>
-                    <option value="optional">Approval · Optional</option>
-                  </StyledSelect>
+                  <div style={{ width: 170, flex: 'none' }}>
+                    <Dropdown
+                      variant="select"
+                      aria-label="Filter by effect"
+                      value={effectFilter}
+                      onChange={(v) => setEffectFilter(v as 'all' | 'readonly' | 'effectful')}
+                      items={[
+                        { value: 'all', label: 'Effect · All' },
+                        { value: 'readonly', label: 'Effect · Read-only' },
+                        { value: 'effectful', label: 'Effect · Effectful' },
+                      ]}
+                    />
+                  </div>
+                  <div style={{ width: 170, flex: 'none' }}>
+                    <Dropdown
+                      variant="select"
+                      aria-label="Filter by approval"
+                      value={approvalFilter}
+                      onChange={(v) => setApprovalFilter(v as 'any' | 'required' | 'optional')}
+                      items={[
+                        { value: 'any', label: 'Approval · Any' },
+                        { value: 'required', label: 'Approval · Required' },
+                        { value: 'optional', label: 'Approval · Optional' },
+                      ]}
+                    />
+                  </div>
                 </FilterBar>
 
                 {catalog.isPending ? (

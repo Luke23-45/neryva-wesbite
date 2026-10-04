@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { Plus, FlaskConical } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Modal } from '@components/common/ui/Modal';
 import { Drawer } from '@components/common/ui/Drawer';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
@@ -203,26 +204,36 @@ export function EvaluationsView() {
         <SectionGap>
           <Panel title="Runs" subtitle="Newest first (cap 100, filtered locally). Latest completed decision per content hash is what every gate reads. Engine-side scoring covers lexical (contains/not_contains), state assertions (tool.<name>=called|not_called against the run's tool-call log), and rubrics (judged by the configured LLM-judge endpoint; rubric cases fail closed without one).">
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              <label style={{ fontSize: 12 }}>
-                Decision
-                <select value={decisionFilter} onChange={(e) => setDecisionFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                  <option value="">All decisions</option>
-                  <option value="PASS">PASS</option>
-                  <option value="WARN">WARN</option>
-                  <option value="BLOCK">BLOCK</option>
-                  <option value="FAIL">FAIL</option>
-                </select>
-              </label>
-              <label style={{ fontSize: 12 }}>
-                State
-                <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                  <option value="">All states</option>
-                  <option value="pending">pending</option>
-                  <option value="running">running</option>
-                  <option value="completed">completed</option>
-                  <option value="failed">failed</option>
-                </select>
-              </label>
+              <div style={{ width: 170 }}>
+              <Dropdown
+                variant="select"
+                label="Decision"
+                value={decisionFilter}
+                onChange={setDecisionFilter}
+                items={[
+                  { value: '', label: 'All decisions' },
+                  { value: 'PASS', label: 'PASS' },
+                  { value: 'WARN', label: 'WARN' },
+                  { value: 'BLOCK', label: 'BLOCK' },
+                  { value: 'FAIL', label: 'FAIL' },
+                ]}
+              />
+              </div>
+              <div style={{ width: 170 }}>
+              <Dropdown
+                variant="select"
+                label="State"
+                value={stateFilter}
+                onChange={setStateFilter}
+                items={[
+                  { value: '', label: 'All states' },
+                  { value: 'pending', label: 'pending' },
+                  { value: 'running', label: 'running' },
+                  { value: 'completed', label: 'completed' },
+                  { value: 'failed', label: 'failed' },
+                ]}
+              />
+              </div>
             </div>
             <QueryView
               query={runs}
@@ -295,15 +306,21 @@ export function EvaluationsView() {
         <SectionGap>
           <Panel title="Retrieval recall@k" subtitle="Live hybrid retrieval measured against a dataset (FL-3.8).">
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
-              <label style={{ fontSize: 13, minWidth: 260 }}>
-                Dataset
-                <select value={recallDatasetId} onChange={(e) => setRecallDatasetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-                  <option value="">Pick a dataset…</option>
-                  {(datasets.data ?? []).map((dataset) => (
-                    <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
-                  ))}
-                </select>
-              </label>
+              <div style={{ width: 260 }}>
+              <Dropdown
+                variant="select"
+                label="Dataset"
+                value={recallDatasetId}
+                onChange={setRecallDatasetId}
+                items={[
+                  { value: '', label: 'Pick a dataset…' },
+                  ...(datasets.data ?? []).map((dataset) => ({
+                    value: dataset.id,
+                    label: dataset.name,
+                  })),
+                ]}
+              />
+              </div>
               <label style={{ fontSize: 13 }}>
                 k
                 <input type="number" min={1} max={20} value={recallK} onChange={(e) => setRecallK(e.target.value)} style={{ display: 'block', width: 90, marginTop: 4 }} />

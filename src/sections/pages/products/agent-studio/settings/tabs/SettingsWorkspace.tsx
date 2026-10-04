@@ -21,6 +21,7 @@ import {
   resolveWorkspaceLogo,
 } from './workspaceBranding';
 import { SaveRow } from './shared';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Settings → Workspace (ledger T-2)
@@ -349,17 +350,17 @@ function WorkspaceForm({ data }: { data: OrgProfileData }) {
             disabled={!canManage}
           />
           <SelectField label="Default project">
-            <WorkspaceSelect
+            <Dropdown
+              variant="select"
               value={defaultProjectId}
-              onChange={(e) => setDefaultProjectId(e.target.value)}
+              onChange={(v) => setDefaultProjectId(v)}
               aria-label="Default project"
               disabled={!canManage}
-            >
-              <option value="">No default project</option>
-              {(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </WorkspaceSelect>
+              items={[
+                { value: '', label: 'No default project' },
+                ...(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => ({ value: p.id, label: p.name })),
+              ]}
+            />
             {/* P1-8: agent creation cannot consume this — the engine's
                 CreateAssistantDto rejects unknown top-level keys, so the
                 copy claims only what key issuance actually does. */}
@@ -697,32 +698,6 @@ const SelectFieldBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
-`;
-
-const WorkspaceSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const InlineNote = styled.span`

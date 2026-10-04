@@ -16,6 +16,7 @@ import { useDefaultProject } from '@hooks/studio/useDefaultProject';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Create API key — dedicated section replacing the create wizard modal (G-1).
@@ -274,10 +275,16 @@ export function ApiKeyCreateSection() {
                   autoFocus
                 />
                 <SelectField label="Key role">
-                  <RolePicker value={role} onChange={(e) => setRole(e.target.value as 'operator' | 'auditor')} aria-label="Key role">
-                    <option value="operator">Operator — read and act</option>
-                    <option value="auditor">Auditor — read-only, audit scoped</option>
-                  </RolePicker>
+                  <Dropdown
+                    variant="select"
+                    value={role}
+                    onChange={(v) => setRole(v as 'operator' | 'auditor')}
+                    aria-label="Key role"
+                    items={[
+                      { value: 'operator', label: 'Operator — read and act' },
+                      { value: 'auditor', label: 'Auditor — read-only, audit scoped' },
+                    ]}
+                  />
                 </SelectField>
                 <Helper>
                   <ShieldCheck size={13} strokeWidth={1.8} />
@@ -488,27 +495,6 @@ const SelectLabel = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   font-weight: 500;
   color: ${({ theme }) => theme.app.text.secondary};
-`;
-
-const RolePicker = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 // ─── Stepper ─────────────────────────────────────────────────────────

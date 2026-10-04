@@ -137,6 +137,7 @@ import {
   ResidencyNoteText,
 
 } from './ComplianceView.styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 
 
@@ -1043,11 +1044,15 @@ function ConfigLifecycleSection() {
                 aria-label="Product scope"
                 title="Product tag — lowercase letters, digits, underscores. Empty = org-level config."
               />
-              <ScopeSelect value={scope} onChange={(e) => selectScope(e.target.value as PublishableConfigScope)} aria-label="Config scope">
-                {PUBLISHABLE_SCOPES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </ScopeSelect>
+              <div style={{ width: 170 }}>
+                <Dropdown
+                  variant="select"
+                  value={scope}
+                  onChange={(v) => selectScope(v as PublishableConfigScope)}
+                  aria-label="Config scope"
+                  items={PUBLISHABLE_SCOPES.map((s) => ({ value: s, label: s }))}
+                />
+              </div>
               <ActionButton
                 variant="secondary"
                 size="sm"
@@ -1318,17 +1323,6 @@ function ConfigLifecycleSection() {
     </>
   );
 }
-
-const ScopeSelect = styled.select`
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(0, 0, 0, 0.30);
-  color: inherit;
-  font-family: inherit;
-  cursor: pointer;
-`;
 
 /* C-16: the product tag the engine keys (org, scope, product) on. */
 const ProductInput = styled.input`

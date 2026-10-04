@@ -8,6 +8,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import {
   ViewShell,
   ViewHeader,
@@ -38,19 +39,6 @@ const FilterBar = styled.div`
   gap: 12px;
   align-items: flex-end;
   margin: 12px 0;
-
-  & > label {
-    font-size: 13px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    color: ${({ theme }) => theme.app.text.secondary};
-  }
-
-  & select {
-    display: block;
-    min-width: 140px;
-  }
 `;
 
 const EmptyNote = styled.div`
@@ -145,25 +133,35 @@ export function BlocksView() {
       </div>
 
       <FilterBar>
-        <label>
-          Target
-          <select value={targetFilter} onChange={(e) => setTargetFilter(e.target.value as BlockTargetFilter)} aria-label="Filter by target">
-            <option value="all">All targets</option>
-            {BLOCK_TARGETS.map((target) => (
-              <option key={target} value={target}>{target}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Status
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as BlockStatusFilter)} aria-label="Filter by status">
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="expiring">Expiring soon</option>
-            <option value="expired">Expired</option>
-            <option value="permanent">Permanent</option>
-          </select>
-        </label>
+        <div style={{ width: 170 }}>
+          <Dropdown
+            variant="select"
+            label="Target"
+            aria-label="Filter by target"
+            value={targetFilter}
+            onChange={(v) => setTargetFilter(v as BlockTargetFilter)}
+            items={[
+              { value: 'all', label: 'All targets' },
+              ...BLOCK_TARGETS.map((target) => ({ value: target, label: target })),
+            ]}
+          />
+        </div>
+        <div style={{ width: 170 }}>
+          <Dropdown
+            variant="select"
+            label="Status"
+            aria-label="Filter by status"
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as BlockStatusFilter)}
+            items={[
+              { value: 'all', label: 'All' },
+              { value: 'active', label: 'Active' },
+              { value: 'expiring', label: 'Expiring soon' },
+              { value: 'expired', label: 'Expired' },
+              { value: 'permanent', label: 'Permanent' },
+            ]}
+          />
+        </div>
         <TextInput label="Search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name or reason…" />
       </FilterBar>
 

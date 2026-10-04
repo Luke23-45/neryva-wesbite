@@ -20,6 +20,7 @@ import { useKeys, useProjects, type KeyRow } from '@hooks/engine/queries';
 import { useRevokeKey } from '@hooks/engine/mutations';
 import { useKeyDetail, useRotateKey, useUpdateKey, useBindKey, useUnbindKey } from '@hooks/studio/useStudioKeys';
 import { useOrg } from '@/Context/OrgContext';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Settings → API keys (ledger T-4) — fully engine-backed:
@@ -321,10 +322,11 @@ function KeyDrawer({ keyId, onClose, canManage }: { keyId: string; onClose: () =
                       : 'Not bound — works across projects'}
                   </DetailValue>
                 ) : (
-                <RolePicker
+                <Dropdown
+                  variant="select"
                   value={info.projectId ?? ''}
-                  onChange={(e) => {
-                    const projectId = e.target.value;
+                  onChange={(v) => {
+                    const projectId = v;
                     if (projectId) {
                       bind.mutate({ keyId: info.id, projectId }, { onSuccess: () => toast.success('Key bound to project') });
                     } else {
@@ -332,12 +334,11 @@ function KeyDrawer({ keyId, onClose, canManage }: { keyId: string; onClose: () =
                     }
                   }}
                   aria-label="Bound project"
-                >
-                  <option value="">Not bound — works across projects</option>
-                  {(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </RolePicker>
+                  items={[
+                    { value: '', label: 'Not bound — works across projects' },
+                    ...(projects.data?.projects ?? []).filter((p) => !p.archivedAt).map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                />
                 )}
               </div>
               <BindingHint aria-hidden="true"><FolderInput size={13} strokeWidth={1.8} /></BindingHint>
@@ -505,27 +506,6 @@ const NameMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-`;
-
-const RolePicker = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const RevealWrap = styled.div`

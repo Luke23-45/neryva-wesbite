@@ -10,7 +10,8 @@ import { pageItem } from '@styles/motion';
 import { useEnqueuePurge, buildPurgeBody, PURGE_REASONS } from '@hooks/studio/useLifecycle';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
-import { ScopeSelect, ValidationError, FieldColumn, ActionsRow } from './section-styles';
+import { ValidationError, FieldColumn, ActionsRow } from './section-styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Request a purge — dedicated section replacing the request-purge modal
@@ -90,11 +91,13 @@ export function PurgeNewSection() {
             />
             <FieldColumn>
               Reason
-              <ScopeSelect value={reason} onChange={(e) => setReason(e.target.value as typeof reason)} aria-label="Purge reason">
-                {PURGE_REASONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </ScopeSelect>
+              <Dropdown
+                variant="select"
+                value={reason}
+                onChange={(v) => setReason(v as typeof reason)}
+                aria-label="Purge reason"
+                items={PURGE_REASONS.map((r) => ({ value: r, label: r }))}
+              />
             </FieldColumn>
             {error && <ValidationError>{error}</ValidationError>}
             <ActionsRow>

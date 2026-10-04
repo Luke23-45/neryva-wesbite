@@ -597,28 +597,6 @@ export const DefaultsGrid = styled.div`
   }
 `;
 
-export const Select = styled.select`
-  width: 100%;
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: ${({ theme }) => theme.app.type.body};
-  padding: ${({ theme }) => theme.spacing.px10} ${({ theme }) => theme.spacing.px14};
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
-
 export const FieldLabel = styled.label`
   display: block;
   font-size: ${({ theme }) => theme.app.type.caption};

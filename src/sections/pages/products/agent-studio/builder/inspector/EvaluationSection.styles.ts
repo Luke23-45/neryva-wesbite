@@ -21,26 +21,6 @@ export const DatasetLabel = styled.label`
   color: ${({ theme }) => theme.app.text.primary};
 `;
 
-export const DatasetSelect = styled.select`
-  /* DS-9: 44px hit target — no 44px spacing token exists, so a plain
-   * literal per the 44px-target rule (the only native select in the
-   * inspector that was under 44px). */
-  height: 44px;
-  padding: 0 ${({ theme }) => theme.spacing.s3};
-  border-radius: ${({ theme }) => theme.radii.md};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-family: inherit;
-  max-width: 100%;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.app.border.focus};
-  }
-`;
-
 export const AttemptsWrap = styled.div`
   max-width: 220px;
 `;

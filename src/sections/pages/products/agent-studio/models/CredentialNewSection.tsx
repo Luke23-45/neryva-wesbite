@@ -18,29 +18,13 @@ import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
 import { validateCredentialSecret } from './ModelsView';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const FieldLabel = styled.label`
   font-size: ${({ theme }) => theme.app.type.body};
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: ${({ theme }) => theme.spacing.s1};
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: ${({ theme }) => theme.radii.sm};
-  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.px10};
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const ActionsRow = styled.div`
   display: flex;
@@ -150,13 +134,15 @@ export function CredentialNewSection() {
           */}
           <FieldLabel>
             Provider
-            <FieldSelect value={provider} onChange={(e) => setProvider(e.target.value)} aria-label="Provider">
-              {MODEL_PROVIDERS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </FieldSelect>
+            <div style={{ marginTop: 4 }}>
+              <Dropdown
+                variant="select"
+                aria-label="Provider"
+                value={provider}
+                onChange={(v) => setProvider(v)}
+                items={MODEL_PROVIDERS.map((p) => ({ value: p, label: p }))}
+              />
+            </div>
           </FieldLabel>
           <div style={{ marginTop: 12 }}>
             <TextInput label="Label" name="label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. prod-anthropic" autoFocus />

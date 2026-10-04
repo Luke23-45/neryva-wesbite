@@ -22,29 +22,13 @@ import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
 import { PlatformIcon } from './platformIcons';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const FieldLabel = styled.label`
   font-size: 13px;
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const Blurb = styled.p`
   font-size: 12px;
@@ -200,11 +184,15 @@ export function ConnectSection() {
         <Panel title="Platform" subtitle="Only credentialable platforms are offered.">
           <FieldLabel>
             Platform
-            <FieldSelect value={platform} onChange={(e) => { setPlatform(e.target.value as ConnectablePlatform); setCredentialValues({}); }}>
-              {PLATFORM_CREDENTIAL_SPECS.map((s) => (
-                <option key={s.platform} value={s.platform}>{s.label}</option>
-              ))}
-            </FieldSelect>
+            <div style={{ marginTop: 4 }}>
+              <Dropdown
+                variant="select"
+                aria-label="Platform"
+                value={platform}
+                onChange={(v) => { setPlatform(v as ConnectablePlatform); setCredentialValues({}); }}
+                items={PLATFORM_CREDENTIAL_SPECS.map((s) => ({ value: s.platform, label: s.label }))}
+              />
+            </div>
           </FieldLabel>
           <Blurb><PlatformIcon platform={platform} size={20} /> {spec.blurb}</Blurb>
         </Panel>
@@ -233,12 +221,21 @@ export function ConnectSection() {
           )}
           <FieldLabel style={{ marginTop: 12 }}>
             Serving assistant (required)
-            <FieldSelect value={assistantId} onChange={(e) => setAssistantId(e.target.value)}>
-              <option value="">Pick the assistant this channel serves…</option>
-              {(assistants.data ?? []).map((assistant) => (
-                <option key={assistant.id} value={assistant.id}>{assistant.name} ({assistant.status})</option>
-              ))}
-            </FieldSelect>
+            <div style={{ marginTop: 4 }}>
+              <Dropdown
+                variant="select"
+                aria-label="Serving assistant"
+                value={assistantId}
+                onChange={(v) => setAssistantId(v)}
+                items={[
+                  { value: '', label: 'Pick the assistant this channel serves…' },
+                  ...(assistants.data ?? []).map((assistant) => ({
+                    value: assistant.id,
+                    label: `${assistant.name} (${assistant.status})`,
+                  })),
+                ]}
+              />
+            </div>
           </FieldLabel>
           {submitted && assistantProblem && <InlineError>{assistantProblem}</InlineError>}
           {returnTo && !assistantProblem && (

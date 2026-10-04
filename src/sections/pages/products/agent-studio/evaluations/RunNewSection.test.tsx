@@ -128,23 +128,29 @@ const NEW_PATH = '/agent-studio/evaluations/runs/new';
 const LIST_PATH = '/agent-studio/evaluations';
 
 function datasetPicker() {
-  return screen.getByLabelText('Dataset', { selector: 'select' });
+  return screen.getByLabelText('Dataset');
 }
 function assistantPicker() {
-  return screen.getByLabelText('Assistant (to locate published versions)', { selector: 'select' });
+  return screen.getByLabelText('Assistant (to locate published versions)');
 }
 function versionPicker() {
-  return screen.getByLabelText('Published version', { selector: 'select' });
+  return screen.getByLabelText('Published version');
 }
 
+function pickOption(name: string | RegExp) {
+  fireEvent.click(screen.getByRole('option', { name }));
+}
 function pickDataset() {
-  fireEvent.change(datasetPicker(), { target: { value: 'd1' } });
+  fireEvent.click(datasetPicker());
+  pickOption('refund-regressions');
 }
 function pickAssistant() {
-  fireEvent.change(assistantPicker(), { target: { value: 'a1' } });
+  fireEvent.click(assistantPicker());
+  pickOption('support-bot');
 }
 function pickPublishedVersion() {
-  fireEvent.change(versionPicker(), { target: { value: 'v-pub' } });
+  fireEvent.click(versionPicker());
+  pickOption(/v3 · abcdef123456/);
 }
 
 /** Simulates the engine accepting the run: the section must exit via the return contract. */
@@ -161,7 +167,7 @@ describe('RunNewSection role gate', () => {
     const router = await routerAt(NEW_PATH, 'reader');
     expect(router.state.location.pathname).toBe(LIST_PATH);
     expect(screen.queryByText('Start eval run')).toBeNull();
-    expect(screen.queryByLabelText('Dataset', { selector: 'select' })).toBeNull();
+    expect(screen.queryByLabelText('Dataset')).toBeNull();
   });
 
   it('renders the run configuration for an owner', async () => {
@@ -195,18 +201,20 @@ describe('RunNewSection run-config semantics (parity with the old modal)', () =>
   it('lists only PUBLISHED versions — drafts are excluded', async () => {
     await routerAt(NEW_PATH);
     pickAssistant();
-    const options = Array.from(versionPicker().querySelectorAll('option')).map((o) => o.value);
-    expect(options).toContain('v-pub');
-    expect(options).not.toContain('v-draft');
+    fireEvent.click(versionPicker());
+    const labels = screen.getAllByRole('option').map((o) => o.textContent ?? '');
+    expect(labels.some((l) => l.includes('v3 ·'))).toBe(true);
+    expect(labels.some((l) => l.includes('v0 ·'))).toBe(false);
   });
 
   it('resets the version when the assistant changes', async () => {
     await routerAt(NEW_PATH);
     pickAssistant();
     pickPublishedVersion();
-    expect(versionPicker()).toHaveValue('v-pub');
-    fireEvent.change(assistantPicker(), { target: { value: '' } });
-    expect(versionPicker()).toHaveValue('');
+    expect(versionPicker()).toHaveTextContent('v3');
+    fireEvent.click(assistantPicker());
+    pickOption('Pick an assistant…');
+    expect(versionPicker()).toHaveTextContent('Pick an assistant first…');
   });
 
   it('posts the identical start payload: dataset, trimmed version id, clamped attempts', async () => {

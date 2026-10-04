@@ -19,6 +19,7 @@ import {
   InviteInput,
 } from './TeamsView.styles';
 import styled from 'styled-components';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const INVITE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
 
@@ -26,27 +27,6 @@ const INVITE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
 // scoped to the tab. If the page mounts with a marker but no active reveal
 // state, the link was already shown and is gone: say so explicitly.
 const REVEAL_MARKER = 'teams:invite:revealed';
-
-const RoleSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
-`;
 
 const RevealNotice = styled.div`
   padding: 12px 14px;
@@ -218,18 +198,26 @@ export function InviteSection() {
               </InviteLabel>
               <InviteLabel>
                 Role
-                <RoleSelect value={role} onChange={(e) => setRole(e.target.value as OrgRole)} aria-label="Invite role">
-                  {roleOptions.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </RoleSelect>
+                <Dropdown
+                  variant="select"
+                  value={role}
+                  onChange={(v) => setRole(v as OrgRole)}
+                  aria-label="Invite role"
+                  items={roleOptions.map((r) => ({ value: r, label: r }))}
+                />
               </InviteLabel>
               <InviteLabel>
                 Delivery
-                <RoleSelect value={delivery} onChange={(e) => setDelivery(e.target.value as 'email' | 'manual')} aria-label="Delivery method">
-                  <option value="manual">Manual link</option>
-                  <option value="email">Email invitation</option>
-                </RoleSelect>
+                <Dropdown
+                  variant="select"
+                  value={delivery}
+                  onChange={(v) => setDelivery(v as 'email' | 'manual')}
+                  aria-label="Delivery method"
+                  items={[
+                    { value: 'manual', label: 'Manual link' },
+                    { value: 'email', label: 'Email invitation' },
+                  ]}
+                />
               </InviteLabel>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
                 <ActionButton variant="secondary" onClick={() => navigate({ to: '/agent-studio/teams' })}>

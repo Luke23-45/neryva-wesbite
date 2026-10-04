@@ -29,6 +29,7 @@ import { useOrg, ROLE_LABELS, ROLE_SUBTITLES, type OrgRole } from '@/Context/Org
 import { useSessionStore } from '@lib/engine/auth';
 import { ApiError } from '@lib/engine/client';
 import { Panel } from '@components/common/ui/Panel/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
 import { SearchField } from '@components/common/ui/SearchField/SearchField';
@@ -42,16 +43,6 @@ import { DataTable, DataHead, DataRow, DataCell, CellPrimary, CellMeta } from '@
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, Toolbar, ToolbarGroup } from '@components/common/ui/ViewLayout';
 
 const ASSIGNABLE_ROLES: OrgRole[] = ['admin', 'billing', 'developer', 'reader'];
-
-const RoleSelect = styled.select`
-  background: rgba(255, 255, 255, 0.05);
-  color: #eceef4;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
-  cursor: pointer;
-`;
 
 const Form = styled.div`
   display: flex;
@@ -400,15 +391,13 @@ export default function OrgMembersPage() {
                       </DataCell>
                       <DataCell>
                         {canChangeThis ? (
-                          <RoleSelect
+                          <Dropdown
+                            variant="select"
                             value={member.role}
                             aria-label={`Change role for ${member.email}`}
-                            onChange={(e) => changeRole.mutate({ accountId: member.accountId, role: e.target.value })}
-                          >
-                            {changeableRoles.map((r) => (
-                              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                            ))}
-                          </RoleSelect>
+                            onChange={(v) => changeRole.mutate({ accountId: member.accountId, role: v })}
+                            items={changeableRoles.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                          />
                         ) : (
                           ROLE_LABELS[member.role as OrgRole] ?? member.role
                         )}
@@ -589,11 +578,16 @@ export default function OrgMembersPage() {
           <Form>
             <TextInput label="Email" name="invite-email" type="email" placeholder="teammate@company.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} />
             <div>
-              <RoleSelect value={inviteRole} onChange={(e) => setInviteRole(e.target.value as OrgRole)} style={{ width: '100%', padding: '8px 10px' }} aria-label="Invite role">
-                {(isOwner ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r !== 'admin')).map((r) => (
-                  <option key={r} value={r}>{ROLE_LABELS[r]} — {ROLE_SUBTITLES[r]}</option>
-                ))}
-              </RoleSelect>
+              <Dropdown
+                variant="select"
+                value={inviteRole}
+                onChange={(v) => setInviteRole(v as OrgRole)}
+                aria-label="Invite role"
+                items={(isOwner ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r !== 'admin')).map((r) => ({
+                  value: r,
+                  label: `${ROLE_LABELS[r]} — ${ROLE_SUBTITLES[r]}`,
+                }))}
+              />
               <FieldHint>Ownership is transferred, never invited.{!isOwner ? ' Inviting as admin requires an owner.' : ''}</FieldHint>
             </div>
             <div>

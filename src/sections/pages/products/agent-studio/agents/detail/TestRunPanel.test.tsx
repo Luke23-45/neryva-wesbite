@@ -96,16 +96,16 @@ describe('TestRunPanel (dedicated try surface — shared console truth)', () => 
 
   it('renders the version picker and the shared console dock', async () => {
     await shell();
-    expect((screen.getByLabelText(/Version/) as HTMLSelectElement).value).toBe('v3');
+    expect(screen.getByLabelText(/Version/)).toHaveTextContent(/v3 · DRAFT/);
     expect(screen.getByLabelText(/Test prompt/)).toBeTruthy();
     expect(screen.getByText('v3 · DRAFT · a41f9c00 — draft-pinned, never billable.')).toBeTruthy();
   });
 
   it('switching version starts a fresh thread, never another version\u2019s replay', async () => {
     await shell();
-    const picker = screen.getByLabelText(/Version/) as HTMLSelectElement;
-    fireEvent.change(picker, { target: { value: 'v2' } });
-    expect((screen.getByLabelText(/Version/) as HTMLSelectElement).value).toBe('v2');
+    fireEvent.click(screen.getByLabelText(/Version/));
+    fireEvent.click(screen.getByRole('option', { name: /v2 · PUBLISHED/ }));
+    expect(screen.getByLabelText(/Version/)).toHaveTextContent(/v2 · PUBLISHED/);
     expect(window.location.search).not.toContain('try=');
   });
 });

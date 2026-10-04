@@ -13,29 +13,13 @@ import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from '../SectionBackRow';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const FieldLabel = styled.label`
   font-size: 13px;
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const FieldProblem = styled.p`
   font-size: 12px;
@@ -192,11 +176,15 @@ export function LibrariesBlockNewSection() {
         <Panel title="Control block" subtitle="Target, mandatory audited reason, and optional expiry.">
           <FieldLabel>
             Target type
-            <FieldSelect value={targetType} onChange={(e) => setTargetType(e.target.value)} aria-label="Target type">
-              {BLOCK_TARGETS.map((target) => (
-                <option key={target} value={target}>{target}</option>
-              ))}
-            </FieldSelect>
+            <div style={{ marginTop: 4 }}>
+              <Dropdown
+                variant="select"
+                aria-label="Target type"
+                value={targetType}
+                onChange={(v) => setTargetType(v)}
+                items={BLOCK_TARGETS.map((target) => ({ value: target, label: target }))}
+              />
+            </div>
           </FieldLabel>
           <div style={{ marginTop: 12 }}>
             <TextInput id="block-target-name" label="Target name (id or slug)" value={targetName} onChange={(e) => setTargetName(e.target.value)} error={nameProblem ?? undefined} />

@@ -18,6 +18,7 @@ import { useInviteMember, useResendInvite, useRevokeInvite, useChangeRole, useSu
 import { useOrg } from '@/Context/OrgContext';
 import type { OrgRole } from '@/Context/OrgContext';
 import { ApiError } from '@lib/engine/client';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Settings → Team (ledger T-5)
@@ -132,11 +133,15 @@ function InviteForm({ actorRole }: { actorRole: OrgRole | null }) {
           aria-label="Email address"
         />
       </div>
-      <RoleSelect aria-label="Invite role" value={role} onChange={(e) => setRole(e.target.value as OrgRole)}>
-        {assignableRoles(actorRole).map((r) => (
-          <option key={r} value={r}>{ROLE_LABELS_CAP[r]}</option>
-        ))}
-      </RoleSelect>
+      <div style={{ width: 170 }}>
+        <Dropdown
+          variant="select"
+          aria-label="Invite role"
+          value={role}
+          onChange={(v) => setRole(v as OrgRole)}
+          items={assignableRoles(actorRole).map((r) => ({ value: r, label: ROLE_LABELS_CAP[r] }))}
+        />
+      </div>
       <InviteBtn
         type="button"
         onClick={send}
@@ -578,28 +583,6 @@ const InviteError = styled.div`
   color: ${({ theme }) => theme.app.status.error.fg};
   font-size: ${({ theme }) => theme.app.type.caption};
   margin: -8px 0 16px;
-`;
-
-const RoleSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  height: 36px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const InviteBtn = styled(motion.button)`

@@ -40,6 +40,7 @@ import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/buil
 import { INSTRUCTIONS_LIMIT } from '@/sections/pages/products/agent-studio/builder/lib/instructions-v1';
 import { checkDefinitionCaps, sectionOf } from '@lib/engine/setup-caps';
 import { ApiError } from '@lib/engine/client';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { BackLink } from '../AgentDetailView.styles';
 import {
   EditorGrid,
@@ -48,7 +49,6 @@ import {
   FieldRow,
   FieldStack,
   FieldLabel,
-  EditorSelect,
   JsonBox,
   ToolRow,
   ChipRowBox,
@@ -394,22 +394,24 @@ export function AgentEditor() {
                         </FieldRow>
                         <FieldRow>
                           <SelectField label="Reasoning effort (unset = model default)">
-                            <EditorSelect
+                            <Dropdown
+                              variant="select"
                               value={effective.model_params.reasoning_effort ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value as '' | 'minimal' | 'low' | 'medium' | 'high';
+                              onChange={(v) => {
+                                const value = v as '' | 'minimal' | 'low' | 'medium' | 'high';
                                 const { reasoning_effort: _dropped, ...rest } = effective.model_params;
                                 void _dropped;
                                 patch({ model_params: value === '' ? rest : { ...rest, reasoning_effort: value } });
                               }}
                               aria-label="Reasoning effort"
-                            >
-                              <option value="">unset</option>
-                              <option value="minimal">minimal — fastest, shallowest</option>
-                              <option value="low">low</option>
-                              <option value="medium">medium — balanced</option>
-                              <option value="high">high — slowest, deepest</option>
-                            </EditorSelect>
+                              items={[
+                                { value: '', label: 'unset' },
+                                { value: 'minimal', label: 'minimal — fastest, shallowest' },
+                                { value: 'low', label: 'low' },
+                                { value: 'medium', label: 'medium — balanced' },
+                                { value: 'high', label: 'high — slowest, deepest' },
+                              ]}
+                            />
                           </SelectField>
                           <div />
                         </FieldRow>
@@ -439,22 +441,20 @@ export function AgentEditor() {
                         </FieldRow>
                         <FieldRow>
                           <SelectField label="Memory scope">
-                            <EditorSelect
+                            <Dropdown
+                              variant="select"
                               value={effective.context_policy.memory_scope}
-                              onChange={(e) =>
+                              onChange={(v) =>
                                 patch({
                                   context_policy: {
                                     ...effective.context_policy,
-                                    memory_scope: e.target.value as AgentDefinition['context_policy']['memory_scope'],
+                                    memory_scope: v as AgentDefinition['context_policy']['memory_scope'],
                                   },
                                 })
                               }
                               aria-label="Memory scope"
-                            >
-                              {MEMORY_SCOPES.map((scope) => (
-                                <option key={scope} value={scope}>{scope}</option>
-                              ))}
-                            </EditorSelect>
+                              items={MEMORY_SCOPES.map((scope) => ({ value: scope, label: scope }))}
+                            />
                           </SelectField>
                           <div />
                         </FieldRow>
@@ -533,14 +533,16 @@ export function AgentEditor() {
                           />
                         </SwitchRow>
                         <FieldLabel>Execution mode</FieldLabel>
-                        <EditorSelect
+                        <Dropdown
+                          variant="select"
                           value={effective.guardrails.execution_mode}
-                          onChange={(e) => patch({ guardrails: { ...effective.guardrails, execution_mode: e.target.value as GuardrailExecutionMode } })}
+                          onChange={(v) => patch({ guardrails: { ...effective.guardrails, execution_mode: v as GuardrailExecutionMode } })}
                           aria-label="Guardrail execution mode"
-                        >
-                          <option value="blocking">{MODE_COPY.blocking}</option>
-                          <option value="logging">{MODE_COPY.logging}</option>
-                        </EditorSelect>
+                          items={[
+                            { value: 'blocking', label: MODE_COPY.blocking },
+                            { value: 'logging', label: MODE_COPY.logging },
+                          ]}
+                        />
                         <SwitchSub>
                           {effective.guardrails.execution_mode === 'logging'
                             ? 'Logging records screening verdicts; deny topics still refuse on contact — measure first, then flip.'
@@ -858,41 +860,53 @@ function ToolBindingRow({
           />
         ) : (
           <SelectField label={`Tool ${index + 1}`}>
-            <EditorSelect value={tool.name} onChange={(e) => {
-              const value = e.target.value;
-              if (value === '__custom__') {
-                setCustom(true);
-                return;
-              }
-              onChange({ ...tool, name: value });
-            }} aria-label={`Tool ${index + 1} binding`}>
-              <option value="">Pick a tool…</option>
-              {options.map((option) => (
-                <option key={option.name} value={option.name}>
-                  {option.name}{option.effect && option.effect !== 'built-in' ? ` · ${option.effect}` : ''}{option.effect === 'built-in' ? ' · built-in' : ''}
-                </option>
-              ))}
-              <option value="__custom__">Custom name…</option>
-            </EditorSelect>
+            <Dropdown
+              variant="select"
+              value={tool.name}
+              onChange={(v) => {
+                if (v === '__custom__') {
+                  setCustom(true);
+                  return;
+                }
+                onChange({ ...tool, name: v });
+              }}
+              aria-label={`Tool ${index + 1} binding`}
+              items={[
+                { value: '', label: 'Pick a tool…' },
+                ...options.map((option) => ({
+                  value: option.name,
+                  label: `${option.name}${option.effect && option.effect !== 'built-in' ? ` · ${option.effect}` : ''}${option.effect === 'built-in' ? ' · built-in' : ''}`,
+                })),
+                { value: '__custom__', label: 'Custom name…' },
+              ]}
+            />
           </SelectField>
         )}
       </div>
       <SelectField label="Access">
-        <EditorSelect value={tool.access} onChange={(e) => onChange({ ...tool, access: e.target.value as ToolPolicy['access'] })} aria-label={`Access for tool ${index + 1}`}>
-          <option value="read">Read</option>
-          <option value="write">Write</option>
-        </EditorSelect>
+        <Dropdown
+          variant="select"
+          value={tool.access}
+          onChange={(v) => onChange({ ...tool, access: v as ToolPolicy['access'] })}
+          aria-label={`Access for tool ${index + 1}`}
+          items={[
+            { value: 'read', label: 'Read' },
+            { value: 'write', label: 'Write' },
+          ]}
+        />
       </SelectField>
       <SelectField label="Approval">
-        <EditorSelect
+        <Dropdown
+          variant="select"
           value={tool.approval}
-          onChange={(e) => onChange({ ...tool, approval: e.target.value as ToolPolicy['approval'] })}
+          onChange={(v) => onChange({ ...tool, approval: v as ToolPolicy['approval'] })}
           aria-label={`Approval for tool ${index + 1}`}
-        >
-          <option value="never">Never</option>
-          <option value="on_effect">On effect</option>
-          <option value="always">Always</option>
-        </EditorSelect>
+          items={[
+            { value: 'never', label: 'Never' },
+            { value: 'on_effect', label: 'On effect' },
+            { value: 'always', label: 'Always' },
+          ]}
+        />
       </SelectField>
       <IconRemove type="button" aria-label={`Remove tool ${tool.name || index + 1}`} onClick={onRemove}>
         <Trash2 size={13} strokeWidth={1.7} />

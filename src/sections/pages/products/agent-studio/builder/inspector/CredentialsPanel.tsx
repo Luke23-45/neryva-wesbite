@@ -28,12 +28,12 @@ import {
   FormNote,
   InlineForm,
   RowActions,
-  Select,
   SelectWrap,
   SmButton,
   TextButton,
   Wrap,
 } from './CredentialsPanel.styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /** Engine secret bounds (SPEC bind — enforced before any step-up prompt). */
 const SECRET_MIN = 8;
@@ -317,13 +317,13 @@ function ConnectForm({
     <InlineForm>
       <SelectWrap>
         <FieldLabel>Provider</FieldLabel>
-        <Select value={provider} onChange={(event) => setProvider(event.target.value)}>
-          {MODEL_PROVIDERS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </Select>
+        <Dropdown
+          variant="select"
+          value={provider}
+          onChange={(v) => setProvider(v)}
+          aria-label="Provider"
+          items={MODEL_PROVIDERS.map((p) => ({ value: p, label: p }))}
+        />
       </SelectWrap>
       <TextInput label="Label" value={label} onChange={(event) => setLabel(event.target.value)} placeholder="prod key" />
       <TextInput

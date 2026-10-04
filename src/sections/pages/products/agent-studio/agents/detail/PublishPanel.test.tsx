@@ -102,12 +102,12 @@ describe('PublishPanel', () => {
     await shell();
     expect(screen.getByText('Shape + instructions')).toBeTruthy();
     expect(screen.getByText('Knowledge pins resolved')).toBeTruthy();
-    expect(screen.getByDisplayValue(/v7 · DRAFT/)).toBeTruthy();
+    expect(screen.getByLabelText('Draft')).toHaveTextContent(/v7 · DRAFT/);
   });
 
   it('lands version-row jumps on the gate (select + focus)', async () => {
     await shell({ versionId: 'v7', nonce: 1 });
-    expect(screen.getByDisplayValue(/v7 · DRAFT/)).toBeTruthy();
+    expect(screen.getByLabelText('Draft')).toHaveTextContent(/v7 · DRAFT/);
     expect(document.activeElement?.id).toBe('publish-gate-panel');
   });
 

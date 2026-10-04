@@ -20,18 +20,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { DataTable, DataHead, DataRow, DataCell, CellMono, CellMeta } from '@components/common/ui/DataTable';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle, Toolbar, ToolbarGroup } from '@components/common/ui/ViewLayout';
-import styled from 'styled-components';
-
-const FilterSelect = styled.select`
-  background: rgba(255, 255, 255, 0.05);
-  color: #eceef4;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  max-width: 220px;
-`;
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const PAGE_SIZE = 50;
 
@@ -92,18 +81,30 @@ export default function AuditPage() {
         action={
           <Toolbar>
             <ToolbarGroup>
-              <FilterSelect value={action} onChange={(e) => { setAction(e.target.value); resetPages(); }} aria-label="Filter by action">
-                <option value="">All actions</option>
-                {facets.data?.actions.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </FilterSelect>
-              <FilterSelect value={resourceType} onChange={(e) => { setResourceType(e.target.value); resetPages(); }} title="Filters the loaded page" aria-label="Filter by resource type">
-                <option value="">All resources</option>
-                {facets.data?.resourceTypes.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </FilterSelect>
+              <div style={{ width: 180 }}>
+                <Dropdown
+                  variant="select"
+                  value={action}
+                  onChange={(v) => { setAction(v); resetPages(); }}
+                  aria-label="Filter by action"
+                  items={[
+                    { value: '', label: 'All actions' },
+                    ...(facets.data?.actions.map((a) => ({ value: a, label: a })) ?? []),
+                  ]}
+                />
+              </div>
+              <div style={{ width: 180 }}>
+                <Dropdown
+                  variant="select"
+                  value={resourceType}
+                  onChange={(v) => { setResourceType(v); resetPages(); }}
+                  aria-label="Filter by resource type"
+                  items={[
+                    { value: '', label: 'All resources' },
+                    ...(facets.data?.resourceTypes.map((r) => ({ value: r, label: r })) ?? []),
+                  ]}
+                />
+              </div>
               <input
                 type="date"
                 value={from}

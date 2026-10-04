@@ -6,6 +6,7 @@ import { Copy, Ellipsis, FileText, Minus, Pencil, Plus, TriangleAlert, X } from 
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { Switch } from '@components/common/ui/Switch';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Segmented } from '@components/common/ui/Segmented';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ApiError, engine } from '@lib/engine/client';
@@ -126,7 +127,6 @@ import {
   PinProgressLabel,
   PinState,
   PinTitle,
-  Select,
   StaleBadge,
   StalePill,
   StatLabel,
@@ -1400,21 +1400,20 @@ export function KnowledgeSection({
               />
               <div>
                 <FieldLabel htmlFor="knowledge-embedding-model">Embedding model</FieldLabel>
-                <Select
+                <Dropdown
+                  variant="select"
                   id="knowledge-embedding-model"
                   value={sourceDefaults.embeddingModel}
-                  onChange={(event) => setSourceDefaults((prev) => ({ ...prev, embeddingModel: event.target.value }))}
+                  onChange={(v) => setSourceDefaults((prev) => ({ ...prev, embeddingModel: v }))}
                   disabled={!canAuthor}
-                >
-                  {EMBEDDING_MODELS.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                  {!EMBEDDING_MODELS.includes(sourceDefaults.embeddingModel as (typeof EMBEDDING_MODELS)[number]) && (
-                    <option value={sourceDefaults.embeddingModel}>{sourceDefaults.embeddingModel}</option>
-                  )}
-                </Select>
+                  aria-label="Embedding model"
+                  items={[
+                    ...EMBEDDING_MODELS.map((model) => ({ value: model, label: model })),
+                    ...(!EMBEDDING_MODELS.includes(sourceDefaults.embeddingModel as (typeof EMBEDDING_MODELS)[number])
+                      ? [{ value: sourceDefaults.embeddingModel, label: sourceDefaults.embeddingModel }]
+                      : []),
+                  ]}
+                />
               </div>
               <div>
                 <FieldLabel id="knowledge-refresh-policy-label">Refresh policy</FieldLabel>

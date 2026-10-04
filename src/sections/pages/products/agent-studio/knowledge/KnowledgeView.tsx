@@ -15,7 +15,6 @@ import {
   Upload as UploadIcon,
   FileText,
   Filter,
-  ChevronDown,
   ArrowRight,
   Activity,
   Ban,
@@ -51,6 +50,7 @@ import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { useKnowledgeUploads } from './KnowledgeUploads';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 // Document states (engine knowledge schema): processing|ready|failed|retired.
 // Retired = source-deleted tombstone (mapping kept for resurrection,
@@ -376,44 +376,6 @@ const ChipRow = styled.div`
   align-items: center;
   margin-bottom: 16px;
   flex-wrap: wrap;
-`;
-
-const ChipSelectWrap = styled.label`
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-`;
-
-const ChipSelect = styled.select`
-  appearance: none;
-  height: 28px;
-  padding: 0 28px 0 12px;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.app.surface.subtle};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.text.muted};
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${({ theme }) => theme.app.border.strong};
-    color: ${({ theme }) => theme.app.text.secondary};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.text.link};
-    outline-offset: 1px;
-  }
-`;
-
-const ChipChevron = styled.span`
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: ${({ theme }) => theme.app.text.muted};
-  pointer-events: none;
-  display: flex;
 `;
 
 const ChipNote = styled.span`
@@ -1032,57 +994,41 @@ export function KnowledgeView() {
             </SearchComposer>
 
             <ChipRow>
-              <ChipSelectWrap>
-                <ChipSelect
+              <div style={{ width: 220 }}>
+                <Dropdown
+                  variant="select"
                   aria-label="Search scope"
                   value={searchScope}
-                  onChange={(e) => setSearchScope(e.target.value)}
-                >
-                  <option value="all">Scope: All documents</option>
-                  {(documents.data ?? []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      Scope: {d.sourceSlug || d.title || d.id.slice(0, 8)}
-                    </option>
-                  ))}
-                </ChipSelect>
-                <ChipChevron>
-                  <ChevronDown size={14} strokeWidth={2} />
-                </ChipChevron>
-              </ChipSelectWrap>
+                  onChange={(v) => setSearchScope(v)}
+                  items={[
+                    { value: 'all', label: 'Scope: All documents' },
+                    ...(documents.data ?? []).map((d) => ({
+                      value: d.id,
+                      label: `Scope: ${d.sourceSlug || d.title || d.id.slice(0, 8)}`,
+                    })),
+                  ]}
+                />
+              </div>
 
-              <ChipSelectWrap>
-                <ChipSelect
+              <div style={{ width: 150 }}>
+                <Dropdown
+                  variant="select"
                   aria-label="Top K results"
-                  value={searchTopK}
-                  onChange={(e) => setSearchTopK(Number(e.target.value))}
-                >
-                  {TOP_K_OPTIONS.map((k) => (
-                    <option key={k} value={k}>
-                      Top K: {k}
-                    </option>
-                  ))}
-                </ChipSelect>
-                <ChipChevron>
-                  <ChevronDown size={14} strokeWidth={2} />
-                </ChipChevron>
-              </ChipSelectWrap>
+                  value={String(searchTopK)}
+                  onChange={(v) => setSearchTopK(Number(v))}
+                  items={TOP_K_OPTIONS.map((k) => ({ value: String(k), label: `Top K: ${k}` }))}
+                />
+              </div>
 
-              <ChipSelectWrap>
-                <ChipSelect
+              <div style={{ width: 180 }}>
+                <Dropdown
+                  variant="select"
                   aria-label="Retrieval mode"
                   value={searchMode}
-                  onChange={(e) => setSearchMode(e.target.value as KnowledgeSearchMode)}
-                >
-                  {SEARCH_MODES.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      Mode: {m.label}
-                    </option>
-                  ))}
-                </ChipSelect>
-                <ChipChevron>
-                  <ChevronDown size={14} strokeWidth={2} />
-                </ChipChevron>
-              </ChipSelectWrap>
+                  onChange={(v) => setSearchMode(v as KnowledgeSearchMode)}
+                  items={SEARCH_MODES.map((m) => ({ value: m.value, label: `Mode: ${m.label}` }))}
+                />
+              </div>
 
               <ChipNote>Queries the live index · results are not cached</ChipNote>
             </ChipRow>

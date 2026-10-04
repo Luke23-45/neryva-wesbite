@@ -29,6 +29,7 @@ import {
   type UsageRange,
 } from '@hooks/engine/usage';
 import { useUrlSearchParams, useUrlState } from '@lib/useUrlState';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const SERIES_COLORS = ['#8b8ff8', '#05e3a4', '#f5b942'];
 
@@ -85,27 +86,6 @@ const Toolbar = styled.div`
 
 const Spacer = styled.div`
   flex: 1;
-`;
-
-const ProductSelect = styled.select`
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: ${({ theme }) => theme.app.text.primary};
-  }
 `;
 
 const ChartWrap = styled.div`
@@ -254,15 +234,18 @@ export function UsageExplorer({ defaultProduct = 'all' }: { defaultProduct?: str
   return (
     <div>
       <Toolbar>
-        <ProductSelect
-          value={product}
-          onChange={(e) => setProduct(e.target.value)}
-          aria-label="Product filter"
-        >
-          {PRODUCT_OPTIONS.filter((o) => o.value !== 'all' || defaultProduct === 'all').map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </ProductSelect>
+        <div style={{ width: 180 }}>
+          <Dropdown
+            variant="select"
+            value={product}
+            onChange={(v) => setProduct(v)}
+            aria-label="Product filter"
+            items={PRODUCT_OPTIONS.filter((o) => o.value !== 'all' || defaultProduct === 'all').map((o) => ({
+              value: o.value,
+              label: o.label,
+            }))}
+          />
+        </div>
         <Segmented options={RANGE_OPTIONS} value={rangeValue} onChange={setRangeAndClearError} ariaLabel="Usage range" />
         <Spacer />
         <ActionButton

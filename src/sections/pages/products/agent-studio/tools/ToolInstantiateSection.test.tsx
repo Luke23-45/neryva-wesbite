@@ -135,8 +135,14 @@ function instantiateButton() {
 }
 
 function fillValid() {
-  fireEvent.change(screen.getByLabelText('Template'), { target: { value: 'tpl-webhook' } });
+  pickTemplate();
   fireEvent.change(screen.getByLabelText(URL_LABEL), { target: { value: 'https://hooks.example/in' } });
+}
+
+/** Drives the Template Dropdown (Apple pop-up button): opens the menu and picks the template option. */
+function pickTemplate() {
+  fireEvent.click(screen.getByRole('button', { name: 'Template' }));
+  fireEvent.click(screen.getByRole('option', { name: /webhook_relay/ }));
 }
 
 describe('ToolInstantiateSection role gate', () => {
@@ -155,16 +161,18 @@ describe('ToolInstantiateSection role gate', () => {
 describe('ToolInstantiateSection form', () => {
   it('lists published templates with effect/approval context', async () => {
     await routerAt('/agent-studio/tools/instantiate');
-    const select = screen.getByLabelText('Template') as HTMLSelectElement;
-    expect(Array.from(select.options).map((o) => o.value)).toEqual(['', 'tpl-webhook']);
-    expect(select.options[1].text).toContain('webhook_relay');
-    expect(select.options[1].text).toContain('WRITE');
+    fireEvent.click(screen.getByRole('button', { name: 'Template' }));
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveTextContent('Pick a template…');
+    expect(options[1].textContent).toContain('webhook_relay');
+    expect(options[1].textContent).toContain('WRITE');
   });
 
   it('warns when the template name already exists (A4-66 upsert advisory)', async () => {
     mockCatalog = [catalogEntry()];
     await routerAt('/agent-studio/tools/instantiate');
-    fireEvent.change(screen.getByLabelText('Template'), { target: { value: 'tpl-webhook' } });
+    pickTemplate();
     const alert = screen.getByRole('alert');
     expect(alert.textContent).toContain('webhook_relay');
     expect(alert.textContent).toContain('replaces its schema');
@@ -176,7 +184,7 @@ describe('ToolInstantiateSection form', () => {
   it('keeps Instantiate disabled until a template and an https URL are set', async () => {
     await routerAt('/agent-studio/tools/instantiate');
     expect(instantiateButton()).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Template'), { target: { value: 'tpl-webhook' } });
+    pickTemplate();
     expect(instantiateButton()).toBeDisabled();
     fireEvent.change(screen.getByLabelText(URL_LABEL), { target: { value: 'http://hooks.example/in' } });
     expect(screen.getByText('Must be an https URL.')).toBeTruthy();

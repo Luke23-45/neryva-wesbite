@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { Rocket } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import {
@@ -176,16 +177,16 @@ export function PublishPanel({
             : 'Atomic pointer swing with every gate evaluated first — BLOCK, required checks, tool pins, models, knowledge. Nothing auto-publishes.'
         }
       >
-        <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
-          Draft
-          <select value={effectiveId} onChange={(e) => { setVersionId(e.target.value); setAcknowledge(false); }} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            {drafts.map((v) => (
-              <option key={v.id} value={v.id}>
-                v{v.version} · {v.status}{v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Dropdown
+          variant="select"
+          label="Draft"
+          value={effectiveId}
+          onChange={(v) => { setVersionId(v); setAcknowledge(false); }}
+          items={drafts.map((v) => ({
+            value: v.id,
+            label: `v${v.version} · ${v.status}${v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}`,
+          }))}
+        />
 
         {readiness.isError && (
           <Notice>

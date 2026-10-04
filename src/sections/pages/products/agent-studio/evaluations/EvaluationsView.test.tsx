@@ -113,7 +113,8 @@ describe('EvaluationsView (C10 extends — badges, filters, re-run, results)', (
     runsData = [run({ id: 'r1', decision: 'PASS' }), run({ id: 'r2', decision: 'BLOCK', score: '0.4100' })];
     await shell();
     expect(screen.getByText(/cap 100, filtered locally/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText(/Decision/), { target: { value: 'BLOCK' } });
+    fireEvent.click(screen.getByLabelText(/Decision/));
+    fireEvent.click(screen.getByRole('option', { name: 'BLOCK' }));
     expect(screen.queryByText('0.9312')).toBeNull();
     expect(screen.getByText('0.4100')).toBeTruthy();
   });

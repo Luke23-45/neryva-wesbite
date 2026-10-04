@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { pageItem } from '@styles/motion';
@@ -129,35 +130,45 @@ function RunForm({ returnTo }: { returnTo: string | null }) {
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel title="Run configuration" subtitle="Same dataset, same attempts as a re-run — drafts evaluate from their agent page.">
-          <label style={{ fontSize: 13, display: 'block' }}>
-            Dataset
-            <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              <option value="">Pick a dataset…</option>
-              {(datasets.data ?? []).map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>{dataset.name}</option>
-              ))}
-            </select>
-          </label>
-          <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-            Assistant (to locate published versions)
-            <select value={assistantId} onChange={(e) => { setAssistantId(e.target.value); setVersionId(''); }} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              <option value="">Pick an assistant…</option>
-              {(assistants.data ?? []).map((assistant) => (
-                <option key={assistant.id} value={assistant.id}>{assistant.name}</option>
-              ))}
-            </select>
-          </label>
-          <label style={{ fontSize: 13, display: 'block', marginTop: 12 }}>
-            Published version
-            <select value={versionId} onChange={(e) => setVersionId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              <option value="">{assistantId ? 'Pick a PUBLISHED version…' : 'Pick an assistant first…'}</option>
-              {publishedVersions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.version}{v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            variant="select"
+            label="Dataset"
+            value={datasetId}
+            onChange={setDatasetId}
+            items={[
+              { value: '', label: 'Pick a dataset…' },
+              ...(datasets.data ?? []).map((dataset) => ({
+                value: dataset.id,
+                label: dataset.name,
+              })),
+            ]}
+          />
+          <Dropdown
+            variant="select"
+            label="Assistant (to locate published versions)"
+            value={assistantId}
+            onChange={(v) => { setAssistantId(v); setVersionId(''); }}
+            items={[
+              { value: '', label: 'Pick an assistant…' },
+              ...(assistants.data ?? []).map((assistant) => ({
+                value: assistant.id,
+                label: assistant.name,
+              })),
+            ]}
+          />
+          <Dropdown
+            variant="select"
+            label="Published version"
+            value={versionId}
+            onChange={setVersionId}
+            items={[
+              { value: '', label: assistantId ? 'Pick a PUBLISHED version…' : 'Pick an assistant first…' },
+              ...publishedVersions.map((v) => ({
+                value: v.id,
+                label: `v${v.version}${v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}`,
+              })),
+            ]}
+          />
           <div style={{ marginTop: 12, maxWidth: 200 }}>
             <TextInput id="eval-run-attempts" label="Attempts per case (1–5)" type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
           </div>

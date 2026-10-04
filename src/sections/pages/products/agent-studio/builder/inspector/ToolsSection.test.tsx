@@ -493,7 +493,8 @@ describe('ToolsSection catalog empty states (wave 4 item 3)', () => {
     // lookup_ticket matches the search but its approval is NONE; the approval
     // filter hides it and the search hides everything else.
     fireEvent.change(screen.getByPlaceholderText(/Filter by name/), { target: { value: 'lookup' } });
-    fireEvent.change(screen.getByLabelText('Filter by approval'), { target: { value: 'required' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Filter by approval' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Approval · Required' }));
     expect(screen.getByText('No catalog rows match the current filters.')).toBeTruthy();
     expect(screen.queryByText(/register one in the Tools library/)).toBeNull();
   });

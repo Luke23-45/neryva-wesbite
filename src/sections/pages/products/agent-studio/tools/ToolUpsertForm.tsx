@@ -8,6 +8,7 @@ import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { pageItem } from '@styles/motion';
 import {
   useUpsertTool,
@@ -29,23 +30,6 @@ const FieldLabel = styled.label`
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const ActionsRow = styled.div`
   display: flex;
@@ -281,19 +265,27 @@ export function ToolUpsertForm({
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <FieldLabel style={{ flex: 1 }}>
               Effect class
-              <FieldSelect value={effectClass} onChange={(e) => setEffectClass(e.target.value)} aria-label="Effect class">
-                {TOOL_EFFECT_CLASSES.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </FieldSelect>
+              <div style={{ marginTop: 4 }}>
+                <Dropdown
+                  variant="select"
+                  aria-label="Effect class"
+                  value={effectClass}
+                  onChange={(v) => setEffectClass(v)}
+                  items={TOOL_EFFECT_CLASSES.map((value) => ({ value, label: value }))}
+                />
+              </div>
             </FieldLabel>
             <FieldLabel style={{ flex: 1 }}>
               Approval requirement
-              <FieldSelect value={approval} onChange={(e) => setApproval(e.target.value)} aria-label="Approval requirement">
-                {TOOL_APPROVAL_REQUIREMENTS.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </FieldSelect>
+              <div style={{ marginTop: 4 }}>
+                <Dropdown
+                  variant="select"
+                  aria-label="Approval requirement"
+                  value={approval}
+                  onChange={(v) => setApproval(v)}
+                  items={TOOL_APPROVAL_REQUIREMENTS.map((value) => ({ value, label: value }))}
+                />
+              </div>
             </FieldLabel>
           </div>
           <div style={{ marginTop: 12 }}>

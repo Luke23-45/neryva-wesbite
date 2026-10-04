@@ -27,6 +27,7 @@ import { OrgSwitcher } from '@components/platform/OrgSwitcher';
 import { CreditBalanceChip } from '@components/platform/credits/CreditBalanceChip';
 import { UpgradeModal } from '@/sections/pages/products/agent-studio/UpgradeModal';
 import { SignInOptions } from '@components/platform/SignInOptions';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const Shell = styled.div`
   display: flex;
@@ -85,14 +86,6 @@ const TopGroup = styled.div`
   align-items: center;
   gap: 10px;
   min-width: 0;
-`;
-
-const PlainSelect = styled.select`
-  background: transparent;
-  color: rgba(236, 238, 244, 0.7);
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
 `;
 
 const AccountChip = styled.div`
@@ -240,14 +233,17 @@ export default function PlatformShell() {
           <TopGroup>
             <OrgSwitcher onSwitch={() => void navigate({ to: '/platform' })} />
             {projects.data?.projects?.length ? (
-              <PlainSelect defaultValue="">
-                <option value="">All projects</option>
-                {projects.data.projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </PlainSelect>
+              <div style={{ width: 180 }}>
+                <Dropdown
+                  variant="select"
+                  defaultValue=""
+                  aria-label="Project filter"
+                  items={[
+                    { value: '', label: 'All projects' },
+                    ...projects.data.projects.map((p) => ({ value: p.id, label: p.name })),
+                  ]}
+                />
+              </div>
             ) : null}
           </TopGroup>
           <TopGroup>

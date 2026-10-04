@@ -475,28 +475,6 @@ export const FilterInputWrap = styled.div`
   min-width: 0;
 `;
 
-export const StyledSelect = styled.select`
-  flex: none;
-  appearance: none;
-  background: ${({ theme }) => theme.app.bg.base};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: ${({ theme }) => theme.radii.md};
-  padding: ${({ theme }) => theme.spacing.s2} ${({ theme }) => theme.spacing.s4};
-  padding-right: ${({ theme }) => theme.spacing.s6};
-  font: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.primary};
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3ad' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-
-  &:focus-visible {
-    outline: ${({ theme }) => theme.spacing.px2} solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: ${({ theme }) => theme.spacing.px2};
-  }
-`;
-
 export const CatalogList = styled.div`
   display: flex;
   flex-direction: column;

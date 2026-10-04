@@ -87,9 +87,11 @@ describe('BlocksView', () => {
 
   it('status filter surfaces expired rows with the Expired pill', async () => {
     await shell();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Filter by status'), { target: { value: 'expired' } });
-    });
+    // NOTE: no `await act(...)` wrapper here — fireEvent already flushes inside
+    // act, and nesting it in an async act scope swallows the Dropdown's state
+    // update (the menu never opens).
+    fireEvent.click(screen.getByLabelText('Filter by status'));
+    fireEvent.click(screen.getByRole('option', { name: 'Expired' }));
     const row = screen.getByText('web-browse').parentElement?.parentElement as HTMLElement;
     expect(within(row).getByText('Expired')).toBeTruthy();
     expect(screen.queryByText('refund-payment')).toBeNull();

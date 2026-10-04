@@ -14,6 +14,7 @@ import { EmptyState } from '@components/common/ui/EmptyState';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { ActionButton } from '@components/common/ui/ActionButton/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog/ConfirmDialog';
 import { StatusPill } from '@components/common/ui/StatusPill/StatusPill';
@@ -207,16 +208,13 @@ export default function ApiKeysPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
             <TextInput label="Name" name="key-name" placeholder="ci-runner" value={name} onChange={(e) => setName(e.target.value)} />
-            <div>
-              <label htmlFor="key-role" style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'rgba(229, 231, 235, 0.78)', marginBottom: 6 }}>
-                Role
-              </label>
-              <select id="key-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ORG_KEY_ROLES)[number])} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
-                {ORG_KEY_ROLES.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
+            <Dropdown
+              variant="select"
+              label="Role"
+              value={role}
+              onChange={(v) => setRole(v as (typeof ORG_KEY_ROLES)[number])}
+              items={ORG_KEY_ROLES.map((r) => ({ value: r, label: r }))}
+            />
             <div>
               <label style={{ fontSize: 12, opacity: 0.7, display: 'block', marginBottom: 6 }}>Scopes (space or comma separated; * alone = everything)</label>
               <ScopesInput value={scopes} onChange={(e) => setScopes(e.target.value)} />

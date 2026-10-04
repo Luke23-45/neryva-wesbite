@@ -31,6 +31,7 @@ import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
 import { PlatformIcon } from './platformIcons';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const statusTone: Record<string, StatusTone> = {
   active: 'success',
@@ -59,23 +60,6 @@ const FieldLabel = styled.label`
   display: block;
 `;
 
-const FieldSelect = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  border: 1px solid ${({ theme }) => theme.app.border.strong};
-  border-radius: 9px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.body};
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
 
 const FactRow = styled.div`
   display: flex;
@@ -371,20 +355,39 @@ function ChannelDetailForm({ account }: { account: ChannelAccount }) {
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                 <FieldLabel style={{ flex: 1 }}>
                   Status
-                  <FieldSelect value={status} onChange={(e) => setStatus(e.target.value)}>
-                    <option value="active">active</option>
-                    <option value="suspended">suspended</option>
-                    {status === 'pending' ? <option value="pending" disabled>pending (verify to activate)</option> : null}
-                  </FieldSelect>
+                  <div style={{ marginTop: 4 }}>
+                    <Dropdown
+                      variant="select"
+                      aria-label="Status"
+                      value={status}
+                      onChange={(v) => setStatus(v)}
+                      items={[
+                        { value: 'active', label: 'active' },
+                        { value: 'suspended', label: 'suspended' },
+                        ...(status === 'pending'
+                          ? [{ value: 'pending', label: 'pending (verify to activate)', disabled: true }]
+                          : []),
+                      ]}
+                    />
+                  </div>
                 </FieldLabel>
                 <FieldLabel style={{ flex: 2 }}>
                   Serving assistant (re-binding re-checks routability)
-                  <FieldSelect value={assistantId} onChange={(e) => setAssistantId(e.target.value)}>
-                    <option value="">Unbound (legacy — new accounts always bind)</option>
-                    {(assistants.data ?? []).map((assistant) => (
-                      <option key={assistant.id} value={assistant.id}>{assistant.name} ({assistant.status})</option>
-                    ))}
-                  </FieldSelect>
+                  <div style={{ marginTop: 4 }}>
+                    <Dropdown
+                      variant="select"
+                      aria-label="Serving assistant"
+                      value={assistantId}
+                      onChange={(v) => setAssistantId(v)}
+                      items={[
+                        { value: '', label: 'Unbound (legacy — new accounts always bind)' },
+                        ...(assistants.data ?? []).map((assistant) => ({
+                          value: assistant.id,
+                          label: `${assistant.name} (${assistant.status})`,
+                        })),
+                      ]}
+                    />
+                  </div>
                 </FieldLabel>
               </div>
               {account.platform === 'web' && (

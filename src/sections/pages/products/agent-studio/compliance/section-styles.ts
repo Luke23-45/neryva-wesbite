@@ -5,17 +5,6 @@ import styled from 'styled-components';
  * Carried over verbatim from the dialog-era ComplianceView styles — the
  * selects and validation lines keep the exact look the modals had.
  */
-export const ScopeSelect = styled.select`
-  font-size: 13px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(0, 0, 0, 0.30);
-  color: inherit;
-  font-family: inherit;
-  cursor: pointer;
-`;
-
 export const ValidationError = styled.div`
   font-size: ${({ theme }) => theme.app.type.micro};
   color: ${({ theme }) => theme.app.status.error.fg};

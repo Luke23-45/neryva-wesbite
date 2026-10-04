@@ -180,22 +180,6 @@ export const FieldLabel = styled.span`
   color: ${({ theme }) => theme.app.text.secondary};
 `;
 
-export const Select = styled.select`
-  height: 40px;
-  padding: 0 ${({ theme }) => theme.spacing.s3};
-  border-radius: ${({ theme }) => theme.radii.md};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.tint};
-  color: ${({ theme }) => theme.app.text.primary};
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-family: inherit;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.app.border.focus};
-  }
-`;
-
 export const SelectWrap = styled.label`
   font-size: ${({ theme }) => theme.app.type.caption};
   display: flex;

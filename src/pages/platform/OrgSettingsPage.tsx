@@ -21,6 +21,7 @@ import { requestStepUp } from '@lib/engine/stepup';
 import { Panel } from '@components/common/ui/Panel/Panel';
 import { Modal } from '@components/common/ui/Modal/Modal';
 import { TextInput } from '@components/common/ui/TextInput/TextInput';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { ActionButton } from '@components/common/ui/ActionButton/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog/ConfirmDialog';
 import { StatusPill } from '@components/common/ui/StatusPill/StatusPill';
@@ -252,12 +253,19 @@ function GroupsTab({ canManage }: { canManage: boolean }) {
         }
       >
         <div style={{ paddingTop: 4 }}>
-          <select value={memberId} onChange={(e) => setMemberId(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
-            <option value="">Select a member…</option>
-            {(members.data?.members ?? []).map((m) => (
-              <option key={m.accountId} value={m.accountId}>{m.displayName ?? m.email} ({m.email})</option>
-            ))}
-          </select>
+          <Dropdown
+            variant="select"
+            aria-label="Select a member"
+            value={memberId}
+            onChange={setMemberId}
+            items={[
+              { value: '', label: 'Select a member…' },
+              ...(members.data?.members ?? []).map((m) => ({
+                value: m.accountId,
+                label: `${m.displayName ?? m.email} (${m.email})`,
+              })),
+            ]}
+          />
         </div>
       </Modal>
 
@@ -490,12 +498,21 @@ function DangerTab({ isOwner }: { isOwner: boolean }) {
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <select value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)} aria-label="Select the new owner" style={{ background: 'rgba(255,255,255,0.05)', color: '#eceef4', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '8px 10px', fontSize: 13 }}>
-                  <option value="">Select the new owner…</option>
-                  {(members.data?.members ?? []).filter((m) => m.status === 'active' && m.role !== 'owner').map((m) => (
-                    <option key={m.accountId} value={m.accountId}>{m.displayName ?? m.email} ({m.email})</option>
-                  ))}
-                </select>
+                <Dropdown
+                  variant="select"
+                  aria-label="Select the new owner"
+                  value={transferTarget}
+                  onChange={setTransferTarget}
+                  items={[
+                    { value: '', label: 'Select the new owner…' },
+                    ...(members.data?.members ?? [])
+                      .filter((m) => m.status === 'active' && m.role !== 'owner')
+                      .map((m) => ({
+                        value: m.accountId,
+                        label: `${m.displayName ?? m.email} (${m.email})`,
+                      })),
+                  ]}
+                />
                 <ActionButton variant="secondary" disabled={!transferTarget || transfer.isPending} onClick={() => { void requestStepUp('Transfer ownership').then((mfaProof) => transfer.mutate({ targetAccountId: transferTarget, mfaProof })).catch(() => undefined); }}>
                   <Crown size={13} /> Transfer ownership
                 </ActionButton>

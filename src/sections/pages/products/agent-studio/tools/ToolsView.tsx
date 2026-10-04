@@ -8,6 +8,7 @@ import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Switch } from '@components/common/ui/Switch';
 import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -390,24 +391,30 @@ export function ToolsView() {
                       <div style={{ flex: '2 1 180px' }}>
                         <TextInput aria-label="Filter tools" placeholder="Filter by name…" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
                       </div>
-                      <label style={{ fontSize: 13 }}>
-                        Effect
-                        <select value={effectFilter} onChange={(e) => setEffectFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                          <option value="">All effects</option>
-                          {TOOL_EFFECT_CLASSES.map((value) => (
-                            <option key={value} value={value}>{value}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label style={{ fontSize: 13 }}>
-                        Approval
-                        <select value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)} style={{ display: 'block', marginTop: 4 }}>
-                          <option value="">All approvals</option>
-                          {TOOL_APPROVAL_REQUIREMENTS.map((value) => (
-                            <option key={value} value={value}>{value}</option>
-                          ))}
-                        </select>
-                      </label>
+                      <div style={{ width: 170 }}>
+                        <Dropdown
+                          variant="select"
+                          label="Effect"
+                          value={effectFilter}
+                          onChange={setEffectFilter}
+                          items={[
+                            { value: '', label: 'All effects' },
+                            ...TOOL_EFFECT_CLASSES.map((value) => ({ value, label: value })),
+                          ]}
+                        />
+                      </div>
+                      <div style={{ width: 170 }}>
+                        <Dropdown
+                          variant="select"
+                          label="Approval"
+                          value={approvalFilter}
+                          onChange={setApprovalFilter}
+                          items={[
+                            { value: '', label: 'All approvals' },
+                            ...TOOL_APPROVAL_REQUIREMENTS.map((value) => ({ value, label: value })),
+                          ]}
+                        />
+                      </div>
                       <div style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
                         <SwitchPair>
                           <Switch

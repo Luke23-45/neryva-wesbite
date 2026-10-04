@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { useAssistantDefinition, type AgentVersion } from '@hooks/studio/useAgentAuthoring';
 import { useModelAvailability } from '@hooks/studio/useSetupModels';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
@@ -52,23 +53,19 @@ export function TestRunPanel({ agentId, versions }: { agentId: string; versions:
           modelsLoading={models.isPending}
           editMode={{ kind: 'link', builderHref: buildAgentBuildPath(agentId) }}
           header={
-            <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
-              Version
-              <select
-                value={effectiveVersionId}
-                onChange={(e) => {
-                  resetTryParam();
-                  setVersionId(e.target.value);
-                }}
-                style={{ display: 'block', width: '100%', marginTop: 4 }}
-              >
-                {runnable.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    v{v.version} · {v.status}{v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Dropdown
+              variant="select"
+              label="Version"
+              value={effectiveVersionId}
+              onChange={(v) => {
+                resetTryParam();
+                setVersionId(v);
+              }}
+              items={runnable.map((v) => ({
+                value: v.id,
+                label: `v${v.version} · ${v.status}${v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}`,
+              }))}
+            />
           }
         />
       )}

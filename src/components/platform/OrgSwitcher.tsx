@@ -4,37 +4,9 @@
  * keys do the cache separation. `onSwitch` lets a shell reset its own
  * navigation (the platform console bounces to its home; the studio stays).
  */
-import { ChevronDown } from 'lucide-react';
-import styled from 'styled-components';
 import { useOrg, ROLE_LABELS, type OrgRole } from '@/Context/OrgContext';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
-const Select = styled.select`
-  background: rgba(255, 255, 255, 0.05);
-  color: #eceef4;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 7px 10px;
-  font-size: 13px;
-  max-width: 320px;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid rgba(139, 143, 248, 0.6);
-    outline-offset: 1px;
-  }
-
-  option {
-    background: #14151c;
-    color: #eceef4;
-  }
-`;
-
-const Wrap = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-`;
 
 export function OrgSwitcher({ onSwitch, ariaLabel = 'Switch organization' }: { onSwitch?: () => void; ariaLabel?: string }) {
   const { orgs, orgId, role, setActive } = useOrg();
@@ -47,23 +19,20 @@ export function OrgSwitcher({ onSwitch, ariaLabel = 'Switch organization' }: { o
   }
 
   return (
-    <Wrap>
-      <Select
+    <div style={{ maxWidth: 320 }}>
+      <Dropdown
+        variant="select"
         value={orgId ?? ''}
-        onChange={(e) => {
-          setActive(e.target.value);
+        onChange={(v) => {
+          setActive(v);
           onSwitch?.();
         }}
         aria-label={ariaLabel}
-      >
-        {orgs.map((org) => (
-          <option key={org.orgId} value={org.orgId}>
-            {org.name ?? org.orgId}
-            {org.orgId === orgId && role ? ` · ${ROLE_LABELS[role as OrgRole] ?? role}` : ''}
-          </option>
-        ))}
-      </Select>
-      <ChevronDown size={13} opacity={0.4} aria-hidden="true" />
-    </Wrap>
+        items={orgs.map((org) => ({
+          value: org.orgId,
+          label: `${org.name ?? org.orgId}${org.orgId === orgId && role ? ` · ${ROLE_LABELS[role as OrgRole] ?? role}` : ''}`,
+        }))}
+      />
+    </div>
   );
 }

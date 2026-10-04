@@ -29,28 +29,6 @@ export const Filters = styled.div`
   align-items: center;
 `;
 
-export const FilterSelect = styled.select`
-  appearance: none;
-  background: ${({ theme }) => theme.app.surface.tint};
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  border-radius: 8px;
-  padding: 6px 10px;
-  color: ${({ theme }) => theme.app.text.secondary};
-  font-family: inherit;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  cursor: pointer;
-  transition: border-color ${({ theme }) => theme.transitions.fast};
-
-  &:hover {
-    border-color: ${({ theme }) => theme.app.border.hover};
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.app.border.focus};
-    outline-offset: 1px;
-  }
-`;
-
 export const List = styled.div`
   display: flex;
   flex-direction: column;

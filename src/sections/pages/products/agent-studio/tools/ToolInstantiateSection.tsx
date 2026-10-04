@@ -18,6 +18,7 @@ import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 const TOOLS_PATH = '/agent-studio/tools';
 
@@ -38,12 +39,6 @@ const FieldWrap = styled.div`
 const Label = styled.label`
   font-size: 13px;
   display: block;
-`;
-
-const Select = styled.select`
-  display: block;
-  width: 100%;
-  margin-top: 4px;
 `;
 
 const CollideWarn = styled.p`
@@ -166,14 +161,21 @@ export function ToolInstantiateSection() {
                 <>
                   <Label>
                     Template
-                    <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)}>
-                      <option value="">Pick a template…</option>
-                      {rows.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} — {t.effectClass} / {t.approvalRequirement}
-                        </option>
-                      ))}
-                    </Select>
+                    <div style={{ marginTop: 4 }}>
+                      <Dropdown
+                        variant="select"
+                        aria-label="Template"
+                        value={templateId}
+                        onChange={(v) => setTemplateId(v)}
+                        items={[
+                          { value: '', label: 'Pick a template…' },
+                          ...rows.map((t) => ({
+                            value: t.id,
+                            label: `${t.name} — ${t.effectClass} / ${t.approvalRequirement}`,
+                          })),
+                        ]}
+                      />
+                    </div>
                   </Label>
                   {collides && (
                     <CollideWarn role="alert">

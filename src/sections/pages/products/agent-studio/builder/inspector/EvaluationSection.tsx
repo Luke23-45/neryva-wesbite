@@ -38,7 +38,6 @@ import {
   ActionsRow,
   AttemptsWrap,
   DatasetLabel,
-  DatasetSelect,
   FieldBlock,
   FieldHead,
   FieldHelper,
@@ -52,6 +51,7 @@ import {
   RunsErrorTitle,
   Wrap,
 } from './EvaluationSection.styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Note } from './TraceDrawer.styles';
 
 export interface EvaluationSectionProps {
@@ -229,14 +229,16 @@ export function EvaluationSection({
             )}
             <DatasetLabel>
               Dataset (omit for the template-seeded default)
-              <DatasetSelect value={datasetId} onChange={(e) => setDatasetId(e.target.value)}>
-                <option value="">Template default (fails loudly when none exists)</option>
-                {(datasets.data ?? []).map((dataset) => (
-                  <option key={dataset.id} value={dataset.id}>
-                    {dataset.name}
-                  </option>
-                ))}
-              </DatasetSelect>
+              <Dropdown
+                variant="select"
+                value={datasetId}
+                onChange={(v) => setDatasetId(v)}
+                aria-label="Dataset"
+                items={[
+                  { value: '', label: 'Template default (fails loudly when none exists)' },
+                  ...(datasets.data ?? []).map((dataset) => ({ value: dataset.id, label: dataset.name })),
+                ]}
+              />
             </DatasetLabel>
             {pickedDataset && <FieldHelper>{describeDatasetOrigin(pickedDataset.name)} dataset.</FieldHelper>}
           </>

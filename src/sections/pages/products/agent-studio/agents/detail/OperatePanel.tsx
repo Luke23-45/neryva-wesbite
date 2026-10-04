@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import toast from 'react-hot-toast';
 import { Pause, Play, ShieldAlert, Power, PowerOff } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { Modal } from '@components/common/ui/Modal';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -283,28 +284,27 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
               <>
                 {editing.map((variant, i) => (
                   <VariantRow key={i}>
-                    <label style={{ flex: 1, fontSize: 13 }}>
-                      Version
-                      <select
-                        value={variant.version_id}
-                        onChange={(e) => {
-                          const next = [...editing];
-                          next[i] = { ...next[i], version_id: e.target.value };
-                          setVariants(next);
-                        }}
-                        style={{ display: 'block', width: '100%', marginTop: 4 }}
-                      >
-                        <option value="">Pick a published version…</option>
-                        {published.map((v) => {
-                          const blocked = blockedByEval.has(v.id);
-                          return (
-                            <option key={v.id} value={v.id} disabled={blocked}>
-                              v{v.version}{blocked ? ' — BLOCKed by evaluation' : ''}{v.hash ? ` · ${v.hash.slice(0, 8)}` : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </label>
+                    <Dropdown
+                      variant="select"
+                      label="Version"
+                      value={variant.version_id}
+                      onChange={(v) => {
+                        const next = [...editing];
+                        next[i] = { ...next[i], version_id: v };
+                        setVariants(next);
+                      }}
+                      items={[
+                        { value: '', label: 'Pick a published version…' },
+                        ...published.map((ver) => {
+                          const blocked = blockedByEval.has(ver.id);
+                          return {
+                            value: ver.id,
+                            label: `v${ver.version}${blocked ? ' — BLOCKed by evaluation' : ''}${ver.hash ? ` · ${ver.hash.slice(0, 8)}` : ''}`,
+                            disabled: blocked,
+                          };
+                        }),
+                      ]}
+                    />
                     <label style={{ width: 120, fontSize: 13 }}>
                       Weight
                       <input
@@ -391,17 +391,20 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
             Channel
             <input value={releaseChannel} onChange={(e) => setReleaseChannel(e.target.value)} placeholder="default" style={{ display: 'block', marginTop: 4 }} />
           </label>
-          <label style={{ fontSize: 13, minWidth: 220 }}>
-            Version
-            <select value={releaseVersionId} onChange={(e) => setReleaseVersionId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              <option value="">Pick a published version…</option>
-              {published.map((v) => (
-                <option key={v.id} value={v.id} disabled={blockedByEval.has(v.id)}>
-                  v{v.version}{blockedByEval.has(v.id) ? ' — BLOCKed' : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            variant="select"
+            label="Version"
+            value={releaseVersionId}
+            onChange={setReleaseVersionId}
+            items={[
+              { value: '', label: 'Pick a published version…' },
+              ...published.map((v) => ({
+                value: v.id,
+                label: `v${v.version}${blockedByEval.has(v.id) ? ' — BLOCKed' : ''}`,
+                disabled: blockedByEval.has(v.id),
+              })),
+            ]}
+          />
           <ActionButton
             size="sm"
             disabled={!canOperate || !releaseVersionId || moveRelease.isPending}

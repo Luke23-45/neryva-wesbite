@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { FlaskConical } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Panel } from '@components/common/ui/Panel';
+import { Dropdown } from '@components/common/ui/Dropdown';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -115,27 +116,29 @@ export function EvaluatePanel({ agentId, versions }: { agentId: string; versions
         <Muted>No DRAFT or PUBLISHED version to evaluate — retired versions never execute.</Muted>
       ) : (
         <>
-          <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
-            Version
-            <select value={effectiveVersionId} onChange={(e) => { setVersionId(e.target.value); setTrackedRunId(null); }} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              {evaluable.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.version} · {v.status}{v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
-            Dataset (omit for the template-seeded default)
-            <select value={datasetId} onChange={(e) => setDatasetId(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-              <option value="">Template default (fails loudly when none exists)</option>
-              {(datasets.data ?? []).map((dataset) => (
-                <option key={dataset.id} value={dataset.id}>
-                  {dataset.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            variant="select"
+            label="Version"
+            value={effectiveVersionId}
+            onChange={(v) => { setVersionId(v); setTrackedRunId(null); }}
+            items={evaluable.map((v) => ({
+              value: v.id,
+              label: `v${v.version} · ${v.status}${v.hash ? ` · ${v.hash.slice(0, 12)}` : ''}`,
+            }))}
+          />
+          <Dropdown
+            variant="select"
+            label="Dataset (omit for the template-seeded default)"
+            value={datasetId}
+            onChange={setDatasetId}
+            items={[
+              { value: '', label: 'Template default (fails loudly when none exists)' },
+              ...(datasets.data ?? []).map((dataset) => ({
+                value: dataset.id,
+                label: dataset.name,
+              })),
+            ]}
+          />
           <div style={{ maxWidth: 220 }}>
             <TextInput label="Attempts per case (1–5)" type="number" value={attempts} min={1} max={5} onChange={(e) => setAttempts(e.target.value)} />
           </div>

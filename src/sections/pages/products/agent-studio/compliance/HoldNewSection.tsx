@@ -13,7 +13,8 @@ import { useOrg } from '@/Context/OrgContext';
 import { canSetup } from '@lib/engine/capabilities';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
 import { SectionBackRow } from './SectionBackRow';
-import { ScopeSelect, ValidationError, FieldColumn, ActionsRow } from './section-styles';
+import { ValidationError, FieldColumn, ActionsRow } from './section-styles';
+import { Dropdown } from '@components/common/ui/Dropdown';
 
 /**
  * Place a legal hold — dedicated section replacing PlaceHoldDialog (X-4).
@@ -96,11 +97,13 @@ export function HoldNewSection() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <FieldColumn>
               Scope
-              <ScopeSelect value={scopeType} onChange={(e) => setScopeType(e.target.value)} aria-label="Hold scope">
-                {HOLD_SCOPE_TYPES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </ScopeSelect>
+              <Dropdown
+                variant="select"
+                value={scopeType}
+                onChange={(v) => setScopeType(v)}
+                aria-label="Hold scope"
+                items={HOLD_SCOPE_TYPES.map((s) => ({ value: s, label: s }))}
+              />
             </FieldColumn>
             <TextInput
               id="hold-scope-id"
