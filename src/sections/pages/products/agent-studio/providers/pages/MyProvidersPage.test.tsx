@@ -62,6 +62,7 @@ function cred(id: string, priority: number, overrides: Partial<ProviderCredentia
   return {
     id,
     provider: 'openai',
+    provider_display_name: 'OpenAI',
     label: `Key ${id}`,
     external_ref: id,
     source: 'byok',
@@ -154,5 +155,36 @@ describe('MyProvidersPage', () => {
     expect(screen.getByLabelText('Connect API key form')).toBeTruthy();
     // Connect is disabled until a successful probe.
     expect(screen.getByRole('button', { name: 'Connect key' })).toBeDisabled();
+  });
+
+  it('renders provider subheaders in alphabetical order with honest counts', () => {
+    hoisted.credentials = [
+      cred('a1', 0, { provider: 'openai', provider_display_name: 'OpenAI' }),
+      cred('b1', 0, { provider: 'anthropic', provider_display_name: 'Anthropic' }),
+      cred('a2', 1, { provider: 'openai', provider_display_name: 'OpenAI' }),
+    ];
+    renderPage();
+    const anthropic = screen.getByText('Anthropic · 1 key');
+    const openai = screen.getByText('OpenAI · 2 keys');
+    expect(anthropic.compareDocumentPosition(openai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('keyboard reorder never crosses provider boundaries', () => {
+    hoisted.credentials = [
+      cred('a1', 0, { provider: 'anthropic', provider_display_name: 'Anthropic' }),
+      cred('o1', 0, { provider: 'openai', provider_display_name: 'OpenAI' }),
+      cred('o2', 1, { provider: 'openai', provider_display_name: 'OpenAI' }),
+    ];
+    renderPage();
+    // a1 is alone in its group: moving down is a no-op (the old global
+    // code would have swapped its priority with o1's).
+    fireEvent.click(screen.getByRole('button', { name: 'Move Key a1 down' }));
+    expect(hoisted.patchMutate).not.toHaveBeenCalled();
+    // o1 moves down within openai: swaps priorities with o2.
+    fireEvent.click(screen.getByRole('button', { name: 'Move Key o1 down' }));
+    expect(hoisted.patchMutate).toHaveBeenCalledWith(
+      { id: 'o1', patch: { priority: 1 } },
+      expect.anything(),
+    );
   });
 });

@@ -5,7 +5,7 @@
  * - Healthy (verified / verifying / unverified): expanded card with
  *   labeled rows — PRIORITY (position + drag-to-reorder handle), FALLBACK
  *   (segmented control), APPLIES TO (model chips + assistant scope),
- *   30-DAY USE (requests · spend · error counts), AGREEMENT (ZDR +
+ *   30-DAY USE (requests · tokens · spend · error counts), AGREEMENT (ZDR +
  *   residency summary with actor + timestamp).
  * - Failed: compact amber card — "Failed: {code}" pill, error line with
  *   verify recency, disabled toggle, Retry verify + Revoke.
@@ -38,6 +38,7 @@ import { Segmented } from '@/components/common/ui/Segmented';
 import { Switch } from '@/components/common/ui/Switch';
 import { StatusPill } from '@/components/common/ui/StatusPill';
 import { ConfirmDialog } from '@/components/common/ui/ConfirmDialog';
+import { providerDisplayName } from '@/sections/pages/products/agent-studio/providers/lib/provider-display-names';
 import { TextInput } from '@/components/common/ui/TextInput';
 import { statusPillFor } from './statusPill';
 import {
@@ -107,18 +108,6 @@ const REGION_ITEMS = [
   { value: 'eu', label: 'EU' },
   { value: 'us', label: 'US' },
 ];
-
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  google: 'Google',
-  azure: 'Azure',
-  custom: 'Custom',
-};
-
-function providerDisplayName(slug: string): string {
-  return PROVIDER_DISPLAY_NAMES[slug.toLowerCase()] ?? slug.charAt(0).toUpperCase() + slug.slice(1);
-}
 
 function tierLabelFor(tier: OrgTier): string | null {
   switch (tier) {
@@ -464,7 +453,8 @@ export function KeyCard({
             ))}
           </div>
           <span style={bodyText}>
-            {providerIndex + 1} of {providerCount} {providerDisplayName(credential.provider)} keys
+            {providerIndex + 1} of {providerCount}{' '}
+            {credential.provider_display_name ?? providerDisplayName(credential.provider)} keys
             <span style={{ color: colors.textFaint }}> — drag to reorder</span>
           </span>
           <span style={{ flex: 1 }} />
@@ -730,7 +720,13 @@ function UsageSummary({
 
   return (
     <p style={{ ...bodyText, margin: 0 }}>
-      {`${usage.requests.toLocaleString()} requests · $${usage.spend_usd}`}
+      {usage.requests.toLocaleString()} requests ·{' '}
+      <span
+        title={`${usage.tokens.prompt.toLocaleString()} prompt · ${usage.tokens.completion.toLocaleString()} completion`}
+      >
+        {usage.tokens.total.toLocaleString()} tokens
+      </span>{' '}
+      · ${usage.spend_usd}
       {usage.pricing_basis === 'list' && (
         <span style={{ color: colors.textFaint }}> (list-price equivalent — not billed)</span>
       )}{' '}

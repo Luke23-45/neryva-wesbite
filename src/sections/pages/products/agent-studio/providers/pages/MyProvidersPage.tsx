@@ -7,12 +7,13 @@
  * manage (platform keys) — the page renders an honest note instead of the
  * management UI.
  */
-import { useMemo, useState, type CSSProperties } from 'react';
+import { Fragment, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useOrg } from '@/Context/OrgContext';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { KeyCard } from '@/sections/pages/products/agent-studio/providers/components/KeyCard';
 import { ConnectKeyForm } from '@/sections/pages/products/agent-studio/providers/components/ConnectKeyForm';
+import { providerDisplayName } from '@/sections/pages/products/agent-studio/providers/lib/provider-display-names';
 import {
   useCredentialMutations,
   useCredentials,
@@ -38,6 +39,24 @@ const enterprisePill: CSSProperties = {
   background: 'rgba(255,255,255,0.2)',
   borderRadius: 999,
   padding: '2px 8px',
+};
+
+/**
+ * Provider subgroup subheader — full-width label row above each provider's
+ * key cards. Mirrors the ModelsPage ProviderSubHeadCell tinted treatment
+ * (uppercase 11px faint on a tint surface), adapted from the table cell to
+ * the card layout.
+ */
+const providerSubHeader: CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: colors.textFaint,
+  background: colors.surface2,
+  border: `1px solid ${colors.borderSoft}`,
+  borderRadius: 8,
+  padding: '8px 12px',
 };
 
 /**
@@ -90,8 +109,9 @@ export function MyProvidersPage() {
     );
   }, [data]);
 
-  // Provider groups back the "N of M {Provider} keys" label and constrain
-  // drag-to-reorder drops to the same provider.
+  // Provider groups back the "N of M {Provider} keys" label, render the
+  // subgroup subheaders, and constrain drag-to-reorder drops to the same
+  // provider.
   const groups = useMemo(() => {
     const map = new Map<string, ProviderCredentialView[]>();
     for (const c of credentials) {
@@ -101,6 +121,22 @@ export function MyProvidersPage() {
     }
     return map;
   }, [credentials]);
+
+  // Group entries in stable alphabetical order by display name. Within a
+  // group the existing provider-then-priority sort is preserved (the groups
+  // are built from the already-sorted credentials array).
+  const groupEntries = useMemo(() => {
+    return [...groups.entries()]
+      .map(([provider, list]) => ({
+        provider,
+        // All cards in a group share one provider; the engine computes the
+        // display name canonically, so the first card's is representative.
+        // Falls back to the client map on older engines.
+        displayName: list[0]?.provider_display_name ?? providerDisplayName(provider),
+        list,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [groups]);
 
   // Pointer-drag state: { sourceId, targetId } while a drag is in flight.
   const [drag, setDrag] = useState<{ sourceId: string; targetId: string | null } | null>(null);
@@ -140,10 +176,15 @@ export function MyProvidersPage() {
     );
   };
 
-  const move = (index: number, direction: 'up' | 'down') => {
+  // Keyboard/arrow-button reorder is group-relative, matching the
+  // pointer-drag constraint (drops are limited to the same provider).
+  // Priority stays a global engine number; the UI keeps interpreting it
+  // per-provider (unchanged semantics).
+  const move = (provider: string, index: number, direction: 'up' | 'down') => {
+    const group = groups.get(provider) ?? [];
     const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= credentials.length) return;
-    swapPriorities(credentials[index].id, credentials[target].id);
+    if (target < 0 || target >= group.length) return;
+    swapPriorities(group[index].id, group[target].id);
   };
 
   return (
@@ -202,32 +243,36 @@ export function MyProvidersPage() {
       )}
 
       <div style={{ display: 'grid', gap: 16 }}>
-        {credentials.map((cred, index) => {
-          const group = groups.get(cred.provider) ?? [];
-          return (
-            <KeyCard
-              key={cred.id}
-              credential={cred}
-              orgId={orgId}
-              isFirst={index === 0}
-              isLast={index === credentials.length - 1}
-              onMoveUp={() => move(index, 'up')}
-              onMoveDown={() => move(index, 'down')}
-              providerIndex={group.findIndex((c) => c.id === cred.id)}
-              providerCount={group.length}
-              groupIds={group.map((c) => c.id)}
-              orgTier={tier}
-              dragSourceId={drag?.sourceId ?? null}
-              dragTargetId={drag?.targetId ?? null}
-              onDragStart={(id) => setDrag({ sourceId: id, targetId: null })}
-              onDragMove={(id) => setDrag((d) => (d ? { ...d, targetId: id } : d))}
-              onDragEnd={(sourceId, targetId) => {
-                setDrag(null);
-                if (targetId && targetId !== sourceId) swapPriorities(sourceId, targetId);
-              }}
-            />
-          );
-        })}
+        {groupEntries.map((group) => (
+          <Fragment key={group.provider}>
+            <div style={providerSubHeader} role="heading" aria-level={3}>
+              {group.displayName} · {group.list.length} {group.list.length === 1 ? 'key' : 'keys'}
+            </div>
+            {group.list.map((cred, index) => (
+              <KeyCard
+                key={cred.id}
+                credential={cred}
+                orgId={orgId}
+                isFirst={index === 0}
+                isLast={index === group.list.length - 1}
+                onMoveUp={() => move(group.provider, index, 'up')}
+                onMoveDown={() => move(group.provider, index, 'down')}
+                providerIndex={index}
+                providerCount={group.list.length}
+                groupIds={group.list.map((c) => c.id)}
+                orgTier={tier}
+                dragSourceId={drag?.sourceId ?? null}
+                dragTargetId={drag?.targetId ?? null}
+                onDragStart={(id) => setDrag({ sourceId: id, targetId: null })}
+                onDragMove={(id) => setDrag((d) => (d ? { ...d, targetId: id } : d))}
+                onDragEnd={(sourceId, targetId) => {
+                  setDrag(null);
+                  if (targetId && targetId !== sourceId) swapPriorities(sourceId, targetId);
+                }}
+              />
+            ))}
+          </Fragment>
+        ))}
       </div>
 
       {!isLoading && !isError && credentials.length > 0 && (

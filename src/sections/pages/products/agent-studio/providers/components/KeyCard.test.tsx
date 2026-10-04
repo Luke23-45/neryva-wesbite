@@ -34,6 +34,7 @@ const hoisted = vi.hoisted(() => ({
   revokeMutate: vi.fn(),
   createMutate: vi.fn(),
   fetchGroupedModels: vi.fn(),
+  usageLoading: false,
 }));
 
 vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials', () => ({
@@ -54,7 +55,7 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCrede
       error_breakdown: { '401': 3, '403': 0, '429': 1, '5xx': 0 },
       window: '7d',
     },
-    isLoading: false,
+    isLoading: hoisted.usageLoading,
   }),
   useCredentials: () => ({ data: undefined, isLoading: false }),
 }));
@@ -74,6 +75,7 @@ function baseCredential(overrides: Partial<ProviderCredentialView> = {}): Provid
   return {
     id: 'cred-1',
     provider: 'openai',
+    provider_display_name: 'OpenAI',
     label: 'Production Key',
     external_ref: 'ext-1',
     source: 'byok',
@@ -149,6 +151,7 @@ function renderCard(props: Partial<KeyCardProps> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   hoisted.fetchGroupedModels.mockResolvedValue({ platform: [], byok: [] });
+  hoisted.usageLoading = false;
 });
 
 describe('statusPillFor matrix', () => {
@@ -307,6 +310,24 @@ describe('30-day usage summary', () => {
     renderCard();
     expect(screen.getByText('401 ×3')).toBeTruthy();
     expect(screen.getByText('429 ×1')).toBeTruthy();
+  });
+
+  it('renders the total token count', () => {
+    renderCard();
+    expect(screen.getByText('1,000,000 tokens')).toBeTruthy();
+  });
+
+  it('shows the prompt/completion split in the token tooltip', () => {
+    renderCard();
+    const tokens = screen.getByText('1,000,000 tokens');
+    expect(tokens.getAttribute('title')).toBe('800,000 prompt · 200,000 completion');
+  });
+
+  it('renders the honest loading state while usage is fetching', () => {
+    hoisted.usageLoading = true;
+    renderCard();
+    expect(screen.getByText('Loading…')).toBeTruthy();
+    expect(screen.queryByText(/1,000,000 tokens/)).toBeNull();
   });
 });
 

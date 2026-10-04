@@ -92,6 +92,7 @@ function credFixture(id: string): ProviderCredentialView {
   return {
     id,
     provider: 'openai',
+    provider_display_name: 'OpenAI',
     label: `Key ${id}`,
     external_ref: id,
     source: 'byok',

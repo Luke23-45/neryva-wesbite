@@ -121,6 +121,11 @@ export interface ModelToggleInput {
 export interface ProviderCredentialView {
   id: string;
   provider: string;
+  /**
+   * Engine-served display name (additive). Absent on older engines — the UI
+   * falls back to the client-side providerDisplayName map.
+   */
+  provider_display_name: string;
   label: string;
   external_ref: string;
   source: string;
