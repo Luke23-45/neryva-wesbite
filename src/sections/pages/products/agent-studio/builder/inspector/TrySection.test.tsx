@@ -273,13 +273,13 @@ describe('TrySection demo honesty (build spec v3 §2/§3/§6)', () => {
     expect(screen.queryByText('Demo')).toBeNull();
   });
 
-  it('renders the demo limit panel with the three demo CTAs', async () => {
+  it('renders the demo limit panel with the two demo CTAs', async () => {
     sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: { product: 'agent_studio_demo' } }];
     await shell();
     expect(screen.getByText('Demo limit reached')).toBeTruthy();
-    expect(screen.getByText('Claim free credits')).toBeTruthy();
     expect(screen.getByText('Top up')).toBeTruthy();
     expect(screen.getByText(/Connect a provider/)).toBeTruthy();
+    expect(screen.queryByText('Claim free credits')).toBeNull();
   });
 
   it('renders the generic paid limit panel for other quota products', async () => {

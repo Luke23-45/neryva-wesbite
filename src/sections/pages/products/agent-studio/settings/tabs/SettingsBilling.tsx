@@ -29,8 +29,8 @@ import { deriveSubscriptionKind, SUBSCRIPTION_COPY, type SubscriptionKind } from
  *
  * D-1 update (2026-09-28, explicit user direction): the CURRENT subscription
  * is shown here, derived from real entitlement data (enterprise commitment
- * boolean, the engine's single 'payg' plan identifier, else the free monthly
- * grant). The Settings → Pricing page owns how plans and prices display;
+ * boolean, the engine's single 'payg' plan identifier, else no plan yet).
+ * The Settings → Pricing page owns how plans and prices display;
  * this section never invents tiers or prices.
  * PDF downloads are ⛔ E-13 — no fake download buttons.
  * BUG-2: the fabricated UpgradeModal plan picker (invented tiers/prices,

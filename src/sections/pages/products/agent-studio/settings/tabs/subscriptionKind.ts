@@ -3,8 +3,8 @@
  * so the mapping is unit-testable and never hand-waved in JSX.
  * - enterprise: an active enterprise commitment (discounted rate + BYOK).
  * - payg: the engine's single plan identifier (plans.ts: tiers are dead).
- * - free: no paid plan — the org runs on the 1,000 monthly free credit grant
- *   (credit-ledger.service grantFreeMonthly; no rollover).
+ * - free: no paid plan yet — the org holds no credits until it tops up
+ *   (the free monthly credit grant is removed).
  */
 export type SubscriptionKind = 'enterprise' | 'payg' | 'free';
 
@@ -28,7 +28,7 @@ export const SUBSCRIPTION_COPY: Record<SubscriptionKind, { name: string; blurb: 
     blurb: '1 credit = $0.01. Top up anytime, $10 minimum.',
   },
   free: {
-    name: 'Free',
-    blurb: '1,000 free credits every month. No card required.',
+    name: 'No plan',
+    blurb: 'No paid plan yet — top up credits to run paid models.',
   },
 };

@@ -88,13 +88,12 @@ function QuotaLimitPanel({
       <QuotaTitle>{demo ? 'Demo limit reached' : 'Usage limit reached'}</QuotaTitle>
       <QuotaCopy>
         {demo
-          ? 'You’ve used up the free demo allowance for this organization. The demo is heavily limited so it stays free — claim your free monthly credits, top up, or connect your own provider to keep testing with real models.'
+          ? 'You’ve used up the free demo allowance for this organization. The demo is heavily limited so it stays free — top up credits, or connect your own provider to keep testing with real models.'
           : 'This organization’s usage limit was reached, so the run was refused.'}
       </QuotaCopy>
       <QuotaCtaRow>
         {demo ? (
           <>
-            <Link to="/platform/billing">Claim free credits</Link>
             <Link to="/platform/billing">Top up</Link>
             {connectCta}
           </>

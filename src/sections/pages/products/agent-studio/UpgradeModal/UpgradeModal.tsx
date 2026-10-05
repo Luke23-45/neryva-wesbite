@@ -10,8 +10,7 @@ import styled from 'styled-components';
  * Pricing modal — the credit-pricing sheet (Phase 5).
  *
  * Neryva is pay-as-you-go: 1 credit = $0.01 USD. No tiers, no plans,
- * no seat gates. Three lines:
- *   Free: 1,000 credits/month
+ * no seat gates. Two lines:
  *   Pay-as-you-go: $0.01/credit
  *   Enterprise: $0.008/credit with $2,000/month commitment
  *
@@ -22,7 +21,7 @@ import styled from 'styled-components';
  * - Pricing uses tabular-nums so values don't shift width.
  */
 
-type TierId = 'free' | 'payg' | 'enterprise';
+type TierId = 'payg' | 'enterprise';
 
 type Tier = {
   id: TierId;
@@ -35,18 +34,6 @@ type Tier = {
 };
 
 const TIERS: Tier[] = [
-  {
-    id: 'free',
-    name: 'Free',
-    tagline: '1,000 credits every month. No card required.',
-    price: '$0',
-    suffix: '',
-    perks: [
-      '1,000 credits / month',
-      'Resets monthly, no rollover',
-      'All agents and features',
-    ],
-  },
   {
     id: 'payg',
     name: 'Pay-as-you-go',
@@ -168,7 +155,7 @@ export function UpgradeModal() {
 
         <Footnote>
           Prices in USD. Bonus credits expire 12 months after purchase. Purchased
-          credits expire 12 months after purchase — free monthly credits don't roll over.
+          credits expire 12 months after purchase.
         </Footnote>
       </Modal>
     </>
@@ -201,7 +188,7 @@ const Subhead = styled.p`
 
 const PlanList = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 
   @media (max-width: 560px) {

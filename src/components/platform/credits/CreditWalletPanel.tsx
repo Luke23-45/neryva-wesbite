@@ -73,7 +73,7 @@ export function CreditWalletPanel() {
   return (
     <Panel
       title="Credit wallet"
-      subtitle="1 credit = $0.01 USD · free 1,000 credits/month"
+      subtitle="1 credit = $0.01 USD"
       action={profile.data?.walletFrozen ? <StatusPill tone="error">Wallet frozen</StatusPill> : undefined}
     >
       <QueryView query={wallet} skeleton={<Skeleton $h="120px" $r="12px" />}>
