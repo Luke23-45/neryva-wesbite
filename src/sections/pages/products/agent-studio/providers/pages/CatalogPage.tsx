@@ -387,17 +387,6 @@ const DimText = styled.span`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
-const UpgradeLink = styled(Link)`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.link};
-  text-decoration: none;
-  white-space: nowrap;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
 const GatedAccess = styled.span`
   display: inline-flex;
   align-items: center;
@@ -1011,15 +1000,14 @@ function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
 export interface AccessToggleError {
   message: string;
   /** True when the failure was the plan gate (402) — warning icon with the
-      nudge message plus the upgrade link to the pricing page. */
+      nudge message. No billing links in table cells. */
   tierGated: boolean;
 }
 
 /**
- * Toggle-failure display shared by both interactive-switch branches
- * (can_enable === true and the older-engine tier-covers fallback). One
- * component so a tier-gated failure can never show the icon in one branch
- * and the icon + upgrade link in the other.
+ * Toggle-failure display shared by every switch branch. Warning icon with
+ * the failure message in a focusable tooltip — never a billing link in the
+ * table; billing lives on the pricing page.
  */
 function AccessError({ error }: { error: AccessToggleError | null }) {
   if (!error) return null;
@@ -1032,11 +1020,6 @@ function AccessError({ error }: { error: AccessToggleError | null }) {
           <AlertTriangle size={14} aria-hidden="true" />
         </DimText>
       </Tooltip>
-      {error.tierGated && (
-        // Plan-gated failure (402): the icon carries the reason, the link
-        // carries the resolution — the same single canonical destination.
-        <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
-      )}
     </>
   );
 }
@@ -1099,10 +1082,8 @@ function AccessCell({
         {/* Same failure display as the interactive-switch branches: a
             grandfathered ON row can still be switched OFF, and if that
             mutation fails the switch flips back with no signal without
-            this. The shared component keeps icon + tier-gated upgrade
-            copy identical across branches. */}
+            this. */}
         <AccessError error={error} />
-        <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
       </GatedAccess>
     );
   }
@@ -1124,9 +1105,27 @@ function AccessCell({
     );
   }
 
+  // Older engine (can_enable absent): fall back to the client tier
+  // derivation. Uncovered rows render a disabled switch with the reason in
+  // the tooltip — never a billing link. Grandfathered ON stays interactive
+  // so the org can always turn it OFF. Covered rows are fully interactive.
   const coverage = tierCovers(tier, effectiveEnableTier(entry.min_required_product));
   if (coverage === false) {
-    return <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>;
+    return (
+      <GatedAccess>
+        <Tooltip label={TIER_GATE_NUDGE} focusable wrap>
+          <span style={{ display: 'inline-block' }}>
+            <Switch
+              checked={storedOn}
+              onChange={(next) => onToggle(entry, next)}
+              label={label}
+              disabled={pending || !storedOn || !canWrite}
+            />
+          </span>
+        </Tooltip>
+        <AccessError error={error} />
+      </GatedAccess>
+    );
   }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -1134,8 +1133,8 @@ function AccessCell({
         checked={storedOn}
         onChange={(next) => onToggle(entry, next)}
         label={label}
-          disabled={pending || !canWrite}
-        />
+        disabled={pending || !canWrite}
+      />
       <AccessError error={error} />
     </span>
   );

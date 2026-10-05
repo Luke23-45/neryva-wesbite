@@ -376,7 +376,7 @@ describe('CatalogPage', () => {
     expect(screen.getByText(/your plan governs what can be enabled/)).toBeTruthy();
   });
 
-  it('can_enable=false: row stays visible with a disabled switch and the upgrade link; no API fires', () => {
+  it('can_enable=false: row stays visible with a disabled switch and no billing link; no API fires', () => {
     providersOverride.current = [
       entry({
         can_enable: false,
@@ -388,10 +388,8 @@ describe('CatalogPage', () => {
     expect(screen.getByText('OpenAI')).toBeTruthy();
     const sw = screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    // The tooltip carries the reason; the upgrade link carries the
-    // resolution — single canonical destination, never /platform/billing.
-    const link = screen.getByRole('link', { name: 'Upgrade →' });
-    expect(link.getAttribute('href')).toBe('/agent-studio/settings/pricing');
+    // No billing link in the table — the switch tooltip carries the reason.
+    expect(screen.queryByRole('link', { name: 'Upgrade →' })).toBeNull();
     // A disabled switch cannot trigger the toggle — the guard never fires the API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();
@@ -412,7 +410,7 @@ describe('CatalogPage', () => {
     expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'openai', enabled: false });
   });
 
-  it('a 402 provider_tier_required surfaces the nudge on the warning icon plus the upgrade link, never the raw engine message', () => {
+  it('a 402 provider_tier_required surfaces the message on the warning icon only, never the raw engine message', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
     fireEvent.click(sw);
@@ -421,12 +419,11 @@ describe('CatalogPage', () => {
     act(() => {
       onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
     });
-    // The icon carries the reason, the link carries the resolution.
+    // The icon carries the message; no billing link in the table.
     expect(
       screen.getByRole('img', { name: "Toggle failed: Your plan doesn't cover this provider" }),
     ).toBeTruthy();
-    const link = screen.getByRole('link', { name: 'Upgrade →' });
-    expect(link.getAttribute('href')).toBe('/agent-studio/settings/pricing');
+    expect(screen.queryByRole('link', { name: 'Upgrade →' })).toBeNull();
     expect(screen.queryByText('plan required')).toBeNull();
   });
 

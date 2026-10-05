@@ -451,7 +451,7 @@ describe('ModelsPage', () => {
     expect(screen.getAllByText('Direct')).toHaveLength(2);
   });
 
-  it('tier-gates honestly: disabled switch + tooltip + Upgrade CTA, never hidden', async () => {
+  it('tier-gates honestly: disabled switch + tooltip, no billing link, never hidden', async () => {
     renderPage();
     // Grok Reasoner requires enterprise; the org is free. The kit's Switch
     // expresses disabled via aria-disabled + tabindex -1 (no native disabled).
@@ -470,7 +470,8 @@ describe('ModelsPage', () => {
       { timeout: 3000 },
     );
 
-    expect(screen.getAllByRole('link', { name: 'Upgrade →' }).length).toBeGreaterThan(0);
+    // No billing links anywhere in the table — tooltips carry reasons.
+    expect(screen.queryByRole('link', { name: 'Upgrade →' })).toBeNull();
 
     // A free-tier model on a free org stays interactive.
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).not.toHaveAttribute(
@@ -479,7 +480,7 @@ describe('ModelsPage', () => {
     );
   });
 
-  it('provider can_enable=false gates model toggles but keeps the Upgrade CTA; rows never hide', async () => {
+  it('provider can_enable=false gates model toggles with no billing link; rows never hide', async () => {
     // GPT-4o Mini is free-tier and OFF: the client tier logic alone would
     // leave it interactive on a free org — the provider-level server gate
     // disables it instead.
@@ -487,13 +488,10 @@ describe('ModelsPage', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    // The row is still fully visible (no hiding), and the provider-gated row
-    // links to the canonical pricing page — the SVG's gated example shows
-    // "Upgrade →" right-aligned in ACCESS.
+    // The row is still fully visible (no hiding); the tooltip carries the
+    // reason, and no billing link renders in the table.
     expect(screen.getByText('GPT-4o Mini')).toBeTruthy();
-    const upgradeLinks = screen.getAllByRole('link', { name: 'Upgrade →' });
-    expect(upgradeLinks.length).toBeGreaterThan(0);
-    expect(upgradeLinks[0]).toHaveAttribute('href', '/agent-studio/settings/pricing');
+    expect(screen.queryByRole('link', { name: 'Upgrade →' })).toBeNull();
     // The tooltip uses plan-honest copy: can_enable=false is a plan gate
     // (engine: tierGte), never a credit gate.
     fireEvent.mouseEnter(sw);

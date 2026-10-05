@@ -558,19 +558,6 @@ const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean; $reveal?: boole
     `}
 `;
 
-const UpgradeLink = styled(Link)`
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.link};
-  text-decoration: none;
-  white-space: nowrap;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
 const NoCredRow = styled(Link)`
   display: flex;
   align-items: center;
@@ -1318,12 +1305,6 @@ export function ModelsPage() {
             </Tooltip>
           ) : (
             switchNode
-          )}
-          {/* One upgrade destination: provider-gated and plan-gated rows
-              alike link to the canonical pricing page. The SVG's gated
-              example shows "Upgrade →" right-aligned in ACCESS. */}
-          {gated && (
-            <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
           )}
         </BodyCell>
       </BodyRow>
