@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, DollarSign, Eye, Plus, X, Zap } from 'lucide-react';
+import { AlertTriangle, Eye, ListFilter, Plus, Shield, X, Zap } from 'lucide-react';
 import { useOrg } from '@/Context/OrgContext';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { SearchField } from '@components/common/ui/SearchField';
@@ -25,11 +25,19 @@ import { useSetProviderEnabled } from '../hooks/useProviderEnablement';
 
 export type ChipKey = 'tools' | 'vision' | 'price' | 'zdr';
 
-export const CHIPS: Array<{ key: ChipKey; label: string; icon: typeof Zap }> = [
-  { key: 'tools', label: 'Needs Tools', icon: Zap },
-  { key: 'vision', label: 'Needs Vision', icon: Eye },
-  { key: 'price', label: 'Price < $1.00/1M', icon: DollarSign },
-  { key: 'zdr', label: 'ZDR Capable', icon: Zap },
+export const CHIPS: Array<{ key: ChipKey; label: string; icon: React.ReactNode }> = [
+  { key: 'tools', label: 'Needs Tools', icon: <Zap size={13} strokeWidth={1.8} aria-hidden="true" /> },
+  { key: 'vision', label: 'Needs Vision', icon: <Eye size={13} strokeWidth={1.8} aria-hidden="true" /> },
+  {
+    key: 'price',
+    label: 'Price < $1/1M',
+    icon: (
+      <span aria-hidden="true" style={{ fontSize: 13, fontWeight: 600, lineHeight: 1 }}>
+        $
+      </span>
+    ),
+  },
+  { key: 'zdr', label: 'ZDR Capable', icon: <Shield size={13} strokeWidth={1.8} aria-hidden="true" /> },
 ];
 
 function fromPrice(entry: ProviderDirectoryEntry): number | null {
@@ -84,7 +92,8 @@ export function sourceLine(entry: ProviderDirectoryEntry): string {
   if (entry.door === 'byok') {
     const label = entry.credential_label?.trim() || 'key';
     const fp = entry.credential_fingerprint?.trim();
-    return fp ? `BYOK · ${label} ${fp}` : `BYOK · ${label}`;
+    // SVG 2026-10-05: "Production key · sk-…9f2c" (no BYOK prefix)
+    return fp ? `${label} · ${fp}` : label;
   }
   const transport = transportLabel(entry.transport);
   return transport ? `Platform pool · ${entry.provider} · ${transport}` : `Platform pool · ${entry.provider}`;
@@ -133,15 +142,55 @@ const CAPABILITY_ORDER = ['tools', 'vision', 'reasoning'] as const;
 
 const Toolbar = styled.div`
   display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+`;
+
+const ToolbarRow = styled.div`
+  display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 `;
 
 const SearchWrap = styled.div`
   width: 320px;
   max-width: 100%;
+`;
+
+const FiltersButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.strong};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+`;
+
+const FilterBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.app.text.link};
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 `;
 
 const ChipBar = styled.div`
@@ -197,11 +246,6 @@ const SectionTitle = styled.h2`
   text-transform: uppercase;
   color: ${({ theme }) => theme.app.text.faint};
   margin: 0;
-`;
-
-const SectionCount = styled.span`
-  font-size: 12px;
-  color: ${({ theme }) => theme.app.text.faint};
 `;
 
 const TableWrap = styled.div`
@@ -362,19 +406,61 @@ const UpgradeLink = styled(Link)`
 const CustomRow = styled(Link)`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-top: 12px;
   padding: 14px 16px;
   border: 1px dashed ${({ theme }) => theme.app.border.strong};
   border-radius: 12px;
   color: ${({ theme }) => theme.app.text.secondary};
   text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
   &:hover {
     border-color: ${({ theme }) => theme.app.text.link};
-    color: ${({ theme }) => theme.app.text.primary};
   }
+`;
+
+const CustomIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid ${({ theme }) => theme.app.text.link};
+  color: ${({ theme }) => theme.app.text.link};
+  flex-shrink: 0;
+`;
+
+const CustomText = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const CustomTitle = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.primary};
+`;
+
+const CustomSub = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
+const GuidedSetup = styled.span`
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.app.text.link};
+  background: ${({ theme }) => theme.app.status.info.bg};
+  color: ${({ theme }) => theme.app.text.link};
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
 `;
 
 const Footnote = styled.p`
@@ -864,6 +950,7 @@ export function CatalogPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [chips, setChips] = useState<Set<ChipKey>>(new Set());
+  const [showFilters, setShowFilters] = useState(true);
   const [selected, setSelected] = useState<ProviderDirectoryEntry | null>(null);
   const [toggleError, setToggleError] = useState<{ provider: string; message: string } | null>(
     null,
@@ -963,6 +1050,9 @@ export function CatalogPage() {
 
   const filterActive = searchInput.trim().length > 0 || chips.size > 0;
   const totalModels = filtered.reduce((n, p) => n + p.model_count, 0);
+  // Propagate the "+" from approximate labels (e.g. "300+") so the header
+  // reads "416+ models" instead of a false exact "416 models".
+  const totalModelsApprox = filtered.some((p) => p.model_count_label?.includes('+'));
 
   return (
     <ViewShell>
@@ -982,16 +1072,29 @@ export function CatalogPage() {
       )}
 
       <Toolbar>
-        <SearchWrap>
-          <SearchField
-            value={searchInput}
-            onChange={setSearchInput}
-            placeholder="Search providers or models…"
-            ariaLabel="Search providers"
-          />
-        </SearchWrap>
-        <ChipBar role="group" aria-label="Catalog filters">
-          {CHIPS.map(({ key, label, icon: Icon }) => (
+        <ToolbarRow>
+          <SearchWrap>
+            <SearchField
+              value={searchInput}
+              onChange={setSearchInput}
+              placeholder="Search providers, models, tags…"
+              ariaLabel="Search providers"
+            />
+          </SearchWrap>
+          <FiltersButton
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            aria-expanded={showFilters}
+            aria-label={`Filters${chips.size > 0 ? `, ${chips.size} active` : ''}`}
+          >
+            <ListFilter size={14} strokeWidth={1.8} aria-hidden="true" />
+            Filters
+            {chips.size > 0 && <FilterBadge>{chips.size}</FilterBadge>}
+          </FiltersButton>
+        </ToolbarRow>
+        {showFilters && (
+          <ChipBar role="group" aria-label="Catalog filters">
+          {CHIPS.map(({ key, label, icon }) => (
             <Chip
               key={key}
               type="button"
@@ -999,7 +1102,7 @@ export function CatalogPage() {
               aria-pressed={chips.has(key)}
               onClick={() => toggleChip(key)}
             >
-              <Icon size={13} strokeWidth={1.8} aria-hidden="true" />
+              {icon}
               {label}
             </Chip>
           ))}
@@ -1009,7 +1112,8 @@ export function CatalogPage() {
               Clear
             </Chip>
           )}
-        </ChipBar>
+          </ChipBar>
+        )}
       </Toolbar>
 
       {query.isLoading ? (
@@ -1052,17 +1156,15 @@ export function CatalogPage() {
         <Layout>
           <CatalogCol>
             <ResultMeta>
-              {filtered.length} {filtered.length === 1 ? 'provider' : 'providers'} · {totalModels}{' '}
-              {totalModels === 1 ? 'model' : 'models'}
+              {filtered.length} {filtered.length === 1 ? 'provider' : 'providers'} · {totalModels}
+              {totalModelsApprox ? '+' : ''} {totalModels === 1 && !totalModelsApprox ? 'model' : 'models'}
             </ResultMeta>
             {sections.map((section) => (
               <SectionBlock key={section.key}>
                 <SectionHead>
-                  <SectionTitle>{section.key}</SectionTitle>
-                  <SectionCount>
-                    {section.providers.length}{' '}
-                    {section.providers.length === 1 ? 'provider' : 'providers'}
-                  </SectionCount>
+                  <SectionTitle>
+                    {section.key} · {section.providers.length}
+                  </SectionTitle>
                 </SectionHead>
                 <TableWrap>
                   <StyledTable>
@@ -1082,7 +1184,7 @@ export function CatalogPage() {
                       {section.providers.map((entry) => {
                         const input = priceCell(entry.from_price_per_1m, entry.pricing_mode);
                         const output = priceCell(entry.to_price_per_1m, entry.pricing_mode);
-                        const context = formatContext(entry.max_context_tokens);
+                        const context = entry.context_label ?? formatContext(entry.max_context_tokens);
                         const isSelected = effectiveSelected?.provider === entry.provider;
                         const tErr =
                           toggleError?.provider === entry.provider ? toggleError.message : null;
@@ -1108,7 +1210,8 @@ export function CatalogPage() {
                             </BodyCell>
                             <BodyCell>
                               <DimText>
-                                {entry.model_count} {entry.model_count === 1 ? 'model' : 'models'}
+                                {entry.model_count_label ?? entry.model_count}{' '}
+                                {entry.model_count === 1 ? 'model' : 'models'}
                               </DimText>
                             </BodyCell>
                             <BodyCell>
@@ -1186,17 +1289,19 @@ export function CatalogPage() {
             ))}
 
             <CustomRow to="/agent-studio/providers/custom/new">
-              <Plus size={16} strokeWidth={1.8} aria-hidden="true" />
-              Add a custom endpoint — point a private vLLM, TGI, or Ollama cluster at your
-              workspace (Enterprise)
+              <CustomIcon>
+                <Plus size={14} strokeWidth={2} aria-hidden="true" />
+              </CustomIcon>
+              <CustomText>
+                <CustomTitle>Connect custom endpoint</CustomTitle>
+                <CustomSub>Enterprise · vLLM, TGI, or Ollama with egress controls</CustomSub>
+              </CustomText>
+              <GuidedSetup>Guided setup</GuidedSetup>
             </CustomRow>
 
             <Footnote>
-              Catalog data is served live from the provider registry — pricing, context windows,
-              and capabilities are what providers publish, and rows marked incomplete are missing
-              part of that data rather than hiding it. Access toggles apply immediately: disabled
-              providers fail closed at publish and run time. The same catalog serves every
-              workspace; your plan decides which rows you can switch on.
+              ZDR = zero data retention · prices per 1M tokens (input / output) · catalog is
+              shared; your plan governs what can be enabled
             </Footnote>
           </CatalogCol>
 

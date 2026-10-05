@@ -156,7 +156,7 @@ describe('catalog pure helpers', () => {
     expect(sourceLine(entry())).toBe('Platform pool · openai · OpenAI-Compatible');
     expect(sourceLine(entry({ transport: undefined }))).toBe('Platform pool · openai');
     expect(sourceLine(entry({ door: 'byok', credential_label: 'Work key', credential_fingerprint: 'fp:9f2a' }))).toBe(
-      'BYOK · Work key fp:9f2a',
+      'Work key · fp:9f2a',
     );
   });
 
@@ -186,14 +186,14 @@ describe('catalog pure helpers', () => {
 describe('CatalogPage', () => {
   it('renders server-driven sections with counts and the full column set', () => {
     renderPage();
-    expect(screen.getByText('Frontier labs')).toBeTruthy();
-    expect(screen.getByText('BYOK providers')).toBeTruthy();
+    expect(screen.getByText('Frontier labs · 2')).toBeTruthy();
+    expect(screen.getByText('BYOK providers · 1')).toBeTruthy();
     for (const col of ['Provider', 'Models', 'Context', 'Capabilities', 'Input / 1M', 'Output / 1M', 'Plan', 'Access']) {
       expect(screen.getAllByText(col).length).toBeGreaterThan(0);
     }
     // Mandatory source lines.
     expect(screen.getByText('Platform pool · openai · OpenAI-Compatible')).toBeTruthy();
-    expect(screen.getByText('BYOK · Work key fp:9f2a')).toBeTruthy();
+    expect(screen.getByText('Work key · fp:9f2a')).toBeTruthy();
     // Context + prices.
     expect(screen.getByText('128K')).toBeTruthy();
     expect(screen.getByText('200K')).toBeTruthy();
@@ -247,11 +247,11 @@ describe('CatalogPage', () => {
 
   it('renders the dashed custom-endpoint row and the footer copy', () => {
     renderPage();
-    expect(screen.getByRole('link', { name: /Add a custom endpoint/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Connect custom endpoint/ })).toHaveAttribute(
       'href',
       '/agent-studio/providers/custom/new',
     );
-    expect(screen.getByText(/Catalog data is served live from the provider registry/)).toBeTruthy();
-    expect(screen.getByText(/disabled providers fail closed at publish and run time/)).toBeTruthy();
+    expect(screen.getByText(/ZDR = zero data retention/)).toBeTruthy();
+    expect(screen.getByText(/your plan governs what can be enabled/)).toBeTruthy();
   });
 });

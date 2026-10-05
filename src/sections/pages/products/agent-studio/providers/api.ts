@@ -28,6 +28,8 @@ export interface ProviderDirectoryEntry {
   display_name: string;
   transport?: string;
   model_count: number;
+  /** Display label for model count (e.g., "300+" for OpenRouter). */
+  model_count_label?: string;
   models: Array<{ model_id: string; display_name: string }>;
   /** Min input price over the provider's models, USD/1M — absent when unpriced, never zero-invented. */
   from_price_per_1m?: string;
@@ -35,6 +37,8 @@ export interface ProviderDirectoryEntry {
   to_price_per_1m?: string;
   /** Max context window over the provider's models — absent when unknown. */
   max_context_tokens?: number;
+  /** Display label for context (e.g., "Varies", "1M"). */
+  context_label?: string;
   /**
    * Effective serving door for this org: 'byok' when the org holds a
    * verified active credential for the provider, else 'platform'.
