@@ -166,18 +166,6 @@ const ROWS: BuilderModelRow[] = [
   }),
 ];
 
-const DEMO_ROW = row({
-  key: 'platform|mock/neryva/demo|',
-  provider: 'mock',
-  providerDisplayName: 'mock',
-  modelId: 'neryva/demo',
-  ref: 'mock/neryva/demo',
-  displayName: 'Neryva Demo',
-  capabilities: { tools: false, vision: false, reasoning: false, structured_output: false },
-  pricing: undefined,
-  contextWindowTokens: 8000,
-});
-
 function shell(props?: Partial<React.ComponentProps<typeof ModelPicker>>) {
   const onToggle = vi.fn();
   const ui = render(
@@ -381,29 +369,6 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
     // theme.app.status.warning.fg = #fbbf24.
     expect(window.getComputedStyle(el).color).toBe('rgb(251, 191, 36)');
   });
-
-  it('renders the demo-allowance reason with label text only (no link)', async () => {
-    const allowanceRow = row({
-      key: 'platform|mock/neryva/demo|',
-      provider: 'mock',
-      providerDisplayName: 'mock',
-      modelId: 'neryva/demo',
-      ref: 'mock/neryva/demo',
-      displayName: 'Neryva Demo',
-      usable: false,
-      reasons: ['demo_conversation_limit_reached'],
-      capabilities: { tools: false, vision: false, reasoning: false, structured_output: false },
-      pricing: undefined,
-    });
-    await act(async () => {
-      shell({ rows: [allowanceRow], pipelineKeys: new Set() });
-    });
-    expect(screen.getByText(/demo allowance used/)).toBeTruthy();
-    // The row itself must render no link — only the footer link exists
-    // elsewhere on the surface.
-    const rowEl = (screen.getByText(/demo allowance used/) as HTMLElement).closest('label');
-    expect(rowEl?.querySelectorAll('a')).toHaveLength(0);
-  });
 });
 
 describe('ModelPicker footer, toggle, and gating', () => {
@@ -494,33 +459,3 @@ describe('ModelPicker footer, toggle, and gating', () => {
   });
 });
 
-describe('ModelPicker demo group (build spec v3 §1/§6)', () => {
-  it('renders its own group with the pinned display name and a badge', async () => {
-    await act(async () => {
-      shell({ rows: [DEMO_ROW], pipelineKeys: new Set() });
-    });
-    expect(screen.getByText('Platform managed')).toBeTruthy();
-    expect(screen.getByText(/Free demo · 1/)).toBeTruthy();
-    expect(screen.getByText('Free demo — mock responses, not AI')).toBeTruthy();
-    expect(screen.getByText('Demo')).toBeTruthy();
-  });
-
-  it('keeps the demo row selectable when usable', async () => {
-    let onToggle!: ReturnType<typeof vi.fn>;
-    await act(async () => {
-      ({ onToggle } = shell({ rows: [DEMO_ROW], pipelineKeys: new Set() }));
-    });
-    const box = screen.getByLabelText('Free demo — mock responses, not AI') as HTMLInputElement;
-    expect(box.disabled).toBe(false);
-    fireEvent.click(box);
-    expect(onToggle).toHaveBeenCalledWith('mock/neryva/demo', null);
-  });
-
-  it('finds the demo row when searching the pinned name', async () => {
-    await act(async () => {
-      shell({ rows: [DEMO_ROW], pipelineKeys: new Set() });
-    });
-    fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'mock responses' } });
-    expect(screen.getByText('Free demo — mock responses, not AI')).toBeTruthy();
-  });
-});

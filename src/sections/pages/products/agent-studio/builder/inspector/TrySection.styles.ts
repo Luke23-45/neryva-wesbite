@@ -91,49 +91,15 @@ export const PrereqDetail = styled.div`
 `;
 
 /**
- * Demo banner (build spec v3 §6): persistent, non-modal, informational.
- * It sits above the thread — never a modal, never dismissible into
- * confusion about what produced the replies.
+ * Limit-hit panel: the run was refused with `quota_exceeded`.
  */
-export const DemoBanner = styled.div`
-  padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
-  border-radius: ${({ theme }) => theme.radii.xl};
-  border: 1px solid ${({ theme }) => theme.app.status.info.border};
-  background: ${({ theme }) => theme.app.status.info.bg};
-  color: ${({ theme }) => theme.app.status.info.fg};
-  font-size: ${({ theme }) => theme.app.type.body};
-  line-height: ${({ theme }) => theme.typography.lineHeights.appBody};
-`;
-
-/** Per-message demo badge (build spec v3 §6) — on every synthetic agent reply. */
-export const DemoBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 1px ${({ theme }) => theme.spacing.s2};
-  border-radius: ${({ theme }) => theme.radii.pill};
-  font-size: ${({ theme }) => theme.app.type.micro};
-  font-weight: ${({ theme }) => theme.typography.weights.semibold};
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.app.status.info.fg};
-  background: ${({ theme }) => theme.app.status.info.bg};
-  border: 1px solid ${({ theme }) => theme.app.status.info.border};
-  white-space: nowrap;
-  vertical-align: 1px;
-`;
-
-/**
- * Limit-hit panel (build spec v3 §3): one component for paid and demo
- * quota exhaustion — the `$demo` tone branch only switches copy/CTAs.
- */
-export const QuotaPanel = styled.div<{ $demo?: boolean }>`
+export const QuotaPanel = styled.div`
   align-self: flex-start;
   max-width: 100%;
   padding: ${({ theme }) => theme.spacing.px14} ${({ theme }) => theme.spacing.s4};
   border-radius: ${({ theme }) => theme.radii.xl};
-  border: 1px solid
-    ${({ theme, $demo }) => ($demo ? theme.app.status.warning.border : theme.app.status.error.border)};
-  background: ${({ theme, $demo }) => ($demo ? theme.app.status.warning.bg : theme.app.status.error.bg)};
+  border: 1px solid ${({ theme }) => theme.app.status.error.border};
+  background: ${({ theme }) => theme.app.status.error.bg};
 `;
 
 export const QuotaTitle = styled.div`

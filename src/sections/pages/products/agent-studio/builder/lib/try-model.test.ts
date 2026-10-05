@@ -8,7 +8,6 @@ import {
   describeTryStop,
   extractReportedHits,
   extractReportedVerdicts,
-  hasDemoLimitReason,
   validateTryPrompt,
 } from './try-model';
 
@@ -36,34 +35,15 @@ describe('describeTryPrereqs (blocks before advisory)', () => {
     expect(prereqs[2].tone).toBe('advisory');
     expect(prereqs[2].headline).toMatch(/publish refuses/);
   });
-  it('names the weekly demo allowance when the engine exhausted it', () => {
-    const prereqs = describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: 0, hasInstructions: true, demoLimitReached: true });
-    expect(prereqs.map((p) => p.kind)).toEqual(['no-model-demo-limit']);
-    expect(prereqs[0].tone).toBe('block');
-    expect(prereqs[0].headline).toBe('Your organization has used its 20 free demo conversations for the current rolling 7-day window.');
-    expect(prereqs[0].detail).toMatch(/rolling 7-day window/);
-  });
-  it('keeps the generic copy when the limit reason is absent', () => {
-    const prereqs = describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: 0, hasInstructions: true, demoLimitReached: false });
+  it('blocks with the honest no-model copy when no model is usable', () => {
+    const prereqs = describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: 0, hasInstructions: true });
     expect(prereqs.map((p) => p.kind)).toEqual(['no-model']);
-    expect(prereqs[0].headline).toBe('No usable model — connect a credential first.');
+    expect(prereqs[0].tone).toBe('block');
+    expect(prereqs[0].headline).toBe('No model available — top up credits to try your assistant.');
   });
-  it('emits no model block when a usable model exists, even with the limit flag', () => {
-    const prereqs = describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: 2, hasInstructions: true, demoLimitReached: true });
+  it('emits no model block when a usable model exists', () => {
+    const prereqs = describeTryPrereqs({ hasRunnableVersion: true, usableModelCount: 2, hasInstructions: true });
     expect(prereqs).toEqual([]);
-  });
-});
-
-describe('hasDemoLimitReason (wire facts only)', () => {
-  it('detects the engine limit reason', () => {
-    expect(hasDemoLimitReason(['demo_conversation_limit_reached'])).toBe(true);
-    expect(hasDemoLimitReason(['demo_provider_disabled'])).toBe(false);
-  });
-  it('never guesses on unknown shapes', () => {
-    expect(hasDemoLimitReason(null)).toBe(false);
-    expect(hasDemoLimitReason(undefined)).toBe(false);
-    expect(hasDemoLimitReason('demo_conversation_limit_reached')).toBe(false);
-    expect(hasDemoLimitReason([])).toBe(false);
   });
 });
 

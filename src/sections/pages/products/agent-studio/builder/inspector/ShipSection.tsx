@@ -318,12 +318,7 @@ export function ShipSection({
           <RefusalTitle>
             {refusal.kind === 'no-op'
               ? 'No changes to publish'
-              : refusal.kind === 'demo-model'
-                // Demo publish gate (build spec v3 §5): the demo can never
-                // publish — the title names the rule, the engine message
-                // below is verbatim, and the only fix is a real model.
-                ? 'Cannot publish a demo model'
-                : 'Publish refused'}
+              : 'Publish refused'}
           </RefusalTitle>
           <RefusalMessage>{refusal.message}</RefusalMessage>
           <RefusalFix>

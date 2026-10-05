@@ -584,13 +584,10 @@ describe('ModelSection credential block exemption (W19)', () => {
     expect(screen.queryByRole('link', { name: 'Connect A →' })).toBeNull();
   });
 
-  it('exempts the demo row — honest demo copy, never platform-pool copy', async () => {
-    mockGrouped.rows = [
-      groupedRow('mock/neryva/demo', {
-        displayName: 'Free demo — mock responses, not AI',
-        providerDisplayName: 'mock',
-      }),
-    ];
+  it('renders an honest unavailable state for a stored ref missing from the catalog', async () => {
+    // A dangling default (e.g. a removed model) must never crash or silently
+    // substitute — it renders "Model unavailable" with the raw ref.
+    mockGrouped.rows = [];
     await act(async () => {
       shell({
         definition: {
@@ -599,13 +596,7 @@ describe('ModelSection credential block exemption (W19)', () => {
         },
       });
     });
-    fireEvent.click(screen.getByLabelText('Expand Free demo — mock responses, not AI configuration'));
-    // R2-2: the demo is served by the deterministic in-Studio mock adapter,
-    // never the platform pool — the copy must not claim platform serving.
-    expect(screen.getByText('Free demo — no credential needed')).toBeTruthy();
-    expect(screen.queryByText('Served by platform pool — no credential needed')).toBeNull();
-    expect(screen.queryByText(/No Mock credential connected/)).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Connect Mock →' })).toBeNull();
+    expect(screen.getByText('Model unavailable — no longer offered. Remove it or pick a replacement.')).toBeTruthy();
   });
 
   it('still offers the connect helper for a genuine provider_credential_missing blocker', async () => {

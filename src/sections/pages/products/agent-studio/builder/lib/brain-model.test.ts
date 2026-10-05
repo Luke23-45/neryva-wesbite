@@ -44,18 +44,11 @@ describe('brain model (C04 binds)', () => {
     expect(reasonFix('residency_incompatible')).toEqual({ label: 'Switch profile', action: 'profile' });
     expect(reasonFix('credential_compromised')).toEqual({ label: 'Rotate the key', action: 'incident' });
     expect(reasonFix('subscription_required')).toEqual({ label: 'View subscription options', action: 'billing' });
-    // The demo limit has no console action — the copy names the weekly
-    // allowance and the FixButton stays unrendered (action: null).
-    expect(reasonFix('demo_conversation_limit_reached')).toEqual({
-      label: 'demo allowance used — refreshes automatically',
-      action: null,
-    });
-    expect(humanizeReason('demo_conversation_limit_reached')).toBe('demo allowance used (20 conversations per organization per rolling 7 days)');
     expect(humanizeReason('subscription_required')).toBe('subscription required');
     expect(humanizeReason('credential_compromised')).toBe('credential_compromised (derived)');
     expect(humanizeReason('residency_incompatible')).toBe('residency incompatible');
     // Unknown reasons degrade truthfully — never a guessed fix.
-    expect(reasonFix('something_new')).toEqual({ label: 'See Models library', action: null });
+    expect(reasonFix('something_new')).toEqual({ label: 'See Providers', action: null });
     expect(humanizeReason('something_new')).toBe('something_new');
   });
 

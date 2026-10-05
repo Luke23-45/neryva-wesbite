@@ -95,9 +95,7 @@ const DONE_TURN: TryTurn = {
   stop: null,
   rawEvents: [],
   restored: false,
-  synthetic: false,
-  quota: null,
-  policyRefused: false,
+  quota: false,
 };
 
 beforeEach(() => {
@@ -135,7 +133,7 @@ describe('TrySection (builder response spine)', () => {
     await shell({ definition: def });
     // The prereq banner AND the empty-state echo read the same blocked copy
     // (finding 2) — one coherent dead end.
-    expect(screen.getAllByText(/No usable model/)).toHaveLength(2);
+    expect(screen.getAllByText(/No model available/)).toHaveLength(2);
     fireEvent.click(screen.getByText(/Fix in Model/));
   });
 
@@ -149,7 +147,7 @@ describe('TrySection (builder response spine)', () => {
     // Typed prompt, still disarmed: the same usable-model signal as the
     // prereq block wires into the button.
     expect(button.disabled).toBe(true);
-    expect(button.getAttribute('title')).toMatch(/No usable model/);
+    expect(button.getAttribute('title')).toMatch(/No model available/);
     fireEvent.click(screen.getByText(/Run test/));
     expect(sessionMock.send).not.toHaveBeenCalled();
   });
@@ -171,7 +169,7 @@ describe('TrySection (builder response spine)', () => {
     // invite input that cannot run.
     const input = screen.getByLabelText(/Test prompt/) as HTMLTextAreaElement;
     expect(input.disabled).toBe(true);
-    expect(input.getAttribute('placeholder')).toMatch(/No usable model/);
+    expect(input.getAttribute('placeholder')).toMatch(/No model available/);
     // The thread area echoes the blocked copy instead of the "Ask anything"
     // invite — one coherent dead end, never two contradictory messages.
     expect(screen.queryByText(/Ask anything/)).toBeNull();
@@ -241,52 +239,20 @@ describe('TrySection (builder response spine)', () => {
   });
 });
 
-describe('TrySection demo honesty (build spec v3 §2/§3/§6)', () => {
-  const DEMO_MODELS = [
-    { provider: 'mock', model: 'neryva/demo', ref: 'mock/neryva/demo', usable: true },
-  ];
-
-  function demoDefinition() {
-    const def = defaultConsumer();
-    def.model_policy.allowed_models = ['mock/neryva/demo'];
-    return { ...def, instructions: '## Role\nR.\n' };
-  }
-
-  it('shows the persistent banner and a Demo badge on synthetic turns', async () => {
-    sessionMock.turns = [{ ...DONE_TURN, synthetic: true, agentText: 'This is a canned demo reply.' }];
-    await shell();
-    expect(screen.getByText(/You're chatting with a demo model/)).toBeTruthy();
-    expect(screen.getByText('Demo')).toBeTruthy();
-    expect(screen.getByText('This is a canned demo reply.')).toBeTruthy();
-  });
-
-  it('shows the banner when the demo is the only usable allowed model (no turns yet)', async () => {
-    sessionMock.turns = [];
-    await shell({ definition: demoDefinition(), models: DEMO_MODELS as never });
-    expect(screen.getByText(/You're chatting with a demo model/)).toBeTruthy();
-  });
-
-  it('shows no banner and no badge for real-model turns', async () => {
+describe('TrySection honesty (no demo UI)', () => {
+  it('shows no demo banner or badge for real-model turns', async () => {
     sessionMock.turns = [DONE_TURN];
     await shell();
-    expect(screen.queryByText(/You're chatting with a demo model/)).toBeNull();
+    expect(screen.queryByText(/demo model/i)).toBeNull();
     expect(screen.queryByText('Demo')).toBeNull();
   });
 
-  it('renders the demo limit panel with the two demo CTAs', async () => {
-    sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: { product: 'agent_studio_demo' } }];
-    await shell();
-    expect(screen.getByText('Demo limit reached')).toBeTruthy();
-    expect(screen.getByText('Top up')).toBeTruthy();
-    expect(screen.getByText(/Connect a provider/)).toBeTruthy();
-    expect(screen.queryByText('Claim free credits')).toBeNull();
-  });
-
-  it('renders the generic paid limit panel for other quota products', async () => {
-    sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: { product: 'agent_studio' } }];
+  it('renders the usage-limit panel when the run was refused for quota', async () => {
+    sessionMock.turns = [{ ...DONE_TURN, status: 'error', agentText: '', quota: true }];
     await shell();
     expect(screen.getByText('Usage limit reached')).toBeTruthy();
     expect(screen.getByText('Open billing')).toBeTruthy();
+    expect(screen.getByText(/Connect a provider/)).toBeTruthy();
     expect(screen.queryByText('Demo limit reached')).toBeNull();
   });
 });

@@ -38,9 +38,9 @@ export type { ModelGroupView, ModelRowView, OrgDefaultModel, Supergroup };
 
 /** Engine `reasons[]` codes rendered as human text (doc 19 §13).
  * Keys are the engine's real reason vocabulary: availability/N-5
- * (model-catalog.service.ts), template compatibility (templates.service.ts),
- * and the free-demo judgments (demo-policy.service.ts). Unknown codes fall
- * back to the raw snake_case words — never invented. */
+ * (model-catalog.service.ts) and template compatibility
+ * (templates.service.ts). Unknown codes fall back to the raw snake_case
+ * words — never invented. */
 export function humanizeReason(reason: string): string {
   const known: Record<string, string> = {
     // Availability / N-5 (model-catalog.service.ts)
@@ -57,14 +57,6 @@ export function humanizeReason(reason: string): string {
     // Template compatibility (templates.service.ts)
     provider_credential_missing:
       'No verified provider credential is attached — connect a key before enabling.',
-    // Free demo (demo-policy.service.ts)
-    demo_provider_disabled: 'The free demo is currently turned off.',
-    demo_conversation_limit_reached:
-      'The weekly demo conversation allowance for this organization is used up.',
-    demo_unavailable_with_credit_balance:
-      'Demo replies are only offered to organizations without a credit balance.',
-    demo_unavailable_with_provider_credential:
-      'Demo replies are not offered while a verified provider key is connected.',
   };
   return known[reason] ?? reason.replace(/_/g, ' ');
 }

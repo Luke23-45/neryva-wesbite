@@ -47,7 +47,6 @@ export type PublishRefusalKind =
   | 'models'
   | 'tools'
   | 'instructions'
-  | 'demo-model'
   | 'unknown';
 
 function detailsOf(error: ApiError): Record<string, unknown> {
@@ -57,20 +56,13 @@ function detailsOf(error: ApiError): Record<string, unknown> {
 }
 
 /**
- * Typed publish/rollback refusal (409 ×3 shapes, 400 ×4 shapes, 422 demo
- * gate). Message prefixes match the engine verbatim; details keys
- * disambiguate the 400s. Anything else is 'unknown' — rendered verbatim,
- * never paraphrased.
+ * Typed publish/rollback refusal (409 ×3 shapes, 400 ×4 shapes). Message
+ * prefixes match the engine verbatim; details keys disambiguate the 400s.
+ * Anything else is 'unknown' — rendered verbatim, never paraphrased.
  */
 export function classifyPublishRefusal(error: unknown): PublishRefusalKind {
   if (!(error instanceof ApiError)) {
     return 'unknown';
-  }
-  // Demo publish gate (build spec v3 §5): the engine refuses 422 when the
-  // version's model is the demo. The status is pinned and unambiguous —
-  // check it first, before message-prefix and details-key matching.
-  if (error.status === 422) {
-    return 'demo-model';
   }
   const message = error.message ?? '';
   if (message.startsWith(REFUSAL_TEXT.noOpJoint) || message === REFUSAL_TEXT.noOpLegacy) {
@@ -166,15 +158,6 @@ export function refusalFix(kind: PublishRefusalKind): RefusalFix {
         fixLabel: 'Map the pins',
         fixRoute: PUBLISH_FIX_ROUTES.knowledge,
         editTarget: 'knowledge',
-      };
-    case 'demo-model':
-      // Demo publish gate (build spec v3 §5): the demo can never publish —
-      // there is no override, only the fix route to a real model.
-      return {
-        title: 'Cannot publish a demo model',
-        fixLabel: 'Choose a real model',
-        fixRoute: PUBLISH_FIX_ROUTES.models,
-        editTarget: 'model',
       };
     case 'status':
       return {

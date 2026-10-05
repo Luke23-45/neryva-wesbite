@@ -10,7 +10,6 @@ import { Switch } from '@components/common/ui/Switch';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { Tooltip } from '@components/common/ui/Tooltip';
-import { isDemoProvider } from '@/sections/pages/products/agent-studio/builder/lib/demo-model';
 import type {
   ProviderDirectoryCapability,
   ProviderDirectoryEntry,
@@ -687,11 +686,6 @@ const ConnectLink = styled.button`
   }
 `;
 
-const NoKeyText = styled.span`
-  font-size: 13.5px;
-  color: ${({ theme }) => theme.app.text.secondary};
-`;
-
 const DocsLink = styled.a`
   font-size: 13.5px;
   font-weight: 600;
@@ -779,9 +773,6 @@ function ProviderDrawer({
         <DetailLabel>Connection</DetailLabel>
         {entry.connection.has_active_credential ? (
           <StatusPill tone="success">Connected</StatusPill>
-        ) : isDemoProvider(entry.provider) ? (
-          // The demo adapter takes no key — the connect flow would be a dead end.
-          <NoKeyText>No key needed</NoKeyText>
         ) : (
           <ConnectLink type="button" onClick={onConnectKey}>
             Connect key →

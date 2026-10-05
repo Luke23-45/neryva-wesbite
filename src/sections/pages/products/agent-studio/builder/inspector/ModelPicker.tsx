@@ -1,13 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Tooltip } from '@components/common/ui/Tooltip';
 import { ENGINE_RANGES, humanizeReason, reasonFix, subscriptionGateCopy } from '../lib/brain-model';
-import {
-  DEMO_DISPLAY_NAME,
-  DEMO_GROUP_LABEL,
-  DEMO_TOOLTIP,
-  isDemoProvider,
-} from '../lib/demo-model';
 import type { BuilderModelRow } from '../lib/useGroupedModels';
 import {
   CapChips,
@@ -15,7 +8,6 @@ import {
   CatalogList,
   CatalogRow,
   CountBadge,
-  DemoBadge,
   EmptyNote,
   GroupLabel,
   InPipelineBadge,
@@ -120,9 +112,6 @@ export function ModelPicker({
     return list.filter(
       (row) =>
         row.displayName.toLowerCase().includes(q) ||
-        // The demo row renders the pinned display name, which may differ
-        // from the engine's displayName — match against it too.
-        (isDemoProvider(row.provider) && DEMO_DISPLAY_NAME.toLowerCase().includes(q)) ||
         row.ref.toLowerCase().includes(q) ||
         row.provider.toLowerCase().includes(q) ||
         (row.credentialLabel ?? '').toLowerCase().includes(q),
@@ -178,11 +167,7 @@ export function ModelPicker({
     const disabled = !canAuthor || (!row.usable && !inPipeline) || (!inPipeline && capped);
     const ctx = fmtCtx(row.contextWindowTokens);
     const chips = capabilityChips(row.capabilities);
-    // Demo row (build spec v3 §1/§6): the engine declares the demo as an
-    // ordinary availability row — the picker renders the pinned copy so it
-    // can never be mistaken for a real model.
-    const demo = isDemoProvider(row.provider);
-    const name = demo ? DEMO_DISPLAY_NAME : row.displayName;
+    const name = row.displayName;
     // PRV-076: badge only — the confirm step mounts in ModelSection.
     const showToolWarn = pinnedToolCount > 0 && row.capabilities.tools === false;
     const byokSuffix = row.supergroup === 'byok' ? ` · BYOK · ${row.credentialLabel ?? 'unlabeled credential'}` : '';
@@ -262,30 +247,10 @@ export function ModelPicker({
               <EmptyNote>No connected credentials — connect a key to see its discovered models here.</EmptyNote>
             ) : (
               section.subgroups.map((group) => {
-                // Demo group (build spec v3 §6): its own labeled group with an
-                // info tooltip — never folded into a provider's list.
-                const demoGroup = isDemoProvider(group.provider);
                 return (
                   <div key={group.provider}>
                     <GroupLabel>
-                      {demoGroup ? (
-                        <>
-                          {DEMO_GROUP_LABEL} · {group.rows.length}{' '}
-                          {/* side="bottom": the catalog list scrolls (overflow-y),
-                              so an upward bubble is clipped whenever the demo group
-                              sits near the top of the scrollport. Below the badge
-                              there is always catalog content to overlay.
-                              focusable: the badge is a plain span — without a tab
-                              stop keyboard users can never reveal the policy copy. */}
-                          <Tooltip label={DEMO_TOOLTIP} side="bottom" focusable>
-                            <DemoBadge>Demo</DemoBadge>
-                          </Tooltip>
-                        </>
-                      ) : (
-                        <>
-                          {group.providerDisplayName} · {group.rows.length}
-                        </>
-                      )}
+                      {group.providerDisplayName} · {group.rows.length}
                     </GroupLabel>
                     {group.rows.map((row) => renderRow(row))}
                   </div>
@@ -381,7 +346,7 @@ function ReasonBlock({
 function FixLink({ reason, isEnterprise }: { reason: string; isEnterprise: boolean }) {
   const fix = reasonFix(reason);
   if (!fix.action) {
-    // action: null (e.g. the demo allowance) — label text only, no link.
+    // action: null — label text only, no link.
     return null;
   }
   if (fix.action === 'connect' && !isEnterprise) {

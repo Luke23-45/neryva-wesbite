@@ -148,7 +148,7 @@ describe('model pipeline wire contract (P2-1 / WEB-005)', () => {
     const cases: Array<[string, boolean]> = [
       ['openai/gpt-4o', true],
       ['anthropic/claude-sonnet-4-5', true],
-      ['mock/neryva/demo', true],
+      ['acme/corp-model', true],
       ['my-provider/model_v2.1', true],
       ['NOT A REF', false],
       ['OpenAI/gpt-4o', false],

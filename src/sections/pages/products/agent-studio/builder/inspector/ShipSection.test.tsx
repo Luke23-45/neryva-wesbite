@@ -246,7 +246,7 @@ describe('ShipSection', () => {
     expect(screen.getByText('Evaluate this version →')).toBeTruthy();
   });
 
-  it('renders the demo publish refusal with its title and model fix — never an override', async () => {
+  it('renders an unmatched refusal with the generic title and the verbatim message', async () => {
     await shell();
     fireEvent.click(screen.getByText('Publish this draft'));
     fireEvent.click(screen.getByText('Publish', { selector: 'button' }));
@@ -255,16 +255,13 @@ describe('ShipSection', () => {
     const { ApiError } = await import('@lib/engine/client');
     act(() => {
       onError?.(
-        // 422 from the engine is `validation_failed` (EngineErrorCode has no
-        // 'unprocessable' — that string was never a real engine code).
-        new ApiError(422, 'validation_failed', 'This agent uses a demo model — select a real model to publish.', {
-          demo_model: true,
-        }),
+        // An unmatched 422 classifies as 'unknown' — the refusal renders
+        // with the generic title and the engine message verbatim.
+        new ApiError(422, 'validation_failed', 'The draft failed a policy check.'),
       );
     });
-    expect(screen.getByText('Cannot publish a demo model')).toBeTruthy();
-    expect(screen.getByText(/This agent uses a demo model/)).toBeTruthy();
-    expect(screen.getByText('Choose a real model →')).toBeTruthy();
+    expect(screen.getByText('Publish refused')).toBeTruthy();
+    expect(screen.getByText(/The draft failed a policy check/)).toBeTruthy();
   });
 
   it('renders the success receipt with exits after publish', async () => {

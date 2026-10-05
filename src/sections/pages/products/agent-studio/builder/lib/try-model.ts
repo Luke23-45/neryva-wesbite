@@ -1,5 +1,3 @@
-import { DEMO_ALLOWANCE_EXHAUSTED } from './demo-model';
-
 /**
  * C13 pure model — try-console bounds, copy, and descriptors.
  *
@@ -43,16 +41,7 @@ export const TRY_COPY = {
   noBillRow: 'Test runs write no bill row — measured spend lives in Usage.',
   instructionsAdvisory: 'No instructions yet — try runs, publish refuses.',
   noRunnableVersion: 'No DRAFT or PUBLISHED version to run — save a draft first.',
-  noUsableModel: 'No usable model — connect a credential first.',
-  /**
-   * Demo weekly-allowance exhaustion — the engine's typed refusal
-   * (`demo_conversation_limit_reached`) names the policy, so the console
-   * names it too instead of the misleading "no usable model" framing.
-   * References the single DEMO_ALLOWANCE_EXHAUSTED definition.
-   */
-  demoAllowanceExhausted: DEMO_ALLOWANCE_EXHAUSTED,
-  demoLimitDetail:
-    'Connect a provider credential to keep testing with real models — the demo allowance refreshes automatically on a rolling 7-day window.',
+  noUsableModel: 'No model available — top up credits to try your assistant.',
   activeRunConflict: 'A run is already active on this thread — wait for it or stop it, then re-ask.',
   threadKept: 'Thread kept in ?try= — reload restores it.',
   /** Client poll budget exhausted — the turn never strands in 'accepted'. */
@@ -70,7 +59,7 @@ export function validateTryPrompt(raw: string): { ok: true } | { ok: false; erro
   return { ok: true };
 }
 
-export type TryPrereqKind = 'no-version' | 'no-model' | 'no-model-demo-limit' | 'instructions-advisory';
+export type TryPrereqKind = 'no-version' | 'no-model' | 'instructions-advisory';
 
 export interface TryPrereq {
   kind: TryPrereqKind;
@@ -83,18 +72,11 @@ export interface TryPrereq {
 /**
  * Ordered prerequisite descriptors. Blocks sort before the advisory whisper;
  * a ready console returns an empty list.
- *
- * `demoLimitReached` is the engine's own judgment — the caller derives it
- * from the model-availability wire rows (`demo_conversation_limit_reached`
- * on the demo row), never from client-side entitlement math. When set and
- * no model is usable, the block names the weekly allowance instead of the
- * generic "no usable model" copy.
  */
 export function describeTryPrereqs(input: {
   hasRunnableVersion: boolean;
   usableModelCount: number;
   hasInstructions: boolean;
-  demoLimitReached?: boolean;
 }): TryPrereq[] {
   const prereqs: TryPrereq[] = [];
   if (!input.hasRunnableVersion) {
@@ -106,21 +88,12 @@ export function describeTryPrereqs(input: {
     });
   }
   if (input.usableModelCount < 1) {
-    if (input.demoLimitReached === true) {
-      prereqs.push({
-        kind: 'no-model-demo-limit',
-        tone: 'block',
-        headline: TRY_COPY.demoAllowanceExhausted,
-        detail: TRY_COPY.demoLimitDetail,
-      });
-    } else {
-      prereqs.push({
-        kind: 'no-model',
-        tone: 'block',
-        headline: TRY_COPY.noUsableModel,
-        detail: 'A try needs at least one usable model on the version.',
-      });
-    }
+    prereqs.push({
+      kind: 'no-model',
+      tone: 'block',
+      headline: TRY_COPY.noUsableModel,
+      detail: 'A try needs at least one usable model on the version.',
+    });
   }
   if (input.hasInstructions === false) {
     prereqs.push({
@@ -131,15 +104,6 @@ export function describeTryPrereqs(input: {
     });
   }
   return prereqs;
-}
-
-/**
- * Pure wire-reason check — true when the engine's model-availability
- * reasons (or refusal details) carry the demo weekly-allowance reason.
- * Tolerates non-array input; unknown shapes yield false, never a guess.
- */
-export function hasDemoLimitReason(reasons: unknown): boolean {
-  return Array.isArray(reasons) && reasons.includes('demo_conversation_limit_reached');
 }
 
 export type TryStopKind = 'wall-clock' | 'reported' | 'failed' | 'none';

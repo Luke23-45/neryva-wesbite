@@ -107,8 +107,7 @@ export type ModelReason =
   | 'residency_incompatible'
   | 'credential_compromised'
   | 'subscription_required'
-  | 'model_disabled_by_org'
-  | 'demo_conversation_limit_reached';
+  | 'model_disabled_by_org';
 
 export type ReasonAction = 'connect' | 'enable' | 'profile' | 'incident' | 'billing';
 
@@ -122,11 +121,6 @@ const REASON_FIX: Record<ModelReason, { label: string; action: ReasonAction | nu
   // it on the Providers > Models page. Same 'enable' action as
   // provider_not_enabled: both deep-link Providers.
   model_disabled_by_org: { label: 'Re-enable in Providers', action: 'enable' },
-  // No console action exists — the allowance refreshes on a rolling weekly
-  // basis. action: null keeps the FixButton unrendered (ModelPicker gates
-  // on fix.action). The label is phrased to complete "No usable model — …"
-  // in the Ship/model subtitle.
-  demo_conversation_limit_reached: { label: 'demo allowance used — refreshes automatically', action: null },
 };
 
 /** SPEC inline fixes — unknown reasons degrade to a truthful label, never a guess. */
@@ -143,7 +137,6 @@ const REASON_LABEL: Record<ModelReason, string> = {
   credential_compromised: 'credential_compromised (derived)',
   subscription_required: 'subscription required',
   model_disabled_by_org: 'disabled by organization',
-  demo_conversation_limit_reached: 'demo allowance used (20 conversations per organization per rolling 7 days)',
 };
 
 /**

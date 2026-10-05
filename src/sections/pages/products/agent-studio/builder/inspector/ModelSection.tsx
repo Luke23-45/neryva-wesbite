@@ -52,7 +52,6 @@ import { useStringDraft } from '../lib/use-string-draft';
 import { useSectionConfirmationContext } from '../lib/section-confirmation-context';
 import { ENGINE_RANGES, formatStepValue, humanizeReason, roundToStep, validateOutputSchema, type ReasoningEffort } from '../lib/brain-model';
 import { pipelineEntryKey } from '../lib/entry-key';
-import { isDemoProvider } from '../lib/demo-model';
 import { buildAgentBuildPath } from '../lib/slot-model';
 import { useGroupedModels, type BuilderModelRow } from '../lib/useGroupedModels';
 import { ToolCompatGuard } from '../../providers/components/ToolCompatGuard';
@@ -1463,16 +1462,11 @@ function PipelineRow({
   // Unusable for a known reason — render the human text plus the Providers
   // deep-link (PRV-080). Unknown rows (no N-5 match) render nothing.
   const unusableReason = row && !row.usable ? (row.reasons[0] ?? 'unknown') : null;
-  // W19: credential-exempt rows — the demo provider, or platform-sourced
-  // rows the platform pool serves — never need an org credential. Keys off
-  // the same signal as the readiness panel: only a genuine
-  // provider_credential_missing blocker (credBlocked) may offer the
-  // connect-credential helper.
-  // R2-2: demo rows are exempt for a different reason than platform rows —
-  // the demo is served by the deterministic in-Studio mock adapter, never
-  // the platform pool — so the copy must not claim platform-pool serving.
-  const demoRow = isDemoProvider(row?.provider ?? provider);
-  const credentialExempt = !credBlocked && (demoRow || row?.supergroup === 'platform');
+  // W19: credential-exempt rows — platform-sourced rows the platform
+  // pool serves never need an org credential. Keys off the same signal as
+  // the readiness panel: only a genuine provider_credential_missing blocker
+  // (credBlocked) may offer the connect-credential helper.
+  const credentialExempt = !credBlocked && row?.supergroup === 'platform';
 
   return (
     <PipelineRowShell>
@@ -1498,6 +1492,11 @@ function PipelineRow({
               <PipelineRowMeta>
                 unusable: {humanizeReason(unusableReason)} ·{' '}
                 <Link to="/agent-studio/providers/models">Open Providers →</Link>
+              </PipelineRowMeta>
+            )}
+            {row === undefined && (
+              <PipelineRowMeta>
+                Model unavailable — no longer offered. Remove it or pick a replacement.
               </PipelineRowMeta>
             )}
           </div>
@@ -1553,12 +1552,7 @@ function PipelineRow({
                 ]}
               />
             ) : credentialExempt ? (
-              // R2-2: demo rows are served by the deterministic in-Studio
-              // mock adapter — the "platform pool" claim would be false for
-              // them. Platform rows keep the platform-pool copy.
-              <HelperText>
-                {demoRow ? 'Free demo — no credential needed' : 'Served by platform pool — no credential needed'}
-              </HelperText>
+              <HelperText>Served by platform pool — no credential needed</HelperText>
             ) : (
               <HelperText>
                 {credBlocked ? (
