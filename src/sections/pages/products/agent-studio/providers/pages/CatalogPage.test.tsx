@@ -210,6 +210,34 @@ describe('CatalogPage', () => {
     expect(screen.queryByText('Acme BYOK')).toBeNull();
   });
 
+  it('anchors the drawer panel to the selected row so it mounts in view', () => {
+    // jsdom has no layout engine: fake the geometry the anchoring hook measures.
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const top = this.dataset.providerId ? 620 : 120;
+        return {
+          top, left: 0, bottom: top, right: 0, width: 0, height: 0, x: 0, y: top,
+          toJSON: () => ({}),
+        } as DOMRect;
+      });
+    const heightSpy = vi
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.tagName === 'ASIDE' ? 500 : 4000;
+      });
+    try {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Mystery Lab details' }));
+      const panel = screen.getByRole('complementary', { name: 'Mystery Lab details' });
+      // Row at 620, layout at 120 → 500px anchor; clamp allows up to 4000-500-16.
+      expect(panel.style.marginTop).toBe('500px');
+    } finally {
+      rectSpy.mockRestore();
+      heightSpy.mockRestore();
+    }
+  });
+
   it('row click opens the slide-over drawer; Escape closes it', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Mystery Lab details' }));

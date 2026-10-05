@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -729,8 +729,33 @@ function ProviderDrawer({
     latency_profile?: string;
     docs_url?: string;
   };
+  // Row-anchored mount: the drawer mounts at the top of the Layout while
+  // the user's viewport may be far below (e.g. OpenRouter at the bottom).
+  // `position: sticky` only keeps a *visible* element in view — it can't
+  // teleport an off-screen element into view. So on mount we measure the
+  // selected row's offset inside the Layout and start the panel there;
+  // sticky handles every scroll after that. No scroll listener needed.
+  const panelRef = useRef<HTMLElement>(null);
+  const [anchorTop, setAnchorTop] = useState(0);
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    const layout = panel?.parentElement;
+    if (!panel || !layout) return;
+    const row = layout.querySelector<HTMLElement>(
+      `[data-provider-id="${CSS.escape(entry.provider)}"]`,
+    );
+    if (!row) return;
+    const offset =
+      row.getBoundingClientRect().top - layout.getBoundingClientRect().top;
+    // Never overflow the Layout's bottom edge — sticky pulls it back anyway,
+    // but clamping keeps the first paint honest.
+    const maxTop = Math.max(0, layout.offsetHeight - panel.offsetHeight - 16);
+    setAnchorTop(Math.min(Math.max(0, offset), maxTop));
+  }, [entry.provider]);
   return (
     <DetailPanel
+      ref={panelRef}
+      style={{ marginTop: anchorTop }}
       initial={{ x: 40, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 40, opacity: 0 }}
@@ -1219,7 +1244,11 @@ export function CatalogPage() {
                         const tErr =
                           toggleError?.provider === entry.provider ? toggleError : null;
                         return (
-                          <BodyRow key={entry.provider} $selected={isSelected}>
+                          <BodyRow
+                            key={entry.provider}
+                            $selected={isSelected}
+                            data-provider-id={entry.provider}
+                          >
                             <BodyCell>
                               <ProviderCell>
                                 <Avatar aria-hidden="true">
