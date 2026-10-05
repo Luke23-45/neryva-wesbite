@@ -15,6 +15,11 @@ import type {
   ProviderDirectoryCapability,
   ProviderDirectoryEntry,
 } from '../api';
+import {
+  TIER_GATE_NUDGE,
+  TIER_GATE_NUDGE_SHORT,
+  isTierGateError,
+} from '../api';
 import { useOrgTier, tierCovers } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
 import { useSetProviderEnabled } from '../hooks/useProviderEnablement';
@@ -356,6 +361,27 @@ const UpgradeLink = styled(Link)`
   &:hover {
     text-decoration: underline;
   }
+`;
+
+/**
+ * Tier-gate nudge: inline link (never a modal) shown when the org's plan
+ * doesn't cover a provider. Flat link styling, consistent with UpgradeLink.
+ */
+const TierNudge = styled(Link)`
+  font-size: 12.5px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.link};
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const GatedAccess = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 `;
 
 const CustomRow = styled(Link)`
@@ -858,6 +884,12 @@ function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
   );
 }
 
+export interface AccessToggleError {
+  message: string;
+  /** True when the failure was the plan gate (402) — render the nudge, not the warning icon. */
+  tierGated: boolean;
+}
+
 function AccessCell({
   entry,
   pending,
@@ -866,30 +898,61 @@ function AccessCell({
 }: {
   entry: ProviderDirectoryEntry;
   pending: boolean;
-  error: string | null;
-  onToggle: (provider: string, enabled: boolean) => void;
+  error: AccessToggleError | null;
+  onToggle: (entry: ProviderDirectoryEntry, enabled: boolean) => void;
 }) {
   const tier = useOrgTier();
+  const isOn = entry.connection.enabled;
+  const label = `${isOn ? 'Disable' : 'Enable'} ${entry.display_name} for this workspace`;
+  // Server is authoritative when it speaks: can_enable === false means the
+  // org's plan doesn't cover this provider. Absent (older engine) falls
+  // back to the client tier derivation — existing behavior, untouched.
+  const serverGated = entry.can_enable === false;
+
+  if (serverGated) {
+    return (
+      <GatedAccess>
+        <Tooltip
+          label={isOn ? 'Top up credits to turn this back on after disabling' : TIER_GATE_NUDGE}
+        >
+          <span style={{ display: 'inline-block' }}>
+            <Switch
+              checked={isOn}
+              onChange={(next) => onToggle(entry, next)}
+              label={label}
+              // Grandfathered ON stays interactive so the org can always
+              // turn it OFF; OFF is disabled — enabling is plan-gated.
+              disabled={pending || !isOn}
+            />
+          </span>
+        </Tooltip>
+        <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+      </GatedAccess>
+    );
+  }
+
   const coverage = tierCovers(tier, entry.min_required_product);
   if (coverage === false) {
     return <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>;
   }
-  const label = `${entry.connection.enabled ? 'Disable' : 'Enable'} ${entry.display_name} for this workspace`;
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <Switch
-        checked={entry.connection.enabled}
-        onChange={(next) => onToggle(entry.provider, next)}
+        checked={isOn}
+        onChange={(next) => onToggle(entry, next)}
         label={label}
         disabled={pending}
       />
-      {error && (
-        <Tooltip label={error}>
-          <DimText role="img" aria-label={`Toggle failed: ${error}`}>
-            <AlertTriangle size={14} aria-hidden="true" />
-          </DimText>
-        </Tooltip>
-      )}
+      {error &&
+        (error.tierGated ? (
+          <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+        ) : (
+          <Tooltip label={error.message}>
+            <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
+              <AlertTriangle size={14} aria-hidden="true" />
+            </DimText>
+          </Tooltip>
+        ))}
     </span>
   );
 }
@@ -907,9 +970,9 @@ export function CatalogPage() {
   const [chips, setChips] = useState<Set<ChipKey>>(new Set());
   const [showFilters, setShowFilters] = useState(true);
   const [selected, setSelected] = useState<ProviderDirectoryEntry | null>(null);
-  const [toggleError, setToggleError] = useState<{ provider: string; message: string } | null>(
-    null,
-  );
+  const [toggleError, setToggleError] = useState<
+    ({ provider: string } & AccessToggleError) | null
+  >(null);
 
   // ?returnTo — the builder's ModelPicker deep-links here; the guard keeps
   // the return target inside the studio so the banner can never bounce out.
@@ -987,17 +1050,36 @@ export function CatalogPage() {
   const setEnabled = useSetProviderEnabled(orgId);
   const pendingProvider = setEnabled.isPending ? setEnabled.variables?.provider ?? null : null;
 
-  const handleToggle = (provider: string, enabled: boolean) => {
+  const handleToggle = (entry: ProviderDirectoryEntry, enabled: boolean) => {
+    // Guard: enabling while the server says the plan doesn't cover this
+    // provider never fires the API — surface the nudge instead.
+    if (enabled && entry.can_enable === false) {
+      setToggleError({
+        provider: entry.provider,
+        message: TIER_GATE_NUDGE,
+        tierGated: true,
+      });
+      return;
+    }
     setToggleError(null);
     setEnabled.mutate(
-      { provider, enabled },
+      { provider: entry.provider, enabled },
       {
-        onError: () => {
-          // Sanitized copy — never the raw engine message.
-          setToggleError({
-            provider,
-            message: 'Could not change provider access. Please try again.',
-          });
+        onError: (err: unknown) => {
+          if (isTierGateError(err)) {
+            // Sanitized nudge copy — never the raw engine message.
+            setToggleError({
+              provider: entry.provider,
+              message: TIER_GATE_NUDGE,
+              tierGated: true,
+            });
+          } else {
+            setToggleError({
+              provider: entry.provider,
+              message: 'Could not change provider access. Please try again.',
+              tierGated: false,
+            });
+          }
         },
       },
     );
@@ -1135,7 +1217,7 @@ export function CatalogPage() {
                       {section.providers.map((entry) => {
                         const isSelected = effectiveSelected?.provider === entry.provider;
                         const tErr =
-                          toggleError?.provider === entry.provider ? toggleError.message : null;
+                          toggleError?.provider === entry.provider ? toggleError : null;
                         return (
                           <BodyRow key={entry.provider} $selected={isSelected}>
                             <BodyCell>

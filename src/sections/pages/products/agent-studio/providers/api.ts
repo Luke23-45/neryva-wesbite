@@ -67,6 +67,13 @@ export interface ProviderDirectoryEntry {
   connection: { has_active_credential: boolean; enabled: boolean };
   min_required_product: OrgModelTier;
   min_required_product_label: string;
+  /**
+   * Whether this org's plan may enable the provider. Server-computed from
+   * the org's real entitlement state (the client tier derivation is only
+   * a fallback for affordances). Optional until the engine ships it —
+   * absent means "no server signal", never "cannot enable".
+   */
+  can_enable?: boolean;
 }
 
 export interface ModelRowView {
@@ -234,6 +241,26 @@ export async function setProviderEnabled(
     `/console/org/${orgId}/provider-credentials/providers/${provider}`,
     { method: 'POST', body: { enabled } },
   );
+}
+
+/**
+ * Upgrade nudge copy for the provider/model enable gate. One copy string
+ * everywhere so the catalog row, the models page, and the 402 fallback all
+ * read identically.
+ */
+export const TIER_GATE_NUDGE = 'Top up credits to enable providers';
+export const TIER_GATE_NUDGE_SHORT = 'Top up credits to enable';
+
+/**
+ * True when a toggle/enablement write was rejected because the org's plan
+ * doesn't cover the provider: HTTP 402 with the engine's
+ * `provider_tier_required` code (wire format is lowercase snake_case).
+ * Duck-typed — works for ApiError and for test doubles.
+ */
+export function isTierGateError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code;
+  const status = (err as { status?: unknown } | null)?.status;
+  return code === 'provider_tier_required' || status === 402;
 }
 
 // ---------------------------------------------------------------------------

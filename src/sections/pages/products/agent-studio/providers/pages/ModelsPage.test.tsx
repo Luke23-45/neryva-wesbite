@@ -27,6 +27,10 @@ const defaultMutateMock = vi.hoisted(() => vi.fn());
 // Mutable grouped-models payload for tests that need a different fixture
 // than the default (vi.hoisted: the mock factory runs before module body).
 const fixtureOverrideRef = vi.hoisted(() => ({ current: null as GroupedModels | null }));
+// Mutable N-4 directory rows for provider-level gate tests (can_enable).
+const directoryOverrideRef = vi.hoisted(
+  () => ({ current: null }) as { current: Array<{ provider: string; can_enable?: boolean }> | null },
+);
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-1' }),
@@ -70,6 +74,15 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
+}));
+
+vi.mock('../hooks/useProviderDirectory', () => ({
+  useProviderDirectory: () => ({
+    data: { providers: directoryOverrideRef.current ?? [] },
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -220,6 +233,7 @@ beforeEach(() => {
   defaultMutateMock.mockReset();
   vi.mocked(toast.error).mockReset();
   fixtureOverrideRef.current = null;
+  directoryOverrideRef.current = null;
 });
 
 describe('ModelsPage', () => {
@@ -399,6 +413,48 @@ describe('ModelsPage', () => {
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).not.toHaveAttribute(
       'aria-disabled',
       'true',
+    );
+  });
+
+  it('provider can_enable=false gates model toggles with the top-up nudge, never hides rows', () => {
+    // GPT-4o Mini is free-tier and OFF: the client tier logic alone would
+    // leave it interactive on a free org — the provider-level server gate
+    // disables it instead.
+    directoryOverrideRef.current = [{ provider: 'openai', can_enable: false }];
+    renderPage();
+    const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    // The row is still fully visible (no hiding).
+    expect(screen.getByText('GPT-4o Mini')).toBeTruthy();
+    const nudges = screen.getAllByRole('link', { name: 'Top up credits to enable' });
+    expect(nudges.length).toBeGreaterThan(0);
+    expect(nudges[0]).toHaveAttribute('href', '/platform/billing');
+    // The disabled switch cannot fire the toggle API.
+    fireEvent.click(sw);
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it('provider can_enable=false on an enabled model keeps the switch interactive for turning off', () => {
+    directoryOverrideRef.current = [{ provider: 'openai', can_enable: false }];
+    renderPage();
+    // GPT-4o is enabled in the fixture: grandfathered ON stays interactive
+    // so the org can always turn it OFF (disabling is never plan-gated).
+    const sw = screen.getByRole('switch', { name: /GPT-4o \(platform\)/ });
+    expect(sw).not.toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    expect(mutateMock.mock.calls[0][0][0]).toMatchObject({ enabled: false });
+  });
+
+  it('a 402 provider_tier_required on a model toggle toasts the nudge, never the raw error', () => {
+    renderPage();
+    const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
+    onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      'Top up credits to enable models for this provider.',
     );
   });
 

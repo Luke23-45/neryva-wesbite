@@ -10,7 +10,7 @@
  * - Missing prices/context render honestly ("—"), never invented.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import {
@@ -25,6 +25,9 @@ import {
 import type { ProviderDirectoryEntry } from '../api';
 
 const mutateMock = vi.hoisted(() => vi.fn());
+const providersOverride = vi.hoisted(
+  () => ({ current: null }) as { current: import('../api').ProviderDirectoryEntry[] | null },
+);
 
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-1' }),
@@ -47,7 +50,7 @@ vi.mock('../hooks/useOrgTier', () => ({
 
 vi.mock('../hooks/useProviderDirectory', () => ({
   useProviderDirectory: () => ({
-    data: { providers: fixture() },
+    data: { providers: providersOverride.current ?? fixture() },
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -132,6 +135,7 @@ function renderPage() {
 
 beforeEach(() => {
   mutateMock.mockReset();
+  providersOverride.current = null;
 });
 
 describe('catalog pure helpers', () => {
@@ -244,5 +248,64 @@ describe('CatalogPage', () => {
     );
     expect(screen.getByText(/ZDR = zero data retention/)).toBeTruthy();
     expect(screen.getByText(/your plan governs what can be enabled/)).toBeTruthy();
+  });
+
+  it('can_enable=false: row stays visible with a disabled switch + top-up nudge; no API fires', () => {
+    providersOverride.current = [
+      entry({
+        can_enable: false,
+        connection: { has_active_credential: false, enabled: false },
+      }),
+    ];
+    renderPage();
+    // The row is never hidden for no-plan orgs.
+    expect(screen.getByText('OpenAI')).toBeTruthy();
+    const sw = screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' });
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    const nudge = screen.getByRole('link', { name: 'Top up credits to enable' });
+    expect(nudge).toHaveAttribute('href', '/platform/billing');
+    // A disabled switch cannot trigger the toggle — the guard never fires the API.
+    fireEvent.click(sw);
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it('can_enable=false on a grandfathered ON row keeps the switch interactive for turning off', () => {
+    providersOverride.current = [
+      entry({
+        can_enable: false,
+        connection: { has_active_credential: false, enabled: true },
+      }),
+    ];
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Disable OpenAI for this workspace' });
+    expect(sw).not.toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'openai', enabled: false });
+  });
+
+  it('a 402 provider_tier_required surfaces the top-up nudge, never the raw engine message', () => {
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
+    act(() => {
+      onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
+    });
+    expect(screen.getByRole('link', { name: 'Top up credits to enable' })).toBeTruthy();
+    expect(screen.queryByText('plan required')).toBeNull();
+  });
+
+  it('a non-tier toggle failure keeps the generic warning icon, not the nudge', () => {
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
+    fireEvent.click(sw);
+    const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
+    act(() => {
+      onError({ status: 500, code: 'internal_error', message: 'boom' });
+    });
+    expect(screen.getByRole('img', { name: /Toggle failed/ })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
   });
 });

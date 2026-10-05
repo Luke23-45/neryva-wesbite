@@ -29,6 +29,7 @@ export type EngineErrorCode =
   | 'forbidden'
   | 'entitlement_required'
   | 'past_due'
+  | 'provider_tier_required'
   | 'seat_limit_reached'
   | 'quota_exceeded'
   | 'step_up_required'
@@ -142,6 +143,7 @@ const KNOWN_ERROR_CODES: ReadonlySet<string> = new Set([
   'forbidden',
   'entitlement_required',
   'past_due',
+  'provider_tier_required',
   'seat_limit_reached',
   'quota_exceeded',
   'step_up_required',

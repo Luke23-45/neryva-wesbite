@@ -41,6 +41,12 @@ import {
   type Supergroup,
 } from '../hooks/useGroupedModels';
 import { useOrgTier, tierCovers, type OrgTier } from '../hooks/useOrgTier';
+import { useProviderDirectory } from '../hooks/useProviderDirectory';
+import {
+  TIER_GATE_NUDGE,
+  TIER_GATE_NUDGE_SHORT,
+  isTierGateError,
+} from '../api';
 
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
@@ -298,6 +304,24 @@ const UpgradeLink = styled(Link)`
   }
 `;
 
+/**
+ * Tier-gate nudge: inline link (never a modal) shown when the org's plan
+ * doesn't cover the provider. Same shape as UpgradeLink so gated rows
+ * keep a stable layout.
+ */
+const TierNudge = styled(Link)`
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.link};
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
 const NoCredRow = styled(Link)`
   display: flex;
   align-items: center;
@@ -470,6 +494,21 @@ export function ModelsPage() {
   );
 
   /**
+   * Provider-level plan gate from the N-4 directory (`can_enable` per row).
+   * The engine computes this from the org's real entitlement state; the
+   * grouped-models payload doesn't carry it, so it arrives via the shared
+   * directory query cache (no extra request when CatalogPage already
+   * fetched it). Absent entry/field = no server signal — the per-model
+   * client tier derivation below stays the fallback.
+   */
+  const directory = useProviderDirectory(orgId);
+  const canEnableByProvider = useMemo(() => {
+    const map = new Map<string, boolean | undefined>();
+    for (const p of directory.data?.providers ?? []) map.set(p.provider, p.can_enable);
+    return map;
+  }, [directory.data]);
+
+  /**
    * The N-5 `default_model` — absent/null until the engine ships it, in
    * which case every DEFAULT radio renders unchecked (never invented).
    */
@@ -574,8 +613,13 @@ export function ModelsPage() {
         },
       ],
       {
-        onError: () => {
-          toast.error('Could not save the model toggle — your previous settings were restored.');
+        onError: (err: unknown) => {
+          if (isTierGateError(err)) {
+            // Sanitized nudge copy — never the raw engine message.
+            toast.error('Top up credits to enable models for this provider.');
+          } else {
+            toast.error('Could not save the model toggle — your previous settings were restored.');
+          }
         },
         onSettled: () => setPendingKey(null),
       },
@@ -588,6 +632,12 @@ export function ModelsPage() {
     model: ModelRowView,
     next: boolean,
   ) => {
+    // Guard: enabling while the server says the plan doesn't cover this
+    // provider never fires the API — surface the nudge instead.
+    if (next && canEnableByProvider.get(group.provider) === false) {
+      toast.error('Top up credits to enable models for this provider.');
+      return;
+    }
     // Toggle-OFF of a model pinned by a live assistant needs the
     // blast-radius confirm — no silent downgrade (doc 20 §3.3).
     if (!next && model.pinned_by.length > 0) {
@@ -602,15 +652,20 @@ export function ModelsPage() {
 
   const renderRow = (supergroup: Supergroup, group: ModelGroupView, model: ModelRowView) => {
     const key = rowKey(supergroup, group, model);
+    // Provider-level server gate (N-4 `can_enable`) takes precedence; the
+    // per-model client tier derivation is the fallback when the server is
+    // silent. 'unknown' tier stays indeterminate — the server gates the write.
+    const providerGated = canEnableByProvider.get(group.provider) === false;
     const covers = tierCovers(tier, model.required_product);
-    // 'unknown' tier: indeterminate — the server gates the write, so the
-    // switch stays interactive and no upgrade CTA renders.
-    const gated = covers === false;
-    const disabled = gated || !model.usable;
+    const gated = providerGated || covers === false;
     // Invariant: the switch can never render ON alongside a cannot-enable
     // warning. The visual state derives from the same availability object
     // that decides whether the warning row renders (`model.usable`).
     const on = model.enabled && model.usable;
+    // Grandfathered: a gated-but-currently-on row stays interactive so the
+    // org can always turn it OFF (disabling is never plan-gated). Enabling
+    // while gated never fires — see handleToggle's guard.
+    const disabled = (gated && !on) || !model.usable;
     // DEFAULT radio: only a defaultable model can become the org default.
     // Unknown tier stays interactive — the server 422s when the model truly
     // can't serve, and the page rolls back with a toast.
@@ -764,14 +819,18 @@ export function ModelsPage() {
         <BodyCell>{defaultCell}</BodyCell>
         <BodyCell>
           {gated ? (
-            <Tooltip label={`Requires ${model.required_product_label} plan to enable`}>
+            <Tooltip
+              label={providerGated ? TIER_GATE_NUDGE : `Requires ${model.required_product_label} plan to enable`}
+            >
               <span style={{ display: 'inline-block' }}>{switchNode}</span>
             </Tooltip>
           ) : (
             switchNode
           )}
-          {gated && (
-            <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
+          {providerGated ? (
+            <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+          ) : (
+            gated && <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
           )}
         </BodyCell>
       </BodyRow>
