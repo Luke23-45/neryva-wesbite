@@ -268,10 +268,11 @@ export async function setProviderEnabled(
 /**
  * Upgrade nudge copy for the provider/model enable gate. One copy string
  * everywhere so the catalog row, the models page, and the 402 fallback all
- * read identically.
+ * read identically. The gate is plan-based (can_enable === false,
+ * provider_tier_required) — never credit-based — so the copy names the plan,
+ * not credits.
  */
-export const TIER_GATE_NUDGE = 'Top up credits to enable providers';
-export const TIER_GATE_NUDGE_SHORT = 'Top up credits to enable';
+export const TIER_GATE_NUDGE = "Your plan doesn't cover this provider";
 
 /**
  * True when a toggle/enablement write was rejected because the org's plan

@@ -38,6 +38,7 @@ export const Input = styled.input`
 `;
 
 export const ClearButton = styled.button`
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -50,6 +51,13 @@ export const ClearButton = styled.button`
   background: transparent;
   color: ${({ theme }) => theme.app.text.muted};
   cursor: pointer;
+
+  /* 44px hit target, visual-neutral — the visible button stays 22px. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
 
   &:hover {
     color: ${({ theme }) => theme.app.text.primary};

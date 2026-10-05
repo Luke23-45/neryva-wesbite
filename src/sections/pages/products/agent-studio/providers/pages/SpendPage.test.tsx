@@ -438,7 +438,7 @@ describe('SpendPage on-breach radios', () => {
 });
 
 describe('SpendPage intro and footer', () => {
-  it('renders the intro line with an Invoices & plan link to /platform/billing', async () => {
+  it('renders the intro line with an Invoices & plan link to /agent-studio/settings/billing', async () => {
     renderPage();
     await waitFor(() => {
       expect(
@@ -446,7 +446,7 @@ describe('SpendPage intro and footer', () => {
       ).toBeTruthy();
     });
     const link = screen.getByRole('link', { name: /Invoices & plan/ });
-    expect(link).toHaveAttribute('href', '/platform/billing');
+    expect(link).toHaveAttribute('href', '/agent-studio/settings/billing');
   });
 
   it('renders the reference footer copy with a Settings Billing link', async () => {

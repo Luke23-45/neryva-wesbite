@@ -6,12 +6,20 @@ import { spring } from '@styles/motion';
 /**
  * iOS-style switch — Apple-grade.
  *
- * - Track crossfades between the flat accent fill and the neutral well when toggling.
- * - Thumb translates with a `bouncy` spring (slight overshoot, just like
- *   the real iOS toggle — it "ticks" past the end then settles).
- * - Thumb scales slightly (0.94) while pressed, then bounces back.
+ * - Track crossfades between the flat accent fill and the neutral well when
+ *   toggling. The track keeps a subtle press scale (0.98) via framer-motion
+ *   `whileTap` + `spring.snap` — that is the only motion on this control.
+ * - Thumb is a pure-CSS span: it slides via a `left` transition (3px off /
+ *   19px on across the 38px track, 180ms ease-out) and is vertically centered
+ *   with `translateY(-50%)`. Framer-motion is deliberately NOT used on the
+ *   thumb — motion writes inline transforms that clobbered the CSS centering
+ *   after the first interaction (the thumb dropped to the bottom of the track
+ *   and stayed there). Nothing in JS touches the thumb's transform, so that
+ *   class of bug is structurally impossible.
  * - Focus brightens the track border (no glow ring).
- * - Disabled state: 0.4 opacity, `cursor: not-allowed`.
+ * - Disabled state: never the native `disabled` attribute (keyboard focus is
+ *   managed via `tabIndex` + `aria-disabled` instead) — 0.4 opacity,
+ *   `cursor: not-allowed`, removed from the tab order.
  * - 44px invisible hit target via ::after — the visible track stays 38×22.
  *
  * One label, one place: the switch never renders visible label text. The

@@ -491,8 +491,16 @@ describe('CustomProviderForm edit mode', () => {
     expect(hoisted.navigate).toHaveBeenCalledWith({ to: '/agent-studio/providers' });
   });
 
-  it('Round 2 P0: "Replace the header set" sends the full new set, nothing else changes', async () => {
+  it('Round 3 P2: edit-mode probe button is disabled with an honest reason (sealed secret can’t authenticate)', () => {
     hoisted.credentials = [editCred()];
+    renderForm('cred-1');
+    const probe = screen.getByRole('button', { name: /Run Probe & Discover Models/ });
+    expect(probe).toBeDisabled();
+    expect(probe.getAttribute('title')).toMatch(/sealed secret can’t be re-sent/);
+    expect(probe.getAttribute('title')).toMatch(/Sync \/ Refresh Models/);
+  });
+
+  it('Round 2 P0: "Replace the header set" sends the full new set, nothing else changes', async () => {    hoisted.credentials = [editCred()];
     renderForm('cred-1');
     // The header editor is hidden until the operator opts in.
     expect(screen.queryByRole('button', { name: /Add Header/ })).toBeNull();

@@ -52,11 +52,15 @@ const enterprisePill: CSSProperties = {
  * never cause a layout shift.
  */
 function CredentialListSkeleton() {
+  // Round 3 P2: role="status" + aria-hidden blocks, mirroring ModelsPage —
+  // aria-busy on a role-less div is inert, so the loading state was never
+  // announced to assistive tech.
   return (
-    <div aria-busy="true" aria-label="Loading providers">
+    <div role="status" aria-label="Loading providers">
       {[0, 1].map((i) => (
         <div
           key={i}
+          aria-hidden="true"
           style={{
             ...card,
             marginBottom: 16,
@@ -334,7 +338,7 @@ export function MyProvidersPage() {
       <div style={{ display: 'grid', gap: 16 }}>
         {groupEntries.map((group) => (
           <Fragment key={group.provider}>
-            <div style={providerSubHeader} role="heading" aria-level={3}>
+            <div style={providerSubHeader} role="heading" aria-level={2}>
               {group.displayName} · {group.list.length} {group.list.length === 1 ? 'key' : 'keys'}
             </div>
             {group.list.map((cred, index) => (

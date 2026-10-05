@@ -43,11 +43,18 @@ import {
 } from '../hooks/useGroupedModels';
 import { useOrgTier, tierCovers, type OrgTier } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
-import {
-  TIER_GATE_NUDGE,
-  isTierGateError,
-} from '../api';
+import { useSpendSummary } from '../hooks/useSpend';
+import { isTierGateError } from '../api';
 import { shortPlanLabel } from '../lib/plan-labels';
+
+/**
+ * `can_enable === false` is a PLAN gate (engine: tierGte(orgTier,
+ * requiredTier)) — never a credit gate. "Top up credits" misadvises, so
+ * every provider-gated state on this page uses plan-honest copy. The
+ * pricing page is the single upgrade destination for both remedies
+ * (activate pay-as-you-go, or contact sales for enterprise).
+ */
+const PLAN_GATE_COPY = 'Your plan doesn\u2019t cover this provider \u2014 upgrade to enable it.';
 
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
@@ -379,14 +386,29 @@ const CapBadges = styled.div`
   align-items: center;
 `;
 
-/* SVG reference: capabilities are plain text labels, not pills. No badge
-   chrome (no border, no fill, no dot) — color alone carries meaning:
-   secondary for capabilities, warning amber for No tools, info for the
-   operator price tag. */
-const MiniBadge = styled.span`
-  font-size: 13px;
+/* SVG reference (models-list-reference.svg): every capability carries a 7px
+   dot before its label — filled #34D399 (theme success.fg) when the model
+   has the capability, a hollow ring when it doesn't. Labels are 12px:
+   secondary for present, faint for absent. */
+const CapDot = styled.span<{ $present: boolean }>`
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  ${({ $present, theme }) =>
+    $present
+      ? `background: ${theme.app.status.success.fg};`
+      : `border: 1.4px solid ${theme.app.text.faint};`}
+`;
+
+const MiniBadge = styled.span<{ $present?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   font-weight: 500;
-  color: ${({ theme }) => theme.app.text.secondary};
+  color: ${({ theme, $present }) =>
+    $present === false ? theme.app.text.faint : theme.app.text.secondary};
   white-space: nowrap;
 `;
 
@@ -619,6 +641,15 @@ export function ModelsPage() {
   const { data, isPending, isError, refetch } = useGroupedModels(orgId);
   const toggles = useModelToggles(orgId);
   const defaultMut = useModelDefault(orgId);
+
+  /**
+   * Engine truth for the BYOK platform fee — a flat per-call credit charge
+   * (fee_config.byok_fee_credits_per_call), never hardcoded in the UI. When
+   * the summary hasn't loaded (or fails), the per-row fee suffix is omitted
+   * rather than invented.
+   */
+  const { data: spendData } = useSpendSummary(orgId, '30d');
+  const byokFeePerCall = spendData?.fee_config?.byok_fee_credits_per_call;
 
   /**
    * P1-1: engine model writes (toggles, default) are owner/admin/
@@ -879,8 +910,9 @@ export function ModelsPage() {
           // Machine details stay in the console — the user gets honest copy.
           console.error('[models] toggle POST failed', err);
           if (isTierGateError(err)) {
-            // Sanitized nudge copy — never the raw engine message.
-            toast.error('Top up credits to enable models for this provider.');
+            // Sanitized nudge copy — never the raw engine message. The gate
+            // is plan-based (engine: tierGte), never credit-based.
+            toast.error(PLAN_GATE_COPY);
           } else {
             toast.error('Could not save the model toggle — your previous settings were restored.');
           }
@@ -899,7 +931,7 @@ export function ModelsPage() {
     // Guard: enabling while the server says the plan doesn't cover this
     // provider never fires the API — surface the nudge instead.
     if (next && canEnableByProvider.get(group.provider) === false) {
-      toast.error('Top up credits to enable models for this provider.');
+      toast.error(PLAN_GATE_COPY);
       return;
     }
     // Toggle-OFF of a model pinned by a live assistant needs the
@@ -972,6 +1004,18 @@ export function ModelsPage() {
     const outputPrice = model.pricing?.output_per_1m ? formatUsd(model.pricing.output_per_1m) : null;
     const isOperatorPriced = model.pricing_source === 'operator_declared';
 
+    // BYOK rows disclose the per-call platform fee on the second line, per
+    // the SVG reference (`openai · gpt-4o · 128K · billed by OpenAI +5%`).
+    // The engine's fee is a flat per-call credit charge — not a percentage —
+    // so the row renders engine truth (`+ 2 credits/call`), never the SVG's
+    // stale percentage. Unknown fee (summary not loaded) omits the suffix
+    // rather than inventing one.
+    const feeSuffix =
+      supergroup === 'byok' && typeof byokFeePerCall === 'number'
+        ? ` · billed by ${group.provider_display_name ?? group.provider} + ${byokFeePerCall} ${byokFeePerCall === 1 ? 'credit' : 'credits'}/call`
+        : '';
+    const modelSubLine = `${group.provider} · ${model.model_id} · ${formatContextTokens(model.context_window_tokens)}${feeSuffix}`;
+
     const switchNode = (
       <Switch
         checked={on}
@@ -1028,14 +1072,11 @@ export function ModelsPage() {
         <BodyCell>
           <ModelCellRow>
             <ProviderAvatar aria-hidden="true">
-              {(group.provider_display_name.trim().charAt(0) || '?').toUpperCase()}
+              {((group.provider_display_name ?? '').trim().charAt(0) || '?').toUpperCase()}
             </ProviderAvatar>
             <div>
               <ModelName title={model.display_name}>{model.display_name}</ModelName>
-              <ModelId title={`${group.provider} · ${model.model_id}`}>
-                {group.provider} · {model.model_id} ·{' '}
-                {formatContextTokens(model.context_window_tokens)}
-              </ModelId>
+              <ModelId title={modelSubLine}>{modelSubLine}</ModelId>
               {!model.usable && model.reasons.length > 0 && (
                 <Reasons aria-label="Why this model cannot be used">
                   {model.reasons.map((r) => (
@@ -1076,9 +1117,15 @@ export function ModelsPage() {
         </BodyCell>
         <BodyCell>
           <CapBadges>
-            {(Object.keys(CAPABILITY_LABELS) as Array<keyof typeof CAPABILITY_LABELS>).map((cap) =>
-              model.capabilities[cap] ? <MiniBadge key={cap}>{CAPABILITY_LABELS[cap]}</MiniBadge> : null,
-            )}
+            {(Object.keys(CAPABILITY_LABELS) as Array<keyof typeof CAPABILITY_LABELS>).map((cap) => {
+              const present = model.capabilities[cap] === true;
+              return (
+                <MiniBadge key={cap} $present={present}>
+                  <CapDot $present={present} aria-hidden="true" />
+                  {CAPABILITY_LABELS[cap]}
+                </MiniBadge>
+              );
+            })}
             {!model.capabilities.tools && (
               <Tooltip focusable label="Models without native tool calling cannot run assistants that use tools">
                 <NoToolsTag>No tools</NoToolsTag>
@@ -1117,16 +1164,17 @@ export function ModelsPage() {
           {gated ? (
             <Tooltip
               focusable
-              label={providerGated ? TIER_GATE_NUDGE : `Requires ${model.required_product_label} plan to enable`}
+              label={providerGated ? PLAN_GATE_COPY : `Requires ${model.required_product_label} plan to enable`}
             >
               <span style={{ display: 'inline-block' }}>{switchNode}</span>
             </Tooltip>
           ) : (
             switchNode
           )}
-          {/* No inline billing links in the table — the tooltip on the switch
-              carries the reason; billing lives on the pricing page. */}
-          {!providerGated && gated && (
+          {/* One upgrade destination: provider-gated and plan-gated rows
+              alike link to the canonical pricing page. The SVG's gated
+              example shows "Upgrade →" right-aligned in ACCESS. */}
+          {gated && (
             <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
           )}
         </BodyCell>

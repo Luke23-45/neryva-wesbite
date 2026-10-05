@@ -28,7 +28,7 @@
  * no content modals, no invented numbers — every figure is engine-rendered
  * or absent.
  */
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import styled from 'styled-components';
 import { Link } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
@@ -63,6 +63,7 @@ import {
   spendSharePct,
   topModelSummary,
 } from '@/sections/pages/products/agent-studio/providers/lib/model-spend';
+import { errorCodeLabel } from '@/sections/pages/products/agent-studio/providers/lib/error-code-labels';
 import {
   bodyText,
   card,
@@ -98,6 +99,34 @@ function formatUsd(value: string | undefined): string | null {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Exact decimal-USD-string → integer cents. Never via Number()-first: a
+ * float epsilon at the cap boundary could flip the at-cap notice or the
+ * used-percent. Malformed/missing input → null (honest unknown, never a
+ * guess). Spend figures are non-negative; the parser stays sign-safe.
+ */
+function usdToCents(usd: string | null | undefined): number | null {
+  if (usd == null) return null;
+  const m = /^(-)?(\d+)(?:\.(\d{1,2}))?$/.exec(usd.trim());
+  if (!m) return null;
+  const cents = Number(m[2]) * 100 + Number((m[3] ?? '').padEnd(2, '0'));
+  return m[1] ? -cents : cents;
+}
+
+/**
+ * Exact budget-used percent from integer-cent math (single division,
+ * rounded, clamped). Display-only — enforcement is engine-side — but the
+ * display must not lie at the boundary. null when cap or used is unknown.
+ */
+function budgetUsedPct(
+  usedUsd: string | null | undefined,
+  capCents: number | null | undefined,
+): number | null {
+  const usedCents = usdToCents(usedUsd);
+  if (capCents == null || capCents <= 0 || usedCents == null) return null;
+  return Math.min(100, Math.round((usedCents * 100) / capCents));
 }
 
 export function SpendPage() {
@@ -158,7 +187,7 @@ export function SpendPage() {
       <p style={{ ...hintText, fontSize: 13.5, margin: '0 0 16px' }}>
         Monitor spend per credential and model, and enforce a monthly cap.{' '}
         <a
-          href="/platform/billing"
+          href="/agent-studio/settings/billing"
           style={{ color: colors.accent, textDecoration: 'none' }}
         >
           Invoices &amp; plan →
@@ -244,11 +273,9 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
   const byok = formatUsd(data.byok.list_price_equivalent_usd);
   const budget = data.budget;
   const capUsd = budget.cap_usd_cents == null ? null : budget.cap_usd_cents / 100;
-  const used = Number(budget.used_usd);
-  const pct =
-    capUsd != null && capUsd > 0 && Number.isFinite(used)
-      ? Math.min(100, Math.round((used / capUsd) * 100))
-      : null;
+  // Exact percent: integer-cent math, never a float quotient (an epsilon at
+  // the boundary would misstate the progress bar and the used label).
+  const pct = budgetUsedPct(budget.used_usd, budget.cap_usd_cents);
   const top =
     modelSpend?.rows?.length
       ? topModelSummary(modelSpend.rows, modelSpend.total_spend_usd)
@@ -636,6 +663,28 @@ function InfoGlyph() {
   );
 }
 
+/**
+ * Supplementary detail that must not be title-only: keyboard-focusable so
+ * keyboard and screen-reader users reach the same text sighted mouse users
+ * get on hover. The full text rides aria-label (title is kept as the hover
+ * affordance), with a visible focus ring per the standing focus rules.
+ */
+const DetailNote = styled.span`
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.accentControl};
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+`;
+
+function AccessibleDetail({ text, children }: { text: string; children: ReactNode }) {
+  return (
+    <DetailNote tabIndex={0} aria-label={text} title={text}>
+      {children}
+    </DetailNote>
+  );
+}
+
 /** Share bar + percent, per the spend-list reference. null = honest "—". */
 function ShareCell({ pct }: { pct: number | null }) {
   if (pct === null || !Number.isFinite(pct)) return <span>—</span>;
@@ -668,33 +717,22 @@ function ShareCell({ pct }: { pct: number | null }) {
   );
 }
 
-/** Dominant engine error code from the N-7 error_breakdown. null = clean. */
+/** Dominant engine error code from the N-7 error_breakdown. null = clean.
+ * Iterates every entry the wire actually carries — a new engine code with
+ * count > 0 surfaces through errorCodeLabel's passthrough instead of being
+ * dropped by a closed allow-list (which left the Errors cell reading "—",
+ * actively under-reporting failed calls). */
 function dominantError(
   breakdown: CredentialUsageView['error_breakdown'],
 ): { code: string; count: number } | null {
-  const entries: Array<[string, number]> = [
-    ['401', breakdown['401']],
-    ['403', breakdown['403']],
-    ['429', breakdown['429']],
-    ['5xx', breakdown['5xx']],
-  ];
+  const entries = Object.entries(breakdown ?? {});
   let best: { code: string; count: number } | null = null;
   for (const [code, count] of entries) {
-    if (count > 0 && (best === null || count > best.count)) best = { code, count };
+    if (typeof count === 'number' && count > 0 && (best === null || count > best.count)) {
+      best = { code, count };
+    }
   }
   return best;
-}
-
-/** Human copy for the closed engine error-code set — never a bare "429". */
-const ERROR_CODE_LABELS: Record<string, string> = {
-  '401': 'Auth failed',
-  '403': 'Forbidden',
-  '429': 'Rate limited',
-  '5xx': 'Provider errors',
-};
-
-function errorCodeLabel(code: string): string {
-  return ERROR_CODE_LABELS[code] ?? code;
 }
 
 type CredentialTone = 'success' | 'info' | 'warning' | 'neutral';
@@ -720,13 +758,17 @@ function formatShortDate(iso: string | null): string | null {
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-/** Full-width provider sub-header row inside the per-model table body. */
-const ModelSubHeadCell = styled.td`
+/** Full-width provider sub-header row inside the per-model table body —
+ * a row-group header (th + scope="rowgroup"), the same treatment Round 2
+ * gave the Models page provider subheads. text-align stays left: th
+ * centers by default, which would change the look. */
+const ModelSubHeadCell = styled.th`
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-align: left;
   color: ${({ theme }) => theme.app.text.faint};
   background: ${({ theme }) => theme.app.surface.tint};
   border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
@@ -958,11 +1000,13 @@ function CredentialSpendList({
                   ) : loading || !u ? (
                     '—'
                   ) : dominant ? (
-                    <span title={`${errorCodeLabel(dominant.code)} — ${dominant.count} failed call${dominant.count === 1 ? '' : 's'} in this window`}>
+                    <AccessibleDetail
+                      text={`${errorCodeLabel(dominant.code)} — ${dominant.count} failed call${dominant.count === 1 ? '' : 's'} in this window`}
+                    >
                       <StatusPill tone="warning">
                         {errorCodeLabel(dominant.code)} ×{dominant.count}
                       </StatusPill>
-                    </span>
+                    </AccessibleDetail>
                   ) : (
                     '—'
                   )}
@@ -1063,7 +1107,7 @@ export function ModelSpendList({
           {groups.map((group) => (
             <Fragment key={`sub-${group.provider}`}>
               <tr>
-                <ModelSubHeadCell colSpan={7}>
+                <ModelSubHeadCell colSpan={7} scope="rowgroup">
                   {group.provider_display_name} · {group.rows.length}
                 </ModelSubHeadCell>
               </tr>
@@ -1111,11 +1155,11 @@ export function ModelSpendList({
                     </SpendBodyCell>
                     <SpendBodyCell>{formatTokens(row.requests)}</SpendBodyCell>
                     <SpendBodyCell>
-                      <span
-                        title={`${formatTokens(row.prompt_tokens)} prompt · ${formatTokens(row.completion_tokens)} completion`}
+                      <AccessibleDetail
+                        text={`${formatTokens(row.prompt_tokens)} prompt · ${formatTokens(row.completion_tokens)} completion`}
                       >
                         {formatTokens(row.total_tokens)}
-                      </span>
+                      </AccessibleDetail>
                     </SpendBodyCell>
                     <SpendBodyCell>{formatUsd(row.spend_usd) ?? '—'}</SpendBodyCell>
                     <SpendBodyCell>
@@ -1281,11 +1325,15 @@ function BudgetControls({
   const shown = capText ?? capUsd ?? '';
   const dirty = capText !== null && capText !== (capUsd ?? '');
 
-  const used = Number(budget.used_usd);
+  const usedCents = usdToCents(budget.used_usd);
+  // Exact boundary: integer cents vs integer cents. A float epsilon here
+  // could flip the at-cap notice (enforcement is engine-side; the display
+  // must agree with it, not wobble at the edge).
   const atCap =
-    budget.cap_usd_cents != null &&
-    Number.isFinite(used) &&
-    used >= budget.cap_usd_cents / 100;
+    budget.cap_usd_cents != null && usedCents != null && usedCents >= budget.cap_usd_cents;
+  // One exact percent for both the bar and its accessible value — the old
+  // code rounded aria-valuenow but not the bar width, so they could disagree.
+  const pct = budgetUsedPct(budget.used_usd, budget.cap_usd_cents);
 
   const saveCap = () => {
     const parsed = parseCapInput(shown);
@@ -1335,7 +1383,7 @@ function BudgetControls({
             </>
           )}
         </p>
-        {budget.cap_usd_cents != null && Number.isFinite(used) && (
+        {budget.cap_usd_cents != null && pct != null && (
           <div
             style={{
               height: 8,
@@ -1346,7 +1394,7 @@ function BudgetControls({
               maxWidth: 320,
             }}
             role="progressbar"
-            aria-valuenow={Math.min(100, Math.round((used / (budget.cap_usd_cents / 100)) * 100))}
+            aria-valuenow={pct}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Budget used"
@@ -1354,7 +1402,7 @@ function BudgetControls({
             <div
               style={{
                 height: '100%',
-                width: `${Math.min(100, (used / (budget.cap_usd_cents / 100)) * 100)}%`,
+                width: `${pct}%`,
                 background: atCap ? colors.error : colors.accent,
               }}
             />

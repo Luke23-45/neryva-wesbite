@@ -79,8 +79,25 @@ vi.mock('@/sections/pages/products/agent-studio/providers/api', async (importOri
 });
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ to, search, children }: { to: string; search?: Record<string, unknown>; children: React.ReactNode }) => (
-    <a href={search?.q ? `${to}?q=${encodeURIComponent(String(search.q))}` : to}>{children}</a>
+  // Forwards style so 44px hit-target assertions on text links are real —
+  // the old mock silently dropped it.
+  Link: ({
+    to,
+    search,
+    children,
+    style,
+  }: {
+    to: string;
+    search?: Record<string, unknown>;
+    children: React.ReactNode;
+    style?: React.CSSProperties;
+  }) => (
+    <a
+      href={search?.q ? `${to}?q=${encodeURIComponent(String(search.q))}` : to}
+      style={style}
+    >
+      {children}
+    </a>
   ),
 }));
 
@@ -389,10 +406,20 @@ describe('30-day usage summary', () => {
     expect(screen.getByText(/list-price equivalent — not billed/)).toBeTruthy();
   });
 
-  it('renders the non-zero error counts with the 429 highlighted', () => {
+  it('renders the non-zero error counts with human labels and the 429 highlighted', () => {
     renderCard();
-    expect(screen.getByText('401 ×3')).toBeTruthy();
-    expect(screen.getByText('429 ×1')).toBeTruthy();
+    expect(screen.getByText('Auth failed ×3')).toBeTruthy();
+    expect(screen.getByText('Rate limited ×1')).toBeTruthy();
+  });
+
+  it('puts a human tooltip on each error count', () => {
+    renderCard();
+    expect(screen.getByText('Auth failed ×3').getAttribute('title')).toBe(
+      'Auth failed — 3 failed calls in the last 30 days',
+    );
+    expect(screen.getByText('Rate limited ×1').getAttribute('title')).toBe(
+      'Rate limited — 1 failed call in the last 30 days',
+    );
   });
 
   it('renders the total token count', () => {
@@ -411,6 +438,29 @@ describe('30-day usage summary', () => {
     renderCard();
     expect(screen.getByText('Loading…')).toBeTruthy();
     expect(screen.queryByText(/1,000,000 tokens/)).toBeNull();
+  });
+
+  it('Round 3 P2: card aria-label names the credential kind (custom endpoint vs API key)', () => {
+    const { unmount } = renderCard();
+    expect(screen.getByRole('article', { name: 'API key: Production Key' })).toBeTruthy();
+    unmount();
+    renderCard({
+      credential: baseCredential({ base_url: 'https://llm.example.com/v1', label: 'EU vLLM' }),
+    });
+    expect(screen.getByRole('article', { name: 'Custom endpoint: EU vLLM' })).toBeTruthy();
+  });
+
+  it('Round 3 P2: "Edit endpoint →" and "View audit trail →" meet the 44px hit target', () => {
+    renderCard({
+      credential: baseCredential({ base_url: 'https://llm.example.com/v1' }),
+    });
+    const edit = screen.getByRole('link', { name: 'Edit endpoint →' });
+    const audit = screen.getByRole('link', { name: 'View audit trail →' });
+    expect(edit.style.minHeight).toBe('44px');
+    expect(audit.style.minHeight).toBe('44px');
+    // Text-link look is preserved — no button chrome.
+    expect(edit.style.textDecoration).toBe('none');
+    expect(edit.style.display).toBe('inline-flex');
   });
 });
 

@@ -10,7 +10,7 @@
  * - Missing prices/context render honestly ("—"), never invented.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import {
@@ -308,6 +308,22 @@ describe('CatalogPage', () => {
     );
   });
 
+  it('the drawer renders exactly one Plan block — the floored one, never the raw label', () => {
+    providersOverride.current = [
+      entry({ min_required_product: 'free', min_required_product_label: 'Free' }),
+    ];
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI details' }));
+    const drawer = screen.getByRole('complementary', { name: 'OpenAI details' });
+    // Single Plan block: Round 2 removed the raw-label duplicate from the
+    // Profile section; the rework re-added it and it is removed again here.
+    expect(within(drawer).getAllByText('Plan')).toHaveLength(1);
+    // Floored label: a 'free' row minimum reads PAYG in the drawer too,
+    // never the raw "Free".
+    expect(within(drawer).queryByText('Free')).toBeNull();
+    expect(within(drawer).getByText('PAYG')).toBeTruthy();
+  });
+
   it('the ACCESS toggle posts the provider enablement', () => {
     renderPage();
     // Acme BYOK is currently disabled → the switch reads "Enable …".
@@ -340,7 +356,7 @@ describe('CatalogPage', () => {
     expect(screen.getByText(/your plan governs what can be enabled/)).toBeTruthy();
   });
 
-  it('can_enable=false: row stays visible with a disabled switch and no table link; no API fires', () => {
+  it('can_enable=false: row stays visible with a disabled switch and the upgrade link; no API fires', () => {
     providersOverride.current = [
       entry({
         can_enable: false,
@@ -352,8 +368,10 @@ describe('CatalogPage', () => {
     expect(screen.getByText('OpenAI')).toBeTruthy();
     const sw = screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    // No billing link in the table — the switch tooltip carries the reason.
-    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+    // The tooltip carries the reason; the upgrade link carries the
+    // resolution — single canonical destination, never /platform/billing.
+    const link = screen.getByRole('link', { name: 'Upgrade →' });
+    expect(link.getAttribute('href')).toBe('/agent-studio/settings/pricing');
     // A disabled switch cannot trigger the toggle — the guard never fires the API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();
@@ -374,7 +392,7 @@ describe('CatalogPage', () => {
     expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'openai', enabled: false });
   });
 
-  it('a 402 provider_tier_required surfaces the top-up message on the warning icon, never the raw engine message', () => {
+  it('a 402 provider_tier_required surfaces the nudge on the warning icon plus the upgrade link, never the raw engine message', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
     fireEvent.click(sw);
@@ -383,10 +401,12 @@ describe('CatalogPage', () => {
     act(() => {
       onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
     });
-    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+    // The icon carries the reason, the link carries the resolution.
     expect(
-      screen.getByRole('img', { name: 'Toggle failed: Top up credits to enable providers' }),
+      screen.getByRole('img', { name: "Toggle failed: Your plan doesn't cover this provider" }),
     ).toBeTruthy();
+    const link = screen.getByRole('link', { name: 'Upgrade →' });
+    expect(link.getAttribute('href')).toBe('/agent-studio/settings/pricing');
     expect(screen.queryByText('plan required')).toBeNull();
   });
 
@@ -399,7 +419,8 @@ describe('CatalogPage', () => {
       onError({ status: 500, code: 'internal_error', message: 'boom' });
     });
     expect(screen.getByRole('img', { name: /Toggle failed/ })).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+    // Non-tier failures get no upgrade link — only the plan gate does.
+    expect(screen.queryByRole('link', { name: 'Upgrade →' })).toBeNull();
   });
 
   it('plan pill follows the floored tier: a "free" row minimum never reads "Included"', () => {

@@ -33,6 +33,9 @@ const directoryOverrideRef = vi.hoisted(
 );
 // Mutable org role for role-gating tests (default: owner — fully privileged).
 const roleOverrideRef = vi.hoisted(() => ({ current: null as string | null }));
+// Mutable BYOK fee for the per-row fee disclosure tests (null = fee config
+// not loaded → the suffix is omitted, never invented).
+const feeOverrideRef = vi.hoisted(() => ({ current: 2 as number | null }));
 // Observable refetch for degraded-lane retry tests.
 const refetchMockRef = vi.hoisted(() => ({ current: vi.fn() }));
 
@@ -70,6 +73,15 @@ vi.mock('../hooks/useGroupedModels', () => ({
   humanizeReason: (r: string) => r.replace(/_/g, ' '),
   rowKey: (sg: string, g: { provider: string }, m: { model_id: string }) =>
     `${sg}:${g.provider}:${m.model_id}`,
+}));
+
+vi.mock('../hooks/useSpend', () => ({
+  useSpendSummary: () => ({
+    data:
+      feeOverrideRef.current === null
+        ? null
+        : { fee_config: { byok_fee_credits_per_call: feeOverrideRef.current } },
+  }),
 }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -240,6 +252,7 @@ beforeEach(() => {
   fixtureOverrideRef.current = null;
   directoryOverrideRef.current = null;
   roleOverrideRef.current = null;
+  feeOverrideRef.current = 2;
   refetchMockRef.current.mockReset();
 });
 
@@ -292,13 +305,21 @@ describe('ModelsPage', () => {
     expect(screen.queryByText('xAI · 2')).toBeNull();
     expect(screen.queryByText('OpenAI · 2')).toBeNull();
     // Provider identity lives on every row: avatar initial + second line.
-    expect(screen.getAllByText('openai · gpt-4o · 128K')).toHaveLength(2);
+    // The BYOK row additionally discloses the per-call platform fee.
+    expect(screen.getByText('openai · gpt-4o · 128K')).toBeTruthy();
+    expect(
+      screen.getByText('openai · gpt-4o · 128K · billed by OpenAI + 2 credits/call'),
+    ).toBeTruthy();
     expect(screen.getByText('anthropic · claude-3-7-sonnet · 200K')).toBeTruthy();
   });
 
   it('shows context in the model sub-line; "—" when the catalog has no value', () => {
     renderPage();
-    expect(screen.getAllByText('openai · gpt-4o · 128K')).toHaveLength(2);
+    expect(screen.getByText('openai · gpt-4o · 128K')).toBeTruthy();
+    // The BYOK duplicate additionally discloses the per-call platform fee.
+    expect(
+      screen.getByText('openai · gpt-4o · 128K · billed by OpenAI + 2 credits/call'),
+    ).toBeTruthy();
     expect(screen.getByText('anthropic · claude-3-7-sonnet · 200K')).toBeTruthy();
     expect(screen.getByText('xai · grok-heavy · 1M')).toBeTruthy();
     // Unknown context is honest, never invented.
@@ -433,7 +454,7 @@ describe('ModelsPage', () => {
     );
   });
 
-  it('provider can_enable=false gates model toggles with no table link; rows never hide', () => {
+  it('provider can_enable=false gates model toggles but keeps the Upgrade CTA; rows never hide', async () => {
     // GPT-4o Mini is free-tier and OFF: the client tier logic alone would
     // leave it interactive on a free org — the provider-level server gate
     // disables it instead.
@@ -441,10 +462,24 @@ describe('ModelsPage', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    // The row is still fully visible (no hiding), and no billing link is
-    // rendered in the table — the switch tooltip carries the reason.
+    // The row is still fully visible (no hiding), and the provider-gated row
+    // links to the canonical pricing page — the SVG's gated example shows
+    // "Upgrade →" right-aligned in ACCESS.
     expect(screen.getByText('GPT-4o Mini')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+    const upgradeLinks = screen.getAllByRole('link', { name: 'Upgrade →' });
+    expect(upgradeLinks.length).toBeGreaterThan(0);
+    expect(upgradeLinks[0]).toHaveAttribute('href', '/agent-studio/settings/pricing');
+    // The tooltip uses plan-honest copy: can_enable=false is a plan gate
+    // (engine: tierGte), never a credit gate.
+    fireEvent.mouseEnter(sw);
+    await waitFor(
+      () => {
+        expect(screen.getByRole('tooltip').textContent).toContain(
+          'Your plan doesn\u2019t cover this provider',
+        );
+      },
+      { timeout: 3000 },
+    );
     // The disabled switch cannot fire the toggle API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();
@@ -462,7 +497,7 @@ describe('ModelsPage', () => {
     expect(mutateMock.mock.calls[0][0][0]).toMatchObject({ enabled: false });
   });
 
-  it('a 402 provider_tier_required on a model toggle toasts the nudge, never the raw error', () => {
+  it('a 402 provider_tier_required on a model toggle toasts the plan-honest nudge, never the raw error', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
     fireEvent.click(sw);
@@ -470,8 +505,63 @@ describe('ModelsPage', () => {
     const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
     onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      'Top up credits to enable models for this provider.',
+      'Your plan doesn\u2019t cover this provider \u2014 upgrade to enable it.',
     );
+  });
+
+  it('capability badges render all four capabilities with SVG-faithful dots', () => {
+    renderPage();
+    // The stylesheet carries both halves of the SVG treatment: filled green
+    // for present, hollow ring for absent.
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((s) => s.textContent ?? '')
+      .join('\n');
+    expect(css).toMatch(/#34d399/i);
+    expect(css).toMatch(/1\.4px solid/);
+    // GPT-4o (platform) has tools+vision; reasoning+structured_output are
+    // absent — the SVG shows absent capabilities as hollow rings, not
+    // silence, so all four badges render, each with its dot.
+    const gptSwitch = screen.getByRole('switch', { name: /GPT-4o \(platform\)/ });
+    const gptRow = gptSwitch.closest('tr') as HTMLElement;
+    for (const label of ['Tools', 'Vision', 'Reasoning', 'Structured output']) {
+      const badge = within(gptRow).getByText(label);
+      expect(badge.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+    }
+  });
+
+  it('BYOK rows disclose the per-call platform fee from engine fee_config on the second line', () => {
+    renderPage();
+    const byokSwitch = screen.getByRole('switch', { name: /GPT-4o \(BYOK/ });
+    const byokRow = byokSwitch.closest('tr') as HTMLElement;
+    const subLine = within(byokRow).getByText(/billed by OpenAI/);
+    // Engine truth is a flat per-call credit fee — never the SVG's stale
+    // percentage, never invented.
+    expect(subLine.textContent).toContain(
+      'openai · gpt-4o · 128K · billed by OpenAI + 2 credits/call',
+    );
+    // Platform rows carry no fee suffix.
+    const platformSwitch = screen.getByRole('switch', { name: /GPT-4o \(platform\)/ });
+    const platformRow = platformSwitch.closest('tr') as HTMLElement;
+    expect(within(platformRow).queryByText(/billed by/)).toBeNull();
+  });
+
+  it('omits the fee suffix when the fee config has not loaded — never invents it', () => {
+    feeOverrideRef.current = null;
+    renderPage();
+    const byokSwitch = screen.getByRole('switch', { name: /GPT-4o \(BYOK/ });
+    const byokRow = byokSwitch.closest('tr') as HTMLElement;
+    expect(within(byokRow).queryByText(/billed by/)).toBeNull();
+    expect(within(byokRow).getByText('openai · gpt-4o · 128K')).toBeTruthy();
+  });
+
+  it('a null provider display name renders the avatar fallback instead of crashing', () => {
+    const f = fixture();
+    f.platform[0].provider_display_name = null as unknown as string;
+    fixtureOverrideRef.current = f;
+    renderPage();
+    // The page renders (client search must never 500 the page) and the
+    // avatar falls back to '?'.
+    expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeTruthy();
   });
 
   it('shows usable=false reasons as human text', () => {

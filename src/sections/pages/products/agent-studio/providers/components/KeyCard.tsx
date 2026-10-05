@@ -55,6 +55,7 @@ import {
   useAssistantRefs,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials';
 import type { OrgTier } from '@/sections/pages/products/agent-studio/providers/hooks/useOrgTier';
+import { errorCodeLabel } from '@/sections/pages/products/agent-studio/providers/lib/error-code-labels';
 import {
   bodyText,
   card,
@@ -346,9 +347,12 @@ export function KeyCard({
   /* Failed: compact amber card (never for revoked — revoked cards always */
   /* render the dead state below, even if their last probe failed)        */
   /* ---------------------------------------------------------------- */
+  // Round 3 P2: the card's accessible name names the credential kind —
+  // custom endpoints (base_url present) are not API keys.
+  const cardKindLabel = credential.base_url != null ? 'Custom endpoint' : 'API key';
   if (failed && !revoked) {
     return (
-      <article aria-label={`API key: ${credential.label}`} data-key-card-id={credential.id} style={cardStyle}>
+      <article aria-label={`${cardKindLabel}: ${credential.label}`} data-key-card-id={credential.id} style={cardStyle}>
         {header}
         <p style={{ ...bodyText, marginTop: 14 }}>
           {lastError ?? 'The last verification failed'}
@@ -444,7 +448,7 @@ export function KeyCard({
   };
 
   return (
-    <article aria-label={`API key: ${credential.label}`} data-key-card-id={credential.id} style={cardStyle}>
+    <article aria-label={`${cardKindLabel}: ${credential.label}`} data-key-card-id={credential.id} style={cardStyle}>
       {header}
 
       {credential.verification_status === 'unverified' && (
@@ -662,7 +666,16 @@ export function KeyCard({
           <Link
             to="/agent-studio/providers/custom/$credentialId/edit"
             params={{ credentialId: credential.id }}
-            style={{ color: colors.accent, fontSize: 13, textDecoration: 'none' }}
+            style={{
+              color: colors.accent,
+              fontSize: 13,
+              textDecoration: 'none',
+              // Round 3 P2: text-link look, 44px hit target — the links sit in
+              // an operations row of 44px buttons, so they get the same bar.
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+            }}
           >
             Edit endpoint →
           </Link>
@@ -670,7 +683,15 @@ export function KeyCard({
         <Link
           to="/agent-studio/activity"
           search={{ q: credential.label }}
-          style={{ color: colors.accent, fontSize: 13, textDecoration: 'none' }}
+          style={{
+            color: colors.accent,
+            fontSize: 13,
+            textDecoration: 'none',
+            // Round 3 P2: text-link look, 44px hit target (see above).
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+          }}
         >
           View audit trail →
         </Link>
@@ -816,12 +837,13 @@ function UsageSummary({
           <span key={code}>
             {i > 0 && <span style={{ color: colors.textFaint }}> · </span>}
             <span
+              title={`${errorCodeLabel(code)} — ${usage.error_breakdown[code]} failed call${usage.error_breakdown[code] === 1 ? '' : 's'} in the last 30 days`}
               style={{
                 color: code === '429' ? colors.warning : colors.textDim,
                 fontWeight: code === '429' ? 700 : 400,
               }}
             >
-              {code} ×{usage.error_breakdown[code]}
+              {errorCodeLabel(code)} ×{usage.error_breakdown[code]}
             </span>
           </span>
         ))

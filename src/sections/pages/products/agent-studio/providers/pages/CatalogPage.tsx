@@ -188,7 +188,9 @@ export function humanizeDataQualityReason(reason: string): string {
 
 const Toolbar = styled.div`
   display: flex;
-  gap: 10px;
+  /* 12px — the chips' invisible 44px hit zones (::after { inset: -6px })
+     exactly touch at this gap instead of overlapping. */
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
   margin-bottom: 16px;
@@ -884,8 +886,10 @@ function ProviderDrawer({
           </dd>
           <dt>Max context</dt>
           <dd>{formatContext(entry.max_context_tokens) ?? 'Not published'}</dd>
-          <dt>Plan</dt>
-          <dd>{shortPlanLabel(entry.min_required_product_label)}</dd>
+          {/* No raw Plan row here — the single floored PlanCell row below is
+              the only Plan block (Round 2 removed the raw-label duplicate
+              because a 'free' minimum must never render as "Free" while the
+              floored row says PAYG). */}
         </DetailMeta>
       </DetailRow>
 
@@ -982,8 +986,35 @@ function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
 
 export interface AccessToggleError {
   message: string;
-  /** True when the failure was the plan gate (402) — warning icon with the nudge message, never a billing link. */
+  /** True when the failure was the plan gate (402) — warning icon with the
+      nudge message plus the upgrade link to the pricing page. */
   tierGated: boolean;
+}
+
+/**
+ * Toggle-failure display shared by both interactive-switch branches
+ * (can_enable === true and the older-engine tier-covers fallback). One
+ * component so a tier-gated failure can never show the icon in one branch
+ * and the icon + upgrade link in the other.
+ */
+function AccessError({ error }: { error: AccessToggleError | null }) {
+  if (!error) return null;
+  return (
+    <>
+      {/* focusable: the failure explanation is otherwise invisible to
+          keyboard users — the icon is decorative to the tab order. */}
+      <Tooltip label={error.message} focusable>
+        <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
+          <AlertTriangle size={14} aria-hidden="true" />
+        </DimText>
+      </Tooltip>
+      {error.tierGated && (
+        // Plan-gated failure (402): the icon carries the reason, the link
+        // carries the resolution — the same single canonical destination.
+        <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
+      )}
+    </>
+  );
 }
 
 function AccessCell({
@@ -1013,8 +1044,10 @@ function AccessCell({
   const serverGated = entry.can_enable === false;
 
   if (serverGated) {
-    // No inline billing link in the table — the tooltip on the switch
-    // carries the reason; billing lives on the pricing page.
+    // The tooltip carries the reason; the upgrade link carries the
+    // resolution — a gated row is a dead end without it (the catalog SVG
+    // shows "Upgrade →" in ACCESS for gated rows). Single canonical
+    // destination: /agent-studio/settings/pricing.
     return (
       <GatedAccess>
         <Tooltip
@@ -1039,6 +1072,7 @@ function AccessCell({
             />
           </span>
         </Tooltip>
+        <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
       </GatedAccess>
     );
   }
@@ -1055,15 +1089,7 @@ function AccessCell({
           label={label}
           disabled={pending || !canWrite}
         />
-      {error && (
-            // focusable: the failure explanation is otherwise invisible to
-            // keyboard users — the icon is decorative to the tab order.
-            <Tooltip label={error.message} focusable>
-              <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
-                <AlertTriangle size={14} aria-hidden="true" />
-              </DimText>
-            </Tooltip>
-          )}
+        <AccessError error={error} />
       </span>
     );
   }
@@ -1080,15 +1106,7 @@ function AccessCell({
         label={label}
           disabled={pending || !canWrite}
         />
-      {error && (
-        // focusable: the failure explanation is otherwise invisible to
-        // keyboard users — the icon is decorative to the tab order.
-        <Tooltip label={error.message} focusable>
-          <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
-            <AlertTriangle size={14} aria-hidden="true" />
-          </DimText>
-        </Tooltip>
-      )}
+      <AccessError error={error} />
     </span>
   );
 }

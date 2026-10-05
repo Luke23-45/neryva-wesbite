@@ -817,7 +817,23 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                   </button>
                 </div>
               ) : (
-                <button type="button" onClick={runProbe} disabled={!urlOk} style={{ ...secondaryBtn, ...(!urlOk ? disabledBtn : {}) }}>
+                <button
+                  type="button"
+                  onClick={runProbe}
+                  disabled={!urlOk || !!editing}
+                  // Round 3 P2: in edit mode the sealed secret isn't editable,
+                  // so the probe would send secret: '' and can only fail with
+                  // an auth error — keep the button visible but disabled with
+                  // the honest reason, never a live button to nowhere.
+                  title={
+                    editing
+                      ? 'Probing is unavailable while editing — the sealed secret can’t be re-sent for authentication. Use “Sync / Refresh Models” on the key card to re-verify this endpoint with the stored secret.'
+                      : !urlOk
+                        ? 'Enter a valid base URL first'
+                        : undefined
+                  }
+                  style={{ ...secondaryBtn, ...(!urlOk || editing ? disabledBtn : {}) }}
+                >
                   Run Probe &amp; Discover Models
                 </button>
               )}

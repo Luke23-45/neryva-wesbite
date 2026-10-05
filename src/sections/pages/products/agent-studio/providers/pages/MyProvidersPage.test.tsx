@@ -178,7 +178,10 @@ describe('MyProvidersPage', () => {
     hoisted.tier = 'unknown';
     hoisted.credentials = [cred('c1', 0)];
     renderPage();
-    expect(screen.getByLabelText('Loading providers')).toBeTruthy();
+    const skeleton = screen.getByLabelText('Loading providers');
+    expect(skeleton).toBeTruthy();
+    // Round 3 P2: the skeleton is a live status region, not an inert div.
+    expect(skeleton.getAttribute('role')).toBe('status');
     expect(screen.queryByText('Key c1')).toBeNull();
     hoisted.tier = 'payg';
   });
@@ -201,6 +204,15 @@ describe('MyProvidersPage', () => {
     const anthropic = screen.getByText('Anthropic · 1 key');
     const openai = screen.getByText('OpenAI · 2 keys');
     expect(anthropic.compareDocumentPosition(openai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('Round 3 P2: provider subheaders are heading level 2 (page h1 → subheader h2 → card h3)', () => {
+    hoisted.credentials = [
+      cred('a1', 0, { provider: 'openai', provider_display_name: 'OpenAI' }),
+    ];
+    renderPage();
+    const subheader = screen.getByRole('heading', { name: 'OpenAI · 1 key' });
+    expect(subheader.getAttribute('aria-level')).toBe('2');
   });
 
   it('reorder with TIED priorities sends distinct priorities reflecting the new display order (Round 2 P0)', async () => {
