@@ -134,8 +134,6 @@ export function priceCell(
   return { text: `$${n.toFixed(2)}`, known: true };
 }
 
-const CAPABILITY_ORDER = ['tools', 'vision', 'reasoning'] as const;
-
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
 /* ------------------------------------------------------------------ */
@@ -345,51 +343,8 @@ const SourceLine = styled.span`
   max-width: 260px;
 `;
 
-const CapDots = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const CapDot = styled.span<{ $on: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: ${({ theme, $on }) => ($on ? theme.app.text.secondary : theme.app.text.faint)};
-  opacity: ${({ $on }) => ($on ? 1 : 0.35)};
-  &::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: ${({ theme, $on }) => ($on ? theme.app.text.link : theme.app.border.strong)};
-  }
-`;
-
-const IncompleteTag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 8px;
-  margin-left: 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px dashed ${({ theme }) => theme.app.status.warning.fg};
-  color: ${({ theme }) => theme.app.status.warning.fg};
-  cursor: help;
-  white-space: nowrap;
-`;
-
 const DimText = styled.span`
   color: ${({ theme }) => theme.app.text.faint};
-`;
-
-const PriceText = styled.span<{ $known: boolean }>`
-  color: ${({ theme, $known }) => ($known ? theme.app.text.primary : theme.app.text.faint)};
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 `;
 
 const UpgradeLink = styled(Link)`
@@ -1172,19 +1127,12 @@ export function CatalogPage() {
                       <tr>
                         <HeadCell scope="col">Provider</HeadCell>
                         <HeadCell scope="col">Models</HeadCell>
-                        <HeadCell scope="col">Context</HeadCell>
-                        <HeadCell scope="col">Capabilities</HeadCell>
-                        <HeadCell scope="col">Input / 1M</HeadCell>
-                        <HeadCell scope="col">Output / 1M</HeadCell>
                         <HeadCell scope="col">Plan</HeadCell>
                         <HeadCell scope="col">Access</HeadCell>
                       </tr>
                     </thead>
                     <tbody>
                       {section.providers.map((entry) => {
-                        const input = priceCell(entry.from_price_per_1m, entry.pricing_mode);
-                        const output = priceCell(entry.to_price_per_1m, entry.pricing_mode);
-                        const context = entry.context_label ?? formatContext(entry.max_context_tokens);
                         const isSelected = effectiveSelected?.provider === entry.provider;
                         const tErr =
                           toggleError?.provider === entry.provider ? toggleError.message : null;
@@ -1213,60 +1161,6 @@ export function CatalogPage() {
                                 {entry.model_count_label ?? entry.model_count}{' '}
                                 {entry.model_count === 1 ? 'model' : 'models'}
                               </DimText>
-                            </BodyCell>
-                            <BodyCell>
-                              {context ? (
-                                <PriceText $known>{context}</PriceText>
-                              ) : (
-                                <Tooltip label="Context window not published for this provider">
-                                  <DimText>—</DimText>
-                                </Tooltip>
-                              )}
-                            </BodyCell>
-                            <BodyCell>
-                              <CapDots>
-                                {CAPABILITY_ORDER.map((cap) => (
-                                  <CapDot
-                                    key={cap}
-                                    $on={entry.capabilities.includes(cap)}
-                                    title={`${CAPABILITY_LABELS[cap]}: ${
-                                      entry.capabilities.includes(cap)
-                                        ? 'supported'
-                                        : 'not reported'
-                                    }`}
-                                  >
-                                    {CAPABILITY_LABELS[cap]}
-                                  </CapDot>
-                                ))}
-                                {entry.data_quality === 'incomplete' && (
-                                  <Tooltip
-                                    label={`Catalog incomplete: ${entry.data_quality_reasons.join(
-                                      '; ',
-                                    )}`}
-                                    focusable
-                                  >
-                                    <IncompleteTag>Incomplete</IncompleteTag>
-                                  </Tooltip>
-                                )}
-                              </CapDots>
-                            </BodyCell>
-                            <BodyCell>
-                              {input.known ? (
-                                <PriceText $known>{input.text}</PriceText>
-                              ) : (
-                                <Tooltip label="Pricing not published for this provider">
-                                  <PriceText $known={false}>—</PriceText>
-                                </Tooltip>
-                              )}
-                            </BodyCell>
-                            <BodyCell>
-                              {output.known ? (
-                                <PriceText $known>{output.text}</PriceText>
-                              ) : (
-                                <Tooltip label="Pricing not published for this provider">
-                                  <PriceText $known={false}>—</PriceText>
-                                </Tooltip>
-                              )}
                             </BodyCell>
                             <BodyCell>
                               <PlanCell entry={entry} />
