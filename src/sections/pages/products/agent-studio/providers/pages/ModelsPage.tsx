@@ -27,7 +27,6 @@ import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { SearchField } from '@components/common/ui/SearchField';
 import { Switch } from '@components/common/ui/Switch';
-import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { Tooltip } from '@components/common/ui/Tooltip';
 import toast from 'react-hot-toast';
@@ -50,7 +49,6 @@ import { useOrgTier, tierCovers, type OrgTier } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
 import { useSpendSummary } from '../hooks/useSpend';
 import { isTierGateError } from '../api';
-import { shortPlanLabel } from '../lib/plan-labels';
 
 /**
  * `can_enable === false` is a PLAN gate (engine: tierGte(orgTier,
@@ -1291,11 +1289,6 @@ export function ModelsPage() {
         <BodyCell>{priceCell(inputPrice)}</BodyCell>
         <BodyCell>{priceCell(outputPrice)}</BodyCell>
         <BodyCell>
-          <StatusPill tone={gated ? 'warning' : 'neutral'} dot={false}>
-            {shortPlanLabel(model.required_product_label)}
-          </StatusPill>
-        </BodyCell>
-        <BodyCell>
           {pinsDegraded ? (
             <Tooltip focusable label="Could not load usage information">
               <DimText>—</DimText>
@@ -1345,7 +1338,6 @@ export function ModelsPage() {
           <HeadCell scope="col">Capabilities</HeadCell>
           <HeadCell scope="col">Input / 1M</HeadCell>
           <HeadCell scope="col">Output / 1M</HeadCell>
-          <HeadCell scope="col">Tier</HeadCell>
           <HeadCell scope="col">Used by</HeadCell>
           <HeadCell scope="col">Default</HeadCell>
           <HeadCell scope="col">Access</HeadCell>

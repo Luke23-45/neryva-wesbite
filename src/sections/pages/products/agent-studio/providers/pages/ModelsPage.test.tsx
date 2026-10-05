@@ -295,7 +295,7 @@ describe('ModelsPage', () => {
     expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
   });
 
-  it('renders the table columns: capabilities, input/output, tier, used-by, default', () => {
+  it('renders the table columns: capabilities, input/output, used-by, default (no tier column)', () => {
     renderPage();
     expect(screen.getAllByText('Capabilities').length).toBeGreaterThan(0);
     expect(screen.queryByText('Context')).toBeNull();
@@ -306,7 +306,8 @@ describe('ModelsPage', () => {
     // Priced platform row shows input + output cells.
     expect(screen.getByText('$2.50')).toBeTruthy();
     expect(screen.getByText('$10.00')).toBeTruthy();
-    expect(screen.getByText('PAYG')).toBeTruthy(); // short plan label, not the engine's 'Pay-as-you-go'
+    // The Tier column was dropped from the models list.
+    expect(screen.queryByText('Tier')).toBeNull();
     // Tool-less rows get the honest tag.
     expect(screen.getByText('No tools')).toBeTruthy();
     // Pinned model shows its assistant count; unpinned rows show "0 assistants".
