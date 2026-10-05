@@ -245,6 +245,26 @@ function renderPage() {
   );
 }
 
+/**
+ * Fixture with one 8-model provider group (empty BYOK) for the
+ * expand/collapse tests. Models are cloned from the base row template so
+ * the row shape stays identical to production rows.
+ */
+function bigGroupFixture(): GroupedModels {
+  const f = fixture();
+  const template = f.platform[0].models[0];
+  const models = Array.from({ length: 8 }, (_, i) => ({
+    ...template,
+    model_id: `gpt-x${i + 1}`,
+    display_name: `GPT X${i + 1}`,
+  }));
+  return {
+    ...f,
+    platform: [{ provider: 'openai', provider_display_name: 'OpenAI', models }],
+    byok: [],
+  };
+}
+
 beforeEach(() => {
   mutateMock.mockReset();
   defaultMutateMock.mockReset();
@@ -294,17 +314,21 @@ describe('ModelsPage', () => {
     expect(screen.getAllByText('0 assistants').length).toBe(6);
   });
 
-  it('renders one table per section with provider avatars, never per-provider sub-tables', () => {
+  it('renders one table per section with provider header rows; small groups show no expand control', () => {
     const { container } = renderPage();
     // Single thead per section: one platform table + one BYOK table.
     expect(screen.getAllByText('Input / 1M')).toHaveLength(2);
-    // No provider sub-header rows (SVG structure) — exactly one <tr> per
-    // model row, nothing else in any tbody.
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(7);
-    expect(screen.queryByText('Anthropic · 1')).toBeNull();
-    expect(screen.queryByText('xAI · 2')).toBeNull();
-    expect(screen.queryByText('OpenAI · 2')).toBeNull();
-    // Provider identity lives on every row: avatar initial + second line.
+    // Platform groups each open with a full-width header row
+    // ("{display_name} · {n} models"); all fixture groups have ≤5 models,
+    // so no Show-all control renders.
+    expect(screen.getByText('OpenAI')).toBeTruthy();
+    expect(screen.getByText('Anthropic')).toBeTruthy();
+    expect(screen.getByText('xAI')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show less' })).toBeNull();
+    // 3 platform header rows + 5 platform model rows + 2 BYOK model rows.
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(10);
+    // Provider identity still lives on every row: avatar initial + second line.
     // The BYOK row additionally discloses the per-call platform fee.
     expect(screen.getByText('openai · gpt-4o · 128K')).toBeTruthy();
     expect(
@@ -857,5 +881,64 @@ describe('ModelsPage', () => {
     } finally {
       errSpy.mockRestore();
     }
+  });
+
+  describe('provider group expand/collapse', () => {
+    it('collapses groups larger than 5 models behind a Show-all control', () => {
+      fixtureOverrideRef.current = bigGroupFixture();
+      renderPage();
+      // The header labels the group; the control carries the honest count.
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+      const expand = screen.getByRole('button', { name: 'Show all 8' });
+      expect(expand).toHaveAttribute('aria-expanded', 'false');
+      // Exactly the first 5 model rows render (one switch per row).
+      const tables = screen.getAllByRole('table');
+      expect(within(tables[0]).getAllByRole('switch')).toHaveLength(5);
+      expect(screen.getByText('GPT X5')).toBeTruthy();
+      expect(screen.queryByText('GPT X6')).toBeNull();
+      // The counts line is unaffected by collapsing — a display affordance,
+      // not a filter.
+      expect(screen.getByText('8 of 8 models · 8 enabled')).toBeTruthy();
+    });
+
+    it('expanding reveals every row and flips the control; collapsing restores', () => {
+      fixtureOverrideRef.current = bigGroupFixture();
+      renderPage();
+      const tables = screen.getAllByRole('table');
+      fireEvent.click(screen.getByRole('button', { name: 'Show all 8' }));
+      const less = screen.getByRole('button', { name: 'Show less' });
+      expect(less).toHaveAttribute('aria-expanded', 'true');
+      expect(within(tables[0]).getAllByRole('switch')).toHaveLength(8);
+      expect(screen.getByText('GPT X8')).toBeTruthy();
+      fireEvent.click(less);
+      expect(screen.getByRole('button', { name: 'Show all 8' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+      expect(within(tables[0]).getAllByRole('switch')).toHaveLength(5);
+      expect(screen.queryByText('GPT X8')).toBeNull();
+    });
+
+    it('groups with 5 or fewer models render no expand control', () => {
+      renderPage();
+      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Show less' })).toBeNull();
+      // All rows still render.
+      expect(screen.getByText('GPT-4o Mini')).toBeTruthy();
+      expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
+    });
+
+    it('an active search bypasses collapsing: all matches render, no control', () => {
+      fixtureOverrideRef.current = bigGroupFixture();
+      renderPage();
+      fireEvent.change(screen.getByLabelText('Search models'), {
+        target: { value: 'gpt-x' },
+      });
+      const tables = screen.getAllByRole('table');
+      expect(within(tables[0]).getAllByRole('switch')).toHaveLength(8);
+      expect(screen.getByText('GPT X8')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Show less' })).toBeNull();
+    });
   });
 });

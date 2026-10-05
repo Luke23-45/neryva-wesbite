@@ -3,8 +3,13 @@
  *
  * Dense list per models-list-reference.svg: MODEL | CAPABILITIES |
  * INPUT/1M | OUTPUT/1M | TIER | USED BY | DEFAULT | ACCESS, grouped under
- * PLATFORM MANAGED and per-credential BYOK sections, with a provider
- * sub-header (`{provider_display_name} · {n}`) inside each table body.
+ * PLATFORM MANAGED and per-credential BYOK sections. The platform table is
+ * organized by provider: each provider group opens with a full-width header
+ * row ("{provider_display_name} · {n} models") carrying a Show all/Show
+ * less expand control — groups render their first 5 models collapsed
+ * (header-only organization, no cards; the single table keeps column
+ * alignment across groups). Search bypasses collapsing: every match
+ * renders in place.
  * The DEFAULT column is a real radio group bound to the N-5
  * `default_model` (optimistic PUT + rollback; 422 → honest toast).
  * All TabModels behavior is preserved: N-6 toggles (optimistic +
@@ -55,6 +60,9 @@ import { shortPlanLabel } from '../lib/plan-labels';
  * (activate pay-as-you-go, or contact sales for enterprise).
  */
 const PLAN_GATE_COPY = 'Your plan doesn\u2019t cover this provider \u2014 upgrade to enable it.';
+
+/** Platform provider groups render this many models before the Show-all control appears. */
+const GROUP_COLLAPSED_SIZE = 5;
 
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
@@ -238,6 +246,99 @@ const HeadCell = styled.th`
   background: ${({ theme }) => theme.app.surface.tint};
   white-space: nowrap;
 `;
+
+/**
+ * Provider group header (platform table): a full-width divider row that
+ * labels the provider section — "{display_name} · {n} models" on the left,
+ * the quiet Show all/Show less expand control on the right. Header-only
+ * organization (no cards): the single table keeps column alignment across
+ * groups. Groups with GROUP_COLLAPSED_SIZE or fewer models render no
+ * control.
+ */
+const GroupHeadRow = styled.tr`
+  background: ${({ theme }) => theme.app.surface.tint};
+`;
+
+const GroupHeadCell = styled.td`
+  padding: 6px 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.default};
+`;
+
+const GroupHeadInner = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`;
+
+const GroupHeadLabel = styled.span`
+  font-size: 12.5px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.app.text.secondary};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const GroupHeadCount = styled.span`
+  font-weight: 500;
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
+/**
+ * The per-provider expand control: a quiet text button (same visual
+ * language as ReasoningToggle), keyboard accessible, communicating state
+ * via aria-expanded. The chevron rotates on expand.
+ */
+const ExpandButton = styled.button`
+  flex: none;
+  border: none;
+  background: none;
+  padding: 4px 8px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.app.text.link};
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 8px;
+  &:hover {
+    text-decoration: underline;
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.accentControl};
+    outline-offset: 2px;
+  }
+`;
+
+const ExpandChevron = styled.span<{ $open: boolean }>`
+  display: inline-flex;
+  transition: transform 160ms ease-out;
+  transform: ${({ $open }) => ($open ? 'rotate(180deg)' : 'rotate(0deg)')};
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
+/** Flat minimal chevron (same icon language as the Dropdown's): decorative, aria-hidden. */
+function ExpandChevronIcon({ open }: { open: boolean }) {
+  return (
+    <ExpandChevron $open={open} aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path
+          d="M3.5 5.25L7 8.75L10.5 5.25"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </ExpandChevron>
+  );
+}
 
 /**
  * Provider avatar badge (SVG reference): every model row carries its
@@ -437,7 +538,7 @@ const DimText = styled.span`
  * out the warning-colored ReasonItems below AA contrast. Semantic color
  * (reasons, badges, pills, links) always keeps full strength.
  */
-const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
+const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean; $reveal?: boolean }>`
   border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   &:last-child {
     border-bottom: none;
@@ -447,6 +548,25 @@ const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
     css`
       ${ModelName}, ${ModelId}, ${PriceText}, ${DimText} {
         color: ${theme.app.text.faint};
+      }
+    `}
+  /* Rows revealed by a provider-group expand fade in — opacity only
+     (transforms on <tr> are unreliable cross-browser). Halted under
+     prefers-reduced-motion, matching the page's other motion. */
+  ${({ $reveal }) =>
+    $reveal &&
+    css`
+      animation: models-row-reveal 160ms ease-out;
+      @keyframes models-row-reveal {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
       }
     `}
 `;
@@ -664,6 +784,21 @@ export function ModelsPage() {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [reasoningOpen, setReasoningOpen] = useState<Record<string, boolean>>({});
   const [searchInput, setSearchInput] = useState('');
+
+  /**
+   * Per-provider expand state for the platform table (keyed by provider
+   * slug). Collapsed groups show the first GROUP_COLLAPSED_SIZE models;
+   * expanding reveals the rest. Search bypasses collapsing entirely (all
+   * matches render), so this state is only consulted when no query is
+   * active — it survives search round-trips (clearing the search restores
+   * the previous expand/collapse state).
+   */
+  const [expandedProviders, setExpandedProviders] = useState<Record<string, boolean>>({});
+  const toggleProviderExpanded = useCallback(
+    (provider: string) =>
+      setExpandedProviders((prev) => ({ ...prev, [provider]: !prev[provider] })),
+    [],
+  );
 
   /**
    * Escape in the search field clears the query (and blurs) — scoped to the
@@ -947,7 +1082,12 @@ export function ModelsPage() {
   const toggleReasoning = (key: string) =>
     setReasoningOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const renderRow = (supergroup: Supergroup, group: ModelGroupView, model: ModelRowView) => {
+  const renderRow = (
+    supergroup: Supergroup,
+    group: ModelGroupView,
+    model: ModelRowView,
+    reveal = false,
+  ) => {
     const key = rowKey(supergroup, group, model);
     // Provider-level server gate (N-4 `can_enable`) takes precedence; the
     // per-model client tier derivation is the fallback when the server is
@@ -1069,7 +1209,7 @@ export function ModelsPage() {
     };
 
     return (
-      <BodyRow key={key} $dimmed={!on} $pending={pendingKey === key}>
+      <BodyRow key={key} $dimmed={!on} $pending={pendingKey === key} $reveal={reveal}>
         <BodyCell>
           <ModelCellRow>
             <ProviderAvatar aria-hidden="true">
@@ -1198,21 +1338,61 @@ export function ModelsPage() {
         </tr>
       </thead>
     );
-    // SVG structure: ONE table per section. Platform groups arrive
-    // provider-sorted from the engine, so flattening keeps models
-    // provider-contiguous (all OpenAI rows together, then Google, …) with no
-    // per-provider sub-tables. Provider identity lives on every row — avatar
-    // + provider second line — never in a divider row.
+    // ONE table for the section; one <tbody> per provider group. Each group
+    // opens with its full-width header row (provider label + Show all/Show
+    // less control), then the group's model rows — collapsed to the first
+    // GROUP_COLLAPSED_SIZE unless expanded. A search bypasses collapsing:
+    // every match renders in place with no expand control. Row-level
+    // provider identity (avatar + provider second line) is retained.
     if (supergroup === 'platform') {
+      const searching = q.length > 0;
       return (
         <TableWrap>
           <StyledTable>
             {head}
-            <tbody>
-              {groupList.flatMap((group) =>
-                group.models.map((m) => renderRow(supergroup, group, m)),
-              )}
-            </tbody>
+            {groupList.map((group) => {
+              const expandable = !searching && group.models.length > GROUP_COLLAPSED_SIZE;
+              const expanded = searching || expandedProviders[group.provider] === true;
+              const visible =
+                expandable && !expanded
+                  ? group.models.slice(0, GROUP_COLLAPSED_SIZE)
+                  : group.models;
+              const modelWord = group.models.length === 1 ? 'model' : 'models';
+              return (
+                <tbody key={group.provider}>
+                  <GroupHeadRow>
+                    <GroupHeadCell colSpan={8}>
+                      <GroupHeadInner>
+                        <GroupHeadLabel>
+                          {(group.provider_display_name?.trim() || group.provider)}{' '}
+                          <GroupHeadCount>
+                            · {group.models.length} {modelWord}
+                          </GroupHeadCount>
+                        </GroupHeadLabel>
+                        {expandable && (
+                          <ExpandButton
+                            type="button"
+                            aria-expanded={expanded}
+                            onClick={() => toggleProviderExpanded(group.provider)}
+                          >
+                            {expanded ? 'Show less' : `Show all ${group.models.length}`}
+                            <ExpandChevronIcon open={expanded} />
+                          </ExpandButton>
+                        )}
+                      </GroupHeadInner>
+                    </GroupHeadCell>
+                  </GroupHeadRow>
+                  {visible.map((m, i) =>
+                    renderRow(
+                      supergroup,
+                      group,
+                      m,
+                      expanded && !searching && i >= GROUP_COLLAPSED_SIZE,
+                    ),
+                  )}
+                </tbody>
+              );
+            })}
           </StyledTable>
         </TableWrap>
       );
