@@ -4,6 +4,7 @@ import {
   type ProviderDirectoryEntry,
 } from '../api';
 import { providerDirectoryKeyPrefix } from './useProviderDirectory';
+import { groupedModelsKey } from './useGroupedModels';
 
 type DirectoryData = { providers: ProviderDirectoryEntry[] };
 type DirectoryConnection = ProviderDirectoryEntry['connection'];
@@ -75,6 +76,10 @@ export function useSetProviderEnabled(orgId: string | null) {
     onSettled: () => {
       if (orgId === null || orgId === '') return;
       void queryClient.invalidateQueries({ queryKey: providerDirectoryKeyPrefix(orgId) });
+      // Governance cascade: the Models page reads the grouped query — a
+      // provider toggle must refetch it immediately, never wait for natural
+      // refetch, or the two pages visibly disagree.
+      void queryClient.invalidateQueries({ queryKey: groupedModelsKey(orgId) });
     },
   });
 }

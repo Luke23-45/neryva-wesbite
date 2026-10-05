@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, Eye, ListFilter, Plus, Shield, X, Zap } from 'lucide-react';
+import { AlertTriangle, Eye, Plus, Shield, X, Zap } from 'lucide-react';
 import { useOrg } from '@/Context/OrgContext';
 import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers/priceFormat';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -18,9 +18,9 @@ import type {
 } from '../api';
 import {
   TIER_GATE_NUDGE,
-  TIER_GATE_NUDGE_SHORT,
   isTierGateError,
 } from '../api';
+import { shortPlanLabel } from '../lib/plan-labels';
 import { useOrgTier, tierCovers } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
 import { useSetProviderEnabled } from '../hooks/useProviderEnablement';
@@ -188,72 +188,20 @@ export function humanizeDataQualityReason(reason: string): string {
 
 const Toolbar = styled.div`
   display: flex;
-  flex-direction: column;
   gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 `;
 
-const ToolbarRow = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-`;
-
 const SearchWrap = styled.div`
-  width: 320px;
-  max-width: 100%;
+  flex: 1 1 240px;
+  max-width: 400px;
+  min-width: 200px;
   @media (max-width: 900px) {
-    width: 100%;
+    flex-basis: 100%;
+    max-width: none;
   }
-`;
-
-const FiltersButton = styled.button`
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
-  color: ${({ theme }) => theme.app.text.secondary};
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  /* 44px hit target, visual-neutral. */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: -4px;
-  }
-  &:hover {
-    border-color: ${({ theme }) => theme.app.border.strong};
-    color: ${({ theme }) => theme.app.text.primary};
-  }
-`;
-
-const FilterBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: ${({ theme }) => theme.app.text.link};
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-`;
-
-const ChipBar = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
 `;
 
 const Chip = styled.button<{ $active: boolean }>`
@@ -423,21 +371,6 @@ const DimText = styled.span`
 
 const UpgradeLink = styled(Link)`
   font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.link};
-  text-decoration: none;
-  white-space: nowrap;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-/**
- * Tier-gate nudge: inline link (never a modal) shown when the org's plan
- * doesn't cover a provider. Flat link styling, consistent with UpgradeLink.
- */
-const TierNudge = styled(Link)`
-  font-size: 12.5px;
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.link};
   text-decoration: none;
@@ -951,6 +884,8 @@ function ProviderDrawer({
           </dd>
           <dt>Max context</dt>
           <dd>{formatContext(entry.max_context_tokens) ?? 'Not published'}</dd>
+          <dt>Plan</dt>
+          <dd>{shortPlanLabel(entry.min_required_product_label)}</dd>
         </DetailMeta>
       </DetailRow>
 
@@ -1036,11 +971,10 @@ function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <StatusPill tone={coverage === false ? 'warning' : 'info'} dot={false}>
-        {coverage === false
-          ? required === 'enterprise'
-            ? 'Requires Ent.'
-            : 'Requires PAYG'
-          : EFFECTIVE_TIER_LABELS[required]}
+        {/* Floored tier in the short register: a 'free' minimum floors to
+            payg (never "Included"), rendered PAYG. Warning tone signals
+            uncovered. */}
+        {shortPlanLabel(EFFECTIVE_TIER_LABELS[required])}
       </StatusPill>
     </span>
   );
@@ -1048,7 +982,7 @@ function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
 
 export interface AccessToggleError {
   message: string;
-  /** True when the failure was the plan gate (402) — render the nudge, not the warning icon. */
+  /** True when the failure was the plan gate (402) — warning icon with the nudge message, never a billing link. */
   tierGated: boolean;
 }
 
@@ -1079,6 +1013,8 @@ function AccessCell({
   const serverGated = entry.can_enable === false;
 
   if (serverGated) {
+    // No inline billing link in the table — the tooltip on the switch
+    // carries the reason; billing lives on the pricing page.
     return (
       <GatedAccess>
         <Tooltip
@@ -1103,7 +1039,6 @@ function AccessCell({
             />
           </span>
         </Tooltip>
-        <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
       </GatedAccess>
     );
   }
@@ -1120,10 +1055,7 @@ function AccessCell({
           label={label}
           disabled={pending || !canWrite}
         />
-        {error &&
-          (error.tierGated ? (
-            <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
-          ) : (
+      {error && (
             // focusable: the failure explanation is otherwise invisible to
             // keyboard users — the icon is decorative to the tab order.
             <Tooltip label={error.message} focusable>
@@ -1131,7 +1063,7 @@ function AccessCell({
                 <AlertTriangle size={14} aria-hidden="true" />
               </DimText>
             </Tooltip>
-          ))}
+          )}
       </span>
     );
   }
@@ -1146,20 +1078,17 @@ function AccessCell({
         checked={storedOn}
         onChange={(next) => onToggle(entry, next)}
         label={label}
-        disabled={pending || !canWrite}
-      />
-      {error &&
-        (error.tierGated ? (
-          <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
-        ) : (
-          // focusable: the failure explanation is otherwise invisible to
-          // keyboard users — the icon is decorative to the tab order.
-          <Tooltip label={error.message} focusable>
-            <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
-              <AlertTriangle size={14} aria-hidden="true" />
-            </DimText>
-          </Tooltip>
-        ))}
+          disabled={pending || !canWrite}
+        />
+      {error && (
+        // focusable: the failure explanation is otherwise invisible to
+        // keyboard users — the icon is decorative to the tab order.
+        <Tooltip label={error.message} focusable>
+          <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
+            <AlertTriangle size={14} aria-hidden="true" />
+          </DimText>
+        </Tooltip>
+      )}
     </span>
   );
 }
@@ -1175,7 +1104,6 @@ export function CatalogPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [chips, setChips] = useState<Set<ChipKey>>(new Set());
-  const [showFilters, setShowFilters] = useState(true);
   const [selected, setSelected] = useState<ProviderDirectoryEntry | null>(null);
   const [toggleError, setToggleError] = useState<
     ({ provider: string } & AccessToggleError) | null
@@ -1361,48 +1289,35 @@ export function CatalogPage() {
         </ReturnBanner>
       )}
 
-      <Toolbar>
-        <ToolbarRow>
-          <SearchWrap ref={searchWrapRef}>
-            <SearchField
-              value={searchInput}
-              onChange={setSearchInput}
-              placeholder="Search providers, models…"
-              ariaLabel="Search providers"
-            />
-          </SearchWrap>
-          <FiltersButton
+      {/* Single toolbar row: search + inline filter chips. No Filters dropdown —
+          with 4 binary filters a dropdown adds clicks to save space we don't
+          need; active states stay visible at all times. */}
+      <Toolbar role="group" aria-label="Catalog search and filters">
+        <SearchWrap ref={searchWrapRef}>
+          <SearchField
+            value={searchInput}
+            onChange={setSearchInput}
+            placeholder="Search providers, models…"
+            ariaLabel="Search providers"
+          />
+        </SearchWrap>
+        {CHIPS.map(({ key, label, icon }) => (
+          <Chip
+            key={key}
             type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            aria-expanded={showFilters}
-            aria-label={`Filters${chips.size > 0 ? `, ${chips.size} active` : ''}`}
+            $active={chips.has(key)}
+            aria-pressed={chips.has(key)}
+            onClick={() => toggleChip(key)}
           >
-            <ListFilter size={14} strokeWidth={1.8} aria-hidden="true" />
-            Filters
-            {chips.size > 0 && <FilterBadge>{chips.size}</FilterBadge>}
-          </FiltersButton>
-        </ToolbarRow>
-        {showFilters && (
-          <ChipBar role="group" aria-label="Catalog filters">
-          {CHIPS.map(({ key, label, icon }) => (
-            <Chip
-              key={key}
-              type="button"
-              $active={chips.has(key)}
-              aria-pressed={chips.has(key)}
-              onClick={() => toggleChip(key)}
-            >
-              {icon}
-              {label}
-            </Chip>
-          ))}
-          {filterActive && (
-            <Chip type="button" $active={false} onClick={clearFilters} aria-label="Clear filters">
-              <X size={13} strokeWidth={1.8} aria-hidden="true" />
-              Clear
-            </Chip>
-          )}
-          </ChipBar>
+            {icon}
+            {label}
+          </Chip>
+        ))}
+        {filterActive && (
+          <Chip type="button" $active={false} onClick={clearFilters} aria-label="Clear search and filters">
+            <X size={13} strokeWidth={1.8} aria-hidden="true" />
+            Clear
+          </Chip>
         )}
       </Toolbar>
 

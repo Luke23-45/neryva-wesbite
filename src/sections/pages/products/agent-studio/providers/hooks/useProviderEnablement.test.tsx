@@ -10,6 +10,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSetProviderEnabled } from './useProviderEnablement';
 import { providerDirectoryKeyPrefix } from './useProviderDirectory';
+import { groupedModelsKey } from './useGroupedModels';
 import type { ProviderDirectoryEntry } from '../api';
 
 const postMock = vi.hoisted(() => vi.fn());
@@ -115,5 +116,21 @@ describe('useSetProviderEnabled', () => {
       expect(data?.providers.find((p) => p.provider === 'openai')?.connection.enabled).toBe(true);
       expect(data?.providers.find((p) => p.provider === 'anthropic')?.connection.enabled).toBe(true);
     });
+  });
+
+  it('invalidates the grouped models query on settle (governance cascade)', async () => {
+    postMock.mockResolvedValue({ enablement: { provider: 'anthropic', enabled: true } });
+    const { client, wrapper } = setup();
+    const spy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useSetProviderEnabled('org-1'), { wrapper });
+
+    await act(async () => {
+      result.current.mutate({ provider: 'anthropic', enabled: true });
+    });
+
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    const keys = spy.mock.calls.map((c) => (c[0] as { queryKey: unknown }).queryKey);
+    expect(keys).toContainEqual([...providerDirectoryKeyPrefix('org-1')]);
+    expect(keys).toContainEqual([...groupedModelsKey('org-1')]);
   });
 });

@@ -273,7 +273,7 @@ describe('ModelsPage', () => {
     // Priced platform row shows input + output cells.
     expect(screen.getByText('$2.50')).toBeTruthy();
     expect(screen.getByText('$10.00')).toBeTruthy();
-    expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
+    expect(screen.getByText('PAYG')).toBeTruthy(); // short plan label, not the engine's 'Pay-as-you-go'
     // Tool-less rows get the honest tag.
     expect(screen.getByText('No tools')).toBeTruthy();
     // Pinned model shows its assistant count; unpinned rows show "0 assistants".
@@ -281,12 +281,19 @@ describe('ModelsPage', () => {
     expect(screen.getAllByText('0 assistants').length).toBe(6);
   });
 
-  it('renders provider sub-headers inside each table body', () => {
-    renderPage();
-    expect(screen.getByText('Anthropic · 1')).toBeTruthy();
-    expect(screen.getByText('xAI · 2')).toBeTruthy();
-    // OpenAI appears twice — once per supergroup.
-    expect(screen.getAllByText('OpenAI · 2')).toHaveLength(2);
+  it('renders one table per section with provider avatars, never per-provider sub-tables', () => {
+    const { container } = renderPage();
+    // Single thead per section: one platform table + one BYOK table.
+    expect(screen.getAllByText('Input / 1M')).toHaveLength(2);
+    // No provider sub-header rows (SVG structure) — exactly one <tr> per
+    // model row, nothing else in any tbody.
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(7);
+    expect(screen.queryByText('Anthropic · 1')).toBeNull();
+    expect(screen.queryByText('xAI · 2')).toBeNull();
+    expect(screen.queryByText('OpenAI · 2')).toBeNull();
+    // Provider identity lives on every row: avatar initial + second line.
+    expect(screen.getAllByText('openai · gpt-4o · 128K')).toHaveLength(2);
+    expect(screen.getByText('anthropic · claude-3-7-sonnet · 200K')).toBeTruthy();
   });
 
   it('shows context in the model sub-line; "—" when the catalog has no value', () => {
@@ -426,7 +433,7 @@ describe('ModelsPage', () => {
     );
   });
 
-  it('provider can_enable=false gates model toggles with the top-up nudge, never hides rows', () => {
+  it('provider can_enable=false gates model toggles with no table link; rows never hide', () => {
     // GPT-4o Mini is free-tier and OFF: the client tier logic alone would
     // leave it interactive on a free org — the provider-level server gate
     // disables it instead.
@@ -434,11 +441,10 @@ describe('ModelsPage', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    // The row is still fully visible (no hiding).
+    // The row is still fully visible (no hiding), and no billing link is
+    // rendered in the table — the switch tooltip carries the reason.
     expect(screen.getByText('GPT-4o Mini')).toBeTruthy();
-    const nudges = screen.getAllByRole('link', { name: 'Top up credits to enable' });
-    expect(nudges.length).toBeGreaterThan(0);
-    expect(nudges[0]).toHaveAttribute('href', '/platform/billing');
+    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
     // The disabled switch cannot fire the toggle API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();

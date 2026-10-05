@@ -45,9 +45,9 @@ import { useOrgTier, tierCovers, type OrgTier } from '../hooks/useOrgTier';
 import { useProviderDirectory } from '../hooks/useProviderDirectory';
 import {
   TIER_GATE_NUDGE,
-  TIER_GATE_NUDGE_SHORT,
   isTierGateError,
 } from '../api';
+import { shortPlanLabel } from '../lib/plan-labels';
 
 /* ------------------------------------------------------------------ */
 /* Styled                                                              */
@@ -232,18 +232,30 @@ const HeadCell = styled.th`
   white-space: nowrap;
 `;
 
-/** Full-width provider sub-header row inside the table body. */
-const ProviderSubHeadCell = styled.th`
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: ${({ theme }) => theme.app.text.faint};
+/**
+ * Provider avatar badge (SVG reference): every model row carries its
+ * provider mark — initial letter in a rounded square. Decorative only
+ * (aria-hidden); the provider second line is the accessible identity.
+ */
+const ModelCellRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+`;
+
+const ProviderAvatar = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background: ${({ theme }) => theme.app.surface.tint};
-  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
-  white-space: nowrap;
-  text-align: left;
+  color: ${({ theme }) => theme.app.text.link};
+  font-size: 14px;
+  font-weight: 700;
 `;
 
 /**
@@ -367,28 +379,23 @@ const CapBadges = styled.div`
   align-items: center;
 `;
 
+/* SVG reference: capabilities are plain text labels, not pills. No badge
+   chrome (no border, no fill, no dot) — color alone carries meaning:
+   secondary for capabilities, warning amber for No tools, info for the
+   operator price tag. */
 const MiniBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 9px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
+  font-size: 13px;
+  font-weight: 500;
   color: ${({ theme }) => theme.app.text.secondary};
-  background: ${({ theme }) => theme.app.surface.tint};
   white-space: nowrap;
 `;
 
 const NoToolsTag = styled(MiniBadge)`
   color: ${({ theme }) => theme.app.status.warning.fg};
-  border-color: ${({ theme }) => theme.app.status.warning.border};
 `;
 
 const OperatorTag = styled(MiniBadge)`
   color: ${({ theme }) => theme.app.status.info.fg};
-  border-color: ${({ theme }) => theme.app.status.info.border};
 `;
 
 const PriceText = styled.span<{ $known: boolean }>`
@@ -423,24 +430,6 @@ const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
 `;
 
 const UpgradeLink = styled(Link)`
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.link};
-  text-decoration: none;
-  white-space: nowrap;
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-/**
- * Tier-gate nudge: inline link (never a modal) shown when the org's plan
- * doesn't cover the provider. Same shape as UpgradeLink so gated rows
- * keep a stable layout.
- */
-const TierNudge = styled(Link)`
   display: inline-block;
   margin-top: 6px;
   font-size: 12.5px;
@@ -986,7 +975,11 @@ export function ModelsPage() {
     const switchNode = (
       <Switch
         checked={on}
-        disabled={disabled || !canWrite}
+        // In-flight guard (same as the Catalog ACCESS toggle): a switch with a
+        // request in flight is not interactive — without this, rapid clicks
+        // fire concurrent POSTs whose optimistic updates + rollbacks interleave
+        // and the UI flaps between states. Combined with the write gate below.
+        disabled={disabled || pendingKey === key || !canWrite}
         onChange={(next) => handleToggle(supergroup, group, model, next)}
         label={`${on ? 'Disable' : 'Enable'} ${model.display_name} (${
           supergroup === 'byok'
@@ -1033,46 +1026,53 @@ export function ModelsPage() {
     return (
       <BodyRow key={key} $dimmed={!on} $pending={pendingKey === key}>
         <BodyCell>
-          <ModelName title={model.display_name}>{model.display_name}</ModelName>
-          <ModelId title={`${group.provider} · ${model.model_id}`}>
-            {group.provider} · {model.model_id} ·{' '}
-            {formatContextTokens(model.context_window_tokens)}
-          </ModelId>
-          {!model.usable && model.reasons.length > 0 && (
-            <Reasons aria-label="Why this model cannot be used">
-              {model.reasons.map((r) => (
-                <ReasonItem key={r}>{humanizeReason(r)}</ReasonItem>
-              ))}
-            </Reasons>
-          )}
-          {model.capabilities.reasoning && (
+          <ModelCellRow>
+            <ProviderAvatar aria-hidden="true">
+              {(group.provider_display_name.trim().charAt(0) || '?').toUpperCase()}
+            </ProviderAvatar>
             <div>
-              <ReasoningToggle
-                type="button"
-                onClick={() => toggleReasoning(key)}
-                aria-expanded={reasoningOpen[key] === true}
-              >
-                {reasoningOpen[key] ? 'Hide reasoning presets' : 'Reasoning presets'}
-              </ReasoningToggle>
-              {reasoningOpen[key] && (
-                <ReasoningPanel>
-                  <PresetChips aria-label="Reasoning effort presets (display only)">
-                    <PresetChip>Fast</PresetChip>
-                    <PresetChip>Standard</PresetChip>
-                    <PresetChip>Deep reasoning</PresetChip>
-                  </PresetChips>
-                  <BudgetRange>Thinking budget range: 1,000 – 32,000 tokens</BudgetRange>
-                  <HonestCopy>
-                    Reasoning effort is set per assistant in the builder — it is stored in
-                    model_params.reasoning_budget_tokens and versioned with the assistant
-                    snapshot. There is no engine field for an org-wide reasoning default
-                    (the toggle endpoint accepts enable/disable only), so this page cannot
-                    set it.
-                  </HonestCopy>
-                </ReasoningPanel>
+              <ModelName title={model.display_name}>{model.display_name}</ModelName>
+              <ModelId title={`${group.provider} · ${model.model_id}`}>
+                {group.provider} · {model.model_id} ·{' '}
+                {formatContextTokens(model.context_window_tokens)}
+              </ModelId>
+              {!model.usable && model.reasons.length > 0 && (
+                <Reasons aria-label="Why this model cannot be used">
+                  {model.reasons.map((r) => (
+                    <ReasonItem key={r}>{humanizeReason(r)}</ReasonItem>
+                  ))}
+                </Reasons>
+              )}
+              {model.capabilities.reasoning && (
+                <div>
+                  <ReasoningToggle
+                    type="button"
+                    onClick={() => toggleReasoning(key)}
+                    aria-expanded={reasoningOpen[key] === true}
+                  >
+                    {reasoningOpen[key] ? 'Hide reasoning presets' : 'Reasoning presets'}
+                  </ReasoningToggle>
+                  {reasoningOpen[key] && (
+                    <ReasoningPanel>
+                      <PresetChips aria-label="Reasoning effort presets (display only)">
+                        <PresetChip>Fast</PresetChip>
+                        <PresetChip>Standard</PresetChip>
+                        <PresetChip>Deep reasoning</PresetChip>
+                      </PresetChips>
+                      <BudgetRange>Thinking budget range: 1,000 – 32,000 tokens</BudgetRange>
+                      <HonestCopy>
+                        Reasoning effort is set per assistant in the builder — it is stored in
+                        model_params.reasoning_budget_tokens and versioned with the assistant
+                        snapshot. There is no engine field for an org-wide reasoning default
+                        (the toggle endpoint accepts enable/disable only), so this page cannot
+                        set it.
+                      </HonestCopy>
+                    </ReasoningPanel>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </ModelCellRow>
         </BodyCell>
         <BodyCell>
           <CapBadges>
@@ -1090,7 +1090,7 @@ export function ModelsPage() {
         <BodyCell>{priceCell(outputPrice)}</BodyCell>
         <BodyCell>
           <StatusPill tone={gated ? 'warning' : 'neutral'} dot={false}>
-            {model.required_product_label}
+            {shortPlanLabel(model.required_product_label)}
           </StatusPill>
         </BodyCell>
         <BodyCell>
@@ -1124,63 +1124,74 @@ export function ModelsPage() {
           ) : (
             switchNode
           )}
-          {providerGated ? (
-            <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
-          ) : (
-            gated && <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
+          {/* No inline billing links in the table — the tooltip on the switch
+              carries the reason; billing lives on the pricing page. */}
+          {!providerGated && gated && (
+            <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
           )}
         </BodyCell>
       </BodyRow>
     );
   };
 
-  const renderTable = (supergroup: Supergroup, groupList: ModelGroupView[]) => (
-    <>
-      {groupList.map((group) => (
-        <div key={`${supergroup}:${group.provider}:${group.credential_id ?? 'platform'}`}>
-          {supergroup === 'byok' && (
+  const renderTable = (supergroup: Supergroup, groupList: ModelGroupView[]) => {
+    const head = (
+      <thead>
+        <tr>
+          <HeadCell scope="col">Model</HeadCell>
+          <HeadCell scope="col">Capabilities</HeadCell>
+          <HeadCell scope="col">Input / 1M</HeadCell>
+          <HeadCell scope="col">Output / 1M</HeadCell>
+          <HeadCell scope="col">Tier</HeadCell>
+          <HeadCell scope="col">Used by</HeadCell>
+          <HeadCell scope="col">Default</HeadCell>
+          <HeadCell scope="col">Access</HeadCell>
+        </tr>
+      </thead>
+    );
+    // SVG structure: ONE table per section. Platform groups arrive
+    // provider-sorted from the engine, so flattening keeps models
+    // provider-contiguous (all OpenAI rows together, then Google, …) with no
+    // per-provider sub-tables. Provider identity lives on every row — avatar
+    // + provider second line — never in a divider row.
+    if (supergroup === 'platform') {
+      return (
+        <TableWrap>
+          <StyledTable>
+            {head}
+            <tbody>
+              {groupList.flatMap((group) =>
+                group.models.map((m) => renderRow(supergroup, group, m)),
+              )}
+            </tbody>
+          </StyledTable>
+        </TableWrap>
+      );
+    }
+    // BYOK: one table per credential under its credential header (a credential
+    // serves exactly one provider, so a provider sub-header inside would be
+    // pure redundancy).
+    return (
+      <>
+        {groupList.map((group) => (
+          <div key={`byok:${group.provider}:${group.credential_id ?? 'platform'}`}>
             <CredHead>
               BYOK · {group.credential_label || group.provider_display_name}
               {group.credential_fingerprint && (
                 <Fingerprint>{group.credential_fingerprint}</Fingerprint>
               )}
             </CredHead>
-          )}
-          <TableWrap>
-            <StyledTable>
-              <thead>
-                <tr>
-                  <HeadCell scope="col">Model</HeadCell>
-                  <HeadCell scope="col">Capabilities</HeadCell>
-                  <HeadCell scope="col">Input / 1M</HeadCell>
-                  <HeadCell scope="col">Output / 1M</HeadCell>
-                  <HeadCell scope="col">Tier</HeadCell>
-                  <HeadCell scope="col">Used by</HeadCell>
-                  <HeadCell scope="col">Default</HeadCell>
-                  <HeadCell scope="col">Access</HeadCell>
-                </tr>
-              </thead>
-              <tbody>
-                {/*
-                 * Provider sub-header: groups are already one provider each
-                 * (platform groups are per-provider; a BYOK credential serves
-                 * one provider), so this is one full-width row per table.
-                 * Model rows carry no provider field, so no deeper
-                 * client-side split is possible — or needed.
-                 */}
-                <tr>
-                  <ProviderSubHeadCell colSpan={8} scope="rowgroup">
-                    {group.provider_display_name} · {group.models.length}
-                  </ProviderSubHeadCell>
-                </tr>
-                {group.models.map((m) => renderRow(supergroup, group, m))}
-              </tbody>
-            </StyledTable>
-          </TableWrap>
-        </div>
-      ))}
-    </>
-  );
+            <TableWrap>
+              <StyledTable>
+                {head}
+                <tbody>{group.models.map((m) => renderRow(supergroup, group, m))}</tbody>
+              </StyledTable>
+            </TableWrap>
+          </div>
+        ))}
+      </>
+    );
+  };
 
   if (isPending) {
     return (

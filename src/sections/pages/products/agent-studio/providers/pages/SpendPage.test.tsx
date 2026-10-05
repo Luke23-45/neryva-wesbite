@@ -46,6 +46,7 @@ const hoisted = vi.hoisted(() => ({
   summary: null as SpendSummaryView | null,
   credentials: [] as ProviderCredentialView[],
   fetchSummary: vi.fn(),
+  fetchModelSpend: vi.fn(async (..._args: unknown[]) => ({ window: '7d', total_spend_usd: '0', rows: [] })),
   fetchCredentials: vi.fn(),
   fetchUsage: vi.fn(),
   patchBudget: vi.fn(),
@@ -68,6 +69,7 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useOrgTier', () 
 
 vi.mock('@/sections/pages/products/agent-studio/providers/api', () => ({
   fetchSpendSummary: (...args: unknown[]) => hoisted.fetchSummary(...args),
+  fetchModelSpend: (...args: unknown[]) => hoisted.fetchModelSpend(...args),
   patchSpendBudget: (...args: unknown[]) => hoisted.patchBudget(...args),
   patchIncludeByokSpend: (...args: unknown[]) => hoisted.patchToggle(...args),
   downloadSpendExport: (...args: unknown[]) => hoisted.exportSpend(...args),

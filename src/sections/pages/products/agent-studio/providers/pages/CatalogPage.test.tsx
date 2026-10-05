@@ -340,7 +340,7 @@ describe('CatalogPage', () => {
     expect(screen.getByText(/your plan governs what can be enabled/)).toBeTruthy();
   });
 
-  it('can_enable=false: row stays visible with a disabled switch + top-up nudge; no API fires', () => {
+  it('can_enable=false: row stays visible with a disabled switch and no table link; no API fires', () => {
     providersOverride.current = [
       entry({
         can_enable: false,
@@ -352,8 +352,8 @@ describe('CatalogPage', () => {
     expect(screen.getByText('OpenAI')).toBeTruthy();
     const sw = screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
-    const nudge = screen.getByRole('link', { name: 'Top up credits to enable' });
-    expect(nudge).toHaveAttribute('href', '/agent-studio/settings/pricing');
+    // No billing link in the table — the switch tooltip carries the reason.
+    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
     // A disabled switch cannot trigger the toggle — the guard never fires the API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();
@@ -374,7 +374,7 @@ describe('CatalogPage', () => {
     expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'openai', enabled: false });
   });
 
-  it('a 402 provider_tier_required surfaces the top-up nudge, never the raw engine message', () => {
+  it('a 402 provider_tier_required surfaces the top-up message on the warning icon, never the raw engine message', () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
     fireEvent.click(sw);
@@ -383,7 +383,10 @@ describe('CatalogPage', () => {
     act(() => {
       onError({ status: 402, code: 'provider_tier_required', message: 'plan required' });
     });
-    expect(screen.getByRole('link', { name: 'Top up credits to enable' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+    expect(
+      screen.getByRole('img', { name: 'Toggle failed: Top up credits to enable providers' }),
+    ).toBeTruthy();
     expect(screen.queryByText('plan required')).toBeNull();
   });
 
@@ -405,7 +408,8 @@ describe('CatalogPage', () => {
     ];
     renderPage();
     expect(screen.queryByText('Included')).toBeNull();
-    expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
+    // Floored tier in the short register: 'free' minimum → PAYG pill.
+    expect(screen.getByText('PAYG')).toBeTruthy();
   });
 
   it('can_enable=true wins over a stale client tier — the switch stays visible', () => {

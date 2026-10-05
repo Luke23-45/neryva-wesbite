@@ -63,7 +63,7 @@ export function Switch({ checked, onChange, label, disabled, id, ...rest }: Prop
         transition={spring.snap}
         {...rest}
       >
-        <Thumb $checked={checked} layout transition={spring.bouncy} />
+        <Thumb $checked={checked} />
       </Track>
     </Root>
   );
@@ -109,13 +109,29 @@ const Track = styled(motion.button)<{ $checked: boolean }>`
     cursor: not-allowed;
     opacity: 0.4;
   }
+
+  /* The switch never sets the native disabled attribute (it keeps keyboard
+     focus management via tabIndex + aria-disabled instead), so the :disabled
+     rule above is dead — this is the rule that actually styles the disabled
+     state. Without it a gated switch looks fully interactive. */
+  &[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
 `;
 
-const Thumb = styled(motion.span)<{ $checked: boolean }>`
+const Thumb = styled.span<{ $checked: boolean }>`
   position: absolute;
   top: 50%;
   left: ${({ $checked }) => ($checked ? '19px' : '3px')};
+  /* Pure CSS owns the thumb completely: centering via translateY, slide via
+     left transition. No framer-motion here on purpose — motion writes inline
+     transforms that clobber the CSS centering after the first interaction
+     (thumb dropped to the bottom of the track and stayed there). Nothing in
+     JS touches this element's transform now, so this class of bug is
+     structurally impossible. */
   transform: translateY(-50%);
+  transition: left 180ms cubic-bezier(0.32, 0.72, 0.24, 1);
   width: 16px;
   height: 16px;
   border-radius: 50%;
