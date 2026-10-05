@@ -29,7 +29,14 @@ const defaultMutateMock = vi.hoisted(() => vi.fn());
 const fixtureOverrideRef = vi.hoisted(() => ({ current: null as GroupedModels | null }));
 // Mutable N-4 directory rows for provider-level gate tests (can_enable).
 const directoryOverrideRef = vi.hoisted(
-  () => ({ current: null }) as { current: Array<{ provider: string; can_enable?: boolean }> | null },
+  () =>
+    ({ current: null }) as {
+      current: Array<{
+        provider: string;
+        can_enable?: boolean;
+        connection?: { enabled: boolean; stored_enabled?: boolean };
+      }> | null;
+    },
 );
 // Mutable org role for role-gating tests (default: owner — fully privileged).
 const roleOverrideRef = vi.hoisted(() => ({ current: null as string | null }));
@@ -936,7 +943,7 @@ describe('ModelsPage', () => {
     });
   });
 
-  describe('provider-disabled filter', () => {
+  describe('provider-selected filter', () => {
     /**
      * Marks every row of the named providers as provider-disabled — the
      * engine's signal (resolveModelGovernance adds `provider_not_enabled`
@@ -959,6 +966,52 @@ describe('ModelsPage', () => {
         ),
       };
     }
+
+    it('mirrors the Catalog switch: never-toggled providers stay hidden', () => {
+      // No provider_not_enabled reasons anywhere — the engine's governance
+      // default says enabled. The directory says only OpenAI's switch is ON;
+      // Anthropic/xAI were never toggled (switch OFF). Models must mirror
+      // the switches, not the governance default.
+      directoryOverrideRef.current = [
+        { provider: 'openai', connection: { enabled: true, stored_enabled: true } },
+        { provider: 'anthropic', connection: { enabled: false, stored_enabled: false } },
+        { provider: 'xai', connection: { enabled: false, stored_enabled: false } },
+      ];
+      renderPage();
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+      expect(screen.queryByText('Anthropic')).toBeNull();
+      expect(screen.queryByText('xAI')).toBeNull();
+      expect(screen.queryByText('Claude 3.7 Sonnet')).toBeNull();
+      expect(screen.queryByText('Grok Reasoner')).toBeNull();
+      // 2 OpenAI + 2 BYOK rows visible.
+      expect(screen.getByText('4 of 4 models · 3 enabled')).toBeTruthy();
+    });
+
+    it('falls back to connection.enabled when stored_enabled is absent (older engine)', () => {
+      directoryOverrideRef.current = [
+        // No stored_enabled: the switch expression falls back to enabled.
+        { provider: 'openai', connection: { enabled: true } },
+        { provider: 'anthropic', connection: { enabled: false } },
+        { provider: 'xai', connection: { enabled: true } },
+      ];
+      renderPage();
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+      expect(screen.getByText('xAI')).toBeTruthy();
+      expect(screen.queryByText('Anthropic')).toBeNull();
+    });
+
+    it('providers unknown to the directory stay visible (fail open, never blank)', () => {
+      // Directory loaded but knows only OpenAI — Anthropic/xAI are absent
+      // (pending/failed lane, older engine). They stay visible.
+      directoryOverrideRef.current = [
+        { provider: 'openai', connection: { enabled: true, stored_enabled: true } },
+      ];
+      renderPage();
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+      expect(screen.getByText('Anthropic')).toBeTruthy();
+      expect(screen.getByText('xAI')).toBeTruthy();
+      expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
+    });
 
     it('hides a disabled provider’s group; tier-gated rows of enabled providers still render', () => {
       fixtureOverrideRef.current = disableProviders(fixture(), 'xai');

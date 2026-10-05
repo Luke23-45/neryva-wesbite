@@ -926,24 +926,48 @@ export function ModelsPage() {
   );
 
   /**
-   * Provider-disabled filter: the Models page lists only models of providers
-   * the org enabled in Catalog. A disabled provider's group carries
-   * `provider_not_enabled` on every row (engine resolveModelGovernance,
-   * per-provider). Only a positive disabled signal hides the group — absent
-   * reasons (older engines) never filter. Tier-gated and residency-blocked
-   * rows keep rendering with their reasons; this filter is provider
-   * enablement only.
+   * The Catalog switch state per provider — the source of truth for "what
+   * the user selected". The switch renders
+   * `connection.stored_enabled ?? connection.enabled` (api.ts documents
+   * stored_enabled as the switch source; absent on older engines falls back
+   * to the tier-gated served state), so this map mirrors exactly that
+   * expression. Unknown provider → absent from the map → the filter below
+   * fails open (show). Shared query cache with CatalogPage — no request.
+   */
+  const catalogSwitchByProvider = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const p of directory.data?.providers ?? []) {
+      const on = p.connection?.stored_enabled ?? p.connection?.enabled;
+      if (typeof on === 'boolean') map.set(p.provider, on);
+    }
+    return map;
+  }, [directory.data]);
+
+  /**
+   * Provider-selected filter: the Models page lists only models of providers
+   * whose Catalog switch is ON — exactly the switch expression above, never
+   * the governance absent=enabled default.
+   *
+   * Two signals, defense in depth:
+   * 1. `provider_not_enabled` on every row (explicit disable) — needs no
+   *    extra query, always applied.
+   * 2. The directory's per-provider switch state — covers never-toggled
+   *    providers whose switch reads OFF.
+   * A provider unknown to the directory (pending/failed read, older engine)
+   * stays visible: the page never blanks on a degraded read.
    */
   const providerEnabledGroups = useMemo(
     () =>
-      groups.platform.filter(
-        (g) =>
-          !(
-            g.models.length > 0 &&
-            g.models.every((m) => (m.reasons ?? []).includes('provider_not_enabled'))
-          ),
-      ),
-    [groups.platform],
+      groups.platform.filter((g) => {
+        if (
+          g.models.length > 0 &&
+          g.models.every((m) => (m.reasons ?? []).includes('provider_not_enabled'))
+        ) {
+          return false;
+        }
+        return catalogSwitchByProvider.get(g.provider) ?? true;
+      }),
+    [groups.platform, catalogSwitchByProvider],
   );
 
   /** True when every platform group was hidden by the provider-disabled filter. */
