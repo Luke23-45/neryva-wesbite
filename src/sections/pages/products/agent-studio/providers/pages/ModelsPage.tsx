@@ -940,12 +940,37 @@ export function ModelsPage() {
     [q],
   );
 
+  /**
+   * Provider-disabled filter: the Models page lists only models of providers
+   * the org enabled in Catalog. A disabled provider's group carries
+   * `provider_not_enabled` on every row (engine resolveModelGovernance,
+   * per-provider). Only a positive disabled signal hides the group — absent
+   * reasons (older engines) never filter. Tier-gated and residency-blocked
+   * rows keep rendering with their reasons; this filter is provider
+   * enablement only.
+   */
+  const providerEnabledGroups = useMemo(
+    () =>
+      groups.platform.filter(
+        (g) =>
+          !(
+            g.models.length > 0 &&
+            g.models.every((m) => (m.reasons ?? []).includes('provider_not_enabled'))
+          ),
+      ),
+    [groups.platform],
+  );
+
+  /** True when every platform group was hidden by the provider-disabled filter. */
+  const allProvidersDisabled =
+    groups.platform.length > 0 && providerEnabledGroups.length === 0;
+
   const platformGroups = useMemo(
     () =>
-      groups.platform
+      providerEnabledGroups
         .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
         .filter((g) => g.models.length > 0),
-    [groups.platform, matches],
+    [providerEnabledGroups, matches],
   );
   const byokGroups = useMemo(
     () =>
@@ -955,15 +980,16 @@ export function ModelsPage() {
     [groups.byok, matches],
   );
 
-  const total = groups.platform.reduce((n, g) => n + g.models.length, 0) +
+  const total = providerEnabledGroups.reduce((n, g) => n + g.models.length, 0) +
     groups.byok.reduce((n, g) => n + g.models.length, 0);
   const shown = platformGroups.reduce((n, g) => n + g.models.length, 0) +
     byokGroups.reduce((n, g) => n + g.models.length, 0);
   /**
    * P1-4: the enabled count is org state, not search state — it derives
-   * from the FULL groups so typing in the search box never rewrites it.
+   * from the provider-enabled groups (not the search-narrowed rows) so
+   * typing in the search box never rewrites it.
    */
-  const enabledCount = [...groups.platform, ...groups.byok].reduce(
+  const enabledCount = [...providerEnabledGroups, ...groups.byok].reduce(
     (n, g) => n + g.models.filter((m) => m.enabled && m.usable).length,
     0,
   );
@@ -992,11 +1018,11 @@ export function ModelsPage() {
         }
       }
     };
-    collect('platform', groups.platform);
+    collect('platform', providerEnabledGroups);
     collect('byok', groups.byok);
     if (matches.length === 0) return null;
     return (matches.find((r) => r.usable) ?? matches[0]).key;
-  }, [groups.platform, groups.byok, defaultSel, tier]);
+  }, [providerEnabledGroups, groups.byok, defaultSel, tier]);
 
   /** True when the checked default row exists but the current search hides it. */
   const defaultHiddenBySearch = useMemo(() => {
@@ -1554,16 +1580,29 @@ export function ModelsPage() {
       {shown === 0 ? (
         <>
           <EmptyState
-            title={q ? 'No models match this search' : 'No models available'}
+            title={
+              q
+                ? 'No models match this search'
+                : allProvidersDisabled
+                  ? 'No providers enabled'
+                  : 'No models available'
+            }
             description={
               q
                 ? 'Try a different search term.'
-                : 'The catalog returned no models for this workspace.'
+                : allProvidersDisabled
+                  ? 'Turn a provider on in Catalog to see its models here.'
+                  : 'The catalog returned no models for this workspace.'
             }
           />
-          {!q && (
+          {!q && !allProvidersDisabled && (
             <NoCredRow to="/agent-studio/providers/my-providers">
               Connect a key in My Providers →
+            </NoCredRow>
+          )}
+          {!q && allProvidersDisabled && (
+            <NoCredRow to="/agent-studio/providers/catalog">
+              Browse providers in Catalog →
             </NoCredRow>
           )}
         </>

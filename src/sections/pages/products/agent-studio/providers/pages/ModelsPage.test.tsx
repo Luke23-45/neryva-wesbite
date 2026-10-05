@@ -936,4 +936,83 @@ describe('ModelsPage', () => {
       expect(screen.queryByRole('button', { name: 'Show less' })).toBeNull();
     });
   });
+
+  describe('provider-disabled filter', () => {
+    /**
+     * Marks every row of the named providers as provider-disabled — the
+     * engine's signal (resolveModelGovernance adds `provider_not_enabled`
+     * alongside any other reasons on every row of a disabled provider).
+     */
+    function disableProviders(f: GroupedModels, ...providers: string[]): GroupedModels {
+      return {
+        ...f,
+        platform: f.platform.map((g) =>
+          providers.includes(g.provider)
+            ? {
+                ...g,
+                models: g.models.map((m) => ({
+                  ...m,
+                  usable: false,
+                  reasons: [...m.reasons, 'provider_not_enabled'],
+                })),
+              }
+            : g,
+        ),
+      };
+    }
+
+    it('hides a disabled provider’s group; tier-gated rows of enabled providers still render', () => {
+      fixtureOverrideRef.current = disableProviders(fixture(), 'xai');
+      renderPage();
+      // xAI's section is gone entirely — header row and model rows.
+      expect(screen.queryByText('xAI')).toBeNull();
+      expect(screen.queryByText('Grok Reasoner')).toBeNull();
+      expect(screen.queryByText('Grok Heavy')).toBeNull();
+      // Enabled providers are untouched — including rows that are unusable
+      // for OTHER reasons (tier gating never hides).
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+      expect(screen.getByText('Anthropic')).toBeTruthy();
+      // GPT-4o exists in both supergroups — both rows still render.
+      // (Scoped to the tables: the DefaultBar also shows the default's name.)
+      const tables = screen.getAllByRole('table');
+      const rowNames = tables.flatMap((t) => within(t).getAllByText('GPT-4o'));
+      expect(rowNames).toHaveLength(2);
+      expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
+      // Counts line reflects the visible set: 3 platform + 2 BYOK.
+      expect(screen.getByText('5 of 5 models · 3 enabled')).toBeTruthy();
+    });
+
+    it('all providers disabled: honest empty state pointing at Catalog', () => {
+      const f = fixture();
+      fixtureOverrideRef.current = {
+        ...disableProviders(f, 'openai', 'anthropic', 'xai'),
+        byok: [],
+      };
+      // The file's @tanstack/react-router mock renders <Link> as a plain
+      // anchor — no router context needed.
+      renderPage();
+      expect(screen.getByText('No providers enabled')).toBeTruthy();
+      expect(
+        screen.getByText('Turn a provider on in Catalog to see its models here.'),
+      ).toBeTruthy();
+      const link = screen.getByRole('link', { name: 'Browse providers in Catalog →' });
+      expect(link).toHaveAttribute('href', '/agent-studio/providers/catalog');
+      expect(screen.getByText('0 of 0 models · 0 enabled')).toBeTruthy();
+    });
+
+    it('re-enabling restores the group (filter follows the toggle, not the fixture)', () => {
+      // Disabled first…
+      fixtureOverrideRef.current = disableProviders(fixture(), 'xai');
+      const { unmount } = renderPage();
+      expect(screen.queryByText('xAI')).toBeNull();
+      unmount();
+      cleanup();
+      // …then re-enabled: the engine drops the reason and the group returns.
+      fixtureOverrideRef.current = fixture();
+      renderPage();
+      expect(screen.getByText('xAI')).toBeTruthy();
+      expect(screen.getByText('Grok Reasoner')).toBeTruthy();
+      expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
+    });
+  });
 });
