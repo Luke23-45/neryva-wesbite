@@ -487,21 +487,10 @@ const CapBadges = styled.div`
   align-items: center;
 `;
 
-/* SVG reference (models-list-reference.svg): every capability carries a 7px
-   dot before its label — filled #34D399 (theme success.fg) when the model
-   has the capability, a hollow ring when it doesn't. Labels are 12px:
+/* Capability badges: plain text labels, no dots. (The SVG reference showed
+   a 7px dot before each label — filled green when present, hollow ring when
+   absent — but the owner asked for the dots to be removed.) Labels are 12px:
    secondary for present, faint for absent. */
-const CapDot = styled.span<{ $present: boolean }>`
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex: none;
-  ${({ $present, theme }) =>
-    $present
-      ? `background: ${theme.app.status.success.fg};`
-      : `border: 1.4px solid ${theme.app.text.faint};`}
-`;
-
 const MiniBadge = styled.span<{ $present?: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -1262,7 +1251,6 @@ export function ModelsPage() {
               const present = model.capabilities[cap] === true;
               return (
                 <MiniBadge key={cap} $present={present}>
-                  <CapDot $present={present} aria-hidden="true" />
                   {CAPABILITY_LABELS[cap]}
                 </MiniBadge>
               );

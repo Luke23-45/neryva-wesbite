@@ -533,23 +533,18 @@ describe('ModelsPage', () => {
     );
   });
 
-  it('capability badges render all four capabilities with SVG-faithful dots', () => {
+  it('capability badges render all four capabilities as plain labels, no dots', () => {
     renderPage();
-    // The stylesheet carries both halves of the SVG treatment: filled green
-    // for present, hollow ring for absent.
-    const css = Array.from(document.querySelectorAll('style'))
-      .map((s) => s.textContent ?? '')
-      .join('\n');
-    expect(css).toMatch(/#34d399/i);
-    expect(css).toMatch(/1\.4px solid/);
+    // The dots were removed per owner direction: badges are plain text
+    // labels (secondary when present, faint when absent), with no dot
+    // element inside.
     // GPT-4o (platform) has tools+vision; reasoning+structured_output are
-    // absent — the SVG shows absent capabilities as hollow rings, not
-    // silence, so all four badges render, each with its dot.
+    // absent — all four badges still render, each with no dot child.
     const gptSwitch = screen.getByRole('switch', { name: /GPT-4o \(platform\)/ });
     const gptRow = gptSwitch.closest('tr') as HTMLElement;
     for (const label of ['Tools', 'Vision', 'Reasoning', 'Structured output']) {
       const badge = within(gptRow).getByText(label);
-      expect(badge.querySelector('span[aria-hidden="true"]')).not.toBeNull();
+      expect(badge.querySelector('span[aria-hidden="true"]')).toBeNull();
     }
   });
 
