@@ -80,10 +80,11 @@ const Track = styled(motion.button)<{ $checked: boolean }>`
   height: 22px;
   border-radius: ${({ theme }) => theme.radii.pill};
   border: 1px solid
-    ${({ theme, $checked }) => ($checked ? 'transparent' : theme.app.border.default)};
-  /* D-BUG1: flat accent fill when on — no gradient. */
+    ${({ theme, $checked }) => ($checked ? 'transparent' : theme.app.border.strong)};
+  /* D-BUG1: flat accent fill when on — no gradient. Off state uses a visible
+     dark well so the white thumb reads clearly (was nearly invisible). */
   background: ${({ theme, $checked }) =>
-    $checked ? theme.app.accentControl : theme.app.surface.active};
+    $checked ? theme.app.accentControl : 'rgba(255, 255, 255, 0.14)'};
   cursor: pointer;
   transition:
     background ${({ theme }) => theme.transitions.standard},
