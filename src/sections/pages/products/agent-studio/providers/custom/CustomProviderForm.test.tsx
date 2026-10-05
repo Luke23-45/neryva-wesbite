@@ -18,7 +18,7 @@ import { theme } from '@styles/theme';
 import { CustomProviderForm } from './CustomProviderForm';
 import { validateBaseUrl } from './validateBaseUrl';
 import { probeErrorCopy } from '@/sections/pages/products/agent-studio/providers/components/probeCopy';
-import type { ProbeResult } from '@/sections/pages/products/agent-studio/providers/api';
+import type { ProbeResult, ProviderCredentialView } from '@/sections/pages/products/agent-studio/providers/api';
 
 const hoisted = vi.hoisted(() => ({
   probeCredential: vi.fn(),
@@ -26,6 +26,7 @@ const hoisted = vi.hoisted(() => ({
   patchMutateAsync: vi.fn(),
   verifyMutateAsync: vi.fn(),
   navigate: vi.fn(),
+  credentials: [] as ProviderCredentialView[],
 }));
 
 vi.mock('@/Context/OrgContext', () => ({
@@ -40,7 +41,7 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCrede
     rotate: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
     revoke: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
   }),
-  useCredentials: () => ({ data: { credentials: [] }, isLoading: false }),
+  useCredentials: () => ({ data: { credentials: hoisted.credentials }, isLoading: false }),
 }));
 
 vi.mock('@/sections/pages/products/agent-studio/providers/api', async (importOriginal) => {
@@ -52,14 +53,14 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => hoisted.navigate,
 }));
 
-function renderForm() {
+function renderForm(credentialId?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={client}>
-        <CustomProviderForm />
+        <CustomProviderForm credentialId={credentialId} />
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -92,8 +93,10 @@ const okProbe: ProbeResult = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  hoisted.credentials = [];
   hoisted.createMutateAsync.mockResolvedValue({ credential: { id: 'new-cred' } });
   hoisted.verifyMutateAsync.mockResolvedValue({ credential: { id: 'new-cred' } });
+  hoisted.patchMutateAsync.mockResolvedValue({ credential: { id: 'cred-1' } });
 });
 
 describe('validateBaseUrl', () => {
@@ -353,5 +356,190 @@ describe('CustomProviderForm', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Delete header X-Gateway-Routing-Key' }));
     expect(screen.queryByLabelText('Header 1 name')).toBeNull();
+  });
+
+  it('Round 2 P1: editing a probe input invalidates the probe — a stale verify can never gate connect', async () => {
+    hoisted.probeCredential.mockResolvedValue(okProbe);
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('button', { name: /Run Probe & Discover Models/ }));
+    await waitFor(() => {
+      expect(screen.getByText(/Latency: 142ms/)).toBeTruthy();
+    });
+    expect(screen.getByRole('button', { name: /Save & Connect Provider/ })).not.toBeDisabled();
+    // Edit the secret AFTER the probe: the probe verified the old secret.
+    fireEvent.change(screen.getByLabelText('Secret Key'), { target: { value: 'secret-456' } });
+    // The stale probe result is gone and Connect is gated again.
+    expect(screen.queryByText(/Latency: 142ms/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Save & Connect Provider/ })).toBeDisabled();
+  });
+
+  it('Round 2 P1: create fails, input edited, retry mints a fresh idempotency key (no 409)', async () => {
+    hoisted.createMutateAsync.mockRejectedValueOnce(new Error('boom'));
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Inactive' }));
+    await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('alert')).toHaveTextContent('boom');
+    const firstKey = hoisted.createMutateAsync.mock.calls[0][0].idempotencyKey as string;
+    // Edit an input, then retry: the failed attempt's key is retired.
+    fireEvent.change(screen.getByLabelText('Provider Label'), { target: { value: 'EU vLLM 2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Inactive' }));
+    await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalledTimes(2));
+    const secondKey = hoisted.createMutateAsync.mock.calls[1][0].idempotencyKey as string;
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('Round 2 P1: identical-payload retry reuses the idempotency key (engine replays)', async () => {
+    hoisted.createMutateAsync.mockRejectedValueOnce(new Error('boom'));
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Inactive' }));
+    await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalledTimes(1));
+    const firstKey = hoisted.createMutateAsync.mock.calls[0][0].idempotencyKey as string;
+    // Retry WITHOUT editing: the same key is reused so the engine replays
+    // the original attempt instead of duplicating the credential.
+    fireEvent.click(screen.getByRole('button', { name: 'Save as Inactive' }));
+    await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalledTimes(2));
+    expect(hoisted.createMutateAsync.mock.calls[1][0].idempotencyKey).toBe(firstKey);
+  });
+});
+
+function editCred(overrides: Partial<ProviderCredentialView> = {}): ProviderCredentialView {
+  return {
+    id: 'cred-1',
+    provider: 'acme-vllm',
+    provider_display_name: 'Acme vLLM',
+    label: 'EU Production vLLM',
+    external_ref: 'cred-1',
+    source: 'byok',
+    status: 'active',
+    secret_fingerprint: 'sk-…1234',
+    created_at: '2026-10-01T00:00:00Z',
+    rotated_at: null,
+    revoked_at: null,
+    revocation_reason: null,
+    compromised: false,
+    priority: 0,
+    enabled: true,
+    allowed_models: ['llama-3.3-70b-instruct', 'deepseek-r1-distill-qwen-32b'],
+    allowed_assistants: null,
+    shared_capacity_fallback: 'never_for_provider',
+    transport: 'anthropic',
+    base_url: 'https://llm.example.com/v1',
+    custom_header_names: ['X-Gateway-Key'],
+    verification_status: 'verified',
+    verified_at: '2026-10-01T00:00:00Z',
+    last_probe_latency_ms: 100,
+    discovered_models: [],
+    zdr_attestation: 'no_zdr',
+    region_attestation: 'eu',
+    attested_by: null,
+    attested_at: null,
+    manual_model_declarations: [],
+    ...overrides,
+  };
+}
+
+describe('CustomProviderForm edit mode', () => {
+  it('shows a not-found state for an unknown credential id', () => {
+    renderForm('nope');
+    expect(screen.getByText('Custom provider not found')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Back to My Providers' })).toBeTruthy();
+  });
+
+  it('Round 2 P0: prefills every field and save preserves untouched fields (no silent resets)', async () => {
+    hoisted.credentials = [editCred()];
+    renderForm('cred-1');
+    // Full prefill — every editable field restores from the stored row.
+    expect((screen.getByLabelText('Provider Label') as HTMLInputElement).value).toBe(
+      'EU Production vLLM',
+    );
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe(
+      'https://llm.example.com/v1',
+    );
+    const slug = screen.getByLabelText('Provider Slug') as HTMLInputElement;
+    expect(slug.value).toBe('acme-vllm');
+    expect(slug).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Anthropic/ })).toBeChecked();
+    // The sealed secret and auth-scheme selector are not editable here.
+    expect(screen.queryByLabelText('Secret Key')).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Auth scheme' })).toBeNull();
+    // Existing header names are shown read-only; values are never invented.
+    expect(screen.getByText('X-Gateway-Key')).toBeTruthy();
+    // Save is NOT permanently disabled — the prefilled URL validates.
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    expect(save).not.toBeDisabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(hoisted.patchMutateAsync).toHaveBeenCalledTimes(1));
+    const { id, patch } = hoisted.patchMutateAsync.mock.calls[0][0] as {
+      id: string;
+      patch: Record<string, unknown>;
+    };
+    expect(id).toBe('cred-1');
+    expect(patch.label).toBe('EU Production vLLM');
+    expect(patch.base_url).toBe('https://llm.example.com/v1');
+    expect(patch.transport).toBe('anthropic');
+    expect(patch.shared_capacity_fallback).toBe('never_for_provider');
+    expect(patch.zdr_attestation).toBe('no_zdr');
+    expect(patch.region_attestation).toBe('eu');
+    // Untouched fields are omitted — never sent as null/{} (the old code
+    // wiped custom_headers and allowed_models on every edit).
+    expect('custom_headers' in patch).toBe(false);
+    expect('allowed_models' in patch).toBe(false);
+    expect('manual_model_declarations' in patch).toBe(false);
+    expect(hoisted.navigate).toHaveBeenCalledWith({ to: '/agent-studio/providers' });
+  });
+
+  it('Round 2 P0: "Replace the header set" sends the full new set, nothing else changes', async () => {
+    hoisted.credentials = [editCred()];
+    renderForm('cred-1');
+    // The header editor is hidden until the operator opts in.
+    expect(screen.queryByRole('button', { name: /Add Header/ })).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: /Replace the header set/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add Header/ }));
+    fireEvent.change(screen.getByLabelText('Header 1 name'), { target: { value: 'X-New-Key' } });
+    fireEvent.change(screen.getByLabelText('Header 1 value'), { target: { value: 'v2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(hoisted.patchMutateAsync).toHaveBeenCalledTimes(1));
+    const { patch } = hoisted.patchMutateAsync.mock.calls[0][0] as {
+      patch: Record<string, unknown>;
+    };
+    expect(patch.custom_headers).toEqual({ 'X-New-Key': 'v2' });
+    // The allow-list is still untouched — still omitted.
+    expect('allowed_models' in patch).toBe(false);
+  });
+
+  it('Round 2 P0: prefilled manual declarations ride the patch (never wiped)', async () => {
+    hoisted.credentials = [
+      editCred({
+        manual_model_declarations: [
+          {
+            id: 'llama-3.3-70b-instruct',
+            display_name: 'Llama 3.3 70B',
+            context_window_tokens: 131072,
+            capabilities: { tools: true, vision: false, reasoning: false, structured_output: false },
+          },
+        ],
+      }),
+    ];
+    renderForm('cred-1');
+    // Prefill switched to manual mode and restored the row.
+    expect((screen.getByLabelText('Model ID') as HTMLInputElement).value).toBe(
+      'llama-3.3-70b-instruct',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(hoisted.patchMutateAsync).toHaveBeenCalledTimes(1));
+    const { patch } = hoisted.patchMutateAsync.mock.calls[0][0] as {
+      patch: Record<string, unknown>;
+    };
+    expect(patch.manual_model_declarations).toEqual([
+      {
+        id: 'llama-3.3-70b-instruct',
+        display_name: 'Llama 3.3 70B',
+        context_window_tokens: 131072,
+        capabilities: { tools: true, vision: false, reasoning: false, structured_output: false },
+      },
+    ]);
   });
 });

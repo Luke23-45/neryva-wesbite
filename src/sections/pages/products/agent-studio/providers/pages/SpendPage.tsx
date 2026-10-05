@@ -361,8 +361,14 @@ function BreakdownList({ data }: { data: SpendSummaryView }) {
       <h3 style={sectionTitle}>Per-provider breakdown</h3>
       <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'grid', gap: 8 }}>
         {data.providers.map((p, i) => {
-          const src = basisLabel(p.pricing_basis);
-          const lead = p.pricing_basis === 'list' ? p.byok_list_price_equivalent_usd : p.platform_spend_usd;
+          // Settled platform spend is always the lead when non-zero — the
+          // BYOK list-price equivalent is labeled context, never the
+          // headline. The badge describes whichever figure the lead shows.
+          // (platform_spend_usd is the engine's microsToUsd zero-trimmed
+          // string, so zero is exactly '0'.)
+          const platformNonZero = p.platform_spend_usd !== '0';
+          const lead = platformNonZero ? p.platform_spend_usd : p.byok_list_price_equivalent_usd;
+          const src = basisLabel(platformNonZero ? 'settled' : p.pricing_basis);
           return (
             <li
               key={`${p.provider}/${i}`}
@@ -399,6 +405,11 @@ function BreakdownList({ data }: { data: SpendSummaryView }) {
                 <div style={{ ...bodyText, fontWeight: 700, color: colors.text }}>
                   {formatUsd(lead) ?? '—'}
                 </div>
+                {platformNonZero && p.byok_list_price_equivalent_usd && (
+                  <div style={hintText}>
+                    BYOK {LIST_PRICE_LABEL}: {formatUsd(p.byok_list_price_equivalent_usd) ?? '—'}
+                  </div>
+                )}
                 {p.byok_settled_usd !== '0' && (
                   <div style={hintText}>BYOK fees settled: {formatUsd(p.byok_settled_usd)}</div>
                 )}
@@ -520,8 +531,10 @@ function SummarySkeleton() {
       <div
         aria-hidden="true"
         style={{
+          // Mirrors the real OverviewCards grid exactly — same columns, so
+          // the skeleton never reflows into a different layout on load.
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
           gap: 12,
         }}
       >
@@ -670,6 +683,18 @@ function dominantError(
     if (count > 0 && (best === null || count > best.count)) best = { code, count };
   }
   return best;
+}
+
+/** Human copy for the closed engine error-code set — never a bare "429". */
+const ERROR_CODE_LABELS: Record<string, string> = {
+  '401': 'Auth failed',
+  '403': 'Forbidden',
+  '429': 'Rate limited',
+  '5xx': 'Provider errors',
+};
+
+function errorCodeLabel(code: string): string {
+  return ERROR_CODE_LABELS[code] ?? code;
 }
 
 type CredentialTone = 'success' | 'info' | 'warning' | 'neutral';
@@ -899,7 +924,7 @@ function CredentialSpendList({
                       <CredMeta>{sub}</CredMeta>
                       {u && u.pricing_basis === 'list' && u.list_price_equivalent_usd && (
                         <ListBasisTag>
-                          {LIST_PRICE_LABEL} (${u.list_price_equivalent_usd})
+                          {LIST_PRICE_LABEL} ({formatUsd(u.list_price_equivalent_usd) ?? '—'})
                           <InfoGlyph />
                         </ListBasisTag>
                       )}
@@ -933,9 +958,11 @@ function CredentialSpendList({
                   ) : loading || !u ? (
                     '—'
                   ) : dominant ? (
-                    <StatusPill tone="warning">
-                      {dominant.code} ×{dominant.count}
-                    </StatusPill>
+                    <span title={`${errorCodeLabel(dominant.code)} — ${dominant.count} failed call${dominant.count === 1 ? '' : 's'} in this window`}>
+                      <StatusPill tone="warning">
+                        {errorCodeLabel(dominant.code)} ×{dominant.count}
+                      </StatusPill>
+                    </span>
                   ) : (
                     '—'
                   )}
@@ -1389,6 +1416,8 @@ function BudgetControls({
               ...row,
               gap: 10,
               alignItems: 'center',
+              // 44pt HIG target: the whole label is the radio's hit area.
+              minHeight: 44,
               cursor: !editable || breachBusy ? 'not-allowed' : 'pointer',
               opacity: !editable ? 0.55 : 1,
             }}
@@ -1409,6 +1438,8 @@ function BudgetControls({
               ...row,
               gap: 10,
               alignItems: 'center',
+              // 44pt HIG target: the whole label is the radio's hit area.
+              minHeight: 44,
               cursor: !editable || breachBusy ? 'not-allowed' : 'pointer',
               opacity: !editable ? 0.55 : 1,
             }}

@@ -291,7 +291,7 @@ describe('KeyCard rendering', () => {
     const onDragCancel = vi.fn();
     // Simulate an in-flight drag (jsdom has no pointer capture).
     renderCard({ onDragEnd, onDragCancel, dragSourceId: 'cred-1' });
-    const handle = screen.getByRole('button', { name: /Reorder Production Key/ });
+    const handle = screen.getByRole('slider', { name: /Reorder Production Key/ });
     fireEvent.pointerCancel(handle);
     expect(onDragCancel).toHaveBeenCalledTimes(1);
     expect(onDragEnd).not.toHaveBeenCalled();
@@ -330,6 +330,19 @@ describe('scope filter assistant validation', () => {
       { id: 'cred-1', patch: expect.objectContaining({ allowed_assistants: ['asst-1'] }) },
       expect.anything(),
     );
+  });
+
+  it('Round 2 P2: spacing-only edits go clean — dirty normalizes both sides', () => {
+    renderCard({ credential: baseCredential({ allowed_assistants: ['asst-1'] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit scope filters' }));
+    const input = screen.getByLabelText(
+      'Allowed assistants (optional, comma-separated IDs)',
+    ) as HTMLInputElement;
+    expect(input.value).toBe('asst-1');
+    // Same IDs, different spacing — must not stay dirty (the old compare
+    // kept Save dirty forever after a save normalized the value).
+    fireEvent.change(input, { target: { value: '  asst-1 , ' } });
+    expect(screen.getByRole('button', { name: 'Save filters' })).toBeDisabled();
   });
 });
 
@@ -432,11 +445,35 @@ describe('drag reorder', () => {
     const onMoveUp = vi.fn();
     const onMoveDown = vi.fn();
     renderCard({ onMoveUp, onMoveDown });
-    const handle = screen.getByRole('button', { name: /Reorder Production Key/ });
+    // Round 2 P2: the handle's keyboard model is positional, so its honest
+    // role is slider (vertical orientation, position as the value).
+    const handle = screen.getByRole('slider', { name: /Reorder Production Key/ });
+    expect(handle).toHaveAttribute('aria-orientation', 'vertical');
+    expect(handle).toHaveAttribute('aria-valuenow', '1');
+    expect(handle).toHaveAttribute('aria-valuemax', '2');
     fireEvent.keyDown(handle, { key: 'ArrowUp' });
     fireEvent.keyDown(handle, { key: 'ArrowDown' });
     expect(onMoveUp).toHaveBeenCalledTimes(1);
     expect(onMoveDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('Round 2 P1: a verify failure on a healthy card surfaces in the action error (never silent)', async () => {
+    hoisted.verifyMutate.mockImplementation((_id: string, opts: { onError: (e: Error) => void }) => {
+      opts.onError(new Error('upstream 500'));
+    });
+    renderCard({ credential: baseCredential({ verification_status: 'verified' }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Sync / Refresh Models' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('upstream 500'));
+  });
+
+  it('Round 2 P2: rotate with an empty secret shows an inline validation message (never a silent no-op)', async () => {
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: /Rotate/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate key' }));
+    await waitFor(() =>
+      expect(screen.getByText(/Enter the new secret/)).toBeTruthy(),
+    );
+    expect(hoisted.rotateMutate).not.toHaveBeenCalled();
   });
 });
 

@@ -6,11 +6,11 @@
  * and only then enables "Connect". Unverified cards are marked unroutable
  * (doc 19 §1 principle 6).
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from '@/components/common/ui/Dropdown';
 import { TextInput } from '@/components/common/ui/TextInput';
 import { ApiError, randomIdempotencyKey } from '@/lib/engine/client';
-import { runWithStepUp } from '@/lib/engine/stepup';
+import { cancelStepUpFor, runWithStepUp } from '@/lib/engine/stepup';
 import {
   probeCredential,
   type CreateCredentialInput,
@@ -69,12 +69,35 @@ export function ConnectKeyForm({
    * instead of duplicating the credential.
    */
   const idempotencyKeyRef = useRef<string | null>(null);
+  /**
+   * Round 2 P1: probe sequence — a probe in flight is identified by its
+   * input snapshot. The reset effect below bumps the sequence on every
+   * probe-input change, so a probe that resolves after the user edited a
+   * field is discarded instead of marking a never-verified input "ok".
+   */
+  const probeSeqRef = useRef(0);
 
   const valid = provider.trim().length > 0 && label.trim().length > 0 && secret.trim().length > 0;
   const probedOk = probe?.status === 'ok';
 
+  /**
+   * Round 2 P1: a verified probe belongs to the exact inputs it verified.
+   * Editing any probe input (provider, secret, transport) invalidates the
+   * probe and retires the idempotency key, so (a) "probe key A, edit secret
+   * to key B, connect" can never persist a never-verified secret, and
+   * (b) "create fails, edit an input, retry" mints a fresh key instead of
+   * colliding with the failed attempt's 409. Label/fallback are not probe
+   * inputs and don't invalidate.
+   */
+  useEffect(() => {
+    setProbe(null);
+    idempotencyKeyRef.current = null;
+    probeSeqRef.current += 1;
+  }, [provider, secret, transport]);
+
   const runProbe = async () => {
     if (!valid || probing) return;
+    const seq = probeSeqRef.current;
     setProbing(true);
     setProbe(null);
     setSaveError(null);
@@ -91,9 +114,13 @@ export function ConnectKeyForm({
           proof,
         ),
       );
-      setProbe(result);
+      // Superseded by an input edit while the probe was in flight — the
+      // inputs it verified are no longer the current inputs.
+      if (seq === probeSeqRef.current) setProbe(result);
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      // Stale-input errors are discarded silently (seq mismatch); only the
+      // current inputs' failure surfaces.
+      if (seq === probeSeqRef.current && (err as Error).name !== 'AbortError') {
         setProbe({
           status: 'failed',
           latency_ms: 0,
@@ -104,12 +131,21 @@ export function ConnectKeyForm({
         });
       }
     } finally {
+      // The probe settled — the form is idle again whether the result was
+      // applied (seq match) or discarded (superseded by an edit). Only the
+      // result above is sequence-gated.
       abortRef.current = null;
       setProbing(false);
     }
   };
 
-  const cancelProbe = () => abortRef.current?.abort();
+  // Round 2 P2: aborting the fetch doesn't settle the step-up modal (the
+  // fetch already rejected — that's why the modal opened). Cancel must
+  // also fail that pending request so the modal dismisses.
+  const cancelProbe = () => {
+    abortRef.current?.abort();
+    cancelStepUpFor('probe ');
+  };
 
   const connect = () => {
     if (!probedOk) return;

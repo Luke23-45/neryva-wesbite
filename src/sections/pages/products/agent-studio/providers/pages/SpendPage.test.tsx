@@ -3,7 +3,8 @@
  * SpendPage — targeted tests (ported from the retired TabSpend suite):
  * - BYOK list-price figure is ALWAYS labeled "list-price equivalent — not billed";
  *   omitted when the engine reports no BYOK spend
- * - include_byok_spend toggle PATCHes { preferences: { include_byok_spend } }
+ * - include_byok_spend toggle PATCHes { include_byok_spend } at the
+ *   /spend/budget endpoint (atomic merge with the cap/breach keys)
  * - cap editor validation: non-negative USD (2 decimals) or blank; saves as
  *   integer cents; blank saves null (unlimited)
  * - fee panel renders engine-truth numbers + the PRV-008 provisional label
@@ -192,12 +193,16 @@ beforeEach(() => {
 });
 
 describe('SpendPage honesty labels', () => {
-  it('labels the BYOK figure as list-price equivalent, never billed', async () => {
+  it('leads with settled platform spend; the BYOK figure is a labeled second line', async () => {
     renderPage();
+    // The mixed openai row leads with its settled platform spend ($12.40),
+    // not the BYOK list-price equivalent — settled money is never hidden.
     await waitFor(() => {
-      expect(screen.getAllByText('$88.10').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText('$12.40').length).toBeGreaterThanOrEqual(2);
     });
-    expect(screen.getAllByText(LIST_PRICE_LABEL).length).toBeGreaterThanOrEqual(2);
+    // The BYOK list-price equivalent is labeled context ("not billed"),
+    // never the headline.
+    expect(screen.getByText(/BYOK list-price equivalent — not billed/)).toBeTruthy();
   });
 
   it('omits the BYOK card and label when the engine reports no BYOK spend', async () => {
@@ -278,13 +283,14 @@ describe('SpendPage per-credential table', () => {
     expect(screen.getByText(/the platform pool is included/)).toBeTruthy();
   });
 
-  it('renders the dominant error as a warning pill', async () => {
+  it('renders the dominant error as a human-labeled warning pill', async () => {
     hoisted.credentials = [credFixture('c1')];
     renderPage();
-    // usageFixture has a single 429.
+    // usageFixture has a single 429 — the pill shows human copy, not the raw code.
     await waitFor(() => {
-      expect(screen.getByText('429 ×1')).toBeTruthy();
+      expect(screen.getByText('Rate limited ×1')).toBeTruthy();
     });
+    expect(screen.queryByText('429 ×1')).toBeNull();
   });
 
   it('renders "—" for errors when the breakdown is clean', async () => {
@@ -318,7 +324,7 @@ describe('SpendPage per-credential table', () => {
 });
 
 describe('SpendPage include_byok_spend toggle', () => {
-  it('PATCHes { preferences: { include_byok_spend: true } }', async () => {
+  it('PATCHes { include_byok_spend: true } through the budget endpoint', async () => {
     renderPage();
     const toggle = await screen.findByRole('switch', { name: /Include BYOK spend/i });
     fireEvent.click(toggle);

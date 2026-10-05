@@ -15,7 +15,7 @@
  * carries it the sub-line shows the compact form (128K/1M), otherwise "—";
  * nothing is invented.
  */
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import styled, { css } from 'styled-components';
 import { useOrg } from '@/Context/OrgContext';
 import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers/priceFormat';
@@ -207,12 +207,14 @@ const Fingerprint = styled.span`
 const TableWrap = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 const StyledTable = styled.table`
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 13px;
 `;
@@ -643,6 +645,28 @@ export function ModelsPage() {
   const [reasoningOpen, setReasoningOpen] = useState<Record<string, boolean>>({});
   const [searchInput, setSearchInput] = useState('');
 
+  /**
+   * Escape in the search field clears the query (and blurs) — scoped to the
+   * search field via the wrapper ref so it never closes anything else
+   * (Models has no drawer or chips, unlike Catalog). Mirrors Catalog's
+   * scoped Escape handling.
+   */
+  const searchWrapRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const target = e.target as Node | null;
+      // `e.target` can be `window` itself (or another non-Node) when the
+      // event is dispatched on window — guard before calling contains().
+      if (target instanceof Node && searchWrapRef.current?.contains(target)) {
+        setSearchInput('');
+        (target as HTMLElement).blur?.();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   const groups: GroupedModels = useMemo(
     () => data ?? { platform: [], byok: [], default_model: null, degraded: [] },
     [data],
@@ -701,6 +725,26 @@ export function ModelsPage() {
     return defaultSel.model_id;
   }, [groups.platform, groups.byok, defaultSel]);
 
+  /**
+   * The stored default resolves to catalog row(s) that exist but cannot
+   * currently serve as the default (disabled, unusable, or above the org's
+   * tier — e.g. a lapsed tier turning a row `subscription_required`).
+   * `defaultDangling` covers "no row at all"; without this branch the
+   * DefaultBar would present the name as the effective default with no
+   * qualification. Uses the same defaultability rule as the row radios.
+   */
+  const defaultNonServing = useMemo(() => {
+    if (!defaultSel || defaultDangling) return false;
+    for (const g of [...groups.platform, ...groups.byok]) {
+      if (g.provider !== defaultSel.provider) continue;
+      for (const m of g.models) {
+        if (m.model_id !== defaultSel.model_id) continue;
+        if (isDefaultableModel(tier, m)) return false;
+      }
+    }
+    return true;
+  }, [groups.platform, groups.byok, defaultSel, defaultDangling, tier]);
+
   const defaultUnknown = degradedSet.has('default_model');
 
   const handleDefaultChange = (group: ModelGroupView, model: ModelRowView) => {
@@ -716,7 +760,9 @@ export function ModelsPage() {
           toast.error(
             status === 422
               ? "That model isn't available for your organization — the default was not changed."
-              : 'Could not save the default model — your previous default was restored.',
+              : status === 503
+                ? 'Could not verify your saved model settings — the default was not changed. Try again.'
+                : 'Could not save the default model — your previous default was restored.',
           );
         },
       },
@@ -738,28 +784,30 @@ export function ModelsPage() {
 
   const q = searchInput.trim().toLowerCase();
   /** Search matches model names/ids AND provider names — never silently narrows past the default. */
-  const matches = (g: ModelGroupView, m: ModelRowView) =>
-    q.length === 0 ||
-    m.display_name.toLowerCase().includes(q) ||
-    m.model_id.toLowerCase().includes(q) ||
-    g.provider.toLowerCase().includes(q) ||
-    g.provider_display_name.toLowerCase().includes(q);
+  const matches = useCallback(
+    (g: ModelGroupView, m: ModelRowView) =>
+      q.length === 0 ||
+      m.display_name.toLowerCase().includes(q) ||
+      m.model_id.toLowerCase().includes(q) ||
+      g.provider.toLowerCase().includes(q) ||
+      // A missing display name must never 500 the page — client search degrades to "".
+      (g.provider_display_name ?? '').toLowerCase().includes(q),
+    [q],
+  );
 
   const platformGroups = useMemo(
     () =>
       groups.platform
         .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
         .filter((g) => g.models.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [groups.platform, q],
+    [groups.platform, matches],
   );
   const byokGroups = useMemo(
     () =>
       groups.byok
         .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
         .filter((g) => g.models.length > 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [groups.byok, q],
+    [groups.byok, matches],
   );
 
   const total = groups.platform.reduce((n, g) => n + g.models.length, 0) +
@@ -912,6 +960,7 @@ export function ModelsPage() {
       />
     ) : (
       <Tooltip
+        focusable
         label={
           gated
             ? `Requires ${model.required_product_label} for this model to be the default`
@@ -930,8 +979,8 @@ export function ModelsPage() {
       </Tooltip>
     );
 
-    const inputPrice = model.pricing ? formatUsd(model.pricing.input_per_1m) : null;
-    const outputPrice = model.pricing ? formatUsd(model.pricing.output_per_1m) : null;
+    const inputPrice = model.pricing?.input_per_1m ? formatUsd(model.pricing.input_per_1m) : null;
+    const outputPrice = model.pricing?.output_per_1m ? formatUsd(model.pricing.output_per_1m) : null;
     const isOperatorPriced = model.pricing_source === 'operator_declared';
 
     const switchNode = (
@@ -964,11 +1013,12 @@ export function ModelsPage() {
       // When the cost-points sub-read degraded, "—" means "could not load",
       // never "not published".
       return supergroup === 'byok' ? (
-        <Tooltip label="Billed directly by your provider — no platform price published">
+        <Tooltip focusable label="Billed directly by your provider — no platform price published">
           <DimText>Direct</DimText>
         </Tooltip>
       ) : (
         <Tooltip
+          focusable
           label={
             pricesDegraded
               ? 'Pricing could not be loaded — showing no price rather than a stale one'
@@ -1030,7 +1080,7 @@ export function ModelsPage() {
               model.capabilities[cap] ? <MiniBadge key={cap}>{CAPABILITY_LABELS[cap]}</MiniBadge> : null,
             )}
             {!model.capabilities.tools && (
-              <Tooltip label="Models without native tool calling cannot run assistants that use tools">
+              <Tooltip focusable label="Models without native tool calling cannot run assistants that use tools">
                 <NoToolsTag>No tools</NoToolsTag>
               </Tooltip>
             )}
@@ -1045,11 +1095,12 @@ export function ModelsPage() {
         </BodyCell>
         <BodyCell>
           {pinsDegraded ? (
-            <Tooltip label="Could not load usage information">
+            <Tooltip focusable label="Could not load usage information">
               <DimText>—</DimText>
             </Tooltip>
           ) : model.pinned_by.length > 0 ? (
             <Tooltip
+              focusable
               label={model.pinned_by.map((p) => `${p.assistant_id} (v${p.version})`).join(', ')}
             >
               <DimText>
@@ -1065,6 +1116,7 @@ export function ModelsPage() {
         <BodyCell>
           {gated ? (
             <Tooltip
+              focusable
               label={providerGated ? TIER_GATE_NUDGE : `Requires ${model.required_product_label} plan to enable`}
             >
               <span style={{ display: 'inline-block' }}>{switchNode}</span>
@@ -1117,7 +1169,7 @@ export function ModelsPage() {
                  * client-side split is possible — or needed.
                  */}
                 <tr>
-                  <ProviderSubHeadCell colSpan={8} scope="row">
+                  <ProviderSubHeadCell colSpan={8} scope="rowgroup">
                     {group.provider_display_name} · {group.models.length}
                   </ProviderSubHeadCell>
                 </tr>
@@ -1137,15 +1189,15 @@ export function ModelsPage() {
           <ViewTitle>Models</ViewTitle>
           <ViewSubtitle>Turn models on or off for your organization.</ViewSubtitle>
         </ViewHeader>
-        <SkeletonWrap aria-busy="true" aria-label="Loading models">
+        <SkeletonWrap role="status" aria-label="Loading models">
           {/* Toolbar mirror: search field + count line. */}
-          <SkeletonBlock $h="36px" $w="320px" />
-          <SkeletonBlock $h="14px" $w="240px" />
+          <SkeletonBlock $h="36px" $w="320px" aria-hidden="true" />
+          <SkeletonBlock $h="14px" $w="240px" aria-hidden="true" />
           {/* Table mirror: header row + body rows. */}
-          <SkeletonBlock $h="41px" />
-          <SkeletonBlock $h="64px" />
-          <SkeletonBlock $h="64px" />
-          <SkeletonBlock $h="64px" />
+          <SkeletonBlock $h="41px" aria-hidden="true" />
+          <SkeletonBlock $h="64px" aria-hidden="true" />
+          <SkeletonBlock $h="64px" aria-hidden="true" />
+          <SkeletonBlock $h="64px" aria-hidden="true" />
         </SkeletonWrap>
       </ViewShell>
     );
@@ -1179,7 +1231,7 @@ export function ModelsPage() {
       </ViewHeader>
 
       <Toolbar>
-        <SearchWrap>
+        <SearchWrap ref={searchWrapRef}>
           <SearchField
             value={searchInput}
             onChange={setSearchInput}
@@ -1200,7 +1252,7 @@ export function ModelsPage() {
         <SectionNote>The default model is hidden by the current search.</SectionNote>
       )}
 
-      <DefaultBar aria-label="Default model for new assistants">
+      <DefaultBar role="region" aria-label="Default model for new assistants">
         <DefaultBarLabel>Default for new assistants</DefaultBarLabel>
         {defaultUnknown ? (
           <>
@@ -1219,6 +1271,10 @@ export function ModelsPage() {
         ) : defaultDangling ? (
           <DefaultBarValue $warning>
             Model unavailable — no longer offered ({defaultSel.provider} / {defaultSel.model_id})
+          </DefaultBarValue>
+        ) : defaultNonServing ? (
+          <DefaultBarValue $warning>
+            {defaultDisplayName} — can't currently serve (check availability or plan)
           </DefaultBarValue>
         ) : (
           <DefaultBarValue>{defaultDisplayName}</DefaultBarValue>

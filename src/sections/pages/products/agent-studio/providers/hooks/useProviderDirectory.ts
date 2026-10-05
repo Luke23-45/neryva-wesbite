@@ -7,7 +7,7 @@ import {
 } from '../api';
 
 export interface ProviderDirectoryFilters {
-  /** Free-text search over names, models, tags (server-side). */
+  /** Free-text search over provider names, display names, and model ids/names (server-side). */
   search?: string;
   /** Tier pre-filter (server-side). */
   tier?: OrgModelTier;

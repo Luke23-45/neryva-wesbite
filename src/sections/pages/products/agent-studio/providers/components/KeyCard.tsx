@@ -125,11 +125,12 @@ function tierLabelFor(tier: OrgTier): string | null {
   }
 }
 
-/** "Nov 12" — matches the design's attestation recency format. */
+/** "Nov 12" — matches the design's attestation recency format; pinned to
+ * en-US so the shape never shifts with the viewer's locale. */
 function formatShortDate(iso: string): string | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /** Relative recency for the failed card's verify line, e.g. "2 min ago". */
@@ -212,6 +213,9 @@ export function KeyCard({
   const [rotateOpen, setRotateOpen] = useState(false);
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [newSecret, setNewSecret] = useState('');
+  // Inline validation for the rotate dialog (P2): an empty confirm must say
+  // so in the dialog, never silently no-op.
+  const [rotateError, setRotateError] = useState<string | null>(null);
   const [revokeReason, setRevokeReason] = useState('');
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastErrorAt, setLastErrorAt] = useState<number | null>(null);
@@ -230,8 +234,16 @@ export function KeyCard({
         setLastErrorAt(null);
       },
       onError: (err) => {
-        setLastError(err.message);
+        // A verify failure on a healthy card must be visible (P1): the
+        // failed card's summary already shows lastError, but the healthy
+        // card never surfaces it — actionError announces it to assistive
+        // tech there. Scoped to !failed so the failed card doesn't render
+        // the same message twice.
+        const message =
+          err instanceof Error && err.message ? err.message : 'Verification failed. Try again.';
+        setLastError(message);
         setLastErrorAt(Date.now());
+        if (!failed) setActionError(message);
       },
     });
   };
@@ -455,9 +467,17 @@ export function KeyCard({
       <KeyRow label="Priority">
         <div style={{ ...row, flexWrap: 'wrap' }}>
           <div
-            role="button"
+            // The handle's keyboard model is positional (ArrowUp/ArrowDown move
+            // the card within its provider group), so slider with a vertical
+            // orientation and the position as its value is the honest role —
+            // not button, which would imply activation.
+            role="slider"
+            aria-orientation="vertical"
+            aria-valuemin={1}
+            aria-valuemax={providerCount}
+            aria-valuenow={providerIndex + 1}
             tabIndex={revoked ? -1 : 0}
-            aria-label={`Reorder ${credential.label}: drag, or press arrow keys`}
+            aria-label={`Reorder ${credential.label}: position ${providerIndex + 1} of ${providerCount}. Drag, or press arrow keys.`}
             aria-disabled={revoked}
             onPointerDown={revoked ? undefined : onHandlePointerDown}
             onPointerMove={revoked ? undefined : onHandlePointerMove}
@@ -635,6 +655,18 @@ export function KeyCard({
           {mutations.verify.isPending ? 'Syncing…' : 'Sync / Refresh Models'}
         </button>
         <span style={{ flex: 1 }} />
+        {/* Round 2 P0: wire up the orphaned custom-provider edit route. Shown
+            for custom-endpoint credentials (base_url present) that aren't
+            revoked; revoked rows are never mutated. */}
+        {credential.base_url != null && !revoked && (
+          <Link
+            to="/agent-studio/providers/custom/$credentialId/edit"
+            params={{ credentialId: credential.id }}
+            style={{ color: colors.accent, fontSize: 13, textDecoration: 'none' }}
+          >
+            Edit endpoint →
+          </Link>
+        )}
         <Link
           to="/agent-studio/activity"
           search={{ q: credential.label }}
@@ -653,9 +685,15 @@ export function KeyCard({
         onCancel={() => {
           setRotateOpen(false);
           setNewSecret('');
+          setRotateError(null);
         }}
         onConfirm={() => {
-          if (!newSecret.trim()) return;
+          // Empty secret must fail loudly inside the dialog (P2) — never a
+          // silent no-op on confirm.
+          if (!newSecret.trim()) {
+            setRotateError('Enter the new secret — rotation can’t proceed with an empty key.');
+            return;
+          }
           setActionError(null);
           mutations.rotate.mutate(
             { id: credential.id, secret: newSecret.trim() },
@@ -663,11 +701,13 @@ export function KeyCard({
               onSuccess: () => {
                 setRotateOpen(false);
                 setNewSecret('');
+                setRotateError(null);
               },
               onError: (err) => {
                 setActionError(err.message);
                 setRotateOpen(false);
                 setNewSecret('');
+                setRotateError(null);
               },
             },
           );
@@ -678,9 +718,17 @@ export function KeyCard({
           type="password"
           autoComplete="off"
           value={newSecret}
-          onChange={(e) => setNewSecret(e.target.value)}
+          onChange={(e) => {
+            setNewSecret(e.target.value);
+            if (rotateError) setRotateError(null);
+          }}
           hint="Write-only. The plaintext is never displayed again."
         />
+        {rotateError && (
+          <p role="alert" style={{ ...errorCallout, marginTop: 8 }}>
+            {rotateError}
+          </p>
+        )}
       </ConfirmDialog>
 
       {revokeDialog}
@@ -750,11 +798,11 @@ function UsageSummary({
 
   return (
     <p style={{ ...bodyText, margin: 0 }}>
-      {usage.requests.toLocaleString()} requests ·{' '}
+      {usage.requests.toLocaleString('en-US')} requests ·{' '}
       <span
-        title={`${usage.tokens.prompt.toLocaleString()} prompt · ${usage.tokens.completion.toLocaleString()} completion`}
+        title={`${usage.tokens.prompt.toLocaleString('en-US')} prompt · ${usage.tokens.completion.toLocaleString('en-US')} completion`}
       >
-        {usage.tokens.total.toLocaleString()} tokens
+        {usage.tokens.total.toLocaleString('en-US')} tokens
       </span>{' '}
       · ${usage.spend_usd}
       {usage.pricing_basis === 'list' && (
@@ -834,7 +882,7 @@ function AttestationEditor({
       {credential.attested_by && (
         <p style={hintText}>
           Attested by {credential.attested_by}
-          {credential.attested_at ? ` on ${new Date(credential.attested_at).toLocaleString()}` : ''}
+          {credential.attested_at ? ` on ${formatShortDate(credential.attested_at) ?? 'an unknown date'}` : ''}
         </p>
       )}
     </>
@@ -883,9 +931,22 @@ function ScopeFilterEditor({
       .flatMap((m) => m.pinned_by.map((p) => ({ model: m.model_id, ...p })));
   }, [restricted, grouped.data, credential.id, selected]);
 
+  // Normalize both sides (split/trim/join) before comparing: without it,
+  // "a, b" vs "a,b" keeps Save dirty forever after a save normalizes the
+  // server value.
+  const assistantsNormalized = assistantsText
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(', ');
+  const credentialAssistantsNormalized = (credential.allowed_assistants ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(', ');
+
   const dirty =
     JSON.stringify(selected ?? null) !== JSON.stringify(credential.allowed_models ?? null) ||
-    assistantsText.trim() !== (credential.allowed_assistants ?? []).join(', ');
+    assistantsNormalized !== credentialAssistantsNormalized;
 
   const save = () => {
     setSaving(true);

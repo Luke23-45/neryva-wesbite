@@ -31,6 +31,7 @@ export const spendKeys = {
 interface BudgetPatchResult {
   cap_usd_cents: number | null;
   breach_action: 'refuse' | 'alert_only';
+  include_byok_spend: boolean;
 }
 
 interface OptimisticSummaryCtx {
@@ -45,7 +46,9 @@ export interface SpendMutations {
     typeof useMutation<BudgetPatchResult, Error, 'refuse' | 'alert_only', OptimisticSummaryCtx>
   >;
   /** BYOK toggle — optimistic with rollback, like the breach radio. */
-  patchIncludeByok: ReturnType<typeof useMutation<Record<string, unknown>, Error, boolean, OptimisticSummaryCtx>>;
+  patchIncludeByok: ReturnType<
+    typeof useMutation<BudgetPatchResult, Error, boolean, OptimisticSummaryCtx>
+  >;
   exportSpend: ReturnType<typeof useMutation<void, Error, 'csv' | 'json'>>;
 }
 
@@ -93,8 +96,23 @@ export function useSpendMutations(orgId: string): SpendMutations {
     );
     return { prev };
   };
-  const rollbackSummary = (context: OptimisticSummaryCtx | undefined) => {
-    context?.prev.forEach(([key, data]) => queryClient.setQueryData(key, data));
+  /**
+   * Per-key rollback: restore only the budget key this mutation touched,
+   * from its pre-mutation snapshot, leaving any concurrently-succeeded
+   * sibling key (e.g. a BYOK flip that landed while a breach flip failed)
+   * intact in the UI. The onSettled refetch still reconciles everything
+   * against the server.
+   */
+  const rollbackBudgetKey = (
+    context: OptimisticSummaryCtx | undefined,
+    key: 'breach_action' | 'include_byok_spend',
+  ) => {
+    context?.prev.forEach(([qk, snapshot]) => {
+      queryClient.setQueryData<SpendSummaryView>(qk, (current) => {
+        if (!current || !snapshot?.budget) return current;
+        return { ...current, budget: { ...current.budget, [key]: snapshot.budget[key] } };
+      });
+    });
   };
 
   const patchBudget = useMutation({
@@ -110,7 +128,7 @@ export function useSpendMutations(orgId: string): SpendMutations {
         ...old,
         budget: { ...old.budget, breach_action: action },
       })),
-    onError: (_err, _action, context) => rollbackSummary(context),
+    onError: (_err, _action, context) => rollbackBudgetKey(context, 'breach_action'),
     onSuccess: () => invalidateSpend(),
   });
 
@@ -121,7 +139,7 @@ export function useSpendMutations(orgId: string): SpendMutations {
         ...old,
         budget: { ...old.budget, include_byok_spend: include },
       })),
-    onError: (_err, _include, context) => rollbackSummary(context),
+    onError: (_err, _include, context) => rollbackBudgetKey(context, 'include_byok_spend'),
     onSuccess: () => invalidateSpend(),
   });
 

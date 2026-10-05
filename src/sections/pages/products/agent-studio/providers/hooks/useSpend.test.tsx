@@ -200,4 +200,39 @@ describe('useSpendMutations BYOK toggle (patchIncludeByok)', () => {
     });
     await waitFor(() => expect(cachedBudget(client).include_byok_spend).toBe(false));
   });
+
+  it('per-key rollback: a failed breach flip does not clobber an in-flight BYOK flip', async () => {
+    const dBreach = deferred<{ cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' }>();
+    const dByok = deferred<Record<string, unknown>>();
+    hoisted.patchSpendBudget.mockImplementation(() => dBreach.promise);
+    hoisted.patchIncludeByokSpend.mockImplementation(() => dByok.promise);
+    const { client, result } = setup();
+    client.setQueryData(spendKeys.summary(ORG, '7d'), summaryFixture());
+
+    // Both flips in flight: breach first, then BYOK.
+    act(() => {
+      result.current.patchBreachAction.mutate('alert_only');
+    });
+    await waitFor(() => expect(cachedBudget(client).breach_action).toBe('alert_only'));
+    act(() => {
+      result.current.patchIncludeByok.mutate(true);
+    });
+    await waitFor(() => expect(cachedBudget(client).include_byok_spend).toBe(true));
+
+    // The breach flip fails: only breach_action rolls back. The BYOK flip is
+    // still in flight and must keep its optimistic value (a whole-object
+    // rollback would restore the pre-BYK snapshot and clobber it).
+    await act(async () => {
+      dBreach.reject(new Error('radio rejected'));
+    });
+    await waitFor(() => expect(cachedBudget(client).breach_action).toBe('refuse'));
+    expect(cachedBudget(client).include_byok_spend).toBe(true);
+
+    // Clean up: let the BYOK flip succeed.
+    await act(async () => {
+      dByok.resolve({});
+    });
+    await waitFor(() => expect(result.current.patchIncludeByok.isPending).toBe(false));
+    expect(cachedBudget(client).include_byok_spend).toBe(true);
+  });
 });

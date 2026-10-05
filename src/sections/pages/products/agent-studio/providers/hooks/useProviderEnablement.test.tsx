@@ -90,4 +90,30 @@ describe('useSetProviderEnabled', () => {
     const data = client.getQueryData<{ providers: ProviderDirectoryEntry[] }>(key);
     expect(data?.providers.find((p) => p.provider === 'openai')?.connection.enabled).toBe(true);
   });
+
+  it('a failed toggle does not clobber a concurrent toggle', async () => {
+    postMock.mockImplementation((_orgId: unknown, provider: unknown) =>
+      provider === 'openai'
+        ? Promise.reject(new Error('forbidden'))
+        : Promise.resolve({ enablement: { provider, enabled: true } }),
+    );
+    const { client, key, wrapper } = setup();
+    const { result } = renderHook(() => useSetProviderEnabled('org-1'), { wrapper });
+
+    await act(async () => {
+      result.current.mutate(
+        { provider: 'openai', enabled: false },
+        { onError: () => undefined },
+      );
+      result.current.mutate({ provider: 'anthropic', enabled: true });
+    });
+
+    // openai flips back only after its own failure; anthropic's optimistic
+    // flip must survive the whole time — never wiped by openai's rollback.
+    await waitFor(() => {
+      const data = client.getQueryData<{ providers: ProviderDirectoryEntry[] }>(key);
+      expect(data?.providers.find((p) => p.provider === 'openai')?.connection.enabled).toBe(true);
+      expect(data?.providers.find((p) => p.provider === 'anthropic')?.connection.enabled).toBe(true);
+    });
+  });
 });

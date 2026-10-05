@@ -54,6 +54,28 @@ export function requestStepUp(act: string): Promise<string> {
   return useStepUpStore.getState().request(act);
 }
 
+/**
+ * Cancel the pending step-up request when it belongs to the given act
+ * (prefix match, e.g. 'probe '). Probe cancel buttons abort the in-flight
+ * fetch, but that never settles the MFA modal — the fetch already rejected
+ * (that's why the modal opened) — so the modal would linger after Cancel.
+ * Failing the pending request closes the modal and lets the awaiting
+ * `runWithStepUp` fall through to its caller. The rejection is an
+ * AbortError so probe handlers treat it as a cancel, not a failure. Only
+ * requests for the given act are touched — a concurrent rotate/connect
+ * modal is never disturbed. Returns true when a request was cancelled.
+ */
+export function cancelStepUpFor(actPrefix: string): boolean {
+  const { pending, fail } = useStepUpStore.getState();
+  if (pending && pending.act.startsWith(actPrefix)) {
+    const err = new Error('Probe cancelled');
+    err.name = 'AbortError';
+    fail(err);
+    return true;
+  }
+  return false;
+}
+
 /** True when the engine rejected an act because it needs a fresh MFA proof. */
 export function isStepUpRequired(error: unknown): boolean {
   return error instanceof ApiError && error.code === 'step_up_required';

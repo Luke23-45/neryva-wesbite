@@ -53,10 +53,17 @@ function fmtCtx(tokens: number | null | undefined): string | null {
 }
 
 /** USD/1M pair straight from the row — absent when the engine sent none.
- * Operator-declared prices (PRV-035) are labeled (Law VII). */
+ * Each side renders only if declared (Law VII: never invent a price for an
+ * undeclared side). Operator-declared prices (PRV-035) are labeled. */
 function priceLine(row: BuilderModelRow): string {
-  if (!row.pricing) return 'Pricing not listed';
-  const base = `$${row.pricing.input_per_1m}/1M in · $${row.pricing.output_per_1m}/1M out`;
+  const p = row.pricing;
+  if (!p || (p.input_per_1m === undefined && p.output_per_1m === undefined)) {
+    return 'Pricing not listed';
+  }
+  const parts: string[] = [];
+  if (p.input_per_1m !== undefined) parts.push(`$${p.input_per_1m}/1M in`);
+  if (p.output_per_1m !== undefined) parts.push(`$${p.output_per_1m}/1M out`);
+  const base = parts.join(' · ');
   return row.pricingSource === 'operator_declared' ? `${base} (operator-declared)` : base;
 }
 

@@ -49,7 +49,7 @@ export interface BuilderModelRow {
   /** Human label from the engine — never invented here. */
   requiredProductLabel: string | null;
   /** Catalog list prices, USD/1M strings — absent when unpriced. */
-  pricing?: { input_per_1m: string; output_per_1m: string };
+  pricing?: { input_per_1m?: string; output_per_1m?: string };
   /** PRV-035 — `operator_declared` prices are labeled in the picker (Law VII). */
   pricingSource?: 'catalog' | 'operator_declared';
   /** Assistants whose LIVE published pipeline pins this exact triple. IDs only —

@@ -28,12 +28,13 @@ import type { ProviderDirectoryEntry } from '../api';
 
 const mutateMock = vi.hoisted(() => vi.fn());
 const tierOverride = vi.hoisted(() => ({ current: 'payg' }));
+const roleOverride = vi.hoisted(() => ({ current: 'owner' }));
 const providersOverride = vi.hoisted(
   () => ({ current: null }) as { current: import('../api').ProviderDirectoryEntry[] | null },
 );
 
 vi.mock('@/Context/OrgContext', () => ({
-  useOrg: () => ({ orgId: 'org-1' }),
+  useOrg: () => ({ orgId: 'org-1', role: roleOverride.current }),
 }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -159,6 +160,7 @@ beforeEach(() => {
   mutateMock.mockReset();
   providersOverride.current = null;
   tierOverride.current = 'payg';
+  roleOverride.current = 'owner';
 });
 
 describe('catalog pure helpers', () => {
@@ -315,6 +317,19 @@ describe('CatalogPage', () => {
     expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'acme-byok', enabled: true });
   });
 
+  it('a developer sees disabled access switches plus the honest hint — the engine rejects developers with 403', () => {
+    // The catalog toggle endpoint is owner/admin-only (unlike the Models
+    // endpoints, which accept developers) — a developer must never see an
+    // interactive switch that only 403s.
+    roleOverride.current = 'developer';
+    renderPage();
+    expect(screen.getByText('Only owners and admins can change provider access.')).toBeTruthy();
+    const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
+    expect(sw).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(sw);
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
   it('renders the dashed custom-endpoint row and the footer copy', () => {
     renderPage();
     expect(screen.getByRole('link', { name: /Connect custom endpoint/ })).toHaveAttribute(
@@ -338,7 +353,7 @@ describe('CatalogPage', () => {
     const sw = screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' });
     expect(sw).toHaveAttribute('aria-disabled', 'true');
     const nudge = screen.getByRole('link', { name: 'Top up credits to enable' });
-    expect(nudge).toHaveAttribute('href', '/platform/billing');
+    expect(nudge).toHaveAttribute('href', '/agent-studio/settings/pricing');
     // A disabled switch cannot trigger the toggle — the guard never fires the API.
     fireEvent.click(sw);
     expect(mutateMock).not.toHaveBeenCalled();

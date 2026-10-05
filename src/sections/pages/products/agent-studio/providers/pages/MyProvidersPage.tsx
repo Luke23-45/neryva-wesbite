@@ -45,11 +45,13 @@ const enterprisePill: CSSProperties = {
 };
 
 /**
- * Tier-resolution skeleton (P1-4): while `useOrgTier()` reports 'unknown'
- * the page renders this instead of the management UI, so a slow
- * entitlement cache can never flash the wrong surface.
+ * Tier-resolution / list-loading skeleton (P1-4): while `useOrgTier()`
+ * reports 'unknown' — or the credential list is still loading — the page
+ * renders this instead of the management UI / bare loading text, so a
+ * slow entitlement cache can never flash the wrong surface and refetches
+ * never cause a layout shift.
  */
-function TierLoadingSkeleton() {
+function CredentialListSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading providers">
       {[0, 1].map((i) => (
@@ -183,7 +185,7 @@ export function MyProvidersPage() {
           <ViewTitle>My Providers</ViewTitle>
           <ViewSubtitle>Your connected API keys and custom endpoints.</ViewSubtitle>
         </ViewHeader>
-        <TierLoadingSkeleton />
+        <CredentialListSkeleton />
       </ViewShell>
     );
   }
@@ -208,29 +210,35 @@ export function MyProvidersPage() {
   }
 
   /**
-   * Priority swap (P1-3): ONE atomic request applies the group's full new
-   * order — the engine persists it in a single transaction (all-or-nothing),
-   * replacing the old two-PATCH swap that could half-apply.
+   * Priority reorder (P1-3, Round 2 fix): ONE atomic request applies the
+   * group's full new order — the engine persists it in a single
+   * transaction (all-or-nothing), replacing the old two-PATCH swap that
+   * could half-apply.
    *
-   * The request carries every card in the provider group with its resulting
-   * priority: the two cards trade positions and every other card keeps its
-   * priority, so no invented values and no cross-group collisions. The hook
-   * applies the order optimistically and rolls back on failure; the error
-   * surfaces in the alert below, never swallowed.
+   * The group list preserves the page's display order (provider, then
+   * priority, then created_at) — index into it directly. Re-sorting by a
+   * different key here would target a different pair than the one the
+   * user sees.
+   *
+   * Priorities are re-based from the new display order (0..n-1). Every
+   * UI-created credential shares the engine default priority 0, so
+   * trading the two cards' old values would re-send an identical map —
+   * a silent no-op the engine happily 200s. Distinct index-based
+   * priorities make the new order actually persist; the engine accepts
+   * arbitrary values. The hook applies the order optimistically and
+   * rolls back on failure; the error surfaces in the alert below, never
+   * swallowed.
    */
   const swapPriorities = (aId: string, bId: string) => {
     const a = credentials.find((c) => c.id === aId);
     const b = credentials.find((c) => c.id === bId);
     if (!a || !b || a.id === b.id || a.provider !== b.provider) return;
-    const ordered = [...(groups.get(a.provider) ?? [])].sort(
-      (x, y) => x.priority - y.priority || x.id.localeCompare(y.id),
-    );
+    const ordered = [...(groups.get(a.provider) ?? [])];
     const ai = ordered.findIndex((c) => c.id === aId);
     const bi = ordered.findIndex((c) => c.id === bId);
     if (ai === -1 || bi === -1) return;
-    const priorities = ordered.map((c) => c.priority);
     [ordered[ai], ordered[bi]] = [ordered[bi], ordered[ai]];
-    const items = ordered.map((c, i) => ({ id: c.id, priority: priorities[i] }));
+    const items = ordered.map((c, i) => ({ id: c.id, priority: i }));
     setSwapError(null);
     reorder.mutate(items, {
       onError: (err) =>
@@ -292,7 +300,9 @@ export function MyProvidersPage() {
         </div>
       )}
 
-      {isLoading && <p style={hintText}>Loading credentials…</p>}
+      {/* Skeleton instead of bare loading text (P2): keeps the list layout
+          stable while the query loads or refetches. */}
+      {isLoading && <CredentialListSkeleton />}
       {isError && (
         <div style={errorCallout} role="alert">
           Couldn’t load your credentials.{' '}

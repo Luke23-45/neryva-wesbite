@@ -101,8 +101,8 @@ export interface ModelRowView {
   reasons: string[];
   /** Normalized four-key vocabulary (probed values win for display). */
   capabilities: Record<ProviderDirectoryCapability, boolean>;
-  /** Catalog list prices, USD/1M — absent when unpriced. */
-  pricing?: { input_per_1m: string; output_per_1m: string };
+  /** Catalog list prices, USD/1M — absent when unpriced; each side present only if declared. */
+  pricing?: { input_per_1m?: string; output_per_1m?: string };
   /**
    * PRV-035 — where the pricing came from. `operator_declared` = the
    * credential operator's manual declaration (Law VII: labeled, never
@@ -223,7 +223,7 @@ export async function fetchProviderDirectory(
     search?: string;
     tier?: OrgModelTier;
     capability?: ProviderDirectoryCapability;
-    /** Keep priced providers whose min input price (USD/1M) is at or under the cap. */
+    /** Keep priced providers whose min input price (USD/1M) is strictly under the cap. */
     maxInputPricePer1m?: number;
     /** Keep only providers with ≥1 staff-attested ZDR-capable model. */
     zdr?: boolean;
@@ -565,10 +565,11 @@ export interface SpendBudgetView {
   breach_action: 'refuse' | 'alert_only';
 }
 
-/** PATCH /console/org/:orgId/spend/budget payload — cap and/or breach action. */
+/** PATCH /console/org/:orgId/spend/budget payload — cap, breach action, and/or BYOK flag. */
 export interface SpendBudgetPatch {
   cap_usd_cents?: number | null;
   breach_action?: 'refuse' | 'alert_only';
+  include_byok_spend?: boolean;
 }
 
 export interface SpendFeeConfig {
@@ -616,30 +617,38 @@ export async function fetchSpendSummary(
 export async function patchSpendBudget(
   orgId: string,
   payload: SpendBudgetPatch,
-): Promise<{ cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' }> {
-  return engine<{ cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' }>(
-    `/console/org/${orgId}/spend/budget`,
-    {
-      method: 'PATCH',
-      body: payload,
-    },
-  );
+): Promise<{
+  cap_usd_cents: number | null;
+  breach_action: 'refuse' | 'alert_only';
+  include_byok_spend: boolean;
+}> {
+  return engine<{
+    cap_usd_cents: number | null;
+    breach_action: 'refuse' | 'alert_only';
+    include_byok_spend: boolean;
+  }>(`/console/org/${orgId}/spend/budget`, {
+    method: 'PATCH',
+    body: payload,
+  });
 }
 
 /**
- * The include_byok_spend toggle rides the existing
- * PATCH /console/org/:orgId/settings preferences (contract per E1 wave).
- * The response is the org settings record; the summary query is the source
- * of truth for the current toggle value.
+ * The include_byok_spend toggle rides PATCH /console/org/:orgId/spend/budget
+ * (not /settings): all three budget keys merge atomically server-side, so a
+ * BYOK toggle racing a cap save or breach-action flip can never silently
+ * drop the other write (the page's decoupled pending states make concurrent
+ * in-flight writes by design). The summary query stays the source of truth
+ * for the current toggle value.
  */
 export async function patchIncludeByokSpend(
   orgId: string,
   include: boolean,
-): Promise<Record<string, unknown>> {
-  return engine<Record<string, unknown>>(`/console/org/${orgId}/settings`, {
-    method: 'PATCH',
-    body: { preferences: { include_byok_spend: include } },
-  });
+): Promise<{
+  cap_usd_cents: number | null;
+  breach_action: 'refuse' | 'alert_only';
+  include_byok_spend: boolean;
+}> {
+  return patchSpendBudget(orgId, { include_byok_spend: include });
 }
 
 /** Enterprise audit export — step-up auth is engine-enforced; the download streams via engineDownload. */

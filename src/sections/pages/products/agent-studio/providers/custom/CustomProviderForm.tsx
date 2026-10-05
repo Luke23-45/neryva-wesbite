@@ -18,7 +18,7 @@ import { useOrg } from '@/Context/OrgContext';
 import { Dropdown } from '@/components/common/ui/Dropdown';
 import { TextInput } from '@/components/common/ui/TextInput';
 import { ApiError, randomIdempotencyKey } from '@/lib/engine/client';
-import { runWithStepUp } from '@/lib/engine/stepup';
+import { cancelStepUpFor, runWithStepUp } from '@/lib/engine/stepup';
 import {
   probeCredential,
   type DiscoveredModel,
@@ -65,11 +65,16 @@ const SCHEMES: Array<{ value: AuthScheme; label: string; hint: string }> = [
 ];
 
 interface HeaderRow {
+  // Stable row key (P2): rows are keyed by identity, not position, so
+  // deleting row 2 of 3 never scrambles the other rows' input state.
+  rowKey: string;
   name: string;
   value: string;
 }
 
 interface ManualModel {
+  // Stable row key (P2): see HeaderRow.
+  rowKey: string;
   id: string;
   displayName: string;
   contextWindow: string;
@@ -81,7 +86,12 @@ interface ManualModel {
   outputCost: string;
 }
 
+// Module-level row-key sequence — keys only need uniqueness within a form.
+let rowKeySeq = 0;
+const nextRowKey = () => `row-${++rowKeySeq}`;
+
 const emptyManualModel = (): ManualModel => ({
+  rowKey: nextRowKey(),
   id: '',
   displayName: '',
   contextWindow: '',
@@ -146,6 +156,7 @@ function manualModelToInput(m: ManualModel): ManualModelDeclarationInput {
 /** Engine view → form row (edit prefill; preserves all four capability flags). */
 function manualInputToModel(d: ManualModelDeclarationInput): ManualModel {
   return {
+    rowKey: nextRowKey(),
     id: d.id ?? '',
     displayName: d.display_name ?? '',
     contextWindow:
@@ -157,6 +168,20 @@ function manualInputToModel(d: ManualModelDeclarationInput): ManualModel {
     inputCost: d.input_cost_per_1m_usd ?? '',
     outputCost: d.output_cost_per_1m_usd ?? '',
   };
+}
+
+/** Guarded width hook — jsdom has no matchMedia; never throw there. */
+function useNarrow(breakpoint = 640): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [breakpoint]);
+  return narrow;
 }
 
 function slugify(label: string): string {
@@ -172,10 +197,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const { orgId } = useOrg();
   const navigate = useNavigate();
   const mutations = useCredentialMutations(orgId ?? '');
-  const { data: creds } = useCredentials(orgId);
+  const { data: creds, isLoading: credsLoading } = useCredentials(orgId);
   const editing: ProviderCredentialView | undefined = credentialId
     ? creds?.credentials.find((c) => c.id === credentialId)
     : undefined;
+  const narrow = useNarrow();
 
   const [label, setLabel] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -186,6 +212,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const [schemeHeader, setSchemeHeader] = useState('X-API-Key');
   const [secret, setSecret] = useState('');
   const [headers, setHeaders] = useState<HeaderRow[]>([]);
+  // Round 2 P0: explicit opt-in to replace the stored header set on edit.
+  // custom_headers is replace-on-write server-side — without this gate the
+  // edit form would send {} (the untouched editor state) and silently wipe
+  // the stored headers.
+  const [replaceHeaders, setReplaceHeaders] = useState(false);
   const [discoveryMode, setDiscoveryMode] = useState<'auto' | 'manual'>('auto');
   const [probing, setProbing] = useState(false);
   const [probe, setProbe] = useState<ProbeResult | null>(null);
@@ -197,20 +228,47 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const manualPrefilled = useRef(false);
+  const prefilled = useRef(false);
   /**
    * P1-3: one idempotency key per form submit intent. Reused across manual
    * retries of the same create — the engine replays the original instead
    * of duplicating the credential.
    */
   const idempotencyKeyRef = useRef<string | null>(null);
+  /**
+   * Round 2 P1: probe sequence — same contract as ConnectKeyForm. A probe
+   * in flight is identified by its input snapshot; the reset effect below
+   * bumps the sequence on every probe-input change, so a probe that
+   * resolves after an edit is discarded instead of marking stale inputs
+   * "ok".
+   */
+  const probeSeqRef = useRef(0);
 
-  // PRV-035 — prefill manual declarations on edit so the operator sees the
-  // current list and an edit never wipes it (the patch sends the full
-  // list; without this an untouched manual section would clear to []).
+  // Round 2 P0: FULL prefill from the stored credential. The old effect
+  // restored only manualModels — label/baseUrl/adapter/headers/residency/
+  // zdr/fallback started at defaults, so saving an edit silently reset
+  // every untouched field. Every editable field restores here.
+  //
+  // Two things are deliberately NOT editable on this surface: the sealed
+  // secret (N-3 PATCH has no secret field — rotation is the secret-change
+  // path, via Rotate on the key card) and the auth scheme (it only
+  // controls where a *new* secret is placed; nothing to change without a
+  // secret). Headers keep their stored values unless the operator opts
+  // into "Replace header set" — the engine only returns header *names*,
+  // so the editor can't prefill values it must never invent.
   useEffect(() => {
-    if (editing && !manualPrefilled.current) {
-      manualPrefilled.current = true;
+    if (editing && !prefilled.current) {
+      prefilled.current = true;
+      setLabel(editing.label);
+      // The slug is the routing identity — not editable after creation.
+      setSlug(editing.provider);
+      setSlugTouched(true);
+      const t = editing.transport;
+      setAdapter(t === 'anthropic' || t === 'ollama' ? t : 'openai-compatible');
+      setBaseUrl(editing.base_url ?? '');
+      setResidency(editing.region_attestation ?? 'global');
+      setZdr(editing.zdr_attestation ?? 'use_default');
+      setFallback(editing.shared_capacity_fallback ?? 'use_shared');
       const existing = Array.isArray(editing.manual_model_declarations)
         ? (editing.manual_model_declarations as ManualModelDeclarationInput[])
         : [];
@@ -222,6 +280,31 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   }, [editing]);
 
   const effectiveSlug = slugTouched ? slug : slugify(label);
+
+  // Header names the engine returns for the stored credential (values are
+  // write-only and never returned). Shown read-only on edit.
+  const existingHeaderNames = editing?.custom_header_names ?? [];
+
+  /**
+   * Round 2 P1: a verified probe belongs to the exact inputs it verified.
+   * Editing any probe input invalidates the probe (and the checked-model
+   * selection) and retires the idempotency key, so (a) "probe endpoint A,
+   * edit the URL/secret, save" can never persist a never-verified
+   * endpoint, and (b) "create fails, edit an input, retry" mints a fresh
+   * key instead of colliding with the failed attempt's 409. Residency, ZDR,
+   * and fallback are not probe inputs and don't invalidate. On create the
+   * label feeds the slug until the slug is edited by hand, so label edits
+   * invalidate via effectiveSlug; on edit the slug is fixed and label edits
+   * don't. The secret/scheme fields are hidden on edit, so there the live
+   * deps are the endpoint inputs.
+   */
+  useEffect(() => {
+    setProbe(null);
+    setCheckedModels(null);
+    idempotencyKeyRef.current = null;
+    probeSeqRef.current += 1;
+  }, [effectiveSlug, adapter, baseUrl, scheme, schemeHeader, secret, headers]);
+
   const urlCheck = useMemo(() => validateBaseUrl(baseUrl), [baseUrl]);
   const discovered: DiscoveredModel[] = useMemo(
     () => (probe?.status === 'ok' ? probe.models : []),
@@ -264,6 +347,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
 
   const runProbe = async () => {
     if (!orgId || probing || !urlOk) return;
+    const seq = probeSeqRef.current;
     setProbing(true);
     setProbe(null);
     setCheckedModels(null);
@@ -294,12 +378,18 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           proof,
         ),
       );
-      setProbe(result);
-      if (result.status === 'ok') {
-        setCheckedModels(result.models.map((m) => m.id));
+      // Superseded by an input edit while the probe was in flight — the
+      // inputs it verified are no longer the current inputs.
+      if (seq === probeSeqRef.current) {
+        setProbe(result);
+        if (result.status === 'ok') {
+          setCheckedModels(result.models.map((m) => m.id));
+        }
       }
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      // Stale-input errors are discarded silently (seq mismatch); only the
+      // current inputs' failure surfaces.
+      if (seq === probeSeqRef.current && (err as Error).name !== 'AbortError') {
         setProbe({
           status: 'failed',
           latency_ms: 0,
@@ -310,9 +400,20 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
         });
       }
     } finally {
+      // The probe settled — the form is idle again whether the result was
+      // applied (seq match) or discarded (superseded by an edit). Only the
+      // result above is sequence-gated.
       abortRef.current = null;
       setProbing(false);
     }
+  };
+
+  // Round 2 P2: aborting the fetch doesn't settle the step-up modal (the
+  // fetch already rejected — that's why the modal opened). Cancel must
+  // also fail that pending request so the modal dismisses.
+  const cancelProbe = () => {
+    abortRef.current?.abort();
+    cancelStepUpFor('probe ');
   };
 
   const buildCustomHeaders = (): Record<string, string> => {
@@ -327,7 +428,9 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   };
 
   const submit = async (mode: 'connect' | 'inactive') => {
-    if (!orgId || !canSave || (mode === 'connect' && !canSaveAndConnect)) return;
+    // On edit the probe gate doesn't apply (see the footer comment) — a
+    // valid form is sufficient; the engine re-verifies endpoint changes.
+    if (!orgId || !canSave || (!editing && mode === 'connect' && !canSaveAndConnect)) return;
     setSaving(true);
     setSubmitError(null);
     const allowed =
@@ -344,17 +447,25 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
       discoveryMode === 'manual' ? manualModels.map(manualModelToInput) : undefined;
     try {
       if (editing) {
+        // Round 2 P0: the patch only carries fields the operator changed or
+        // explicitly re-confirmed. custom_headers is replace-on-write —
+        // sending the untouched editor state ({}) would wipe the stored
+        // headers — so it's omitted unless "Replace header set" is on.
+        // allowed_models: undefined preserves the stored allow-list (this
+        // also fixes the P2 allow-list wipe: the old code sent null
+        // whenever discovery was untouched). A fresh probe with a narrowed
+        // selection is the only path that sends a new list.
         await mutations.patch.mutateAsync({
           id: editing.id,
           patch: {
             label: label.trim() || editing.label,
             base_url: baseUrl.trim(),
             transport: adapter,
-            custom_headers: buildCustomHeaders(),
-            allowed_models: allowed ?? null,
             shared_capacity_fallback: fallback as ProviderCredentialView['shared_capacity_fallback'],
             zdr_attestation: zdr,
             region_attestation: residency,
+            ...(replaceHeaders ? { custom_headers: buildCustomHeaders() } : {}),
+            ...(allowed !== undefined ? { allowed_models: allowed } : {}),
             ...(manualDeclarations !== undefined
               ? { manual_model_declarations: manualDeclarations }
               : {}),
@@ -407,6 +518,23 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
 
   if (!orgId) return null;
 
+  // Round 2 P0: the edit route is directly addressable — a bad or removed
+  // credentialId gets an honest not-found, never a blank create form.
+  if (credentialId && !credsLoading && !editing) {
+    return (
+      <div style={card}>
+        <h3 style={sectionTitle}>Custom provider not found</h3>
+        <p style={{ ...bodyText, marginTop: 8 }}>
+          This provider doesn’t exist or was removed. Check My Providers for the current set of
+          credentials.
+        </p>
+        <button type="button" onClick={cancel} style={{ ...secondaryBtn, marginTop: 16 }}>
+          Back to My Providers
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'grid', gap: 20, maxWidth: 880 }}>
       {/* 1. Endpoint & transport */}
@@ -422,6 +550,8 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           <TextInput
             label="Provider Slug"
             value={effectiveSlug}
+            // The slug is the routing identity — immutable after creation.
+            disabled={!!editing}
             onChange={(e) => {
               setSlugTouched(true);
               setSlug(e.target.value);
@@ -431,7 +561,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                 ? 'Lowercase letters, numbers, and dashes only.'
                 : undefined
             }
-            hint="Unique identifier used in routing. Derived from the label until you edit it."
+            hint={
+              editing
+                ? "The provider slug is the routing identity and can't be changed after creation."
+                : 'Unique identifier used in routing. Derived from the label until you edit it.'
+            }
           />
           <div>
             <span style={labelText}>Adapter</span>
@@ -490,65 +624,103 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
       <section style={card} aria-label="Authentication and custom headers">
         <h3 style={sectionTitle}>2. Authentication &amp; Custom Headers</h3>
         <div style={{ display: 'grid', gap: 12, marginTop: 12, maxWidth: 560 }}>
-          <div>
-            <span style={labelText}>Auth Scheme</span>
-            <div role="radiogroup" aria-label="Auth scheme" style={{ display: 'grid', gap: 8 }}>
-              {SCHEMES.map((s) => (
-                <label
-                  key={s.value}
-                  style={{
-                    ...row,
-                    gap: 10,
-                    border: `1px solid ${scheme === s.value ? colors.accent : colors.borderSoft}`,
-                    borderRadius: 10,
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="auth-scheme"
-                    checked={scheme === s.value}
-                    onChange={() => setScheme(s.value)}
-                  />
-                  <span>
-                    <span style={bodyText}>{s.label}</span>
-                    <br />
-                    <span style={hintText}>{s.hint}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-          {scheme !== 'bearer' && (
-            <TextInput
-              label="Header name"
-              value={schemeHeader}
-              onChange={(e) => setSchemeHeader(e.target.value)}
-              error={!schemeHeaderValid ? 'Header name is required for this scheme.' : undefined}
-            />
-          )}
-          <TextInput
-            label={editing ? 'Secret (leave empty to keep the existing one)' : 'Secret Key'}
-            type="password"
-            autoComplete="off"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            hint="Write-only. Plaintext is never displayed after save."
-          />
-          {editing && (
-            <p style={hintText}>
-              To change the secret itself, use Rotate on the key card — editing here keeps the
-              existing sealed material.
-            </p>
+          {editing ? (
+            <>
+              {/* Round 2 P0: the sealed secret can't be edited here (N-3 PATCH
+                  has no secret field — rotation is the secret-change path),
+                  so the secret field and auth-scheme selector are hidden on
+                  edit. The stored header set is preserved unless the
+                  operator explicitly opts into replacing it. */}
+              <p style={hintText}>
+                To change the secret itself, use Rotate on the key card — editing here keeps the
+                existing sealed material.
+              </p>
+              <div>
+                <span style={labelText}>Current header set</span>
+                {existingHeaderNames.length > 0 ? (
+                  <p style={{ ...bodyText, marginTop: 4 }}>
+                    {existingHeaderNames.join(', ')}
+                  </p>
+                ) : (
+                  <p style={{ ...hintText, marginTop: 4 }}>No custom headers stored.</p>
+                )}
+                <p style={{ ...hintText, marginTop: 4 }}>
+                  Header values are write-only — only names are ever shown again.
+                </p>
+              </div>
+              <label style={{ ...row, gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={replaceHeaders}
+                  onChange={(e) => setReplaceHeaders(e.target.checked)}
+                />
+                <span style={bodyText}>Replace the header set</span>
+              </label>
+              {replaceHeaders && (
+                <p style={{ ...noticeCallout, margin: 0 }} role="note">
+                  The header set below <strong>replaces</strong> the stored set on save — every
+                  header the endpoint needs must be listed, including ones carried over unchanged.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <span style={labelText}>Auth Scheme</span>
+                <div role="radiogroup" aria-label="Auth scheme" style={{ display: 'grid', gap: 8 }}>
+                  {SCHEMES.map((s) => (
+                    <label
+                      key={s.value}
+                      style={{
+                        ...row,
+                        gap: 10,
+                        border: `1px solid ${scheme === s.value ? colors.accent : colors.borderSoft}`,
+                        borderRadius: 10,
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="auth-scheme"
+                        checked={scheme === s.value}
+                        onChange={() => setScheme(s.value)}
+                      />
+                      <span>
+                        <span style={bodyText}>{s.label}</span>
+                        <br />
+                        <span style={hintText}>{s.hint}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {scheme !== 'bearer' && (
+                <TextInput
+                  label="Header name"
+                  value={schemeHeader}
+                  onChange={(e) => setSchemeHeader(e.target.value)}
+                  error={!schemeHeaderValid ? 'Header name is required for this scheme.' : undefined}
+                />
+              )}
+              <TextInput
+                label="Secret Key"
+                type="password"
+                autoComplete="off"
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                hint="Write-only. Plaintext is never displayed after save."
+              />
+            </>
           )}
 
+          {(!editing || replaceHeaders) && (
           <div>
             <span style={labelText}>Custom HTTP Headers</span>
             {headers.length > 0 && (
               <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
                 {headers.map((h, i) => (
-                  <div key={i} style={{ ...row, gap: 8, alignItems: 'flex-end' }}>
+                  <div key={h.rowKey} style={{ ...row, gap: 8, alignItems: 'flex-end' }}>
                     <div style={{ flex: 1 }}>
                       <TextInput
                         aria-label={`Header ${i + 1} name`}
@@ -556,7 +728,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                         value={h.name}
                         onChange={(e) =>
                           setHeaders((prev) =>
-                            prev.map((row, j) => (j === i ? { ...row, name: e.target.value } : row)),
+                            prev.map((r) => (r.rowKey === h.rowKey ? { ...r, name: e.target.value } : r)),
                           )
                         }
                       />
@@ -568,7 +740,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                         value={h.value}
                         onChange={(e) =>
                           setHeaders((prev) =>
-                            prev.map((row, j) => (j === i ? { ...row, value: e.target.value } : row)),
+                            prev.map((r) => (r.rowKey === h.rowKey ? { ...r, value: e.target.value } : r)),
                           )
                         }
                       />
@@ -576,7 +748,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                     <button
                       type="button"
                       aria-label={`Delete header ${h.name || i + 1}`}
-                      onClick={() => setHeaders((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={() => setHeaders((prev) => prev.filter((r) => r.rowKey !== h.rowKey))}
                       style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: colors.danger }}
                     >
                       Delete
@@ -592,7 +764,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
             )}
             <button
               type="button"
-              onClick={() => setHeaders((prev) => [...prev, { name: '', value: '' }])}
+              onClick={() => setHeaders((prev) => [...prev, { rowKey: nextRowKey(), name: '', value: '' }])}
               style={secondaryBtn}
             >
               + Add Header
@@ -601,6 +773,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
               Header values are write-only after save — only names are ever shown again.
             </p>
           </div>
+          )}
         </div>
       </section>
 
@@ -639,7 +812,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                   <span style={bodyText} role="status">
                     Probing endpoint &amp; discovering models…
                   </span>
-                  <button type="button" aria-label="Cancel probe" onClick={() => abortRef.current?.abort()} style={ghostBtn}>
+                  <button type="button" aria-label="Cancel probe" onClick={cancelProbe} style={ghostBtn}>
                     Cancel
                   </button>
                 </div>
@@ -703,7 +876,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
               </p>
               {manualModels.map((m, i) => (
                 <div
-                  key={i}
+                  key={m.rowKey}
                   style={{
                     border: `1px solid ${manualErrors[i] ? colors.danger : colors.borderSoft}`,
                     borderRadius: 10,
@@ -718,14 +891,14 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       {manualErrors[i]}
                     </p>
                   )}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr', gap: 8 }}>
                     <TextInput
                       label="Model ID"
                       placeholder="llama-3.3-70b-instruct"
                       value={m.id}
                       onChange={(e) =>
                         setManualModels((prev) =>
-                          prev.map((row, j) => (j === i ? { ...row, id: e.target.value } : row)),
+                          prev.map((r) => (r.rowKey === m.rowKey ? { ...r, id: e.target.value } : r)),
                         )
                       }
                     />
@@ -734,12 +907,12 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       value={m.displayName}
                       onChange={(e) =>
                         setManualModels((prev) =>
-                          prev.map((row, j) => (j === i ? { ...row, displayName: e.target.value } : row)),
+                          prev.map((r) => (r.rowKey === m.rowKey ? { ...r, displayName: e.target.value } : r)),
                         )
                       }
                     />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1fr 1fr 1fr', gap: 8 }}>
                     <TextInput
                       label="Context window (tokens)"
                       inputMode="numeric"
@@ -747,7 +920,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       value={m.contextWindow}
                       onChange={(e) =>
                         setManualModels((prev) =>
-                          prev.map((row, j) => (j === i ? { ...row, contextWindow: e.target.value } : row)),
+                          prev.map((r) => (r.rowKey === m.rowKey ? { ...r, contextWindow: e.target.value } : r)),
                         )
                       }
                     />
@@ -757,7 +930,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       value={m.inputCost}
                       onChange={(e) =>
                         setManualModels((prev) =>
-                          prev.map((row, j) => (j === i ? { ...row, inputCost: e.target.value } : row)),
+                          prev.map((r) => (r.rowKey === m.rowKey ? { ...r, inputCost: e.target.value } : r)),
                         )
                       }
                     />
@@ -767,7 +940,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       value={m.outputCost}
                       onChange={(e) =>
                         setManualModels((prev) =>
-                          prev.map((row, j) => (j === i ? { ...row, outputCost: e.target.value } : row)),
+                          prev.map((r) => (r.rowKey === m.rowKey ? { ...r, outputCost: e.target.value } : r)),
                         )
                       }
                     />
@@ -787,7 +960,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                           checked={m[key]}
                           onChange={(e) =>
                             setManualModels((prev) =>
-                              prev.map((row, j) => (j === i ? { ...row, [key]: e.target.checked } : row)),
+                              prev.map((r) => (r.rowKey === m.rowKey ? { ...r, [key]: e.target.checked } : r)),
                             )
                           }
                         />
@@ -796,7 +969,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                     ))}
                     <button
                       type="button"
-                      onClick={() => setManualModels((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={() => setManualModels((prev) => prev.filter((r) => r.rowKey !== m.rowKey))}
                       style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: colors.danger, marginLeft: 'auto' }}
                     >
                       Remove
@@ -861,39 +1034,61 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
         </p>
       )}
 
-      {/* Footer */}
+      {/* Footer.
+          On edit the save requires only a valid form (canSave): the
+          "Save & Connect" probe gate is a create-mode concern — the edit
+          probe can't authenticate (the sealed secret isn't editable here),
+          so gating on it would permanently disable saving for bearer-auth
+          endpoints. The engine re-verifies endpoint changes server-side
+          with the stored secret (N-3). */}
       <div style={{ ...row, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={() => submit('connect')}
-          disabled={!canSaveAndConnect}
-          title={
-            !canSaveAndConnect && discoveryMode === 'auto' && !probedOk
-              ? 'Run a successful discovery probe first'
-              : !canSaveAndConnect && discoveryMode === 'manual' && manualModels.length === 0
-                ? 'Add at least one manual model declaration'
-                : !manualModelsValid || !manualIdsUnique
-                  ? 'Fix the invalid manual model declarations above'
-                  : undefined
-          }
-          style={{ ...primaryBtn, ...(!canSaveAndConnect ? disabledBtn : {}) }}
-        >
-          {saving ? 'Saving…' : editing ? 'Save & Reconnect' : 'Save & Connect Provider'}
-        </button>
-        {!editing && (
+        {editing ? (
           <button
             type="button"
-            onClick={() => submit('inactive')}
+            onClick={() => submit('connect')}
             disabled={!canSave}
             title={
               !manualModelsValid || !manualIdsUnique
                 ? 'Fix the invalid manual model declarations above'
                 : undefined
             }
-            style={{ ...secondaryBtn, ...(!canSave ? disabledBtn : {}) }}
+            style={{ ...primaryBtn, ...(!canSave ? disabledBtn : {}) }}
           >
-            Save as Inactive
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => submit('connect')}
+              disabled={!canSaveAndConnect}
+              title={
+                !canSaveAndConnect && discoveryMode === 'auto' && !probedOk
+                  ? 'Run a successful discovery probe first'
+                  : !canSaveAndConnect && discoveryMode === 'manual' && manualModels.length === 0
+                    ? 'Add at least one manual model declaration'
+                    : !manualModelsValid || !manualIdsUnique
+                      ? 'Fix the invalid manual model declarations above'
+                      : undefined
+              }
+              style={{ ...primaryBtn, ...(!canSaveAndConnect ? disabledBtn : {}) }}
+            >
+              {saving ? 'Saving…' : 'Save & Connect Provider'}
+            </button>
+            <button
+              type="button"
+              onClick={() => submit('inactive')}
+              disabled={!canSave}
+              title={
+                !manualModelsValid || !manualIdsUnique
+                  ? 'Fix the invalid manual model declarations above'
+                  : undefined
+              }
+              style={{ ...secondaryBtn, ...(!canSave ? disabledBtn : {}) }}
+            >
+              Save as Inactive
+            </button>
+          </>
         )}
         <button type="button" onClick={cancel} style={ghostBtn}>
           Cancel

@@ -71,8 +71,10 @@ export function applyChipFilters(
       const price = fromPrice(p);
       if (price === null || price >= 1.0) return false;
     }
-    // zdr_capable absent = unknown — never presented as incapable, so an
-    // unknown row is kept (honest) rather than dropped.
+    // ZDR chip: only staff-attested rows (zdr_capable === true) are shown.
+    // Absent zdr_capable means "not attested", NOT "unknown but honest" —
+    // a "ZDR Capable" filter must never present an unattested row. Rows with
+    // absent zdr_capable appear normally when the chip is off.
     if (chips.has('zdr') && p.zdr_capable !== true) return false;
     return true;
   });
@@ -249,7 +251,7 @@ const FilterBadge = styled.span`
 
 const ChipBar = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 `;
@@ -517,6 +519,12 @@ const Footnote = styled.p`
   line-height: 1.6;
   color: ${({ theme }) => theme.app.text.faint};
   max-width: 860px;
+`;
+
+const SectionNote = styled.p`
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.app.text.muted};
+  margin: 0 0 12px;
 `;
 
 const ReturnBanner = styled.div`
@@ -943,8 +951,6 @@ function ProviderDrawer({
           </dd>
           <dt>Max context</dt>
           <dd>{formatContext(entry.max_context_tokens) ?? 'Not published'}</dd>
-          <dt>Plan</dt>
-          <dd>{entry.min_required_product_label}</dd>
         </DetailMeta>
       </DetailRow>
 
@@ -1050,11 +1056,13 @@ function AccessCell({
   entry,
   pending,
   error,
+  canWrite,
   onToggle,
 }: {
   entry: ProviderDirectoryEntry;
   pending: boolean;
   error: AccessToggleError | null;
+  canWrite: boolean;
   onToggle: (entry: ProviderDirectoryEntry, enabled: boolean) => void;
 }) {
   const tier = useOrgTier();
@@ -1089,11 +1097,13 @@ function AccessCell({
               label={label}
               // Grandfathered ON stays interactive so the org can always
               // turn it OFF; OFF is disabled — enabling is plan-gated.
-              disabled={pending || !storedOn}
+              // canWrite gates everything: non-privileged roles see a
+              // disabled switch, never an interactive one the server 403s.
+              disabled={pending || !storedOn || !canWrite}
             />
           </span>
         </Tooltip>
-        <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+        <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
       </GatedAccess>
     );
   }
@@ -1108,11 +1118,11 @@ function AccessCell({
           checked={storedOn}
           onChange={(next) => onToggle(entry, next)}
           label={label}
-          disabled={pending}
+          disabled={pending || !canWrite}
         />
         {error &&
           (error.tierGated ? (
-            <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+            <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
           ) : (
             // focusable: the failure explanation is otherwise invisible to
             // keyboard users — the icon is decorative to the tab order.
@@ -1136,11 +1146,11 @@ function AccessCell({
         checked={storedOn}
         onChange={(next) => onToggle(entry, next)}
         label={label}
-        disabled={pending}
+        disabled={pending || !canWrite}
       />
       {error &&
         (error.tierGated ? (
-          <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+          <TierNudge to="/agent-studio/settings/pricing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
         ) : (
           // focusable: the failure explanation is otherwise invisible to
           // keyboard users — the icon is decorative to the tab order.
@@ -1159,7 +1169,7 @@ function AccessCell({
 /* ------------------------------------------------------------------ */
 
 export function CatalogPage() {
-  const { orgId } = useOrg();
+  const { orgId, role } = useOrg();
   const navigate = useNavigate();
   const { returnTo } = useSearch({ strict: false }) as { returnTo?: unknown };
   const [searchInput, setSearchInput] = useState('');
@@ -1283,6 +1293,16 @@ export function CatalogPage() {
   const setEnabled = useSetProviderEnabled(orgId);
   const pendingProvider = setEnabled.isPending ? setEnabled.variables?.provider ?? null : null;
 
+  /**
+   * The engine's POST providers/:provider is owner/admin-only — reader,
+   * billing, and developer get 403. Non-privileged roles see disabled
+   * switches plus an honest hint, never interactive controls the server
+   * rejects. NOTE: not `role === 'owner' || ... 'developer'` — the Models
+   * endpoints accept developers but this one does not, so the threshold is
+   * owner/admin only here.
+   */
+  const canWrite = role === 'owner' || role === 'admin';
+
   const handleToggle = (entry: ProviderDirectoryEntry, enabled: boolean) => {
     // Guard: enabling while the server says the plan doesn't cover this
     // provider never fires the API — surface the nudge instead.
@@ -1386,9 +1406,13 @@ export function CatalogPage() {
         )}
       </Toolbar>
 
+      {!canWrite && (
+        <SectionNote>Only owners and admins can change provider access.</SectionNote>
+      )}
+
       {query.isLoading ? (
         <>
-          <ResultMeta>Loading the provider catalog…</ResultMeta>
+          <ResultMeta role="status">Loading the provider catalog…</ResultMeta>
           <SkeletonTable aria-hidden="true">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonRow key={i} />
@@ -1489,6 +1513,7 @@ export function CatalogPage() {
                                 entry={entry}
                                 pending={pendingProvider === entry.provider}
                                 error={tErr}
+                                canWrite={canWrite}
                                 onToggle={handleToggle}
                               />
                             </BodyCell>

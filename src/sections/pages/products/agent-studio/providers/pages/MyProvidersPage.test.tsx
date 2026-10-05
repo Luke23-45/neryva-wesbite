@@ -203,8 +203,25 @@ describe('MyProvidersPage', () => {
     expect(anthropic.compareDocumentPosition(openai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keyboard reorder never crosses provider boundaries', async () => {
-    hoisted.credentials = [
+  it('reorder with TIED priorities sends distinct priorities reflecting the new display order (Round 2 P0)', async () => {
+    // Every UI-created credential shares the engine default priority 0 —
+    // the old value-trading swap re-sent an identical map here (the engine
+    // 200s, nothing moves, no error). Index-based re-basing must produce
+    // an actual order change.
+    hoisted.credentials = [cred('c1', 0), cred('c2', 0)];
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Key c1 down' }));
+    await vi.waitFor(() => expect(hoisted.reorderMutate).toHaveBeenCalledTimes(1));
+    const items = hoisted.reorderMutate.mock.calls[0][0] as Array<{ id: string; priority: number }>;
+    // New display order is c2-then-c1, carried by DISTINCT priorities.
+    expect(items).toEqual([
+      { id: 'c2', priority: 0 },
+      { id: 'c1', priority: 1 },
+    ]);
+    expect(new Set(items.map((i) => i.priority)).size).toBe(items.length);
+  });
+
+  it('keyboard reorder never crosses provider boundaries', async () => {    hoisted.credentials = [
       cred('a1', 0, { provider: 'anthropic', provider_display_name: 'Anthropic' }),
       cred('o1', 0, { provider: 'openai', provider_display_name: 'OpenAI' }),
       cred('o2', 1, { provider: 'openai', provider_display_name: 'OpenAI' }),
@@ -225,5 +242,22 @@ describe('MyProvidersPage', () => {
       ],
       expect.anything(),
     );
+  });
+
+  it('shows the Edit endpoint entry point only on non-revoked custom cards (Round 2 P0)', () => {
+    hoisted.credentials = [
+      cred('custom-1', 0, { provider: 'acme', base_url: 'https://llm.example.com/v1' }),
+      cred('std-1', 0, { provider: 'openai', base_url: null }),
+      cred('custom-revoked', 0, {
+        provider: 'acme',
+        base_url: 'https://llm.example.com/v1',
+        status: 'revoked',
+        revoked_at: '2026-10-02T00:00:00Z',
+      }),
+    ];
+    renderPage();
+    // Exactly one card gets the entry point: the live custom one. The
+    // standard card (no base_url) and the revoked custom card don't.
+    expect(screen.getAllByRole('link', { name: /Edit endpoint/ })).toHaveLength(1);
   });
 });

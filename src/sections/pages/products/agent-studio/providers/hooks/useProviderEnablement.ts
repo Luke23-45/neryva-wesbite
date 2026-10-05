@@ -6,6 +6,7 @@ import {
 import { providerDirectoryKeyPrefix } from './useProviderDirectory';
 
 type DirectoryData = { providers: ProviderDirectoryEntry[] };
+type DirectoryConnection = ProviderDirectoryEntry['connection'];
 
 /**
  * useSetProviderEnabled — workspace access toggle for one catalog row
@@ -27,33 +28,48 @@ export function useSetProviderEnabled(orgId: string | null) {
       return setProviderEnabled(orgId, input.provider, input.enabled);
     },
     onMutate: async ({ provider, enabled }) => {
-      if (orgId === null || orgId === '') return { prev: new Map<string, DirectoryData | undefined>() };
+      if (orgId === null || orgId === '') return { prevConnections: new Map<string, DirectoryConnection>() };
       const prefix = providerDirectoryKeyPrefix(orgId);
       await queryClient.cancelQueries({ queryKey: prefix });
-      const prev = new Map<string, DirectoryData | undefined>();
+      // Per-row snapshot: only the toggled provider's connection is stored.
+      // A concurrent toggle's optimistic flip on another row (or another
+      // query variant) must survive this mutation's rollback — restoring
+      // whole-query snapshots (the old behavior) wiped it.
+      const prevConnections = new Map<string, DirectoryConnection>();
       const snapshots = queryClient.getQueriesData<DirectoryData>({ queryKey: prefix });
       for (const [key, data] of snapshots) {
-        prev.set(JSON.stringify(key), data);
-        if (data) {
-          queryClient.setQueryData<DirectoryData>(key, {
-            ...data,
-            providers: data.providers.map((entry) =>
-              entry.provider === provider
-                ? {
-                    ...entry,
-                    connection: { ...entry.connection, enabled, stored_enabled: enabled },
-                  }
-                : entry,
-            ),
-          });
-        }
+        if (!data) continue;
+        const entry = data.providers.find((e) => e.provider === provider);
+        if (entry) prevConnections.set(JSON.stringify(key), entry.connection);
+        queryClient.setQueryData<DirectoryData>(key, {
+          ...data,
+          providers: data.providers.map((e) =>
+            e.provider === provider
+              ? {
+                  ...e,
+                  connection: { ...e.connection, enabled, stored_enabled: enabled },
+                }
+              : e,
+          ),
+        });
       }
-      return { prev };
+      return { prevConnections };
     },
-    onError: (_error, _variables, context) => {
-      if (orgId === null || orgId === '' || !context?.prev) return;
-      for (const [keyJson, data] of context.prev) {
-        queryClient.setQueryData(JSON.parse(keyJson) as readonly unknown[], data);
+    onError: (_error, variables, context) => {
+      if (orgId === null || orgId === '' || !context?.prevConnections || context.prevConnections.size === 0) return;
+      // Per-row restore: only the row this mutation flipped reverts — a
+      // concurrent mutation's optimistic state is untouched.
+      for (const [keyJson, connection] of context.prevConnections) {
+        queryClient.setQueryData<DirectoryData>(JSON.parse(keyJson) as readonly unknown[], (data) =>
+          data
+            ? {
+                ...data,
+                providers: data.providers.map((e) =>
+                  e.provider === variables.provider ? { ...e, connection } : e,
+                ),
+              }
+            : data,
+        );
       }
     },
     onSettled: () => {
