@@ -7,12 +7,15 @@
  *
  * Org spend overview (platform settled spend vs BYOK list-price equivalent —
  * the BYOK figure is ALWAYS labeled "list-price equivalent — not billed"),
- * N-7 per-credential spend, monthly cap editor, the include_byok_spend
- * toggle with its honest explanation, engine-truth fee transparency, and
- * Enterprise audit export.
+ * N-7 per-credential spend, monthly cap editor with on-breach behavior
+ * (PATCH /spend/budget { breach_action }, optimistic with rollback), the
+ * include_byok_spend toggle with its honest explanation, engine-truth fee
+ * transparency, and Enterprise audit export.
  *
- * Honest omissions (Law VII): the SVG's on-breach behavior radios have no
- * backing API — they are not rendered. The PER-MODEL table is backed by
+ * Honest omissions (Law VII): the platform-pool row shows "—" for requests —
+ * the engine summary exposes no platform-only request count (its `requests`
+ * is the org-wide total); inventing one would violate the zero-hardcode
+ * bar. The PER-MODEL table is backed by
  * GET /console/org/:orgId/spend/models.
  *
  * Tier/role gating (display-only; the server gates every action):
@@ -31,6 +34,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useOrg } from '@/Context/OrgContext';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Dropdown } from '@/components/common/ui/Dropdown';
+import { StatusPill } from '@/components/common/ui/StatusPill';
 import { Switch } from '@/components/common/ui/Switch';
 import { TextInput } from '@/components/common/ui/TextInput';
 import {
@@ -46,6 +50,7 @@ import {
   fetchCredentialUsage,
   type CredentialUsageView,
   type ModelSpendResponse,
+  type ProviderCredentialView,
   type SpendSummaryView,
   type SpendWindow,
 } from '@/sections/pages/products/agent-studio/providers/api';
@@ -144,6 +149,15 @@ export function SpendPage() {
           separate from BYOK list-price equivalents.
         </ViewSubtitle>
       </ViewHeader>
+      <p style={{ ...hintText, fontSize: 13.5, margin: '0 0 16px' }}>
+        Monitor spend per credential and model, and enforce a monthly cap.{' '}
+        <a
+          href="/platform/billing"
+          style={{ color: colors.accent, textDecoration: 'none' }}
+        >
+          Invoices &amp; plan →
+        </a>
+      </p>
       <div style={{ ...row, justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={{ minWidth: 200 }}>
           <Dropdown
@@ -173,7 +187,7 @@ export function SpendPage() {
         <>
           <OverviewCards data={summary.data} modelSpend={modelSpend.data} />
           <BreakdownList data={summary.data} />
-          {!isFree && <CredentialSpendList orgId={orgId} window={window} />}
+          {!isFree && <CredentialSpendList orgId={orgId} window={window} summary={summary.data} />}
           {!isFree && <ModelSpendList query={modelSpend} window={window} />}
           <FeePanel data={summary.data} />
           {isFree ? (
@@ -198,9 +212,14 @@ export function SpendPage() {
             />
           )}
           <p style={{ ...hintText, marginTop: 24, maxWidth: 860 }}>
-            Toggles apply immediately · budget caps are enforced before billable
-            calls run · every figure above is engine-rendered for the selected
-            window.
+            Caps refuse pre-call with reason · totals reconcile with Usage ·
+            wallet, invoices and plan live in{' '}
+            <a
+              href="/agent-studio/settings/billing"
+              style={{ color: colors.accent, textDecoration: 'none' }}
+            >
+              Settings Billing
+            </a>
           </p>
         </>
       )}
@@ -244,7 +263,10 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
           <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
             {byok}
           </p>
-          <p style={{ ...hintText, marginTop: 6 }}>{LIST_PRICE_LABEL}</p>
+          <p style={{ ...hintText, marginTop: 6 }}>
+            {LIST_PRICE_LABEL}
+            <InfoGlyph label={LIST_PRICE_LABEL} />
+          </p>
         </div>
       )}
       <div style={card}>
@@ -459,6 +481,144 @@ const ListBasisTag = styled.span`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
+/** Rounded icon tile used by the per-credential rows (cloud / key). */
+const IconTile = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  color: ${({ theme }) => theme.app.text.faint};
+  flex: none;
+`;
+
+function CloudIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3.4 9.6 h6.2 a2.4 2.4 0 0 0 0.2 -4.8 a3.6 3.6 0 0 0 -6.9 0.9 a2.1 2.1 0 0 0 0.5 3.9 z" />
+    </svg>
+  );
+}
+
+function KeyIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
+      <circle cx="4" cy="6" r="2.6" />
+      <line x1="6.6" y1="6" x2="11.2" y2="6" />
+      <line x1="9.2" y1="6" x2="9.2" y2="8" />
+      <line x1="11" y1="6" x2="11" y2="7.6" />
+    </svg>
+  );
+}
+
+function KebabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <circle cx="3.5" cy="8" r="1.5" />
+      <circle cx="8" cy="8" r="1.5" />
+      <circle cx="12.5" cy="8" r="1.5" />
+    </svg>
+  );
+}
+
+/** Small info glyph with an accessible tooltip — reuses established copy only. */
+function InfoGlyph({ label }: { label: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      role="img"
+      aria-label={label}
+      style={{ verticalAlign: '-1px', marginLeft: 4 }}
+    >
+      <title>{label}</title>
+      <circle cx="6" cy="6" r="5" />
+      <line x1="6" y1="5.4" x2="6" y2="8.8" strokeLinecap="round" />
+      <circle cx="6" cy="3.4" r="0.8" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Share bar + percent, per the spend-list reference. null = honest "—". */
+function ShareCell({ pct }: { pct: number | null }) {
+  if (pct === null || !Number.isFinite(pct)) return <span>—</span>;
+  const clamped = Math.min(100, Math.max(0, Math.round(pct)));
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <span
+        aria-hidden="true"
+        style={{
+          width: 80,
+          height: 6,
+          borderRadius: 999,
+          background: colors.bg,
+          border: `1px solid ${colors.borderSoft}`,
+          overflow: 'hidden',
+          display: 'inline-block',
+        }}
+      >
+        <span
+          style={{
+            display: 'block',
+            height: '100%',
+            width: `${clamped}%`,
+            background: colors.accent,
+          }}
+        />
+      </span>
+      <span>{clamped}%</span>
+    </span>
+  );
+}
+
+/** Dominant engine error code from the N-7 error_breakdown. null = clean. */
+function dominantError(
+  breakdown: CredentialUsageView['error_breakdown'],
+): { code: string; count: number } | null {
+  const entries: Array<[string, number]> = [
+    ['401', breakdown['401']],
+    ['403', breakdown['403']],
+    ['429', breakdown['429']],
+    ['5xx', breakdown['5xx']],
+  ];
+  let best: { code: string; count: number } | null = null;
+  for (const [code, count] of entries) {
+    if (count > 0 && (best === null || count > best.count)) best = { code, count };
+  }
+  return best;
+}
+
+type CredentialTone = 'success' | 'info' | 'warning' | 'neutral';
+
+function credentialStatusPill(c: ProviderCredentialView): { tone: CredentialTone; text: string } {
+  switch (c.verification_status) {
+    case 'verified':
+      return { tone: 'success', text: 'Active' };
+    case 'verifying':
+      return { tone: 'info', text: 'Verifying…' };
+    case 'failed':
+      return { tone: 'warning', text: 'Failed' };
+    case 'revoked':
+      return { tone: 'neutral', text: 'Revoked' };
+    case 'unverified':
+    default:
+      return { tone: 'warning', text: 'Unverified' };
+  }
+}
+
+function formatShortDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 /** Full-width provider sub-header row inside the per-model table body. */
 const ModelSubHeadCell = styled.td`
   padding: 8px 12px;
@@ -472,7 +632,38 @@ const ModelSubHeadCell = styled.td`
   white-space: nowrap;
 `;
 
-function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWindow }) {
+/* ------------------------------------------------------------------ */
+/* Per-credential spend — reference columns:                           */
+/* CREDENTIAL | REQUESTS | SPEND | ERRORS | SHARE | STATUS              */
+/*                                                                     */
+/* The platform pool leads the table (platform-settled spend from the  */
+/* summary — engine figures only). ERRORS renders the dominant code     */
+/* from the engine's error_breakdown as a warning pill ("429 ×3"),     */
+/* "—" when clean. STATUS is Active (green) for verified, Revoked      */
+/* (grey) for revoked. Revoked rows are dimmed with history retained.  */
+/* Share is the row's fraction of the spend shown in this table — the  */
+/* platform pool is included, per the reference.                       */
+/* ------------------------------------------------------------------ */
+
+const kebabBtnStyle = {
+  background: 'none',
+  border: 'none',
+  padding: 6,
+  color: colors.textFaint,
+  cursor: 'not-allowed',
+  display: 'inline-flex',
+  alignItems: 'center',
+} as const;
+
+function CredentialSpendList({
+  orgId,
+  window,
+  summary,
+}: {
+  orgId: string;
+  window: SpendWindow;
+  summary: SpendSummaryView;
+}) {
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
   const credentials = data?.credentials ?? [];
 
@@ -499,26 +690,32 @@ function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWi
       </div>
     );
   }
-  if (credentials.length === 0) return null;
 
-  // Share denominator: the spend figures shown in this table. Rows still
-  // loading are excluded — their cells read "—" until the data lands.
+  // Share denominator: every spend figure shown in this table, including the
+  // platform pool. Rows still loading are excluded — their cells read "—"
+  // until the data lands.
   const spendOf = (u: CredentialUsageView | undefined): number | null => {
     if (!u) return null;
     const n = Number(u.spend_usd);
     return Number.isFinite(n) ? n : null;
   };
-  const total = usages.reduce<number>((sum, q) => {
-    const s = q.data ? spendOf(q.data) : null;
-    return s === null ? sum : sum + s;
-  }, 0);
+  const platformSpendNum = (() => {
+    const n = Number(summary.platform_spend_usd);
+    return Number.isFinite(n) ? n : null;
+  })();
+  const credSpends = usages.map((q) => (q.data ? spendOf(q.data) : null));
+  const total =
+    (platformSpendNum ?? 0) +
+    credSpends.reduce<number>((sum, s) => (s === null ? sum : sum + s), 0);
+  const sharePct = (spend: number | null): number | null =>
+    spend !== null && total > 0 ? (spend / total) * 100 : null;
 
   return (
     <SpendTableWrap>
       <SpendTableHead>
-        <h3 style={sectionTitle}>Per-credential spend</h3>
+        <h3 style={sectionTitle}>Per-credential spend · {window === '30d' ? '30 days' : '7 days'}</h3>
         <p style={{ ...hintText, marginTop: 4 }}>
-          Share is the key&apos;s fraction of the spend shown in this table.
+          Share is the row&apos;s fraction of the spend shown in this table — the platform pool is included.
         </p>
       </SpendTableHead>
       <StyledSpendTable>
@@ -526,39 +723,125 @@ function CredentialSpendList({ orgId, window }: { orgId: string; window: SpendWi
           <tr>
             <SpendHeadCell scope="col">Credential</SpendHeadCell>
             <SpendHeadCell scope="col">Requests</SpendHeadCell>
-            <SpendHeadCell scope="col">Tokens</SpendHeadCell>
             <SpendHeadCell scope="col">Spend</SpendHeadCell>
+            <SpendHeadCell scope="col">Errors</SpendHeadCell>
             <SpendHeadCell scope="col">Share</SpendHeadCell>
+            <SpendHeadCell scope="col">Status</SpendHeadCell>
+            <SpendHeadCell scope="col">
+              <span
+                style={{
+                  position: 'absolute',
+                  width: 1,
+                  height: 1,
+                  overflow: 'hidden',
+                  clip: 'rect(0 0 0 0)',
+                }}
+              >
+                Row actions
+              </span>
+            </SpendHeadCell>
           </tr>
         </thead>
         <tbody>
+          <SpendBodyRow>
+            <SpendBodyCell>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                <IconTile>
+                  <CloudIcon />
+                </IconTile>
+                <span>
+                  <CredName>Platform pool</CredName>
+                  <CredMeta>platform · pool · no key required</CredMeta>
+                </span>
+              </span>
+            </SpendBodyCell>
+            <SpendBodyCell>—</SpendBodyCell>
+            <SpendBodyCell>{formatUsd(summary.platform_spend_usd) ?? '—'}</SpendBodyCell>
+            <SpendBodyCell>—</SpendBodyCell>
+            <SpendBodyCell>
+              <ShareCell pct={sharePct(platformSpendNum)} />
+            </SpendBodyCell>
+            <SpendBodyCell>
+              <StatusPill tone="success">Active</StatusPill>
+            </SpendBodyCell>
+            <SpendBodyCell>
+              <span title="Manage credentials in Providers" style={{ display: 'inline-flex' }}>
+                <button
+                  type="button"
+                  disabled
+                  aria-label="Platform pool actions"
+                  style={kebabBtnStyle}
+                >
+                  <KebabIcon />
+                </button>
+              </span>
+            </SpendBodyCell>
+          </SpendBodyRow>
           {credentials.map((c, i) => {
             const u = usages[i]?.data as CredentialUsageView | undefined;
             const loading = usages[i]?.isLoading ?? false;
             const spend = spendOf(u);
-            const share =
-              spend !== null && total > 0 ? `${Math.round((spend / total) * 100)}%` : '—';
+            const revoked = c.verification_status === 'revoked';
+            const pill = credentialStatusPill(c);
+            const dominant = u ? dominantError(u.error_breakdown) : null;
+            const revokedDate = formatShortDate(c.revoked_at);
+            const sub = revoked
+              ? `${c.provider} · revoked${revokedDate ? ` ${revokedDate}` : ''} · history retained`
+              : `${c.provider} · ${c.secret_fingerprint || 'no fingerprint'}${
+                  c.verification_status === 'verified' && c.last_probe_latency_ms != null
+                    ? ` · verified ${c.last_probe_latency_ms}ms`
+                    : ''
+                }`;
             return (
-              <SpendBodyRow key={c.id}>
+              <SpendBodyRow key={c.id} style={revoked ? { opacity: 0.55 } : undefined}>
                 <SpendBodyCell>
-                  <CredName>
-                    {c.provider} <span style={{ fontWeight: 400 }}>— {c.label}</span>
-                  </CredName>
-                  <CredMeta>{c.secret_fingerprint || 'no fingerprint'}</CredMeta>
-                  {u && u.pricing_basis === 'list' && u.list_price_equivalent_usd && (
-                    <ListBasisTag>
-                      {LIST_PRICE_LABEL} (${u.list_price_equivalent_usd})
-                    </ListBasisTag>
-                  )}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                    <IconTile>
+                      <KeyIcon />
+                    </IconTile>
+                    <span>
+                      <CredName>{c.label}</CredName>
+                      <CredMeta>{sub}</CredMeta>
+                      {u && u.pricing_basis === 'list' && u.list_price_equivalent_usd && (
+                        <ListBasisTag>
+                          {LIST_PRICE_LABEL} (${u.list_price_equivalent_usd})
+                          <InfoGlyph label={LIST_PRICE_LABEL} />
+                        </ListBasisTag>
+                      )}
+                    </span>
+                  </span>
                 </SpendBodyCell>
                 <SpendBodyCell>{loading || !u ? '—' : u.requests.toLocaleString()}</SpendBodyCell>
                 <SpendBodyCell>
-                  {loading || !u ? '—' : u.tokens.total.toLocaleString()}
-                </SpendBodyCell>
-                <SpendBodyCell>
                   {loading || !u ? '—' : (formatUsd(u.spend_usd) ?? '—')}
                 </SpendBodyCell>
-                <SpendBodyCell>{loading ? '—' : share}</SpendBodyCell>
+                <SpendBodyCell>
+                  {loading || !u ? (
+                    '—'
+                  ) : dominant ? (
+                    <StatusPill tone="warning">
+                      {dominant.code} ×{dominant.count}
+                    </StatusPill>
+                  ) : (
+                    '—'
+                  )}
+                </SpendBodyCell>
+                <SpendBodyCell>{loading ? '—' : <ShareCell pct={sharePct(spend)} />}</SpendBodyCell>
+                <SpendBodyCell>
+                  <StatusPill tone={pill.tone}>{pill.text}</StatusPill>
+                </SpendBodyCell>
+                <SpendBodyCell>
+                  <span title="Manage credentials in Providers" style={{ display: 'inline-flex' }}>
+                    <button
+                      type="button"
+                      disabled
+                      aria-label={`Actions for ${c.label}`}
+                      style={kebabBtnStyle}
+                    >
+                      <KebabIcon />
+                    </button>
+                  </span>
+                </SpendBodyCell>
               </SpendBodyRow>
             );
           })}
@@ -790,6 +1073,53 @@ function parseCapInput(text: string): ParseResult {
   return { ok: true, cents };
 }
 
+/* ------------------------------------------------------------------ */
+/* Budget controls — cap editor, on-breach behavior, BYOK toggle        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * On-breach radio: a real <input type="radio"> (keyboard + screen reader
+ * semantics), custom-styled to the reference (outer ring, accent dot when
+ * checked) via appearance:none — never a native unstyled radio and never a
+ * div pretending to be one. Matches the ModelsPage DefaultRadio styling.
+ */
+const BreachRadio = styled.input.attrs({ type: 'radio' })`
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid ${({ theme }) => theme.app.border.strong};
+  background: transparent;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  vertical-align: middle;
+  &:checked {
+    border-color: ${({ theme }) => theme.app.accentControl};
+  }
+  &:checked::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: ${({ theme }) => theme.app.accentControl};
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.app.accentControl};
+    outline-offset: 2px;
+  }
+`;
+
 function BudgetControls({
   data,
   editable,
@@ -823,13 +1153,30 @@ function BudgetControls({
     }
     setCapError(null);
     setActionError(null);
-    mutations.patchBudget.mutate(parsed.cents, {
-      onSuccess: () => setCapText(null),
-      onError: (err) => setActionError(err.message),
-    });
+    mutations.patchBudget.mutate(
+      { cap_usd_cents: parsed.cents },
+      {
+        onSuccess: () => setCapText(null),
+        onError: (err) => setActionError(err.message),
+      },
+    );
   };
 
   const toggleBusy = mutations.patchIncludeByok.isPending;
+  const breachBusy = mutations.patchBudget.isPending;
+  const breachAction = budget.breach_action ?? 'refuse';
+
+  const setBreachAction = (next: 'refuse' | 'alert_only') => {
+    if (next === breachAction) return;
+    setActionError(null);
+    // Optimistic with rollback — handled in useSpendMutations.onMutate/onError.
+    mutations.patchBudget.mutate(
+      { breach_action: next },
+      {
+        onError: (err) => setActionError(err.message),
+      },
+    );
+  };
 
   return (
     <div style={{ ...card, marginTop: 16 }}>
@@ -873,7 +1220,9 @@ function BudgetControls({
         )}
         {atCap && (
           <p style={{ ...noticeCallout, marginTop: 8 }}>
-            At or over the cap — new billable calls are blocked until the next month.
+            {breachAction === 'alert_only'
+              ? 'At or over the cap — new billable calls are allowed in alert-only mode; owners are notified once per day.'
+              : 'At or over the cap — new billable calls are blocked until the next month.'}
           </p>
         )}
       </div>
@@ -887,7 +1236,11 @@ function BudgetControls({
             setCapText(e.target.value);
             setCapError(null);
           }}
-          hint="Leave blank for unlimited. Billable calls are blocked before they run once the cap is reached."
+          hint={
+            breachAction === 'alert_only'
+              ? 'Leave blank for unlimited. When the cap is reached, calls continue and owners are notified.'
+              : 'Leave blank for unlimited. Billable calls are blocked before they run once the cap is reached.'
+          }
           error={capError ?? undefined}
           disabled={!editable || mutations.patchBudget.isPending}
           inputMode="decimal"
@@ -912,6 +1265,50 @@ function BudgetControls({
           Budget controls require the owner or admin role — the server enforces this.
         </p>
       )}
+
+      <div style={{ marginTop: 16, maxWidth: 560 }}>
+        <span style={{ ...labelText, marginBottom: 8, display: 'block' }}>On breach</span>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <label
+            style={{
+              ...row,
+              gap: 10,
+              alignItems: 'center',
+              cursor: !editable || breachBusy ? 'not-allowed' : 'pointer',
+              opacity: !editable ? 0.55 : 1,
+            }}
+          >
+            <BreachRadio
+              name="breach-action"
+              value="refuse"
+              checked={breachAction === 'refuse'}
+              disabled={!editable || breachBusy}
+              onChange={() => setBreachAction('refuse')}
+            />
+            <span style={bodyText}>
+              Refuse new runs <span style={hintText}>— callers get a reason</span>
+            </span>
+          </label>
+          <label
+            style={{
+              ...row,
+              gap: 10,
+              alignItems: 'center',
+              cursor: !editable || breachBusy ? 'not-allowed' : 'pointer',
+              opacity: !editable ? 0.55 : 1,
+            }}
+          >
+            <BreachRadio
+              name="breach-action"
+              value="alert_only"
+              checked={breachAction === 'alert_only'}
+              disabled={!editable || breachBusy}
+              onChange={() => setBreachAction('alert_only')}
+            />
+            <span style={bodyText}>Alert only</span>
+          </label>
+        </div>
+      </div>
 
       {actionError && (
         <p role="alert" style={{ ...errorCallout, marginTop: 12 }}>

@@ -289,7 +289,7 @@ function summaryFixture(): SpendSummaryView {
     providers: [
       { provider: 'openai', platform_spend_usd: '12.40', byok_settled_usd: '0', byok_list_price_equivalent_usd: '88.10', pricing_basis: 'list' },
     ],
-    budget: { cap_usd_cents: 5000, used_usd: '12.40', include_byok_spend: false },
+    budget: { cap_usd_cents: 5000, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
     fee_config: {
       byok_fee_credits_per_call: 2,
       payg_margin_note: '30% margin on list cost for PAYG inference.',

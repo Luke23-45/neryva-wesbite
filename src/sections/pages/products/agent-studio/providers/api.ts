@@ -483,6 +483,14 @@ export interface SpendBudgetView {
   cap_usd_cents: number | null;
   used_usd: string;
   include_byok_spend: boolean;
+  /** What happens when the cap is breached. Defaults to 'refuse' server-side when unset. */
+  breach_action: 'refuse' | 'alert_only';
+}
+
+/** PATCH /console/org/:orgId/spend/budget payload — cap and/or breach action. */
+export interface SpendBudgetPatch {
+  cap_usd_cents?: number | null;
+  breach_action?: 'refuse' | 'alert_only';
 }
 
 export interface SpendFeeConfig {
@@ -529,12 +537,15 @@ export async function fetchSpendSummary(
 
 export async function patchSpendBudget(
   orgId: string,
-  cap_usd_cents: number | null,
-): Promise<{ cap_usd_cents: number | null }> {
-  return engine<{ cap_usd_cents: number | null }>(`/console/org/${orgId}/spend/budget`, {
-    method: 'PATCH',
-    body: { cap_usd_cents },
-  });
+  payload: SpendBudgetPatch,
+): Promise<{ cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' }> {
+  return engine<{ cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' }>(
+    `/console/org/${orgId}/spend/budget`,
+    {
+      method: 'PATCH',
+      body: payload,
+    },
+  );
 }
 
 /**

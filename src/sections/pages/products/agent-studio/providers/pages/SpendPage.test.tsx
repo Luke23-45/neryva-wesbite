@@ -13,7 +13,10 @@
  *   free tier gets read-only overview (no controls, no export)
  * - 7d/30d window Dropdown refetches the summary
  * - NEW: summary budget-cap card with progress; per-credential spend renders
- *   as the reference table (Credential / Requests / Tokens / Spend / Share)
+ *   as the reference table (Credential / Requests / Spend / Errors / Share /
+ *   Status) with the platform pool leading, dominant-error pills, and
+ *   status pills; on-breach radios PATCH { breach_action } with optimistic
+ *   rollback
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -79,7 +82,7 @@ function summaryFixture(over: Partial<SpendSummaryView> = {}): SpendSummaryView 
       { provider: 'openai', platform_spend_usd: '12.40', byok_settled_usd: '0', byok_list_price_equivalent_usd: '88.10', pricing_basis: 'list' },
       { provider: 'anthropic', platform_spend_usd: '0', byok_settled_usd: '0', pricing_basis: 'settled' },
     ],
-    budget: { cap_usd_cents: 5000, used_usd: '12.40', include_byok_spend: false },
+    budget: { cap_usd_cents: 5000, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
     fee_config: {
       byok_fee_credits_per_call: 2,
       payg_margin_note: '30% margin on list cost for PAYG inference.',
@@ -216,7 +219,7 @@ describe('SpendPage summary cards', () => {
 
   it('renders Unlimited with no progress bar when the engine reports no cap', async () => {
     hoisted.summary = summaryFixture({
-      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false },
+      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
     });
     renderPage();
     await waitFor(() => {
@@ -234,17 +237,56 @@ describe('SpendPage per-credential table', () => {
     await waitFor(() => {
       expect(screen.getByText('Credential')).toBeTruthy();
     });
-    for (const col of ['Credential', 'Requests', 'Tokens', 'Spend', 'Share']) {
+    for (const col of ['Credential', 'Requests', 'Spend', 'Errors', 'Share', 'Status']) {
       expect(screen.getByRole('columnheader', { name: col })).toBeTruthy();
     }
+    // Platform pool leads the table with the engine's settled spend.
+    expect(screen.getByText('Platform pool')).toBeTruthy();
+    expect(screen.getByText('platform · pool · no key required')).toBeTruthy();
     await waitFor(() => {
       expect(screen.getAllByText('120')).toHaveLength(2);
     });
-    expect(screen.getAllByText('1,500')).toHaveLength(2);
     expect(screen.getAllByText('$0.40').length).toBeGreaterThanOrEqual(2);
-    // Two keys at $0.40 each → 50% share each.
-    expect(screen.getAllByText('50%').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/Share is the key's fraction of the spend shown in this table/)).toBeTruthy();
+    // $12.40 platform + two keys at $0.40 each = $13.20 → 3% each, 94% pool.
+    expect(screen.getAllByText('3%').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('94%')).toBeTruthy();
+    expect(screen.getByText(/the platform pool is included/)).toBeTruthy();
+  });
+
+  it('renders the dominant error as a warning pill', async () => {
+    hoisted.credentials = [credFixture('c1')];
+    renderPage();
+    // usageFixture has a single 429.
+    await waitFor(() => {
+      expect(screen.getByText('429 ×1')).toBeTruthy();
+    });
+  });
+
+  it('renders "—" for errors when the breakdown is clean', async () => {
+    hoisted.credentials = [credFixture('c1')];
+    hoisted.fetchUsage.mockImplementation(async () =>
+      usageFixture({ error_breakdown: { '401': 0, '403': 0, '429': 0, '5xx': 0 } }),
+    );
+    renderPage();
+    await waitFor(() => {
+      // Header row + pool row + one credential row; the credential's
+      // ERRORS cell reads "—".
+      expect(screen.getAllByRole('row').length).toBe(3);
+    });
+    expect(screen.queryByText('429 ×1')).toBeNull();
+  });
+
+  it('shows Active for verified and a dimmed Revoked row with history retained', async () => {
+    const revoked = credFixture('c2');
+    revoked.verification_status = 'revoked';
+    revoked.revoked_at = '2026-10-02T00:00:00Z';
+    hoisted.credentials = [credFixture('c1'), revoked];
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Revoked')).toBeTruthy();
+    });
+    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/history retained/)).toBeTruthy();
   });
 });
 
@@ -294,7 +336,7 @@ describe('SpendPage cap editor', () => {
     fireEvent.change(input, { target: { value: '75.50' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
     await waitFor(() => {
-      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', 7550);
+      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', { cap_usd_cents: 7550 });
     });
   });
 
@@ -304,18 +346,81 @@ describe('SpendPage cap editor', () => {
     fireEvent.change(input, { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save cap' }));
     await waitFor(() => {
-      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', null);
+      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', { cap_usd_cents: null });
     });
   });
 
   it('renders "Unlimited" when the engine reports no cap', async () => {
     hoisted.summary = summaryFixture({
-      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false },
+      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
     });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText(/Unlimited — no cap is set/)).toBeTruthy();
     });
+  });
+});
+
+describe('SpendPage on-breach radios', () => {
+  it('renders the engine breach_action with "Refuse new runs" checked by default', async () => {
+    renderPage();
+    const refuse = await screen.findByRole('radio', { name: /Refuse new runs/ });
+    const alertOnly = screen.getByRole('radio', { name: /Alert only/ });
+    expect((refuse as HTMLInputElement).checked).toBe(true);
+    expect((alertOnly as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('PATCHes { breach_action } when the radio changes', async () => {
+    renderPage();
+    const alertOnly = await screen.findByRole('radio', { name: /Alert only/ });
+    fireEvent.click(alertOnly);
+    await waitFor(() => {
+      expect(hoisted.patchBudget).toHaveBeenCalledWith('org-1', { breach_action: 'alert_only' });
+    });
+  });
+
+  it('rolls the radio back when the server rejects the change', async () => {
+    hoisted.patchBudget.mockImplementation(async () => {
+      throw new Error('nope');
+    });
+    renderPage();
+    const alertOnly = await screen.findByRole('radio', { name: /Alert only/ });
+    fireEvent.click(alertOnly);
+    await waitFor(() => {
+      // Optimistic flip happened, then rollback restored 'refuse'.
+      const refuse = screen.getByRole('radio', { name: /Refuse new runs/ });
+      expect((refuse as HTMLInputElement).checked).toBe(true);
+    });
+    expect(screen.getByText('nope')).toBeTruthy();
+  });
+
+  it('disables the radios for the billing role', async () => {
+    hoisted.role = 'billing';
+    renderPage();
+    const refuse = await screen.findByRole('radio', { name: /Refuse new runs/ });
+    expect((refuse as HTMLInputElement).disabled).toBe(true);
+  });
+});
+
+describe('SpendPage intro and footer', () => {
+  it('renders the intro line with an Invoices & plan link to /platform/billing', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Monitor spend per credential and model, and enforce a monthly cap/),
+      ).toBeTruthy();
+    });
+    const link = screen.getByRole('link', { name: /Invoices & plan/ });
+    expect(link).toHaveAttribute('href', '/platform/billing');
+  });
+
+  it('renders the reference footer copy with a Settings Billing link', async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Caps refuse pre-call with reason/)).toBeTruthy();
+    });
+    const link = screen.getByRole('link', { name: 'Settings Billing' });
+    expect(link).toHaveAttribute('href', '/agent-studio/settings/billing');
   });
 });
 
