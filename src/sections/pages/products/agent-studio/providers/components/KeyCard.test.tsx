@@ -45,6 +45,19 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCrede
     rotate: { mutate: hoisted.rotateMutate, isPending: false },
     revoke: { mutate: hoisted.revokeMutate, isPending: false },
   }),
+  useOptimisticEnabledToggle: () => ({
+    mutate: hoisted.patchMutate,
+    isPending: false,
+  }),
+  usePatchCredentialField: () => ({
+    mutate: hoisted.patchMutate,
+    isPending: false,
+  }),
+  useAssistantRefs: () => ({
+    data: { assistants: [{ id: 'asst-1', name: 'Support' }] },
+    isLoading: false,
+    isError: false,
+  }),
   useCredentialUsage: (): { data: CredentialUsageView; isLoading: boolean } => ({
     data: {
       requests: 1200,
@@ -134,6 +147,7 @@ function renderCard(props: Partial<KeyCardProps> = {}) {
     onDragStart: vi.fn(),
     onDragMove: vi.fn(),
     onDragEnd: vi.fn(),
+    onDragCancel: vi.fn(),
     ...props,
   };
   return {
@@ -177,9 +191,18 @@ describe('statusPillFor matrix', () => {
     expect(pill.text).toBe('Failed');
     expect(pill.tone).toBe('warning');
   });
-  it('renders Revoked and Verifying', () => {
-    expect(statusPillFor(baseCredential({ verification_status: 'revoked' })).text).toBe('Revoked');
-    expect(statusPillFor(baseCredential({ verification_status: 'verifying' })).text).toBe('Verifying…');
+  it('renders Revoked from the lifecycle status field', () => {
+    // P0-2: revocation lives in `status`, never in verification_status.
+    expect(statusPillFor(baseCredential({ status: 'revoked' })).text).toBe('Revoked');
+    expect(statusPillFor(baseCredential({ status: 'revoked' })).tone).toBe('neutral');
+  });
+
+  it('has no fictional verifying state', () => {
+    // The engine never emits 'verifying'; the pill falls back to
+    // 'Unverified' for anything unexpected.
+    expect(
+      statusPillFor(baseCredential({ verification_status: 'unverified' })).text,
+    ).toBe('Unverified');
   });
 });
 
@@ -233,16 +256,17 @@ describe('KeyCard rendering', () => {
   });
 
   it('disables the enabled toggle on revoked cards', () => {
-    renderCard({ credential: baseCredential({ verification_status: 'revoked', enabled: false }) });
+    // P0-2: revoked is read from `status`, not verification_status.
+    renderCard({ credential: baseCredential({ status: 'revoked', enabled: false }) });
     expect(screen.getByText('Revoked')).toBeTruthy();
     expect(screen.getByRole('switch').getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('toggles enabled state via patch', () => {
+  it('toggles enabled state via the optimistic toggle', () => {
     renderCard();
     fireEvent.click(screen.getByRole('switch'));
     expect(hoisted.patchMutate).toHaveBeenCalledWith(
-      { id: 'cred-1', patch: { enabled: false } },
+      { id: 'cred-1', enabled: false },
       expect.anything(),
     );
   });
@@ -260,6 +284,52 @@ describe('KeyCard rendering', () => {
   it('disables the up button when first', () => {
     renderCard({ isFirst: true, isLast: false });
     expect(screen.getByRole('button', { name: 'Move Production Key up' })).toBeDisabled();
+  });
+
+  it('pointercancel clears the drag without committing a reorder', () => {
+    const onDragEnd = vi.fn();
+    const onDragCancel = vi.fn();
+    // Simulate an in-flight drag (jsdom has no pointer capture).
+    renderCard({ onDragEnd, onDragCancel, dragSourceId: 'cred-1' });
+    const handle = screen.getByRole('button', { name: /Reorder Production Key/ });
+    fireEvent.pointerCancel(handle);
+    expect(onDragCancel).toHaveBeenCalledTimes(1);
+    expect(onDragEnd).not.toHaveBeenCalled();
+  });
+
+  it('renders the revoked dead state even when the last probe failed', () => {
+    // P0-2: revoked cards always render dead state (disabled controls,
+    // revoked pill) — never the failed compact card's "Retry verify".
+    renderCard({ credential: baseCredential({ status: 'revoked', verification_status: 'failed' }) });
+    expect(screen.getByText('Revoked')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Retry verify' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Sync / Refresh Models' })).toBeDisabled();
+  });
+});
+
+describe('scope filter assistant validation', () => {
+  it('blocks save with a loud error on unknown assistant IDs', () => {
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit scope filters' }));
+    fireEvent.change(screen.getByLabelText('Allowed assistants (optional, comma-separated IDs)'), {
+      target: { value: 'no-such-assistant' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save filters' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Unknown assistant ID');
+    expect(hoisted.patchMutate).not.toHaveBeenCalled();
+  });
+
+  it('saves when every assistant ID is real', () => {
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit scope filters' }));
+    fireEvent.change(screen.getByLabelText('Allowed assistants (optional, comma-separated IDs)'), {
+      target: { value: 'asst-1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save filters' }));
+    expect(hoisted.patchMutate).toHaveBeenCalledWith(
+      { id: 'cred-1', patch: expect.objectContaining({ allowed_assistants: ['asst-1'] }) },
+      expect.anything(),
+    );
   });
 });
 

@@ -15,7 +15,7 @@
  * - Search narrows the tables; the counts line stays honest.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import toast from 'react-hot-toast';
@@ -31,9 +31,13 @@ const fixtureOverrideRef = vi.hoisted(() => ({ current: null as GroupedModels | 
 const directoryOverrideRef = vi.hoisted(
   () => ({ current: null }) as { current: Array<{ provider: string; can_enable?: boolean }> | null },
 );
+// Mutable org role for role-gating tests (default: owner — fully privileged).
+const roleOverrideRef = vi.hoisted(() => ({ current: null as string | null }));
+// Observable refetch for degraded-lane retry tests.
+const refetchMockRef = vi.hoisted(() => ({ current: vi.fn() }));
 
 vi.mock('@/Context/OrgContext', () => ({
-  useOrg: () => ({ orgId: 'org-1' }),
+  useOrg: () => ({ orgId: 'org-1', role: roleOverrideRef.current ?? 'owner' }),
 }));
 
 vi.mock('../hooks/useOrgTier', () => ({
@@ -51,7 +55,7 @@ vi.mock('../hooks/useGroupedModels', () => ({
     data: fixtureOverrideRef.current ?? fixture(),
     isPending: false,
     isError: false,
-    refetch: vi.fn(),
+    refetch: refetchMockRef.current,
   }),
   useModelToggles: () => ({ mutate: mutateMock, isPending: false }),
   useModelDefault: () => ({ mutate: defaultMutateMock, isPending: false }),
@@ -217,6 +221,7 @@ function fixture(): GroupedModels {
       },
     ],
     default_model: { provider: 'openai', model_id: 'gpt-4o' },
+    degraded: [],
   };
 }
 
@@ -234,6 +239,8 @@ beforeEach(() => {
   vi.mocked(toast.error).mockReset();
   fixtureOverrideRef.current = null;
   directoryOverrideRef.current = null;
+  roleOverrideRef.current = null;
+  refetchMockRef.current.mockReset();
 });
 
 describe('ModelsPage', () => {
@@ -244,8 +251,11 @@ describe('ModelsPage', () => {
     // BYOK credential sub-header: key label + fingerprint.
     expect(screen.getByRole('heading', { name: /BYOK · Production Key/ })).toBeTruthy();
     expect(screen.getByText('sk-…8f9a')).toBeTruthy();
-    // Same model id, two distinct rows — one per supergroup.
-    expect(screen.getAllByText('GPT-4o')).toHaveLength(2);
+    // Same model id, two distinct rows — one per supergroup. (Scoped to the
+    // tables: the DefaultBar also displays the current default's name.)
+    const tables = screen.getAllByRole('table');
+    const rowNames = tables.flatMap((t) => within(t).queryAllByText('GPT-4o'));
+    expect(rowNames).toHaveLength(2);
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeTruthy();
     expect(screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ })).toBeTruthy();
     // Counts line is honest.
@@ -540,7 +550,9 @@ describe('ModelsPage', () => {
     fireEvent.change(search, { target: { value: 'claude' } });
     expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
     expect(screen.queryByText('Grok Reasoner')).toBeNull();
-    expect(screen.getByText('1 of 7 models · 0 enabled')).toBeTruthy();
+    // The enabled count is org state, not search state: it derives from the
+    // FULL groups, so the search never rewrites it.
+    expect(screen.getByText('1 of 7 models · 3 enabled')).toBeTruthy();
   });
 
   it('renders the footer copy from the reference', () => {
@@ -548,5 +560,163 @@ describe('ModelsPage', () => {
     expect(screen.getByText(/Toggles apply immediately/)).toBeTruthy();
     expect(screen.getByText(/disabled models fail closed at publish and run time/)).toBeTruthy();
     expect(screen.getByText(/the default applies to new assistants/)).toBeTruthy();
+  });
+
+  it('reader role: radios and switches are disabled with an honest hint', () => {
+    roleOverrideRef.current = 'reader';
+    renderPage();
+    expect(
+      screen.getByText('Only owners, admins and developers can change models.'),
+    ).toBeTruthy();
+    const radios = screen.getAllByRole('radio');
+    expect(radios.length).toBeGreaterThan(0);
+    for (const r of radios) expect(r).toBeDisabled();
+    expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    // No write can fire.
+    fireEvent.click(screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ }));
+    expect(mutateMock).not.toHaveBeenCalled();
+  });
+
+  it('billing role cannot change models either — rank equality with developer does not grant writes', () => {
+    roleOverrideRef.current = 'billing';
+    renderPage();
+    expect(
+      screen.getByText('Only owners, admins and developers can change models.'),
+    ).toBeTruthy();
+    expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('developer role keeps full write access', () => {
+    roleOverrideRef.current = 'developer';
+    renderPage();
+    expect(
+      screen.queryByText('Only owners, admins and developers can change models.'),
+    ).toBeNull();
+    expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('clear default sends null to the engine', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear default' }));
+    expect(defaultMutateMock).toHaveBeenCalledTimes(1);
+    expect(defaultMutateMock.mock.calls[0][0]).toBeNull();
+  });
+
+  it('a failed clear toasts honestly without leaking machine details', () => {
+    renderPage();
+    defaultMutateMock.mockImplementationOnce(
+      (_def: unknown, opts?: { onError?: (e: unknown) => void }) =>
+        opts?.onError?.({ status: 500, code: 'internal', message: 'db exploded' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Clear default' }));
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      'Could not clear the default model — your previous default was restored.',
+    );
+    // No [status code]: message leak in the user copy.
+    for (const call of vi.mocked(toast.error).mock.calls) {
+      expect(String(call[0])).not.toContain('db exploded');
+      expect(String(call[0])).not.toMatch(/\[\d+ /);
+    }
+  });
+
+  it('a dangling stored default renders the honest unavailable state, never a silent unchecked radio', () => {
+    const f = fixture();
+    fixtureOverrideRef.current = {
+      ...f,
+      default_model: { provider: 'openai', model_id: 'ghost-model' },
+    };
+    renderPage();
+    expect(screen.getByText(/Model unavailable — no longer offered/)).toBeTruthy();
+    expect(screen.getByText(/openai \/ ghost-model/)).toBeTruthy();
+    // No radio claims the default.
+    const allRadios = screen.getAllByRole('radio');
+    expect(allRadios.filter((r) => (r as HTMLInputElement).checked)).toHaveLength(0);
+  });
+
+  it('a default hidden by search keeps its indication via the honest note', () => {
+    renderPage();
+    const search = screen.getByLabelText('Search models');
+    fireEvent.change(search, { target: { value: 'claude' } });
+    // The checked radio still resolves from the FULL groups even though no
+    // defaultable row is visible.
+    expect(screen.getByText('The default model is hidden by the current search.')).toBeTruthy();
+    expect(screen.getByText('GPT-4o')).toBeTruthy();
+  });
+
+  it('search matches provider names too', () => {
+    renderPage();
+    const search = screen.getByLabelText('Search models');
+    fireEvent.change(search, { target: { value: 'anthropic' } });
+    expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
+    expect(screen.queryByText('Grok Reasoner')).toBeNull();
+  });
+
+  it('each degraded lane renders an honest note with a working retry', () => {
+    const f = fixture();
+    fixtureOverrideRef.current = {
+      ...f,
+      degraded: ['model_toggles', 'credentials', 'provider_facts', 'cost_points', 'model_pins'],
+    };
+    renderPage();
+    expect(
+      screen.getByText(/Could not load your saved toggles/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Could not load your connected credentials — the BYOK section may be incomplete/),
+    ).toBeTruthy();
+    expect(screen.getByText(/Could not verify provider status/)).toBeTruthy();
+    expect(screen.getByText(/Could not load pricing/)).toBeTruthy();
+    expect(screen.getByText(/Could not load usage information/)).toBeTruthy();
+    // Every lane's retry refetches the grouped query.
+    const retries = screen.getAllByRole('button', { name: 'Retry' });
+    expect(retries.length).toBeGreaterThanOrEqual(5);
+    fireEvent.click(retries[0]);
+    expect(refetchMockRef.current).toHaveBeenCalledTimes(1);
+  });
+
+  it('an unknown default model offers retry instead of a dead end', () => {
+    const f = fixture();
+    fixtureOverrideRef.current = { ...f, degraded: ['default_model'] };
+    renderPage();
+    expect(screen.getByText('Could not load the default model.')).toBeTruthy();
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    fireEvent.click(retry);
+    expect(refetchMockRef.current).toHaveBeenCalledTimes(1);
+    // No Clear affordance while the default is unknown — nothing to clear.
+    expect(screen.queryByRole('button', { name: 'Clear default' })).toBeNull();
+  });
+
+  it('a failed toggle logs machine details and toasts user-safe copy', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      mutateMock.mockImplementationOnce(
+        (_toggles: unknown, opts?: { onError?: (e: unknown) => void }) =>
+          opts?.onError?.({ status: 500, code: 'internal', message: 'db exploded' }),
+      );
+      fireEvent.click(screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ }));
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        'Could not save the model toggle — your previous settings were restored.',
+      );
+      // Machine details are logged, never toasted.
+      expect(errSpy).toHaveBeenCalledWith(
+        '[models] toggle POST failed',
+        expect.objectContaining({ message: 'db exploded' }),
+      );
+      for (const call of vi.mocked(toast.error).mock.calls) {
+        expect(String(call[0])).not.toContain('db exploded');
+      }
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 });

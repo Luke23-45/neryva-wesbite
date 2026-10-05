@@ -15,7 +15,10 @@ export function validateBaseUrl(raw: string): { state: UrlState; message: string
   try {
     url = new URL(value);
   } catch {
-    return { state: 'invalid', message: 'Enter a valid URL, e.g. https://vllm.internal.corp/v1.' };
+    // P1-5: the example must be an honest public endpoint — the old
+    // internal-corp example contradicted the SSRF posture (private hosts
+    // are blocked, by design).
+    return { state: 'invalid', message: 'Enter a valid URL, e.g. https://llm.example.com/v1.' };
   }
   if (url.protocol === 'https:') {
     // fall through to host checks
@@ -43,7 +46,10 @@ export function validateBaseUrl(raw: string): { state: UrlState; message: string
   if (privateHost) {
     return {
       state: 'invalid',
-      message: 'Target address resolves to private or metadata network.',
+      // Deliberate SSRF posture (engine ssrfSafeFetch agrees): only
+      // publicly reachable HTTPS endpoints. Corp-internal allowlisting is a
+      // future founder decision, not a silent exception.
+      message: 'Private, loopback, and link-local addresses are blocked — use a publicly reachable HTTPS endpoint.',
     };
   }
   return { state: 'valid', message: 'URL validated.' };

@@ -15,8 +15,8 @@ import { KeyCard } from '@/sections/pages/products/agent-studio/providers/compon
 import { ConnectKeyForm } from '@/sections/pages/products/agent-studio/providers/components/ConnectKeyForm';
 import { providerDisplayName } from '@/sections/pages/products/agent-studio/providers/lib/provider-display-names';
 import {
-  useCredentialMutations,
   useCredentials,
+  useReorderPriorities,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials';
 import { useOrgTier } from '@/sections/pages/products/agent-studio/providers/hooks/useOrgTier';
 import type { ProviderCredentialView } from '@/sections/pages/products/agent-studio/providers/api';
@@ -36,10 +36,36 @@ const enterprisePill: CSSProperties = {
   marginLeft: 8,
   fontSize: 11,
   fontWeight: 700,
-  background: 'rgba(255,255,255,0.2)',
+  // Solid warning on near-black text — ~7:1 contrast (WCAG AA). The old
+  // translucent white-on-surface2 treatment fell below AA.
+  background: colors.warning,
+  color: '#0d1117',
   borderRadius: 999,
   padding: '2px 8px',
 };
+
+/**
+ * Tier-resolution skeleton (P1-4): while `useOrgTier()` reports 'unknown'
+ * the page renders this instead of the management UI, so a slow
+ * entitlement cache can never flash the wrong surface.
+ */
+function TierLoadingSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading providers">
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          style={{
+            ...card,
+            marginBottom: 16,
+            minHeight: 120,
+            // Flat color — no gradients on console surfaces (standing rule).
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 /**
  * Provider subgroup subheader — full-width label row above each provider's
@@ -96,7 +122,6 @@ export function MyProvidersPage() {
   const { orgId } = useOrg();
   const tier = useOrgTier();
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
-  const mutations = useCredentialMutations(orgId ?? '');
   const [connectOpen, setConnectOpen] = useState(false);
 
   const credentials = useMemo(() => {
@@ -140,8 +165,28 @@ export function MyProvidersPage() {
 
   // Pointer-drag state: { sourceId, targetId } while a drag is in flight.
   const [drag, setDrag] = useState<{ sourceId: string; targetId: string | null } | null>(null);
+  // Priority-reorder failure (P1-3): the atomic request failed; the hook
+  // rolled the optimistic reorder back and the surviving error renders
+  // here, never swallowed.
+  const [swapError, setSwapError] = useState<string | null>(null);
+  const reorder = useReorderPriorities(orgId ?? '');
 
   if (!orgId) return null;
+
+  // Tier unknown (still resolving) — render the skeleton, never the
+  // management UI. Gating only on 'free' flashed the wrong surface while
+  // the entitlement cache was loading (P1-4).
+  if (tier === 'unknown') {
+    return (
+      <ViewShell>
+        <ViewHeader>
+          <ViewTitle>My Providers</ViewTitle>
+          <ViewSubtitle>Your connected API keys and custom endpoints.</ViewSubtitle>
+        </ViewHeader>
+        <TierLoadingSkeleton />
+      </ViewShell>
+    );
+  }
 
   // Free tier: platform keys only, nothing to manage (doc 19 §2).
   if (tier === 'free') {
@@ -162,18 +207,39 @@ export function MyProvidersPage() {
     );
   }
 
+  /**
+   * Priority swap (P1-3): ONE atomic request applies the group's full new
+   * order — the engine persists it in a single transaction (all-or-nothing),
+   * replacing the old two-PATCH swap that could half-apply.
+   *
+   * The request carries every card in the provider group with its resulting
+   * priority: the two cards trade positions and every other card keeps its
+   * priority, so no invented values and no cross-group collisions. The hook
+   * applies the order optimistically and rolls back on failure; the error
+   * surfaces in the alert below, never swallowed.
+   */
   const swapPriorities = (aId: string, bId: string) => {
     const a = credentials.find((c) => c.id === aId);
     const b = credentials.find((c) => c.id === bId);
-    if (!a || !b || a.id === b.id) return;
-    // Swap priorities so ordering stays a strict sequence.
-    mutations.patch.mutate(
-      { id: a.id, patch: { priority: b.priority } },
-      {
-        onSuccess: () =>
-          mutations.patch.mutate({ id: b.id, patch: { priority: a.priority } }),
-      },
+    if (!a || !b || a.id === b.id || a.provider !== b.provider) return;
+    const ordered = [...(groups.get(a.provider) ?? [])].sort(
+      (x, y) => x.priority - y.priority || x.id.localeCompare(y.id),
     );
+    const ai = ordered.findIndex((c) => c.id === aId);
+    const bi = ordered.findIndex((c) => c.id === bId);
+    if (ai === -1 || bi === -1) return;
+    const priorities = ordered.map((c) => c.priority);
+    [ordered[ai], ordered[bi]] = [ordered[bi], ordered[ai]];
+    const items = ordered.map((c, i) => ({ id: c.id, priority: priorities[i] }));
+    setSwapError(null);
+    reorder.mutate(items, {
+      onError: (err) =>
+        setSwapError(
+          err instanceof Error && err.message
+            ? `Reorder failed and was rolled back: ${err.message}`
+            : 'Reorder failed and was rolled back. Reload the page to see the current order.',
+        ),
+    });
   };
 
   // Keyboard/arrow-button reorder is group-relative, matching the
@@ -203,6 +269,19 @@ export function MyProvidersPage() {
         />
       </div>
 
+      {swapError && (
+        <div style={{ ...errorCallout, marginBottom: 16 }} role="alert">
+          {swapError}{' '}
+          <button
+            type="button"
+            onClick={() => setSwapError(null)}
+            style={{ ...ghostBtn, minHeight: 44, padding: '8px 14px' }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {connectOpen && (
         <div style={{ marginBottom: 16 }}>
           <ConnectKeyForm
@@ -217,7 +296,7 @@ export function MyProvidersPage() {
       {isError && (
         <div style={errorCallout} role="alert">
           Couldn’t load your credentials.{' '}
-          <button type="button" onClick={() => refetch()} style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px' }}>
+          <button type="button" onClick={() => refetch()} style={{ ...ghostBtn, minHeight: 44, padding: '8px 14px' }}>
             Retry
           </button>
         </div>
@@ -269,6 +348,9 @@ export function MyProvidersPage() {
                   setDrag(null);
                   if (targetId && targetId !== sourceId) swapPriorities(sourceId, targetId);
                 }}
+                // P2: a cancelled pointer gesture must NOT commit a
+                // reorder — it only clears the drag state.
+                onDragCancel={() => setDrag(null)}
               />
             ))}
           </Fragment>

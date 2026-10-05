@@ -12,7 +12,10 @@ type DirectoryData = { providers: ProviderDirectoryEntry[] };
  * (POST /provider-credentials/providers/:provider, owner/admin only).
  *
  * Optimistic + rollback, mirroring the N-6 model-toggle hook: the directory
- * cache's `connection.enabled` flips immediately and rolls back on failure.
+ * cache's `connection.enabled` AND `connection.stored_enabled` flip
+ * immediately and roll back on failure. Both flip because the switch
+ * renders from the stored value — flipping only `enabled` would leave a
+ * grandfathered row visually stuck until refetch.
  * The caller owns the error copy (sanitized at render time — never the raw
  * engine message).
  */
@@ -36,7 +39,10 @@ export function useSetProviderEnabled(orgId: string | null) {
             ...data,
             providers: data.providers.map((entry) =>
               entry.provider === provider
-                ? { ...entry, connection: { ...entry.connection, enabled } }
+                ? {
+                    ...entry,
+                    connection: { ...entry.connection, enabled, stored_enabled: enabled },
+                  }
                 : entry,
             ),
           });

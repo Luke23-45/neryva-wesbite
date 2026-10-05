@@ -15,11 +15,19 @@ export interface StatusPillData {
 /**
  * Status-pill matrix. `lastError` is the engine probe failure detail from
  * the most recent verify attempt on this card.
+ *
+ * Revocation is read from the separate lifecycle `status` field (P0-2): a
+ * revoked credential keeps its last verification_status forever, so
+ * matching revocation on verification_status was dead code. The engine
+ * never emits 'verifying' (probes are synchronous — the row goes
+ * unverified → verified/failed), so that fictional state is gone from the
+ * type and unhandled here.
  */
 export function statusPillFor(
-  credential: Pick<ProviderCredentialView, 'verification_status' | 'last_probe_latency_ms'>,
+  credential: Pick<ProviderCredentialView, 'verification_status' | 'last_probe_latency_ms' | 'status'>,
   lastError?: string | null,
 ): StatusPillData {
+  if (credential.status === 'revoked') return { tone: 'neutral', text: 'Revoked' };
   switch (credential.verification_status) {
     case 'verified':
       return {
@@ -29,8 +37,6 @@ export function statusPillFor(
             ? `Verified (${credential.last_probe_latency_ms}ms)`
             : 'Verified',
       };
-    case 'verifying':
-      return { tone: 'info', text: 'Verifying…' };
     case 'failed': {
       // Founder key-cards design: amber "Failed: {code}" — the code is the
       // leading 3-digit status from the most recent verify attempt's engine
@@ -39,8 +45,6 @@ export function statusPillFor(
       const code = lastError?.match(/^\d{3}/)?.[0];
       return { tone: 'warning', text: code ? `Failed: ${code}` : 'Failed' };
     }
-    case 'revoked':
-      return { tone: 'neutral', text: 'Revoked' };
     case 'unverified':
     default:
       return { tone: 'warning', text: 'Unverified' };

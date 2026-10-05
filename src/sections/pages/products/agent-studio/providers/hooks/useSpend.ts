@@ -9,7 +9,7 @@
  * the server remains the authority on error.
  * Error copy is rendered by callers from `ApiError.message` only.
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   downloadSpendExport,
   fetchSpendSummary,
@@ -28,16 +28,24 @@ export const spendKeys = {
     [...spendKeys.root(orgId), 'models', window] as const,
 };
 
+interface BudgetPatchResult {
+  cap_usd_cents: number | null;
+  breach_action: 'refuse' | 'alert_only';
+}
+
+interface OptimisticSummaryCtx {
+  prev: Array<[readonly unknown[], SpendSummaryView | undefined]>;
+}
+
 export interface SpendMutations {
-  patchBudget: ReturnType<
-    typeof useMutation<
-      { cap_usd_cents: number | null; breach_action: 'refuse' | 'alert_only' },
-      Error,
-      SpendBudgetPatch,
-      { prev: Array<[readonly unknown[], SpendSummaryView | undefined]> } | undefined
-    >
+  /** Cap saves — never optimistic: money must not display a state the server didn't accept. */
+  patchBudget: ReturnType<typeof useMutation<BudgetPatchResult, Error, SpendBudgetPatch>>;
+  /** breach_action flips — optimistic with rollback. */
+  patchBreachAction: ReturnType<
+    typeof useMutation<BudgetPatchResult, Error, 'refuse' | 'alert_only', OptimisticSummaryCtx>
   >;
-  patchIncludeByok: ReturnType<typeof useMutation<Record<string, unknown>, Error, boolean>>;
+  /** BYOK toggle — optimistic with rollback, like the breach radio. */
+  patchIncludeByok: ReturnType<typeof useMutation<Record<string, unknown>, Error, boolean, OptimisticSummaryCtx>>;
   exportSpend: ReturnType<typeof useMutation<void, Error, 'csv' | 'json'>>;
 }
 
@@ -59,37 +67,61 @@ export function useSpendSummary(
  * All spend mutations for one org. Each invalidates the spend query tree on
  * success so the overview, budget, and fee panels reflect server state.
  *
- * breach_action updates are optimistic with rollback: the radio must flip
- * immediately and revert if the server rejects — money controls must never
- * display a state the server didn't accept.
+ * Pending states are decoupled per control: the cap save (`patchBudget`) is
+ * never optimistic and has its own `isPending`; the breach-action radio
+ * (`patchBreachAction`) and the BYOK toggle (`patchIncludeByok`) are
+ * optimistic with rollback — they must respond immediately and revert if
+ * the server rejects, since money controls must never display a state the
+ * server didn't accept.
  */
 export function useSpendMutations(orgId: string): SpendMutations {
   const queryClient = useQueryClient();
+  const summaryPrefix = [...spendKeys.root(orgId), 'summary'] as const;
   const invalidateSpend = () =>
     queryClient.invalidateQueries({ queryKey: spendKeys.root(orgId) });
 
+  // Snapshot every cached summary window and apply an optimistic flip; the
+  // returned context restores the snapshot on error (rollback).
+  const optimisticSummary = async (
+    qc: QueryClient,
+    flip: (old: SpendSummaryView) => SpendSummaryView,
+  ): Promise<OptimisticSummaryCtx> => {
+    await qc.cancelQueries({ queryKey: spendKeys.root(orgId) });
+    const prev = qc.getQueriesData<SpendSummaryView>({ queryKey: summaryPrefix });
+    qc.setQueriesData<SpendSummaryView>({ queryKey: summaryPrefix }, (old) =>
+      old ? flip(old) : old,
+    );
+    return { prev };
+  };
+  const rollbackSummary = (context: OptimisticSummaryCtx | undefined) => {
+    context?.prev.forEach(([key, data]) => queryClient.setQueryData(key, data));
+  };
+
   const patchBudget = useMutation({
     mutationFn: (payload: SpendBudgetPatch) => patchSpendBudget(orgId, payload),
-    onMutate: async (payload) => {
-      if (payload.breach_action === undefined) return undefined;
-      await queryClient.cancelQueries({ queryKey: spendKeys.root(orgId) });
-      const summaryKey = [...spendKeys.root(orgId), 'summary'] as const;
-      const prev = queryClient.getQueriesData<SpendSummaryView>({
-        queryKey: summaryKey,
-      });
-      queryClient.setQueriesData<SpendSummaryView>({ queryKey: summaryKey }, (old) =>
-        old ? { ...old, budget: { ...old.budget, breach_action: payload.breach_action! } } : old,
-      );
-      return { prev };
-    },
-    onError: (_err, _payload, context) => {
-      context?.prev.forEach(([key, data]) => queryClient.setQueryData(key, data));
-    },
+    onSuccess: () => invalidateSpend(),
+  });
+
+  const patchBreachAction = useMutation({
+    mutationFn: (action: 'refuse' | 'alert_only') =>
+      patchSpendBudget(orgId, { breach_action: action }),
+    onMutate: (action) =>
+      optimisticSummary(queryClient, (old) => ({
+        ...old,
+        budget: { ...old.budget, breach_action: action },
+      })),
+    onError: (_err, _action, context) => rollbackSummary(context),
     onSuccess: () => invalidateSpend(),
   });
 
   const patchIncludeByok = useMutation({
     mutationFn: (include: boolean) => patchIncludeByokSpend(orgId, include),
+    onMutate: (include) =>
+      optimisticSummary(queryClient, (old) => ({
+        ...old,
+        budget: { ...old.budget, include_byok_spend: include },
+      })),
+    onError: (_err, _include, context) => rollbackSummary(context),
     onSuccess: () => invalidateSpend(),
   });
 
@@ -97,5 +129,5 @@ export function useSpendMutations(orgId: string): SpendMutations {
     mutationFn: (format: 'csv' | 'json') => downloadSpendExport(orgId, format),
   });
 
-  return { patchBudget, patchIncludeByok, exportSpend };
+  return { patchBudget, patchBreachAction, patchIncludeByok, exportSpend };
 }

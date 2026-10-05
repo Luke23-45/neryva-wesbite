@@ -15,9 +15,10 @@
  * carries it the sub-line shows the compact form (128K/1M), otherwise "—";
  * nothing is invented.
  */
-import { useMemo, useState } from 'react';
-import styled from 'styled-components';
+import { useMemo, useState, type ReactNode } from 'react';
+import styled, { css } from 'styled-components';
 import { useOrg } from '@/Context/OrgContext';
+import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers/priceFormat';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { SearchField } from '@components/common/ui/SearchField';
 import { Switch } from '@components/common/ui/Switch';
@@ -70,6 +71,91 @@ const CountLine = styled.div`
   color: ${({ theme }) => theme.app.text.faint};
   margin-bottom: 16px;
 `;
+
+/**
+ * Default-model bar: the one place that shows the org default (or its
+ * honest absence), the "no longer offered" state for a dangling stored
+ * ref, and the Clear affordance the engine's nullable PUT supports.
+ */
+const DefaultBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 12px;
+  background: ${({ theme }) => theme.app.surface.subtle};
+`;
+
+const DefaultBarLabel = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.app.text.faint};
+`;
+
+const DefaultBarValue = styled.span<{ $warning?: boolean }>`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme, $warning }) =>
+    $warning ? theme.app.status.warning.fg : theme.app.text.primary};
+`;
+
+const ClearDefaultButton = styled.button`
+  margin-left: auto;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  border-radius: 8px;
+  background: transparent;
+  color: ${({ theme }) => theme.app.text.secondary};
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 12px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  &:hover {
+    background: ${({ theme }) => theme.app.surface.hover};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
+/** Honest per-section state when a grouped-models sub-read degraded. */
+const DegradedNote = styled.p`
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.app.status.warning.fg};
+`;
+
+/**
+ * One degraded lane: honest "unavailable" copy plus a retry that refetches
+ * the grouped query — every failed sub-read gets a recovery action, never
+ * a dead end.
+ */
+function DegradedLaneNote({
+  children,
+  onRetry,
+}: {
+  children: ReactNode;
+  onRetry: () => void;
+}) {
+  return (
+    <DegradedNote>
+      {children}{' '}
+      <RetryButton $compact type="button" onClick={onRetry}>
+        Retry
+      </RetryButton>
+    </DegradedNote>
+  );
+}
 
 const SectionBlock = styled.section`
   margin-bottom: 28px;
@@ -145,7 +231,7 @@ const HeadCell = styled.th`
 `;
 
 /** Full-width provider sub-header row inside the table body. */
-const ProviderSubHeadCell = styled.td`
+const ProviderSubHeadCell = styled.th`
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 700;
@@ -155,6 +241,7 @@ const ProviderSubHeadCell = styled.td`
   background: ${({ theme }) => theme.app.surface.tint};
   border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
   white-space: nowrap;
+  text-align: left;
 `;
 
 /**
@@ -162,8 +249,13 @@ const ProviderSubHeadCell = styled.td`
  * reader semantics), custom-styled to the reference (outer ring, accent dot
  * when checked) via appearance:none — never a native unstyled radio and
  * never a div pretending to be one.
+ *
+ * 44px invisible hit target via ::before (mirrors the Switch ::after
+ * pattern — ::before because ::after renders the checked dot).
+ * `$saving` is the in-flight write state: a pulse ring + progress cursor,
+ * visually distinct from the policy-disabled dim.
  */
-const DefaultRadio = styled.input.attrs({ type: 'radio' })`
+const DefaultRadio = styled.input.attrs({ type: 'radio' })<{ $saving?: boolean }>`
   appearance: none;
   -webkit-appearance: none;
   width: 16px;
@@ -177,6 +269,11 @@ const DefaultRadio = styled.input.attrs({ type: 'radio' })`
   position: relative;
   flex: none;
   vertical-align: middle;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -14px;
+  }
   &:checked {
     border-color: ${({ theme }) => theme.app.accentControl};
   }
@@ -198,14 +295,26 @@ const DefaultRadio = styled.input.attrs({ type: 'radio' })`
     outline: 2px solid ${({ theme }) => theme.app.accentControl};
     outline-offset: 2px;
   }
-`;
-
-const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
-  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
-  opacity: ${({ $dimmed, $pending }) => ($dimmed || $pending ? 0.55 : 1)};
-  &:last-child {
-    border-bottom: none;
-  }
+  ${({ $saving, theme }) =>
+    $saving &&
+    css`
+      cursor: progress;
+      opacity: 1;
+      animation: default-saving 1.2s ease-in-out infinite;
+      @keyframes default-saving {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 transparent;
+        }
+        50% {
+          box-shadow: 0 0 0 5px ${theme.app.accentControl}40;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+        box-shadow: 0 0 0 2px ${theme.app.accentControl};
+      }
+    `}
 `;
 
 const BodyCell = styled.td`
@@ -291,6 +400,26 @@ const DimText = styled.span`
   white-space: nowrap;
 `;
 
+/**
+ * Table body row. Dimmed/pending rows dim their NON-semantic text to the
+ * faint tone instead of dropping row opacity: a 0.55 opacity also washes
+ * out the warning-colored ReasonItems below AA contrast. Semantic color
+ * (reasons, badges, pills, links) always keeps full strength.
+ */
+const BodyRow = styled.tr<{ $dimmed: boolean; $pending: boolean }>`
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
+  &:last-child {
+    border-bottom: none;
+  }
+  ${({ $dimmed, $pending, theme }) =>
+    ($dimmed || $pending) &&
+    css`
+      ${ModelName}, ${ModelId}, ${PriceText}, ${DimText} {
+        color: ${theme.app.text.faint};
+      }
+    `}
+`;
+
 const UpgradeLink = styled(Link)`
   display: inline-block;
   margin-top: 6px;
@@ -343,8 +472,11 @@ const NoCredRow = styled(Link)`
 const ReasoningToggle = styled.button`
   border: none;
   background: none;
-  padding: 0;
+  padding: 0 4px;
   margin-top: 4px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
   font-weight: 500;
   color: ${({ theme }) => theme.app.text.link};
@@ -414,15 +546,18 @@ const ErrorBox = styled.div`
   gap: 12px;
 `;
 
-const RetryButton = styled.button`
+const RetryButton = styled.button<{ $compact?: boolean }>`
   flex: none;
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 8px;
   background: transparent;
   color: ${({ theme }) => theme.app.text.primary};
-  font-size: 13px;
+  font-size: ${({ $compact }) => ($compact ? '12.5px' : '13px')};
   font-weight: 600;
-  padding: 7px 14px;
+  padding: ${({ $compact }) => ($compact ? '0 12px' : '7px 14px')};
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
   &:hover {
     background: ${({ theme }) => theme.app.surface.hover};
@@ -435,8 +570,14 @@ const SkeletonWrap = styled.div`
   gap: 12px;
 `;
 
-const SkeletonBlock = styled.div<{ $h: string }>`
+/**
+ * Loading skeleton. Geometry mirrors the loaded page (toolbar search +
+ * count line, then table header + body rows) so content doesn't jump, and
+ * the pulse halts under prefers-reduced-motion.
+ */
+const SkeletonBlock = styled.div<{ $h: string; $w?: string }>`
   height: ${({ $h }) => $h};
+  width: ${({ $w }) => $w ?? '100%'};
   border-radius: 12px;
   background: ${({ theme }) => theme.app.skeleton.base};
   animation: pulse 1.4s ease-in-out infinite;
@@ -449,11 +590,16 @@ const SkeletonBlock = styled.div<{ $h: string }>`
       opacity: 0.45;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 `;
 
 function formatUsd(v: string): string | null {
   const n = Number.parseFloat(v);
-  return Number.isFinite(n) ? `$${n.toFixed(2)}` : null;
+  // One shared price formatter for the section — sub-cent renders as
+  // "<$0.01", never "$0.00".
+  return Number.isFinite(n) ? formatUsdPer1M(n) : null;
 }
 
 /**
@@ -477,11 +623,20 @@ interface BlastTarget {
 /* ------------------------------------------------------------------ */
 
 export function ModelsPage() {
-  const { orgId } = useOrg();
+  const { orgId, role } = useOrg();
   const tier = useOrgTier();
   const { data, isPending, isError, refetch } = useGroupedModels(orgId);
   const toggles = useModelToggles(orgId);
   const defaultMut = useModelDefault(orgId);
+
+  /**
+   * P1-1: engine model writes (toggles, default) are owner/admin/
+   * developer-only — billing and reader get 403. Non-privileged roles see
+   * disabled controls plus an honest hint, never interactive controls the
+   * server rejects. NOTE: not `atLeast('developer')` — billing shares
+   * developer's rank but is excluded from model writes server-side.
+   */
+  const canWrite = role === 'owner' || role === 'admin' || role === 'developer';
 
   const [blastTarget, setBlastTarget] = useState<BlastTarget | null>(null);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -489,9 +644,19 @@ export function ModelsPage() {
   const [searchInput, setSearchInput] = useState('');
 
   const groups: GroupedModels = useMemo(
-    () => data ?? { platform: [], byok: [], default_model: null },
+    () => data ?? { platform: [], byok: [], default_model: null, degraded: [] },
     [data],
   );
+
+  /**
+   * Per-read degradation codes from the grouped payload (engine
+   * GROUPED_MODEL_DEGRADED_READS). Absent on older engines — default to
+   * "nothing degraded" rather than inventing failure.
+   */
+  const degradedSet = useMemo(() => new Set(groups.degraded ?? []), [groups.degraded]);
+
+  /** Refetch the grouped query — the recovery action for every degraded lane. */
+  const retryGrouped = () => void refetch();
 
   /**
    * Provider-level plan gate from the N-4 directory (`can_enable` per row).
@@ -509,10 +674,34 @@ export function ModelsPage() {
   }, [directory.data]);
 
   /**
-   * The N-5 `default_model` — absent/null until the engine ships it, in
-   * which case every DEFAULT radio renders unchecked (never invented).
+   * The N-5 `default_model` — null = no default set (never invented).
+   * `defaultDangling` is the stored ref matching no catalog row (e.g. the
+   * removed mock provider): no radio is checked and the DefaultBar states
+   * "Model unavailable — no longer offered" instead of rendering silence.
    */
   const defaultSel = groups.default_model ?? null;
+
+  const defaultDangling = useMemo(() => {
+    if (!defaultSel) return false;
+    for (const g of [...groups.platform, ...groups.byok]) {
+      if (g.provider !== defaultSel.provider) continue;
+      if (g.models.some((m) => m.model_id === defaultSel.model_id)) return false;
+    }
+    return true;
+  }, [groups.platform, groups.byok, defaultSel]);
+
+  /** Display name for the DefaultBar — the catalog row's name, else the raw model id. */
+  const defaultDisplayName = useMemo(() => {
+    if (!defaultSel) return null;
+    for (const g of [...groups.platform, ...groups.byok]) {
+      if (g.provider !== defaultSel.provider) continue;
+      const m = g.models.find((mm) => mm.model_id === defaultSel.model_id);
+      if (m) return m.display_name;
+    }
+    return defaultSel.model_id;
+  }, [groups.platform, groups.byok, defaultSel]);
+
+  const defaultUnknown = degradedSet.has('default_model');
 
   const handleDefaultChange = (group: ModelGroupView, model: ModelRowView) => {
     defaultMut.mutate(
@@ -520,30 +709,46 @@ export function ModelsPage() {
       {
         onError: (err) => {
           const status = (err as { status?: number } | null)?.status;
-          const message = (err as { message?: string } | null)?.message ?? 'unknown';
-          const code = (err as { code?: string } | null)?.code ?? 'unknown';
-          // TEMP-DIAG: surface the real server error so we can root-cause the
-          // production failure (the generic copy hides the status/body).
+          if (status !== 422) {
+            // Machine details stay in the console — the user gets honest copy.
+            console.error('[models] default-model PUT failed', err);
+          }
           toast.error(
             status === 422
               ? "That model isn't available for your organization — the default was not changed."
-              : `Could not save the default model [${status} ${code}]: ${message} — your previous default was restored.`,
+              : 'Could not save the default model — your previous default was restored.',
           );
         },
       },
     );
   };
 
+  /**
+   * P1-2: the engine accepts `null` — an org whose stored default is a
+   * removed ref (or any stale value) can unset it here.
+   */
+  const handleClearDefault = () => {
+    defaultMut.mutate(null, {
+      onError: (err) => {
+        console.error('[models] clear default-model failed', err);
+        toast.error('Could not clear the default model — your previous default was restored.');
+      },
+    });
+  };
+
   const q = searchInput.trim().toLowerCase();
-  const matches = (m: ModelRowView) =>
+  /** Search matches model names/ids AND provider names — never silently narrows past the default. */
+  const matches = (g: ModelGroupView, m: ModelRowView) =>
     q.length === 0 ||
     m.display_name.toLowerCase().includes(q) ||
-    m.model_id.toLowerCase().includes(q);
+    m.model_id.toLowerCase().includes(q) ||
+    g.provider.toLowerCase().includes(q) ||
+    g.provider_display_name.toLowerCase().includes(q);
 
   const platformGroups = useMemo(
     () =>
       groups.platform
-        .map((g) => ({ ...g, models: g.models.filter(matches) }))
+        .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
         .filter((g) => g.models.length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [groups.platform, q],
@@ -551,7 +756,7 @@ export function ModelsPage() {
   const byokGroups = useMemo(
     () =>
       groups.byok
-        .map((g) => ({ ...g, models: g.models.filter(matches) }))
+        .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
         .filter((g) => g.models.length > 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [groups.byok, q],
@@ -561,7 +766,11 @@ export function ModelsPage() {
     groups.byok.reduce((n, g) => n + g.models.length, 0);
   const shown = platformGroups.reduce((n, g) => n + g.models.length, 0) +
     byokGroups.reduce((n, g) => n + g.models.length, 0);
-  const enabledCount = [...platformGroups, ...byokGroups].reduce(
+  /**
+   * P1-4: the enabled count is org state, not search state — it derives
+   * from the FULL groups so typing in the search box never rewrites it.
+   */
+  const enabledCount = [...groups.platform, ...groups.byok].reduce(
     (n, g) => n + g.models.filter((m) => m.enabled && m.usable).length,
     0,
   );
@@ -573,6 +782,10 @@ export function ModelsPage() {
    * `default_model` names only provider+model_id, so a model served by both
    * doors matches twice. When no matching row is usable, the first match is
    * still shown checked so the stored server state stays visible (disabled).
+   *
+   * P1-4: resolved against the FULL groups — search never unchecks the
+   * default. When the default row is filtered out, the page keeps the
+   * indication via the "hidden by search" note below.
    */
   const defaultRowKey = useMemo(() => {
     if (!defaultSel) return null;
@@ -586,11 +799,23 @@ export function ModelsPage() {
         }
       }
     };
-    collect('platform', platformGroups);
-    collect('byok', byokGroups);
+    collect('platform', groups.platform);
+    collect('byok', groups.byok);
     if (matches.length === 0) return null;
     return (matches.find((r) => r.usable) ?? matches[0]).key;
-  }, [platformGroups, byokGroups, defaultSel, tier]);
+  }, [groups.platform, groups.byok, defaultSel, tier]);
+
+  /** True when the checked default row exists but the current search hides it. */
+  const defaultHiddenBySearch = useMemo(() => {
+    if (!defaultRowKey || q.length === 0) return false;
+    const visible = new Set<string>();
+    const collect = (supergroup: Supergroup, list: ModelGroupView[]) => {
+      for (const g of list) for (const m of g.models) visible.add(rowKey(supergroup, g, m));
+    };
+    collect('platform', platformGroups);
+    collect('byok', byokGroups);
+    return !visible.has(defaultRowKey);
+  }, [defaultRowKey, platformGroups, byokGroups, q]);
 
   const commitToggle = (
     supergroup: Supergroup,
@@ -614,6 +839,8 @@ export function ModelsPage() {
       ],
       {
         onError: (err: unknown) => {
+          // Machine details stay in the console — the user gets honest copy.
+          console.error('[models] toggle POST failed', err);
           if (isTierGateError(err)) {
             // Sanitized nudge copy — never the raw engine message.
             toast.error('Top up credits to enable models for this provider.');
@@ -668,15 +895,18 @@ export function ModelsPage() {
     const disabled = (gated && !on) || !model.usable;
     // DEFAULT radio: only a defaultable model can become the org default.
     // Unknown tier stays interactive — the server 422s when the model truly
-    // can't serve, and the page rolls back with a toast.
+    // can't serve, and the page rolls back with a toast. Non-privileged
+    // roles never get an interactive radio (P1-1).
     const defaultable = isDefaultableModel(tier, model);
     const isDefault = defaultRowKey !== null && key === defaultRowKey;
+    const isSavingDefault = isDefault && defaultMut.isPending;
 
     const defaultCell = defaultable ? (
       <DefaultRadio
         name="org-default-model"
         checked={isDefault}
-        disabled={defaultMut.isPending}
+        $saving={isSavingDefault}
+        disabled={defaultMut.isPending || !canWrite}
         onChange={() => handleDefaultChange(group, model)}
         aria-label={`Set ${model.display_name} as the default model for new assistants`}
       />
@@ -707,7 +937,7 @@ export function ModelsPage() {
     const switchNode = (
       <Switch
         checked={on}
-        disabled={disabled}
+        disabled={disabled || !canWrite}
         onChange={(next) => handleToggle(supergroup, group, model, next)}
         label={`${on ? 'Disable' : 'Enable'} ${model.display_name} (${
           supergroup === 'byok'
@@ -716,6 +946,9 @@ export function ModelsPage() {
         })`}
       />
     );
+
+    const pricesDegraded = degradedSet.has('cost_points');
+    const pinsDegraded = degradedSet.has('model_pins');
 
     const priceCell = (price: string | null) => {
       if (price) {
@@ -728,12 +961,20 @@ export function ModelsPage() {
       }
       // BYOK inference is billed directly by the provider — "Direct" is the
       // honest cell when no price is published; platform rows show "—".
+      // When the cost-points sub-read degraded, "—" means "could not load",
+      // never "not published".
       return supergroup === 'byok' ? (
         <Tooltip label="Billed directly by your provider — no platform price published">
           <DimText>Direct</DimText>
         </Tooltip>
       ) : (
-        <Tooltip label="Pricing not published for this model">
+        <Tooltip
+          label={
+            pricesDegraded
+              ? 'Pricing could not be loaded — showing no price rather than a stale one'
+              : 'Pricing not published for this model'
+          }
+        >
           <PriceText $known={false}>—</PriceText>
         </Tooltip>
       );
@@ -766,9 +1007,9 @@ export function ModelsPage() {
               {reasoningOpen[key] && (
                 <ReasoningPanel>
                   <PresetChips aria-label="Reasoning effort presets (display only)">
-                    <PresetChip aria-disabled="true">Fast</PresetChip>
-                    <PresetChip aria-disabled="true">Standard</PresetChip>
-                    <PresetChip aria-disabled="true">Deep reasoning</PresetChip>
+                    <PresetChip>Fast</PresetChip>
+                    <PresetChip>Standard</PresetChip>
+                    <PresetChip>Deep reasoning</PresetChip>
                   </PresetChips>
                   <BudgetRange>Thinking budget range: 1,000 – 32,000 tokens</BudgetRange>
                   <HonestCopy>
@@ -803,7 +1044,11 @@ export function ModelsPage() {
           </StatusPill>
         </BodyCell>
         <BodyCell>
-          {model.pinned_by.length > 0 ? (
+          {pinsDegraded ? (
+            <Tooltip label="Could not load usage information">
+              <DimText>—</DimText>
+            </Tooltip>
+          ) : model.pinned_by.length > 0 ? (
             <Tooltip
               label={model.pinned_by.map((p) => `${p.assistant_id} (v${p.version})`).join(', ')}
             >
@@ -872,7 +1117,7 @@ export function ModelsPage() {
                  * client-side split is possible — or needed.
                  */}
                 <tr>
-                  <ProviderSubHeadCell colSpan={8}>
+                  <ProviderSubHeadCell colSpan={8} scope="row">
                     {group.provider_display_name} · {group.models.length}
                   </ProviderSubHeadCell>
                 </tr>
@@ -892,10 +1137,15 @@ export function ModelsPage() {
           <ViewTitle>Models</ViewTitle>
           <ViewSubtitle>Turn models on or off for your organization.</ViewSubtitle>
         </ViewHeader>
-        <SkeletonWrap aria-busy="true">
-          <SkeletonBlock $h="36px" />
-          <SkeletonBlock $h="280px" />
-          <SkeletonBlock $h="200px" />
+        <SkeletonWrap aria-busy="true" aria-label="Loading models">
+          {/* Toolbar mirror: search field + count line. */}
+          <SkeletonBlock $h="36px" $w="320px" />
+          <SkeletonBlock $h="14px" $w="240px" />
+          {/* Table mirror: header row + body rows. */}
+          <SkeletonBlock $h="41px" />
+          <SkeletonBlock $h="64px" />
+          <SkeletonBlock $h="64px" />
+          <SkeletonBlock $h="64px" />
         </SkeletonWrap>
       </ViewShell>
     );
@@ -924,7 +1174,7 @@ export function ModelsPage() {
         <ViewTitle>Models</ViewTitle>
         <ViewSubtitle>
           Turn models on or off for your organization — platform and BYOK sources are listed
-          separately. Learn more
+          separately.
         </ViewSubtitle>
       </ViewHeader>
 
@@ -942,15 +1192,92 @@ export function ModelsPage() {
         {shown} of {total} {total === 1 ? 'model' : 'models'} · {enabledCount} enabled
       </CountLine>
 
+      {!canWrite && (
+        <SectionNote>Only owners, admins and developers can change models.</SectionNote>
+      )}
+
+      {defaultHiddenBySearch && (
+        <SectionNote>The default model is hidden by the current search.</SectionNote>
+      )}
+
+      <DefaultBar aria-label="Default model for new assistants">
+        <DefaultBarLabel>Default for new assistants</DefaultBarLabel>
+        {defaultUnknown ? (
+          <>
+            <DefaultBarValue $warning>Could not load the default model.</DefaultBarValue>
+            <RetryButton
+              $compact
+              type="button"
+              onClick={retryGrouped}
+              style={{ marginLeft: 'auto' }}
+            >
+              Retry
+            </RetryButton>
+          </>
+        ) : defaultSel == null ? (
+          <DefaultBarValue>No default set</DefaultBarValue>
+        ) : defaultDangling ? (
+          <DefaultBarValue $warning>
+            Model unavailable — no longer offered ({defaultSel.provider} / {defaultSel.model_id})
+          </DefaultBarValue>
+        ) : (
+          <DefaultBarValue>{defaultDisplayName}</DefaultBarValue>
+        )}
+        {canWrite && !defaultUnknown && defaultSel != null && (
+          <ClearDefaultButton
+            type="button"
+            onClick={handleClearDefault}
+            disabled={defaultMut.isPending}
+          >
+            {defaultMut.isPending ? 'Clearing…' : 'Clear default'}
+          </ClearDefaultButton>
+        )}
+      </DefaultBar>
+
+      {degradedSet.has('model_toggles') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not load your saved toggles — switches show defaults until the load succeeds.
+        </DegradedLaneNote>
+      )}
+      {degradedSet.has('credentials') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not load your connected credentials — the BYOK section may be incomplete.
+        </DegradedLaneNote>
+      )}
+      {degradedSet.has('provider_facts') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not verify provider status — models are shown as unavailable until the check
+          succeeds.
+        </DegradedLaneNote>
+      )}
+      {degradedSet.has('cost_points') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not load pricing — prices are hidden rather than shown stale.
+        </DegradedLaneNote>
+      )}
+      {degradedSet.has('model_pins') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not load usage information — the "Used by" column is hidden until the
+          load succeeds.
+        </DegradedLaneNote>
+      )}
+
       {shown === 0 ? (
-        <EmptyState
-          title={q ? 'No models match this search' : 'No models available'}
-          description={
-            q
-              ? 'Try a different search term.'
-              : 'The catalog returned no models for this workspace.'
-          }
-        />
+        <>
+          <EmptyState
+            title={q ? 'No models match this search' : 'No models available'}
+            description={
+              q
+                ? 'Try a different search term.'
+                : 'The catalog returned no models for this workspace.'
+            }
+          />
+          {!q && (
+            <NoCredRow to="/agent-studio/providers/my-providers">
+              Connect a key in My Providers →
+            </NoCredRow>
+          )}
+        </>
       ) : (
         <>
           {platformGroups.length > 0 && (
@@ -980,6 +1307,10 @@ export function ModelsPage() {
             </SectionNote>
             {byokGroups.length > 0 ? (
               renderTable('byok', byokGroups)
+            ) : degradedSet.has('credentials') ? (
+              <DegradedLaneNote onRetry={retryGrouped}>
+                Could not load your connected credentials — check your connection and try again.
+              </DegradedLaneNote>
             ) : (
               <EmptyState
                 title="No connected credentials"

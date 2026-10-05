@@ -18,7 +18,15 @@ import { engine, engineDownload } from '@/lib/engine/client';
 export type OrgModelTier = 'free' | 'payg' | 'enterprise';
 export type Supergroup = 'platform' | 'byok';
 export type ProviderDirectoryCapability = 'tools' | 'vision' | 'reasoning' | 'structured_output';
-export type VerificationStatus = 'unverified' | 'verifying' | 'verified' | 'failed' | 'revoked';
+/**
+ * Verification lifecycle for a stored credential. Matches the engine enum
+ * (`PROVIDER_CREDENTIAL_VERIFICATION_STATUSES`) exactly: the engine never
+ * emits 'verifying' (a probe is synchronous — the row goes unverified →
+ * verified/failed) and never emits 'revoked' here (revocation lives in the
+ * separate `status` field on the view). Reading revocation from
+ * `verification_status` was the P0-2 dead-code bug.
+ */
+export type VerificationStatus = 'unverified' | 'verified' | 'failed';
 
 export type ProviderPricingMode = 'per_model' | 'varies' | 'custom' | 'pass_through';
 export type DataQuality = 'complete' | 'incomplete';
@@ -31,10 +39,10 @@ export interface ProviderDirectoryEntry {
   /** Display label for model count (e.g., "300+" for OpenRouter). */
   model_count_label?: string;
   models: Array<{ model_id: string; display_name: string }>;
-  /** Min input price over the provider's models, USD/1M — absent when unpriced, never zero-invented. */
-  from_price_per_1m?: string;
-  /** Min output price over the provider's models, USD/1M — absent when unpriced, never zero-invented. */
-  to_price_per_1m?: string;
+  /** Min input price over the provider's models, USD/1M — raw number, absent when unpriced, never zero-invented. */
+  from_price_per_1m?: number;
+  /** Min output price over the provider's models, USD/1M — raw number, absent when unpriced, never zero-invented. */
+  to_price_per_1m?: number;
   /** Max context window over the provider's models — absent when unknown. */
   max_context_tokens?: number;
   /** Display label for context (e.g., "Varies", "1M"). */
@@ -64,7 +72,13 @@ export interface ProviderDirectoryEntry {
    */
   zdr_capable?: boolean;
   capabilities: ProviderDirectoryCapability[];
-  connection: { has_active_credential: boolean; enabled: boolean };
+  /**
+   * `enabled` is the tier-gated served state. `stored_enabled` is the raw
+   * toggle row — the access switch renders from it so a lapsed-tier org
+   * can always turn a grandfathered provider OFF. Optional for
+   * forward-compatibility with older engines (falls back to `enabled`).
+   */
+  connection: { has_active_credential: boolean; enabled: boolean; stored_enabled?: boolean };
   min_required_product: OrgModelTier;
   min_required_product_label: string;
   /**
@@ -239,7 +253,15 @@ export async function setProviderEnabled(
 ): Promise<{ enablement: { provider: string; enabled: boolean } }> {
   return engine<{ enablement: { provider: string; enabled: boolean } }>(
     `/console/org/${orgId}/provider-credentials/providers/${provider}`,
-    { method: 'POST', body: { enabled } },
+    {
+      method: 'POST',
+      body: { enabled },
+      // The endpoint is @Idempotent(): send a fresh key per toggle so a
+      // double-click or retry replays the same mutation instead of writing
+      // it twice. (Keys must be ≥8 chars — the engine ignores shorter ones;
+      // the shared client mints UUIDv7 when `idempotent` is set.)
+      idempotent: true,
+    },
   );
 }
 
@@ -274,16 +296,19 @@ export async function fetchGroupedModels(
   platform: ModelGroupView[];
   byok: ModelGroupView[];
   /**
-   * The org's default model for new assistants. Optional until the engine
-   * ships it (parallel team) — absent means "no default known", never
-   * "no default set"; the page renders all radios unchecked.
+   * The org's default model for new assistants — null when unset.
+   * Per-read degradation codes (engine GROUPED_MODEL_DEGRADED_READS):
+   * names the sub-reads that failed; the page renders honest per-section
+   * states instead of a page-level 500.
    */
-  default_model?: OrgDefaultModel | null;
+  default_model: OrgDefaultModel | null;
+  degraded: string[];
 }> {
   return engine<{
     platform: ModelGroupView[];
     byok: ModelGroupView[];
-    default_model?: OrgDefaultModel | null;
+    default_model: OrgDefaultModel | null;
+    degraded: string[];
   }>(`/console/org/${orgId}/models/grouped`, { query: supergroup ? { supergroup } : {} });
 }
 
@@ -306,6 +331,8 @@ export async function fetchModelDefault(
  * `PUT /console/org/:orgId/models/default` — body `{ default: {...} | null }`.
  * 200 returns the same shape; 422 when the model isn't enabled+usable for
  * the org (the page rolls back and toasts honestly on 422).
+ * Idempotent: a retried save replays the original response instead of
+ * double-applying.
  */
 export async function setModelDefault(
   orgId: string,
@@ -314,6 +341,7 @@ export async function setModelDefault(
   return engine<{ default: OrgDefaultModel | null }>(`/console/org/${orgId}/models/default`, {
     method: 'PUT',
     body: { default: def },
+    idempotent: true,
   });
 }
 
@@ -328,6 +356,8 @@ export async function postModelToggles(
   return engine<{ success: true; updated_count: number }>(`/console/org/${orgId}/models/toggles`, {
     method: 'POST',
     body: { toggles },
+    // Idempotent: a retried toggle batch replays instead of double-applying.
+    idempotent: true,
   });
 }
 
@@ -379,10 +409,17 @@ export interface ManualModelDeclarationInput {
 export async function createCredential(
   orgId: string,
   input: CreateCredentialInput,
+  opts?: { idempotencyKey?: string; mfaProof?: string },
 ): Promise<{ credential: ProviderCredentialView }> {
   return engine<{ credential: ProviderCredentialView }>(`/console/org/${orgId}/provider-credentials`, {
     method: 'POST',
     body: input,
+    // P1-3: every credential mutation sends an idempotency key — the engine
+    // endpoints are @Idempotent() but the client never sent the header, so
+    // retries (network timeout, post-create verify failure) duplicated rows.
+    idempotent: true,
+    idempotencyKey: opts?.idempotencyKey,
+    mfaProof: opts?.mfaProof,
   });
 }
 
@@ -390,10 +427,13 @@ export async function patchCredential(
   orgId: string,
   id: string,
   patch: Partial<Omit<CreateCredentialInput, 'provider' | 'secret'>> & { enabled?: boolean },
+  opts?: { idempotencyKey?: string },
 ): Promise<{ credential: ProviderCredentialView }> {
   return engine<{ credential: ProviderCredentialView }>(`/console/org/${orgId}/provider-credentials/${id}`, {
     method: 'PATCH',
     body: patch,
+    idempotent: true,
+    idempotencyKey: opts?.idempotencyKey,
   });
 }
 
@@ -401,21 +441,24 @@ export async function probeCredential(
   orgId: string,
   input: { provider: string; secret?: string; transport?: string; base_url?: string; custom_headers?: Record<string, string> },
   signal?: AbortSignal,
+  mfaProof?: string,
 ): Promise<ProbeResult> {
   return engine<ProbeResult>(`/console/org/${orgId}/provider-credentials/probe`, {
     method: 'POST',
     body: input,
     signal,
+    mfaProof,
   });
 }
 
 export async function verifyCredential(
   orgId: string,
   id: string,
+  opts?: { mfaProof?: string },
 ): Promise<{ credential: ProviderCredentialView }> {
   return engine<{ credential: ProviderCredentialView }>(
     `/console/org/${orgId}/provider-credentials/${id}/verify`,
-    { method: 'POST' },
+    { method: 'POST', mfaProof: opts?.mfaProof },
   );
 }
 
@@ -423,10 +466,11 @@ export async function rotateCredential(
   orgId: string,
   id: string,
   secret: string,
+  opts?: { idempotencyKey?: string; mfaProof?: string },
 ): Promise<{ credential: ProviderCredentialView }> {
   return engine<{ credential: ProviderCredentialView }>(
     `/console/org/${orgId}/provider-credentials/${id}/rotate`,
-    { method: 'POST', body: { secret } },
+    { method: 'POST', body: { secret }, idempotent: true, idempotencyKey: opts?.idempotencyKey, mfaProof: opts?.mfaProof },
   );
 }
 
@@ -434,11 +478,45 @@ export async function revokeCredential(
   orgId: string,
   id: string,
   reason?: string,
+  opts?: { idempotencyKey?: string },
 ): Promise<{ credential: ProviderCredentialView }> {
   return engine<{ credential: ProviderCredentialView }>(
     `/console/org/${orgId}/provider-credentials/${id}/revoke`,
-    { method: 'POST', body: reason ? { reason } : {} },
+    { method: 'POST', body: reason ? { reason } : {}, idempotent: true, idempotencyKey: opts?.idempotencyKey },
   );
+}
+
+/**
+ * P1-3 — atomic priority reorder.
+ * `POST /console/org/:orgId/provider-credentials/reorder` — body
+ * `{ items: [{ id, priority }] }`. Applies the full map in ONE server-side
+ * transaction (all-or-nothing), replacing the old two-PATCH half-swap.
+ * Idempotent: a retried drop replays instead of double-applying.
+ */
+export async function reorderCredentials(
+  orgId: string,
+  items: Array<{ id: string; priority: number }>,
+  opts?: { idempotencyKey?: string },
+): Promise<{ credentials: ProviderCredentialView[] }> {
+  return engine<{ credentials: ProviderCredentialView[] }>(
+    `/console/org/${orgId}/provider-credentials/reorder`,
+    { method: 'POST', body: { items }, idempotent: true, idempotencyKey: opts?.idempotencyKey },
+  );
+}
+
+/** Minimal assistant row for scope-filter validation (P2). */
+export interface AssistantRef {
+  id: string;
+  name?: string | null;
+}
+
+/**
+ * Org assistants (id + name) — used to validate `allowed_assistants` scope
+ * IDs client-side so a typo fails loudly at save time instead of silently
+ * scoping the credential to nobody.
+ */
+export async function fetchAssistants(orgId: string): Promise<{ assistants: AssistantRef[] }> {
+  return engine<{ assistants: AssistantRef[] }>(`/console/org/${orgId}/assistants`);
 }
 
 // ---------------------------------------------------------------------------

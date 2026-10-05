@@ -17,6 +17,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useOrg } from '@/Context/OrgContext';
 import { Dropdown } from '@/components/common/ui/Dropdown';
 import { TextInput } from '@/components/common/ui/TextInput';
+import { ApiError, randomIdempotencyKey } from '@/lib/engine/client';
+import { runWithStepUp } from '@/lib/engine/stepup';
 import {
   probeCredential,
   type DiscoveredModel,
@@ -196,6 +198,12 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const [saving, setSaving] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const manualPrefilled = useRef(false);
+  /**
+   * P1-3: one idempotency key per form submit intent. Reused across manual
+   * retries of the same create — the engine replays the original instead
+   * of duplicating the credential.
+   */
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   // PRV-035 — prefill manual declarations on edit so the operator sees the
   // current list and an edit never wipes it (the patch sends the full
@@ -270,16 +278,21 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
       customHeaders[schemeHeader.trim()] = secret.trim();
     }
     try {
-      const result = await probeCredential(
-        orgId,
-        {
-          provider: effectiveSlug || 'custom',
-          secret: secret.trim() || undefined,
-          transport: adapter,
-          base_url: baseUrl.trim(),
-          custom_headers: customHeaders,
-        },
-        ctrl.signal,
+      // P2 re-proof: the probe route requires a fresh MFA proof — if it
+      // expired, re-prompt and retry rather than surfacing a raw error.
+      const result = await runWithStepUp('probe custom endpoint', (proof) =>
+        probeCredential(
+          orgId,
+          {
+            provider: effectiveSlug || 'custom',
+            secret: secret.trim() || undefined,
+            transport: adapter,
+            base_url: baseUrl.trim(),
+            custom_headers: customHeaders,
+          },
+          ctrl.signal,
+          proof,
+        ),
       );
       setProbe(result);
       if (result.status === 'ok') {
@@ -287,7 +300,14 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
-        setProbe({ status: 'failed', latency_ms: 0, models: [], error: (err as Error).message });
+        setProbe({
+          status: 'failed',
+          latency_ms: 0,
+          models: [],
+          error: (err as Error).message,
+          // P2: engine-imposed 429s get their own copy (not provider quota).
+          error_code: err instanceof ApiError ? err.code : undefined,
+        });
       }
     } finally {
       abortRef.current = null;
@@ -342,26 +362,37 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
         });
         await navigate({ to: '/agent-studio/providers' });
       } else {
+        if (!idempotencyKeyRef.current) idempotencyKeyRef.current = randomIdempotencyKey();
         const { credential } = await mutations.create.mutateAsync({
-          provider: effectiveSlug,
-          label: label.trim(),
-          secret: secret.trim(),
-          transport: adapter,
-          base_url: baseUrl.trim(),
-          custom_headers: buildCustomHeaders(),
-          allowed_models: allowed,
-          shared_capacity_fallback: fallback as ProviderCredentialView['shared_capacity_fallback'],
-          zdr_attestation: zdr,
-          region_attestation: residency,
-          enabled: mode === 'connect',
-          ...(manualDeclarations !== undefined
-            ? { manual_model_declarations: manualDeclarations }
-            : {}),
+          input: {
+            provider: effectiveSlug,
+            label: label.trim(),
+            secret: secret.trim(),
+            transport: adapter,
+            base_url: baseUrl.trim(),
+            custom_headers: buildCustomHeaders(),
+            allowed_models: allowed,
+            shared_capacity_fallback: fallback as ProviderCredentialView['shared_capacity_fallback'],
+            zdr_attestation: zdr,
+            region_attestation: residency,
+            enabled: mode === 'connect',
+            ...(manualDeclarations !== undefined
+              ? { manual_model_declarations: manualDeclarations }
+              : {}),
+          },
+          idempotencyKey: idempotencyKeyRef.current,
         });
         if (mode === 'connect') {
-          // Re-verify server-side so the card lands verified (the probe above
-          // ran client-side pre-save; this persists the verified state).
-          await mutations.verify.mutateAsync(credential.id);
+          // Re-verify server-side so the card lands verified (the probe
+          // above ran client-side pre-save; this persists the verified
+          // state). Best-effort: the credential already exists, so a verify
+          // failure must NOT block navigation — the card renders the
+          // outcome and offers "Retry verify" (P0-1).
+          try {
+            await mutations.verify.mutateAsync(credential.id);
+          } catch {
+            // Swallowed deliberately — the card surface reports it.
+          }
         }
         await navigate({ to: '/agent-studio/providers' });
       }
@@ -384,7 +415,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
         <div style={{ display: 'grid', gap: 12, marginTop: 12, maxWidth: 560 }}>
           <TextInput
             label="Provider Label"
-            placeholder="Internal EU vLLM Cluster"
+            placeholder="EU Production vLLM"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
           />
@@ -435,10 +466,11 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
           <div>
             <TextInput
               label="Base URL"
-              placeholder="https://vllm.internal.corp/v1"
+              placeholder="https://llm.example.com/v1"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               error={urlCheck.state === 'invalid' ? urlCheck.message : undefined}
+              hint="Must be a publicly reachable HTTPS endpoint — private, loopback, and link-local addresses are blocked."
             />
             {urlCheck.state === 'valid' && (
               <p style={{ ...hintText, color: colors.success, marginTop: 4 }} role="status">
@@ -545,7 +577,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                       type="button"
                       aria-label={`Delete header ${h.name || i + 1}`}
                       onClick={() => setHeaders((prev) => prev.filter((_, j) => j !== i))}
-                      style={{ ...ghostBtn, minHeight: 36, color: colors.danger }}
+                      style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: colors.danger }}
                     >
                       Delete
                     </button>
@@ -765,7 +797,7 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
                     <button
                       type="button"
                       onClick={() => setManualModels((prev) => prev.filter((_, j) => j !== i))}
-                      style={{ ...ghostBtn, minHeight: 32, color: colors.danger, marginLeft: 'auto' }}
+                      style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: colors.danger, marginLeft: 'auto' }}
                     >
                       Remove
                     </button>

@@ -28,8 +28,9 @@
  * no content modals, no invented numbers — every figure is engine-rendered
  * or absent.
  */
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { Link } from '@tanstack/react-router';
 import { useQueries } from '@tanstack/react-query';
 import { useOrg } from '@/Context/OrgContext';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -83,6 +84,11 @@ const WINDOW_ITEMS = [
   { value: '7d', label: 'Last 7 days', description: 'Trailing 7-day spend' },
   { value: '30d', label: 'Last 30 days', description: 'Trailing 30-day spend' },
 ];
+
+/** One window wording everywhere: "7d" → "7 days", "30d" → "30 days". */
+function windowLabel(window: SpendWindow): string {
+  return window === '30d' ? '30 days' : '7 days';
+}
 
 /** The exact honesty label — reused from the KeyCard N-7 pills, verbatim. */
 const LIST_PRICE_LABEL = 'list-price equivalent — not billed';
@@ -170,14 +176,14 @@ export function SpendPage() {
         </div>
       </div>
 
-      {summary.isLoading && <p style={hintText}>Loading spend…</p>}
+      {summary.isLoading && <SummarySkeleton />}
       {summary.isError && (
         <div style={errorCallout} role="alert">
           Couldn’t load spend data.{' '}
           <button
             type="button"
             onClick={() => summary.refetch()}
-            style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px' }}
+            style={{ ...ghostBtn, minHeight: 44, padding: '4px 10px' }}
           >
             Retry
           </button>
@@ -265,14 +271,14 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
           </p>
           <p style={{ ...hintText, marginTop: 6 }}>
             {LIST_PRICE_LABEL}
-            <InfoGlyph label={LIST_PRICE_LABEL} />
+            <InfoGlyph />
           </p>
         </div>
       )}
       <div style={card}>
         <p style={labelText}>BYOK calls</p>
         <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
-          {data.byok.fee.calls.toLocaleString()}
+          {data.byok.fee.calls.toLocaleString('en-US')}
         </p>
         <p style={{ ...hintText, marginTop: 6 }}>in this window</p>
       </div>
@@ -315,7 +321,7 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
       </div>
       {top && modelSpend && (
         <div style={card}>
-          <p style={labelText}>Top model · {modelSpend.window}</p>
+          <p style={labelText}>Top model · {windowLabel(modelSpend.window)}</p>
           <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
             {top.model_display_name}
           </p>
@@ -412,7 +418,8 @@ function BreakdownList({ data }: { data: SpendSummaryView }) {
 const SpendTableWrap = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: ${({ theme }) => theme.app.surface.subtle};
   margin-top: 16px;
 `;
@@ -424,6 +431,7 @@ const SpendTableHead = styled.div`
 
 const StyledSpendTable = styled.table`
   width: 100%;
+  min-width: 680px;
   border-collapse: collapse;
   font-size: 13px;
 `;
@@ -481,6 +489,76 @@ const ListBasisTag = styled.span`
   color: ${({ theme }) => theme.app.text.faint};
 `;
 
+/* ------------------------------------------------------------------ */
+/* Loading skeletons — shaped like the cards/tables they replace so the
+ * page doesn't jump when data arrives. Decorative blocks are aria-hidden;
+ * each skeleton announces one polite status line instead. */
+/* ------------------------------------------------------------------ */
+
+const SkeletonBlock = styled.div`
+  border-radius: 8px;
+  background: ${({ theme }) => theme.app.surface.tint};
+  animation: spend-skeleton-pulse 1.4s ease-in-out infinite;
+  @keyframes spend-skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+`;
+
+/** Stat-card row skeleton for the overview panel. */
+function SummarySkeleton() {
+  return (
+    <div role="status" aria-label="Loading spend summary">
+      <div
+        aria-hidden="true"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gap: 12,
+        }}
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} style={card}>
+            <SkeletonBlock style={{ height: 12, width: '55%', marginBottom: 10 }} />
+            <SkeletonBlock style={{ height: 30, width: '75%' }} />
+          </div>
+        ))}
+      </div>
+      <div aria-hidden="true" style={{ ...card, marginTop: 16 }}>
+        <SkeletonBlock style={{ height: 14, width: '35%', marginBottom: 12 }} />
+        <SkeletonBlock style={{ height: 10, width: '100%' }} />
+        <SkeletonBlock style={{ height: 12, width: '60%', marginTop: 12 }} />
+      </div>
+    </div>
+  );
+}
+
+/** Table-shaped skeleton for the credential and per-model spend tables. */
+function TableSkeleton({ rows = 4, label }: { rows?: number; label: string }) {
+  return (
+    <div role="status" aria-label={label}>
+      <SpendTableWrap aria-hidden="true" style={{ padding: '6px 0' }}>
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '14px 16px' }}>
+            <SkeletonBlock style={{ height: 14, flex: '2 1 0' }} />
+            <SkeletonBlock style={{ height: 14, flex: '1 1 0' }} />
+            <SkeletonBlock style={{ height: 14, flex: '1 1 0' }} />
+            <SkeletonBlock style={{ height: 14, flex: '1 1 0' }} />
+          </div>
+        ))}
+      </SpendTableWrap>
+    </div>
+  );
+}
+
 /** Rounded icon tile used by the per-credential rows (cloud / key). */
 const IconTile = styled.span`
   display: inline-flex;
@@ -524,8 +602,9 @@ function KebabIcon() {
   );
 }
 
-/** Small info glyph with an accessible tooltip — reuses established copy only. */
-function InfoGlyph({ label }: { label: string }) {
+/** Decorative info glyph — the label text is always adjacent, so the glyph
+ * itself is hidden from assistive technology. */
+function InfoGlyph() {
   return (
     <svg
       width="12"
@@ -534,11 +613,9 @@ function InfoGlyph({ label }: { label: string }) {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.3"
-      role="img"
-      aria-label={label}
+      aria-hidden="true"
       style={{ verticalAlign: '-1px', marginLeft: 4 }}
     >
-      <title>{label}</title>
       <circle cx="6" cy="6" r="5" />
       <line x1="6" y1="5.4" x2="6" y2="8.8" strokeLinecap="round" />
       <circle cx="6" cy="3.4" r="0.8" fill="currentColor" stroke="none" />
@@ -598,15 +675,14 @@ function dominantError(
 type CredentialTone = 'success' | 'info' | 'warning' | 'neutral';
 
 function credentialStatusPill(c: ProviderCredentialView): { tone: CredentialTone; text: string } {
+  // P0-2 (same class as My Providers): revocation lives in `status`, and
+  // the engine never emits 'verifying' — that case was dead code.
+  if (c.status === 'revoked') return { tone: 'neutral', text: 'Revoked' };
   switch (c.verification_status) {
     case 'verified':
       return { tone: 'success', text: 'Active' };
-    case 'verifying':
-      return { tone: 'info', text: 'Verifying…' };
     case 'failed':
       return { tone: 'warning', text: 'Failed' };
-    case 'revoked':
-      return { tone: 'neutral', text: 'Revoked' };
     case 'unverified':
     default:
       return { tone: 'warning', text: 'Unverified' };
@@ -645,14 +721,20 @@ const ModelSubHeadCell = styled.td`
 /* platform pool is included, per the reference.                       */
 /* ------------------------------------------------------------------ */
 
-const kebabBtnStyle = {
+/** Kebab affordance, now a real link: row actions live on the Providers page. */
+const kebabLinkStyle = {
   background: 'none',
   border: 'none',
   padding: 6,
   color: colors.textFaint,
-  cursor: 'not-allowed',
+  cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
+  justifyContent: 'center',
+  width: 44,
+  height: 44,
+  borderRadius: 8,
+  textDecoration: 'none',
 } as const;
 
 function CredentialSpendList({
@@ -675,7 +757,21 @@ function CredentialSpendList({
     })),
   });
 
-  if (isLoading) return <p style={{ ...hintText, marginTop: 16 }}>Loading credentials…</p>;
+  // A failed usage query is a per-row error state, not "no data": the row
+  // keeps '—' for the missing figures but the Errors cell names the
+  // failure and offers a row-level retry. Machine details go to the
+  // console only.
+  const failedUsageIds = credentials
+    .filter((_, i) => usages[i]?.isError)
+    .map((c) => c.id)
+    .join(',');
+  useEffect(() => {
+    if (failedUsageIds && typeof console !== 'undefined') {
+      console.error('[spend] credential usage failed', failedUsageIds.split(','));
+    }
+  }, [failedUsageIds]);
+
+  if (isLoading) return <TableSkeleton label="Loading credential spend" />;
   if (isError) {
     return (
       <div style={{ ...errorCallout, marginTop: 16 }} role="alert">
@@ -683,7 +779,7 @@ function CredentialSpendList({
         <button
           type="button"
           onClick={() => refetch()}
-          style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px' }}
+          style={{ ...ghostBtn, minHeight: 44, padding: '4px 10px' }}
         >
           Retry
         </button>
@@ -713,7 +809,7 @@ function CredentialSpendList({
   return (
     <SpendTableWrap>
       <SpendTableHead>
-        <h3 style={sectionTitle}>Per-credential spend · {window === '30d' ? '30 days' : '7 days'}</h3>
+        <h3 style={sectionTitle}>Per-credential spend · {windowLabel(window)}</h3>
         <p style={{ ...hintText, marginTop: 4 }}>
           Share is the row&apos;s fraction of the spend shown in this table — the platform pool is included.
         </p>
@@ -765,23 +861,22 @@ function CredentialSpendList({
               <StatusPill tone="success">Active</StatusPill>
             </SpendBodyCell>
             <SpendBodyCell>
-              <span title="Manage credentials in Providers" style={{ display: 'inline-flex' }}>
-                <button
-                  type="button"
-                  disabled
-                  aria-label="Platform pool actions"
-                  style={kebabBtnStyle}
-                >
-                  <KebabIcon />
-                </button>
-              </span>
+              <Link
+                to="/agent-studio/providers/my-providers"
+                title="Manage credentials in Providers"
+                aria-label="Manage credentials in Providers"
+                style={kebabLinkStyle}
+              >
+                <KebabIcon />
+              </Link>
             </SpendBodyCell>
           </SpendBodyRow>
           {credentials.map((c, i) => {
             const u = usages[i]?.data as CredentialUsageView | undefined;
             const loading = usages[i]?.isLoading ?? false;
+            const failed = usages[i]?.isError ?? false;
             const spend = spendOf(u);
-            const revoked = c.verification_status === 'revoked';
+            const revoked = c.status === 'revoked';
             const pill = credentialStatusPill(c);
             const dominant = u ? dominantError(u.error_breakdown) : null;
             const revokedDate = formatShortDate(c.revoked_at);
@@ -805,18 +900,37 @@ function CredentialSpendList({
                       {u && u.pricing_basis === 'list' && u.list_price_equivalent_usd && (
                         <ListBasisTag>
                           {LIST_PRICE_LABEL} (${u.list_price_equivalent_usd})
-                          <InfoGlyph label={LIST_PRICE_LABEL} />
+                          <InfoGlyph />
                         </ListBasisTag>
                       )}
                     </span>
                   </span>
                 </SpendBodyCell>
-                <SpendBodyCell>{loading || !u ? '—' : u.requests.toLocaleString()}</SpendBodyCell>
+                <SpendBodyCell>{loading || !u ? '—' : u.requests.toLocaleString('en-US')}</SpendBodyCell>
                 <SpendBodyCell>
                   {loading || !u ? '—' : (formatUsd(u.spend_usd) ?? '—')}
                 </SpendBodyCell>
                 <SpendBodyCell>
-                  {loading || !u ? (
+                  {failed ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        justifyContent: 'flex-end',
+                      }}
+                    >
+                      <StatusPill tone="warning">Load failed</StatusPill>
+                      <button
+                        type="button"
+                        onClick={() => usages[i]?.refetch()}
+                        aria-label={`Retry loading usage for ${c.label}`}
+                        style={{ ...ghostBtn, minHeight: 44, padding: '4px 10px' }}
+                      >
+                        Retry
+                      </button>
+                    </span>
+                  ) : loading || !u ? (
                     '—'
                   ) : dominant ? (
                     <StatusPill tone="warning">
@@ -831,16 +945,14 @@ function CredentialSpendList({
                   <StatusPill tone={pill.tone}>{pill.text}</StatusPill>
                 </SpendBodyCell>
                 <SpendBodyCell>
-                  <span title="Manage credentials in Providers" style={{ display: 'inline-flex' }}>
-                    <button
-                      type="button"
-                      disabled
-                      aria-label={`Actions for ${c.label}`}
-                      style={kebabBtnStyle}
-                    >
-                      <KebabIcon />
-                    </button>
-                  </span>
+                  <Link
+                    to="/agent-studio/providers/my-providers"
+                    title="Manage credentials in Providers"
+                    aria-label={`Manage ${c.label} in Providers`}
+                    style={kebabLinkStyle}
+                  >
+                    <KebabIcon />
+                  </Link>
                 </SpendBodyCell>
               </SpendBodyRow>
             );
@@ -864,21 +976,22 @@ export function ModelSpendList({
 }) {
   const { data, isLoading, isError, refetch } = query;
 
-  if (isLoading) return <p style={{ ...hintText, marginTop: 16 }}>Loading model spend…</p>;
+  // Machine details go to the console only — users get honest copy + retry.
+  useEffect(() => {
+    if (isError && typeof console !== 'undefined') {
+      console.error('[spend] model spend failed', query.error);
+    }
+  }, [isError, query]);
+
+  if (isLoading) return <TableSkeleton label="Loading model spend" />;
   if (isError) {
-    const err = query.error as { status?: number; code?: string; message?: string } | null;
-    // TEMP-DIAG: surface the real server error so we can root-cause the
-    // production failure.
     return (
       <div style={{ ...errorCallout, marginTop: 16 }} role="alert">
-        Couldn&apos;t load model spend.{' '}
-        <span style={{ fontSize: 12 }}>
-          [{err?.status ?? '?'} {err?.code ?? '?'}]: {err?.message ?? 'unknown'}
-        </span>{' '}
+        Couldn&apos;t load model spend. Your budget settings are unaffected —{' '}
         <button
           type="button"
           onClick={() => refetch()}
-          style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px' }}
+          style={{ ...ghostBtn, minHeight: 44, padding: '4px 10px' }}
         >
           Retry
         </button>
@@ -901,7 +1014,7 @@ export function ModelSpendList({
   return (
     <SpendTableWrap>
       <SpendTableHead>
-        <h3 style={sectionTitle}>Per-model spend · {window.toUpperCase()}</h3>
+        <h3 style={sectionTitle}>Per-model spend · {windowLabel(window)}</h3>
         <p style={{ ...hintText, marginTop: 4 }}>
           Share is the model&apos;s fraction of total spend in this window. BYOK
           rows are list-price equivalents — not billed.
@@ -916,7 +1029,7 @@ export function ModelSpendList({
             <SpendHeadCell scope="col">Tokens</SpendHeadCell>
             <SpendHeadCell scope="col">Spend</SpendHeadCell>
             <SpendHeadCell scope="col">Share</SpendHeadCell>
-            <SpendHeadCell scope="col">Vs prior {window.toUpperCase()}</SpendHeadCell>
+            <SpendHeadCell scope="col">Vs prior {windowLabel(window)}</SpendHeadCell>
           </tr>
         </thead>
         <tbody>
@@ -1039,7 +1152,7 @@ function FeePanel({ data }: { data: SpendSummaryView }) {
           </span>
         </li>
         <li style={bodyText}>
-          {`${data.byok.fee.calls.toLocaleString()} BYOK calls this window — the per-call fee is deducted from your Neryva credit balance, not from your provider bill.`}
+          {`${data.byok.fee.calls.toLocaleString('en-US')} BYOK calls this window — the per-call fee is deducted from your Neryva credit balance, not from your provider bill.`}
         </li>
         <li>
           <span style={labelText}>Pay-As-You-Go Margin</span>
@@ -1060,7 +1173,9 @@ type ParseResult = { ok: true; cents: number | null } | { ok: false; error: stri
 
 /** Non-negative USD with up to 2 decimals, or blank for unlimited (null). */
 function parseCapInput(text: string): ParseResult {
-  const t = text.trim();
+  // Thousands separators are stripped, not rejected: "1,000" and "1 000"
+  // both mean one thousand dollars.
+  const t = text.trim().replace(/[\s,]/g, '');
   if (t === '') return { ok: true, cents: null };
   if (!/^\d+(\.\d{1,2})?$/.test(t)) {
     return {
@@ -1157,25 +1272,25 @@ function BudgetControls({
       { cap_usd_cents: parsed.cents },
       {
         onSuccess: () => setCapText(null),
-        onError: (err) => setActionError(err.message),
+        // Cap-save errors belong on the cap field, not the breach radio.
+        onError: (err) => setCapError(err.message),
       },
     );
   };
 
   const toggleBusy = mutations.patchIncludeByok.isPending;
-  const breachBusy = mutations.patchBudget.isPending;
+  // Decoupled from the cap save: the radio has its own pending state, so a
+  // slow cap PATCH never freezes the breach-action control (and vice versa).
+  const breachBusy = mutations.patchBreachAction.isPending;
   const breachAction = budget.breach_action ?? 'refuse';
 
   const setBreachAction = (next: 'refuse' | 'alert_only') => {
     if (next === breachAction) return;
     setActionError(null);
     // Optimistic with rollback — handled in useSpendMutations.onMutate/onError.
-    mutations.patchBudget.mutate(
-      { breach_action: next },
-      {
-        onError: (err) => setActionError(err.message),
-      },
-    );
+    mutations.patchBreachAction.mutate(next, {
+      onError: (err) => setActionError(err.message),
+    });
   };
 
   return (

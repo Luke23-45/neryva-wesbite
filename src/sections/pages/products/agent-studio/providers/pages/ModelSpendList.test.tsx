@@ -10,8 +10,8 @@
  *   breakdown in the token cell's title tooltip, SPEND as USD
  * - SHARE is the pct of total_spend_usd; a zero total renders "—"
  * - VS PRIOR: up shows ↑ in the error tone, down ↓ in the success tone,
- *   null → "new", 0 → "—"; the header reads "VS PRIOR 7D" / "VS PRIOR 30D"
- *   per window
+ *   null → "new", 0 → "—"; the header reads "Vs prior 7 days" /
+ *   "Vs prior 30 days" per window (consistent "7 days" wording)
  * - Top Model card (OverviewCards, via SpendPage): renders with the top row's
  *   display name, spend, share, and sources label; absent when rows are empty
  * - empty / error / loading states
@@ -19,6 +19,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import { ModelSpendList, SpendPage } from './SpendPage';
@@ -206,14 +213,14 @@ describe('ModelSpendList vs prior', () => {
     expect(screen.getAllByText('—')).toHaveLength(1);
   });
 
-  it('labels the header VS PRIOR 7D for the 7d window', () => {
+  it('labels the header "Vs prior 7 days" for the 7d window', () => {
     renderList(fakeQuery({ data: MODEL_SPEND }), '7d');
-    expect(screen.getByRole('columnheader', { name: /vs prior 7d/i })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: /vs prior 7 days/i })).toBeTruthy();
   });
 
-  it('labels the header VS PRIOR 30D for the 30d window', () => {
+  it('labels the header "Vs prior 30 days" for the 30d window', () => {
     renderList(fakeQuery({ data: { ...MODEL_SPEND, window: '30d' } }), '30d');
-    expect(screen.getByRole('columnheader', { name: /vs prior 30d/i })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: /vs prior 30 days/i })).toBeTruthy();
   });
 });
 
@@ -233,7 +240,9 @@ describe('ModelSpendList states', () => {
 
   it('renders the loading state', () => {
     renderList(fakeQuery({ isLoading: true }));
-    expect(screen.getByText('Loading model spend…')).toBeTruthy();
+    // Skeleton shaped like the table: one polite status line, decorative
+    // blocks hidden from assistive technology.
+    expect(screen.getByRole('status', { name: 'Loading model spend' })).toBeTruthy();
   });
 });
 
@@ -301,13 +310,31 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={client}>
-        <SpendPage />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
+  // SpendPage includes the per-credential table, whose kebab affordance is
+  // a real Link — Link needs its RouterProvider context (same pattern as
+  // SpendPage.test.tsx).
+  const rootRoute = createRootRoute();
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => (
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={client}>
+          <SpendPage />
+        </QueryClientProvider>
+      </ThemeProvider>
+    ),
+  });
+  const providersRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'agent-studio/providers/my-providers',
+    component: () => null,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([indexRoute, providersRoute]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  return render(<RouterProvider router={router} />);
 }
 
 beforeEach(() => {
@@ -320,7 +347,7 @@ beforeEach(() => {
 describe('Top Model card', () => {
   it('renders the top row’s name, spend, share, and sources label', async () => {
     renderPage();
-    const label = await screen.findByText('Top model · 7d');
+    const label = await screen.findByText('Top model · 7 days');
     const card = label.closest('div');
     expect(card).not.toBeNull();
     const scope = within(card as HTMLElement);
@@ -338,6 +365,6 @@ describe('Top Model card', () => {
     }));
     renderPage();
     await screen.findByText('No model spend in this window.');
-    expect(screen.queryByText('Top model · 7d')).toBeNull();
+    expect(screen.queryByText('Top model · 7 days')).toBeNull();
   });
 });

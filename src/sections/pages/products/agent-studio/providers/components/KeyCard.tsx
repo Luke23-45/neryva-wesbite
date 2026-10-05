@@ -50,6 +50,9 @@ import {
 import {
   useCredentialMutations,
   useCredentialUsage,
+  useOptimisticEnabledToggle,
+  usePatchCredentialField,
+  useAssistantRefs,
 } from '@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials';
 import type { OrgTier } from '@/sections/pages/products/agent-studio/providers/hooks/useOrgTier';
 import {
@@ -167,6 +170,11 @@ export interface KeyCardProps {
   onDragStart: (id: string) => void;
   onDragMove: (id: string | null) => void;
   onDragEnd: (sourceId: string, targetId: string | null) => void;
+  /**
+   * A cancelled pointer gesture (pointercancel) clears the drag state
+   * WITHOUT committing a reorder — it is not a drop.
+   */
+  onDragCancel: () => void;
 }
 
 export function KeyCard({
@@ -185,10 +193,20 @@ export function KeyCard({
   onDragStart,
   onDragMove,
   onDragEnd,
+  onDragCancel,
 }: KeyCardProps) {
   const mutations = useCredentialMutations(orgId);
-  const revoked = credential.verification_status === 'revoked';
+  // P0-2: revocation lives in the separate lifecycle `status` field — the
+  // engine never emits 'revoked' as a verification_status, so every
+  // revoked-gated treatment keyed on verification_status was dead code.
+  const revoked = credential.status === 'revoked';
   const failed = credential.verification_status === 'failed';
+  // P1-6: per-concern patch mutations. The enable toggle is optimistic
+  // with rollback; fallback/attestations/scope filters each get an
+  // independent mutation so one in-flight patch no longer freezes the
+  // whole card.
+  const enableToggle = useOptimisticEnabledToggle(orgId);
+  const fallbackPatch = usePatchCredentialField(orgId);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [attestOpen, setAttestOpen] = useState(false);
   const [rotateOpen, setRotateOpen] = useState(false);
@@ -218,22 +236,24 @@ export function KeyCard({
     });
   };
 
-  const enabledBusy = mutations.patch.isPending;
+  const enabledBusy = enableToggle.isPending;
   const toggleDisabled = revoked || failed || enabledBusy;
   const isDragSource = dragSourceId === credential.id;
   const isDropTarget = dragTargetId === credential.id;
 
   const patchEnabled = (next: boolean) => {
     setActionError(null);
-    mutations.patch.mutate(
-      { id: credential.id, patch: { enabled: next } },
+    // Optimistic with rollback (hook handles both); the inline error is
+    // the loud failure signal.
+    enableToggle.mutate(
+      { id: credential.id, enabled: next },
       { onError: (err) => setActionError(err.message) },
     );
   };
 
   const patchFallback = (value: FallbackValue) => {
     setActionError(null);
-    mutations.patch.mutate(
+    fallbackPatch.mutate(
       { id: credential.id, patch: { shared_capacity_fallback: value } },
       { onError: (err) => setActionError(err.message) },
     );
@@ -311,9 +331,10 @@ export function KeyCard({
   );
 
   /* ---------------------------------------------------------------- */
-  /* Failed: compact amber card                                        */
+  /* Failed: compact amber card (never for revoked — revoked cards always */
+  /* render the dead state below, even if their last probe failed)        */
   /* ---------------------------------------------------------------- */
-  if (failed) {
+  if (failed && !revoked) {
     return (
       <article aria-label={`API key: ${credential.label}`} data-key-card-id={credential.id} style={cardStyle}>
         {header}
@@ -391,6 +412,15 @@ export function KeyCard({
     if (dragSourceId !== credential.id) return;
     onDragEnd(credential.id, dragTargetId);
   };
+  /**
+   * P2: a cancelled gesture (touch interrupted, alert appearing, etc.) is
+   * NOT a drop — it clears the drag state without committing a reorder.
+   * Previously this called the same handler as pointer-up and committed.
+   */
+  const onHandlePointerCancel = () => {
+    if (dragSourceId !== credential.id) return;
+    onDragCancel();
+  };
   const onHandleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -412,7 +442,7 @@ export function KeyCard({
             type="button"
             onClick={runVerify}
             disabled={mutations.verify.isPending}
-            style={{ ...ghostBtn, minHeight: 32, padding: '4px 10px', color: '#e8c06a' }}
+            style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: '#e8c06a' }}
           >
             {mutations.verify.isPending ? 'Verifying…' : 'Verify now'}
           </button>
@@ -432,7 +462,7 @@ export function KeyCard({
             onPointerDown={revoked ? undefined : onHandlePointerDown}
             onPointerMove={revoked ? undefined : onHandlePointerMove}
             onPointerUp={revoked ? undefined : onHandlePointerUp}
-            onPointerCancel={revoked ? undefined : onHandlePointerUp}
+            onPointerCancel={revoked ? undefined : onHandlePointerCancel}
             onKeyDown={revoked ? undefined : onHandleKeyDown}
             style={{
               cursor: revoked ? 'default' : 'grab',
@@ -463,7 +493,7 @@ export function KeyCard({
             aria-label={`Move ${credential.label} up`}
             disabled={isFirst || revoked || enabledBusy}
             onClick={onMoveUp}
-            style={{ ...secondaryBtn, minHeight: 36, padding: '6px 12px', ...(isFirst || revoked ? disabledBtn : {}) }}
+            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isFirst || revoked ? disabledBtn : {}) }}
           >
             ↑
           </button>
@@ -472,7 +502,7 @@ export function KeyCard({
             aria-label={`Move ${credential.label} down`}
             disabled={isLast || revoked || enabledBusy}
             onClick={onMoveDown}
-            style={{ ...secondaryBtn, minHeight: 36, padding: '6px 12px', ...(isLast || revoked ? disabledBtn : {}) }}
+            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isLast || revoked ? disabledBtn : {}) }}
           >
             ↓
           </button>
@@ -521,7 +551,7 @@ export function KeyCard({
             onClick={() => setFiltersOpen((v) => !v)}
             aria-expanded={filtersOpen}
             aria-label={filtersOpen ? 'Done editing scope filters' : 'Edit scope filters'}
-            style={{ ...ghostBtn, padding: '6px 8px', minHeight: 32, color: colors.accent }}
+            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent }}
           >
             {filtersOpen ? 'Done' : 'Edit'}
           </button>
@@ -560,7 +590,7 @@ export function KeyCard({
             onClick={() => setAttestOpen((v) => !v)}
             aria-expanded={attestOpen}
             aria-label={attestOpen ? 'Done editing attestations' : 'Edit attestations'}
-            style={{ ...ghostBtn, padding: '6px 8px', minHeight: 32, color: colors.accent }}
+            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent }}
           >
             {attestOpen ? 'Done' : 'Edit'}
           </button>
@@ -767,7 +797,10 @@ function AttestationEditor({
   disabled: boolean;
   onError: (msg: string | null) => void;
 }) {
-  const mutations = useCredentialMutations(orgId);
+  // P1-6: independent mutation — an attestation save in flight no longer
+  // freezes the enable toggle, fallback, or scope filters.
+  const attestPatch = usePatchCredentialField(orgId);
+  const busy = attestPatch.isPending;
   return (
     <>
       <Dropdown
@@ -775,10 +808,10 @@ function AttestationEditor({
         label="Zero data retention (ZDR)"
         items={ZDR_ITEMS}
         value={credential.zdr_attestation ?? 'use_default'}
-        disabled={disabled}
+        disabled={disabled || busy}
         onChange={(value) => {
           onError(null);
-          mutations.patch.mutate(
+          attestPatch.mutate(
             { id: credential.id, patch: { zdr_attestation: value } },
             { onError: (err) => onError(err.message) },
           );
@@ -789,10 +822,10 @@ function AttestationEditor({
         label="Data residency"
         items={REGION_ITEMS}
         value={credential.region_attestation ?? 'global'}
-        disabled={disabled}
+        disabled={disabled || busy}
         onChange={(value) => {
           onError(null);
-          mutations.patch.mutate(
+          attestPatch.mutate(
             { id: credential.id, patch: { region_attestation: value } },
             { onError: (err) => onError(err.message) },
           );
@@ -821,7 +854,12 @@ function ScopeFilterEditor({
   orgId: string;
   onError: (msg: string | null) => void;
 }) {
-  const mutations = useCredentialMutations(orgId);
+  // P1-6: independent mutation — a filter save in flight no longer freezes
+  // the enable toggle, fallback, or attestations.
+  const scopePatch = usePatchCredentialField(orgId);
+  // P2: real assistant IDs for scope validation (typo = loud error, never
+  // a silent empty scope).
+  const assistantRefs = useAssistantRefs(orgId);
   const discovered = useMemo(() => asDiscoveredModels(credential.discovered_models), [credential.discovered_models]);
   const [selected, setSelected] = useState<string[] | null>(credential.allowed_models);
   const [assistantsText, setAssistantsText] = useState((credential.allowed_assistants ?? []).join(', '));
@@ -856,7 +894,32 @@ function ScopeFilterEditor({
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    mutations.patch.mutate(
+    // P2: validate assistant IDs against the org's real assistants before
+    // saving. A typo must fail loudly here — never silently scope the key
+    // to nobody. While the list is still loading the save is blocked
+    // (also loud) rather than validated against nothing.
+    if (allowed_assistants.length > 0) {
+      if (assistantRefs.isLoading) {
+        setSaving(false);
+        onError('Still loading your assistants — wait a moment, then save again.');
+        return;
+      }
+      if (assistantRefs.isError || !assistantRefs.data) {
+        setSaving(false);
+        onError('Couldn’t load your assistants to validate the scope — try again.');
+        return;
+      }
+      const known = new Set(assistantRefs.data.assistants.map((a) => a.id));
+      const unknown = allowed_assistants.filter((id) => !known.has(id));
+      if (unknown.length > 0) {
+        setSaving(false);
+        onError(
+          `Unknown assistant ID${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')} — check the IDs and try again.`,
+        );
+        return;
+      }
+    }
+    scopePatch.mutate(
       {
         id: credential.id,
         patch: { allowed_models: selected, allowed_assistants: allowed_assistants.length ? allowed_assistants : null },
@@ -924,7 +987,19 @@ function ScopeFilterEditor({
           value={assistantsText}
           onChange={(e) => setAssistantsText(e.target.value)}
           hint="Leave empty to let every assistant use this key. Isolates prod vs experiment spend."
+          // P2: typeahead of the org's real assistant IDs — reduces typos;
+          // anything not in the list is still rejected loudly at save time.
+          list={`assistant-ids-${credential.id}`}
         />
+        {assistantRefs.data && assistantRefs.data.assistants.length > 0 && (
+          <datalist id={`assistant-ids-${credential.id}`}>
+            {assistantRefs.data.assistants.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name ?? a.id}
+              </option>
+            ))}
+          </datalist>
+        )}
       </div>
 
       {/* Blast-radius preview — derived from N-5 pinned_by */}

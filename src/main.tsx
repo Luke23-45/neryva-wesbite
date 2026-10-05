@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
+import { MotionConfig } from 'framer-motion';
 import { ThemeProvider } from 'styled-components';
 import { Toaster } from 'react-hot-toast';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -56,27 +57,36 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
-          <GlobalStyles />
-          <BootSplashCleaner />
-          <OrgProvider>
-        <RouterProvider router={router} />
-      </OrgProvider>
-            <Toaster
-              position="bottom-right"
-              gutter={8}
-              toastOptions={{
-                duration: 4000,
-                style: toastStyle,
-                success: {
-                  iconTheme: { primary: '#05e3a4', secondary: '#0b0d12' },
-                },
-                error: {
-                  iconTheme: { primary: '#f87171', secondary: '#0b0d12' },
-                },
-              }}
-            />
-          </ThemeProvider>
+        {/*
+          * MotionConfig reducedMotion="user": every framer-motion animation
+          * in the app (drawer springs, Switch thumb springs, AnimatePresence
+          * transitions) follows the OS prefers-reduced-motion setting.
+          * GlobalStyles only kills CSS animations — the JS-driven springs
+          * need this. Motion that cannot be turned off is a veto-list item.
+          */}
+        <MotionConfig reducedMotion="user">
+          <ThemeProvider theme={theme}>
+            <GlobalStyles />
+            <BootSplashCleaner />
+            <OrgProvider>
+          <RouterProvider router={router} />
+        </OrgProvider>
+              <Toaster
+                position="bottom-right"
+                gutter={8}
+                toastOptions={{
+                  duration: 4000,
+                  style: toastStyle,
+                  success: {
+                    iconTheme: { primary: '#05e3a4', secondary: '#0b0d12' },
+                  },
+                  error: {
+                    iconTheme: { primary: '#f87171', secondary: '#0b0d12' },
+                  },
+                }}
+              />
+            </ThemeProvider>
+        </MotionConfig>
       </QueryClientProvider>
     </HelmetProvider>
   </React.StrictMode>

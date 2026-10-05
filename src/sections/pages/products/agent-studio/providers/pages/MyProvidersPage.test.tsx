@@ -18,6 +18,8 @@ const hoisted = vi.hoisted(() => ({
   tier: 'payg' as string,
   credentials: [] as ProviderCredentialView[],
   patchMutate: vi.fn(),
+  patchMutateAsync: vi.fn(async () => ({})),
+  reorderMutate: vi.fn(),
 }));
 
 vi.mock('@/Context/OrgContext', () => ({
@@ -37,11 +39,15 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCrede
   }),
   useCredentialMutations: () => ({
     create: { mutate: vi.fn(), isPending: false },
-    patch: { mutate: hoisted.patchMutate, isPending: false, mutateAsync: vi.fn() },
+    patch: { mutate: hoisted.patchMutate, isPending: false, mutateAsync: hoisted.patchMutateAsync },
     verify: { mutate: vi.fn(), isPending: false, mutateAsync: vi.fn() },
     rotate: { mutate: vi.fn(), isPending: false, mutateAsync: vi.fn() },
     revoke: { mutate: vi.fn(), isPending: false, mutateAsync: vi.fn() },
   }),
+  useOptimisticEnabledToggle: () => ({ mutate: vi.fn(), isPending: false }),
+  usePatchCredentialField: () => ({ mutate: vi.fn(), isPending: false }),
+  useReorderPriorities: () => ({ mutate: hoisted.reorderMutate, isPending: false }),
+  useAssistantRefs: () => ({ data: { assistants: [] }, isLoading: false, isError: false }),
   useCredentialUsage: () => ({ data: undefined, isLoading: false }),
 }));
 
@@ -139,14 +145,42 @@ describe('MyProvidersPage', () => {
     expect(cards[1].getAttribute('aria-label')).toBe('API key: Key c2');
   });
 
-  it('priority move swaps priorities via patch', () => {
+  it('priority move applies the full group order via one atomic reorder call', async () => {
     hoisted.credentials = [cred('c1', 0), cred('c2', 1)];
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Move Key c1 down' }));
-    expect(hoisted.patchMutate).toHaveBeenCalledWith(
-      { id: 'c1', patch: { priority: 1 } },
+    // P1-3: a single request carries the group's full new order — the
+    // engine applies it in one transaction. No two-PATCH swap anymore.
+    await vi.waitFor(() => expect(hoisted.reorderMutate).toHaveBeenCalledTimes(1));
+    expect(hoisted.reorderMutate).toHaveBeenCalledWith(
+      [
+        { id: 'c2', priority: 0 },
+        { id: 'c1', priority: 1 },
+      ],
       expect.anything(),
     );
+    expect(hoisted.patchMutate).not.toHaveBeenCalled();
+    expect(hoisted.patchMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('alerts loudly when the atomic reorder fails (hook rolls back)', async () => {
+    hoisted.credentials = [cred('c1', 0), cred('c2', 1)];
+    hoisted.reorderMutate.mockImplementation((_items: unknown, opts?: { onError?: (e: Error) => void }) =>
+      opts?.onError?.(new Error('boom')),
+    );
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Move Key c1 down' }));
+    await screen.findByRole('alert');
+    expect(screen.getByRole('alert')).toHaveTextContent(/Reorder failed/);
+  });
+
+  it('renders the skeleton while the tier is still resolving', () => {
+    hoisted.tier = 'unknown';
+    hoisted.credentials = [cred('c1', 0)];
+    renderPage();
+    expect(screen.getByLabelText('Loading providers')).toBeTruthy();
+    expect(screen.queryByText('Key c1')).toBeNull();
+    hoisted.tier = 'payg';
   });
 
   it('opening + Connect a key shows the verify-first form', () => {
@@ -169,7 +203,7 @@ describe('MyProvidersPage', () => {
     expect(anthropic.compareDocumentPosition(openai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('keyboard reorder never crosses provider boundaries', () => {
+  it('keyboard reorder never crosses provider boundaries', async () => {
     hoisted.credentials = [
       cred('a1', 0, { provider: 'anthropic', provider_display_name: 'Anthropic' }),
       cred('o1', 0, { provider: 'openai', provider_display_name: 'OpenAI' }),
@@ -179,11 +213,16 @@ describe('MyProvidersPage', () => {
     // a1 is alone in its group: moving down is a no-op (the old global
     // code would have swapped its priority with o1's).
     fireEvent.click(screen.getByRole('button', { name: 'Move Key a1 down' }));
-    expect(hoisted.patchMutate).not.toHaveBeenCalled();
-    // o1 moves down within openai: swaps priorities with o2.
+    expect(hoisted.reorderMutate).not.toHaveBeenCalled();
+    // o1 moves down within openai: one atomic call with the group's full
+    // new order (o2 takes priority 0, o1 takes priority 1).
     fireEvent.click(screen.getByRole('button', { name: 'Move Key o1 down' }));
-    expect(hoisted.patchMutate).toHaveBeenCalledWith(
-      { id: 'o1', patch: { priority: 1 } },
+    await vi.waitFor(() => expect(hoisted.reorderMutate).toHaveBeenCalledTimes(1));
+    expect(hoisted.reorderMutate).toHaveBeenCalledWith(
+      [
+        { id: 'o2', priority: 0 },
+        { id: 'o1', priority: 1 },
+      ],
       expect.anything(),
     );
   });

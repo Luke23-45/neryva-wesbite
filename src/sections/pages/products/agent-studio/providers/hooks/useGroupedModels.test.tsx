@@ -17,6 +17,8 @@ import {
   useModelToggles,
   useModelDefault,
   applyToggles,
+  snapshotToggledRows,
+  restoreToggledRows,
   formatContextTokens,
   groupedModelsKey,
   type GroupedModels,
@@ -68,6 +70,8 @@ function fixture(): GroupedModels {
         models: [row('gpt-4o', true)],
       },
     ],
+    default_model: null,
+    degraded: [],
   };
 }
 
@@ -122,6 +126,68 @@ describe('applyToggles', () => {
       { supergroup: 'platform', provider: 'openai', model_id: 'gpt-4o', enabled: false },
     ]);
     expect(out.default_model).toEqual({ provider: 'openai', model_id: 'gpt-4o-mini' });
+  });
+
+  it('moves usable/reasons with the flipped value — the reason list never lags a round-trip', () => {
+    const out = applyToggles(fixture(), [
+      { supergroup: 'platform', provider: 'openai', model_id: 'gpt-4o', enabled: false },
+    ]);
+    const flipped = out.platform[0].models.find((m) => m.model_id === 'gpt-4o');
+    expect(flipped?.enabled).toBe(false);
+    expect(flipped?.usable).toBe(false);
+    expect(flipped?.reasons).toContain('model_disabled_by_org');
+  });
+
+  it('re-enabling removes model_disabled_by_org and restores usable when no other reason stands', () => {
+    const prev: GroupedModels = {
+      ...fixture(),
+      platform: [
+        {
+          ...fixture().platform[0],
+          models: [
+            {
+              ...row('gpt-4o', false),
+              usable: false,
+              reasons: ['model_disabled_by_org'],
+            },
+            row('gpt-4o-mini', true),
+          ],
+        },
+      ],
+    };
+    const out = applyToggles(prev, [
+      { supergroup: 'platform', provider: 'openai', model_id: 'gpt-4o', enabled: true },
+    ]);
+    const flipped = out.platform[0].models.find((m) => m.model_id === 'gpt-4o');
+    expect(flipped?.enabled).toBe(true);
+    expect(flipped?.reasons).not.toContain('model_disabled_by_org');
+    expect(flipped?.usable).toBe(true);
+  });
+
+  it('keeps server-computed reasons (e.g. subscription_required) when the toggle flips', () => {
+    const prev: GroupedModels = {
+      ...fixture(),
+      platform: [
+        {
+          ...fixture().platform[0],
+          models: [
+            {
+              ...row('gpt-4o', true),
+              usable: false,
+              reasons: ['subscription_required'],
+            },
+            row('gpt-4o-mini', true),
+          ],
+        },
+      ],
+    };
+    const out = applyToggles(prev, [
+      { supergroup: 'platform', provider: 'openai', model_id: 'gpt-4o', enabled: false },
+    ]);
+    const flipped = out.platform[0].models.find((m) => m.model_id === 'gpt-4o');
+    expect(flipped?.reasons).toContain('subscription_required');
+    expect(flipped?.reasons).toContain('model_disabled_by_org');
+    expect(flipped?.usable).toBe(false);
   });
 });
 
@@ -180,6 +246,28 @@ describe('useModelToggles', () => {
     // Optimistic flip happened, then the rollback restored the original row.
     const restored = seedClient.getQueryData<GroupedModels>(groupedModelsKey(ORG));
     expect(restored?.platform[0].models.find((m) => m.model_id === 'gpt-4o')?.enabled).toBe(true);
+  });
+
+  it("per-row rollback: batch A's failure never wipes batch B's optimistic flip", () => {
+    const data = fixture();
+    const batchA = [
+      { supergroup: 'platform' as const, provider: 'openai', model_id: 'gpt-4o', enabled: false },
+    ];
+    const batchB = [
+      { supergroup: 'platform' as const, provider: 'openai', model_id: 'gpt-4o-mini', enabled: false },
+    ];
+    // A snapshots, then both optimistic flips land (B on top of A).
+    const snapA = snapshotToggledRows(data, batchA);
+    const withBoth = applyToggles(applyToggles(data, batchA), batchB);
+    expect(withBoth.platform[0].models.find((m) => m.model_id === 'gpt-4o')?.enabled).toBe(false);
+    expect(withBoth.platform[0].models.find((m) => m.model_id === 'gpt-4o-mini')?.enabled).toBe(false);
+    // A's write fails → only A's rows revert; B's flip survives.
+    const rolledBack = restoreToggledRows(withBoth, snapA);
+    expect(rolledBack.platform[0].models.find((m) => m.model_id === 'gpt-4o')?.enabled).toBe(true);
+    expect(rolledBack.platform[0].models.find((m) => m.model_id === 'gpt-4o-mini')?.enabled).toBe(false);
+    // Untouched rows pass through by reference.
+    expect(rolledBack.byok).toEqual(withBoth.byok);
+    expect(rolledBack.byok[0].models[0]).toBe(withBoth.byok[0].models[0]);
   });
 });
 

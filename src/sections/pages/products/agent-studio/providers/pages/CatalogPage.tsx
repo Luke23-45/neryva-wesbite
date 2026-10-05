@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, Eye, ListFilter, Plus, Shield, X, Zap } from 'lucide-react';
 import { useOrg } from '@/Context/OrgContext';
+import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers/priceFormat';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { SearchField } from '@components/common/ui/SearchField';
 import { Switch } from '@components/common/ui/Switch';
@@ -11,6 +12,7 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { Tooltip } from '@components/common/ui/Tooltip';
 import type {
+  OrgModelTier,
   ProviderDirectoryCapability,
   ProviderDirectoryEntry,
 } from '../api';
@@ -44,10 +46,11 @@ export const CHIPS: Array<{ key: ChipKey; label: string; icon: React.ReactNode }
   { key: 'zdr', label: 'ZDR Capable', icon: <Shield size={13} strokeWidth={1.8} aria-hidden="true" /> },
 ];
 
+/** Raw USD/1M input price as a number (the engine passes prices through unrounded). */
 function fromPrice(entry: ProviderDirectoryEntry): number | null {
-  if (!entry.from_price_per_1m) return null;
-  const n = Number.parseFloat(entry.from_price_per_1m);
-  return Number.isFinite(n) ? n : null;
+  return typeof entry.from_price_per_1m === 'number' && Number.isFinite(entry.from_price_per_1m)
+    ? entry.from_price_per_1m
+    : null;
 }
 
 /**
@@ -75,16 +78,16 @@ export function applyChipFilters(
   });
 }
 
+/**
+ * Transport label. The registry's transport values are already display
+ * labels ('OpenAI-compatible', 'Anthropic', …) — this only trims and
+ * passes through, returning null for empty input. The old slug map
+ * ('openai-compatible' → 'OpenAI-Compatible', …) is gone: no registry
+ * value ever matched its keys.
+ */
 export function transportLabel(transport?: string): string | null {
-  if (!transport) return null;
-  const map: Record<string, string> = {
-    'openai-compatible': 'OpenAI-Compatible',
-    anthropic: 'Anthropic',
-    'aws-sigv4': 'AWS SigV4',
-    'vertex-rest': 'Vertex REST',
-    ollama: 'Ollama',
-  };
-  return map[transport] ?? transport;
+  const t = transport?.trim();
+  return t ? t : null;
 }
 
 /**
@@ -124,18 +127,57 @@ const CAPABILITY_LABELS: Record<string, string> = {
   structured_output: 'structured',
 };
 
-/** Pricing cell vocabulary. Returns { text, honest } — honest=false means the value is missing, never zero. */
+/**
+ * Pricing cell vocabulary. Returns { text, known } — known=false means the
+ * value is missing, never zero. Prices arrive as raw USD/1M numbers and go
+ * through the section's one shared formatter: a known price under one cent
+ * renders as "<$0.01" — never "$0.00", which would read as free.
+ */
 export function priceCell(
-  price: string | undefined,
+  price: number | undefined,
   pricingMode: ProviderDirectoryEntry['pricing_mode'],
 ): { text: string; known: boolean } {
   if (pricingMode === 'varies') return { text: 'Varies', known: true };
   if (pricingMode === 'custom') return { text: 'Custom', known: true };
   if (pricingMode === 'pass_through') return { text: 'Pass-through', known: true };
-  if (!price) return { text: '—', known: false };
-  const n = Number.parseFloat(price);
-  if (!Number.isFinite(n)) return { text: '—', known: false };
-  return { text: `$${n.toFixed(2)}`, known: true };
+  if (price === undefined || price === null || !Number.isFinite(price)) return { text: '—', known: false };
+  return { text: formatUsdPer1M(price), known: true };
+}
+
+/**
+ * Humanize a `data_quality_reasons` code for the drawer completeness
+ * block. Raw codes (metadata_snapshot_missing) and raw ISO timestamps
+ * never reach the user verbatim; timestamps render as dates. Unknown
+ * codes pass through unchanged — never invent copy for a code we don't
+ * recognize.
+ */
+export function humanizeDataQualityReason(reason: string): string {
+  switch (reason) {
+    case 'metadata_snapshot_missing':
+      return 'model data not yet published for this provider';
+    case 'metadata_refresh_failing':
+      return 'model data refresh is failing';
+    case 'no_models_in_snapshot':
+      return 'no models listed in the published data';
+    case 'capabilities_unknown':
+      return 'capabilities not published';
+    case 'pricing_unknown':
+      return 'pricing not published';
+    case 'context_unknown':
+      return 'context window not published';
+    default: {
+      const stale = reason.match(/^metadata_snapshot_stale_since_(.+)$/);
+      if (stale) {
+        const raw = stale[1];
+        const d = new Date(raw);
+        const when = Number.isNaN(d.getTime())
+          ? raw
+          : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        return `model data is stale (last updated ${when})`;
+      }
+      return reason;
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -159,9 +201,13 @@ const ToolbarRow = styled.div`
 const SearchWrap = styled.div`
   width: 320px;
   max-width: 100%;
+  @media (max-width: 900px) {
+    width: 100%;
+  }
 `;
 
 const FiltersButton = styled.button`
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -174,6 +220,12 @@ const FiltersButton = styled.button`
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  /* 44px hit target, visual-neutral. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
   &:hover {
     border-color: ${({ theme }) => theme.app.border.strong};
     color: ${({ theme }) => theme.app.text.primary};
@@ -203,6 +255,7 @@ const ChipBar = styled.div`
 `;
 
 const Chip = styled.button<{ $active: boolean }>`
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -218,6 +271,12 @@ const Chip = styled.button<{ $active: boolean }>`
     $active ? theme.app.status.info.bg : theme.app.surface.subtle};
   color: ${({ theme, $active }) => ($active ? theme.app.text.link : theme.app.text.secondary)};
   transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  /* 44px hit target, visual-neutral — the visible chip stays 32px. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+  }
   &:hover {
     border-color: ${({ theme }) => theme.app.border.strong};
     color: ${({ theme }) => theme.app.text.primary};
@@ -253,12 +312,14 @@ const SectionTitle = styled.h2`
 const TableWrap = styled.div`
   border: 1px solid ${({ theme }) => theme.app.border.default};
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   background: ${({ theme }) => theme.app.surface.subtle};
 `;
 
 const StyledTable = styled.table`
   width: 100%;
+  min-width: 620px;
   border-collapse: collapse;
   font-size: 13px;
 `;
@@ -315,12 +376,19 @@ const Avatar = styled.div`
 `;
 
 const ProviderNameBtn = styled.button`
+  position: relative;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   text-align: left;
   min-width: 0;
+  /* 44px vertical hit target, visual-neutral. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+  }
   &:hover > span:first-child {
     text-decoration: underline;
   }
@@ -492,6 +560,7 @@ const ErrorCopy = styled.p`
 `;
 
 const RetryButton = styled.button`
+  position: relative;
   height: 34px;
   padding: 0 16px;
   border-radius: 8px;
@@ -501,6 +570,12 @@ const RetryButton = styled.button`
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  /* 44px hit target, visual-neutral. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+  }
   &:hover {
     border-color: ${({ theme }) => theme.app.border.strong};
   }
@@ -550,6 +625,16 @@ const DetailPanel = styled(motion.aside)`
   border-radius: 16px;
   background: ${({ theme }) => theme.app.surface.subtle};
   padding: 20px;
+  /* Programmatic focus target on open (tabIndex=-1) — never in the tab
+     order, so no focus ring. */
+  &:focus {
+    outline: none;
+  }
+  @media (max-width: 900px) {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
 `;
 
 const DetailHead = styled.div`
@@ -573,6 +658,7 @@ const DetailSub = styled.div`
 `;
 
 const CloseBtn = styled.button`
+  position: relative;
   margin-left: auto;
   width: 30px;
   height: 30px;
@@ -585,6 +671,12 @@ const CloseBtn = styled.button`
   justify-content: center;
   cursor: pointer;
   flex: none;
+  /* 44px hit target, visual-neutral. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+  }
   &:hover {
     color: ${({ theme }) => theme.app.text.primary};
     border-color: ${({ theme }) => theme.app.border.strong};
@@ -674,6 +766,7 @@ const ModelName = styled.div`
 `;
 
 const ConnectLink = styled.button`
+  position: relative;
   background: none;
   border: none;
   padding: 0;
@@ -681,16 +774,12 @@ const ConnectLink = styled.button`
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.link};
   cursor: pointer;
-  &:hover {
-    text-decoration: underline;
+  /* 44px vertical hit target, visual-neutral. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -12px -6px;
   }
-`;
-
-const DocsLink = styled.a`
-  font-size: 13.5px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.link};
-  text-decoration: none;
   &:hover {
     text-decoration: underline;
   }
@@ -700,6 +789,9 @@ const Layout = styled.div`
   display: flex;
   gap: 20px;
   align-items: flex-start;
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
 `;
 
 const CatalogCol = styled.div`
@@ -719,10 +811,6 @@ function ProviderDrawer({
   const initial = entry.display_name.charAt(0).toUpperCase() || '?';
   const input = priceCell(entry.from_price_per_1m, entry.pricing_mode);
   const output = priceCell(entry.to_price_per_1m, entry.pricing_mode);
-  const extras = entry as ProviderDirectoryEntry & {
-    latency_profile?: string;
-    docs_url?: string;
-  };
   // Row-anchored mount: the drawer mounts at the top of the Layout while
   // the user's viewport may be far below (e.g. OpenRouter at the bottom).
   // `position: sticky` only keeps a *visible* element in view — it can't
@@ -735,20 +823,72 @@ function ProviderDrawer({
     const panel = panelRef.current;
     const layout = panel?.parentElement;
     if (!panel || !layout) return;
-    const row = layout.querySelector<HTMLElement>(
-      `[data-provider-id="${CSS.escape(entry.provider)}"]`,
-    );
-    if (!row) return;
-    const offset =
-      row.getBoundingClientRect().top - layout.getBoundingClientRect().top;
-    // Never overflow the Layout's bottom edge — sticky pulls it back anyway,
-    // but clamping keeps the first paint honest.
-    const maxTop = Math.max(0, layout.offsetHeight - panel.offsetHeight - 16);
-    setAnchorTop(Math.min(Math.max(0, offset), maxTop));
+    const measure = () => {
+      // Narrow viewports stack the panel below the table (see the Layout /
+      // DetailPanel media queries) — no row anchoring there.
+      if (window.innerWidth <= 900) {
+        setAnchorTop(0);
+        return;
+      }
+      const row = layout.querySelector<HTMLElement>(
+        `[data-provider-id="${CSS.escape(entry.provider)}"]`,
+      );
+      if (!row) return;
+      const offset =
+        row.getBoundingClientRect().top - layout.getBoundingClientRect().top;
+      // Never overflow the Layout's bottom edge — sticky pulls it back anyway,
+      // but clamping keeps the first paint honest.
+      const maxTop = Math.max(0, layout.offsetHeight - panel.offsetHeight - 16);
+      setAnchorTop(Math.min(Math.max(0, offset), maxTop));
+    };
+    measure();
+    // The anchor goes stale when the viewport resizes (rows reflow) or the
+    // row order changes — re-measure on both. `entry` in deps re-anchors
+    // when the refetched row data lands.
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [entry.provider, entry]);
+
+  // Drawer focus management. The panel is a persistent complementary region
+  // (not a modal) — the table stays interactive behind it — so the trap is
+  // scoped to the panel itself: on open, focus moves into the panel; while
+  // focus is inside, Tab wraps at the panel's edges; Escape closes (handled
+  // by the page-level listener); the page returns focus to the row's details
+  // button on close. Motion on this panel is covered by the app-level
+  // MotionConfig reducedMotion="user".
+  useLayoutEffect(() => {
+    panelRef.current?.focus({ preventScroll: true });
   }, [entry.provider]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const items = [
+        ...panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => el.getClientRects().length > 0);
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    panel.addEventListener('keydown', onKeyDown);
+    return () => panel.removeEventListener('keydown', onKeyDown);
+  }, [entry.provider]);
+
   return (
     <DetailPanel
       ref={panelRef}
+      tabIndex={-1}
       style={{ marginTop: anchorTop }}
       initial={{ x: 40, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
@@ -805,12 +945,6 @@ function ProviderDrawer({
           <dd>{formatContext(entry.max_context_tokens) ?? 'Not published'}</dd>
           <dt>Plan</dt>
           <dd>{entry.min_required_product_label}</dd>
-          {extras.latency_profile && (
-            <>
-              <dt>Latency</dt>
-              <dd>{extras.latency_profile}</dd>
-            </>
-          )}
         </DetailMeta>
       </DetailRow>
 
@@ -823,7 +957,7 @@ function ProviderDrawer({
             data:
             <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
               {entry.data_quality_reasons.map((r) => (
-                <li key={r}>{r}</li>
+                <li key={r}>{humanizeDataQualityReason(r)}</li>
               ))}
             </ul>
           </div>
@@ -861,14 +995,6 @@ function ProviderDrawer({
         )}
       </DetailRow>
 
-      {extras.docs_url && (
-        <DetailRow>
-          <DocsLink href={extras.docs_url} target="_blank" rel="noopener noreferrer">
-            Provider documentation →
-          </DocsLink>
-        </DetailRow>
-      )}
-
       <DetailRow>
         <DetailLabel>Plan</DetailLabel>
         <PlanCell entry={entry} />
@@ -881,20 +1007,34 @@ function ProviderDrawer({
 /* PLAN + ACCESS cells                                                 */
 /* ------------------------------------------------------------------ */
 
+/** Client mirror of the engine's `effectiveEnableTier`: the enable requirement floors at 'payg'. */
+export function effectiveEnableTier(minRequired: OrgModelTier): 'payg' | 'enterprise' {
+  // 'free' floors to 'payg' — the PAYG floor. The ternary's true-branch is
+  // only reachable for 'payg' | 'enterprise', which the cast records.
+  return minRequired === 'free' ? 'payg' : (minRequired as 'payg' | 'enterprise');
+}
+
+const EFFECTIVE_TIER_LABELS: Record<'payg' | 'enterprise', string> = {
+  payg: 'Pay-as-you-go',
+  enterprise: 'Enterprise',
+};
+
 function PlanCell({ entry }: { entry: ProviderDirectoryEntry }) {
   const tier = useOrgTier();
-  const coverage = tierCovers(tier, entry.min_required_product);
-  if (entry.min_required_product === 'free') {
-    return (
-      <StatusPill tone="neutral" dot={false}>
-        Included
-      </StatusPill>
-    );
-  }
+  // The engine floors the enable requirement at 'payg' (effectiveEnableTier)
+  // — a 'free' row minimum must never render as "Included" again; that copy
+  // contradicts the PAYG floor and is a contract-drift trap. The label
+  // follows the floored tier so the pill can never contradict the gate.
+  const required = effectiveEnableTier(entry.min_required_product);
+  const coverage = tierCovers(tier, required);
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <StatusPill tone={coverage === false ? 'warning' : 'info'} dot={false}>
-        {coverage === false ? 'Requires Ent.' : entry.min_required_product_label}
+        {coverage === false
+          ? required === 'enterprise'
+            ? 'Requires Ent.'
+            : 'Requires PAYG'
+          : EFFECTIVE_TIER_LABELS[required]}
       </StatusPill>
     </span>
   );
@@ -918,8 +1058,13 @@ function AccessCell({
   onToggle: (entry: ProviderDirectoryEntry, enabled: boolean) => void;
 }) {
   const tier = useOrgTier();
-  const isOn = entry.connection.enabled;
-  const label = `${isOn ? 'Disable' : 'Enable'} ${entry.display_name} for this workspace`;
+  // The switch renders from the STORED toggle — never the tier-anded
+  // `enabled` — so a lapsed-tier org with a grandfathered ON row still sees
+  // a checked, interactive switch and can always turn it OFF. Turning OFF
+  // always fires (the engine accepts it); turning ON when the plan doesn't
+  // cover shows the tier nudge instead of firing (see handleToggle).
+  const storedOn = entry.connection.stored_enabled ?? entry.connection.enabled;
+  const label = `${storedOn ? 'Disable' : 'Enable'} ${entry.display_name} for this workspace`;
   // Server is authoritative when it speaks: can_enable === false means the
   // org's plan doesn't cover this provider. Absent (older engine) falls
   // back to the client tier derivation — existing behavior, untouched.
@@ -929,16 +1074,22 @@ function AccessCell({
     return (
       <GatedAccess>
         <Tooltip
-          label={isOn ? 'Top up credits to turn this back on after disabling' : TIER_GATE_NUDGE}
+          label={
+            storedOn
+              ? 'this provider is still on from your previous plan — turn it off to remove access'
+              : TIER_GATE_NUDGE
+          }
+          focusable
+          wrap
         >
           <span style={{ display: 'inline-block' }}>
             <Switch
-              checked={isOn}
+              checked={storedOn}
               onChange={(next) => onToggle(entry, next)}
               label={label}
               // Grandfathered ON stays interactive so the org can always
               // turn it OFF; OFF is disabled — enabling is plan-gated.
-              disabled={pending || !isOn}
+              disabled={pending || !storedOn}
             />
           </span>
         </Tooltip>
@@ -947,14 +1098,42 @@ function AccessCell({
     );
   }
 
-  const coverage = tierCovers(tier, entry.min_required_product);
+  if (entry.can_enable === true) {
+    // Server says the plan covers this provider: the switch is always
+    // visible. The client tier is stale the moment it disagrees — it only
+    // feeds nudge copy elsewhere, never switch visibility.
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <Switch
+          checked={storedOn}
+          onChange={(next) => onToggle(entry, next)}
+          label={label}
+          disabled={pending}
+        />
+        {error &&
+          (error.tierGated ? (
+            <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
+          ) : (
+            // focusable: the failure explanation is otherwise invisible to
+            // keyboard users — the icon is decorative to the tab order.
+            <Tooltip label={error.message} focusable>
+              <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
+                <AlertTriangle size={14} aria-hidden="true" />
+              </DimText>
+            </Tooltip>
+          ))}
+      </span>
+    );
+  }
+
+  const coverage = tierCovers(tier, effectiveEnableTier(entry.min_required_product));
   if (coverage === false) {
     return <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>;
   }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       <Switch
-        checked={isOn}
+        checked={storedOn}
         onChange={(next) => onToggle(entry, next)}
         label={label}
         disabled={pending}
@@ -963,7 +1142,9 @@ function AccessCell({
         (error.tierGated ? (
           <TierNudge to="/platform/billing">{TIER_GATE_NUDGE_SHORT}</TierNudge>
         ) : (
-          <Tooltip label={error.message}>
+          // focusable: the failure explanation is otherwise invisible to
+          // keyboard users — the icon is decorative to the tab order.
+          <Tooltip label={error.message} focusable>
             <DimText role="img" aria-label={`Toggle failed: ${error.message}`}>
               <AlertTriangle size={14} aria-hidden="true" />
             </DimText>
@@ -1036,17 +1217,53 @@ export function CatalogPage() {
   }, [filtered]);
 
   // If the selected provider disappears from the list (filter change), the
-  // drawer closes — derived during render, not in an effect.
-  const effectiveSelected =
-    selected && filtered.some((p) => p.provider === selected.provider) ? selected : null;
+  // drawer closes — derived during render, not in an effect. The selection
+  // is re-matched against the refetched row so the drawer never shows
+  // stale facts after a background refetch (toggle, polling, refocus).
+  const effectiveSelected = selected
+    ? (filtered.find((p) => p.provider === selected.provider) ?? null)
+    : null;
 
+  // Escape in the search field clears the query (and blurs) — it must not
+  // close the detail drawer while the user is filtering. Escape anywhere
+  // else closes the drawer.
+  const searchWrapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') setSelected(null);
+      if (e.key !== 'Escape') return;
+      const target = e.target as Node | null;
+      // `e.target` can be `window` itself (or another non-Node) when the
+      // event is dispatched on window — guard before calling contains().
+      if (target instanceof Node && searchWrapRef.current?.contains(target)) {
+        setSearchInput('');
+        setSearch('');
+        setChips(new Set());
+        (target as HTMLElement).blur?.();
+        return;
+      }
+      setSelected(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Return focus to the row's details button when the drawer closes — a
+  // keyboard user who opened it with Enter lands back where they started.
+  // If the row is gone (filtered out), the lookup no-ops honestly.
+  const lastDrawerProvider = useRef<string | null>(null);
+  useEffect(() => {
+    if (effectiveSelected) {
+      lastDrawerProvider.current = effectiveSelected.provider;
+      return;
+    }
+    const provider = lastDrawerProvider.current;
+    lastDrawerProvider.current = null;
+    if (!provider) return;
+    document
+      .querySelector<HTMLElement>(`[data-provider-id="${CSS.escape(provider)}"]`)
+      ?.querySelector<HTMLElement>('button[aria-label$=" details"]')
+      ?.focus({ preventScroll: true });
+  }, [effectiveSelected]);
 
   const toggleChip = (key: ChipKey) => {
     setChips((prev) => {
@@ -1126,11 +1343,11 @@ export function CatalogPage() {
 
       <Toolbar>
         <ToolbarRow>
-          <SearchWrap>
+          <SearchWrap ref={searchWrapRef}>
             <SearchField
               value={searchInput}
               onChange={setSearchInput}
-              placeholder="Search providers, models, tags…"
+              placeholder="Search providers, models…"
               ariaLabel="Search providers"
             />
           </SearchWrap>

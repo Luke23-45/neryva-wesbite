@@ -21,6 +21,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import { SpendPage } from './SpendPage';
@@ -143,13 +150,31 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={client}>
-        <SpendPage />
-      </QueryClientProvider>
-    </ThemeProvider>,
-  );
+  // The per-credential rows link to the Providers page (kebab affordance is
+  // a real Link, not a dead button) — the established router-in-tests
+  // pattern gives Link its RouterProvider context.
+  const rootRoute = createRootRoute();
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => (
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={client}>
+          <SpendPage />
+        </QueryClientProvider>
+      </ThemeProvider>
+    ),
+  });
+  const providersRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'agent-studio/providers/my-providers',
+    component: () => null,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([indexRoute, providersRoute]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  return render(<RouterProvider router={router} />);
 }
 
 beforeEach(() => {
@@ -278,7 +303,9 @@ describe('SpendPage per-credential table', () => {
 
   it('shows Active for verified and a dimmed Revoked row with history retained', async () => {
     const revoked = credFixture('c2');
-    revoked.verification_status = 'revoked';
+    // Revocation lives in `status` — the engine never emits it in
+    // `verification_status` (P0-2: reading it there was dead code).
+    revoked.status = 'revoked';
     revoked.revoked_at = '2026-10-02T00:00:00Z';
     hoisted.credentials = [credFixture('c1'), revoked];
     renderPage();

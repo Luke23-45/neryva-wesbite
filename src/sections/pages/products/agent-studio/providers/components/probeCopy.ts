@@ -9,6 +9,12 @@
 /** Actionable remediation copy for a failed discovery probe. */
 export function probeErrorCopy(errorCode?: string, error?: string): string {
   const code = (errorCode ?? '').toLowerCase();
+  // P2: an engine-imposed 429 (the probe route's org burst limit or the
+  // per-credential daily probe budget, both code `rate_limited`) is NOT
+  // provider quota — the copy must say so, with the honest cause.
+  if (code === 'rate_limited') {
+    return 'Neryva’s verification limit is exhausted for now — the provider itself was not the problem. Try again shortly.';
+  }
   const msg = (error ?? '').toLowerCase();
   // Normalize separators so codes like `invalid_api_key` match word checks.
   const hay = `${code} ${msg}`.replace(/[_-]+/g, ' ');

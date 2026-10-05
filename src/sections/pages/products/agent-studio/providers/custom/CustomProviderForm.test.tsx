@@ -104,7 +104,9 @@ describe('validateBaseUrl', () => {
     for (const host of ['169.254.169.254', '10.0.0.5', '192.168.1.1', '172.16.0.9', '127.0.0.1', 'localhost']) {
       const result = validateBaseUrl(`https://${host}/v1`);
       expect(result.state).toBe('invalid');
-      expect(result.message).toBe('Target address resolves to private or metadata network.');
+      expect(result.message).toBe(
+        'Private, loopback, and link-local addresses are blocked — use a publicly reachable HTTPS endpoint.',
+      );
     }
   });
   it('rejects garbage input', () => {
@@ -131,8 +133,16 @@ describe('probeErrorCopy', () => {
       'Key lacks model-read permissions. Use manual model declaration or expand key scopes.',
     );
   });
-  it('maps 429 to the quota copy', () => {
-    expect(probeErrorCopy('rate_limited')).toBe('Provider quota exceeded or rate-limited. Try again shortly.');
+  it('maps engine-imposed 429 (rate_limited) to the platform-limit copy, not provider quota', () => {
+    expect(probeErrorCopy('rate_limited')).toBe(
+      'Neryva’s verification limit is exhausted for now — the provider itself was not the problem. Try again shortly.',
+    );
+  });
+
+  it('maps provider 429/quota messages to the provider quota copy', () => {
+    expect(probeErrorCopy('upstream_429', 'provider returned 429 quota exceeded')).toBe(
+      'Provider quota exceeded or rate-limited. Try again shortly.',
+    );
   });
 });
 
@@ -149,7 +159,9 @@ describe('CustomProviderForm', () => {
       target: { value: 'https://169.254.169.254/latest/meta-data' },
     });
     expect(
-      screen.getByText('Target address resolves to private or metadata network.'),
+      screen.getByText(
+        'Private, loopback, and link-local addresses are blocked — use a publicly reachable HTTPS endpoint.',
+      ),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: /Run Probe/ })).toBeDisabled();
   });
@@ -230,11 +242,31 @@ describe('CustomProviderForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save & Connect Provider/ }));
     await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalled());
     const payload = hoisted.createMutateAsync.mock.calls[0][0];
-    expect(payload.provider).toBe('eu-vllm');
-    expect(payload.base_url).toBe('https://example.com/v1');
-    expect(payload.enabled).toBe(true);
+    // P1-3: the create rides { input, idempotencyKey } — one key per submit
+    // intent so a manual retry replays instead of duplicating.
+    expect(payload.input.provider).toBe('eu-vllm');
+    expect(payload.input.base_url).toBe('https://example.com/v1');
+    expect(payload.input.enabled).toBe(true);
+    expect(typeof payload.idempotencyKey).toBe('string');
+    expect(payload.idempotencyKey.length).toBeGreaterThanOrEqual(8);
     expect(hoisted.verifyMutateAsync).toHaveBeenCalledWith('new-cred');
     expect(hoisted.navigate).toHaveBeenCalledWith({ to: '/agent-studio/providers' });
+  });
+
+  it('navigates even when the post-create verify fails (best-effort verify)', async () => {
+    hoisted.probeCredential.mockResolvedValue(okProbe);
+    hoisted.verifyMutateAsync.mockRejectedValueOnce(new Error('probe exploded'));
+    renderForm();
+    fillBasics();
+    fireEvent.click(screen.getByRole('button', { name: /Run Probe & Discover Models/ }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Save & Connect Provider/ })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Save & Connect Provider/ }));
+    await waitFor(() => expect(hoisted.navigate).toHaveBeenCalledWith({ to: '/agent-studio/providers' }));
+    // The failure is swallowed deliberately — the card surface reports it
+    // and offers "Retry verify".
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('Save as Inactive works without a probe and skips verification', async () => {
@@ -244,7 +276,7 @@ describe('CustomProviderForm', () => {
     expect(saveInactive).not.toBeDisabled();
     fireEvent.click(saveInactive);
     await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalled());
-    expect(hoisted.createMutateAsync.mock.calls[0][0].enabled).toBe(false);
+    expect(hoisted.createMutateAsync.mock.calls[0][0].input.enabled).toBe(false);
     expect(hoisted.verifyMutateAsync).not.toHaveBeenCalled();
   });
 
@@ -274,7 +306,7 @@ describe('CustomProviderForm', () => {
     fireEvent.click(saveConnect);
     await waitFor(() => expect(hoisted.createMutateAsync).toHaveBeenCalled());
     const payload = hoisted.createMutateAsync.mock.calls[0][0];
-    expect(payload.manual_model_declarations).toEqual([
+    expect(payload.input.manual_model_declarations).toEqual([
       {
         id: 'llama-3.3-70b-instruct',
         display_name: 'Llama 3.3 70B Instruct',

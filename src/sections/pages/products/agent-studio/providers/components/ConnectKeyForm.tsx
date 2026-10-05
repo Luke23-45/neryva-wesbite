@@ -9,6 +9,8 @@
 import { useRef, useState } from 'react';
 import { Dropdown } from '@/components/common/ui/Dropdown';
 import { TextInput } from '@/components/common/ui/TextInput';
+import { ApiError, randomIdempotencyKey } from '@/lib/engine/client';
+import { runWithStepUp } from '@/lib/engine/stepup';
 import {
   probeCredential,
   type CreateCredentialInput,
@@ -61,6 +63,12 @@ export function ConnectKeyForm({
   const [probe, setProbe] = useState<ProbeResult | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /**
+   * P1-3: one idempotency key per form submit intent. Reused across manual
+   * retries of the same connect — the engine replays the original create
+   * instead of duplicating the credential.
+   */
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const valid = provider.trim().length > 0 && label.trim().length > 0 && secret.trim().length > 0;
   const probedOk = probe?.status === 'ok';
@@ -73,10 +81,15 @@ export function ConnectKeyForm({
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const result = await probeCredential(
-        orgId,
-        { provider: provider.trim(), secret: secret.trim(), transport },
-        ctrl.signal,
+      // P2 re-proof: the probe route requires a fresh MFA proof — if it
+      // expired, re-prompt and retry rather than surfacing a raw error.
+      const result = await runWithStepUp('probe provider key', (proof) =>
+        probeCredential(
+          orgId,
+          { provider: provider.trim(), secret: secret.trim(), transport },
+          ctrl.signal,
+          proof,
+        ),
       );
       setProbe(result);
     } catch (err) {
@@ -86,6 +99,8 @@ export function ConnectKeyForm({
           latency_ms: 0,
           models: [],
           error: (err as Error).message,
+          // P2: engine-imposed 429s get their own copy (not provider quota).
+          error_code: err instanceof ApiError ? err.code : undefined,
         });
       }
     } finally {
@@ -99,13 +114,17 @@ export function ConnectKeyForm({
   const connect = () => {
     if (!probedOk) return;
     setSaveError(null);
+    if (!idempotencyKeyRef.current) idempotencyKeyRef.current = randomIdempotencyKey();
     mutations.create.mutate(
       {
-        provider: provider.trim(),
-        label: label.trim(),
-        secret: secret.trim(),
-        transport,
-        shared_capacity_fallback: fallback,
+        input: {
+          provider: provider.trim(),
+          label: label.trim(),
+          secret: secret.trim(),
+          transport,
+          shared_capacity_fallback: fallback,
+        },
+        idempotencyKey: idempotencyKeyRef.current,
       },
       {
         onSuccess: ({ credential }) => onDone(credential),

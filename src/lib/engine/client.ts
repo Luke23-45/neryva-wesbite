@@ -97,6 +97,13 @@ export interface EngineRequestInit {
   body?: unknown;
   /** Generate an Idempotency-Key (engine stores the response for replays). */
   idempotent?: boolean;
+  /**
+   * Explicit idempotency key. When `idempotent` is set and this is provided,
+   * it is sent verbatim instead of generating one — lets a form reuse one
+   * key across manual retries of the same intent, so the engine replays the
+   * original response instead of creating a duplicate.
+   */
+  idempotencyKey?: string;
   /** Step-up MFA proof (privileged acts: role→owner/admin, transfer, deletion, key issue). */
   mfaProof?: string;
   /** Extra headers (e.g. `If-Match` for optimistic-concurrency draft writes). Merged over generated headers. */
@@ -128,7 +135,7 @@ function buildUrl(path: string, query?: EngineRequestInit['query']): string {
 }
 
 /** UUIDv7 (time-ordered, crypto-random) for Idempotency-Key — the engine stores the key verbatim. */
-function randomIdempotencyKey(): string {
+export function randomIdempotencyKey(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x70; // version 7
@@ -243,7 +250,7 @@ async function execute<T>(path: string, init: EngineRequestInit, retryOn401: boo
     headers['x-neryva-org'] = orgId;
   }
   if (init.idempotent) {
-    headers['idempotency-key'] = randomIdempotencyKey();
+    headers['idempotency-key'] = init.idempotencyKey ?? randomIdempotencyKey();
   }
   if (init.mfaProof) {
     headers['x-mfa-proof'] = init.mfaProof;

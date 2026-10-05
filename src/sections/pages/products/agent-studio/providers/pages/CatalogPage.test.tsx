@@ -20,11 +20,14 @@ import {
   formatContext,
   priceCell,
   transportLabel,
+  humanizeDataQualityReason,
+  effectiveEnableTier,
   type ChipKey,
 } from './CatalogPage';
 import type { ProviderDirectoryEntry } from '../api';
 
 const mutateMock = vi.hoisted(() => vi.fn());
+const tierOverride = vi.hoisted(() => ({ current: 'payg' }));
 const providersOverride = vi.hoisted(
   () => ({ current: null }) as { current: import('../api').ProviderDirectoryEntry[] | null },
 );
@@ -44,17 +47,36 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 vi.mock('../hooks/useOrgTier', () => ({
-  useOrgTier: () => 'payg',
-  tierCovers: (_tier: string, required: string) => required !== 'enterprise',
+  useOrgTier: () => tierOverride.current,
+  tierCovers: (tier: string, required: string) => {
+    // Honest mirror of the real tierCovers rank comparison.
+    const rank: Record<string, number> = { free: 0, payg: 1, enterprise: 2 };
+    if (tier === 'unknown') return null;
+    return (rank[tier] ?? -1) >= (rank[required] ?? 0);
+  },
 }));
 
 vi.mock('../hooks/useProviderDirectory', () => ({
-  useProviderDirectory: () => ({
-    data: { providers: providersOverride.current ?? fixture() },
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
+  // Faithful stand-in for the server: the real hook sends `search` to the
+  // engine, which substrings over provider id, display name, and model
+  // ids/names. A mock that ignored the filter would make any search-driven
+  // test vacuous (the list could never change).
+  useProviderDirectory: (_orgId: string | null, filters?: { search?: string }) => {
+    const q = filters?.search?.trim().toLowerCase();
+    let providers = providersOverride.current ?? fixture();
+    if (q) {
+      providers = providers.filter((p) => {
+        const modelHay = p.models.map((m) => `${m.model_id} ${m.display_name}`).join(' ');
+        return `${p.provider} ${p.display_name} ${modelHay}`.toLowerCase().includes(q);
+      });
+    }
+    return {
+      data: { providers },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  },
 }));
 
 vi.mock('../hooks/useProviderEnablement', () => ({
@@ -69,11 +91,11 @@ function entry(over: Partial<ProviderDirectoryEntry> = {}): ProviderDirectoryEnt
   return {
     provider: 'openai',
     display_name: 'OpenAI',
-    transport: 'openai-compatible',
+    transport: 'OpenAI-compatible',
     model_count: 5,
     models: [{ model_id: 'gpt-4o', display_name: 'GPT-4o' }],
-    from_price_per_1m: '2.50',
-    to_price_per_1m: '10.00',
+    from_price_per_1m: 2.5,
+    to_price_per_1m: 10.0,
     max_context_tokens: 128000,
     door: 'platform',
     section: 'Frontier labs',
@@ -82,9 +104,9 @@ function entry(over: Partial<ProviderDirectoryEntry> = {}): ProviderDirectoryEnt
     data_quality_reasons: [],
     zdr_capable: true,
     capabilities: ['tools', 'vision'],
-    connection: { has_active_credential: false, enabled: true },
-    min_required_product: 'free',
-    min_required_product_label: 'Free',
+    connection: { has_active_credential: false, enabled: true, stored_enabled: true },
+    min_required_product: 'payg',
+    min_required_product_label: 'Pay-as-you-go',
     ...over,
   };
 }
@@ -115,7 +137,7 @@ function fixture(): ProviderDirectoryEntry[] {
       section: 'Frontier labs',
       pricing_mode: 'varies',
       data_quality: 'incomplete',
-      data_quality_reasons: ['pricing not published', 'capabilities not published'],
+      data_quality_reasons: ['pricing_unknown', 'capabilities_unknown'],
       capabilities: [],
       zdr_capable: undefined,
       max_context_tokens: undefined,
@@ -136,6 +158,7 @@ function renderPage() {
 beforeEach(() => {
   mutateMock.mockReset();
   providersOverride.current = null;
+  tierOverride.current = 'payg';
 });
 
 describe('catalog pure helpers', () => {
@@ -145,7 +168,7 @@ describe('catalog pure helpers', () => {
     expect(applyChipFilters(all, new Set<ChipKey>(['tools']))).toHaveLength(2);
     expect(applyChipFilters(all, new Set<ChipKey>(['tools', 'vision']))).toHaveLength(1);
     expect(applyChipFilters(all, new Set<ChipKey>(['price']))).toHaveLength(0); // 2.50 ≥ 1
-    const cheap = entry({ from_price_per_1m: '0.50' });
+    const cheap = entry({ from_price_per_1m: 0.5 });
     expect(applyChipFilters([cheap], new Set<ChipKey>(['price']))).toHaveLength(1);
   });
 
@@ -157,7 +180,7 @@ describe('catalog pure helpers', () => {
   });
 
   it('sourceLine names the door on every row', () => {
-    expect(sourceLine(entry())).toBe('Platform pool · openai · OpenAI-Compatible');
+    expect(sourceLine(entry())).toBe('Platform pool · openai · OpenAI-compatible');
     expect(sourceLine(entry({ transport: undefined }))).toBe('Platform pool · openai');
     expect(sourceLine(entry({ door: 'byok', credential_label: 'Work key', credential_fingerprint: 'fp:9f2a' }))).toBe(
       'Work key · fp:9f2a',
@@ -172,18 +195,42 @@ describe('catalog pure helpers', () => {
     expect(formatContext(0)).toBeNull();
   });
 
-  it('priceCell speaks the pricing-mode vocabulary; missing per-model prices are honest', () => {
-    expect(priceCell('2.50', 'per_model')).toEqual({ text: '$2.50', known: true });
+  it('priceCell speaks the pricing-mode vocabulary; sub-cent prices never render as $0.00', () => {
+    expect(priceCell(2.5, 'per_model')).toEqual({ text: '$2.50', known: true });
+    expect(priceCell(0.00014, 'per_model')).toEqual({ text: '<$0.01', known: true });
+    expect(priceCell(0, 'per_model')).toEqual({ text: '<$0.01', known: true });
     expect(priceCell(undefined, 'per_model')).toEqual({ text: '—', known: false });
+    expect(priceCell(Number.NaN, 'per_model')).toEqual({ text: '—', known: false });
     expect(priceCell(undefined, 'varies')).toEqual({ text: 'Varies', known: true });
     expect(priceCell(undefined, 'custom')).toEqual({ text: 'Custom', known: true });
     expect(priceCell(undefined, 'pass_through')).toEqual({ text: 'Pass-through', known: true });
   });
 
-  it('transportLabel maps known transports and passes the rest through', () => {
-    expect(transportLabel('openai-compatible')).toBe('OpenAI-Compatible');
-    expect(transportLabel('ollama')).toBe('Ollama');
+  it('transportLabel passes the registry display labels through; blank is null', () => {
+    expect(transportLabel('OpenAI-compatible')).toBe('OpenAI-compatible');
+    expect(transportLabel('Anthropic')).toBe('Anthropic');
+    expect(transportLabel('  OpenAI-compatible  ')).toBe('OpenAI-compatible');
     expect(transportLabel(undefined)).toBeNull();
+    expect(transportLabel('')).toBeNull();
+  });
+
+  it('humanizeDataQualityReason turns codes and timestamps into human copy', () => {
+    expect(humanizeDataQualityReason('metadata_snapshot_missing')).toBe(
+      'model data not yet published for this provider',
+    );
+    expect(humanizeDataQualityReason('pricing_unknown')).toBe('pricing not published');
+    expect(humanizeDataQualityReason('capabilities_unknown')).toBe('capabilities not published');
+    const stale = humanizeDataQualityReason('metadata_snapshot_stale_since_2026-09-01T00:00:00.000Z');
+    expect(stale).toMatch(/^model data is stale \(last updated .+2026\)$/);
+    expect(stale).not.toContain('T00:00:00');
+    // Unknown codes pass through verbatim — never invented.
+    expect(humanizeDataQualityReason('some_future_code')).toBe('some_future_code');
+  });
+
+  it('effectiveEnableTier floors the requirement at payg (never "Included")', () => {
+    expect(effectiveEnableTier('free')).toBe('payg');
+    expect(effectiveEnableTier('payg')).toBe('payg');
+    expect(effectiveEnableTier('enterprise')).toBe('enterprise');
   });
 });
 
@@ -196,7 +243,7 @@ describe('CatalogPage', () => {
       expect(screen.getAllByText(col).length).toBeGreaterThan(0);
     }
     // Mandatory source lines.
-    expect(screen.getByText('Platform pool · openai · OpenAI-Compatible')).toBeTruthy();
+    expect(screen.getByText('Platform pool · openai · OpenAI-compatible')).toBeTruthy();
     expect(screen.getByText('Work key · fp:9f2a')).toBeTruthy();
   });
 
@@ -335,5 +382,111 @@ describe('CatalogPage', () => {
     });
     expect(screen.getByRole('img', { name: /Toggle failed/ })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Top up credits to enable' })).toBeNull();
+  });
+
+  it('plan pill follows the floored tier: a "free" row minimum never reads "Included"', () => {
+    providersOverride.current = [
+      entry({ min_required_product: 'free', min_required_product_label: 'Free' }),
+    ];
+    renderPage();
+    expect(screen.queryByText('Included')).toBeNull();
+    expect(screen.getByText('Pay-as-you-go')).toBeTruthy();
+  });
+
+  it('can_enable=true wins over a stale client tier — the switch stays visible', () => {
+    // The client thinks the org is on 'free'; the server says the plan
+    // covers this provider. The old code rendered only the upgrade link
+    // and hid the off-switch.
+    tierOverride.current = 'free';
+    providersOverride.current = [
+      entry({
+        can_enable: true,
+        connection: { has_active_credential: false, enabled: false, stored_enabled: false },
+      }),
+    ];
+    renderPage();
+    expect(
+      screen.getByRole('switch', { name: 'Enable OpenAI for this workspace' }),
+    ).toBeTruthy();
+    expect(screen.queryByText('Upgrade →')).toBeNull();
+  });
+
+  it('the switch follows stored_enabled, not the tier-gated enabled flag', () => {
+    // Grandfathered row: the engine serves enabled=false (tier lapsed) but
+    // the stored toggle is still ON. The switch must render checked from
+    // the stored value so the org can turn it OFF.
+    providersOverride.current = [
+      entry({
+        can_enable: false,
+        connection: { has_active_credential: false, enabled: false, stored_enabled: true },
+      }),
+    ];
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Disable OpenAI for this workspace' });
+    expect(sw).toHaveAttribute('aria-checked', 'true');
+    expect(sw).not.toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    expect(mutateMock.mock.calls[0][0]).toEqual({ provider: 'openai', enabled: false });
+  });
+
+  it('Escape in the search field clears the query instead of closing the drawer', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Mystery Lab details' }));
+    expect(
+      screen.getByRole('complementary', { name: 'Mystery Lab details' }),
+    ).toBeTruthy();
+    const search = screen.getByLabelText('Search providers');
+    fireEvent.change(search, { target: { value: 'zzz' } });
+    // The input debounces 250ms before the list filters.
+    await waitFor(() => {
+      expect(screen.queryByText('OpenAI')).toBeNull();
+    });
+    fireEvent.keyDown(search, { key: 'Escape' });
+    // The drawer survives; the filter is cleared.
+    expect(
+      screen.getByRole('complementary', { name: 'Mystery Lab details' }),
+    ).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText('OpenAI')).toBeTruthy();
+    });
+  });
+
+  it('drawer focus: opens with focus inside, Escape closes and returns focus to the row button', () => {
+    renderPage();
+    const trigger = screen.getByRole('button', { name: 'Mystery Lab details' });
+    fireEvent.click(trigger);
+    const drawer = screen.getByRole('complementary', { name: 'Mystery Lab details' });
+    // Focus moves into the drawer on open.
+    expect(drawer.contains(document.activeElement)).toBe(true);
+    // Escape (from inside the drawer) closes it…
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    // …and focus returns to the row's details button.
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('search placeholder promises only what the server searches (no tags)', () => {
+    renderPage();
+    // The server matches provider id, display name, and model ids/names —
+    // there are no tags in the metadata, so the copy must not promise them.
+    expect(screen.getByLabelText('Search providers')).toHaveAttribute(
+      'placeholder',
+      'Search providers, models…',
+    );
+  });
+
+  it('toggle-failure explanation is keyboard reachable', () => {
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Enable Acme BYOK for this workspace' });
+    fireEvent.click(sw);
+    const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
+    act(() => {
+      onError({ status: 500, code: 'internal_error', message: 'boom' });
+    });
+    const icon = screen.getByRole('img', { name: /Toggle failed/ });
+    // The Tooltip trigger wraps the icon and must be tabbable so keyboard
+    // users can read the failure explanation.
+    expect(icon.closest('[tabindex="0"]')).not.toBeNull();
   });
 });

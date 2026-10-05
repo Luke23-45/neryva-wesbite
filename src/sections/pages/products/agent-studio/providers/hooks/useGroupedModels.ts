@@ -13,8 +13,10 @@
  * Optimistic semantics: the mutation flips `enabled` on the exact rows the
  * toggle addresses — matched on (supergroup, provider, credential, model_id)
  * — so the same model id served by Platform Managed AND a BYOK key is two
- * distinct rows and only the addressed one flips. On error the previous
- * cache entry is restored verbatim; on settle the query refetches.
+ * distinct rows and only the addressed one flips. `usable`/`reasons` move
+ * with the flip (mirroring the engine derivation). On error only the
+ * addressed rows roll back (per-row snapshots — a concurrent batch's
+ * optimistic flips survive); on settle the query refetches.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,6 +29,7 @@ import {
   type OrgDefaultModel,
   type Supergroup,
 } from '../api';
+import { orgDefaultModelKey } from './useOrgDefaultModel';
 
 // Re-export the N-5 view types so pages import from one module.
 export type { ModelGroupView, ModelRowView, OrgDefaultModel, Supergroup };
@@ -54,20 +57,13 @@ export function humanizeReason(reason: string): string {
       'This model is not available in your organization\u2019s data residency region.',
     model_disabled_by_org:
       'Disabled for this organization — turn the switch on to make it available again.',
+    provider_facts_unknown:
+      'The provider status check failed, so this model stays unavailable until the check succeeds.',
     // Template compatibility (templates.service.ts)
     provider_credential_missing:
       'No verified provider credential is attached — connect a key before enabling.',
   };
   return known[reason] ?? reason.replace(/_/g, ' ');
-}
-
-/** `$2.50 / $10.00 per 1M tokens` — absent when the row is unpriced (never invented).
- * Operator-declared prices (PRV-035) are labeled as such, never presented
- * as verified catalog prices (Law VII). */
-export function priceLabel(model: ModelRowView): string | null {
-  if (!model.pricing) return null;
-  const base = `$${model.pricing.input_per_1m} / $${model.pricing.output_per_1m} per 1M tokens`;
-  return model.pricing_source === 'operator_declared' ? `${base} (operator-declared)` : base;
 }
 
 export const CAPABILITY_LABELS = {
@@ -88,11 +84,14 @@ export function rowKey(
 export interface GroupedModels {
   platform: ModelGroupView[];
   byok: ModelGroupView[];
+  /** The org's default model for new assistants — null when unset. */
+  default_model: OrgDefaultModel | null;
   /**
-   * Mirrors the N-5 `default_model` — optional until the engine ships it
-   * (parallel team); absent/null = no default known, never invented.
+   * Per-read degradation codes (engine GROUPED_MODEL_DEGRADED_READS).
+   * Empty when every sub-read succeeded — the page renders honest
+   * per-section states for the codes present instead of a page-level 500.
    */
-  default_model?: OrgDefaultModel | null;
+  degraded: string[];
 }
 
 /**
@@ -129,7 +128,10 @@ function credentialMatches(group: ModelGroupView, t: ModelToggleInput): boolean 
 
 /**
  * Pure optimistic reducer — exported for tests. Applies each toggle to the
- * rows it addresses without touching anything else.
+ * rows it addresses without touching anything else. `usable` and `reasons`
+ * move with the flipped value — mirroring the engine's
+ * `usable: enabled && row.usable` plus `model_disabled_by_org` derivation —
+ * so the reason list never lags a round-trip behind the switch.
  */
 export function applyToggles(data: GroupedModels, toggles: ModelToggleInput[]): GroupedModels {
   const apply = (groups: ModelGroupView[], supergroup: Supergroup): ModelGroupView[] =>
@@ -141,9 +143,16 @@ export function applyToggles(data: GroupedModels, toggles: ModelToggleInput[]): 
       const byModel = new Map(hits.map((h) => [h.model_id, h.enabled]));
       return {
         ...group,
-        models: group.models.map((m) =>
-          byModel.has(m.model_id) ? { ...m, enabled: byModel.get(m.model_id) === true } : m,
-        ),
+        models: group.models.map((m) => {
+          if (!byModel.has(m.model_id)) return m;
+          const nextEnabled = byModel.get(m.model_id) === true;
+          const reasons = nextEnabled
+            ? m.reasons.filter((r) => r !== 'model_disabled_by_org')
+            : m.reasons.includes('model_disabled_by_org')
+              ? m.reasons
+              : [...m.reasons, 'model_disabled_by_org'];
+          return { ...m, enabled: nextEnabled, usable: nextEnabled && reasons.length === 0, reasons };
+        }),
       };
     });
   return {
@@ -151,6 +160,48 @@ export function applyToggles(data: GroupedModels, toggles: ModelToggleInput[]): 
     platform: apply(data.platform, 'platform'),
     byok: apply(data.byok, 'byok'),
   };
+}
+
+/**
+ * Per-row rollback snapshots — exported for tests. Snapshots ONLY the rows
+ * a toggle batch addresses, so two interleaved batches roll back
+ * independently: restoring the whole query (the old behavior) let batch A's
+ * rollback wipe batch B's optimistic flip.
+ */
+export function snapshotToggledRows(
+  data: GroupedModels,
+  toggles: ModelToggleInput[],
+): Map<string, ModelRowView> {
+  const prev = new Map<string, ModelRowView>();
+  const collect = (groups: ModelGroupView[], supergroup: Supergroup) => {
+    for (const group of groups) {
+      const hits = toggles.filter(
+        (t) => t.supergroup === supergroup && t.provider === group.provider && credentialMatches(group, t),
+      );
+      if (hits.length === 0) continue;
+      const ids = new Set(hits.map((h) => h.model_id));
+      for (const m of group.models) {
+        if (ids.has(m.model_id)) prev.set(rowKey(supergroup, group, m), m);
+      }
+    }
+  };
+  collect(data.platform, 'platform');
+  collect(data.byok, 'byok');
+  return prev;
+}
+
+/** Restores exactly the rows a per-row snapshot captured; all others pass through. */
+export function restoreToggledRows(
+  data: GroupedModels,
+  prev: Map<string, ModelRowView>,
+): GroupedModels {
+  if (prev.size === 0) return data;
+  const restore = (groups: ModelGroupView[], supergroup: Supergroup): ModelGroupView[] =>
+    groups.map((group) => ({
+      ...group,
+      models: group.models.map((m) => prev.get(rowKey(supergroup, group, m)) ?? m),
+    }));
+  return { ...data, platform: restore(data.platform, 'platform'), byok: restore(data.byok, 'byok') };
 }
 
 export function useGroupedModels(orgId: string | null) {
@@ -169,17 +220,22 @@ export function useModelToggles(orgId: string | null) {
       return postModelToggles(orgId, toggles);
     },
     onMutate: async (toggles) => {
-      if (orgId === null || orgId === '') return { prev: undefined as GroupedModels | undefined };
+      if (orgId === null || orgId === '') return { prevRows: new Map<string, ModelRowView>() };
       await queryClient.cancelQueries({ queryKey: groupedModelsKey(orgId) });
       const prev = queryClient.getQueryData<GroupedModels>(groupedModelsKey(orgId));
+      const prevRows = prev ? snapshotToggledRows(prev, toggles) : new Map<string, ModelRowView>();
       if (prev) {
         queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), applyToggles(prev, toggles));
       }
-      return { prev };
+      return { prevRows };
     },
     onError: (_error, _variables, context) => {
-      if (orgId === null || orgId === '' || !context?.prev) return;
-      queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), context.prev);
+      if (orgId === null || orgId === '' || !context?.prevRows || context.prevRows.size === 0) return;
+      // Per-row restore: only the rows this batch addressed revert — a
+      // concurrent batch's optimistic flips survive.
+      queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), (data) =>
+        data ? restoreToggledRows(data, context.prevRows) : data,
+      );
     },
     onSettled: () => {
       if (orgId === null || orgId === '') return;
@@ -192,10 +248,12 @@ export function useModelToggles(orgId: string | null) {
  * useModelDefault — N-8 org default model write
  * (`PUT /console/org/:orgId/models/default`).
  *
- * Optimistic update flips the grouped query's `default_model` only (the
- * page derives every radio's checked state from it); on error the previous
- * cache entry is restored verbatim; on settle the query refetches. The
- * page owns the error copy (422 → "not available for your organization").
+ * Optimistic update flips the grouped query's `default_model` (the page
+ * derives every radio's checked state from it) AND the standalone
+ * `useOrgDefaultModel` read the guided setup flow consumes — the two
+ * default-model truths reconcile at this single writer. On error both are
+ * restored; on settle both refetch. The page owns the error copy (422 →
+ * "not available for your organization").
  */
 export function useModelDefault(orgId: string | null) {
   const queryClient = useQueryClient();
@@ -205,24 +263,35 @@ export function useModelDefault(orgId: string | null) {
       return setModelDefault(orgId, def);
     },
     onMutate: async (def) => {
-      if (orgId === null || orgId === '') return { prev: undefined as GroupedModels | undefined };
+      if (orgId === null || orgId === '')
+        return {
+          prev: undefined as GroupedModels | undefined,
+          prevDefault: undefined as { default: OrgDefaultModel | null } | undefined,
+        };
       await queryClient.cancelQueries({ queryKey: groupedModelsKey(orgId) });
       const prev = queryClient.getQueryData<GroupedModels>(groupedModelsKey(orgId));
+      const prevDefault = queryClient.getQueryData<{ default: OrgDefaultModel | null }>(
+        orgDefaultModelKey(orgId),
+      );
       if (prev) {
         queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), {
           ...prev,
           default_model: def,
         });
       }
-      return { prev };
+      queryClient.setQueryData(orgDefaultModelKey(orgId), { default: def });
+      return { prev, prevDefault };
     },
     onError: (_error, _variables, context) => {
-      if (orgId === null || orgId === '' || !context?.prev) return;
-      queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), context.prev);
+      if (orgId === null || orgId === '') return;
+      if (context?.prev) queryClient.setQueryData<GroupedModels>(groupedModelsKey(orgId), context.prev);
+      if (context?.prevDefault !== undefined)
+        queryClient.setQueryData(orgDefaultModelKey(orgId), context.prevDefault);
     },
     onSettled: () => {
       if (orgId === null || orgId === '') return;
       void queryClient.invalidateQueries({ queryKey: groupedModelsKey(orgId) });
+      void queryClient.invalidateQueries({ queryKey: orgDefaultModelKey(orgId) });
     },
   });
 }
