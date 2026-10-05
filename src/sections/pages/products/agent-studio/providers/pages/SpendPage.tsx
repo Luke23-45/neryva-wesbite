@@ -583,9 +583,15 @@ export function ModelSpendList({
 
   if (isLoading) return <p style={{ ...hintText, marginTop: 16 }}>Loading model spend…</p>;
   if (isError) {
+    const err = query.error as { status?: number; code?: string; message?: string } | null;
+    // TEMP-DIAG: surface the real server error so we can root-cause the
+    // production failure.
     return (
       <div style={{ ...errorCallout, marginTop: 16 }} role="alert">
         Couldn&apos;t load model spend.{' '}
+        <span style={{ fontSize: 12 }}>
+          [{err?.status ?? '?'} {err?.code ?? '?'}]: {err?.message ?? 'unknown'}
+        </span>{' '}
         <button
           type="button"
           onClick={() => refetch()}
@@ -746,13 +752,11 @@ function FeePanel({ data }: { data: SpendSummaryView }) {
       <ul style={{ margin: '12px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
         <li style={row}>
           <span style={{ ...bodyText, color: colors.text, fontWeight: 600 }}>
-            {fee.byok_fee_credits_per_call}{' '}
-            {fee.byok_fee_credits_per_call === 1 ? 'credit' : 'credits'} per BYOK call
+            {`${fee.byok_fee_credits_per_call} ${fee.byok_fee_credits_per_call === 1 ? 'credit' : 'credits'} per BYOK call`}
           </span>
         </li>
         <li style={bodyText}>
-          {data.byok.fee.calls.toLocaleString()} BYOK calls this window — the per-call
-          fee is deducted from your Neryva credit balance, not from your provider bill.
+          {`${data.byok.fee.calls.toLocaleString()} BYOK calls this window — the per-call fee is deducted from your Neryva credit balance, not from your provider bill.`}
         </li>
         <li>
           <span style={labelText}>Pay-As-You-Go Margin</span>

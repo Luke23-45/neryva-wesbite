@@ -481,10 +481,14 @@ export function ModelsPage() {
       {
         onError: (err) => {
           const status = (err as { status?: number } | null)?.status;
+          const message = (err as { message?: string } | null)?.message ?? 'unknown';
+          const code = (err as { code?: string } | null)?.code ?? 'unknown';
+          // TEMP-DIAG: surface the real server error so we can root-cause the
+          // production failure (the generic copy hides the status/body).
           toast.error(
             status === 422
               ? "That model isn't available for your organization — the default was not changed."
-              : 'Could not save the default model — your previous default was restored.',
+              : `Could not save the default model [${status} ${code}]: ${message} — your previous default was restored.`,
           );
         },
       },
