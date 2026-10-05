@@ -24,6 +24,7 @@ import {
   bodyText,
   card,
   colors,
+  disabledBtn,
   errorCallout,
   ghostBtn,
   hintText,
@@ -101,22 +102,50 @@ function ConnectActions({
   showApiKey,
   onConnectKey,
   isEnterprise,
+  canWrite,
 }: {
   showApiKey: boolean;
   onConnectKey: () => void;
   isEnterprise: boolean;
+  canWrite: boolean;
 }) {
+  const customEndpointLabel = (
+    <>
+      Connect Custom Endpoint
+      {!isEnterprise && <span style={enterprisePill}>Enterprise</span>}
+    </>
+  );
   return (
     <>
-      <Link
-        to="/agent-studio/providers/custom/new"
-        style={{ ...secondaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
-      >
-        Connect Custom Endpoint
-        {!isEnterprise && <span style={enterprisePill}>Enterprise</span>}
-      </Link>
+      {canWrite ? (
+        <Link
+          to="/agent-studio/providers/custom/new"
+          style={{ ...secondaryBtn, textDecoration: 'none', display: 'inline-block', lineHeight: '26px' }}
+        >
+          {customEndpointLabel}
+        </Link>
+      ) : (
+        // Round 4 P1: non-privileged roles never get a live control the
+        // server 403s — a disabled, non-navigating treatment instead.
+        <span
+          aria-disabled="true"
+          style={{
+            ...secondaryBtn,
+            ...disabledBtn,
+            display: 'inline-block',
+            lineHeight: '26px',
+          }}
+        >
+          {customEndpointLabel}
+        </span>
+      )}
       {showApiKey && (
-        <button type="button" onClick={onConnectKey} style={primaryBtn}>
+        <button
+          type="button"
+          onClick={onConnectKey}
+          disabled={!canWrite}
+          style={{ ...primaryBtn, ...(!canWrite ? disabledBtn : {}) }}
+        >
           + Connect a key
         </button>
       )}
@@ -125,16 +154,30 @@ function ConnectActions({
 }
 
 export function MyProvidersPage() {
-  const { orgId } = useOrg();
+  const { orgId, role } = useOrg();
   const tier = useOrgTier();
   const { data, isLoading, isError, refetch } = useCredentials(orgId);
   const [connectOpen, setConnectOpen] = useState(false);
+
+  /**
+   * Round 4 P1: the engine's credential endpoints (create / patch / probe /
+   * reorder / verify / rotate / revoke) are owner/admin-only — reader,
+   * billing, and developer get 403. Non-privileged roles see disabled
+   * controls plus an honest hint, never interactive controls the server
+   * rejects. NOTE: not `role === 'owner' || ... 'developer'` — the Models
+   * endpoints accept developers but these do not, so the threshold is
+   * owner/admin only here. Mirrors the Catalog page's canWrite gate.
+   */
+  const canWrite = role === 'owner' || role === 'admin';
 
   const credentials = useMemo(() => {
     const list = data?.credentials ?? [];
     return [...list].sort(
       (a, b) =>
-        a.provider.localeCompare(b.provider) ||
+        // Round 4 P2: null-safe — the monogram already tolerates a missing
+        // provider, the sort must too (a malformed row must never kill the
+        // page).
+        (a.provider ?? '').localeCompare(b.provider ?? '') ||
         a.priority - b.priority ||
         (a.created_at ?? '').localeCompare(b.created_at ?? ''),
     );
@@ -274,10 +317,16 @@ export function MyProvidersPage() {
         </ViewSubtitle>
       </ViewHeader>
       <div style={{ ...row, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: 16 }}>
+        {!canWrite && (
+          <p style={{ ...hintText, margin: '0 auto 0 0', alignSelf: 'center' }}>
+            Only owners and admins can manage provider keys.
+          </p>
+        )}
         <ConnectActions
           showApiKey={!connectOpen}
           onConnectKey={() => setConnectOpen(true)}
           isEnterprise={tier === 'enterprise'}
+          canWrite={canWrite}
         />
       </div>
 
@@ -298,6 +347,7 @@ export function MyProvidersPage() {
         <div style={{ marginBottom: 16 }}>
           <ConnectKeyForm
             orgId={orgId}
+            canWrite={canWrite}
             onDone={() => setConnectOpen(false)}
             onCancel={() => setConnectOpen(false)}
           />
@@ -330,8 +380,14 @@ export function MyProvidersPage() {
               showApiKey
               onConnectKey={() => setConnectOpen(true)}
               isEnterprise={tier === 'enterprise'}
+              canWrite={canWrite}
             />
           </div>
+          {!canWrite && (
+            <p style={{ ...hintText, marginTop: 12 }}>
+              Only owners and admins can manage provider keys.
+            </p>
+          )}
         </div>
       )}
 
@@ -346,6 +402,7 @@ export function MyProvidersPage() {
                 key={cred.id}
                 credential={cred}
                 orgId={orgId}
+                canWrite={canWrite}
                 isFirst={index === 0}
                 isLast={index === group.list.length - 1}
                 onMoveUp={() => move(group.provider, index, 'up')}

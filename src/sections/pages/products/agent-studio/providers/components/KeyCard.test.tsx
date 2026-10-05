@@ -35,6 +35,7 @@ const hoisted = vi.hoisted(() => ({
   createMutate: vi.fn(),
   fetchGroupedModels: vi.fn(),
   usageLoading: false,
+  errorBreakdown: null as CredentialUsageView['error_breakdown'] | null,
 }));
 
 vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials', () => ({
@@ -65,7 +66,7 @@ vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCrede
       spend_usd: '4.20',
       list_price_equivalent_usd: '12.34',
       pricing_basis: 'list',
-      error_breakdown: { '401': 3, '403': 0, '429': 1, '5xx': 0 },
+      error_breakdown: hoisted.errorBreakdown ?? { '401': 3, '403': 0, '429': 1, '5xx': 0 },
       window: '7d',
     },
     isLoading: hoisted.usageLoading,
@@ -151,6 +152,9 @@ function renderCard(props: Partial<KeyCardProps> = {}) {
   const full: KeyCardProps = {
     credential: baseCredential(),
     orgId: 'org-1',
+    // Round 4 P1: tests exercise the privileged path by default; the
+    // non-writer surface has its own tests below.
+    canWrite: true,
     isFirst: true,
     isLast: true,
     onMoveUp: vi.fn(),
@@ -183,6 +187,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   hoisted.fetchGroupedModels.mockResolvedValue({ platform: [], byok: [] });
   hoisted.usageLoading = false;
+  hoisted.errorBreakdown = null;
 });
 
 describe('statusPillFor matrix', () => {
@@ -563,5 +568,50 @@ describe('blast-radius preview', () => {
       expect(screen.getByText(/Blast-radius preview/)).toBeTruthy();
       expect(screen.getByText('asst-1@v3')).toBeTruthy();
     });
+  });
+});
+
+describe('Round 4 P1: usage summary renders unknown error codes (never dropped)', () => {
+  it('passes unknown engine codes through honestly instead of dropping them', () => {
+    hoisted.errorBreakdown = { '401': 2, '403': 0, '429': 0, '5xx': 0, '418': 5 };
+    renderCard();
+    // Known code keeps its human label; the unknown code passes through verbatim.
+    expect(screen.getByText(/Auth failed ×2/)).toBeTruthy();
+    expect(screen.getByText(/418 ×5/)).toBeTruthy();
+  });
+
+  it('renders "none" when every code is zero', () => {
+    hoisted.errorBreakdown = { '401': 0, '403': 0, '429': 0, '5xx': 0 };
+    renderCard();
+    expect(screen.getByText('none')).toBeTruthy();
+  });
+});
+
+describe('Round 4 P1: non-writer role gating', () => {
+  it('disables every mutating control and shows the honest hint', () => {
+    // isFirst/isLast false so the only disabled cause is canWrite.
+    renderCard({ canWrite: false, isFirst: false, isLast: false });
+    expect(screen.getByText('Only owners and admins can manage provider keys.')).toBeTruthy();
+    // Toggle, reorder, rotate, revoke, verify, scope + attestation edits.
+    // (The Switch kit signals disabled via aria-disabled + tabindex -1, not
+    // the native disabled attribute — assert what it actually renders.)
+    const toggle = screen.getByRole('switch', { name: 'Disable key' });
+    expect(toggle).toHaveAttribute('aria-disabled', 'true');
+    expect(toggle).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: 'Move Production Key down' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Rotate…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sync / Refresh Models' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit scope filters' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit attestations' })).toBeDisabled();
+    // Drag handle is removed from the tab order.
+    expect(screen.getByRole('slider')).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('writer role keeps every control live', () => {
+    renderCard({ canWrite: true });
+    expect(screen.queryByText('Only owners and admins can manage provider keys.')).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Disable key' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Rotate…' })).not.toBeDisabled();
   });
 });

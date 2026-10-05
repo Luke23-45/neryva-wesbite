@@ -15,7 +15,7 @@
  * - Search narrows the tables; the counts line stays honest.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within, cleanup } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import toast from 'react-hot-toast';
@@ -564,6 +564,20 @@ describe('ModelsPage', () => {
     expect(screen.getByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeTruthy();
   });
 
+  it('a null model display name or id degrades search to "" instead of crashing', () => {
+    const f = fixture();
+    f.platform[0].models[0].display_name = null as unknown as string;
+    f.platform[0].models[0].model_id = null as unknown as string;
+    fixtureOverrideRef.current = f;
+    renderPage();
+    // matches() touches model fields only when a query is active.
+    fireEvent.change(screen.getByLabelText('Search models'), {
+      target: { value: 'anthropic' },
+    });
+    // The page renders — client search must never 500 the page.
+    expect(screen.getByText(/Claude 3.7 Sonnet/)).toBeTruthy();
+  });
+
   it('shows usable=false reasons as human text', () => {
     renderPage();
     expect(screen.getByText('provider credential missing')).toBeTruthy();
@@ -760,11 +774,21 @@ describe('ModelsPage', () => {
     const f = fixture();
     fixtureOverrideRef.current = {
       ...f,
-      degraded: ['model_toggles', 'credentials', 'provider_facts', 'cost_points', 'model_pins'],
+      degraded: [
+        'model_toggles',
+        'provider_enablements',
+        'credentials',
+        'provider_facts',
+        'cost_points',
+        'model_pins',
+      ],
     };
     renderPage();
     expect(
       screen.getByText(/Could not load your saved toggles/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Could not load provider enablement/),
     ).toBeTruthy();
     expect(
       screen.getByText(/Could not load your connected credentials — the BYOK section may be incomplete/),
@@ -774,7 +798,7 @@ describe('ModelsPage', () => {
     expect(screen.getByText(/Could not load usage information/)).toBeTruthy();
     // Every lane's retry refetches the grouped query.
     const retries = screen.getAllByRole('button', { name: 'Retry' });
-    expect(retries.length).toBeGreaterThanOrEqual(5);
+    expect(retries.length).toBeGreaterThanOrEqual(6);
     fireEvent.click(retries[0]);
     expect(refetchMockRef.current).toHaveBeenCalledTimes(1);
   });
@@ -789,6 +813,25 @@ describe('ModelsPage', () => {
     expect(refetchMockRef.current).toHaveBeenCalledTimes(1);
     // No Clear affordance while the default is unknown — nothing to clear.
     expect(screen.queryByRole('button', { name: 'Clear default' })).toBeNull();
+  });
+
+  it('the BYOK CTA adapts to whether credentials exist', () => {
+    // Non-empty BYOK: the persistent CTA invites connecting another key.
+    renderPage();
+    expect(
+      screen.getByRole('link', { name: /Connect another key in My Providers/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No other connected credentials/)).toBeNull();
+
+    // Empty BYOK: the honest empty copy stays.
+    cleanup();
+    const f = fixture();
+    fixtureOverrideRef.current = { ...f, byok: [] };
+    renderPage();
+    expect(
+      screen.getByRole('link', { name: /No other connected credentials/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Connect another key/)).toBeNull();
   });
 
   it('a failed toggle logs machine details and toasts user-safe copy', () => {

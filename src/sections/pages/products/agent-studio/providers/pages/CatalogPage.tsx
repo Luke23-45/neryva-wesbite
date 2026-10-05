@@ -65,8 +65,12 @@ export function applyChipFilters(
 ): ProviderDirectoryEntry[] {
   if (chips.size === 0) return providers;
   return providers.filter((p) => {
-    if (chips.has('tools') && !p.capabilities.includes('tools')) return false;
-    if (chips.has('vision') && !p.capabilities.includes('vision')) return false;
+    // Engine arrays are trusted but not sacred: a malformed capabilities
+    // value degrades to "doesn't match the chip" instead of throwing on
+    // `.includes` and taking the whole page down.
+    const caps = Array.isArray(p.capabilities) ? p.capabilities : [];
+    if (chips.has('tools') && !caps.includes('tools')) return false;
+    if (chips.has('vision') && !caps.includes('vision')) return false;
     if (chips.has('price')) {
       const price = fromPrice(p);
       if (price === null || price >= 1.0) return false;
@@ -106,6 +110,18 @@ export function sourceLine(entry: ProviderDirectoryEntry): string {
   }
   const transport = transportLabel(entry.transport);
   return transport ? `Platform pool · ${entry.provider} · ${transport}` : `Platform pool · ${entry.provider}`;
+}
+
+/**
+ * Avatar initial from a display name. Engine data is trusted but not sacred:
+ * a null/empty display_name must degrade to '?' rather than throw on
+ * `.charAt(0)` and take the whole page down. Single shared helper for the
+ * table cell and the drawer — both sites had the identical unguarded call.
+ * Exported for tests.
+ */
+export function displayInitial(displayName?: string | null): string {
+  const ch = displayName?.trim().charAt(0);
+  return ch ? ch.toUpperCase() : '?';
 }
 
 /** 1000000 → "1M", 500000 → "500K", 128000 → "128K". Null when unknown. */
@@ -751,9 +767,17 @@ function ProviderDrawer({
   onClose: () => void;
   onConnectKey: () => void;
 }) {
-  const initial = entry.display_name.charAt(0).toUpperCase() || '?';
+  const initial = displayInitial(entry.display_name);
   const input = priceCell(entry.from_price_per_1m, entry.pricing_mode);
   const output = priceCell(entry.to_price_per_1m, entry.pricing_mode);
+  // Malformed engine collections degrade to the honest empty treatment —
+  // never a thrown TypeError mid-render. The page's non-findings (ZDR
+  // filtering, tier gating, switch semantics) are untouched by these.
+  const drawerModels = Array.isArray(entry.models) ? entry.models : [];
+  const drawerCapabilities = Array.isArray(entry.capabilities) ? entry.capabilities : [];
+  const drawerDataQualityReasons = Array.isArray(entry.data_quality_reasons)
+    ? entry.data_quality_reasons
+    : [];
   // Row-anchored mount: the drawer mounts at the top of the Layout while
   // the user's viewport may be far below (e.g. OpenRouter at the bottom).
   // `position: sticky` only keeps a *visible* element in view — it can't
@@ -893,15 +917,15 @@ function ProviderDrawer({
         </DetailMeta>
       </DetailRow>
 
-      {entry.data_quality === 'incomplete' && (
+      {entry.data_quality === 'incomplete' && drawerDataQualityReasons.length > 0 && (
         <DetailRow>
           <DetailLabel>Catalog completeness</DetailLabel>
           <div style={{ fontSize: 13, lineHeight: 1.6, color: 'inherit' }}>
-            This row is marked incomplete — {entry.data_quality_reasons.length}{' '}
-            {entry.data_quality_reasons.length === 1 ? 'gap' : 'gaps'} in the published catalog
+            This row is marked incomplete — {drawerDataQualityReasons.length}{' '}
+            {drawerDataQualityReasons.length === 1 ? 'gap' : 'gaps'} in the published catalog
             data:
             <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-              {entry.data_quality_reasons.map((r) => (
+              {drawerDataQualityReasons.map((r) => (
                 <li key={r}>{humanizeDataQualityReason(r)}</li>
               ))}
             </ul>
@@ -912,8 +936,8 @@ function ProviderDrawer({
       <DetailRow>
         <DetailLabel>Capabilities</DetailLabel>
         <BadgeRow>
-          {entry.capabilities.length > 0 ? (
-            entry.capabilities.map((c) => (
+          {drawerCapabilities.length > 0 ? (
+            drawerCapabilities.map((c) => (
               <MiniBadge key={c}>{CAPABILITY_LABELS[c] ?? c}</MiniBadge>
             ))
           ) : (
@@ -924,9 +948,9 @@ function ProviderDrawer({
 
       <DetailRow>
         <DetailLabel>Models</DetailLabel>
-        {entry.models.length > 0 ? (
+        {drawerModels.length > 0 ? (
           <ModelList>
-            {entry.models.map((m) => (
+            {drawerModels.map((m) => (
               <ModelItem key={m.model_id}>
                 <ModelId>{m.model_id}</ModelId>
                 {m.display_name && m.display_name !== m.model_id && (
@@ -1072,6 +1096,12 @@ function AccessCell({
             />
           </span>
         </Tooltip>
+        {/* Same failure display as the interactive-switch branches: a
+            grandfathered ON row can still be switched OFF, and if that
+            mutation fails the switch flips back with no signal without
+            this. The shared component keeps icon + tier-gated upgrade
+            copy identical across branches. */}
+        <AccessError error={error} />
         <UpgradeLink to="/agent-studio/settings/pricing">Upgrade →</UpgradeLink>
       </GatedAccess>
     );
@@ -1285,7 +1315,13 @@ export function CatalogPage() {
   };
 
   const filterActive = searchInput.trim().length > 0 || chips.size > 0;
-  const totalModels = filtered.reduce((n, p) => n + p.model_count, 0);
+  // A malformed model_count (undefined/null/NaN from the engine) counts as 0 —
+  // without this the sum is NaN and the header reads "NaN models".
+  const totalModels = filtered.reduce(
+    (n, p) =>
+      n + (typeof p.model_count === 'number' && Number.isFinite(p.model_count) ? p.model_count : 0),
+    0,
+  );
   // Propagate the "+" from approximate labels (e.g. "300+") so the header
   // reads "416+ models" instead of a false exact "416 models".
   const totalModelsApprox = filtered.some((p) => p.model_count_label?.includes('+'));
@@ -1417,7 +1453,7 @@ export function CatalogPage() {
                             <BodyCell>
                               <ProviderCell>
                                 <Avatar aria-hidden="true">
-                                  {entry.display_name.charAt(0).toUpperCase() || '?'}
+                                  {displayInitial(entry.display_name)}
                                 </Avatar>
                                 <ProviderNameBtn
                                   type="button"

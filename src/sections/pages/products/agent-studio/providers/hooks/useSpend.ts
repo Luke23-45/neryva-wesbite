@@ -10,6 +10,7 @@
  * Error copy is rendered by callers from `ApiError.message` only.
  */
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { runWithStepUp } from '@/lib/engine/stepup';
 import {
   downloadSpendExport,
   fetchSpendSummary,
@@ -144,7 +145,13 @@ export function useSpendMutations(orgId: string): SpendMutations {
   });
 
   const exportSpend = useMutation({
-    mutationFn: (format: 'csv' | 'json') => downloadSpendExport(orgId, format),
+    // The export endpoint is engine-gated behind @RequireStepUp(): runWithStepUp
+    // tries the call, prompts once via the mounted StepUpModal on
+    // `step_up_required`, and retries with the fresh proof — the same pattern
+    // as the credential acts. A user cancel rejects and surfaces through the
+    // panel's error callout as "Step-up verification cancelled".
+    mutationFn: (format: 'csv' | 'json') =>
+      runWithStepUp('export audit data', (proof) => downloadSpendExport(orgId, format, proof)),
   });
 
   return { patchBudget, patchBreachAction, patchIncludeByok, exportSpend };

@@ -9,6 +9,13 @@ type Props = {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /**
+   * Round 4 P2: disables the confirm button while an async confirm is in
+   * flight — prevents double-submit (e.g. double rotate/revoke firing
+   * mutate twice). The label flip ("Rotating…") already existed; the button
+   * stayed clickable.
+   */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   /** Optional extra controls rendered under the message (e.g. incident fields). */
@@ -22,6 +29,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   destructive,
+  confirmDisabled,
   onConfirm,
   onCancel,
   children,
@@ -36,7 +44,12 @@ export function ConfirmDialog({
           <GhostButton type="button" onClick={onCancel}>
             {cancelLabel}
           </GhostButton>
-          <DangerButton type="button" $destructive={destructive} onClick={onConfirm}>
+          <DangerButton
+            type="button"
+            $destructive={destructive}
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+          >
             {confirmLabel}
           </DangerButton>
         </>

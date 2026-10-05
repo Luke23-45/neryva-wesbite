@@ -92,7 +92,10 @@ function summaryFixture(over: Partial<SpendSummaryView> = {}): SpendSummaryView 
       { provider: 'openai', platform_spend_usd: '12.40', byok_settled_usd: '0', byok_list_price_equivalent_usd: '88.10', pricing_basis: 'list' },
       { provider: 'anthropic', platform_spend_usd: '0', byok_settled_usd: '0', pricing_basis: 'settled' },
     ],
-    budget: { cap_usd_cents: 5000, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
+    // The engine's microsToUsd emits up to 6 trimmed fractional digits — the
+    // fixture mirrors the real wire format (not exact cents) so the parser
+    // is exercised against production-shaped data.
+    budget: { cap_usd_cents: 5000, used_usd: '12.400000', include_byok_spend: false, breach_action: 'refuse' as const },
     fee_config: {
       byok_fee_credits_per_call: 2,
       payg_margin_note: '30% margin on list cost for PAYG inference.',
@@ -251,13 +254,85 @@ describe('SpendPage summary cards', () => {
 
   it('renders Unlimited with no progress bar when the engine reports no cap', async () => {
     hoisted.summary = summaryFixture({
-      budget: { cap_usd_cents: null, used_usd: '12.40', include_byok_spend: false, breach_action: 'refuse' as const },
+      budget: { cap_usd_cents: null, used_usd: '12.400000', include_byok_spend: false, breach_action: 'refuse' as const },
     });
     renderPage();
     await waitFor(() => {
       expect(screen.getByText('Budget cap')).toBeTruthy();
     });
     expect(screen.getByText('Unlimited')).toBeTruthy();
+    expect(screen.queryByRole('progressbar', { name: 'Monthly budget used' })).toBeNull();
+  });
+
+  it('parses the engine 6-decimal wire format — no false "No cap set"', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: 5000, used_usd: '45.678901', include_byok_spend: false, breach_action: 'refuse' as const },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    expect(screen.getByText('$50.00')).toBeTruthy();
+    // 45.67 / 50.00 = 91.34% → 91% (sub-cent digits truncated, not rounded).
+    expect(screen.getByText(/91% used/)).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Monthly budget used' })).toHaveAttribute(
+      'aria-valuenow',
+      '91',
+    );
+    expect(screen.queryByText('No cap set')).toBeNull();
+  });
+
+  it('renders sub-cent spend as 0% used under a real cap — no false "No cap set"', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: 5000, used_usd: '0.004', include_byok_spend: false, breach_action: 'refuse' as const },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    expect(screen.getByText('$50.00')).toBeTruthy();
+    expect(screen.getByText(/0% used/)).toBeTruthy();
+    expect(screen.getByRole('progressbar', { name: 'Monthly budget used' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
+    expect(screen.queryByText('No cap set')).toBeNull();
+  });
+
+  it('truncates (not rounds) sub-cent digits: $1.999999 is $1.99, not at a $2.00 cap', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: 200, used_usd: '1.999999', include_byok_spend: false, breach_action: 'refuse' as const },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    // Truncated to 199¢: below the 200¢ cap, so the at-cap notice must NOT render
+    // (rounding would have put it at exactly $2.00 and fired the notice).
+    expect(screen.queryByText(/At or over the cap/)).toBeNull();
+  });
+
+  it('fires the at-cap notice when truncated used reaches the cap', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: 199, used_usd: '1.999999', include_byok_spend: false, breach_action: 'refuse' as const },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText(/At or over the cap/)).toBeTruthy();
+    });
+  });
+
+  it('shows an honest unknown when the used figure is malformed — never "No cap set"', async () => {
+    hoisted.summary = summaryFixture({
+      budget: { cap_usd_cents: 5000, used_usd: 'bogus', include_byok_spend: false, breach_action: 'refuse' as const },
+    });
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Budget cap')).toBeTruthy();
+    });
+    expect(screen.getByText('$50.00')).toBeTruthy();
+    expect(screen.getByText('Used spend unavailable')).toBeTruthy();
+    expect(screen.queryByText('No cap set')).toBeNull();
     expect(screen.queryByRole('progressbar', { name: 'Monthly budget used' })).toBeNull();
   });
 });
@@ -476,7 +551,9 @@ describe('SpendPage audit export', () => {
     const btn = await screen.findByRole('button', { name: 'Export audit data' });
     fireEvent.click(btn);
     await waitFor(() => {
-      expect(hoisted.exportSpend).toHaveBeenCalledWith('org-1', 'csv');
+      // runWithStepUp threads the (absent) proof as the third arg on the
+      // first attempt; the mock resolves so no step-up prompt is needed.
+      expect(hoisted.exportSpend).toHaveBeenCalledWith('org-1', 'csv', undefined);
     });
   });
 

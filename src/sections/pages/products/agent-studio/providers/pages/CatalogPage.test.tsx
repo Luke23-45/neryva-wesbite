@@ -22,6 +22,7 @@ import {
   transportLabel,
   humanizeDataQualityReason,
   effectiveEnableTier,
+  displayInitial,
   type ChipKey,
 } from './CatalogPage';
 import type { ProviderDirectoryEntry } from '../api';
@@ -233,6 +234,25 @@ describe('catalog pure helpers', () => {
     expect(effectiveEnableTier('free')).toBe('payg');
     expect(effectiveEnableTier('payg')).toBe('payg');
     expect(effectiveEnableTier('enterprise')).toBe('enterprise');
+  });
+
+  it('displayInitial degrades null/empty display_name to "?" instead of throwing', () => {
+    expect(displayInitial('OpenAI')).toBe('O');
+    expect(displayInitial('xAI')).toBe('X');
+    expect(displayInitial('  anthropic  ')).toBe('A');
+    expect(displayInitial(null)).toBe('?');
+    expect(displayInitial(undefined)).toBe('?');
+    expect(displayInitial('')).toBe('?');
+    expect(displayInitial('   ')).toBe('?');
+  });
+
+  it('applyChipFilters never throws on malformed capabilities — the row degrades to "no match"', () => {
+    const malformed = entry({ capabilities: null as unknown as [] });
+    // Without the guard this throws a TypeError on `.includes`.
+    expect(() => applyChipFilters([malformed], new Set<ChipKey>(['tools']))).not.toThrow();
+    expect(applyChipFilters([malformed], new Set<ChipKey>(['tools']))).toHaveLength(0);
+    // With no chips active the row still renders normally.
+    expect(applyChipFilters([malformed], new Set<ChipKey>())).toHaveLength(1);
   });
 });
 
@@ -528,5 +548,66 @@ describe('CatalogPage', () => {
     // The Tooltip trigger wraps the icon and must be tabbable so keyboard
     // users can read the failure explanation.
     expect(icon.closest('[tabindex="0"]')).not.toBeNull();
+  });
+
+  it('grandfathered-row toggle failure shows the warning icon — the gated branch never swallows it', () => {
+    // can_enable=false + stored ON: the switch stays interactive so the org
+    // can turn the provider OFF. If that mutation fails, the failure
+    // explanation must render exactly like the other branches.
+    providersOverride.current = [
+      entry({
+        can_enable: false,
+        connection: { has_active_credential: false, enabled: true },
+      }),
+    ];
+    renderPage();
+    const sw = screen.getByRole('switch', { name: 'Disable OpenAI for this workspace' });
+    fireEvent.click(sw);
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    const onError = mutateMock.mock.calls[0][1].onError as (err: unknown) => void;
+    act(() => {
+      onError({ status: 500, code: 'internal_error', message: 'boom' });
+    });
+    expect(
+      screen.getByRole('img', { name: 'Toggle failed: Could not change provider access. Please try again.' }),
+    ).toBeTruthy();
+    expect(screen.queryByText('boom')).toBeNull();
+  });
+
+  it('a malformed model_count counts as 0 — the header never reads "NaN models"', () => {
+    providersOverride.current = [
+      entry({ model_count: undefined as unknown as number }),
+    ];
+    renderPage();
+    expect(screen.getByText('1 provider · 0 models')).toBeTruthy();
+    expect(screen.queryByText(/NaN/)).toBeNull();
+  });
+
+  it('the drawer degrades honestly on malformed engine collections instead of throwing', () => {
+    providersOverride.current = [
+      entry({
+        models: null as unknown as [],
+        capabilities: null as unknown as [],
+        data_quality: 'incomplete',
+        data_quality_reasons: null as unknown as [],
+      }),
+    ];
+    renderPage();
+    // Before the guards this threw a TypeError mid-render on `.length`.
+    fireEvent.click(screen.getByRole('button', { name: 'OpenAI details' }));
+    const drawer = screen.getByRole('complementary', { name: 'OpenAI details' });
+    expect(within(drawer).getByText('Model list not published for this provider.')).toBeTruthy();
+    expect(within(drawer).getByText('No capability data published.')).toBeTruthy();
+    // An incomplete row with no reason list hides the completeness block
+    // rather than printing a false "0 gaps".
+    expect(within(drawer).queryByText(/gaps? in the published catalog/)).toBeNull();
+  });
+
+  it('the drawer survives a null display_name and falls back to the "?" initial', () => {
+    providersOverride.current = [entry({ display_name: null as unknown as string })];
+    renderPage();
+    // Before the guard this threw on `.charAt(0)` and took the page down.
+    fireEvent.click(screen.getByRole('button', { name: 'null details' }));
+    expect(screen.getByRole('complementary', { name: 'null details' })).toBeTruthy();
   });
 });

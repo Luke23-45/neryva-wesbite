@@ -354,8 +354,17 @@ export async function engine<T>(path: string, init: EngineRequestInit = {}): Pro
   }
 }
 
-/** Authenticated download (audit CSV/JSON export, org export): fetch → blob → save. */
-export async function engineDownload(path: string, query?: EngineRequestInit['query']): Promise<void> {
+/**
+ * Authenticated download (audit CSV/JSON export, org export): fetch → blob → save.
+ * Optional step-up MFA proof — attached as `x-mfa-proof` exactly like engine()
+ * for downloads the engine gates behind @RequireStepUp(). Backward-compatible:
+ * callers that pass nothing behave exactly as before.
+ */
+export async function engineDownload(
+  path: string,
+  query?: EngineRequestInit['query'],
+  mfaProof?: string,
+): Promise<void> {
   const attempt = async (token: string | null): Promise<Response> => {
     const headers: Record<string, string> = {};
     if (token) {
@@ -363,6 +372,9 @@ export async function engineDownload(path: string, query?: EngineRequestInit['qu
     }
     if (activeOrgId) {
       headers['x-neryva-org'] = activeOrgId;
+    }
+    if (mfaProof) {
+      headers['x-mfa-proof'] = mfaProof;
     }
     return fetch(buildUrl(path, query), { headers, credentials: 'include' });
   };

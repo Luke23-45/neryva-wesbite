@@ -34,4 +34,14 @@ export const DangerButton = styled.button<{ $destructive?: boolean }>`
   &:hover {
     filter: brightness(1.05);
   }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  &:disabled:hover {
+    filter: none;
+  }
 `;

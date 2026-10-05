@@ -807,8 +807,9 @@ export function ModelsPage() {
   const matches = useCallback(
     (g: ModelGroupView, m: ModelRowView) =>
       q.length === 0 ||
-      m.display_name.toLowerCase().includes(q) ||
-      m.model_id.toLowerCase().includes(q) ||
+      // A missing display name or model id must never 500 the page — client search degrades to "".
+      (m.display_name ?? '').toLowerCase().includes(q) ||
+      (m.model_id ?? '').toLowerCase().includes(q) ||
       g.provider.toLowerCase().includes(q) ||
       // A missing display name must never 500 the page — client search degrades to "".
       (g.provider_display_name ?? '').toLowerCase().includes(q),
@@ -1354,6 +1355,11 @@ export function ModelsPage() {
           Could not load your saved toggles — switches show defaults until the load succeeds.
         </DegradedLaneNote>
       )}
+      {degradedSet.has('provider_enablements') && (
+        <DegradedLaneNote onRetry={retryGrouped}>
+          Could not load provider enablement — rows may show as enabled until the load succeeds.
+        </DegradedLaneNote>
+      )}
       {degradedSet.has('credentials') && (
         <DegradedLaneNote onRetry={retryGrouped}>
           Could not load your connected credentials — the BYOK section may be incomplete.
@@ -1433,7 +1439,9 @@ export function ModelsPage() {
               />
             )}
             <NoCredRow to="/agent-studio/providers/my-providers">
-              No other connected credentials — connect a key in My Providers →
+              {byokGroups.length > 0
+                ? 'Connect another key in My Providers →'
+                : 'No other connected credentials — connect a key in My Providers →'}
             </NoCredRow>
           </SectionBlock>
 

@@ -16,6 +16,8 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { spendKeys, useSpendMutations } from './useSpend';
+import { ApiError } from '@/lib/engine/client';
+import { useStepUpStore } from '@/lib/engine/stepup';
 import type { SpendSummaryView } from '../api';
 
 const ORG = 'org-1';
@@ -79,6 +81,9 @@ function cachedBudget(client: QueryClient) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The step-up store is module-global: a cached proof from one test would
+  // let the next test's request() resolve without prompting.
+  useStepUpStore.setState({ proof: null, pending: null });
 });
 
 describe('useSpendMutations cap save (patchBudget)', () => {
@@ -234,5 +239,38 @@ describe('useSpendMutations BYOK toggle (patchIncludeByok)', () => {
     });
     await waitFor(() => expect(result.current.patchIncludeByok.isPending).toBe(false));
     expect(cachedBudget(client).include_byok_spend).toBe(true);
+  });
+});
+
+describe('useSpendMutations audit export (exportSpend)', () => {
+  it('threads the step-up proof slot through to downloadSpendExport', async () => {
+    const { result } = setup();
+    hoisted.downloadSpendExport.mockResolvedValue(undefined);
+    await act(async () => {
+      await result.current.exportSpend.mutateAsync('csv');
+    });
+    // runWithStepUp attempts without a proof first; the mock resolves, so no
+    // step-up prompt is needed. The proof slot is threaded as the third arg.
+    expect(hoisted.downloadSpendExport).toHaveBeenCalledWith(ORG, 'csv', undefined);
+  });
+
+  it('retries with the fresh proof after the engine demands step-up', async () => {
+    const { result } = setup();
+    hoisted.downloadSpendExport
+      .mockRejectedValueOnce(new ApiError(403, 'step_up_required', 'Step-up authentication required'))
+      .mockResolvedValueOnce(undefined);
+    // Emulate the mounted StepUpModal: deliver a proof as soon as a request pends.
+    const unsub = useStepUpStore.subscribe((s) => {
+      if (s.pending) s.deliver('proof-123');
+    });
+    try {
+      await act(async () => {
+        await result.current.exportSpend.mutateAsync('json');
+      });
+    } finally {
+      unsub();
+    }
+    expect(hoisted.downloadSpendExport).toHaveBeenNthCalledWith(1, ORG, 'json', undefined);
+    expect(hoisted.downloadSpendExport).toHaveBeenNthCalledWith(2, ORG, 'json', 'proof-123');
   });
 });

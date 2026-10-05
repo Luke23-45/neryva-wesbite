@@ -27,10 +27,11 @@ const hoisted = vi.hoisted(() => ({
   verifyMutateAsync: vi.fn(),
   navigate: vi.fn(),
   credentials: [] as ProviderCredentialView[],
+  role: 'owner' as string | null,
 }));
 
 vi.mock('@/Context/OrgContext', () => ({
-  useOrg: () => ({ orgId: 'org-1' }),
+  useOrg: () => ({ orgId: 'org-1', role: hoisted.role }),
 }));
 
 vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useProviderCredentials', () => ({
@@ -94,6 +95,7 @@ const okProbe: ProbeResult = {
 beforeEach(() => {
   vi.clearAllMocks();
   hoisted.credentials = [];
+  hoisted.role = 'owner';
   hoisted.createMutateAsync.mockResolvedValue({ credential: { id: 'new-cred' } });
   hoisted.verifyMutateAsync.mockResolvedValue({ credential: { id: 'new-cred' } });
   hoisted.patchMutateAsync.mockResolvedValue({ credential: { id: 'cred-1' } });
@@ -549,5 +551,23 @@ describe('CustomProviderForm edit mode', () => {
         capabilities: { tools: true, vision: false, reasoning: false, structured_output: false },
       },
     ]);
+  });
+});
+
+describe('Round 4 P1: role gating', () => {
+  it('non-privileged roles get an honest gate instead of a form that would 403', () => {
+    hoisted.role = 'billing';
+    renderForm();
+    expect(screen.getByText('Only owners and admins can manage provider keys.')).toBeTruthy();
+    // No form fields render — nothing to fill, nothing to submit.
+    expect(screen.queryByLabelText('Provider Label')).toBeNull();
+    expect(screen.queryByLabelText('Base URL')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save & Connect Provider' })).toBeNull();
+  });
+
+  it('developer role is also gated (Round 4 P1)', () => {
+    hoisted.role = 'developer';
+    renderForm('cred-1');
+    expect(screen.getByText('Only owners and admins can manage provider keys.')).toBeTruthy();
   });
 });

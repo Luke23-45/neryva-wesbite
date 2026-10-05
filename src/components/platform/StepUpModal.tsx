@@ -22,6 +22,20 @@ export function StepUpModal() {
 
   const open = pending !== null;
 
+  /**
+   * Round 4 P2: a user-dismissed step-up (modal close / Cancel) is a
+   * cancellation, not a failure. Named AbortError — matching cancelStepUpFor
+   * in stepup.ts — so probe handlers' `name !== 'AbortError'` filter treats
+   * it as a cancel. The old plain Error passed the filter and surfaced as
+   * "The endpoint did not respond as expected: Step-up verification
+   * cancelled", and on a failed card it overwrote the real lastError.
+   */
+  const cancelledError = (): Error => {
+    const err = new Error('Step-up verification cancelled');
+    err.name = 'AbortError';
+    return err;
+  };
+
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -45,12 +59,12 @@ export function StepUpModal() {
       onClose={() => {
         setCode('');
         setError(null);
-        fail(new Error('Step-up verification cancelled'));
+        fail(cancelledError());
       }}
       title="Confirm with your authenticator"
       footer={
         <>
-          <ActionButton variant="ghost" onClick={() => { setCode(''); setError(null); fail(new Error('Step-up verification cancelled')); }}>Cancel</ActionButton>
+          <ActionButton variant="ghost" onClick={() => { setCode(''); setError(null); fail(cancelledError()); }}>Cancel</ActionButton>
           <ActionButton variant="primary" disabled={code.trim().length < 6 || busy} onClick={() => void submit()}>
             <ShieldCheck size={13} /> Verify
           </ActionButton>

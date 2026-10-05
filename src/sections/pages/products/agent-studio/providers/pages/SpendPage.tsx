@@ -106,12 +106,20 @@ function formatUsd(value: string | undefined): string | null {
  * float epsilon at the cap boundary could flip the at-cap notice or the
  * used-percent. Malformed/missing input → null (honest unknown, never a
  * guess). Spend figures are non-negative; the parser stays sign-safe.
+ *
+ * Wire format: the engine's microsToUsd emits up to 6 trimmed fractional
+ * digits ("45.678901", "0.004", "0.000001"), so the parser accepts 1–6 and
+ * TRUNCATES toward zero to cents — never rounds. Truncation keeps the
+ * at-cap comparison exactly equivalent to comparing the true values: for
+ * an integer cap, floor(used) >= cap ⟺ used >= cap, and sub-cent residue
+ * is invisible in a whole-percent bar.
  */
 function usdToCents(usd: string | null | undefined): number | null {
   if (usd == null) return null;
-  const m = /^(-)?(\d+)(?:\.(\d{1,2}))?$/.exec(usd.trim());
+  const m = /^(-)?(\d+)(?:\.(\d{1,6}))?$/.exec(usd.trim());
   if (!m) return null;
-  const cents = Number(m[2]) * 100 + Number((m[3] ?? '').padEnd(2, '0'));
+  // Truncate sub-cent digits toward zero: pad to 2, then drop the rest.
+  const cents = Number(m[2]) * 100 + Number((m[3] ?? '').padEnd(2, '0').slice(0, 2));
   return m[1] ? -cents : cents;
 }
 
@@ -314,7 +322,9 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
         <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 700, color: colors.text }}>
           {capUsd == null ? 'Unlimited' : formatUsd(String(capUsd)) ?? '—'}
         </p>
-        {pct !== null ? (
+        {capUsd == null ? (
+          <p style={{ ...hintText, marginTop: 6 }}>No cap set</p>
+        ) : pct !== null ? (
           <div style={{ marginTop: 10 }}>
             <div
               style={{
@@ -343,7 +353,9 @@ function OverviewCards({ data, modelSpend }: { data: SpendSummaryView; modelSpen
             </p>
           </div>
         ) : (
-          <p style={{ ...hintText, marginTop: 6 }}>No cap set</p>
+          // A cap IS set but the engine's used figure didn't parse — honest
+          // unknown, never the false "No cap set".
+          <p style={{ ...hintText, marginTop: 6 }}>Used spend unavailable</p>
         )}
       </div>
       {top && modelSpend && (

@@ -44,3 +44,33 @@ describe('cancelStepUpFor', () => {
     expect(cancelStepUpFor('probe ')).toBe(false);
   });
 });
+
+describe('request (Round 4 P2: no orphaned promises)', () => {
+  it('rejects the previous pending request instead of orphaning it', async () => {
+    const first = requestStepUp('rotate provider key');
+    const firstSettled = first.then(
+      () => 'resolved',
+      (err: Error) => err,
+    );
+    // A second request while the first is still pending: the first caller
+    // must fail loudly, never hang on an unsettled promise.
+    const second = requestStepUp('connect provider key');
+    const err = (await firstSettled) as Error;
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/superseded/);
+    // The second request is the live one.
+    expect(useStepUpStore.getState().pending?.act).toBe('connect provider key');
+    // Clean up so the promise doesn't dangle.
+    useStepUpStore.getState().fail(new Error('cleanup'));
+    await expect(second).rejects.toThrow('cleanup');
+  });
+
+  it('a cached proof still short-circuits without touching pending', async () => {
+    useStepUpStore.setState({
+      proof: { value: 'proof-1', expiresAt: Date.now() + 60_000 },
+      pending: null,
+    });
+    await expect(requestStepUp('rotate provider key')).resolves.toBe('proof-1');
+    expect(useStepUpStore.getState().pending).toBeNull();
+  });
+});

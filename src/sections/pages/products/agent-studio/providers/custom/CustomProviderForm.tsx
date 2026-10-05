@@ -194,7 +194,7 @@ function slugify(label: string): string {
 }
 
 export function CustomProviderForm({ credentialId }: { credentialId?: string }) {
-  const { orgId } = useOrg();
+  const { orgId, role } = useOrg();
   const navigate = useNavigate();
   const mutations = useCredentialMutations(orgId ?? '');
   const { data: creds, isLoading: credsLoading } = useCredentials(orgId);
@@ -517,6 +517,25 @@ export function CustomProviderForm({ credentialId }: { credentialId?: string }) 
   const cancel = () => navigate({ to: '/agent-studio/providers' });
 
   if (!orgId) return null;
+
+  // Round 4 P1: the engine's custom-endpoint create/patch/probe endpoints
+  // are owner/admin-only — reader, billing, and developer get 403. A
+  // non-privileged role that deep-links here gets this honest gate instead
+  // of a form whose every submit 403s. (The tier gate lives one level up
+  // on the routed page; this is the role gate.)
+  if (role !== 'owner' && role !== 'admin') {
+    return (
+      <div style={card}>
+        <h3 style={sectionTitle}>Custom provider</h3>
+        <p style={{ ...bodyText, marginTop: 8 }}>
+          Only owners and admins can manage provider keys.
+        </p>
+        <button type="button" onClick={cancel} style={{ ...secondaryBtn, marginTop: 16 }}>
+          Back to My Providers
+        </button>
+      </div>
+    );
+  }
 
   // Round 2 P0: the edit route is directly addressable — a bad or removed
   // credentialId gets an honest not-found, never a blank create form.

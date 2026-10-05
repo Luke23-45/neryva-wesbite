@@ -48,10 +48,18 @@ export function ConnectKeyForm({
   orgId,
   onDone,
   onCancel,
+  canWrite,
 }: {
   orgId: string;
   onDone: (credential: ProviderCredentialView) => void;
   onCancel: () => void;
+  /**
+   * Round 4 P1: owner/admin only (the engine's credential create/probe
+   * endpoints 403 everyone else). The page gates the button that opens
+   * this form; this guard is the backstop so the form can never be driven
+   * directly by a non-privileged role.
+   */
+  canWrite: boolean;
 }) {
   const mutations = useCredentialMutations(orgId);
   const [provider, setProvider] = useState('');
@@ -168,6 +176,23 @@ export function ConnectKeyForm({
       },
     );
   };
+
+  // Round 4 P1 backstop: the page never opens this form for non-privileged
+  // roles, but the form itself refuses to render its fields for them —
+  // the engine would 403 the create/probe anyway.
+  if (!canWrite) {
+    return (
+      <div style={{ ...card, background: colors.bg }} aria-label="Connect API key form">
+        <h3 style={sectionTitle}>Connect API key</h3>
+        <p style={{ ...bodyText, marginTop: 8 }}>
+          Only owners and admins can manage provider keys.
+        </p>
+        <button type="button" onClick={onCancel} style={{ ...ghostBtn, marginTop: 12 }}>
+          Close
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ ...card, background: colors.bg }} aria-label="Connect API key form">

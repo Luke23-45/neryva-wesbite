@@ -31,6 +31,15 @@ export const useStepUpStore = create<StepUpState>((set, get) => ({
     if (cached && cached.expiresAt > Date.now() + 5_000) {
       return Promise.resolve(cached.value);
     }
+    // Round 4 P2: a still-pending earlier request would be orphaned here —
+    // its promise never settles (a hang on a security flow). Reject it so
+    // the first caller fails loudly instead of hanging. All current call
+    // sites are sequential awaits, so this only fires on genuine overlap.
+    const prev = get().pending;
+    if (prev) {
+      const err = new Error(`Step-up request superseded by "${act}"`);
+      get().fail(err);
+    }
     set({ proof: null });
     return new Promise<string>((resolve, reject) => {
       set({ pending: { resolve, reject, act } });

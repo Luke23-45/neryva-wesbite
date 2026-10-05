@@ -16,6 +16,7 @@ import type { ProviderCredentialView } from '@/sections/pages/products/agent-stu
 
 const hoisted = vi.hoisted(() => ({
   tier: 'payg' as string,
+  role: 'owner' as string | null,
   credentials: [] as ProviderCredentialView[],
   patchMutate: vi.fn(),
   patchMutateAsync: vi.fn(async () => ({})),
@@ -23,7 +24,7 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock('@/Context/OrgContext', () => ({
-  useOrg: () => ({ orgId: 'org-1' }),
+  useOrg: () => ({ orgId: 'org-1', role: hoisted.role }),
 }));
 
 vi.mock('@/sections/pages/products/agent-studio/providers/hooks/useOrgTier', () => ({
@@ -116,6 +117,7 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   hoisted.tier = 'payg';
+  hoisted.role = 'owner';
   hoisted.credentials = [];
 });
 
@@ -271,5 +273,49 @@ describe('MyProvidersPage', () => {
     // Exactly one card gets the entry point: the live custom one. The
     // standard card (no base_url) and the revoked custom card don't.
     expect(screen.getAllByRole('link', { name: /Edit endpoint/ })).toHaveLength(1);
+  });
+
+  it('non-privileged roles get disabled controls plus an honest hint, never live buttons (Round 4 P1)', () => {
+    hoisted.role = 'billing';
+    hoisted.credentials = [cred('c1', 0)];
+    renderPage();
+    // The hint renders (header + card).
+    expect(screen.getAllByText('Only owners and admins can manage provider keys.').length).toBeGreaterThan(0);
+    // "+ Connect a key" is disabled, not clickable.
+    for (const btn of screen.getAllByRole('button', { name: '+ Connect a key' })) {
+      expect(btn).toBeDisabled();
+    }
+    // The custom-endpoint entry is a non-navigating disabled treatment, not a link.
+    expect(screen.queryByRole('link', { name: /Connect Custom Endpoint/ })).toBeNull();
+    // Card controls are all disabled: toggle, reorder, rotate, revoke, verify, scope/attestation edits.
+    // (The Switch kit signals disabled via aria-disabled + tabindex -1, not
+    // the native disabled attribute — assert what it actually renders.)
+    const toggle = screen.getByRole('switch', { name: 'Disable key' });
+    expect(toggle).toHaveAttribute('aria-disabled', 'true');
+    expect(toggle).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: 'Rotate…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sync / Refresh Models' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move Key c1 down' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit scope filters' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit attestations' })).toBeDisabled();
+  });
+
+  it('non-writers never see the custom-endpoint edit entry point (Round 4 P1)', () => {
+    hoisted.role = 'billing';
+    hoisted.credentials = [
+      cred('custom-1', 0, { provider: 'acme', base_url: 'https://llm.example.com/v1' }),
+    ];
+    renderPage();
+    expect(screen.queryByRole('link', { name: /Edit endpoint/ })).toBeNull();
+  });
+
+  it('developer role is also non-privileged for credential management (Round 4 P1)', () => {
+    hoisted.role = 'developer';
+    renderPage();
+    expect(screen.getAllByText('Only owners and admins can manage provider keys.').length).toBeGreaterThan(0);
+    for (const btn of screen.getAllByRole('button', { name: '+ Connect a key' })) {
+      expect(btn).toBeDisabled();
+    }
   });
 });

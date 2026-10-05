@@ -156,6 +156,12 @@ function asDiscoveredModels(value: unknown): DiscoveredModel[] {
 export interface KeyCardProps {
   credential: ProviderCredentialView;
   orgId: string;
+  /**
+   * Round 4 P1: owner/admin only (mirrors the engine's credential-endpoint
+   * roles). Non-writers get every mutating control disabled plus an honest
+   * hint — never a live button the server 403s.
+   */
+  canWrite: boolean;
   isFirst: boolean;
   isLast: boolean;
   onMoveUp: () => void;
@@ -182,6 +188,7 @@ export interface KeyCardProps {
 export function KeyCard({
   credential,
   orgId,
+  canWrite,
   isFirst,
   isLast,
   onMoveUp,
@@ -250,7 +257,12 @@ export function KeyCard({
   };
 
   const enabledBusy = enableToggle.isPending;
-  const toggleDisabled = revoked || failed || enabledBusy;
+  // Round 4 P1: non-privileged roles never get a live toggle the server
+  // would 403 — disabled plus the honest hint in the operations row.
+  const toggleDisabled = revoked || failed || enabledBusy || !canWrite;
+  // Round 4 P1: reorder (drag handle + arrow buttons) is a PATCH the
+  // engine restricts to owner/admin — same treatment as the toggle.
+  const reorderDisabled = revoked || !canWrite;
   const isDragSource = dragSourceId === credential.id;
   const isDropTarget = dragTargetId === credential.id;
 
@@ -313,6 +325,10 @@ export function KeyCard({
       title="Revoke API key"
       message="Revoking is immediate and terminal — the credential is tombstoned permanently. In-flight runs fail over per this key's fallback setting on their next call; they never hang silently."
       confirmLabel={mutations.revoke.isPending ? 'Revoking…' : 'Revoke key'}
+      // Round 4 P2: the confirm button must not stay clickable while the
+      // revoke is in flight — a double-click fired mutate twice and the
+      // second call errored against the already-tombstoned row.
+      confirmDisabled={mutations.revoke.isPending}
       destructive
       onCancel={() => {
         setRevokeOpen(false);
@@ -372,16 +388,16 @@ export function KeyCard({
           <button
             type="button"
             onClick={runVerify}
-            disabled={mutations.verify.isPending}
-            style={{ ...secondaryBtn, ...(mutations.verify.isPending ? disabledBtn : {}) }}
+            disabled={mutations.verify.isPending || !canWrite}
+            style={{ ...secondaryBtn, ...(mutations.verify.isPending || !canWrite ? disabledBtn : {}) }}
           >
             {mutations.verify.isPending ? 'Verifying…' : 'Retry verify'}
           </button>
           <button
             type="button"
             onClick={() => setRevokeOpen(true)}
-            disabled={mutations.revoke.isPending}
-            style={{ ...dangerBtn, ...(mutations.revoke.isPending ? disabledBtn : {}) }}
+            disabled={mutations.revoke.isPending || !canWrite}
+            style={{ ...dangerBtn, ...(mutations.revoke.isPending || !canWrite ? disabledBtn : {}) }}
           >
             Revoke
           </button>
@@ -457,8 +473,8 @@ export function KeyCard({
           <button
             type="button"
             onClick={runVerify}
-            disabled={mutations.verify.isPending}
-            style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: '#e8c06a' }}
+            disabled={mutations.verify.isPending || !canWrite}
+            style={{ ...ghostBtn, minHeight: 44, padding: '8px 12px', color: '#e8c06a', ...(mutations.verify.isPending || !canWrite ? disabledBtn : {}) }}
           >
             {mutations.verify.isPending ? 'Verifying…' : 'Verify now'}
           </button>
@@ -480,22 +496,22 @@ export function KeyCard({
             aria-valuemin={1}
             aria-valuemax={providerCount}
             aria-valuenow={providerIndex + 1}
-            tabIndex={revoked ? -1 : 0}
+            tabIndex={reorderDisabled ? -1 : 0}
             aria-label={`Reorder ${credential.label}: position ${providerIndex + 1} of ${providerCount}. Drag, or press arrow keys.`}
-            aria-disabled={revoked}
-            onPointerDown={revoked ? undefined : onHandlePointerDown}
-            onPointerMove={revoked ? undefined : onHandlePointerMove}
-            onPointerUp={revoked ? undefined : onHandlePointerUp}
-            onPointerCancel={revoked ? undefined : onHandlePointerCancel}
-            onKeyDown={revoked ? undefined : onHandleKeyDown}
+            aria-disabled={reorderDisabled}
+            onPointerDown={reorderDisabled ? undefined : onHandlePointerDown}
+            onPointerMove={reorderDisabled ? undefined : onHandlePointerMove}
+            onPointerUp={reorderDisabled ? undefined : onHandlePointerUp}
+            onPointerCancel={reorderDisabled ? undefined : onHandlePointerCancel}
+            onKeyDown={reorderDisabled ? undefined : onHandleKeyDown}
             style={{
-              cursor: revoked ? 'default' : 'grab',
+              cursor: reorderDisabled ? 'default' : 'grab',
               touchAction: 'none',
               padding: '8px 6px',
               borderRadius: 6,
               display: 'flex',
               gap: 3,
-              opacity: revoked ? 0.35 : 1,
+              opacity: reorderDisabled ? 0.35 : 1,
             }}
           >
             {[0, 1].map((col) => (
@@ -515,18 +531,18 @@ export function KeyCard({
           <button
             type="button"
             aria-label={`Move ${credential.label} up`}
-            disabled={isFirst || revoked || enabledBusy}
+            disabled={isFirst || revoked || enabledBusy || !canWrite}
             onClick={onMoveUp}
-            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isFirst || revoked ? disabledBtn : {}) }}
+            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isFirst || revoked || !canWrite ? disabledBtn : {}) }}
           >
             ↑
           </button>
           <button
             type="button"
             aria-label={`Move ${credential.label} down`}
-            disabled={isLast || revoked || enabledBusy}
+            disabled={isLast || revoked || enabledBusy || !canWrite}
             onClick={onMoveDown}
-            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isLast || revoked ? disabledBtn : {}) }}
+            style={{ ...secondaryBtn, minHeight: 44, padding: '8px 12px', ...(isLast || revoked || !canWrite ? disabledBtn : {}) }}
           >
             ↓
           </button>
@@ -541,7 +557,10 @@ export function KeyCard({
 
       {/* FALLBACK */}
       <KeyRow label="Fallback">
-        <div aria-disabled={revoked} style={revoked ? { opacity: 0.5, pointerEvents: 'none' } : undefined}>
+        <div
+          aria-disabled={revoked || !canWrite}
+          style={revoked || !canWrite ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+        >
           <Segmented
             size="sm"
             ariaLabel="Shared capacity fallback"
@@ -575,7 +594,8 @@ export function KeyCard({
             onClick={() => setFiltersOpen((v) => !v)}
             aria-expanded={filtersOpen}
             aria-label={filtersOpen ? 'Done editing scope filters' : 'Edit scope filters'}
-            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent }}
+            disabled={!canWrite}
+            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent, ...(!canWrite ? disabledBtn : {}) }}
           >
             {filtersOpen ? 'Done' : 'Edit'}
           </button>
@@ -614,7 +634,8 @@ export function KeyCard({
             onClick={() => setAttestOpen((v) => !v)}
             aria-expanded={attestOpen}
             aria-label={attestOpen ? 'Done editing attestations' : 'Edit attestations'}
-            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent }}
+            disabled={!canWrite}
+            style={{ ...ghostBtn, padding: '8px 12px', minHeight: 44, color: colors.accent, ...(!canWrite ? disabledBtn : {}) }}
           >
             {attestOpen ? 'Done' : 'Edit'}
           </button>
@@ -624,7 +645,7 @@ export function KeyCard({
             <AttestationEditor
               credential={credential}
               orgId={orgId}
-              disabled={revoked || enabledBusy}
+              disabled={revoked || enabledBusy || !canWrite}
               onError={setActionError}
             />
           </div>
@@ -636,24 +657,24 @@ export function KeyCard({
         <button
           type="button"
           onClick={() => setRotateOpen(true)}
-          disabled={revoked || mutations.rotate.isPending}
-          style={{ ...secondaryBtn, ...(revoked ? disabledBtn : {}) }}
+          disabled={revoked || mutations.rotate.isPending || !canWrite}
+          style={{ ...secondaryBtn, ...(revoked || !canWrite ? disabledBtn : {}) }}
         >
           Rotate…
         </button>
         <button
           type="button"
           onClick={() => setRevokeOpen(true)}
-          disabled={revoked || mutations.revoke.isPending}
-          style={{ ...dangerBtn, ...(revoked ? disabledBtn : {}) }}
+          disabled={revoked || mutations.revoke.isPending || !canWrite}
+          style={{ ...dangerBtn, ...(revoked || !canWrite ? disabledBtn : {}) }}
         >
           Revoke
         </button>
         <button
           type="button"
           onClick={runVerify}
-          disabled={revoked || mutations.verify.isPending}
-          style={{ ...secondaryBtn, ...(revoked ? disabledBtn : {}) }}
+          disabled={revoked || mutations.verify.isPending || !canWrite}
+          style={{ ...secondaryBtn, ...(revoked || !canWrite ? disabledBtn : {}) }}
           title="Re-probe the upstream endpoint and refresh the discovered model list"
         >
           {mutations.verify.isPending ? 'Syncing…' : 'Sync / Refresh Models'}
@@ -661,8 +682,9 @@ export function KeyCard({
         <span style={{ flex: 1 }} />
         {/* Round 2 P0: wire up the orphaned custom-provider edit route. Shown
             for custom-endpoint credentials (base_url present) that aren't
-            revoked; revoked rows are never mutated. */}
-        {credential.base_url != null && !revoked && (
+            revoked; revoked rows are never mutated. Round 4 P1: owner/admin
+            only — the edit form is role-gated too. */}
+        {credential.base_url != null && !revoked && canWrite && (
           <Link
             to="/agent-studio/providers/custom/$credentialId/edit"
             params={{ credentialId: credential.id }}
@@ -696,6 +718,11 @@ export function KeyCard({
           View audit trail →
         </Link>
       </div>
+      {!canWrite && (
+        <p style={{ ...hintText, marginTop: 8 }}>
+          Only owners and admins can manage provider keys.
+        </p>
+      )}
 
       {/* Rotate dialog (alert-class; MFA step-up is engine-enforced) */}
       <ConfirmDialog
@@ -703,6 +730,9 @@ export function KeyCard({
         title="Rotate API key"
         message="This replaces the sealed key material in place. The card keeps its ID, priority, and filters. The engine requires MFA step-up for rotation."
         confirmLabel={mutations.rotate.isPending ? 'Rotating…' : 'Rotate key'}
+        // Round 4 P2: the confirm button must not stay clickable while the
+        // rotation is in flight — a double-click fired mutate twice.
+        confirmDisabled={mutations.rotate.isPending}
         onCancel={() => {
           setRotateOpen(false);
           setNewSecret('');
@@ -814,8 +844,15 @@ function UsageSummary({
   if (loading) return <span style={hintText}>Loading…</span>;
   if (!usage) return <span style={bodyText}>—</span>;
 
-  const codes = ['401', '403', '429', '5xx'] as const;
-  const nonZero = codes.filter((c) => usage.error_breakdown[c] > 0);
+  // Round 4 P1: iterate the wire map, never a closed allow-list. The old
+  // ['401','403','429','5xx'] list silently dropped any new engine code
+  // with count > 0, under-reporting failed calls. Unknown codes pass
+  // through errorCodeLabel verbatim (honest), never invented. Mirrors the
+  // SpendPage Round 3 fix (dominantError).
+  const nonZero = Object.entries(usage.error_breakdown ?? {}).filter(
+    (entry): entry is [string, number] =>
+      typeof entry[1] === 'number' && entry[1] > 0,
+  );
 
   return (
     <p style={{ ...bodyText, margin: 0 }}>
@@ -833,17 +870,17 @@ function UsageSummary({
       {nonZero.length === 0 ? (
         <span style={{ color: colors.textFaint }}>none</span>
       ) : (
-        nonZero.map((code, i) => (
+        nonZero.map(([code, count], i) => (
           <span key={code}>
             {i > 0 && <span style={{ color: colors.textFaint }}> · </span>}
             <span
-              title={`${errorCodeLabel(code)} — ${usage.error_breakdown[code]} failed call${usage.error_breakdown[code] === 1 ? '' : 's'} in the last 30 days`}
+              title={`${errorCodeLabel(code)} — ${count} failed call${count === 1 ? '' : 's'} in the last 30 days`}
               style={{
                 color: code === '429' ? colors.warning : colors.textDim,
                 fontWeight: code === '429' ? 700 : 400,
               }}
             >
-              {errorCodeLabel(code)} ×{usage.error_breakdown[code]}
+              {errorCodeLabel(code)} ×{count}
             </span>
           </span>
         ))

@@ -209,7 +209,12 @@ export interface CredentialUsageView {
   /** Labeled list-price equivalent — never presented as billed. Absent when unpriced. */
   list_price_equivalent_usd?: string;
   pricing_basis: 'settled' | 'list';
-  error_breakdown: { '401': number; '403': number; '429': number; '5xx': number };
+  /**
+   * Per-code failed-call counts. The four known codes are typed; the index
+   * signature admits future engine codes — UI must iterate this map (never
+   * a closed allow-list) so new codes are never silently dropped.
+   */
+  error_breakdown: { '401': number; '403': number; '429': number; '5xx': number; [code: string]: number };
   window: '7d' | '30d';
 }
 
@@ -652,9 +657,17 @@ export async function patchIncludeByokSpend(
   return patchSpendBudget(orgId, { include_byok_spend: include });
 }
 
-/** Enterprise audit export — step-up auth is engine-enforced; the download streams via engineDownload. */
-export async function downloadSpendExport(orgId: string, format: 'csv' | 'json'): Promise<void> {
-  return engineDownload(`/console/org/${orgId}/spend/export`, { format });
+/**
+ * Enterprise audit export — step-up auth is engine-enforced; the download streams via engineDownload.
+ * The caller supplies the MFA proof via runWithStepUp (prompt-once + retry);
+ * without a proof the engine rejects with `step_up_required`.
+ */
+export async function downloadSpendExport(
+  orgId: string,
+  format: 'csv' | 'json',
+  mfaProof?: string,
+): Promise<void> {
+  return engineDownload(`/console/org/${orgId}/spend/export`, { format }, mfaProof);
 }
 
 // ---------------------------------------------------------------------------
