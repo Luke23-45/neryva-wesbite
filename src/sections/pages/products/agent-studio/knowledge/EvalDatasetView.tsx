@@ -6,7 +6,7 @@ import { Play, Plus } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { TextInput } from '@components/common/ui/TextInput';
-import { QueryView } from '@components/common/ui/AsyncStates';
+import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { MetricCard } from '@components/common/ui/MetricCard';
 import { StudioAreaChart } from '@components/common/ui/StudioAreaChart/StudioAreaChart';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -130,7 +130,9 @@ export function EvalDatasetView() {
 
   return (
     <ViewShell>
-      <SectionBackRow to="/agent-studio/knowledge/eval" label="Eval datasets" />
+      <SectionBackRow to="/agent-studio/knowledge/eval">
+        <span aria-hidden="true">‹</span> Eval datasets
+      </SectionBackRow>
       <ViewHeader>
         <div>
           <ViewTitle>Eval dataset</ViewTitle>
@@ -240,7 +242,7 @@ export function EvalDatasetView() {
       {trendData.length > 1 && (
         <motion.div {...pageItem}>
           <SectionTitle>Trends (last {trendData.length} runs)</SectionTitle>
-          <Panel style={{ padding: 16 }}>
+          <Panel>
             <StudioAreaChart
               data={trendData}
               xKey="date"
@@ -256,7 +258,7 @@ export function EvalDatasetView() {
         </motion.div>
       )}
 
-      {runLoading && <QueryView isLoading={true} isError={false} onRetry={() => {}} />}
+      {runLoading && <Skeleton $h="120px" $r="12px" />}
     </ViewShell>
   );
 }

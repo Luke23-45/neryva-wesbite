@@ -65,7 +65,7 @@ const HitTitle = styled.span`
 `;
 
 const HitScore = styled.span`
-  font-family: ${({ theme }) => theme.app.type.mono};
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
   color: ${({ theme }) => theme.app.text.secondary};
   margin-left: auto;
@@ -106,7 +106,7 @@ const TraceRow = styled.div`
   border-radius: 8px;
   background: ${({ theme }) => theme.app.surface.subtle};
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  font-family: ${({ theme }) => theme.app.type.mono};
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
 `;
 
@@ -174,7 +174,7 @@ export function ScopeSimulateView() {
       <ViewHeader>
         <ViewHeaderRow>
           <div>
-            <ViewTitle>Simulate: {scopeDetail.scope?.name ?? slug}</ViewTitle>
+            <ViewTitle>Simulate: {scopeQuery.data?.scope?.name ?? slug}</ViewTitle>
             <ViewSubtitle>
               Run the retrieval pipeline constrained to this scope — configuration by observation.
             </ViewSubtitle>
@@ -183,7 +183,7 @@ export function ScopeSimulateView() {
       </ViewHeader>
 
       <QueryView query={scopeQuery}>
-        {(scopeDetail) => (
+        {() => (
           <motion.div {...pageItem}>
           <FormGrid>
             <Field>

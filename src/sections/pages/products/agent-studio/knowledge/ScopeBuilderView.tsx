@@ -82,7 +82,7 @@ const RemoveButton = styled.button`
   height: 32px;
   border-radius: 7px;
   border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.default};
+  background: ${({ theme }) => theme.app.surface.tint};
   color: ${({ theme }) => theme.app.text.secondary};
   cursor: pointer;
 
@@ -245,8 +245,8 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
   const detail = scopeQuery.data;
   const createScope = useCreateScope();
   const updateScope = useUpdateScope();
-  const setPins = useSetScopePins();
-  const setExclusions = useSetScopeExclusions();
+  const setPinsMutation = useSetScopePins();
+  const setExclusionsMutation = useSetScopeExclusions();
   const { data: documents } = useDocuments(100);
 
   const [name, setName] = useState('');
@@ -356,8 +356,8 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
       }
       // Persist pins/exclusions via the dedicated endpoints.
       if (targetSlug) {
-        await setPins.mutateAsync({ slug: targetSlug, documentIds: pins });
-        await setExclusions.mutateAsync({ slug: targetSlug, documentIds: exclusions });
+        await setPinsMutation.mutateAsync({ slug: targetSlug, documentIds: pins });
+        await setExclusionsMutation.mutateAsync({ slug: targetSlug, documentIds: exclusions });
       }
       void navigate({ to: '/agent-studio/knowledge/scopes' });
     } catch {
@@ -365,7 +365,7 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
     }
   };
 
-  const saving = createScope.isPending || updateScope.isPending || setPins.isPending || setExclusions.isPending;
+  const saving = createScope.isPending || updateScope.isPending || setPinsMutation.isPending || setExclusionsMutation.isPending;
 
   return (
     <ViewShell>

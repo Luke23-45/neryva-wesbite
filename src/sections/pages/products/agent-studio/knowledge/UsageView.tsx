@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { Download, FileText, Users } from 'lucide-react';
-import { StatusPill } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
@@ -18,7 +17,6 @@ import {
 } from '@components/common/ui/ViewLayout';
 import { DataTable, DataHead, DataRow, DataCell } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
-import { useOrg } from '@/Context/OrgContext';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import {
@@ -39,7 +37,7 @@ const RANGE_OPTIONS = [
 ] as const;
 
 const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.app.type.h3};
+  font-size: ${({ theme }) => theme.app.type.titleLg};
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.primary};
   margin: 28px 0 12px;
@@ -232,7 +230,6 @@ const QUADRANT_META: Record<string, { title: string; desc: string }> = {
 };
 
 export function UsageView() {
-  const { orgId } = useOrg();
   const [days, setDays] = useState<DayRange>('30');
   const daysNum = Number(days);
 

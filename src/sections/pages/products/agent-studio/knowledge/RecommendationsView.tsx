@@ -100,11 +100,6 @@ const DocLinks = styled.div`
   font-size: 12px;
 `;
 
-const DocLink = styled(Link)`
-  font-family: monospace;
-  font-size: 12px;
-`;
-
 const DismissButton = styled.button`
   background: none;
   border: none;
@@ -154,13 +149,14 @@ function RecommendationCard({
         {rec.documentIds.length > 0 && (
           <DocLinks>
             {rec.documentIds.slice(0, 5).map((docId) => (
-              <DocLink
+              <Link
                 key={docId}
                 to="/agent-studio/knowledge/$docId/diagnostics"
                 params={{ docId }}
+                style={{ fontFamily: 'monospace', fontSize: 12 }}
               >
                 {docId.slice(0, 8)}…
-              </DocLink>
+              </Link>
             ))}
             {rec.documentIds.length > 5 && (
               <span style={{ opacity: 0.6 }}>+{rec.documentIds.length - 5} more</span>
@@ -176,12 +172,8 @@ function RecommendationCard({
 }
 
 export function RecommendationsView() {
-  const { data: recommendations, isLoading, isError, refetch } = useRecommendations();
+  const recsQuery = useRecommendations();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-
-  const visible = (recommendations ?? []).filter(
-    (_, i) => !dismissed.has(`${i}`),
-  );
 
   const handleDismiss = (index: number) => {
     setDismissed((prev) => new Set(prev).add(`${index}`));
@@ -201,24 +193,29 @@ export function RecommendationsView() {
         Review each item and take action manually.
       </ReadOnlyNote>
 
-      <QueryView isLoading={isLoading} isError={isError} onRetry={() => void refetch()}>
-        {visible.length === 0 ? (
-          <EmptyState
-            icon={<Lightbulb size={24} />}
-            title="No recommendations"
-            description="The library looks healthy. Check back after more usage data accumulates."
-          />
-        ) : (
-          <motion.div {...pageItem}>
-            {visible.map((rec, i) => (
-              <RecommendationCard
-                key={`${rec.type}-${i}`}
-                rec={rec}
-                onDismiss={() => handleDismiss(i)}
-              />
-            ))}
-          </motion.div>
-        )}
+      <QueryView query={recsQuery}>
+        {(recommendations) => {
+          const visible = (recommendations ?? []).filter(
+            (_, i) => !dismissed.has(`${i}`),
+          );
+          return visible.length === 0 ? (
+            <EmptyState
+              icon={<Lightbulb size={24} />}
+              title="No recommendations"
+              description="The library looks healthy. Check back after more usage data accumulates."
+            />
+          ) : (
+            <motion.div {...pageItem}>
+              {visible.map((rec, i) => (
+                <RecommendationCard
+                  key={`${rec.type}-${i}`}
+                  rec={rec}
+                  onDismiss={() => handleDismiss(i)}
+                />
+              ))}
+            </motion.div>
+          );
+        }}
       </QueryView>
     </ViewShell>
   );

@@ -38,7 +38,7 @@ const ScoreCell = styled.span`
 `;
 
 export function EvalView() {
-  const { data: datasets, isLoading, isError, refetch } = useEvalDatasets();
+  const datasetsQuery = useEvalDatasets();
   const createDataset = useCreateEvalDataset();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -107,8 +107,9 @@ export function EvalView() {
         </motion.div>
       )}
 
-      <QueryView isLoading={isLoading} isError={isError} onRetry={() => void refetch()}>
-        {!datasets || datasets.length === 0 ? (
+      <QueryView query={datasetsQuery}>
+        {(datasets) =>
+          !datasets || datasets.length === 0 ? (
           <EmptyState
             icon={<Plus size={24} />}
             title="No eval datasets yet"
@@ -156,7 +157,8 @@ export function EvalView() {
               </tbody>
             </DataTable>
           </motion.div>
-        )}
+          )
+        }
       </QueryView>
     </ViewShell>
   );

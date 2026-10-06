@@ -145,7 +145,9 @@ export function CurateView() {
 
   return (
     <ViewShell>
-      <SectionBackRow to="/agent-studio/knowledge" label="Knowledge" />
+      <SectionBackRow to="/agent-studio/knowledge">
+        <span aria-hidden="true">‹</span> Knowledge
+      </SectionBackRow>
       <ViewHeader>
         <ViewHeaderRow>
           <div>

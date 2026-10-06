@@ -116,7 +116,9 @@ export function StorageView() {
 
   return (
     <ViewShell>
-      <SectionBackRow to="/agent-studio/knowledge" label="Knowledge" />
+      <SectionBackRow to="/agent-studio/knowledge">
+        <span aria-hidden="true">‹</span> Knowledge
+      </SectionBackRow>
       <ViewHeader>
         <ViewHeaderRow>
           <div>
@@ -126,7 +128,7 @@ export function StorageView() {
         </ViewHeaderRow>
       </ViewHeader>
 
-      <QueryView query={meter} loadingText="Loading storage meter…">
+      <QueryView query={meter}>
         {(data) => {
           if (!data) {
             return (
@@ -237,7 +239,10 @@ export function StorageView() {
                   {data.topDocuments.map((doc) => (
                     <DataRow key={doc.documentId}>
                       <DataCell>
-                        <Link to={`/agent-studio/knowledge/${doc.documentId}/preview`}>
+                        <Link
+                          to="/agent-studio/knowledge/$docId/diagnostics"
+                          params={{ docId: doc.documentId }}
+                        >
                           {doc.title ?? doc.documentId.slice(0, 8)}
                         </Link>
                       </DataCell>

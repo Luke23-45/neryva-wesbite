@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { useParams } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { History, ArrowRight } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
@@ -8,7 +8,6 @@ import { EmptyState } from '@components/common/ui/EmptyState';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { pageItem } from '@styles/motion';
-import { SectionBackRow } from '@/sections/pages/products/agent-studio/libraries/memory/SectionBackRow';
 import { useMemoryTimeline, type MemoryTimelineEvent } from '@hooks/studio/useKnowledgeLibrary';
 import { relativeTime } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
 
@@ -138,11 +137,26 @@ function TimelineEvent({ event, isCurrent }: { event: MemoryTimelineEvent; isCur
 
 export function MemoryTimelineView() {
   const { memoryId } = useParams({ from: '/agent-studio/memory/$memoryId/timeline' });
-  const { data: events, isLoading, isError, refetch } = useMemoryTimeline(memoryId);
+  const eventsQuery = useMemoryTimeline(memoryId);
 
   return (
     <ViewShell>
-      <SectionBackRow to={`/agent-studio/memory/${memoryId}`} label="Memory detail" />
+      <Link
+        to="/agent-studio/memory/$memoryId"
+        params={{ memoryId }}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: 16,
+          fontSize: 13,
+          fontWeight: 600,
+          opacity: 0.72,
+          textDecoration: 'none',
+        }}
+      >
+        <span aria-hidden="true">‹</span> Memory detail
+      </Link>
       <ViewHeader>
         <div>
           <ViewTitle>Memory timeline</ViewTitle>
@@ -150,8 +164,9 @@ export function MemoryTimelineView() {
         </div>
       </ViewHeader>
 
-      <QueryView isLoading={isLoading} isError={isError} onRetry={() => void refetch()}>
-        {!events || events.length === 0 ? (
+      <QueryView query={eventsQuery}>
+        {(events) =>
+          !events || events.length === 0 ? (
           <EmptyState
             icon={<History size={24} />}
             title="No timeline events"
@@ -169,7 +184,8 @@ export function MemoryTimelineView() {
               ))}
             </Timeline>
           </motion.div>
-        )}
+          )
+        }
       </QueryView>
     </ViewShell>
   );

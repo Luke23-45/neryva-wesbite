@@ -69,6 +69,9 @@ const DOC: KnowledgeDocument = {
   state: 'ready',
   updatedAt: '2026-09-16T10:00:00Z',
   latestVersion: 3,
+  origin: 'upload',
+  curationStatus: 'unreviewed',
+  attributes: {},
 };
 
 // createMemoryHistory never wires history.block (no getBlockers/setBlockers),

@@ -73,12 +73,6 @@ const CandidateRow = styled.div`
   font-size: 13px;
 `;
 
-const CandidateDoc = styled(Link)`
-  font-weight: 600;
-  font-family: monospace;
-  font-size: 12px;
-`;
-
 const WhyNotReason = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.app.text.secondary};
@@ -136,12 +130,13 @@ function GapCardView({ gap }: { gap: RecallGap }) {
               <CandidateRow key={docId}>
                 <FileText size={14} style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <CandidateDoc
-                    to="/agent-studio/knowledge/$docId/diagnostics"
-                    params={{ docId }}
-                  >
-                    {docId.slice(0, 8)}…
-                  </CandidateDoc>
+                <Link
+                  to="/agent-studio/knowledge/$docId/diagnostics"
+                  params={{ docId }}
+                  style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: 12 }}
+                >
+                  {docId.slice(0, 8)}…
+                </Link>
                   <WhyNotReason> — see diagnostics for why-not analysis</WhyNotReason>
                 </div>
               </CandidateRow>
@@ -154,8 +149,7 @@ function GapCardView({ gap }: { gap: RecallGap }) {
 
 export function RecallGapsView() {
   const [days, setDays] = useState('7');
-  const { data, isLoading, isError, refetch } = useRecallGaps(parseInt(days, 10));
-  const gaps = data?.gaps ?? [];
+  const gapsQuery = useRecallGaps(parseInt(days, 10));
 
   return (
     <ViewShell>
@@ -168,27 +162,31 @@ export function RecallGapsView() {
 
       <FilterBar>
         <Dropdown
+          variant="select"
           label="Time range"
           value={days}
-          options={DAYS_OPTIONS}
-          onChange={setDays}
+          items={DAYS_OPTIONS}
+          onChange={(v) => setDays(v)}
         />
       </FilterBar>
 
-      <QueryView isLoading={isLoading} isError={isError} onRetry={() => void refetch()}>
-        {gaps.length === 0 ? (
-          <EmptyState
-            icon={<SearchX size={24} />}
-            title="No recall gaps"
-            description={`No queries with zero results or negative feedback in the last ${days} days.`}
-          />
-        ) : (
-          <motion.div {...pageItem}>
-            {gaps.map((gap, i) => (
-              <GapCardView key={`${gap.queryHash}-${i}`} gap={gap} />
-            ))}
-          </motion.div>
-        )}
+      <QueryView query={gapsQuery}>
+        {(data) => {
+          const gaps = data?.gaps ?? [];
+          return gaps.length === 0 ? (
+            <EmptyState
+              icon={<SearchX size={24} />}
+              title="No recall gaps"
+              description={`No queries with zero results or negative feedback in the last ${days} days.`}
+            />
+          ) : (
+            <motion.div {...pageItem}>
+              {gaps.map((gap, i) => (
+                <GapCardView key={`${gap.queryHash}-${i}`} gap={gap} />
+              ))}
+            </motion.div>
+          );
+        }}
       </QueryView>
     </ViewShell>
   );

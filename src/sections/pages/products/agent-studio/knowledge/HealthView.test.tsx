@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@styles/theme';
 import { HealthView } from './HealthView';
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     useNavigate: () => vi.fn(),
-    Link: ({ children }) => <a>{children}</a>,
+    Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
   };
 });
 

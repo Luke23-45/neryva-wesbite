@@ -7,7 +7,6 @@ import { StatusPill } from '@components/common/ui/StatusPill';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
-import { EmptyState } from '@components/common/ui/EmptyState';
 import {
   ViewShell,
   ViewHeader,
@@ -27,7 +26,7 @@ import { relativeTime } from '@/sections/pages/products/agent-studio/builder/lib
 import { SectionBackRow } from './SectionBackRow';
 
 const Mono = styled.span`
-  font-family: ${({ theme }) => theme.app.type.mono};
+  font-family: 'IBM Plex Mono', monospace;
   font-size: 12px;
 `;
 
@@ -182,15 +181,14 @@ export function ScopesView() {
       <ConfirmDialog
         open={deleting !== null}
         title="Delete scope"
-        description={
+        message={
           deleting
             ? `Delete the scope "${deleting.name}" (${deleting.slug})? Agents bound to it will fall back to org-wide retrieval. This cannot be undone.`
             : ''
         }
         confirmLabel="Delete"
-        requireConfirmText={deleting?.slug ?? ''}
         onConfirm={() => void confirmDelete()}
-        onClose={() => setDeleting(null)}
+        onCancel={() => setDeleting(null)}
       />
     </ViewShell>
   );

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
@@ -153,14 +154,12 @@ function FindingCardView({ finding }: { finding: HealthFinding }) {
       </CardAction>
       <CardButtons>
         {fix && (
-          <ActionButton
-            variant="primary"
-            size="sm"
-            to={fix.to}
-            icon={<ArrowRight size={14} />}
-          >
-            {fix.label}
-          </ActionButton>
+          <Link to={fix.to} style={{ textDecoration: 'none' }}>
+            <ActionButton variant="primary" size="sm">
+              {fix.label}
+              <ArrowRight size={14} />
+            </ActionButton>
+          </Link>
         )}
         <ActionButton
           variant="secondary"
