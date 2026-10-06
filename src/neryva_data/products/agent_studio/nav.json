@@ -70,6 +70,48 @@
           "badge": "attention"
         },
         {
+          "label": "Scopes",
+          "to": "/agent-studio/knowledge/scopes",
+          "icon": "knowledge",
+          "match": "/agent-studio/knowledge/scopes"
+        },
+        {
+          "label": "Usage",
+          "to": "/agent-studio/knowledge/usage",
+          "icon": "usage",
+          "match": "/agent-studio/knowledge/usage"
+        },
+        {
+          "label": "Health",
+          "to": "/agent-studio/knowledge/health",
+          "icon": "activity",
+          "match": "/agent-studio/knowledge/health"
+        },
+        {
+          "label": "Storage",
+          "to": "/agent-studio/knowledge/storage",
+          "icon": "knowledge",
+          "match": "/agent-studio/knowledge/storage"
+        },
+        {
+          "label": "Eval",
+          "to": "/agent-studio/knowledge/eval",
+          "icon": "evaluations",
+          "match": "/agent-studio/knowledge/eval"
+        },
+        {
+          "label": "Recall gaps",
+          "to": "/agent-studio/knowledge/recall-gaps",
+          "icon": "analytics",
+          "match": "/agent-studio/knowledge/recall-gaps"
+        },
+        {
+          "label": "Recommendations",
+          "to": "/agent-studio/knowledge/recommendations",
+          "icon": "templates",
+          "match": "/agent-studio/knowledge/recommendations"
+        },
+        {
           "label": "Memory",
           "to": "/agent-studio/memory",
           "icon": "chat"

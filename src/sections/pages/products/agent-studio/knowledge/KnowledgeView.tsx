@@ -635,45 +635,6 @@ export function KnowledgeView() {
         </div>
       </ViewHeaderRow>
 
-      <motion.nav
-        initial="hidden"
-        animate="visible"
-        variants={pageItem}
-        custom={1}
-        aria-label="Knowledge management"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 8,
-          marginBottom: 16,
-        }}
-      >
-        {[
-          { to: '/agent-studio/knowledge/scopes', label: 'Scopes' },
-          { to: '/agent-studio/knowledge/usage', label: 'Usage' },
-          { to: '/agent-studio/knowledge/health', label: 'Health' },
-          { to: '/agent-studio/knowledge/storage', label: 'Storage' },
-          { to: '/agent-studio/knowledge/eval', label: 'Eval' },
-          { to: '/agent-studio/knowledge/recall-gaps', label: 'Recall gaps' },
-          { to: '/agent-studio/knowledge/recommendations', label: 'Recommendations' },
-        ].map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--border-subtle)',
-              fontSize: 13,
-              textDecoration: 'none',
-              color: 'var(--text-primary)',
-            }}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </motion.nav>
-
       {uploads.length > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
           <Panel
