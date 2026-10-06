@@ -68,7 +68,8 @@ export function EvalView() {
           <ViewTitle>Retrieval eval</ViewTitle>
           <ViewSubtitle>Golden-query datasets for measuring retrieval quality over time.</ViewSubtitle>
         </div>
-        <ActionButton onClick={() => setShowForm((v) => !v)} icon={<Plus size={16} />}>
+        <ActionButton onClick={() => setShowForm((v) => !v)} >
+            <Plus size={16} style={{ marginRight: 6 }} />
           New dataset
         </ActionButton>
       </ViewHeader>

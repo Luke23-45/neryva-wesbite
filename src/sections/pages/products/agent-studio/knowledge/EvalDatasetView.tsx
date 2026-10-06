@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useParams } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { Play, Plus } from 'lucide-react';
@@ -75,7 +76,8 @@ function formatScore(value: number | null | undefined): string {
   return value.toFixed(3);
 }
 
-export function EvalDatasetView({ datasetId }: { datasetId: string }) {
+export function EvalDatasetView() {
+  const { datasetId } = useParams({ from: '/agent-studio/knowledge/eval/$datasetId' });
   const [runId, setRunId] = useState<string | null>(null);
   const [showAddCase, setShowAddCase] = useState(false);
   const [query, setQuery] = useState('');
@@ -148,11 +150,12 @@ export function EvalDatasetView({ datasetId }: { datasetId: string }) {
             onClick={handleRun}
             disabled={runEval.isPending}
             variant="primary"
-            icon={<Play size={16} />}
           >
+            <Play size={16} style={{ marginRight: 6 }} />
             {runEval.isPending ? 'Running…' : 'Run eval'}
           </ActionButton>
-          <ActionButton onClick={() => setShowAddCase((v) => !v)} icon={<Plus size={16} />}>
+          <ActionButton onClick={() => setShowAddCase((v) => !v)}>
+            <Plus size={16} style={{ marginRight: 6 }} />
             Add case
           </ActionButton>
         </div>

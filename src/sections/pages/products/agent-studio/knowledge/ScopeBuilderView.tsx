@@ -9,7 +9,6 @@ import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { Dropdown } from '@components/common/ui/Dropdown';
 import { Switch } from '@components/common/ui/Switch';
-import { Panel } from '@components/common/ui/Panel';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import {
   ViewShell,
@@ -22,6 +21,8 @@ import { pageItem } from '@styles/motion';
 import {
   useCreateScope,
   useScope,
+  useSetScopeExclusions,
+  useSetScopePins,
   useUpdateScope,
 } from '@hooks/studio/useKnowledgeLibrary';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
@@ -243,6 +244,8 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
   });
   const createScope = useCreateScope();
   const updateScope = useUpdateScope();
+  const setPins = useSetScopePins();
+  const setExclusions = useSetScopeExclusions();
   const { data: documents } = useDocuments(100);
 
   const [name, setName] = useState('');
@@ -344,21 +347,24 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
       rerankProfile: rerank ? 'default' : null,
     };
     try {
+      const targetSlug = mode === 'new' ? slugInput : slug;
       if (mode === 'new') {
         await createScope.mutateAsync({ slug: slugInput, ...payload });
       } else if (slug) {
         await updateScope.mutateAsync({ slug, ...payload });
       }
-      // NOTE: pins/exclusions are managed in local state only — the engine
-      // exposes no pin/exclusion mutation endpoints yet. They are displayed
-      // for visibility; wiring them requires backend work.
+      // Persist pins/exclusions via the dedicated endpoints.
+      if (targetSlug) {
+        await setPins.mutateAsync({ slug: targetSlug, documentIds: pins });
+        await setExclusions.mutateAsync({ slug: targetSlug, documentIds: exclusions });
+      }
       void navigate({ to: '/agent-studio/knowledge/scopes' });
     } catch {
       // Toast handled by the mutation hooks.
     }
   };
 
-  const saving = createScope.isPending || updateScope.isPending;
+  const saving = createScope.isPending || updateScope.isPending || setPins.isPending || setExclusions.isPending;
 
   return (
     <ViewShell>

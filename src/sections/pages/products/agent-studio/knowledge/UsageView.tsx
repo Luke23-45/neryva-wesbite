@@ -270,7 +270,8 @@ export function UsageView() {
                 onChange={setDays}
                 ariaLabel="Date range"
               />
-              <ActionButton variant="secondary" onClick={handleExportCsv} icon={<Download size={14} />}>
+              <ActionButton variant="secondary" onClick={handleExportCsv} >
+              <Download size={14} style={{ marginRight: 6 }} />
                 Export CSV
               </ActionButton>
             </HeaderActions>

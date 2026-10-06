@@ -1,11 +1,10 @@
 import { Link } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { Database, HardDrive, Trash2, ArrowRight } from 'lucide-react';
+import { Database, HardDrive, ArrowRight } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { ProgressBar } from '@components/common/ui/ProgressBar';
@@ -19,7 +18,6 @@ import {
 import { DataTable, DataHead, DataRow, DataCell } from '@components/common/ui/DataTable';
 import { pageItem } from '@styles/motion';
 import { useStorageMeter } from '@hooks/studio/useKnowledgeLibrary';
-import { useState } from 'react';
 import { SectionBackRow } from './SectionBackRow';
 
 const MeterPanel = styled(Panel)`
@@ -115,7 +113,6 @@ function formatBytes(bytes: number): string {
 
 export function StorageView() {
   const meter = useStorageMeter();
-  const [purgeOpen, setPurgeOpen] = useState(false);
 
   return (
     <ViewShell>
@@ -185,9 +182,6 @@ export function StorageView() {
                     View unused <ArrowRight size={14} />
                   </ActionButton>
                 </Link>
-                <ActionButton variant="secondary" onClick={() => setPurgeOpen(true)}>
-                  <Trash2 size={14} /> Purge retired
-                </ActionButton>
                 <Link to="/agent-studio/settings/billing">
                   <ActionButton variant="secondary">Request quota</ActionButton>
                 </Link>
@@ -252,19 +246,6 @@ export function StorageView() {
                   ))}
                 </tbody>
               </DataTable>
-
-              <ConfirmDialog
-                open={purgeOpen}
-                title="Purge retired documents"
-                message="This permanently deletes all retired documents and their versions. This cannot be undone."
-                confirmLabel="Purge"
-                destructive
-                onConfirm={() => {
-                  // TODO: wire to purge endpoint when available
-                  setPurgeOpen(false);
-                }}
-                onCancel={() => setPurgeOpen(false)}
-              />
             </motion.div>
           );
         }}

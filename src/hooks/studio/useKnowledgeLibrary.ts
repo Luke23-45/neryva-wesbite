@@ -249,6 +249,38 @@ export interface SimulateScopeResult {
   trace: Record<string, unknown> | null;
 }
 
+export function useSetScopePins() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { slug: string; documentIds: string[] }) =>
+      engine<unknown>(`/console/org/${orgId}/scopes/${input.slug}/pins`, {
+        method: 'POST',
+        body: { document_ids: input.documentIds },
+        idempotent: true,
+      }),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: [...LIBRARY_KEY, orgId, 'scopes', variables.slug] }),
+    onError: (error) => toastEngineError(error, 'Could not save the scope pins'),
+  });
+}
+
+export function useSetScopeExclusions() {
+  const { orgId } = useOrg();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { slug: string; documentIds: string[] }) =>
+      engine<unknown>(`/console/org/${orgId}/scopes/${input.slug}/exclusions`, {
+        method: 'POST',
+        body: { document_ids: input.documentIds },
+        idempotent: true,
+      }),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: [...LIBRARY_KEY, orgId, 'scopes', variables.slug] }),
+    onError: (error) => toastEngineError(error, 'Could not save the scope exclusions'),
+  });
+}
+
 export function useSimulateScope() {
   const { orgId } = useOrg();
   return useMutation({

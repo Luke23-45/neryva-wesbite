@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
+import { useParams } from '@tanstack/react-router';
 import { History, ArrowRight } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
@@ -135,7 +136,8 @@ function TimelineEvent({ event, isCurrent }: { event: MemoryTimelineEvent; isCur
   );
 }
 
-export function MemoryTimelineView({ memoryId }: { memoryId: string }) {
+export function MemoryTimelineView() {
+  const { memoryId } = useParams({ from: '/agent-studio/memory/$memoryId/timeline' });
   const { data: events, isLoading, isError, refetch } = useMemoryTimeline(memoryId);
 
   return (

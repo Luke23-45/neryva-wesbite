@@ -155,7 +155,7 @@ export function CurateView() {
         </ViewHeaderRow>
       </ViewHeader>
 
-      <QueryView query={provenance} loadingText="Loading document…">
+      <QueryView query={provenance}>
         {(data) => {
           if (!data) {
             return (
