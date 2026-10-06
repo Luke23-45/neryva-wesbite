@@ -20,6 +20,10 @@ import {
   Ban,
   SlidersHorizontal,
   Info,
+  Database,
+  ShieldCheck,
+  FlaskConical,
+  SearchX,
 } from 'lucide-react';
 import { StatusPill, type StatusTone } from '@components/common/ui/StatusPill';
 import { Panel } from '@components/common/ui/Panel';
@@ -325,6 +329,45 @@ const FactDesc = styled.div`
   font-size: 12px;
   line-height: 1.55;
   color: ${({ theme }) => theme.app.text.muted};
+`;
+
+/* ── Library operations (governance surfaces) ──────────────────── */
+
+const OpsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const OpsCard = styled(Link)`
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.app.border.default};
+  background: ${({ theme }) => theme.app.surface.subtle};
+  text-decoration: none;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.hover};
+  }
+`;
+
+const OpsArrow = styled.span`
+  margin-left: auto;
+  flex-shrink: 0;
+  color: ${({ theme }) => theme.app.text.faint};
+  margin-top: 2px;
 `;
 
 /* ── Search console ──────────────────────────────────────────── */
@@ -634,6 +677,69 @@ export function KnowledgeView() {
           </ActionButton>
         </div>
       </ViewHeaderRow>
+
+      <OpsGrid>
+        <OpsCard to="/agent-studio/knowledge/scopes">
+          <FactIcon>
+            <Filter size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Scopes</FactTitle>
+            <FactDesc>Governed retrieval boundaries — filters, pins, exclusions.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+        <OpsCard to="/agent-studio/knowledge/usage">
+          <FactIcon>
+            <Activity size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Usage</FactTitle>
+            <FactDesc>Which documents agents use — and which sit idle.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+        <OpsCard to="/agent-studio/knowledge/storage">
+          <FactIcon>
+            <Database size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Storage</FactTitle>
+            <FactDesc>Quota usage and breakdowns across the knowledge base.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+        <OpsCard to="/agent-studio/knowledge/health">
+          <FactIcon>
+            <ShieldCheck size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Health</FactTitle>
+            <FactDesc>Findings that need attention — stale, failed, drifting.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+        <OpsCard to="/agent-studio/knowledge/eval">
+          <FactIcon>
+            <FlaskConical size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Eval</FactTitle>
+            <FactDesc>Golden-query datasets measuring retrieval quality.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+        <OpsCard to="/agent-studio/knowledge/recall-gaps">
+          <FactIcon>
+            <SearchX size={16} strokeWidth={1.8} />
+          </FactIcon>
+          <div>
+            <FactTitle>Recall gaps</FactTitle>
+            <FactDesc>Queries where retrieval failed to surface the right content.</FactDesc>
+          </div>
+          <OpsArrow aria-hidden="true">›</OpsArrow>
+        </OpsCard>
+      </OpsGrid>
 
       {uploads.length > 0 && (
         <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>

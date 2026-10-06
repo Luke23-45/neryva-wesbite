@@ -281,7 +281,16 @@ export function UsageView() {
         >
           {(docs) =>
             docs.length === 0 ? (
-              <EmptyState icon={<FileText size={24} />} title="No documents" />
+              <EmptyState
+                icon={<FileText size={24} />}
+                title="No documents"
+                description="Upload documents so agents have something to retrieve — usage appears here."
+                action={
+                  <Link to="/agent-studio/knowledge/upload" style={{ textDecoration: 'none' }}>
+                    <ActionButton size="sm">Upload documents</ActionButton>
+                  </Link>
+                }
+              />
             ) : (
               <DataTable>
                 <DataHead>
@@ -314,7 +323,16 @@ export function UsageView() {
         >
           {(list) =>
             list.length === 0 ? (
-              <EmptyState icon={<Users size={24} />} title="No agents" />
+              <EmptyState
+                icon={<Users size={24} />}
+                title="No agents"
+                description="Agents appear here once they start retrieving knowledge."
+                action={
+                  <Link to="/agent-studio/agents" style={{ textDecoration: 'none' }}>
+                    <ActionButton size="sm">Go to agents</ActionButton>
+                  </Link>
+                }
+              />
             ) : (
               <DataTable>
                 <DataHead>
@@ -346,7 +364,11 @@ export function UsageView() {
         >
           {(data) =>
             data.documents.length === 0 ? (
-              <EmptyState icon={<FileText size={24} />} title="No unused documents" />
+              <EmptyState
+                icon={<FileText size={24} />}
+                title="No unused documents"
+                description="Every ready document was retrieved or cited recently — or is pinned to a scope."
+              />
             ) : (
               <>
                 <DataTable>

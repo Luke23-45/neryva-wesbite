@@ -201,9 +201,7 @@ export function StorageView() {
                       <div style={{ flex: 1 }}>
                         <ProgressBar value={entryPct} label={`${entry.state} storage`} height={8} />
                       </div>
-                      <BarValue>
-                        {formatBytes(entry.bytes)} · {entry.count}
-                      </BarValue>
+                      <BarValue>{formatBytes(entry.bytes)}</BarValue>
                     </BarRow>
                   );
                 })}
@@ -219,9 +217,7 @@ export function StorageView() {
                       <div style={{ flex: 1 }}>
                         <ProgressBar value={entryPct} label={`${entry.origin} storage`} height={8} />
                       </div>
-                      <BarValue>
-                        {formatBytes(entry.bytes)} · {entry.count}
-                      </BarValue>
+                      <BarValue>{formatBytes(entry.bytes)}</BarValue>
                     </BarRow>
                   );
                 })}
@@ -240,7 +236,7 @@ export function StorageView() {
                     <DataRow key={doc.documentId}>
                       <DataCell>
                         <Link
-                          to="/agent-studio/knowledge/$docId/diagnostics"
+                          to="/agent-studio/knowledge/$docId/preview"
                           params={{ docId: doc.documentId }}
                         >
                           {doc.title ?? doc.documentId.slice(0, 8)}

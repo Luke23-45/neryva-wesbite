@@ -474,8 +474,8 @@ export interface StorageMeter {
   reservedBytes: number;
   availableBytes: number;
   warnAtPercent: number | null;
-  byState: Array<{ state: string; bytes: number; count: number }>;
-  byOrigin: Array<{ origin: string; bytes: number; count: number }>;
+  byState: Array<{ state: string; bytes: number }>;
+  byOrigin: Array<{ origin: string; bytes: number }>;
   topDocuments: Array<{ documentId: string; title: string | null; bytes: number }>;
   counts: {
     artifacts: number;
@@ -492,10 +492,13 @@ export function useStorageMeter() {
     queryFn: () => engine<unknown>(`/console/org/${orgId}/knowledge/quota`),
     enabled: !!orgId,
     staleTime: 30_000,
+    // Engine envelope (GET knowledge/quota -> computeStorageMeter, flat
+    // snake_case): top-level max/committed/reserved/available bytes plus
+    // `breakdown: { by_state, by_origin, top_documents }` records and
+    // `counts`. by_state/by_origin are { name: bytes } records, not arrays.
     select: (raw): StorageMeter | null => {
       const record = asRecord(raw);
-      const quota = asRecord(record.quota);
-      if (!quota) return null;
+      if (record.max_bytes == null && record.maxBytes == null) return null;
       const toNum = (v: unknown): number => {
         if (typeof v === 'number') return v;
         if (typeof v === 'string' && v.trim() !== '') {
@@ -504,35 +507,37 @@ export function useStorageMeter() {
         }
         return 0;
       };
-      const byState = Array.isArray(record.by_state)
-        ? record.by_state.map((e) => {
-            const i = asRecord(e);
-            return { state: str(i.state) ?? '', bytes: toNum(i.bytes), count: toNum(i.count) };
-          })
-        : [];
-      const byOrigin = Array.isArray(record.by_origin)
-        ? record.by_origin.map((e) => {
-            const i = asRecord(e);
-            return { origin: str(i.origin) ?? '', bytes: toNum(i.bytes), count: toNum(i.count) };
-          })
-        : [];
-      const topDocuments = Array.isArray(record.top_documents)
-        ? record.top_documents.map((e) => {
+      const pick = (snake: string, camel: string): unknown =>
+        record[snake] ?? record[camel];
+      const breakdown = asRecord(record.breakdown);
+      const recordEntries = (v: unknown): Array<{ name: string; bytes: number }> => {
+        const r = asRecord(v);
+        return Object.entries(r).map(([name, bytes]) => ({ name, bytes: toNum(bytes) }));
+      };
+      const byState = recordEntries(breakdown.by_state ?? breakdown.byState ?? record.by_state).map(
+        ({ name, bytes }) => ({ state: name, bytes }),
+      );
+      const byOrigin = recordEntries(breakdown.by_origin ?? breakdown.byOrigin ?? record.by_origin).map(
+        ({ name, bytes }) => ({ origin: name, bytes }),
+      );
+      const topSource = breakdown.top_documents ?? breakdown.topDocuments ?? record.top_documents;
+      const topDocuments = Array.isArray(topSource)
+        ? topSource.map((e) => {
             const i = asRecord(e);
             return {
-              documentId: (str(i.documentId) ?? str(i.document_id) ?? '') as string,
+              documentId: (str(i.document_id) ?? str(i.documentId) ?? '') as string,
               title: str(i.title),
-              bytes: toNum(i.bytes),
+              bytes: toNum(i.byte_size ?? i.bytes),
             };
           })
         : [];
       const counts = asRecord(record.counts);
       return {
-        maxBytes: quota.max_bytes === null || quota.max_bytes === undefined ? null : toNum(quota.max_bytes),
-        committedBytes: toNum(quota.committed_bytes),
-        reservedBytes: toNum(quota.reserved_bytes),
-        availableBytes: toNum(quota.available_bytes),
-        warnAtPercent: quota.warn_at_percent == null ? null : toNum(quota.warn_at_percent),
+        maxBytes: pick('max_bytes', 'maxBytes') == null ? null : toNum(pick('max_bytes', 'maxBytes')),
+        committedBytes: toNum(pick('committed_bytes', 'committedBytes')),
+        reservedBytes: toNum(pick('reserved_bytes', 'reservedBytes')),
+        availableBytes: toNum(pick('available_bytes', 'availableBytes')),
+        warnAtPercent: pick('warn_percent', 'warnAtPercent') == null ? null : toNum(pick('warn_percent', 'warnAtPercent')),
         byState,
         byOrigin,
         topDocuments,
