@@ -138,7 +138,6 @@ export const SCOPE_SIMULATE_ROUTE_ID = '/agent-studio/knowledge/scopes/$slug/sim
 export function ScopeSimulateView() {
   const { slug } = useParams({ from: SCOPE_SIMULATE_ROUTE_ID });
   const scopeQuery = useScope(slug);
-  const detail = scopeQuery.data?.scope ? scopeQuery.data : null;
   const simulate = useSimulateScope();
   const { data: assistants } = useAssistants({ enabled: true });
 
