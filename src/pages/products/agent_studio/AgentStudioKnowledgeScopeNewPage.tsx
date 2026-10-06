@@ -11,6 +11,9 @@ export default function AgentStudioKnowledgeScopeNewPage() {
         description="Define a governed retrieval boundary for your agents."
         canonicalPath="/agent-studio/knowledge/scopes/new"
       />
+      <div style={{ background: 'yellow', padding: 8, textAlign: 'center', fontWeight: 'bold' }}>
+        DEBUG CODE LIVE — 0d217f3
+      </div>
       <DebugErrorBoundary pageName="ScopeBuilderView">
         <ScopeBuilderView mode="new" />
       </DebugErrorBoundary>
