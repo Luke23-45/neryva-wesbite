@@ -25,11 +25,35 @@
       "icon": "agents",
       "landing": "/agent-studio/agents",
       "items": [
-        { "label": "Overview", "to": "/agent-studio/agents/overview", "icon": "dashboard" },
-        { "label": "All agents", "to": "/agent-studio/agents", "icon": "agents", "badge": "count" },
-        { "label": "Templates", "to": "/agent-studio/templates", "icon": "templates", "badge": "count" },
-        { "label": "Conversations", "to": "/agent-studio/conversations", "icon": "conversations", "badge": "count" },
-        { "label": "Evaluations", "to": "/agent-studio/evaluations", "icon": "evaluations", "badge": "attention" }
+        {
+          "label": "Overview",
+          "to": "/agent-studio/agents/overview",
+          "icon": "dashboard"
+        },
+        {
+          "label": "All agents",
+          "to": "/agent-studio/agents",
+          "icon": "agents",
+          "badge": "count"
+        },
+        {
+          "label": "Templates",
+          "to": "/agent-studio/templates",
+          "icon": "templates",
+          "badge": "count"
+        },
+        {
+          "label": "Conversations",
+          "to": "/agent-studio/conversations",
+          "icon": "conversations",
+          "badge": "count"
+        },
+        {
+          "label": "Evaluations",
+          "to": "/agent-studio/evaluations",
+          "icon": "evaluations",
+          "badge": "attention"
+        }
       ]
     },
     {
@@ -39,10 +63,70 @@
       "icon": "knowledge",
       "landing": "/agent-studio/knowledge",
       "items": [
-        { "label": "Documents", "to": "/agent-studio/knowledge", "icon": "knowledge", "badge": "attention" },
-        { "label": "Memory", "to": "/agent-studio/memory", "icon": "chat" },
-        { "label": "Datasets", "to": "/agent-studio/datasets", "icon": "evaluations" },
-        { "label": "Tools", "to": "/agent-studio/tools", "icon": "tools", "badge": "count" }
+        {
+          "label": "Documents",
+          "to": "/agent-studio/knowledge",
+          "icon": "knowledge",
+          "badge": "attention"
+        },
+        {
+          "label": "Scopes",
+          "to": "/agent-studio/knowledge/scopes",
+          "icon": "knowledge",
+          "match": "/agent-studio/knowledge/scopes"
+        },
+        {
+          "label": "Usage",
+          "to": "/agent-studio/knowledge/usage",
+          "icon": "usage",
+          "match": "/agent-studio/knowledge/usage"
+        },
+        {
+          "label": "Health",
+          "to": "/agent-studio/knowledge/health",
+          "icon": "activity",
+          "match": "/agent-studio/knowledge/health"
+        },
+        {
+          "label": "Storage",
+          "to": "/agent-studio/knowledge/storage",
+          "icon": "knowledge",
+          "match": "/agent-studio/knowledge/storage"
+        },
+        {
+          "label": "Eval",
+          "to": "/agent-studio/knowledge/eval",
+          "icon": "evaluations",
+          "match": "/agent-studio/knowledge/eval"
+        },
+        {
+          "label": "Recall gaps",
+          "to": "/agent-studio/knowledge/recall-gaps",
+          "icon": "analytics",
+          "match": "/agent-studio/knowledge/recall-gaps"
+        },
+        {
+          "label": "Recommendations",
+          "to": "/agent-studio/knowledge/recommendations",
+          "icon": "templates",
+          "match": "/agent-studio/knowledge/recommendations"
+        },
+        {
+          "label": "Memory",
+          "to": "/agent-studio/memory",
+          "icon": "chat"
+        },
+        {
+          "label": "Datasets",
+          "to": "/agent-studio/datasets",
+          "icon": "evaluations"
+        },
+        {
+          "label": "Tools",
+          "to": "/agent-studio/tools",
+          "icon": "tools",
+          "badge": "count"
+        }
       ]
     },
     {
@@ -52,10 +136,27 @@
       "icon": "models",
       "landing": "/agent-studio/providers/catalog",
       "items": [
-        { "label": "Catalog", "to": "/agent-studio/providers/catalog", "icon": "knowledge", "match": "/agent-studio/providers" },
-        { "label": "My Providers", "to": "/agent-studio/providers/my-providers", "icon": "api" },
-        { "label": "Models", "to": "/agent-studio/providers/models", "icon": "models" },
-        { "label": "Spend & Budgets", "to": "/agent-studio/providers/spend", "icon": "usage" }
+        {
+          "label": "Catalog",
+          "to": "/agent-studio/providers/catalog",
+          "icon": "knowledge",
+          "match": "/agent-studio/providers"
+        },
+        {
+          "label": "My Providers",
+          "to": "/agent-studio/providers/my-providers",
+          "icon": "api"
+        },
+        {
+          "label": "Models",
+          "to": "/agent-studio/providers/models",
+          "icon": "models"
+        },
+        {
+          "label": "Spend & Budgets",
+          "to": "/agent-studio/providers/spend",
+          "icon": "usage"
+        }
       ]
     },
     {
@@ -65,9 +166,21 @@
       "icon": "analytics",
       "landing": "/agent-studio/analytics",
       "items": [
-        { "label": "Analytics", "to": "/agent-studio/analytics", "icon": "analytics" },
-        { "label": "Usage", "to": "/agent-studio/usage", "icon": "usage" },
-        { "label": "Activity", "to": "/agent-studio/activity", "icon": "activity" }
+        {
+          "label": "Analytics",
+          "to": "/agent-studio/analytics",
+          "icon": "analytics"
+        },
+        {
+          "label": "Usage",
+          "to": "/agent-studio/usage",
+          "icon": "usage"
+        },
+        {
+          "label": "Activity",
+          "to": "/agent-studio/activity",
+          "icon": "activity"
+        }
       ]
     },
     {
@@ -77,14 +190,51 @@
       "icon": "integrations",
       "landing": "/agent-studio/integrations",
       "items": [
-        { "label": "Integrations", "to": "/agent-studio/integrations", "icon": "integrations" },
-        { "label": "Webhooks", "to": "/agent-studio/integrations/webhooks", "icon": "api" },
-        { "label": "Channels", "to": "/agent-studio/channels", "icon": "channels" },
-        { "label": "Approvals", "to": "/agent-studio/approvals", "icon": "approvals", "badge": "attention" },
-        { "label": "Blocks", "to": "/agent-studio/blocks", "icon": "blocks", "roles": ["owner", "admin"] },
-        { "label": "Compliance", "to": "/agent-studio/compliance", "icon": "compliance" },
-        { "label": "Teams", "to": "/agent-studio/teams", "icon": "teams" },
-        { "label": "API explorer", "to": "/agent-studio/api", "icon": "api" }
+        {
+          "label": "Integrations",
+          "to": "/agent-studio/integrations",
+          "icon": "integrations"
+        },
+        {
+          "label": "Webhooks",
+          "to": "/agent-studio/integrations/webhooks",
+          "icon": "api"
+        },
+        {
+          "label": "Channels",
+          "to": "/agent-studio/channels",
+          "icon": "channels"
+        },
+        {
+          "label": "Approvals",
+          "to": "/agent-studio/approvals",
+          "icon": "approvals",
+          "badge": "attention"
+        },
+        {
+          "label": "Blocks",
+          "to": "/agent-studio/blocks",
+          "icon": "blocks",
+          "roles": [
+            "owner",
+            "admin"
+          ]
+        },
+        {
+          "label": "Compliance",
+          "to": "/agent-studio/compliance",
+          "icon": "compliance"
+        },
+        {
+          "label": "Teams",
+          "to": "/agent-studio/teams",
+          "icon": "teams"
+        },
+        {
+          "label": "API explorer",
+          "to": "/agent-studio/api",
+          "icon": "api"
+        }
       ]
     },
     {
@@ -94,13 +244,41 @@
       "icon": "settings",
       "landing": "/agent-studio/settings/profile",
       "items": [
-        { "label": "Profile", "to": "/agent-studio/settings/profile", "icon": "settings" },
-        { "label": "Workspace", "to": "/agent-studio/settings/workspace", "icon": "settings" },
-        { "label": "Team", "to": "/agent-studio/settings/team", "icon": "teams" },
-        { "label": "Billing", "to": "/agent-studio/settings/billing", "icon": "usage" },
-        { "label": "Pricing", "to": "/agent-studio/settings/pricing", "icon": "pricing" },
-        { "label": "Security", "to": "/agent-studio/settings/security", "icon": "approvals" },
-        { "label": "API keys", "to": "/agent-studio/settings/api-keys", "icon": "api" }
+        {
+          "label": "Profile",
+          "to": "/agent-studio/settings/profile",
+          "icon": "settings"
+        },
+        {
+          "label": "Workspace",
+          "to": "/agent-studio/settings/workspace",
+          "icon": "settings"
+        },
+        {
+          "label": "Team",
+          "to": "/agent-studio/settings/team",
+          "icon": "teams"
+        },
+        {
+          "label": "Billing",
+          "to": "/agent-studio/settings/billing",
+          "icon": "usage"
+        },
+        {
+          "label": "Pricing",
+          "to": "/agent-studio/settings/pricing",
+          "icon": "pricing"
+        },
+        {
+          "label": "Security",
+          "to": "/agent-studio/settings/security",
+          "icon": "approvals"
+        },
+        {
+          "label": "API keys",
+          "to": "/agent-studio/settings/api-keys",
+          "icon": "api"
+        }
       ]
     }
   ],
@@ -112,5 +290,5 @@
   "workspace": {
     "name": "Aurora Labs"
   },
-  "searchPlaceholder": "Search Studio…"
+  "searchPlaceholder": "Search Studio\u2026"
 }
