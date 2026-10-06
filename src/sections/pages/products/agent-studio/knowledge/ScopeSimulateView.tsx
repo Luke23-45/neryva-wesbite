@@ -137,7 +137,8 @@ export const SCOPE_SIMULATE_ROUTE_ID = '/agent-studio/knowledge/scopes/$slug/sim
 
 export function ScopeSimulateView() {
   const { slug } = useParams({ from: SCOPE_SIMULATE_ROUTE_ID });
-  const { data: detail, isLoading, isError, refetch } = useScope(slug);
+  const scopeQuery = useScope(slug);
+  const detail = scopeQuery.data?.scope ? scopeQuery.data : null;
   const simulate = useSimulateScope();
   const { data: assistants } = useAssistants({ enabled: true });
 
@@ -174,7 +175,7 @@ export function ScopeSimulateView() {
       <ViewHeader>
         <ViewHeaderRow>
           <div>
-            <ViewTitle>Simulate: {detail?.scope?.name ?? slug}</ViewTitle>
+            <ViewTitle>Simulate: {scopeDetail.scope?.name ?? slug}</ViewTitle>
             <ViewSubtitle>
               Run the retrieval pipeline constrained to this scope — configuration by observation.
             </ViewSubtitle>
@@ -182,12 +183,9 @@ export function ScopeSimulateView() {
         </ViewHeaderRow>
       </ViewHeader>
 
-      <QueryView
-        loading={isLoading}
-        error={isError ? 'Could not load the scope.' : null}
-        onRetry={() => void refetch()}
-      >
-        <motion.div {...pageItem}>
+      <QueryView query={scopeQuery}>
+        {(scopeDetail) => (
+          <motion.div {...pageItem}>
           <FormGrid>
             <Field>
               Query
@@ -302,7 +300,8 @@ export function ScopeSimulateView() {
               )}
             </>
           )}
-        </motion.div>
+          </motion.div>
+        )}
       </QueryView>
     </ViewShell>
   );
