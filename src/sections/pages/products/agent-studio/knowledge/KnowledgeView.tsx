@@ -62,6 +62,14 @@ const docTone: Record<string, StatusTone> = {
   retired: 'warning',
 };
 
+const curationTone: Record<string, StatusTone> = {
+  unreviewed: 'neutral',
+  curated: 'info',
+  verified: 'success',
+  deprecated: 'warning',
+  rejected: 'error',
+};
+
 const docHint: Record<string, string> = {
   ready: 'Indexed and retrievable.',
   processing: 'Ingestion running (scan → extract → index).',
@@ -765,16 +773,18 @@ export function KnowledgeView() {
                     ) : (
                       <DataTable>
                         <DataHead>
-                          <DataCell $w="24%">Pin address</DataCell>
-                          <DataCell $w="24%">Title</DataCell>
-                          <DataCell $w="12%">State</DataCell>
+                          <DataCell $w="20%">Pin address</DataCell>
+                          <DataCell $w="20%">Title</DataCell>
+                          <DataCell $w="10%">State</DataCell>
+                          <DataCell $w="10%">Curation</DataCell>
+                          <DataCell $w="10%">Origin</DataCell>
                           <DataCell $w="8%">Ver</DataCell>
-                          <DataCell $w="16%">Updated</DataCell>
-                          <DataCell $w="16%" $align="right">Actions</DataCell>
+                          <DataCell $w="12%">Updated</DataCell>
+                          <DataCell $w="10%" $align="right">Actions</DataCell>
                         </DataHead>
                         {rows.map((doc) => (
                           <DataRow key={doc.id} $interactive={false}>
-                            <DataCell $w="24%">
+                            <DataCell $w="20%">
                               {renameTarget?.id === doc.id ? (
                                 <div>
                                   <div style={{ fontSize: 12, opacity: 0.65, marginBottom: 6 }}>
@@ -817,15 +827,21 @@ export function KnowledgeView() {
                                 <Mono>{doc.sourceSlug || <Muted>—</Muted>}</Mono>
                               )}
                             </DataCell>
-                            <DataCell $w="24%">{doc.title ?? <Muted>—</Muted>}</DataCell>
-                            <DataCell $w="12%">
+                            <DataCell $w="20%">{doc.title ?? <Muted>—</Muted>}</DataCell>
+                            <DataCell $w="10%">
                               <span title={docHint[doc.state] ?? doc.state}>
                                 <StatusPill tone={docTone[doc.state] ?? 'neutral'}>{doc.state}</StatusPill>
                               </span>
                             </DataCell>
+                            <DataCell $w="10%">
+                              <StatusPill tone={curationTone[doc.curationStatus] ?? 'neutral'}>
+                                {doc.curationStatus}
+                              </StatusPill>
+                            </DataCell>
+                            <DataCell $w="10%">{doc.origin ?? <Muted>—</Muted>}</DataCell>
                             <DataCell $w="8%">{doc.latestVersion ?? <Muted>—</Muted>}</DataCell>
-                            <DataCell $w="16%">{doc.updatedAt ? doc.updatedAt.slice(0, 16).replace('T', ' ') : <Muted>—</Muted>}</DataCell>
-                            <DataCell $w="16%" $align="right">
+                            <DataCell $w="12%">{doc.updatedAt ? doc.updatedAt.slice(0, 16).replace('T', ' ') : <Muted>—</Muted>}</DataCell>
+                            <DataCell $w="10%" $align="right">
                               <RowActions>
                                 <IconBtn
                                   type="button"

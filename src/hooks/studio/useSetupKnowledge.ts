@@ -70,6 +70,9 @@ export interface KnowledgeDocument {
   state: DocumentState;
   updatedAt: string | null;
   latestVersion: number | null;
+  origin: string;
+  curationStatus: string;
+  attributes: Record<string, unknown>;
 }
 
 export function parseDocuments(raw: unknown): KnowledgeDocument[] {
@@ -90,9 +93,15 @@ export function parseDocuments(raw: unknown): KnowledgeDocument[] {
         id,
         sourceSlug: str(item.source_slug) ?? '',
         title: str(item.title),
-        state: str(item.state) ?? 'processing',
+        state: (str(item.state) ?? 'processing') as DocumentState,
         updatedAt: str(item.updated_at),
         latestVersion: normalizeLatestVersion(latest),
+        origin: str(item.origin) ?? 'unknown',
+        curationStatus: str(item.curation_status) ?? 'unreviewed',
+        attributes:
+          typeof item.attributes === 'object' && item.attributes !== null
+            ? (item.attributes as Record<string, unknown>)
+            : {},
       };
     })
     .filter((d): d is KnowledgeDocument => d !== null);

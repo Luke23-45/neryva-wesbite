@@ -79,6 +79,19 @@ import AgentStudioKnowledgeUploadPage, {
 } from '@pages/products/agent_studio/AgentStudioKnowledgeUploadPage';
 import AgentStudioKnowledgeVersionUploadPage from '@pages/products/agent_studio/AgentStudioKnowledgeVersionUploadPage';
 import AgentStudioKnowledgePreviewPage from '@pages/products/agent_studio/AgentStudioKnowledgePreviewPage';
+import AgentStudioKnowledgeStoragePage from '@pages/products/agent_studio/AgentStudioKnowledgeStoragePage';
+import AgentStudioKnowledgeUsagePage from '@pages/products/agent_studio/AgentStudioKnowledgeUsagePage';
+import AgentStudioKnowledgeHealthPage from '@pages/products/agent_studio/AgentStudioKnowledgeHealthPage';
+import AgentStudioKnowledgeScopesPage from '@pages/products/agent_studio/AgentStudioKnowledgeScopesPage';
+import AgentStudioKnowledgeScopeNewPage from '@pages/products/agent_studio/AgentStudioKnowledgeScopeNewPage';
+import AgentStudioKnowledgeScopeEditPage from '@pages/products/agent_studio/AgentStudioKnowledgeScopeEditPage';
+import AgentStudioKnowledgeScopeSimulatePage from '@pages/products/agent_studio/AgentStudioKnowledgeScopeSimulatePage';
+import AgentStudioKnowledgeDiagnosticsPage from '@pages/products/agent_studio/AgentStudioKnowledgeDiagnosticsPage';
+import AgentStudioKnowledgeCuratePage from '@pages/products/agent_studio/AgentStudioKnowledgeCuratePage';
+import AgentStudioKnowledgeEvalPage from '@pages/products/agent_studio/AgentStudioKnowledgeEvalPage';
+import AgentStudioKnowledgeEvalDatasetPage from '@pages/products/agent_studio/AgentStudioKnowledgeEvalDatasetPage';
+import AgentStudioKnowledgeRecallGapsPage from '@pages/products/agent_studio/AgentStudioKnowledgeRecallGapsPage';
+import AgentStudioKnowledgeRecommendationsPage from '@pages/products/agent_studio/AgentStudioKnowledgeRecommendationsPage';
 import AgentStudioProvidersCatalogPage from '@pages/products/agent_studio/AgentStudioProvidersCatalogPage';
 import AgentStudioProvidersMyProvidersPage from '@pages/products/agent_studio/AgentStudioProvidersMyProvidersPage';
 import AgentStudioProvidersModelsPage from '@pages/products/agent_studio/AgentStudioProvidersModelsPage';
@@ -95,6 +108,7 @@ import AgentStudioLibrariesBlocksNewPage from '@pages/products/agent_studio/Agen
 import AgentStudioLibrariesMemoryNewPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryNewPage';
 import AgentStudioLibrariesMemoryDetailPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryDetailPage';
 import AgentStudioLibrariesMemoryEditPage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryEditPage';
+import AgentStudioLibrariesMemoryTimelinePage from '@pages/products/agent_studio/AgentStudioLibrariesMemoryTimelinePage';
 import AgentStudioChannelsPage, { AgentStudioChannelsLayout } from '@pages/products/agent_studio/AgentStudioChannelsPage';
 import AgentStudioChannelsConnectPage from '@pages/products/agent_studio/AgentStudioChannelsConnectPage';
 import AgentStudioChannelsDetailPage from '@pages/products/agent_studio/AgentStudioChannelsDetailPage';
@@ -661,6 +675,85 @@ export const agentStudioKnowledgePreviewRoute = createRoute({
   component: AgentStudioKnowledgePreviewPage,
 });
 
+export const agentStudioKnowledgeStorageRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/storage',
+  component: AgentStudioKnowledgeStoragePage,
+});
+
+export const agentStudioKnowledgeUsageRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/usage',
+  component: AgentStudioKnowledgeUsagePage,
+});
+
+export const agentStudioKnowledgeHealthRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/health',
+  component: AgentStudioKnowledgeHealthPage,
+});
+
+// Knowledge scopes — list, builder, simulator (dedicated pages, no tabs).
+export const agentStudioKnowledgeScopesRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/scopes',
+  component: AgentStudioKnowledgeScopesPage,
+});
+
+export const agentStudioKnowledgeScopeNewRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/scopes/new',
+  component: AgentStudioKnowledgeScopeNewPage,
+});
+
+export const agentStudioKnowledgeScopeEditRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/scopes/$slug/edit',
+  component: AgentStudioKnowledgeScopeEditPage,
+});
+
+export const agentStudioKnowledgeScopeSimulateRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/scopes/$slug/simulate',
+  component: AgentStudioKnowledgeScopeSimulatePage,
+});
+
+export const agentStudioKnowledgeDiagnosticsRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/$docId/diagnostics',
+  component: AgentStudioKnowledgeDiagnosticsPage,
+});
+
+export const agentStudioKnowledgeCurateRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/$docId/curate',
+  component: AgentStudioKnowledgeCuratePage,
+});
+
+export const agentStudioKnowledgeEvalRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/eval',
+  component: AgentStudioKnowledgeEvalPage,
+});
+
+export const agentStudioKnowledgeEvalDatasetRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/eval/$datasetId',
+  component: AgentStudioKnowledgeEvalDatasetPage,
+});
+
+export const agentStudioKnowledgeRecallGapsRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/recall-gaps',
+  component: AgentStudioKnowledgeRecallGapsPage,
+});
+
+export const agentStudioKnowledgeRecommendationsRoute = createRoute({
+  getParentRoute: () => agentStudioKnowledgeRoute,
+  path: '/recommendations',
+  component: AgentStudioKnowledgeRecommendationsPage,
+});
+
 // Old Models surface (B8 kill-switch, Phase 5): the three legacy routes are
 // redirects into the routed providers surface. Builder/agents-detail links
 // that still point at the old paths land here and are forwarded.
@@ -806,6 +899,12 @@ export const agentStudioMemoryEditRoute = createRoute({
   getParentRoute: () => agentStudioMemoryRoute,
   path: '/$memoryId/edit',
   component: AgentStudioLibrariesMemoryEditPage,
+});
+
+export const agentStudioMemoryTimelineRoute = createRoute({
+  getParentRoute: () => agentStudioMemoryRoute,
+  path: '/$memoryId/timeline',
+  component: AgentStudioLibrariesMemoryTimelinePage,
 });
 
 export const agentStudioDatasetsRoute = createRoute({
@@ -1101,6 +1200,19 @@ export const routeDefinitions = [
       agentStudioKnowledgeUploadRoute,
       agentStudioKnowledgeVersionUploadRoute,
       agentStudioKnowledgePreviewRoute,
+      agentStudioKnowledgeStorageRoute,
+      agentStudioKnowledgeUsageRoute,
+      agentStudioKnowledgeHealthRoute,
+      agentStudioKnowledgeDiagnosticsRoute,
+      agentStudioKnowledgeCurateRoute,
+      agentStudioKnowledgeScopesRoute,
+      agentStudioKnowledgeScopeNewRoute,
+      agentStudioKnowledgeScopeEditRoute,
+      agentStudioKnowledgeScopeSimulateRoute,
+      agentStudioKnowledgeEvalRoute,
+      agentStudioKnowledgeEvalDatasetRoute,
+      agentStudioKnowledgeRecallGapsRoute,
+      agentStudioKnowledgeRecommendationsRoute,
     ]),
     // Old Models surface (B8 kill-switch): direct redirects to the unified
     // providers surface — no layout, no children.
@@ -1125,6 +1237,7 @@ export const routeDefinitions = [
       agentStudioMemoryNewRoute,
       agentStudioMemoryDetailRoute,
       agentStudioMemoryEditRoute,
+      agentStudioMemoryTimelineRoute,
     ]),
     agentStudioDatasetsRoute,
     agentStudioChannelsRoute.addChildren([
