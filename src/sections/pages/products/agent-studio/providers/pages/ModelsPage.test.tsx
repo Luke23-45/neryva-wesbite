@@ -1067,4 +1067,68 @@ describe('ModelsPage', () => {
       expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
     });
   });
+
+  describe('status filter chips (Enabled / Disabled / Pinned)', () => {
+    // Row assertions use switch aria-labels (unique per row): model names
+    // also render in the DefaultBar, so bare text queries over-count.
+    it('Enabled shows only switch-ON rows; the counts line narrows shown, not total', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Enabled' }));
+      expect(screen.getByText('3 of 7 models · 3 enabled')).toBeTruthy();
+      expect(
+        screen.getByRole('switch', { name: /GPT-4o \(platform\)/ }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ }),
+      ).toBeTruthy();
+      expect(screen.getByText('Llama 3.3 70B Instruct')).toBeTruthy();
+      expect(screen.queryByRole('switch', { name: /GPT-4o Mini \(platform\)/ })).toBeNull();
+      expect(screen.queryByText('Claude 3.7 Sonnet')).toBeNull();
+      expect(screen.queryByText('Grok Reasoner')).toBeNull();
+    });
+
+    it('Disabled shows only switch-OFF rows', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Disabled' }));
+      expect(screen.getByText('4 of 7 models · 3 enabled')).toBeTruthy();
+      expect(screen.queryByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeNull();
+      expect(
+        screen.getByRole('switch', { name: /GPT-4o Mini \(platform\)/ }),
+      ).toBeTruthy();
+      expect(screen.getByText('Claude 3.7 Sonnet')).toBeTruthy();
+    });
+
+    it('Enabled + Disabled together are a tautology (no filtering)', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Enabled' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Disabled' }));
+      expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
+      expect(screen.getByText('Grok Reasoner')).toBeTruthy();
+    });
+
+    it('Pinned shows only rows used by assistants', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Pinned' }));
+      expect(screen.getByText('1 of 7 models · 3 enabled')).toBeTruthy();
+      // Only the BYOK GPT-4o row is pinned — the platform twin is hidden.
+      expect(
+        screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ }),
+      ).toBeTruthy();
+      expect(screen.queryByRole('switch', { name: /GPT-4o \(platform\)/ })).toBeNull();
+      expect(screen.queryByText('Llama 3.3 70B Instruct')).toBeNull();
+    });
+
+    it('Enabled + Pinned intersect; Clear restores everything', () => {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Enabled' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Pinned' }));
+      expect(screen.getByText('1 of 7 models · 3 enabled')).toBeTruthy();
+      expect(
+        screen.getByRole('switch', { name: /GPT-4o \(BYOK Production Key\)/ }),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Clear search and filters' }));
+      expect(screen.getByText('7 of 7 models · 3 enabled')).toBeTruthy();
+      expect(screen.getByText('Grok Reasoner')).toBeTruthy();
+    });
+  });
 });

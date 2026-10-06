@@ -22,6 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import styled, { css } from 'styled-components';
+import { CheckCircle2, Pin, X, XCircle } from 'lucide-react';
 import { useOrg } from '@/Context/OrgContext';
 import { formatUsdPer1M } from '@/sections/pages/products/agent-studio/providers/priceFormat';
 import { ViewShell, ViewHeader, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
@@ -75,8 +76,31 @@ const Toolbar = styled.div`
 `;
 
 const SearchWrap = styled.div`
-  width: 320px;
-  max-width: 100%;
+  flex: 1 1 240px;
+  max-width: 400px;
+  min-width: 200px;
+`;
+
+const Chip = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid
+    ${({ theme, $active }) => ($active ? theme.app.text.link : theme.app.border.default)};
+  background: ${({ theme, $active }) =>
+    $active ? theme.app.status.info.bg : theme.app.surface.subtle};
+  color: ${({ theme, $active }) => ($active ? theme.app.text.link : theme.app.text.secondary)};
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+  &:hover {
+    border-color: ${({ theme }) => theme.app.border.strong};
+    color: ${({ theme }) => theme.app.text.primary};
+  }
 `;
 
 const CountLine = styled.div`
@@ -926,6 +950,44 @@ export function ModelsPage() {
   );
 
   /**
+   * Status chips: Enabled / Disabled / Pinned. Same visual language as the
+   * Catalog chips. Semantics: Enabled matches the switch's own definition
+   * (`enabled && usable`); Disabled matches everything else; Enabled and
+   * Disabled together are a tautology (no filtering). Pinned is a second
+   * facet (used by ≥1 assistant) ANDed with the status facet. Absent chips
+   * filter nothing — the page never blanks from filters alone.
+   */
+  type StatusChip = 'enabled' | 'disabled' | 'pinned';
+  const STATUS_CHIPS: Array<{ key: StatusChip; label: string; icon: ReactNode }> = [
+    { key: 'enabled', label: 'Enabled', icon: <CheckCircle2 size={13} strokeWidth={1.8} aria-hidden="true" /> },
+    { key: 'disabled', label: 'Disabled', icon: <XCircle size={13} strokeWidth={1.8} aria-hidden="true" /> },
+    { key: 'pinned', label: 'Pinned', icon: <Pin size={13} strokeWidth={1.8} aria-hidden="true" /> },
+  ];
+  const [statusChips, setStatusChips] = useState<Set<StatusChip>>(new Set());
+  const toggleStatusChip = (key: StatusChip) => {
+    setStatusChips((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const statusMatches = useCallback(
+    (m: ModelRowView) => {
+      // Status facet (OR): neither or both selected = tautology, no filtering.
+      const on = m.enabled && m.usable;
+      const wantsOn = statusChips.has('enabled');
+      const wantsOff = statusChips.has('disabled');
+      const statusPass =
+        wantsOn === wantsOff ? true : wantsOn ? on : !on;
+      // Pinned facet (AND with status): used by ≥1 assistant.
+      const pinnedPass = !statusChips.has('pinned') || m.pinned_by.length > 0;
+      return statusPass && pinnedPass;
+    },
+    [statusChips],
+  );
+
+  /**
    * The Catalog switch state per provider — the source of truth for "what
    * the user selected". The switch renders
    * `connection.stored_enabled ?? connection.enabled` (api.ts documents
@@ -977,16 +1039,22 @@ export function ModelsPage() {
   const platformGroups = useMemo(
     () =>
       providerEnabledGroups
-        .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
+        .map((g) => ({
+          ...g,
+          models: g.models.filter((m) => matches(g, m) && statusMatches(m)),
+        }))
         .filter((g) => g.models.length > 0),
-    [providerEnabledGroups, matches],
+    [providerEnabledGroups, matches, statusMatches],
   );
   const byokGroups = useMemo(
     () =>
       groups.byok
-        .map((g) => ({ ...g, models: g.models.filter((m) => matches(g, m)) }))
+        .map((g) => ({
+          ...g,
+          models: g.models.filter((m) => matches(g, m) && statusMatches(m)),
+        }))
         .filter((g) => g.models.length > 0),
-    [groups.byok, matches],
+    [groups.byok, matches, statusMatches],
   );
 
   const total = providerEnabledGroups.reduce((n, g) => n + g.models.length, 0) +
@@ -1481,7 +1549,7 @@ export function ModelsPage() {
         </ViewSubtitle>
       </ViewHeader>
 
-      <Toolbar>
+      <Toolbar role="group" aria-label="Models search and filters">
         <SearchWrap ref={searchWrapRef}>
           <SearchField
             value={searchInput}
@@ -1490,6 +1558,32 @@ export function ModelsPage() {
             ariaLabel="Search models"
           />
         </SearchWrap>
+        {STATUS_CHIPS.map(({ key, label, icon }) => (
+          <Chip
+            key={key}
+            type="button"
+            $active={statusChips.has(key)}
+            aria-pressed={statusChips.has(key)}
+            onClick={() => toggleStatusChip(key)}
+          >
+            {icon}
+            {label}
+          </Chip>
+        ))}
+        {(searchInput.trim().length > 0 || statusChips.size > 0) && (
+          <Chip
+            type="button"
+            $active={false}
+            onClick={() => {
+              setSearchInput('');
+              setStatusChips(new Set());
+            }}
+            aria-label="Clear search and filters"
+          >
+            <X size={13} strokeWidth={1.8} aria-hidden="true" />
+            Clear
+          </Chip>
+        )}
       </Toolbar>
       <CountLine>
         {shown} of {total} {total === 1 ? 'model' : 'models'} · {enabledCount} enabled
