@@ -273,13 +273,26 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
       setSlugInput(s.slug);
       setSlugTouched(true);
       setDescription(s.description ?? '');
+      // Origin and curation are persisted as ordinary filter clauses by
+      // buildFilters(); pull them back into the dedicated controls so the
+      // edit round-trip is lossless.
       const loaded: FilterClause[] = [];
+      let loadedOrigin = '';
+      let loadedCuration: string[] = [];
       for (const clause of s.filters?.clauses ?? []) {
         for (const [key, values] of Object.entries(clause)) {
-          loaded.push({ key, values: values.join(', ') });
+          if (key === 'origin') {
+            loadedOrigin = values[0] ?? '';
+          } else if (key === 'curation_status') {
+            loadedCuration = values;
+          } else {
+            loaded.push({ key, values: values.join(', ') });
+          }
         }
       }
       setClauses(loaded);
+      setOrigin(loadedOrigin);
+      setCuration(loadedCuration);
       setVersionPolicy(s.versionPolicy === 'pinned_versions' ? 'pinned_versions' : 'follow_latest_ready');
       setThreshold(s.thresholdOverride !== null && s.thresholdOverride !== undefined ? String(s.thresholdOverride) : '');
       setRerank(!!s.rerankProfile);
@@ -367,6 +380,257 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
 
   const saving = createScope.isPending || updateScope.isPending || setPinsMutation.isPending || setExclusionsMutation.isPending;
 
+  // The form fields are shared verbatim between new and edit mode.
+  // In edit mode the slug is read-only: it is the record identity and the
+  // route parameter.
+  const formFields = (readOnlySlug: boolean) => (
+    <>
+      <Field>
+        Name
+        <TextInput
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Support articles"
+        />
+        {errors.name && <ErrorText>{errors.name}</ErrorText>}
+      </Field>
+
+      <Field>
+        Slug
+        <TextInput
+          value={slugInput}
+          onChange={(e) => {
+            setSlugInput(slugify(e.target.value));
+            setSlugTouched(true);
+          }}
+          placeholder="support-articles"
+          disabled={readOnlySlug}
+        />
+        <Hint>
+          {readOnlySlug
+            ? 'Slug cannot be changed after creation.'
+            : 'Lowercase letters, numbers, hyphens. Used in URLs and bindings.'}
+        </Hint>
+        {errors.slug && <ErrorText>{errors.slug}</ErrorText>}
+      </Field>
+
+      <Field>
+        Description
+        <TextArea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="What this scope covers…"
+          rows={3}
+        />
+      </Field>
+
+      <div>
+        <SectionTitle>Attribute filters</SectionTitle>
+        <SectionDesc>
+          Key-value pairs. Multiple values per key are OR&apos;d; keys are AND&apos;d.
+        </SectionDesc>
+        {clauses.map((clause, i) => (
+          <ClauseRow key={i}>
+            <Field>
+              Key
+              <TextInput
+                value={clause.key}
+                onChange={(e) => {
+                  const next = [...clauses];
+                  next[i] = { ...next[i], key: e.target.value };
+                  setClauses(next);
+                }}
+                placeholder="topic"
+              />
+            </Field>
+            <Field>
+              Values (comma-separated)
+              <TextInput
+                value={clause.values}
+                onChange={(e) => {
+                  const next = [...clauses];
+                  next[i] = { ...next[i], values: e.target.value };
+                  setClauses(next);
+                }}
+                placeholder="billing, refunds"
+              />
+            </Field>
+            <RemoveButton
+              title="Remove filter"
+              onClick={() => setClauses(clauses.filter((_, j) => j !== i))}
+            >
+              <X />
+            </RemoveButton>
+          </ClauseRow>
+        ))}
+        {clauses.map((_, i) =>
+          errors[`clause-${i}`] ? <ErrorText key={i}>{errors[`clause-${i}`]}</ErrorText> : null,
+        )}
+        <ActionButton
+          onClick={() => setClauses([...clauses, { key: '', values: '' }])}
+        >
+          <Plus size={15} /> Add filter
+        </ActionButton>
+      </div>
+
+      <div>
+        <SectionTitle>Policies</SectionTitle>
+        <FormGrid>
+          <Field>
+            Origin
+            <Dropdown
+              variant="select"
+              items={ORIGIN_OPTIONS}
+              value={origin}
+              onChange={(v) => setOrigin(v)}
+            />
+          </Field>
+          <Field>
+            Curation statuses
+            <Hint>Selected: {curation.length > 0 ? curation.join(', ') : 'any'}</Hint>
+            <ChipWrap>
+              {CURATION_OPTIONS.map((opt) => {
+                const active = curation.includes(opt.value);
+                return (
+                  <DocChip key={opt.value}>
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => {
+                        setCuration(
+                          active
+                            ? curation.filter((c) => c !== opt.value)
+                            : [...curation, opt.value],
+                        );
+                      }}
+                    />
+                    {opt.label}
+                  </DocChip>
+                );
+              })}
+            </ChipWrap>
+          </Field>
+          <div>
+            <Field>Version policy</Field>
+            <RadioGroup>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="version-policy"
+                  checked={versionPolicy === 'follow_latest_ready'}
+                  onChange={() => setVersionPolicy('follow_latest_ready')}
+                />
+                Org-wide (latest ready)
+              </RadioLabel>
+              <RadioLabel>
+                <input
+                  type="radio"
+                  name="version-policy"
+                  checked={versionPolicy === 'pinned_versions'}
+                  onChange={() => setVersionPolicy('pinned_versions')}
+                />
+                Pinned versions
+              </RadioLabel>
+            </RadioGroup>
+          </div>
+        </FormGrid>
+      </div>
+
+      <div>
+        <SectionTitle>Retrieval tuning</SectionTitle>
+        <FormGrid>
+          <Field>
+            Threshold override (0–1)
+            <TextInput
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+              placeholder="Leave empty for default"
+              inputMode="decimal"
+            />
+            {errors.threshold && <ErrorText>{errors.threshold}</ErrorText>}
+          </Field>
+          <Field>
+            Rerank
+            <Switch
+              checked={rerank}
+              onChange={setRerank}
+              label="Enable reranking for this scope"
+            />
+          </Field>
+        </FormGrid>
+      </div>
+
+      <div>
+        <SectionTitle>Pinned documents</SectionTitle>
+        <SectionDesc>
+          Always admitted, regardless of filters. Read-only until pin endpoints land.
+        </SectionDesc>
+        <DocPicker
+          documents={documents ?? []}
+          excludeIds={pins}
+          onAdd={(id) => setPins([...pins, id])}
+          placeholder="Add a pinned document…"
+        />
+        {pins.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={24} />}
+            title="No pinned documents"
+            description="Pins are managed per scope."
+          />
+        ) : (
+          <ChipWrap>
+            {pins.map((id) => (
+              <DocChip key={id}>
+                {docById.get(id) ?? id}
+                <button
+                  title="Remove pin"
+                  onClick={() => setPins(pins.filter((p) => p !== id))}
+                >
+                  <X size={12} />
+                </button>
+              </DocChip>
+            ))}
+          </ChipWrap>
+        )}
+      </div>
+
+      <div>
+        <SectionTitle>Exclusions</SectionTitle>
+        <SectionDesc>Never admitted, regardless of filters.</SectionDesc>
+        <DocPicker
+          documents={documents ?? []}
+          excludeIds={exclusions}
+          onAdd={(id) => setExclusions([...exclusions, id])}
+          placeholder="Add an excluded document…"
+        />
+        {exclusions.length === 0 ? (
+          <EmptyState
+            icon={<FileText size={24} />}
+            title="No exclusions"
+            description="Excluded documents never surface in this scope."
+          />
+        ) : (
+          <ChipWrap>
+            {exclusions.map((id) => (
+              <DocChip key={id}>
+                {docById.get(id) ?? id}
+                <button
+                  title="Remove exclusion"
+                  onClick={() => setExclusions(exclusions.filter((e) => e !== id))}
+                >
+                  <X size={12} />
+                </button>
+              </DocChip>
+            ))}
+          </ChipWrap>
+        )}
+      </div>
+
+      <PreviewNote>
+        Pins and exclusions save with the scope.
+      </PreviewNote>
+    </>
+  );
   return (
     <ViewShell>
       <SectionBackRow to="/agent-studio/knowledge/scopes">‹ Scopes</SectionBackRow>
@@ -388,255 +652,13 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
 
       {mode === 'new' ? (
         <motion.div {...pageItem}>
-          <FormGrid>
-            <Field>
-              Name
-              <TextInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Support articles"
-              />
-              {errors.name && <ErrorText>{errors.name}</ErrorText>}
-            </Field>
-
-            <Field>
-              Slug
-              <TextInput
-                value={slugInput}
-                onChange={(e) => {
-                  setSlugInput(slugify(e.target.value));
-                  setSlugTouched(true);
-                }}
-                placeholder="support-articles"
-              />
-              <Hint>Lowercase letters, numbers, hyphens. Used in URLs and bindings.</Hint>
-              {errors.slug && <ErrorText>{errors.slug}</ErrorText>}
-            </Field>
-
-            <Field>
-              Description
-              <TextArea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What this scope covers…"
-                rows={3}
-              />
-            </Field>
-
-            <div>
-              <SectionTitle>Attribute filters</SectionTitle>
-              <SectionDesc>
-                Key-value pairs. Multiple values per key are OR&apos;d; keys are AND&apos;d.
-              </SectionDesc>
-              {clauses.map((clause, i) => (
-                <ClauseRow key={i}>
-                  <Field>
-                    Key
-                    <TextInput
-                      value={clause.key}
-                      onChange={(e) => {
-                        const next = [...clauses];
-                        next[i] = { ...next[i], key: e.target.value };
-                        setClauses(next);
-                      }}
-                      placeholder="topic"
-                    />
-                  </Field>
-                  <Field>
-                    Values (comma-separated)
-                    <TextInput
-                      value={clause.values}
-                      onChange={(e) => {
-                        const next = [...clauses];
-                        next[i] = { ...next[i], values: e.target.value };
-                        setClauses(next);
-                      }}
-                      placeholder="billing, refunds"
-                    />
-                  </Field>
-                  <RemoveButton
-                    title="Remove filter"
-                    onClick={() => setClauses(clauses.filter((_, j) => j !== i))}
-                  >
-                    <X />
-                  </RemoveButton>
-                </ClauseRow>
-              ))}
-              {clauses.map((_, i) =>
-                errors[`clause-${i}`] ? <ErrorText key={i}>{errors[`clause-${i}`]}</ErrorText> : null,
-              )}
-              <ActionButton
-                onClick={() => setClauses([...clauses, { key: '', values: '' }])}
-              >
-                <Plus size={15} /> Add filter
-              </ActionButton>
-            </div>
-
-            <div>
-              <SectionTitle>Policies</SectionTitle>
-              <FormGrid>
-                <Field>
-                  Origin
-                  <Dropdown
-                    variant="select"
-                    items={ORIGIN_OPTIONS}
-                    value={origin}
-                    onChange={(v) => setOrigin(v)}
-                  />
-                </Field>
-                <Field>
-                  Curation statuses
-                  <Hint>Selected: {curation.length > 0 ? curation.join(', ') : 'any'}</Hint>
-                  <ChipWrap>
-                    {CURATION_OPTIONS.map((opt) => {
-                      const active = curation.includes(opt.value);
-                      return (
-                        <DocChip key={opt.value}>
-                          <input
-                            type="checkbox"
-                            checked={active}
-                            onChange={() => {
-                              setCuration(
-                                active
-                                  ? curation.filter((c) => c !== opt.value)
-                                  : [...curation, opt.value],
-                              );
-                            }}
-                          />
-                          {opt.label}
-                        </DocChip>
-                      );
-                    })}
-                  </ChipWrap>
-                </Field>
-                <div>
-                  <Field>Version policy</Field>
-                  <RadioGroup>
-                    <RadioLabel>
-                      <input
-                        type="radio"
-                        name="version-policy"
-                        checked={versionPolicy === 'follow_latest_ready'}
-                        onChange={() => setVersionPolicy('follow_latest_ready')}
-                      />
-                      Org-wide (latest ready)
-                    </RadioLabel>
-                    <RadioLabel>
-                      <input
-                        type="radio"
-                        name="version-policy"
-                        checked={versionPolicy === 'pinned_versions'}
-                        onChange={() => setVersionPolicy('pinned_versions')}
-                      />
-                      Pinned versions
-                    </RadioLabel>
-                  </RadioGroup>
-                </div>
-              </FormGrid>
-            </div>
-
-            <div>
-              <SectionTitle>Retrieval tuning</SectionTitle>
-              <FormGrid>
-                <Field>
-                  Threshold override (0–1)
-                  <TextInput
-                    value={threshold}
-                    onChange={(e) => setThreshold(e.target.value)}
-                    placeholder="Leave empty for default"
-                    inputMode="decimal"
-                  />
-                  {errors.threshold && <ErrorText>{errors.threshold}</ErrorText>}
-                </Field>
-                <Field>
-                  Rerank
-                  <Switch
-                    checked={rerank}
-                    onChange={setRerank}
-                    label="Enable reranking for this scope"
-                  />
-                </Field>
-              </FormGrid>
-            </div>
-
-            <div>
-              <SectionTitle>Pinned documents</SectionTitle>
-              <SectionDesc>
-                Always admitted, regardless of filters. Read-only until pin endpoints land.
-              </SectionDesc>
-              <DocPicker
-                documents={documents ?? []}
-                excludeIds={pins}
-                onAdd={(id) => setPins([...pins, id])}
-                placeholder="Add a pinned document…"
-              />
-              {pins.length === 0 ? (
-                <EmptyState
-                  icon={<FileText size={24} />}
-                  title="No pinned documents"
-                  description="Pins are managed per scope."
-                />
-              ) : (
-                <ChipWrap>
-                  {pins.map((id) => (
-                    <DocChip key={id}>
-                      {docById.get(id) ?? id}
-                      <button
-                        title="Remove pin"
-                        onClick={() => setPins(pins.filter((p) => p !== id))}
-                      >
-                        <X size={12} />
-                      </button>
-                    </DocChip>
-                  ))}
-                </ChipWrap>
-              )}
-            </div>
-
-            <div>
-              <SectionTitle>Exclusions</SectionTitle>
-              <SectionDesc>Never admitted, regardless of filters.</SectionDesc>
-              <DocPicker
-                documents={documents ?? []}
-                excludeIds={exclusions}
-                onAdd={(id) => setExclusions([...exclusions, id])}
-                placeholder="Add an excluded document…"
-              />
-              {exclusions.length === 0 ? (
-                <EmptyState
-                  icon={<FileText size={24} />}
-                  title="No exclusions"
-                  description="Excluded documents never surface in this scope."
-                />
-              ) : (
-                <ChipWrap>
-                  {exclusions.map((id) => (
-                    <DocChip key={id}>
-                      {docById.get(id) ?? id}
-                      <button
-                        title="Remove exclusion"
-                        onClick={() => setExclusions(exclusions.filter((e) => e !== id))}
-                      >
-                        <X size={12} />
-                      </button>
-                    </DocChip>
-                  ))}
-                </ChipWrap>
-              )}
-            </div>
-
-            <PreviewNote>
-              Pins and exclusions save with the scope.
-            </PreviewNote>
-          </FormGrid>
+          <FormGrid>{formFields(false)}</FormGrid>
         </motion.div>
       ) : (
         <QueryView query={scopeQuery}>
           {() => (
             <motion.div {...pageItem}>
-              <FormGrid>
-                {/* Edit mode form content - same as above but with loaded data */}
-              </FormGrid>
+              <FormGrid>{formFields(true)}</FormGrid>
             </motion.div>
           )}
         </QueryView>
