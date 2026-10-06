@@ -1,5 +1,6 @@
 import { PageHead } from '@components/common/PageHead';
 import { HealthView } from '@/sections/pages/products/agent-studio/knowledge/HealthView';
+import { DebugErrorBoundary } from '@/sections/pages/products/agent-studio/knowledge/debug/DebugErrorBoundary';
 
 export default function AgentStudioKnowledgeHealthPage() {
   return (
@@ -9,7 +10,9 @@ export default function AgentStudioKnowledgeHealthPage() {
         description="Open findings from library health checks — quota, sessions, drift."
         canonicalPath="/agent-studio/knowledge/health"
       />
-      <HealthView />
+      <DebugErrorBoundary pageName="HealthView">
+        <HealthView />
+      </DebugErrorBoundary>
     </>
   );
 }

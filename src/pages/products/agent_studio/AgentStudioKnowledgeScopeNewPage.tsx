@@ -1,5 +1,6 @@
 import { PageHead } from '@components/common/PageHead';
 import { ScopeBuilderView } from '@/sections/pages/products/agent-studio/knowledge/ScopeBuilderView';
+import { DebugErrorBoundary } from '@/sections/pages/products/agent-studio/knowledge/debug/DebugErrorBoundary';
 
 /** Page for /agent-studio/knowledge/scopes/new. */
 export default function AgentStudioKnowledgeScopeNewPage() {
@@ -10,7 +11,9 @@ export default function AgentStudioKnowledgeScopeNewPage() {
         description="Define a governed retrieval boundary for your agents."
         canonicalPath="/agent-studio/knowledge/scopes/new"
       />
-      <ScopeBuilderView mode="new" />
+      <DebugErrorBoundary pageName="ScopeBuilderView">
+        <ScopeBuilderView mode="new" />
+      </DebugErrorBoundary>
     </>
   );
 }
