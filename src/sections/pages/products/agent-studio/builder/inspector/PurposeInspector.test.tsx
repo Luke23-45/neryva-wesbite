@@ -25,6 +25,13 @@ const createIdentityMock = vi.hoisted(() => ({
   isPending: false,
 }));
 
+const toastSuccess = vi.hoisted(() => vi.fn());
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('react-hot-toast', () => {
+  const fn = vi.fn();
+  return { default: Object.assign(fn, { success: toastSuccess, error: toastError }) };
+});
+
 vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: 'owner' }),
 }));
@@ -456,8 +463,7 @@ describe('PurposeInspector MetaButton hit boxes', () => {
     );
   }
 
-  it.each(['Clone agent', 'Open in Engine Room'])('%s has a 44px hit box via ::after', async (label) => {
-    await shell(
+  it.each(['Clone agent', 'Open in Engine Room'])('%s has a 44px hit box via ::after', async (label) => {    await shell(
       <PurposeInspector
         mode="build"
         agentId="agent-1"
@@ -475,5 +481,91 @@ describe('PurposeInspector MetaButton hit boxes', () => {
     expect(rule).toMatch(/content:(""|'')/);
     expect(rule).toContain('position:absolute');
     expect(rule).toContain('inset:-10px0');
+  });
+});
+
+describe('PurposeInspector submission keys (Z-008) + null-id fallback (Z-010)', () => {
+  type MutateCall = {
+    input: { name: string; description?: string; idempotencyKey?: string };
+    opts?: { onSuccess?: (r: unknown) => void; onError?: (e: unknown) => void };
+  };
+  const calls: MutateCall[] = [];
+
+  function zRefShell(node: (ref: RefObject<PurposeHandle | null>) => ReactNode) {
+    const ref = { current: null } as RefObject<PurposeHandle | null>;
+    const rootRoute = createRootRoute();
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => (
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            {node(ref)}
+          </QueryClientProvider>
+        </ThemeProvider>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    return router.load().then(() => {
+      render(<RouterProvider router={router} />);
+      return ref;
+    });
+  }
+
+  async function submitName(name: string) {
+    createIdentityMock.mutate.mockReset();
+    calls.length = 0;
+    toastSuccess.mockReset();
+    toastError.mockReset();
+    createIdentityMock.mutate.mockImplementation((input: MutateCall['input'], opts?: MutateCall['opts']) => {
+      calls.push({ input, opts });
+    });
+    const ref = await zRefShell((r) => (
+      <PurposeInspector ref={r} mode="new" agentId={null} agentName={null} description={null} canAuthor role="owner" />
+    ));
+    fireEvent.change(screen.getByPlaceholderText('e.g. Billing concierge'), { target: { value: name } });
+    ref.current?.save();
+    return ref;
+  }
+
+  it('reuses one idempotency key across retries of the same submission', async () => {
+    const ref = await submitName('Billing concierge');
+    ref.current?.save();
+    expect(calls).toHaveLength(2);
+    expect(typeof calls[0]?.input.idempotencyKey).toBe('string');
+    expect(calls[0]?.input.idempotencyKey).toBe(calls[1]?.input.idempotencyKey);
+  });
+
+  it('mints a fresh key when the input changes', async () => {
+    const ref = await submitName('Billing concierge');
+    fireEvent.change(screen.getByPlaceholderText('e.g. Billing concierge'), {
+      target: { value: 'Billing concierge!' },
+    });
+    ref.current?.save();
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.input.idempotencyKey).not.toBe(calls[1]?.input.idempotencyKey);
+  });
+
+  it('shows TakenPanel only for the name-taken code, never for idempotency codes', async () => {
+    await submitName('Taken Name');
+    await act(async () => {
+      calls[0]?.opts?.onError?.(new ApiError(409, 'idempotency_in_flight', 'in flight'));
+    });
+    expect(screen.queryByText('That name is taken')).toBeNull();
+    await act(async () => {
+      calls[0]?.opts?.onError?.(new ApiError(409, 'conflict', 'taken'));
+    });
+    expect(screen.getByText('That name is taken')).toBeTruthy();
+  });
+
+  it('toasts instead of dying silent when create succeeds without an id (Z-010)', async () => {
+    await submitName('Billing concierge');
+    await act(async () => {
+      calls[0]?.opts?.onSuccess?.({ assistantId: null, versionId: null, template: null, hash: null });
+    });
+    expect(toastError).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,10 +1,10 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import toast from 'react-hot-toast';
 import { TextInput } from '@components/common/ui/TextInput';
 import { TextArea } from '@components/common/ui/TextArea';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { ApiError } from '@lib/engine/client';
+import { ApiError, randomIdempotencyKey } from '@lib/engine/client';
 import { setupDeniedCopy } from '@lib/engine/capabilities';
 import type { OrgRole } from '@/Context/OrgContext';
 import { useCreateAssistant, useUpdateAssistantIdentity } from '@hooks/studio/useAgentAuthoring';
@@ -89,6 +89,11 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const [desc, setDesc] = useState('');
   const [taken, setTaken] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Z-008: one stable idempotency key per submission (name+description).
+  // Retries of the same submission replay server-side instead of running
+  // twice; editing the fields mints a fresh key (a changed body under a
+  // reused key would 409 as idempotency_conflict — correctly).
+  const submitKey = useRef<{ fingerprint: string; key: string } | null>(null);
   const create = useCreateAssistant();
   const updateIdentity = useUpdateAssistantIdentity();
   const navigate = useNavigate();
@@ -106,20 +111,43 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const submit = useCallback(() => {
     if (!valid || create.isPending) return;
     setTaken(false);
+    const fingerprint = `${trimmed}\n${desc.trim()}`;
+    if (!submitKey.current || submitKey.current.fingerprint !== fingerprint) {
+      submitKey.current = { fingerprint, key: randomIdempotencyKey() };
+    }
+    const submissionKey = submitKey.current.key;
     create.mutate(
-      { name: trimmed, description: desc.trim() || undefined },
+      { name: trimmed, description: desc.trim() || undefined, idempotencyKey: submissionKey },
       {
         onSuccess: (result) => {
           if (result.assistantId) {
+            submitKey.current = null;
             toast.success(`${trimmed} created — configure it on the circuit`);
             onCreated?.(result.assistantId);
+            return;
           }
+          // Z-010: a success without an id is a contract break, not a
+          // success — say so instead of dying silent with a stopped spinner.
+          toast.error('Created, but the reply was unreadable — check the agent list before retrying.');
         },
         onError: (error) => {
-          // Duplicate (organization_id, name): typed 409 → inline recovery,
-          // never a raw toast (C01 SPEC: 409-one-tap-rename).
-          if (error instanceof ApiError && error.status === 409) {
+          // Duplicate (organization_id, name): typed `conflict` → inline
+          // recovery, never a raw toast (C01 SPEC: 409-one-tap-rename).
+          // Idempotency codes are NOT name conflicts: `in_flight` means a
+          // sibling attempt is running (wait, don't rename), `conflict`
+          // with a mismatched body can only come from key reuse across
+          // different submissions (cannot happen — the key tracks the
+          // fingerprint). Both surface as toasts, never the TakenPanel.
+          if (error instanceof ApiError && error.code === 'conflict') {
             setTaken(true);
+            return;
+          }
+          if (error instanceof ApiError && error.code === 'idempotency_in_flight') {
+            toast('Creation is already running — wait a moment, then retry.');
+            return;
+          }
+          if (error instanceof ApiError && error.code === 'idempotency_conflict') {
+            toast.error('Submission key reused across different input — edit nothing and retry, or reload the page.');
             return;
           }
           // All other failures keep the hook's verbatim toast (no double-surface).

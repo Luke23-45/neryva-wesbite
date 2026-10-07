@@ -613,7 +613,7 @@ export function useCreateAssistant() {
   const { orgId } = useOrg();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; description?: string; template?: { slug: string; version?: string }; definition?: AgentDefinition }) => {
+    mutationFn: async (input: { name: string; description?: string; template?: { slug: string; version?: string }; definition?: AgentDefinition; idempotencyKey?: string }) => {
       const raw = await engine<Record<string, unknown>>(`/console/org/${orgId}/assistants`, {
         method: 'POST',
         body: {
@@ -623,6 +623,9 @@ export function useCreateAssistant() {
           ...(input.definition ? { definition: toEnginePayload(input.definition) } : {}),
         },
         idempotent: true,
+        // Z-008: caller-supplied key makes retries of the same submission
+        // replay server-side; absent = one fresh random key (legacy).
+        ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
       });
       const assistant = typeof raw.assistant === 'object' && raw.assistant !== null ? (raw.assistant as Record<string, unknown>) : {};
       const result: CreateAssistantResult = {
