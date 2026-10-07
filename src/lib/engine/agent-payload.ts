@@ -636,7 +636,7 @@ function nonBlank(value: string): string | null {
  * `agent-payload.pipeline-contract.test.ts`, which validates the wire
  * payload against the engine's live schema.
  */
-const MODEL_REF_PATTERN = /^[a-z0-9-]+\/[a-z0-9._-]+(\/[a-z0-9._-]+)*$/;
+const MODEL_REF_PATTERN = /^[a-z0-9-]+\/[a-z0-9._:-]+(\/[a-z0-9._:-]+)*$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
