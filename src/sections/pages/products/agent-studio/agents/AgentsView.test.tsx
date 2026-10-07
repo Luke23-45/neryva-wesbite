@@ -18,12 +18,26 @@ vi.mock('@/Context/OrgContext', () => ({
   useOrg: () => ({ orgId: 'org-test', role: testRole.role }),
 }));
 
+const pageMock = vi.hoisted(() => ({
+  calls: [] as Array<{ sort?: string; q?: string; cursor?: unknown }>,
+  page: {
+    assistants: [
+      { id: 'a1', name: 'Returns Helper', description: null, status: 'live', activeVersionId: 'v1', model: null, updatedAt: null, degradedUntil: null, degradedReason: null, disabledReason: null },
+    ],
+    nextCursor: null as null | { before: string; beforeId: string },
+  },
+}));
+
 vi.mock('@hooks/studio/useAssistants', () => ({
   useAssistants: () => ({
     data: [{ id: 'a1', name: 'Returns Helper', description: null, status: 'live', activeVersionId: 'v1', model: null, updatedAt: null, degradedUntil: null, degradedReason: null, disabledReason: null }],
     isPending: false,
     isError: false,
   }),
+  useAssistantsPage: (input: { sort?: string; q?: string; cursor?: unknown }) => {
+    pageMock.calls.push({ sort: input.sort, q: input.q, cursor: input.cursor ?? null });
+    return { data: pageMock.page, isPending: false, isError: false };
+  },
 }));
 
 vi.mock('@hooks/studio/useFleetHealth', () => ({
@@ -110,5 +124,41 @@ describe('AgentsView (row-menu delete, Z-011)', () => {
     expect(item.closest('button')).toBeDisabled();
     expect(item.closest('button')?.getAttribute('title')).toContain('owner or admin');
     testRole.role = 'owner';
+  });
+});
+
+describe('AgentsView (server pagination)', () => {
+  it('requests page one with sort newest and no cursor', async () => {
+    pageMock.calls.length = 0;
+    testRole.role = 'owner';
+    await shell();
+    expect(screen.getByText('Returns Helper')).toBeTruthy();
+    const first = pageMock.calls[0];
+    expect(first?.sort).toBe('newest');
+    expect(first?.cursor ?? null).toBeNull();
+  });
+
+  it('advances with the returned cursor and goes back', async () => {
+    pageMock.calls.length = 0;
+    pageMock.page.nextCursor = { before: '2026-10-02T00:00:00.000Z', beforeId: 'a1' };
+    await shell();
+    const next = screen.getByRole('button', { name: 'Next page' });
+    expect(next).toBeEnabled();
+    fireEvent.click(next);
+    const last = pageMock.calls[pageMock.calls.length - 1];
+    expect(last?.cursor).toEqual({ before: '2026-10-02T00:00:00.000Z', beforeId: 'a1' });
+    const prev = screen.getByRole('button', { name: 'Previous page' });
+    expect(prev).toBeEnabled();
+    fireEvent.click(prev);
+    const back = pageMock.calls[pageMock.calls.length - 1];
+    expect(back?.cursor ?? null).toBeNull();
+    pageMock.page.nextCursor = null;
+  });
+
+  it('disables Next when the page is not full', async () => {
+    pageMock.page.nextCursor = null;
+    await shell();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
   });
 });

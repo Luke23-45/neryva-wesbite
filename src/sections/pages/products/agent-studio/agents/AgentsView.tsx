@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus, MoreHorizontal, Pencil, MessageSquare, Copy as CopyIcon, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, MessageSquare, Copy as CopyIcon, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { Segmented } from '@components/common/ui/Segmented';
 import { SearchField } from '@components/common/ui/SearchField';
 import { Skeleton } from '@components/common/ui/Skeleton/Skeleton';
 import { QueryView } from '@components/common/ui/AsyncStates';
-import { EmptyState } from '@components/common/ui/EmptyState/EmptyState';
-import { Search as SearchIcon } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import {
@@ -29,6 +27,7 @@ import {
 } from '@components/common/ui/DataTable';
 import { spring, pageItem } from '@styles/motion';
 import { useAssistants, type AssistantSummary } from '@hooks/studio/useAssistants';
+import { useAssistantsPage, type AssistantPageCursor } from '@hooks/studio/useAssistants';
 import { useDeleteAssistant } from '@hooks/studio/useAgentAuthoring';
 import { useFleetKnowledgeHealth } from '@hooks/studio/useFleetHealth';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
@@ -41,6 +40,7 @@ import {
   ModelTag,
   RowMenuButton,
   ToolbarArea,
+  PagerRow,
 } from './AgentsView.styles';
 
 /**
@@ -68,24 +68,28 @@ export function AgentsView() {
   // the gate instead of walking non-governors into a 403.
   const canDelete = canSetup(role, 'setup:govern');
   const deleteDenied = setupDeniedCopy(role, 'setup:govern');
+  // Fleet-wide list for health badges (badges need the whole fleet, not the
+  // visible page). The table below reads the paged query instead.
   const assistants = useAssistants();
+
+  // Server-driven search + sort + cursor pages. The search box stays
+  // immediate for typing; the query goes out debounced. Any filter change
+  // restarts from page one (a cursor from another filter is meaningless).
+  const [debouncedQ, setDebouncedQ] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQ(search);
+      setCursors([null]);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const [cursors, setCursors] = useState<(AssistantPageCursor | null)[]>([null]);
+  const cursor = cursors[cursors.length - 1] ?? null;
+  const page = useAssistantsPage({ sort, q: debouncedQ, cursor });
 
   // Fleet health at a glance (G11): shared hook — same query keys as the
   // Overview, one cache, never refetched per surface.
   const degradedById = useFleetKnowledgeHealth(assistants.data);
-
-  // Client-side sort over the fetched list — the engine list contract is
-  // pinned at integration; server-side ordering lands with it if offered.
-  const list = useMemo(() => {
-    const items = [...(assistants.data ?? [])];
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return items
-        .filter((a) => a.name.toLowerCase().includes(q) || (a.description?.toLowerCase().includes(q) ?? false))
-        .sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return items.sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : 0));
-  }, [assistants.data, search, sort]);
 
   const openAgent = (id: string) =>
     navigate({ to: '/agent-studio/agents/$agentId', params: { agentId: id } });
@@ -100,22 +104,17 @@ export function AgentsView() {
       </ViewHeader>
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
-        <Panel
-          flush
-          action={
-            <ActionButton size="sm" onClick={() => navigate({ to: '/agent-studio/agents/new' })}>
-              <Plus size={14} strokeWidth={2} />
-              New agent
-            </ActionButton>
-          }
-        >
+        <Panel flush>
           <ToolbarArea>
             <Toolbar>
               <ToolbarGroup>
                 <Segmented
                   options={sortOptions}
                   value={sort}
-                  onChange={setSort}
+                  onChange={(v) => {
+                    setSort(v);
+                    setCursors([null]);
+                  }}
                   size="md"
                   ariaLabel="Sort agents"
                 />
@@ -124,30 +123,28 @@ export function AgentsView() {
                   onChange={setSearch}
                   placeholder="Search agents…"
                   ariaLabel="Search agents"
+                  width={240}
                 />
+              </ToolbarGroup>
+              <ToolbarGroup>
+                <ActionButton size="sm" onClick={() => navigate({ to: '/agent-studio/agents/new' })}>
+                  <Plus size={14} strokeWidth={2} />
+                  New agent
+                </ActionButton>
               </ToolbarGroup>
             </Toolbar>
           </ToolbarArea>
 
           <QueryView
-            query={assistants}
+            query={page}
             skeleton={<Skeleton $h="280px" $r="12px" />}
-            isEmpty={(d) => d.length === 0}
-            empty={{ title: search ? 'No agents match' : 'No agents yet', description: search ? 'Try a different search term.' : 'Create your first agent — pick a template and make it yours.' }}
+            isEmpty={(d) => d.assistants.length === 0}
+            empty={{ title: debouncedQ ? 'No agents match' : 'No agents yet', description: debouncedQ ? 'Try a different search term.' : 'Create your first agent — pick a template and make it yours.' }}
           >
-            {(_items) => {
-              // QueryView already handled the truly-empty case (raw data empty).
-              // If the filtered list is empty here, the search matched nothing.
-              if (list.length === 0) {
-                return (
-                  <EmptyState
-                    icon={<SearchIcon size={18} opacity={0.5} />}
-                    title="No agents match"
-                    description="Try a different search term."
-                  />
-                );
-              }
+            {(data) => {
+              const nextCursor = data.nextCursor;
               return (
+              <>
               <DataTable>
                 <DataHead>
                   <DataCell $w="44%">Agent</DataCell>
@@ -156,7 +153,7 @@ export function AgentsView() {
                   <DataCell $w="18%">Updated</DataCell>
                   <DataCell $w="44px" />
                 </DataHead>
-                {list.map((a, i) => (
+                {data.assistants.map((a, i) => (
                   <AgentRow
                     key={a.id}
                     agent={a}
@@ -171,6 +168,27 @@ export function AgentsView() {
                   />
                 ))}
               </DataTable>
+              <PagerRow>
+                <ActionButton
+                  variant="ghost"
+                  size="sm"
+                  disabled={cursors.length <= 1}
+                  onClick={() => setCursors((c) => c.slice(0, -1))}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={13} />
+                </ActionButton>
+                <ActionButton
+                  variant="ghost"
+                  size="sm"
+                  disabled={!nextCursor}
+                  onClick={() => nextCursor && setCursors((c) => [...c, nextCursor])}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={13} />
+                </ActionButton>
+              </PagerRow>
+              </>
               );
             }}
           </QueryView>

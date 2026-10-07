@@ -1,8 +1,12 @@
 import styled from 'styled-components';
 
 /** Toolbar zone inside a flush panel — matches panel gutters. */
-export const ToolbarArea = styled.div`
-  padding: 18px 22px 0;
+  export const ToolbarArea = styled.div`
+    padding: 18px 22px 0;
+  /* The PanelHeader this row absorbed owned the hairline between the
+     controls and the column headers. Both bands sit on surface.subtle, so
+     without it the control row reads as part of the table header. */
+  border-bottom: 1px solid ${({ theme }) => theme.app.border.hairline};
 `;
 
 export const AgentMain = styled.div`
@@ -128,4 +132,12 @@ export const TemplateDesc = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.muted};
   line-height: 1.4;
+`;
+
+/** Cursor pager row under the table (mirrors the audit pager). */
+export const PagerRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px 22px;
 `;

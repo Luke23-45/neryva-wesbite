@@ -80,3 +80,72 @@ export function useAssistants(options?: { enabled?: boolean }) {
     select: parseAssistants,
   });
 }
+
+export const ASSISTANTS_PAGE_SIZE = 25;
+
+export type AssistantPageSort = 'newest' | 'name';
+
+export type AssistantPageCursor =
+  | { before: string; beforeId: string }
+  | { afterName: string; afterId: string };
+
+export interface AssistantsPage {
+  assistants: AssistantSummary[];
+  nextCursor: AssistantPageCursor | null;
+}
+
+function parsePageCursor(raw: unknown): AssistantPageCursor | null {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const before = typeof record.before === 'string' ? record.before : undefined;
+  const beforeId = typeof record.before_id === 'string' ? record.before_id : undefined;
+  if (before !== undefined && beforeId !== undefined) return { before, beforeId };
+  const afterName = typeof record.after_name === 'string' ? record.after_name : undefined;
+  const afterId = typeof record.after_id === 'string' ? record.after_id : undefined;
+  if (afterName !== undefined && afterId !== undefined) return { afterName, afterId };
+  // Half or foreign cursors never silently restart the list — callers treat
+  // null as "no further pages", and the engine 400s malformed cursors that
+  // reach it. A cursor this function cannot read is a dead end, not page one.
+  return null;
+}
+
+function parseAssistantsPage(raw: unknown): AssistantsPage {
+  const record = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  return { assistants: parseAssistants(raw), nextCursor: parsePageCursor(record.next_cursor) };
+}
+
+/** Exported for unit tests (pure envelope parsing, no I/O). */
+export { parseAssistantsPage };
+
+/** Stable query-key fragment for a cursor (cursor identity is value-based). */
+export function pageCursorKey(cursor: AssistantPageCursor | null | undefined): string {
+  if (!cursor) return '';
+  return 'before' in cursor ? `b:${cursor.before}:${cursor.beforeId}` : `a:${cursor.afterName}:${cursor.afterId}`;
+}
+
+export function useAssistantsPage(input: {
+  sort?: AssistantPageSort;
+  q?: string;
+  cursor?: AssistantPageCursor | null;
+  enabled?: boolean;
+}) {
+  const { orgId } = useOrg();
+  const sort = input.sort ?? 'newest';
+  const q = input.q && input.q.trim() !== '' ? input.q.trim() : undefined;
+  const cursor = input.cursor ?? null;
+  return useQuery({
+    queryKey: ['studio', 'assistants', orgId, 'page', sort, q ?? '', pageCursorKey(cursor)],
+    queryFn: () =>
+      engine<unknown>(`/console/org/${orgId}/assistants`, {
+        query: {
+          limit: ASSISTANTS_PAGE_SIZE,
+          sort,
+          ...(q !== undefined ? { q } : {}),
+          ...(cursor && 'before' in cursor ? { before: cursor.before, before_id: cursor.beforeId } : {}),
+          ...(cursor && 'afterName' in cursor ? { after_name: cursor.afterName, after_id: cursor.afterId } : {}),
+        },
+      }),
+    enabled: (input.enabled ?? true) && !!orgId,
+    staleTime: 15_000,
+    select: parseAssistantsPage,
+  });
+}
