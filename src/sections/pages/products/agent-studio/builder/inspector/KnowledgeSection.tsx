@@ -1094,7 +1094,7 @@ export function KnowledgeSection({
                       ref={fileRef}
                       type="file"
                       multiple
-                      style={{ display: 'none' }}
+                      className="sr-only"
                       accept={KNOWLEDGE_MEDIA_TYPES.join(',')}
                       onChange={(event) => {
                         const files = event.target.files ? Array.from(event.target.files) : [];

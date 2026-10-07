@@ -217,7 +217,7 @@ function CasesManager({
               ref={fileInputRef}
               type="file"
               accept=".json,.csv"
-              style={{ display: 'none' }}
+              className="sr-only"
               disabled={!canWrite || importCases.isPending}
               onChange={(e) => {
                 onImportFile(e.target.files?.[0]);

@@ -250,7 +250,7 @@ export function ImportPane({ assistantId, defaultName, onImported }: ImportPaneP
             ref={fileRef}
             type="file"
             accept=".json,application/json"
-            style={{ display: 'none' }}
+            className="sr-only"
             aria-hidden="true"
             tabIndex={-1}
             onChange={(e) => {
