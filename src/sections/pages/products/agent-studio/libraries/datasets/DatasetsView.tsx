@@ -80,6 +80,7 @@ export function DatasetsView() {
                 <DataCell $w="28%">
                   <Link
                     to="/agent-studio/evaluations"
+                    search={{ returnTo: undefined }}
                     style={{ textDecoration: 'none' }}
                   >
                     <StatusPill tone="info" dot={false}>
