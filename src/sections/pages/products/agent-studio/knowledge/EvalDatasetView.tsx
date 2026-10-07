@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from '@tanstack/react-router';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
+import toast from 'react-hot-toast';
 import { Play, Plus } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
@@ -15,6 +16,7 @@ import { pageItem } from '@styles/motion';
 import { SectionBackRow } from '@/sections/pages/products/agent-studio/knowledge/SectionBackRow';
 import {
   useAddEvalCase,
+  useEvalDatasets,
   useEvalRun,
   useEvalTrends,
   useRunEval,
@@ -95,6 +97,7 @@ export function EvalDatasetView() {
     try {
       const result = await runEval.mutateAsync({ datasetId, k: kNum });
       setRunId(result.runId);
+      toast.success('Eval run started');
     } catch {
       // toast handled in hook.
     }
@@ -128,6 +131,25 @@ export function EvalDatasetView() {
         mrr: r.avgMrr ?? 0,
       })) ?? [];
 
+  const datasetsQuery = useEvalDatasets();
+  const dataset = (datasetsQuery.data ?? []).find((d) => d.id === datasetId);
+
+  if (datasetsQuery.isSuccess && !dataset) {
+    return (
+      <ViewShell>
+        <SectionBackRow to="/agent-studio/knowledge/eval">
+          <span aria-hidden="true">‹</span> Eval datasets
+        </SectionBackRow>
+        <ViewHeader>
+          <div>
+            <ViewTitle>Dataset not found</ViewTitle>
+            <ViewSubtitle>No eval dataset exists with this ID.</ViewSubtitle>
+          </div>
+        </ViewHeader>
+      </ViewShell>
+    );
+  }
+
   return (
     <ViewShell>
       <SectionBackRow to="/agent-studio/knowledge/eval">
@@ -140,13 +162,14 @@ export function EvalDatasetView() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <TextInput
-            label="k"
+            label="Top k"
             value={k}
             onChange={(e) => setK(e.target.value)}
             type="number"
             min={1}
             max={50}
             style={{ width: 80 }}
+            title="Number of top results to evaluate per query"
           />
           <ActionButton
             onClick={handleRun}
