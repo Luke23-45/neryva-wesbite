@@ -85,8 +85,8 @@ export function MemoryComposerForm({
   const dirty =
     !submitted &&
     (editing
-      ? content !== editing.content || contentMode !== 'raw'
-      : trimmed !== '' || contentMode !== 'raw');
+      ? content !== editing.content
+      : trimmed !== '');
   const { dialog: dirtyDialog } = useDirtyGuard(
     dirty,
     'You have an unsaved memory. Leaving now discards it.',
