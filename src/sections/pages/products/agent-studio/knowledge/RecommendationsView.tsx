@@ -205,7 +205,7 @@ export function RecommendationsView() {
               description="The library looks healthy. Check back after more usage data accumulates."
             />
           ) : (
-            <motion.div {...pageItem}>
+            <motion.div variants={pageItem} initial="hidden" animate="visible">
               {visible.map((rec, i) => (
                 <RecommendationCard
                   key={`${rec.type}-${i}`}

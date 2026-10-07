@@ -173,7 +173,7 @@ export function MemoryTimelineView() {
             description="This memory has no recorded state transitions yet."
           />
         ) : (
-          <motion.div {...pageItem}>
+          <motion.div variants={pageItem} initial="hidden" animate="visible">
             <Timeline>
               {events.map((event, i) => (
                 <TimelineEvent

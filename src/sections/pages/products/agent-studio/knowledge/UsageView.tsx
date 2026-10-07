@@ -250,7 +250,7 @@ export function UsageView() {
 
   return (
     <ViewShell>
-      <motion.div {...pageItem}>
+      <motion.div variants={pageItem} initial="hidden" animate="visible">
         <SectionBackRow to="/agent-studio/knowledge">‹ Knowledge</SectionBackRow>
         <ViewHeader>
           <ViewHeaderRow>

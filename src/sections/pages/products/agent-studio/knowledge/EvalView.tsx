@@ -75,7 +75,7 @@ export function EvalView() {
       </ViewHeader>
 
       {showForm && (
-        <motion.div {...pageItem}>
+        <motion.div variants={pageItem} initial="hidden" animate="visible">
           <FormCard>
             <FormRow>
               <FormField>
@@ -116,7 +116,7 @@ export function EvalView() {
             description="Create a dataset of golden queries to start measuring retrieval quality."
           />
         ) : (
-          <motion.div {...pageItem}>
+          <motion.div variants={pageItem} initial="hidden" animate="visible">
             <DataTable>
               <DataHead>
                 <DataCell>Name</DataCell>

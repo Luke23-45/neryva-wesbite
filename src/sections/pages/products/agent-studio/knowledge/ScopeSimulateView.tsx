@@ -184,7 +184,7 @@ export function ScopeSimulateView() {
 
       <QueryView query={scopeQuery}>
         {() => (
-          <motion.div {...pageItem}>
+          <motion.div variants={pageItem} initial="hidden" animate="visible">
           <FormGrid>
             <Field>
               Query

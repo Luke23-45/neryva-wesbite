@@ -180,7 +180,7 @@ export function RecallGapsView() {
               description={`No queries with zero results or negative feedback in the last ${days} days.`}
             />
           ) : (
-            <motion.div {...pageItem}>
+            <motion.div variants={pageItem} initial="hidden" animate="visible">
               {gaps.map((gap, i) => (
                 <GapCardView key={`${gap.queryHash}-${i}`} gap={gap} />
               ))}

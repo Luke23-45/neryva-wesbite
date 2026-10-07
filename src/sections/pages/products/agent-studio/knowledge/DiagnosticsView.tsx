@@ -139,7 +139,7 @@ export function DiagnosticsView() {
         </ViewHeaderRow>
       </ViewHeader>
 
-      <motion.div {...pageItem}>
+      <motion.div variants={pageItem} initial="hidden" animate="visible">
         <FormRow>
           <div style={{ flex: 1 }}>
             <TextInput

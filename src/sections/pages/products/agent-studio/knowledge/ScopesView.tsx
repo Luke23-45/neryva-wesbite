@@ -105,7 +105,7 @@ export function ScopesView() {
         }}
       >
         {(scopes) => (
-          <motion.div {...pageItem}>
+          <motion.div variants={pageItem} initial="hidden" animate="visible">
             <DataTable>
               <DataHead>
                 <DataCell>Name</DataCell>

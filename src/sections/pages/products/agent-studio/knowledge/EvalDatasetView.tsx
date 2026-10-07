@@ -164,7 +164,7 @@ export function EvalDatasetView() {
       </ViewHeader>
 
       {showAddCase && (
-        <motion.div {...pageItem}>
+        <motion.div variants={pageItem} initial="hidden" animate="visible">
           <FormCard>
             <FormRow>
               <FormField>
@@ -192,7 +192,7 @@ export function EvalDatasetView() {
       )}
 
       {run && (
-        <motion.div {...pageItem}>
+        <motion.div variants={pageItem} initial="hidden" animate="visible">
           <SectionTitle>Latest run results</SectionTitle>
           <MetricsGrid>
             <MetricCard label="Avg recall" value={formatScore(run.avgRecall)} />
@@ -236,7 +236,7 @@ export function EvalDatasetView() {
       )}
 
       {trendData.length > 1 && (
-        <motion.div {...pageItem}>
+        <motion.div variants={pageItem} initial="hidden" animate="visible">
           <SectionTitle>Trends (last {trendData.length} runs)</SectionTitle>
           <Panel>
             <StudioAreaChart

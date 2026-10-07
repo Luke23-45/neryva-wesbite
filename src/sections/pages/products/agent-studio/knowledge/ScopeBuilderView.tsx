@@ -651,13 +651,13 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
       </ViewHeader>
 
       {mode === 'new' ? (
-        <motion.div {...pageItem}>
+        <motion.div variants={pageItem} initial="hidden" animate="visible">
           <FormGrid>{formFields(false)}</FormGrid>
         </motion.div>
       ) : (
         <QueryView query={scopeQuery}>
           {() => (
-            <motion.div {...pageItem}>
+            <motion.div variants={pageItem} initial="hidden" animate="visible">
               <FormGrid>{formFields(true)}</FormGrid>
             </motion.div>
           )}

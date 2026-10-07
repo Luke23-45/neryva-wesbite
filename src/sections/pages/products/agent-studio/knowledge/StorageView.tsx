@@ -145,7 +145,7 @@ export function StorageView() {
           const isWarning = pct >= warnAt;
 
           return (
-            <motion.div {...pageItem}>
+            <motion.div variants={pageItem} initial="hidden" animate="visible">
               {isWarning && (
                 <WarningBanner>
                   <HardDrive size={16} />

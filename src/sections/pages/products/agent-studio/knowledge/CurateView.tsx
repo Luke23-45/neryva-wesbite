@@ -169,7 +169,7 @@ export function CurateView() {
             );
           }
           return (
-            <motion.div {...pageItem}>
+            <motion.div variants={pageItem} initial="hidden" animate="visible">
               <SectionTitle>Current status</SectionTitle>
               <Panel>
                 <StatusGrid>
