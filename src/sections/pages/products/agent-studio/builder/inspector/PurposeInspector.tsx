@@ -110,14 +110,28 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const descValid = isDescriptionValid(desc);
   const valid = nameValid && descValid;
   // Edit-through-create: prefill once when the existing identity arrives.
-  // Guarded by target id (never clobbers typing) and skipped when the
-  // maker already typed (dirty fields win over the fetch).
-  const prefilledFor = useRef<string | null>(null);
+  // Two refs because two things must be true: stale values from a previous
+  // target are dropped exactly once on switch (dirty-guard-blocked
+  // navigation aside, a switched target must never inherit typed values),
+  // and the fill runs once per target without clobbering typing (dirty
+  // fields win over the fetch).
+  const prevTarget = useRef<string | null>(null);
+  const filledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!editAgentId || prefilledFor.current === editAgentId) return;
+    // Normalize absent to null: null !== undefined is always true, and a
+    // naive comparison would reset the form on every render, wiping typing.
+    const target = editAgentId ?? null;
+    if (prevTarget.current !== target) {
+      prevTarget.current = target;
+      filledFor.current = null;
+      setName('');
+      setDesc('');
+      setTaken(false);
+    }
+    if (!target || filledFor.current === target) return;
     if (agentName === null && description === null) return;
     if (name !== '' || desc !== '') return;
-    prefilledFor.current = editAgentId;
+    filledFor.current = target;
     setName(agentName ?? '');
     setDesc(description ?? '');
     setTaken(false);
@@ -141,6 +155,15 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
             submitKey.current = null;
             toast.success(`${trimmed} updated`);
             onEdited?.(editAgentId);
+          },
+          onError: (error) => {
+            // Same contract as creation: only the typed name-taken
+            // `conflict` opens the inline TakenPanel. Every other failure
+            // keeps the hook's verbatim toast (no double-surface) — without
+            // this branch a 409 rename would die silent here.
+            if (error instanceof ApiError && error.code === 'conflict') {
+              setTaken(true);
+            }
           },
         },
       );

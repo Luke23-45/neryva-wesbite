@@ -618,15 +618,15 @@ describe('PurposeInspector edit-through-create (?edit=)', () => {
   it('saving updates (PATCH) instead of creating, then fires onEdited', async () => {
     const onEdited = vi.fn();
     const onCreated = vi.fn();
+    const ref = await editShell(onCreated, onEdited);
     updateIdentityMock.mutate.mockImplementation(
       (
-        input: { assistantId: string; name: string; description: string },
+        _input: { assistantId: string; name: string; description: string },
         opts?: { onSuccess?: () => void; onError?: (e: unknown) => void },
       ) => {
         opts?.onSuccess?.();
       },
     );
-    const ref = await editShell(onCreated, onEdited);
     ref.current?.save();
     expect(createIdentityMock.mutate).not.toHaveBeenCalled();
     expect(updateIdentityMock.mutate).toHaveBeenCalledWith(
@@ -638,12 +638,12 @@ describe('PurposeInspector edit-through-create (?edit=)', () => {
   });
 
   it('recovers inline from a 409 rename in edit mode', async () => {
+    const ref = await editShell();
     updateIdentityMock.mutate.mockImplementation(
       (_input: unknown, opts?: { onError?: (error: unknown) => void }) => {
         opts?.onError?.(new ApiError(409, 'conflict', 'taken'));
       },
     );
-    const ref = await editShell();
     ref.current?.save();
     expect(await screen.findByText('That name is taken')).toBeTruthy();
     expect(createIdentityMock.mutate).not.toHaveBeenCalled();

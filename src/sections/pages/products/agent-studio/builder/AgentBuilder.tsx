@@ -156,8 +156,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const definition = form.data?.definition ?? null;
   const hasDraft = form.data?.isDraft ?? false;
   const hasLive = (assistant.data?.activeVersionId ?? null) !== null;
-const agentName = isEditing ? (editIdentity.data?.name ?? null) : (assistant.data?.name ?? null);
-const description = isEditing ? (editIdentity.data?.description ?? null) : (assistant.data?.description ?? null);
+  const agentName = isEditing ? (editIdentity.data?.name ?? null) : (assistant.data?.name ?? null);
+  const description = isEditing ? (editIdentity.data?.description ?? null) : (assistant.data?.description ?? null);
 
   const onFormState = useCallback((state: PurposeFormState) => {
     setFormState(state);
@@ -499,10 +499,10 @@ const description = isEditing ? (editIdentity.data?.description ?? null) : (assi
     // Knowledge attention (C05): the graded section's own verdict, computed
     // once — the bar never re-derives what the projector already decided.
     const grade = mode === 'build' && definition ? knowledgeSlot(definition, librarySlugs, health.data ?? undefined) : null;
-      return deriveBottomAction({
-        mode,
-        isEdit: isEditing,
-        purposeValid: mode === 'new' ? formState.valid : true,
+    return deriveBottomAction({
+      mode,
+      isEdit: isEditing,
+      purposeValid: mode === 'new' ? formState.valid : true,
       hasDraft,
       // Usability, not presence (C04): a loading catalog is not-ready-yet
       // (neutral copy downstream), an all-unusable set selects the model section.
@@ -515,7 +515,7 @@ const description = isEditing ? (editIdentity.data?.description ?? null) : (assi
       selectedSkippableUntouched: false,
       selectedSlot: selectedId,
     });
-  }, [mode, formState.valid, hasDraft, definition, librarySlugs, health.data, models.data, selectedId]);
+  }, [mode, isEditing, formState.valid, hasDraft, definition, librarySlugs, health.data, models.data, selectedId]);
 
   // — Actions —
 
@@ -697,7 +697,7 @@ const description = isEditing ? (editIdentity.data?.description ?? null) : (assi
           : isEditing
             ? editIdentity.isError || (!editIdentity.isPending && !editIdentity.data)
             : false,
-      onRetryIdentity: () => assistant.refetch(),
+      onRetryIdentity: () => (isEditing ? editIdentity.refetch() : assistant.refetch()),
       canAuthor,
       role,
       hasDraft,
