@@ -15,6 +15,13 @@ export const ViewShell = styled.div`
   margin: 0 auto;
   padding: 32px 28px 80px;
 
+  /* Buttons placed as direct children hug their content instead of
+     stretching to the full shell width (flex column defaults to
+     align-items: stretch). Panels, tables, and layout divs still stretch. */
+  & > button {
+    align-self: flex-start;
+  }
+
   ${({ theme }) => theme.media.mobile} {
     padding: 24px 18px 56px;
   }

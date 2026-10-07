@@ -28,6 +28,13 @@ const FormGrid = styled.div`
   gap: 16px;
   max-width: 720px;
   margin-bottom: 24px;
+
+  /* Buttons placed as direct grid items hug their content instead of
+     stretching to the grid width (grid defaults to justify-items: stretch).
+     Fields and inputs still stretch to fill. */
+  & > button {
+    justify-self: start;
+  }
 `;
 
 const Field = styled.label`
