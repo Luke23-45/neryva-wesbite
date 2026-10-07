@@ -72,6 +72,20 @@ const NON_NAVIGABLE_EXACT = new Set([
   '/agent-studio/models/credentials/new',
   '/agent-studio/models/credentials/$credentialId/rotate',
   '/agent-studio/providers',
+  // Intentionally sidebar-less per user direction (2026-10-07): Memory,
+  // Datasets, and Tools are top-level routes accessible via direct URL and
+  // command palette, but removed from the Libraries sidebar domain to avoid
+  // duplication with their canonical locations.
+  '/agent-studio/memory',
+  '/agent-studio/memory/new',
+  '/agent-studio/memory/$memoryId',
+  '/agent-studio/memory/$memoryId/edit',
+  '/agent-studio/memory/$memoryId/timeline',
+  '/agent-studio/datasets',
+  '/agent-studio/tools',
+  '/agent-studio/tools/new',
+  '/agent-studio/tools/$toolId/edit',
+  '/agent-studio/tools/instantiate',
 ]);
 
 const config = navJson as unknown as NavConfig;

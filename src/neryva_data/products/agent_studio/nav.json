@@ -110,22 +110,6 @@
           "to": "/agent-studio/knowledge/recommendations",
           "icon": "templates",
           "match": "/agent-studio/knowledge/recommendations"
-        },
-        {
-          "label": "Memory",
-          "to": "/agent-studio/memory",
-          "icon": "chat"
-        },
-        {
-          "label": "Datasets",
-          "to": "/agent-studio/datasets",
-          "icon": "evaluations"
-        },
-        {
-          "label": "Tools",
-          "to": "/agent-studio/tools",
-          "icon": "tools",
-          "badge": "count"
         }
       ]
     },
