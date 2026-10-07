@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus, MoreHorizontal, Pencil, MessageSquare, Copy as CopyIcon } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, MessageSquare, Copy as CopyIcon, Trash2 } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { Segmented } from '@components/common/ui/Segmented';
@@ -12,6 +12,7 @@ import { QueryView } from '@components/common/ui/AsyncStates';
 import { EmptyState } from '@components/common/ui/EmptyState/EmptyState';
 import { Search as SearchIcon } from 'lucide-react';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import {
   ViewShell,
   ViewHeader,
@@ -28,6 +29,7 @@ import {
 } from '@components/common/ui/DataTable';
 import { spring, pageItem } from '@styles/motion';
 import { useAssistants, type AssistantSummary } from '@hooks/studio/useAssistants';
+import { useDeleteAssistant } from '@hooks/studio/useAgentAuthoring';
 import { useFleetKnowledgeHealth } from '@hooks/studio/useFleetHealth';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
@@ -62,6 +64,10 @@ export function AgentsView() {
   const { role } = useOrg();
   const canClone = canSetup(role, 'setup:author');
   const cloneDenied = setupDeniedCopy(role, 'setup:author');
+  // Z-011: delete is owner/admin-only server-side — the row menu mirrors
+  // the gate instead of walking non-governors into a 403.
+  const canDelete = canSetup(role, 'setup:govern');
+  const deleteDenied = setupDeniedCopy(role, 'setup:govern');
   const assistants = useAssistants();
 
   // Fleet health at a glance (G11): shared hook — same query keys as the
@@ -159,6 +165,8 @@ export function AgentsView() {
                     onOpen={() => openAgent(a.id)}
                     canClone={canClone}
                     cloneDenied={cloneDenied}
+                    canDelete={canDelete}
+                    deleteDenied={deleteDenied}
                     onClone={() => navigate({ to: '/agent-studio/agents/clone', search: { sourceId: a.id, returnTo: '/agent-studio/agents' } })}
                   />
                 ))}
@@ -176,21 +184,27 @@ function AgentRow({
   agent,
   degraded,
   index,
-  onOpen,
-  canClone,
-  cloneDenied,
-  onClone,
-}: {
-  agent: AssistantSummary;
-  degraded: boolean;
-  index: number;
-  onOpen: () => void;
-  canClone: boolean;
-  cloneDenied: string;
-  onClone: () => void;
-}) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+    onOpen,
+    canClone,
+    cloneDenied,
+    canDelete,
+    deleteDenied,
+    onClone,
+  }: {
+    agent: AssistantSummary;
+    degraded: boolean;
+    index: number;
+    onOpen: () => void;
+    canClone: boolean;
+    cloneDenied: string;
+    canDelete: boolean;
+    deleteDenied: string;
+    onClone: () => void;
+  }) {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
+    const deleteAssistant = useDeleteAssistant();
+    const wrapRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -287,27 +301,52 @@ function AgentRow({
                   <MessageSquare size={13} strokeWidth={1.7} />
                   Test
                 </RowMenuItem>
-                <RowMenuItem
-                  type="button"
-                  role="menuitem"
-                  disabled={!canClone}
-                  title={canClone ? 'Pick a source, name the copy' : cloneDenied}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onClone();
-                  }}
-                >
-                  <CopyIcon size={13} strokeWidth={1.7} />
-                  Clone
-                </RowMenuItem>
-              </RowMenu>
-            )}
-          </AnimatePresence>
-        </div>
-      </DataCell>
-    </DataRow>
-  );
-}
+                  <RowMenuItem
+                    type="button"
+                    role="menuitem"
+                    disabled={!canClone}
+                    title={canClone ? 'Pick a source, name the copy' : cloneDenied}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onClone();
+                    }}
+                  >
+                    <CopyIcon size={13} strokeWidth={1.7} />
+                    Clone
+                  </RowMenuItem>
+                  <RowMenuItem
+                    type="button"
+                    role="menuitem"
+                    disabled={!canDelete}
+                    title={canDelete ? 'Delete this agent' : deleteDenied}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setDeleteConfirm(true);
+                    }}
+                  >
+                    <Trash2 size={13} strokeWidth={1.7} />
+                    Delete
+                  </RowMenuItem>
+                </RowMenu>
+              )}
+            </AnimatePresence>
+            <ConfirmDialog
+              open={deleteConfirm}
+              title='Delete this agent?'
+              message='This removes the agent, all its versions, and its archived conversations. Active conversations must be archived first.'
+              destructive
+              confirmLabel='Delete'
+              onConfirm={() => {
+                deleteAssistant.mutate(agent.id);
+                setDeleteConfirm(false);
+              }}
+              onCancel={() => setDeleteConfirm(false)}
+            />
+          </div>
+        </DataCell>
+      </DataRow>
+    );
+  }
 
 // ─── local styled additions ──────────────────────────────────────────
 const RowMenu = styled(motion.div)`

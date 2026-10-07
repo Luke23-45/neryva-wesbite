@@ -130,6 +130,10 @@ export function AgentDetailView() {
   const { role } = useOrg();
   const canAuthorClone = canSetup(role, 'setup:author');
   const cloneDenied = setupDeniedCopy(role, 'setup:author');
+  // Z-011: delete is owner/admin-only server-side — mirror the gate instead
+  // of walking non-governors into a 403 (same P1-1 pattern as Publish).
+  const canDelete = canSetup(role, 'setup:govern');
+  const deleteDenied = setupDeniedCopy(role, 'setup:govern');
 
   return (
     <ViewShell>
@@ -219,16 +223,18 @@ export function AgentDetailView() {
                       Clone
                     </ActionButton>
                   </Tooltip>
-                  <Tooltip label='Delete this agent (rejected while active conversations exist)'>
-                    <ActionButton
-                      variant='danger'
-                      size='sm'
-                      aria-label='Delete agent'
-                      onClick={() => setDeleteConfirm(true)}
-                    >
-                      <Trash2 size={13} strokeWidth={1.7} />
-                    </ActionButton>
-                  </Tooltip>
+                    <Tooltip label={canDelete ? 'Delete this agent (rejected while active conversations exist)' : deleteDenied}>
+                      <ActionButton
+                        variant='danger'
+                        size='sm'
+                        aria-label='Delete agent'
+                        disabled={!canDelete}
+                        title={canDelete ? undefined : deleteDenied}
+                        onClick={() => setDeleteConfirm(true)}
+                      >
+                        <Trash2 size={13} strokeWidth={1.7} />
+                      </ActionButton>
+                    </Tooltip>
                 </ActionCluster>
               </HeaderRow>
               <TemplateDetailOrigin assistantId={agent.id} activeVersionId={agent.activeVersionId} />
