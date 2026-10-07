@@ -63,7 +63,7 @@ import type { EditableBlock, ModalBlock } from '../section-ui/types';
 import { MicroTip, PageOutline, SectionGroup, SectionPage } from '../section-ui/SectionPage';
 import { SkeletonRows } from './SkeletonRows';
 import { ConflictDialog } from './ConflictDialog';
-import { ModelPicker } from './ModelPicker';
+import { ModelPicker, filterCatalogRows } from './ModelPicker';
 import {
   AddModelButton,
   BlockerPill,
@@ -724,7 +724,7 @@ export function ModelSection({
   // expands for configuration via addModel). Otherwise scroll to the catalog
   // and state the true unblock step.
   const handleAddModel = useCallback(() => {
-    const usable = (groupedRows ?? []).filter(
+    const usable = filterCatalogRows(groupedRows ?? [], new Set()).filter(
       (row) => row.usable && !pipeline.some((entry) => pipelineEntryKey(entry.ref, entry.credential_id) === row.key),
     );
     if (usable.length > 0 && pipeline.length === 0) {
@@ -876,7 +876,7 @@ export function ModelSection({
     {
       key: 'catalog',
       label: 'Catalog',
-      meta: groupedRows === undefined ? 'Loading…' : `${groupedRows.length} models`,
+      meta: groupedRows === undefined ? 'Loading…' : `${filterCatalogRows(groupedRows, pipelineKeys).length} models`,
       done: groupedRows !== undefined,
     },
     {
@@ -1043,7 +1043,7 @@ export function ModelSection({
       <div id="model-catalog">
         <SectionGroup
           label="Catalog"
-          description="Every model your organization can use, grouped by source. Locked rows name the subscription they need."
+          description="Models enabled for your organization in Providers → Models. Toggled-off models are hidden; locked rows name the subscription they need."
         >
           <ModelPicker
             rows={groupedRows}

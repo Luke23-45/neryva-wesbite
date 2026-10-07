@@ -332,13 +332,14 @@ describe('ModelPicker per-reason rendering (PRV-080)', () => {
     expect(link.getAttribute('href')).toBe('/agent-studio/providers/models');
   });
 
-  it('renders model_disabled_by_org with its label and a Providers link', async () => {
+  it('hides model_disabled_by_org rows instead of rendering them disabled', async () => {
     await act(async () => {
       shell();
     });
-    expect(screen.getByText(/disabled by organization/)).toBeTruthy();
-    const link = screen.getByRole('link', { name: /re-enable in providers/i }) as HTMLAnchorElement;
-    expect(link.getAttribute('href')).toBe('/agent-studio/providers/models');
+    // The Gemini fixture row (enabled: false) never reaches the list — the
+    // Providers → Models surface owns toggles, the picker reflects them.
+    expect(screen.queryByText('Gemini 3')).toBeNull();
+    expect(screen.queryByText(/disabled by organization/)).toBeNull();
   });
 
   it('explains a subscription lock with the product label and a billing link', async () => {
@@ -456,6 +457,49 @@ describe('ModelPicker footer, toggle, and gating', () => {
     });
     fireEvent.change(screen.getByLabelText('Search model catalog'), { target: { value: 'no-such-model' } });
     expect(screen.getByText(/No models match/)).toBeTruthy();
+  });
+});
+
+describe('ModelPicker org-toggle filter', () => {
+  it('keeps a toggled-off row visible and removable while it is in the pipeline', async () => {
+    let onToggle!: ReturnType<typeof vi.fn>;
+    await act(async () => {
+      ({ onToggle } = shell({
+        pipelineKeys: new Set([
+          'platform|anthropic/claude-sonnet-4-5|',
+          'platform|google/gemini-3|',
+        ]),
+      }));
+    });
+    const box = screen.getByLabelText(/Gemini 3/) as HTMLInputElement;
+    expect(box.disabled).toBe(false);
+    fireEvent.click(box);
+    expect(onToggle).toHaveBeenCalledWith('google/gemini-3', null);
+  });
+
+  it('states an all-toggled-off catalog honestly with a Providers link', async () => {
+    await act(async () => {
+      shell({
+        rows: [
+          row({
+            key: 'platform|google/gemini-3|',
+            provider: 'google',
+            providerDisplayName: 'Google',
+            modelId: 'gemini-3',
+            ref: 'google/gemini-3',
+            displayName: 'Gemini 3',
+            usable: false,
+            enabled: false,
+            reasons: ['model_disabled_by_org'],
+            pricing: undefined,
+          }),
+        ],
+        pipelineKeys: new Set(),
+      });
+    });
+    expect(screen.getByText(/No enabled models/)).toBeTruthy();
+    const link = screen.getByRole('link', { name: /providers.*models/i }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/agent-studio/providers/models');
   });
 });
 

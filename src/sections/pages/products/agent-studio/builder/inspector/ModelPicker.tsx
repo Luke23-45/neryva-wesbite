@@ -90,12 +90,27 @@ interface SupergroupSection {
 }
 
 /**
+ * Catalog visibility: only org-enabled rows plus anything already in the
+ * draft pipeline (a model toggled off after being picked stays removable
+ * and keeps its "unavailable" note in the pipeline — it never vanishes
+ * silently). The Providers → Models surface owns the toggles; this list
+ * reflects them.
+ */
+export function filterCatalogRows(
+  rows: BuilderModelRow[],
+  pipelineKeys: Set<string>,
+): BuilderModelRow[] {
+  return rows.filter((row) => row.enabled || pipelineKeys.has(row.key));
+}
+
+/**
  * Catalog multi-pick on the N-5 grouped-model rows — supergroup sections
  * (Platform managed / BYOK — <credentialLabel>) wrapping provider sub-groups,
  * with search, capability chips, per-1M pricing, and inline usability
- * reasons. Unusable rows are DISABLED (never hidden); pipeline rows stay
- * removable. Viewer gets the same list read-only. Reorder moved to the
- * pipeline rows (no OrderStrip here).
+ * reasons. Only org-enabled rows are listed (plus anything already in the
+ * pipeline); unusable-but-enabled rows are DISABLED (never hidden);
+ * pipeline rows stay removable. Viewer gets the same list read-only.
+ * Reorder moved to the pipeline rows (no OrderStrip here).
  */
 export function ModelPicker({
   rows,
@@ -113,7 +128,7 @@ export function ModelPicker({
   const capped = pickedCount >= ENGINE_RANGES.allowedModelsMax;
 
   const visible = useMemo(() => {
-    const list = rows ?? [];
+    const list = filterCatalogRows(rows ?? [], pipelineKeys);
     const q = query.trim().toLowerCase();
     if (!q) return list;
     return list.filter(
@@ -123,7 +138,11 @@ export function ModelPicker({
         row.provider.toLowerCase().includes(q) ||
         (row.credentialLabel ?? '').toLowerCase().includes(q),
     );
-  }, [rows, query]);
+  }, [rows, query, pipelineKeys]);
+
+  // Rows exist but the org-toggle filter hid every one (no search active).
+  const allToggledOff =
+    (rows?.length ?? 0) > 0 && query.trim() === '' && visible.length === 0 && !loadError;
 
   // Supergroup sections in catalog order (never alphabetical — the catalog's
   // own ordering is the source of truth): platform first, then BYOK groups
@@ -242,8 +261,14 @@ export function ModelPicker({
         <EmptyNote>No models in the platform catalog yet — nothing can ship until staff publishes entries.</EmptyNote>
       )}
       {/* D1: zero-match search gets an explicit empty state, not a blank list. */}
-      {rows !== undefined && rows.length > 0 && visible.length === 0 && !loadError && (
+      {rows !== undefined && rows.length > 0 && visible.length === 0 && !loadError && !allToggledOff && (
         <EmptyNote>No models match “{query.trim()}” — try a different search.</EmptyNote>
+      )}
+      {allToggledOff && (
+        <EmptyNote>
+          No enabled models — everything is toggled off. Enable models in{' '}
+          <Link to="/agent-studio/providers/models">Providers → Models</Link>, then pick them here.
+        </EmptyNote>
       )}
 
       <CatalogList>

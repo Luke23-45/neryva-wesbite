@@ -537,7 +537,7 @@ describe('ModelSection group headings', () => {
     });
     expect(screen.getByText('The models that serve this agent, in order. Configure each one below.')).toBeTruthy();
     expect(
-      screen.getByText('Every model your organization can use, grouped by source. Locked rows name the subscription they need.'),
+      screen.getByText('Models enabled for your organization in Providers → Models. Toggled-off models are hidden; locked rows name the subscription they need.'),
     ).toBeTruthy();
     expect(screen.getByText('Generation defaults for every run. Unset means the model default. Per-model overrides live in the pipeline above.')).toBeTruthy();
   });
