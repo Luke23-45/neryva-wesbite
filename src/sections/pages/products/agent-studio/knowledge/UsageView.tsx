@@ -7,6 +7,7 @@ import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { EmptyState } from '@components/common/ui/EmptyState';
 import { QueryView } from '@components/common/ui/AsyncStates';
+import toast from 'react-hot-toast';
 import { Segmented } from '@components/common/ui/Segmented/Segmented';
 import {
   ViewShell,
@@ -246,6 +247,7 @@ export function UsageView() {
       rows.push([doc.title ?? doc.id, '', '', '', '']);
     }
     downloadCsv(`knowledge-usage-${days}d.csv`, toCsv(rows));
+    toast.success('Usage CSV downloaded');
   };
 
   return (
@@ -396,7 +398,14 @@ export function UsageView() {
         <QueryView
           query={quadrants}
         >
-          {(data) => (
+          {(data) =>
+            data.quadrants.length === 0 ? (
+              <EmptyState
+                icon={<FileText size={24} />}
+                title="No citation data yet"
+                description="Quadrants appear once documents are retrieved and cited."
+              />
+            ) : (
             <QuadrantGrid>
               {data.quadrants.map((q) => {
                 const meta = QUADRANT_META[q.quadrant] ?? { title: q.quadrant, desc: '' };
@@ -412,7 +421,8 @@ export function UsageView() {
                 );
               })}
             </QuadrantGrid>
-          )}
+            )
+          }
         </QueryView>
         <div style={{ height: 32 }} />
       </motion.div>
