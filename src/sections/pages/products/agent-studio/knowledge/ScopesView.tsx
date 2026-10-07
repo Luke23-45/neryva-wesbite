@@ -108,16 +108,13 @@ export function ScopesView() {
           <motion.div {...pageItem}>
             <DataTable>
               <DataHead>
-                <DataRow>
-                  <DataCell as="th">Name</DataCell>
-                  <DataCell as="th">Slug</DataCell>
-                  <DataCell as="th">Version policy</DataCell>
-                  <DataCell as="th">Updated</DataCell>
-                  <DataCell as="th" style={{ textAlign: 'right' }}>Actions</DataCell>
-                </DataRow>
+                <DataCell>Name</DataCell>
+                <DataCell>Slug</DataCell>
+                <DataCell>Version policy</DataCell>
+                <DataCell>Updated</DataCell>
+                <DataCell style={{ textAlign: 'right' }}>Actions</DataCell>
               </DataHead>
-              <tbody>
-                {scopes.map((scope) => (
+              {scopes.map((scope) => (
                   <DataRow key={scope.id}>
                     <DataCell>
                       <Link
@@ -172,7 +169,6 @@ export function ScopesView() {
                     </DataCell>
                   </DataRow>
                 ))}
-              </tbody>
             </DataTable>
           </motion.div>
         )}

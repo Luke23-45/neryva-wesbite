@@ -294,24 +294,20 @@ export function UsageView() {
             ) : (
               <DataTable>
                 <DataHead>
-                  <DataRow>
-                    <DataCell as="th">Title</DataCell>
-                    <DataCell as="th">Retrievals</DataCell>
-                    <DataCell as="th">Citations</DataCell>
-                    <DataCell as="th">Conversion</DataCell>
-                    <DataCell as="th">Agents</DataCell>
-                  </DataRow>
+                  <DataCell>Title</DataCell>
+                  <DataCell>Retrievals</DataCell>
+                  <DataCell>Citations</DataCell>
+                  <DataCell>Conversion</DataCell>
+                  <DataCell>Agents</DataCell>
                 </DataHead>
-                <tbody>
-                  {docs.map((doc) => (
-                    <DocumentUsageRow
-                      key={doc.id}
-                      documentId={doc.id}
-                      title={doc.title ?? doc.id}
-                      days={daysNum}
-                    />
-                  ))}
-                </tbody>
+                {docs.map((doc) => (
+                  <DocumentUsageRow
+                    key={doc.id}
+                    documentId={doc.id}
+                    title={doc.title ?? doc.id}
+                    days={daysNum}
+                  />
+                ))}
               </DataTable>
             )
           }
@@ -336,23 +332,19 @@ export function UsageView() {
             ) : (
               <DataTable>
                 <DataHead>
-                  <DataRow>
-                    <DataCell as="th">Name</DataCell>
-                    <DataCell as="th">Documents</DataCell>
-                    <DataCell as="th">Retrievals</DataCell>
-                    <DataCell as="th">Citations</DataCell>
-                  </DataRow>
+                  <DataCell>Name</DataCell>
+                  <DataCell>Documents</DataCell>
+                  <DataCell>Retrievals</DataCell>
+                  <DataCell>Citations</DataCell>
                 </DataHead>
-                <tbody>
-                  {list.map((agent) => (
-                    <AgentUsageRow
-                      key={agent.id}
-                      agentId={agent.id}
-                      name={agent.name ?? agent.id}
-                      days={daysNum}
-                    />
-                  ))}
-                </tbody>
+                {list.map((agent) => (
+                  <AgentUsageRow
+                    key={agent.id}
+                    agentId={agent.id}
+                    name={agent.name ?? agent.id}
+                    days={daysNum}
+                  />
+                ))}
               </DataTable>
             )
           }
@@ -373,27 +365,23 @@ export function UsageView() {
               <>
                 <DataTable>
                   <DataHead>
-                    <DataRow>
-                      <DataCell as="th">Document</DataCell>
-                      <DataCell as="th">Created</DataCell>
-                      <DataCell as="th">Size</DataCell>
-                      <DataCell as="th">Days unused</DataCell>
-                    </DataRow>
+                    <DataCell>Document</DataCell>
+                    <DataCell>Created</DataCell>
+                    <DataCell>Size</DataCell>
+                    <DataCell>Days unused</DataCell>
                   </DataHead>
-                  <tbody>
-                    {data.documents.map((doc) => (
-                      <DataRow key={doc.documentId}>
-                        <DataCell style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                          {doc.documentId.slice(0, 8)}…
-                        </DataCell>
-                        <DataCell>{relativeTime(doc.createdAt)}</DataCell>
-                        <DataCell>{formatBytes(doc.byteSize)}</DataCell>
-                        <DataCell style={{ fontVariantNumeric: 'tabular-nums' }}>
-                          {data.windowDays}
-                        </DataCell>
-                      </DataRow>
-                    ))}
-                  </tbody>
+                  {data.documents.map((doc) => (
+                    <DataRow key={doc.documentId}>
+                      <DataCell style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                        {doc.documentId.slice(0, 8)}…
+                      </DataCell>
+                      <DataCell>{relativeTime(doc.createdAt)}</DataCell>
+                      <DataCell>{formatBytes(doc.byteSize)}</DataCell>
+                      <DataCell style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {data.windowDays}
+                      </DataCell>
+                    </DataRow>
+                  ))}
                 </DataTable>
                 <SectionNote>
                   Unused = ready + no scope pins + no retrieval or citation in the last{' '}

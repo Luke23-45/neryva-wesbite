@@ -119,15 +119,12 @@ export function EvalView() {
           <motion.div {...pageItem}>
             <DataTable>
               <DataHead>
-                <tr>
-                  <th>Name</th>
-                  <th>Cases</th>
-                  <th>Last run</th>
-                  <th>Created</th>
-                </tr>
+                <DataCell>Name</DataCell>
+                <DataCell>Cases</DataCell>
+                <DataCell>Last run</DataCell>
+                <DataCell>Created</DataCell>
               </DataHead>
-              <tbody>
-                {datasets.map((ds) => (
+              {datasets.map((ds) => (
                   <DataRow key={ds.id}>
                     <DataCell>
                       <Link
@@ -154,7 +151,6 @@ export function EvalView() {
                     <DataCell>{ds.createdAt ? relativeTime(ds.createdAt) : '—'}</DataCell>
                   </DataRow>
                 ))}
-              </tbody>
             </DataTable>
           </motion.div>
           )

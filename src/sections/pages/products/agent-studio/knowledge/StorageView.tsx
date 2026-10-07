@@ -225,27 +225,23 @@ export function StorageView() {
 
               <SectionTitle>Top 20 documents</SectionTitle>
               <DataTable>
-                <thead>
-                  <DataRow>
-                    <DataHead>Title</DataHead>
-                    <DataHead>Size</DataHead>
+                <DataHead>
+                  <DataCell>Title</DataCell>
+                  <DataCell>Size</DataCell>
+                </DataHead>
+                {data.topDocuments.map((doc) => (
+                  <DataRow key={doc.documentId}>
+                    <DataCell>
+                      <Link
+                        to="/agent-studio/knowledge/$docId/preview"
+                        params={{ docId: doc.documentId }}
+                      >
+                        {doc.title ?? doc.documentId.slice(0, 8)}
+                      </Link>
+                    </DataCell>
+                    <DataCell>{formatBytes(doc.bytes)}</DataCell>
                   </DataRow>
-                </thead>
-                <tbody>
-                  {data.topDocuments.map((doc) => (
-                    <DataRow key={doc.documentId}>
-                      <DataCell>
-                        <Link
-                          to="/agent-studio/knowledge/$docId/preview"
-                          params={{ docId: doc.documentId }}
-                        >
-                          {doc.title ?? doc.documentId.slice(0, 8)}
-                        </Link>
-                      </DataCell>
-                      <DataCell>{formatBytes(doc.bytes)}</DataCell>
-                    </DataRow>
-                  ))}
-                </tbody>
+                ))}
               </DataTable>
             </motion.div>
           );

@@ -202,16 +202,13 @@ export function EvalDatasetView() {
           </MetricsGrid>
           <DataTable>
             <DataHead>
-              <tr>
-                <th>Case</th>
-                <th>Recall</th>
-                <th>Precision</th>
-                <th>nDCG</th>
-                <th>MRR</th>
-              </tr>
+              <DataCell>Case</DataCell>
+              <DataCell>Recall</DataCell>
+              <DataCell>Precision</DataCell>
+              <DataCell>nDCG</DataCell>
+              <DataCell>MRR</DataCell>
             </DataHead>
-            <tbody>
-              {run.results.map((r) => (
+            {run.results.map((r) => (
                 <DataRow key={r.caseId}>
                   <DataCell>
                     <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{r.caseId.slice(0, 8)}…</span>
@@ -234,7 +231,6 @@ export function EvalDatasetView() {
                   </DataCell>
                 </DataRow>
               ))}
-            </tbody>
           </DataTable>
         </motion.div>
       )}
