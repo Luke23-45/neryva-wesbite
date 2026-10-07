@@ -311,7 +311,7 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
   const docById = useMemo(() => {
     const map = new Map<string, string>();
     for (const d of documents ?? []) {
-      map.set(d.id, d.title ?? d.id);
+      map.set(d.id, d.sourceSlug);
     }
     return map;
   }, [documents]);
@@ -383,13 +383,25 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
   // The form fields are shared verbatim between new and edit mode.
   // In edit mode the slug is read-only: it is the record identity and the
   // route parameter.
+  const clearError = (key: string) => {
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
   const formFields = (readOnlySlug: boolean) => (
     <>
       <Field>
         Name
         <TextInput
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearError('name');
+          }}
           placeholder="Support articles"
         />
         {errors.name && <ErrorText>{errors.name}</ErrorText>}
@@ -402,6 +414,7 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
           onChange={(e) => {
             setSlugInput(slugify(e.target.value));
             setSlugTouched(true);
+            clearError('slug');
           }}
           placeholder="support-articles"
           disabled={readOnlySlug}
@@ -492,10 +505,11 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
               {CURATION_OPTIONS.map((opt) => {
                 const active = curation.includes(opt.value);
                 return (
-                  <DocChip key={opt.value}>
+                  <DocChip key={opt.value} as="label">
                     <input
                       type="checkbox"
                       checked={active}
+                      aria-label={`Curation status: ${opt.label}`}
                       onChange={() => {
                         setCuration(
                           active
@@ -543,7 +557,10 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
             Threshold override (0–1)
             <TextInput
               value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
+              onChange={(e) => {
+                setThreshold(e.target.value);
+                clearError('threshold');
+              }}
               placeholder="Leave empty for default"
               inputMode="decimal"
             />
@@ -563,7 +580,7 @@ export function ScopeBuilderView({ mode }: { mode: 'new' | 'edit' }) {
       <div>
         <SectionTitle>Pinned documents</SectionTitle>
         <SectionDesc>
-          Always admitted, regardless of filters. Read-only until pin endpoints land.
+          Always admitted, regardless of filters.
         </SectionDesc>
         <DocPicker
           documents={documents ?? []}
