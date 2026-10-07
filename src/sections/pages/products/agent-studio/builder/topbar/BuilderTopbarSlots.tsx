@@ -26,7 +26,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 export interface BuilderTopbarSlots {
   /** 24px mark + breadcrumb + Draft/Live pills. */
   identity: ReactNode;
-  /** Save readout + Save + Test run + Publish (+badge). */
+  /** Save readout + Save + Test run. */
   actions: ReactNode;
 }
 

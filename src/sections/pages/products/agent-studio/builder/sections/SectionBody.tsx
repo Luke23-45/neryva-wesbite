@@ -110,11 +110,11 @@ export interface InspectorContext {
    */
   requestSave: () => void;
   /**
-   * Manual publish counter (v10 §8.12 — topbar Publish). Blocked clicks
-   * never reach it — they select the ship node instead; unblocked clicks
-   * increment it and the Ship section fires its publish flow.
+   * Legacy manual publish counter (v10 §8.12 — removed topbar Publish).
+   * Optional — absent means idle (Ship drives its own flow). Kept so older
+   * callers typecheck; nothing increments it anymore.
    */
-  publishSignal: number;
+  publishSignal?: number;
   /**
    * SHP-1: the Ship section calls this after firing a signal increment —
    * the counter returns to idle so a stale signal never fires unprompted.

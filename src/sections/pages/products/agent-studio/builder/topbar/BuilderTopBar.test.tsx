@@ -28,18 +28,11 @@ function renderIdentity(overrides: Partial<BuilderTopbarIdentityProps> = {}) {
 
 function renderActions(overrides: Partial<BuilderTopbarActionsProps> = {}) {
   const onSave = vi.fn();
-  const onTestRun = vi.fn();
-  const onPublish = vi.fn();
   const props: BuilderTopbarActionsProps = {
     mode: 'build',
     saveState: 'unsaved',
     onSave,
     canAuthor: true,
-    // P1-1: publish is a setup:govern act; governors pass canPublish=true.
-    canPublish: true,
-    onTestRun,
-    onPublish,
-    blockingCount: 0,
     ...overrides,
   };
   render(
@@ -47,12 +40,10 @@ function renderActions(overrides: Partial<BuilderTopbarActionsProps> = {}) {
       <BuilderTopbarActions {...props} />
     </ThemeProvider>,
   );
-  return { onSave, onTestRun, onPublish, container: document.body };
+  return { onSave, container: document.body };
 }
 
 const saveButton = () => screen.getByRole('button', { name: 'Save changes' });
-const testRunButton = () => screen.getByRole('button', { name: /test run/i });
-const publishButton = () => screen.getByRole('button', { name: /publish/i });
 
 describe('BuilderTopbarIdentity (T13)', () => {
   it('renders the flat 24px logo mark — no gradient anywhere on it', () => {
@@ -159,93 +150,27 @@ describe('BuilderTopbarActions manual save', () => {
   });
 });
 
-describe('BuilderTopbarActions Test run (T9)', () => {
-  it('calls onTestRun when the Test run button is clicked', () => {
-    const { onTestRun } = renderActions({ canAuthor: true });
-    fireEvent.click(testRunButton());
-    expect(onTestRun).toHaveBeenCalledTimes(1);
-  });
-
-  it('hides the Test run button in new mode', () => {
-    renderActions({ mode: 'new' });
+describe('BuilderTopbarActions has no Test run affordance', () => {
+  it('renders no Test run button — testing lives in the Try section only', () => {
+    renderActions({ canAuthor: true });
     expect(screen.queryByRole('button', { name: /test run/i })).toBeNull();
-  });
-
-  it('disables Test run with an honest reason when the viewer cannot author', () => {
-    const { onTestRun } = renderActions({ canAuthor: false });
-    const btn = testRunButton();
-    expect(btn).toBeDisabled();
-    expect(btn.getAttribute('title')).toBe('Testing requires an author role');
-    fireEvent.click(btn);
-    expect(onTestRun).not.toHaveBeenCalled();
   });
 });
 
-describe('BuilderTopbarActions Publish (T10)', () => {
-  it('calls onPublish when the Publish button is clicked', () => {
-    const { onPublish } = renderActions({ blockingCount: 0 });
-    fireEvent.click(publishButton());
-    expect(onPublish).toHaveBeenCalledTimes(1);
-  });
-
-  it('hides the Publish button in new mode', () => {
-    renderActions({ mode: 'new' });
+describe('BuilderTopbarActions has no Publish affordance', () => {
+  it('renders no Publish button — publishing lives in the Ship section only', () => {
+    renderActions();
     expect(screen.queryByRole('button', { name: /publish/i })).toBeNull();
   });
 
-  it('never disables Publish in build mode — blocked clicks open the issues surface', () => {
-    renderActions({ blockingCount: 3, canAuthor: true });
-    expect(publishButton()).toBeEnabled();
-  });
-
-  it('shows the blocking-count badge when blockingCount > 0', () => {
-    renderActions({ blockingCount: 3 });
-    expect(screen.getByTestId('publish-badge').textContent).toBe('3');
-  });
-
-  it('renders no badge when blockingCount is 0', () => {
-    renderActions({ blockingCount: 0 });
-    expect(screen.queryByTestId('publish-badge')).toBeNull();
-  });
-
-  it('names the blocking count honestly in the Publish title', () => {
-    renderActions({ blockingCount: 2 });
-    expect(publishButton().getAttribute('title')).toContain('2 blocking issues');
-  });
-
-  it('renders the publish button flat — no gradient', () => {
+  it('renders no blocking-count badge', () => {
     renderActions();
-    const style = window.getComputedStyle(publishButton());
-    expect(style.backgroundImage).not.toContain('gradient');
-    expect(style.backgroundColor).toBe('rgb(47, 127, 224)');
+    expect(screen.queryByTestId('publish-badge')).toBeNull();
   });
 
   it('renders no Engine Room link — it moved to the builder status bar (T13)', () => {
     renderActions();
     expect(screen.queryByText(/engine room/i)).toBeNull();
-  });
-
-  it('P1-1 (T-01): disables Publish with the honest owner-or-admin copy for non-governors', () => {
-    const { onPublish } = renderActions({ canPublish: false, blockingCount: 0 });
-    const btn = publishButton();
-    expect(btn).toBeDisabled();
-    expect(btn.getAttribute('title')).toBe(
-      'Publish needs owner or admin — you can draft, test and evaluate. Ask an owner to publish.',
-    );
-    fireEvent.click(btn);
-    expect(onPublish).not.toHaveBeenCalled();
-  });
-
-  it('P1-1 (T-01): a developer stays disabled even with blocking issues — the badge never re-enables the gate', () => {
-    renderActions({ canPublish: false, blockingCount: 2 });
-    expect(publishButton()).toBeDisabled();
-    expect(screen.getByTestId('publish-badge').textContent).toBe('2');
-  });
-
-  it('P1-1 (T-01): keeps Publish enabled for governors', () => {
-    renderActions({ canPublish: true, blockingCount: 0 });
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton().getAttribute('title')).toBe('Publish this version');
   });
 });
 

@@ -1,7 +1,6 @@
-import { PanelLeftOpen, PanelRightOpen, Play, Upload, Waypoints } from 'lucide-react';
+import { PanelLeftOpen, PanelRightOpen, Waypoints } from 'lucide-react';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { ActionButton } from '@components/common/ui/ActionButton';
-import { PUBLISH_COPY } from '../lib/publish-model';
 import {
   ActionsGroup,
   AgentName,
@@ -11,11 +10,7 @@ import {
   LogoMark,
   PanelToggleButton,
   Pills,
-  PublishBadge,
-  PublishButton,
-  PublishWrap,
   SaveState,
-  TestRunButton,
 } from './BuilderTopBar.styles';
 
 /**
@@ -46,19 +41,6 @@ export interface BuilderTopbarActionsProps {
   /** Manual save trigger (topbar button) — no-ops in new mode. */
   onSave: () => void;
   canAuthor: boolean;
-  /** Selects the Try node — the same try-run flow, no duplicate (T9). */
-  onTestRun: () => void;
-  /**
-   * P1-1 (T-01): setup:govern (owner/admin) — publish is NOT a
-   * setup:author act. False → the Publish button is disabled with the same
-   * honest "Publish needs owner or admin" copy the Ship section uses, so a
-   * developer is never walked into a confirm dialog that can only 403.
-   */
-  canPublish: boolean;
-  /** Triggers the Ship publish flow, or opens the issues surface when blocked (T10). */
-  onPublish: () => void;
-  /** Live blocking-issue count; 0 → no badge rendered. */
-  blockingCount: number;
   /** T15: inspector hidden → show the restore button after Publish. */
   inspectorCollapsed?: boolean;
   onRestoreInspector?: () => void;
@@ -124,8 +106,9 @@ export function BuilderTopbarIdentity({
 
 /**
  * Actions slot (v10 T13): honest save readout + Save button (the single
- * save indicator per A2 — no relative timestamps), Test run and Publish in
- * build mode. The Engine Room link moved to the builder status bar
+ * save indicator per A2 — no relative timestamps). Testing and publishing
+ * live in their sections (Try, Ship) — no topbar shortcuts.
+ * The Engine Room link moved to the builder status bar
  * (user 2026-09-28: keep only what's important in the merged bar).
  *
  * Omitted on purpose (C5): Build/Test/Monitor tabs, undo/redo, Realtime —
@@ -136,10 +119,6 @@ export function BuilderTopbarActions({
   saveState,
   onSave,
   canAuthor,
-  canPublish,
-  onTestRun,
-  onPublish,
-  blockingCount,
   inspectorCollapsed = false,
   onRestoreInspector,
 }: BuilderTopbarActionsProps) {
@@ -159,17 +138,6 @@ export function BuilderTopbarActions({
             : saveState === 'syncing'
               ? 'Waiting for the latest data…'
               : 'Save now (Ctrl+S / ⌘S)';
-  const testRunTitle = !canAuthor
-    ? 'Testing requires an author role'
-    : 'Run a test conversation (opens the Try node)';
-  const publishTitle =
-    !canPublish
-      ? // P1-1: same honest copy the Ship section shows non-governors —
-        // the button is disabled, never a dead click into a doomed dialog.
-        PUBLISH_COPY.requestPublish
-      : blockingCount > 0
-        ? `Publish — ${blockingCount} blocking issue${blockingCount === 1 ? '' : 's'} to review first`
-        : 'Publish this version';
   return (
     <ActionsGroup>
       <SaveState aria-live="polite">
@@ -178,21 +146,6 @@ export function BuilderTopbarActions({
       <ActionButton size="sm" variant="primary" onClick={onSave} disabled={saveDisabled} title={saveTitle} aria-label="Save changes">
         Save
       </ActionButton>
-      {mode === 'build' && (
-        <TestRunButton type="button" onClick={onTestRun} disabled={!canAuthor} title={testRunTitle}>
-          <Play size={14} aria-hidden="true" />
-          Test run
-        </TestRunButton>
-      )}
-      {mode === 'build' && (
-        <PublishWrap>
-          <PublishButton type="button" onClick={onPublish} disabled={!canPublish} title={publishTitle}>
-            <Upload size={14} aria-hidden="true" />
-            Publish
-          </PublishButton>
-          {blockingCount > 0 && <PublishBadge data-testid="publish-badge">{blockingCount}</PublishBadge>}
-        </PublishWrap>
-      )}
       {inspectorCollapsed && (
         <PanelToggleButton
           type="button"

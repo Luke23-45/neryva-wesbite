@@ -29,7 +29,7 @@ import type { PurposeFormState, PurposeHandle } from './inspector/PurposeInspect
 import { BuilderBottomBar } from './bottombar/BuilderBottomBar';
 import { deriveBottomAction, type BottomAction, type BottomPrimary } from './lib/bottom-action';
 import { SETUP_ENTRY_STEP, clearSetupPosition, getSetupOrder, nextSetupSection, prevSetupSection, readSetupPosition, setupStepIndex, writeSetupPosition } from './lib/setup-flow';
-import { knowledgeSlot, projectBuilderGraph, FUNCTIONAL_NODE_IDS } from './lib/projector';
+import { knowledgeSlot, projectBuilderGraph } from './lib/projector';
 import { estimateRun, PLATFORM_DEFAULTS } from './lib/budget-model';
 import { selectVersionEvalState } from './lib/eval-model';
 import type { PublishEditTarget } from './lib/publish-model';
@@ -73,10 +73,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   // Guided setup is an author-only continuation of creation — viewers who
   // land on ?setup=1 get the ordinary build mode.
   const isSetupFlow = mode === 'build' && setupFlow === true && canAuthor && agentId != null;
-  // P1-1 (T-01): publish is a setup:govern act (owner/admin only —
-  // assistants.controller.ts:198-201). The topbar Publish must mirror the
-  // Ship section's gate, never the broader setup:author tier.
-  const canPublish = canSetup(role, 'setup:govern');
 
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
@@ -486,31 +482,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     select(OVERVIEW_ID);
   }, [mode, scopeKey, selectedId, form.data, select, initialSlot, isSetupFlow, agentId]);
 
-  // Section health (v10 §8.10): the 14 functional ids (everything except
-  // context/response — excluded from readiness math). configured = 'ready'
-  // sections among them; nextStep = first attention/error, else first
-  // untouched, else null.
-  const sectionHealth = useMemo(() => {
-    const functional = projected.nodes.filter((n) => (FUNCTIONAL_NODE_IDS as readonly string[]).includes(n.id));
-    const configured = functional.filter((n) => n.data.status === 'ready').length;
-    const next =
-      functional.find((n) => n.data.status === 'attention' || n.data.status === 'error') ??
-      functional.find((n) => n.data.status === 'untouched') ??
-      null;
-    return {
-      configured,
-      total: functional.length,
-      // SHP-2: ack-aware blocker count from the shared derivation — an
-      // acknowledged exception is no longer reported as a "blocking issue"
-      // by the topbar badge.
-      blockers: mode === 'build' ? shipReadiness.blockers : 0,
-      // No defensible advisory count exists yet (the only candidate,
-      // noChangeHint, is boolean) — omitted rather than invented (§8.11).
-      suggestions: 0,
-      nextStep: next ? { label: next.data.title, nodeId: next.id } : null,
-    };
-  }, [projected.nodes, shipReadiness.blockers, mode]);
-
   const bottomAction = useMemo(() => {
     // Knowledge attention (C05): the graded section's own verdict, computed
     // once — the bar never re-derives what the projector already decided.
@@ -596,38 +567,6 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     setSaveSignal((s) => s + 1);
   }, [mode, canAuthor, anySectionDirty, view, formState.dirty]);
 
-  // Manual publish signal (v10 §8.12 — topbar Publish). Blocked clicks land
-  // on the ship section (the gate truth lives there); unblocked clicks
-  // select the ship section and increment the counter — the Ship section
-  // fires its publish flow once per increment (SHP-1: the old bump-without-
-  // navigate dead-clicked from every other section, and the never-reset
-  // signal popped the confirm dialog unprompted on every later Ship visit).
-  // P1-1 (T-01): gated on setup:govern, not setup:author — the engine's
-  // publish endpoint requires owner/admin, so a developer must never bump
-  // this signal into a confirm dialog that can only 403. The topbar button
-  // is disabled with the honest copy for non-governors; this guard is
-  // defense-in-depth for any other caller of handlePublish.
-  const [publishSignal, setPublishSignal] = useState(0);
-  const handlePublish = useCallback(() => {
-    if (mode === 'new' || !canAuthor || !canPublish) return;
-    if (sectionHealth.blockers > 0) {
-      select('ship');
-      return;
-    }
-    select('ship');
-    setPublishSignal((s) => s + 1);
-  }, [mode, canAuthor, canPublish, sectionHealth.blockers, select]);
-
-  /**
-   * SHP-1: the Ship section calls this after firing a signal increment —
-   * the signal is consumed idempotently back to idle (0), so a stale signal
-   * can never fire the confirm dialog unprompted on a later visit. The
-   * section re-arms its own seen mark when the consume lands (signal 0).
-   */
-  const consumePublishSignal = useCallback(() => {
-    setPublishSignal(0);
-  }, []);
-
   /**
    * Merged builder topbar (ledger T13): instead of a stacked 56px row,
    * the builder provides identity/actions slots that `StudioShell` renders
@@ -648,34 +587,26 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
           hasLive={hasLive}
         />
       ),
-      actions: (
-        <BuilderTopbarActions
-          mode={mode}
-          saveState={saveState}
-          onSave={requestSave}
-          canAuthor={canAuthor}
-          canPublish={canPublish}
-          onTestRun={() => handleSelectSection('try')}
-          onPublish={handlePublish}
-          blockingCount={sectionHealth.blockers}
-        />
-      ),
-    };
-  }, [
-    mode,
-    assistant.data,
-    agentName,
-    orgName,
-    hasDraft,
-    hasLive,
-    saveState,
-    requestSave,
-    canAuthor,
-    canPublish,
-    handleSelectSection,
-    handlePublish,
-    sectionHealth.blockers,
-  ]);
+        actions: (
+          <BuilderTopbarActions
+            mode={mode}
+            saveState={saveState}
+            onSave={requestSave}
+            canAuthor={canAuthor}
+          />
+        ),
+      };
+    }, [
+      mode,
+      assistant.data,
+      agentName,
+      orgName,
+      hasDraft,
+      hasLive,
+      saveState,
+      requestSave,
+      canAuthor,
+    ]);
 
   // Publish the merged topbar slots to the layout-level provider above
   // StudioShell (T19 — the provider must sit above the shell, not inside
@@ -774,19 +705,9 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
        */
       requestSave,
       /**
-       * Manual publish counter (v10 §8.12 — topbar Publish). The Ship
-       * section fires its publish flow when this increments; blocked
-       * clicks never reach it — they select the ship section instead.
-       * The section consumes each increment back to 0 (SHP-1), so a stale
-       * signal can never fire unprompted.
-       */
-      publishSignal,
-      /** SHP-1: Ship calls this after firing a signal increment. */
-      onPublishSignalConsumed: consumePublishSignal,
-      /**
-       * Degraded-knowledge ack (SHP-2): lifted here so the topbar badge,
-       * the graph node, and the Ship section all read the same ack-aware
-       * derivation. Resets with the working version.
+       * Degraded-knowledge ack (SHP-2): lifted here so the graph node and
+       * the Ship section read the same ack-aware derivation. Resets with
+       * the working version.
        */
       degradedAck,
       onDegradedAck: setDegradedAck,
@@ -798,7 +719,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
        */
       isSetupFlow,
     }),
-    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, publishSignal, consumePublishSignal, degradedAck, requestSave, isSetupFlow],
+    [mode, agentId, agentName, description, assistant, canAuthor, role, hasDraft, definition, form.data?.versionId, form.data?.hash, form.data?.status, models.data, models.isPending, lastTry, onTryEvent, onEditJump, onShipJump, saveSignal, degradedAck, requestSave, isSetupFlow],
   );
 
   // — Build-mode loading / not-found / fetch-error (firsthand states, never blank) —
