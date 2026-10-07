@@ -78,9 +78,14 @@ export function DatasetsView() {
             {list.map((d) => (
               <DataRow key={d.id}>
                 <DataCell $w="28%">
-                  <StatusPill tone="info" dot={false}>
-                    {d.name}
-                  </StatusPill>
+                  <Link
+                    to="/agent-studio/evaluations"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <StatusPill tone="info" dot={false}>
+                      {d.name}
+                    </StatusPill>
+                  </Link>
                 </DataCell>
                 <DataCell $w="26%">{describeDatasetOrigin(d.name)}</DataCell>
                 <DataCell $w="32%">{d.description ?? '—'}</DataCell>
