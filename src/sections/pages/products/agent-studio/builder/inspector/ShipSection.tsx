@@ -382,9 +382,9 @@ function RefusalFixLinks({
           {fix.fixLabel} →
         </RefusalLink>
       ) : (
-        <RefusalLink to={buildAgentDetailPath(agentId)}>
-          {fix.fixLabel} →
-        </RefusalLink>
+        <span>
+          {fix.fixLabel}
+        </span>
       )}
     </>
   );
