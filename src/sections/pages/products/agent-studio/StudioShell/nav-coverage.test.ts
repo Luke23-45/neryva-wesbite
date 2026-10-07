@@ -72,20 +72,24 @@ const NON_NAVIGABLE_EXACT = new Set([
   '/agent-studio/models/credentials/new',
   '/agent-studio/models/credentials/$credentialId/rotate',
   '/agent-studio/providers',
-  // Intentionally sidebar-less per user direction (2026-10-07): Memory,
-  // Datasets, and Tools are top-level routes accessible via direct URL and
-  // command palette, but removed from the Libraries sidebar domain to avoid
-  // duplication with their canonical locations.
-  '/agent-studio/memory',
-  '/agent-studio/memory/new',
-  '/agent-studio/memory/$memoryId',
-  '/agent-studio/memory/$memoryId/edit',
-  '/agent-studio/memory/$memoryId/timeline',
-  '/agent-studio/datasets',
-  '/agent-studio/tools',
-  '/agent-studio/tools/new',
-  '/agent-studio/tools/$toolId/edit',
-  '/agent-studio/tools/instantiate',
+  // Intentionally sidebar-less per user direction (2026-10-07): Knowledge
+  // sub-sections (Scopes, Usage, Health, Storage, Eval, Recall gaps,
+  // Recommendations) are accessible via direct URL, but removed from the
+  // Libraries sidebar domain. Only Documents, Memory, Datasets, and Tools
+  // remain in the sidebar.
+  '/agent-studio/knowledge/scopes',
+  '/agent-studio/knowledge/scopes/new',
+  '/agent-studio/knowledge/scopes/$slug/edit',
+  '/agent-studio/knowledge/scopes/$slug/simulate',
+  '/agent-studio/knowledge/usage',
+  '/agent-studio/knowledge/health',
+  '/agent-studio/knowledge/storage',
+  '/agent-studio/knowledge/eval',
+  '/agent-studio/knowledge/eval/datasets',
+  '/agent-studio/knowledge/recall-gaps',
+  '/agent-studio/knowledge/recommendations',
+  '/agent-studio/knowledge/diagnostics',
+  '/agent-studio/knowledge/curate',
 ]);
 
 const config = navJson as unknown as NavConfig;

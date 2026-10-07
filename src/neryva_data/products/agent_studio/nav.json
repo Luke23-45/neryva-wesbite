@@ -70,46 +70,20 @@
           "badge": "attention"
         },
         {
-          "label": "Scopes",
-          "to": "/agent-studio/knowledge/scopes",
-          "icon": "knowledge",
-          "match": "/agent-studio/knowledge/scopes"
+          "label": "Memory",
+          "to": "/agent-studio/memory",
+          "icon": "chat"
         },
         {
-          "label": "Usage",
-          "to": "/agent-studio/knowledge/usage",
-          "icon": "usage",
-          "match": "/agent-studio/knowledge/usage"
+          "label": "Datasets",
+          "to": "/agent-studio/datasets",
+          "icon": "evaluations"
         },
         {
-          "label": "Health",
-          "to": "/agent-studio/knowledge/health",
-          "icon": "activity",
-          "match": "/agent-studio/knowledge/health"
-        },
-        {
-          "label": "Storage",
-          "to": "/agent-studio/knowledge/storage",
-          "icon": "knowledge",
-          "match": "/agent-studio/knowledge/storage"
-        },
-        {
-          "label": "Eval",
-          "to": "/agent-studio/knowledge/eval",
-          "icon": "evaluations",
-          "match": "/agent-studio/knowledge/eval"
-        },
-        {
-          "label": "Recall gaps",
-          "to": "/agent-studio/knowledge/recall-gaps",
-          "icon": "analytics",
-          "match": "/agent-studio/knowledge/recall-gaps"
-        },
-        {
-          "label": "Recommendations",
-          "to": "/agent-studio/knowledge/recommendations",
-          "icon": "templates",
-          "match": "/agent-studio/knowledge/recommendations"
+          "label": "Tools",
+          "to": "/agent-studio/tools",
+          "icon": "tools",
+          "badge": "count"
         }
       ]
     },
