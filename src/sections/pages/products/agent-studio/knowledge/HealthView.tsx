@@ -241,6 +241,7 @@ export function HealthView() {
             value={findingType}
             onChange={setFindingType}
             items={typeOptions}
+            disabled={typeOptions.length <= 1}
           />
         </FilterBar>
 

@@ -441,6 +441,7 @@ export const Dropdown = forwardRef<HTMLElement, DropdownProps>(function Dropdown
         return;
       case 'Escape':
         e.preventDefault();
+        e.stopPropagation();
         close(true);
         return;
       case 'Tab':
