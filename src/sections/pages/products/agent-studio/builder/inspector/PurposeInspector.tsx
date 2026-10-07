@@ -71,6 +71,13 @@ interface PurposeInspectorProps {
   onFormState?: (state: PurposeFormState) => void;
   /** New assistant id after create — or a clone id (parent navigates to /build). */
   onCreated?: (assistantId: string) => void;
+  /**
+   * Edit-through-create (?edit= on /agents/new): the existing agent being
+   * renamed/re-described. Submit updates (PATCH) instead of creating.
+   */
+  editAgentId?: string | null;
+  /** Fired instead of onCreated when the edit submit persists. */
+  onEdited?: (assistantId: string) => void;
 }
 
 /**
@@ -82,7 +89,7 @@ interface PurposeInspectorProps {
  * unchanged — creation contract, 409 one-tap rename, identity PATCH.
  */
 export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>(function PurposeInspector(
-  { mode, agentId, agentName, description, identityPending, identityError, onRetryIdentity, canAuthor, role, onFormState, onCreated },
+  { mode, agentId, agentName, description, identityPending, identityError, onRetryIdentity, canAuthor, role, onFormState, onCreated, editAgentId, onEdited },
   ref,
 ) {
   const [name, setName] = useState('');
@@ -102,6 +109,19 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
   const nameValid = isNameValid(name);
   const descValid = isDescriptionValid(desc);
   const valid = nameValid && descValid;
+  // Edit-through-create: prefill once when the existing identity arrives.
+  // Guarded by target id (never clobbers typing) and skipped when the
+  // maker already typed (dirty fields win over the fetch).
+  const prefilledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editAgentId || prefilledFor.current === editAgentId) return;
+    if (agentName === null && description === null) return;
+    if (name !== '' || desc !== '') return;
+    prefilledFor.current = editAgentId;
+    setName(agentName ?? '');
+    setDesc(description ?? '');
+    setTaken(false);
+  }, [editAgentId, agentName, description, name, desc]);
   // Inline validation: the field explains itself once the maker has typed
   // something invalid (pristine stays quiet — the helper carries the
   // range). A disabled Save with no explanation is the defect this fixes.
@@ -109,8 +129,23 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
     name.length > 0 && !nameValid ? `Needs ${NAME_MIN}–${NAME_MAX} characters` : undefined;
 
   const submit = useCallback(() => {
-    if (!valid || create.isPending) return;
+    if (!valid || create.isPending || updateIdentity.isPending) return;
     setTaken(false);
+    // Edit-through-create: the agent exists — PATCH identity, then leave
+    // through onEdited (ordinary build surface, never the setup walk).
+    if (editAgentId) {
+      updateIdentity.mutate(
+        { assistantId: editAgentId, name: trimmed, description: desc.trim() },
+        {
+          onSuccess: () => {
+            submitKey.current = null;
+            toast.success(`${trimmed} updated`);
+            onEdited?.(editAgentId);
+          },
+        },
+      );
+      return;
+    }
     const fingerprint = `${trimmed}\n${desc.trim()}`;
     if (!submitKey.current || submitKey.current.fingerprint !== fingerprint) {
       submitKey.current = { fingerprint, key: randomIdempotencyKey() };
@@ -154,7 +189,7 @@ export const PurposeInspector = forwardRef<PurposeHandle, PurposeInspectorProps>
         },
       },
     );
-  }, [valid, create, trimmed, desc, onCreated]);
+  }, [valid, create, updateIdentity, trimmed, desc, onCreated, editAgentId, onEdited]);
 
   // Stable handle for the bottom action bar (single-action invariant).
 

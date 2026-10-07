@@ -155,6 +155,17 @@ interface SectionBodyProps {
   onRoleDirty?: (dirty: boolean) => void;
   onBudgetDirty?: (dirty: boolean) => void;
   onCreated?: (assistantId: string) => void;
+  /**
+   * Edit-through-create (?edit= on /agents/new): fired instead of onCreated
+   * when the new-mode submit updates an existing agent. The parent lands on
+   * the ordinary build surface (no setup walk — the agent already exists).
+   */
+  onEdited?: (assistantId: string) => void;
+  /**
+   * The ?edit= target in new mode (null = blank creation). Passed to the
+   * identity form so its submit updates (PATCH) instead of creating.
+   */
+  editAgentId?: string | null;
 }
 
 /**
@@ -191,6 +202,8 @@ export function SectionBody({
   onRoleDirty,
   onBudgetDirty,
   onCreated,
+  onEdited,
+  editAgentId,
 }: SectionBodyProps) {
   const agentId = context.agentId;
 
@@ -214,6 +227,8 @@ export function SectionBody({
           role={context.role}
           onFormState={onFormState}
           onCreated={onCreated}
+          onEdited={onEdited}
+          editAgentId={editAgentId}
         />
         {context.mode === 'build' && context.agentId && purposeNodes && onPurposeSelect && (
           <PurposeExtras

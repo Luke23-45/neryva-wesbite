@@ -205,7 +205,12 @@ export function AgentDetailView() {
                     <ActionButton
                       variant="secondary"
                       size="sm"
-                      onClick={() => navigate({ to: '/agent-studio/agents/$agentId/edit', params: { agentId: agent.id } })}
+                      onClick={() =>
+                        navigate({
+                          to: '/agent-studio/agents/new',
+                          search: { edit: agent.id },
+                        })
+                      }
                     >
                       <Pencil size={13} strokeWidth={1.7} />
                       Edit

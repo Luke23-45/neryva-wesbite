@@ -23,6 +23,13 @@ describe('deriveBottomAction (rules 1–4 + fallback)', () => {
     expect(action.showSkip).toBe(false);
   });
 
+  it('rule 1b (?edit=): the same shell saves instead of creating', () => {
+    const action = deriveBottomAction(base({ mode: 'new', isEdit: true, purposeValid: false }));
+    expect(action.primary).toEqual({ action: 'create' });
+    expect(action.primaryLabel).toBe('Save changes');
+    expect(action.showSkip).toBe(false);
+  });
+
   it('rule 2: no draft opens the Engine Room (P8-A05)', () => {
     const action = deriveBottomAction(base({ hasDraft: false, modelReady: false }));
     expect(action.primary).toEqual({ action: 'engine-room' });

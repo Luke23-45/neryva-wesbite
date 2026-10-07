@@ -569,3 +569,83 @@ describe('PurposeInspector submission keys (Z-008) + null-id fallback (Z-010)', 
     expect(toastError).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('PurposeInspector edit-through-create (?edit=)', () => {
+  const EDIT_ID = 'agent-edit-1';
+
+  async function editShell(onCreated?: (id: string) => void, onEdited?: (id: string) => void) {
+    updateIdentityMock.mutate.mockReset();
+    createIdentityMock.mutate.mockReset();
+    const ref = { current: null } as RefObject<PurposeHandle | null>;
+    const rootRoute = createRootRoute();
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => (
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+            <PurposeInspector
+              ref={ref}
+              mode="new"
+              agentId={null}
+              agentName="Billing Support"
+              description="Support bot"
+              canAuthor
+              role="owner"
+              editAgentId={EDIT_ID}
+              onCreated={onCreated}
+              onEdited={onEdited}
+            />
+          </QueryClientProvider>
+        </ThemeProvider>
+      ),
+    });
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    await router.load();
+    render(<RouterProvider router={router} />);
+    return ref;
+  }
+
+  it('prefills the form from the existing identity', async () => {
+    await editShell();
+    expect(screen.getByDisplayValue('Billing Support')).toBeTruthy();
+    expect(screen.getByDisplayValue('Support bot')).toBeTruthy();
+  });
+
+  it('saving updates (PATCH) instead of creating, then fires onEdited', async () => {
+    const onEdited = vi.fn();
+    const onCreated = vi.fn();
+    updateIdentityMock.mutate.mockImplementation(
+      (
+        input: { assistantId: string; name: string; description: string },
+        opts?: { onSuccess?: () => void; onError?: (e: unknown) => void },
+      ) => {
+        opts?.onSuccess?.();
+      },
+    );
+    const ref = await editShell(onCreated, onEdited);
+    ref.current?.save();
+    expect(createIdentityMock.mutate).not.toHaveBeenCalled();
+    expect(updateIdentityMock.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantId: EDIT_ID, name: 'Billing Support' }),
+      expect.anything(),
+    );
+    expect(onEdited).toHaveBeenCalledWith(EDIT_ID);
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it('recovers inline from a 409 rename in edit mode', async () => {
+    updateIdentityMock.mutate.mockImplementation(
+      (_input: unknown, opts?: { onError?: (error: unknown) => void }) => {
+        opts?.onError?.(new ApiError(409, 'conflict', 'taken'));
+      },
+    );
+    const ref = await editShell();
+    ref.current?.save();
+    expect(await screen.findByText('That name is taken')).toBeTruthy();
+    expect(createIdentityMock.mutate).not.toHaveBeenCalled();
+  });
+});

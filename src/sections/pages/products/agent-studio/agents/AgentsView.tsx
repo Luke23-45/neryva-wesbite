@@ -300,14 +300,16 @@ function AgentRow({
                 <RowMenuItem
                   type="button"
                   role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    navigate({ to: '/agent-studio/agents/$agentId/edit', params: { agentId: agent.id } });
-                  }}
-                >
-                  <Pencil size={13} strokeWidth={1.7} />
-                  Edit definition
-                </RowMenuItem>
+                    onClick={() => {
+                      setMenuOpen(false);
+                      // Edit opens the creation page repopulated (?edit=):
+                      // same surface, same flow — saving updates the agent.
+                      navigate({ to: '/agent-studio/agents/new', search: { edit: agent.id } });
+                    }}
+                  >
+                    <Pencil size={13} strokeWidth={1.7} />
+                    Edit definition
+                  </RowMenuItem>
                 <RowMenuItem
                   type="button"
                   role="menuitem"

@@ -5,8 +5,10 @@
  * action invariant holds in every state: the bar never renders empty and
  * never renders two competing CTAs.
  */
-export interface BottomActionInput {
-  mode: 'new' | 'build';
+  export interface BottomActionInput {
+    mode: 'new' | 'build';
+    /** Edit-through-create (?edit=): same new-mode shell, but the primary updates instead of creating. */
+    isEdit?: boolean;
   /** New-mode Purpose form validity (trimmed name 2–128). */
   purposeValid: boolean;
   hasDraft: boolean;
@@ -43,15 +45,16 @@ export function deriveBottomAction(input: BottomActionInput): BottomAction {
       ? { showSkip: true, skipTarget: input.selectedSlot }
       : { showSkip: false, skipTarget: null };
 
-  // Rule 1 — pre-create: the only action is creating.
-  if (input.mode === 'new') {
-    return {
-      primaryLabel: 'Create agent',
-      primary: { action: 'create' },
-      whisper: null,
-      ...skip,
-    };
-  }
+    // Rule 1 — pre-create: the only action is creating (or saving, when
+    // ?edit= reopens this shell around an existing agent).
+    if (input.mode === 'new') {
+      return {
+        primaryLabel: input.isEdit ? 'Save changes' : 'Create agent',
+        primary: { action: 'create' },
+        whisper: null,
+        ...skip,
+      };
+    }
 
   // Rule 2 — no draft: nothing exists to configure against yet. The Engine
   // Room owns the no-draft state ("No open draft — saving creates one"), so

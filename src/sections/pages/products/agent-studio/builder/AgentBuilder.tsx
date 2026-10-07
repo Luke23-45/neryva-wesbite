@@ -54,6 +54,12 @@ export interface AgentBuilderProps {
   /** Build mode only (route param, passed by the page — never read here). */
   agentId?: string | null;
   /**
+   * Edit-through-create (?edit= on /agents/new, new mode only): reopen this
+   * page prefilled with the agent's identity; submitting updates (PATCH)
+   * instead of creating, then lands on the ordinary build surface.
+   */
+  editAgentId?: string | null;
+  /**
    * C15 re-entry (?slot=): resume on a section id once. Unknown values
    * fall through to default selection — never an error, never a surprise.
    */
@@ -66,15 +72,22 @@ export interface AgentBuilderProps {
   setupFlow?: boolean;
 }
 
-export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFlow = false }: AgentBuilderProps) {
+export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFlow = false, editAgentId = null }: AgentBuilderProps) {
   const navigate = useNavigate();
   const { role, name: orgName } = useOrg();
   const canAuthor = canSetup(role, 'setup:author');
+  // Edit-through-create: only in new mode with an explicit ?edit= target.
+  // Anything else (build mode, absent/blank edit) is ordinary behavior.
+  const editingId = mode === 'new' && editAgentId ? editAgentId : null;
+  const isEditing = editingId !== null;
   // Guided setup is an author-only continuation of creation — viewers who
   // land on ?setup=1 get the ordinary build mode.
   const isSetupFlow = mode === 'build' && setupFlow === true && canAuthor && agentId != null;
 
   const assistant = useAssistant(mode === 'build' ? (agentId ?? null) : null, { enabled: mode === 'build' });
+  // Edit-through-create reads identity only (name/description prefill) —
+  // sections stay locked; the form below never touches the draft.
+  const editIdentity = useAssistant(editingId, { enabled: editingId !== null });
   const form = useAssistantDefinition(mode === 'build' ? (agentId ?? null) : null);
   const models = useModelAvailability({ enabled: mode === 'build' });
   const modelCosts = useModelCosts({ enabled: mode === 'build' });
@@ -131,7 +144,7 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   // Origin choice (C11, new mode only): the pre-builder start screen.
   // 'choose' shows the origin paths; 'blank' restores the locked builder
   // with the Identity form. Template installs navigate away (build mode).
-  const [origin, setOrigin] = useState<'choose' | 'blank'>('choose');
+  const [origin, setOrigin] = useState<'choose' | 'blank'>(() => (editingId ? 'blank' : 'choose'));
   const [formState, setFormState] = useState<PurposeFormState>({ dirty: false, valid: false });
   const [composerDirty, setComposerDirty] = useState(false);
   const [brandDirty, setBrandDirty] = useState(false);
@@ -143,8 +156,8 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
   const definition = form.data?.definition ?? null;
   const hasDraft = form.data?.isDraft ?? false;
   const hasLive = (assistant.data?.activeVersionId ?? null) !== null;
-  const agentName = assistant.data?.name ?? null;
-  const description = assistant.data?.description ?? null;
+const agentName = isEditing ? (editIdentity.data?.name ?? null) : (assistant.data?.name ?? null);
+const description = isEditing ? (editIdentity.data?.description ?? null) : (assistant.data?.description ?? null);
 
   const onFormState = useCallback((state: PurposeFormState) => {
     setFormState(state);
@@ -486,9 +499,10 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
     // Knowledge attention (C05): the graded section's own verdict, computed
     // once — the bar never re-derives what the projector already decided.
     const grade = mode === 'build' && definition ? knowledgeSlot(definition, librarySlugs, health.data ?? undefined) : null;
-    return deriveBottomAction({
-      mode,
-      purposeValid: mode === 'new' ? formState.valid : true,
+      return deriveBottomAction({
+        mode,
+        isEdit: isEditing,
+        purposeValid: mode === 'new' ? formState.valid : true,
       hasDraft,
       // Usability, not presence (C04): a loading catalog is not-ready-yet
       // (neutral copy downstream), an all-unusable set selects the model section.
@@ -673,8 +687,16 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
       agentId,
       agentName,
       description,
-      identityPending: mode === 'build' && assistant.isPending,
-      identityError: mode === 'build' && assistant.isError,
+      identityPending: mode === 'build' ? assistant.isPending : isEditing ? editIdentity.isPending : false,
+      // Edit target missing (foreign/deleted id resolves null without an
+      // error) reads as a load failure — never a blank form that would
+      // PATCH a ghost on submit.
+      identityError:
+        mode === 'build'
+          ? assistant.isError
+          : isEditing
+            ? editIdentity.isError || (!editIdentity.isPending && !editIdentity.data)
+            : false,
       onRetryIdentity: () => assistant.refetch(),
       canAuthor,
       role,
@@ -830,6 +852,15 @@ export function AgentBuilder({ mode, agentId = null, initialSlot = null, setupFl
               // instead of stranding the maker on the Overview.
               navigate({ to: buildAgentBuildPath(id), search: { setup: '1' } });
             }}
+            onEdited={(id) => {
+              // Edit-through-create (?edit=): the agent already exists, so
+              // land on the ordinary build surface — never the setup walk.
+              flushSync(() => {
+                setFormState({ dirty: false, valid: false });
+              });
+              navigate({ to: buildAgentBuildPath(id) });
+            }}
+            editAgentId={editingId}
           />
           </SectionConfirmationContext.Provider>
         )}

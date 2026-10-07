@@ -474,6 +474,12 @@ export const agentStudioAgentRollbackRoute = createRoute({
 export const agentStudioAgentsNewRoute = createRoute({
   getParentRoute: () => agentStudioAgentsRoute,
   path: '/new',
+  validateSearch: (search: Record<string, unknown>) => ({
+    // Edit-through-create: ?edit=<assistantId> reopens this page
+    // prefilled with the agent's identity; saving updates (PATCH)
+    // instead of creating. Absent = blank creation.
+    edit: typeof search.edit === 'string' ? search.edit : undefined,
+  }),
   component: AgentStudioAgentBuilderNewPage,
 });
 
