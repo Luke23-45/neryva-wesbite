@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Corp — Support</title>
+  <link rel="stylesheet" href="./site.css">
+</head>
+<body>
+  <nav class="top">
+    <a class="logo" href="./index.html">Acme Corp</a>
+    <a class="page" href="./index.html">Home</a>
+    <a class="page" href="./pricing.html">Pricing</a>
+    <a class="page" href="./support.html" aria-current="page">Support</a>
+    <span class="spacer"></span>
+    <a class="cta" href="./support.html">Talk to us</a>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Support that answers.</h1>
+      <p>Start with the assistant in the bubble — it resolves most issues on
+        the spot, and escalates to a human when it can't.</p>
+    </div>
+  </header>
+
+  <main class="wrap prose">
+    <h2>How it works here</h2>
+    <p>Open the chat bubble and ask anything: order status, returns, plan
+      differences, or "talk to a human". Try the quick-reply chips if the
+      operator configured any.</p>
+    <div class="grid">
+      <div class="card">
+        <h3>Track an order</h3>
+        <p>Ask "where is order <code class="code inline">AC-1042</code>?" and the assistant looks it up.</p>
+      </div>
+      <div class="card">
+        <h3>Start a return</h3>
+        <p>"I want to return my widget" opens the returns flow, human-approved.</p>
+      </div>
+      <div class="card">
+        <h3>Escalate</h3>
+        <p>"Talk to a human" hands the conversation to the support queue.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 Acme Corp (fictional demo company for the Neryva website widget).</div>
+  </footer>
+
+  <script src="./config.js"></script>
+  <script>
+    (function () {
+      var cfg = window.NERYVA_DEMO || {};
+      if (!cfg.ENGINE_URL || !cfg.PUBLIC_KEY || cfg.PUBLIC_KEY.indexOf('REPLACE_ME') !== -1) {
+        console.warn('[acme demo] set ENGINE_URL + PUBLIC_KEY in config.js to enable the chat bubble.');
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = cfg.ENGINE_URL + '/public/channels/widget/v1/neryva.js';
+      s.setAttribute('data-key', cfg.PUBLIC_KEY);
+      s.async = true;
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

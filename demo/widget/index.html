@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Corp — Widgets that answer back</title>
+  <link rel="stylesheet" href="./site.css">
+</head>
+<body>
+  <nav class="top">
+    <a class="logo" href="./index.html">Acme Corp</a>
+    <a class="page" href="./index.html" aria-current="page">Home</a>
+    <a class="page" href="./pricing.html">Pricing</a>
+    <a class="page" href="./support.html">Support</a>
+    <span class="spacer"></span>
+    <a class="cta" href="./support.html">Talk to us</a>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Hardware for companies that ship.</h1>
+      <p>Acme Corp builds absurdly reliable widgets, sprockets, and thingamajigs —
+        with support that actually answers. Try the chat bubble, bottom-right.</p>
+      <a class="btn" href="./pricing.html">See pricing</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h3>Overnight replacements</h3>
+        <p>Anything that breaks in the first year is replaced overnight, no forms.</p>
+      </div>
+      <div class="card">
+        <h3>Humans on support</h3>
+        <p>Our assistant triages instantly; a human takes over when it matters.</p>
+      </div>
+      <div class="card">
+        <h3>30-day returns</h3>
+        <p>Changed your mind? Send it back within 30 days, shipping on us.</p>
+      </div>
+    </div>
+    <div class="hint">
+      Demo note: the chat bubble appears on <strong>every page</strong> of this
+      site (home, pricing, support) — navigate around to prove it persists.
+      Each page load mints a fresh visitor session.
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 Acme Corp (fictional demo company for the Neryva website widget).</div>
+  </footer>
+
+  <script src="./config.js"></script>
+  <script>
+    // Single-source embed: the stock one-line loader, src built from config.js
+    // so the public key + engine origin live in exactly one place.
+    (function () {
+      var cfg = window.NERYVA_DEMO || {};
+      if (!cfg.ENGINE_URL || !cfg.PUBLIC_KEY || cfg.PUBLIC_KEY.indexOf('REPLACE_ME') !== -1) {
+        console.warn('[acme demo] set ENGINE_URL + PUBLIC_KEY in config.js to enable the chat bubble.');
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = cfg.ENGINE_URL + '/public/channels/widget/v1/neryva.js';
+      s.setAttribute('data-key', cfg.PUBLIC_KEY);
+      s.async = true;
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

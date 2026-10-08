@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Corp — Pricing</title>
+  <link rel="stylesheet" href="./site.css">
+</head>
+<body>
+  <nav class="top">
+    <a class="logo" href="./index.html">Acme Corp</a>
+    <a class="page" href="./index.html">Home</a>
+    <a class="page" href="./pricing.html" aria-current="page">Pricing</a>
+    <a class="page" href="./support.html">Support</a>
+    <span class="spacer"></span>
+    <a class="cta" href="./support.html">Talk to us</a>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <h1>Simple pricing, serious hardware.</h1>
+      <p>Questions about a plan? Ask the chat bubble — it knows this page.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+      <div class="card">
+        <h3>Starter</h3>
+        <div class="price">$49<small>/mo</small></div>
+        <ul class="tick">
+          <li>Up to 10 widgets</li>
+          <li>Email support</li>
+          <li>30-day returns</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Growth</h3>
+        <div class="price">$149<small>/mo</small></div>
+        <ul class="tick">
+          <li>Up to 100 widgets</li>
+          <li>Priority chat support</li>
+          <li>Overnight replacements</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Enterprise</h3>
+        <div class="price">Custom</div>
+        <ul class="tick">
+          <li>Unlimited widgets</li>
+          <li>Dedicated human + SLA</li>
+          <li>On-site installation</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">© 2026 Acme Corp (fictional demo company for the Neryva website widget).</div>
+  </footer>
+
+  <script src="./config.js"></script>
+  <script>
+    (function () {
+      var cfg = window.NERYVA_DEMO || {};
+      if (!cfg.ENGINE_URL || !cfg.PUBLIC_KEY || cfg.PUBLIC_KEY.indexOf('REPLACE_ME') !== -1) {
+        console.warn('[acme demo] set ENGINE_URL + PUBLIC_KEY in config.js to enable the chat bubble.');
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = cfg.ENGINE_URL + '/public/channels/widget/v1/neryva.js';
+      s.setAttribute('data-key', cfg.PUBLIC_KEY);
+      s.async = true;
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

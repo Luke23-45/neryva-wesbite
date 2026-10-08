@@ -1,0 +1,57 @@
+/* site.css — Acme Corp demo theme (fictional company, no build step). */
+:root {
+  --ink: #16161d;
+  --muted: #5b5b6e;
+  --brand: #4f46e5;
+  --brand-dark: #4338ca;
+  --paper: #ffffff;
+  --wash: #f4f4fa;
+  --line: #e4e4ef;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+nav.top {
+  display: flex; align-items: center; gap: 22px;
+  padding: 16px 20px; border-bottom: 1px solid var(--line);
+  max-width: 960px; margin: 0 auto;
+}
+nav.top .logo { font-weight: 800; font-size: 19px; color: var(--brand-dark); text-decoration: none; }
+nav.top a.page { color: var(--muted); text-decoration: none; font-size: 15px; }
+nav.top a.page[aria-current="page"] { color: var(--ink); font-weight: 700; }
+nav.top .spacer { flex: 1; }
+nav.top .cta {
+  background: var(--brand); color: #fff; text-decoration: none;
+  padding: 8px 16px; border-radius: 999px; font-size: 14px; font-weight: 600;
+}
+.hero { text-align: center; padding: 72px 20px 56px; background: var(--wash); }
+.hero h1 { font-size: clamp(30px, 5vw, 48px); margin: 0 0 12px; letter-spacing: -0.02em; }
+.hero p { color: var(--muted); max-width: 560px; margin: 0 auto 24px; }
+.btn {
+  display: inline-block; background: var(--brand); color: #fff;
+  padding: 12px 26px; border-radius: 10px; text-decoration: none; font-weight: 700;
+}
+.btn:hover { background: var(--brand-dark); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 40px 0; }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; background: var(--paper); }
+.card h3 { margin: 0 0 8px; }
+.card p { color: var(--muted); margin: 0 0 6px; font-size: 15px; }
+.price { font-size: 34px; font-weight: 800; margin: 8px 0; }
+.price small { font-size: 14px; color: var(--muted); font-weight: 400; }
+ul.tick { list-style: none; padding: 0; margin: 12px 0 0; }
+ul.tick li { padding-left: 26px; position: relative; margin: 6px 0; font-size: 15px; }
+ul.tick li::before { content: "✓"; position: absolute; left: 4px; color: var(--brand); font-weight: 800; }
+.prose { padding: 40px 0 64px; }
+.prose h2 { margin-top: 0; }
+.hint {
+  border: 1px dashed var(--brand); border-radius: var(--radius);
+  background: #eef0ff; padding: 14px 18px; margin: 24px 0; font-size: 15px;
+}
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; padding: 22px 0 80px; }
+code.inline { background: var(--wash); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; font-size: 14px; }
