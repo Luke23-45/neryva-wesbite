@@ -339,7 +339,7 @@ export function ShipSection({
                 Review the acknowledge box →
               </FixLink>
             ) : (
-              <RefusalFixLinks kind={refusal.kind} agentId={assistantId} onEditJump={onEditJump} />
+              <RefusalFixLinks kind={refusal.kind} onEditJump={onEditJump} />
             )}
           </RefusalFix>
         </Refusal>
@@ -361,11 +361,9 @@ export function ShipSection({
 
 function RefusalFixLinks({
   kind,
-  agentId,
   onEditJump,
 }: {
   kind: PublishRefusalKind;
-  agentId: string;
   onEditJump: (target: PublishEditTarget) => void;
 }) {
   // Fix descriptors come from the pure model (verbatim engine copy + the
