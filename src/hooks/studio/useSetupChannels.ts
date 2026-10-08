@@ -31,6 +31,7 @@
  * (widget.controller.ts:268-274,326-351).
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { engine, ENGINE_BASE } from '@lib/engine/client';
 import { toastEngineError } from '@lib/engine/errors';
 import { useOrg } from '@/Context/OrgContext';
@@ -396,11 +397,90 @@ export function useChannel(channelId: string | null, options?: { enabled?: boole
   });
 }
 
-function useInvalidateChannels() {
-  const { orgId } = useOrg();
-  const queryClient = useQueryClient();
-  return () => void queryClient.invalidateQueries({ queryKey: [...CHANNELS_KEY, orgId] });
-}
+  function useInvalidateChannels() {
+    const { orgId } = useOrg();
+    const queryClient = useQueryClient();
+    return () => void queryClient.invalidateQueries({ queryKey: [...CHANNELS_KEY, orgId] });
+  }
+
+  function useInvalidateEntitlements() {
+    const { orgId } = useOrg();
+    const queryClient = useQueryClient();
+    // Prefix invalidation — matches both useEntitlements (hooks/engine/queries)
+    // and useChannelsProduct below.
+    return () => void queryClient.invalidateQueries({ queryKey: ['engine', 'entitlements', orgId] });
+  }
+
+  export type ChannelsProductState = 'unknown' | 'enabled' | 'missing' | 'blocked';
+
+  /**
+   * Whether the `channels` product may serve this workspace, read from the
+   * live entitlement ledger (GET /console/org/:orgId/entitlements).
+   *
+   * - enabled: a row exists and creation is allowed (active/trial/... —
+   *   anything the backend does not mark read_only/expired).
+   * - missing: no row, or expired — the workspace can self-serve via the
+   *   activate endpoint (owner/billing). This is the state that used to
+   *   surface as a bare 403 on channel create.
+   * - blocked: past_due/suspended — billing-owned, re-activation would
+   *   conflict; the UI points at Billing instead of an enable button.
+   * - unknown: loading or read failed — callers render as today; the
+   *   backend remains the enforcer, so nothing is hidden or promised.
+   */
+  export function useChannelsProduct(): {
+    state: ChannelsProductState;
+    status: string | null;
+    isPending: boolean;
+  } {
+    const { orgId } = useOrg();
+    const query = useQuery({
+      queryKey: ['engine', 'entitlements', orgId, 'channels-product'],
+      queryFn: () =>
+        engine<{ entitlements: Array<{ product: string; status: string }> }>(
+          `/console/org/${orgId}/entitlements`,
+        ),
+      enabled: !!orgId,
+      staleTime: 30_000,
+    });
+    if (query.isPending || query.isError || !query.data) {
+      return { state: 'unknown', status: null, isPending: query.isPending };
+    }
+    const row = query.data.entitlements.find((e) => e.product === 'channels') ?? null;
+    if (!row || row.status === 'expired') {
+      return { state: 'missing', status: row?.status ?? null, isPending: false };
+    }
+    if (row.status === 'past_due' || row.status === 'suspended') {
+      return { state: 'blocked', status: row.status, isPending: false };
+    }
+    return { state: 'enabled', status: row.status, isPending: false };
+  }
+
+  /**
+   * Self-serve enable for the `channels` product (POST
+   * /console/org/:orgId/entitlements/channels/activate, plan payg, audited,
+   * idempotent). Owner/billing only — the endpoint enforces it; the UI
+   * mirrors it via billing:manage so non-privileged users never see a
+   * button that would 403.
+   */
+  export function useActivateChannelsProduct() {
+    const { orgId } = useOrg();
+    const invalidateChannels = useInvalidateChannels();
+    const invalidateEntitlements = useInvalidateEntitlements();
+    return useMutation({
+      mutationFn: async () =>
+        engine<unknown>(`/console/org/${orgId}/entitlements/channels/activate`, {
+          method: 'POST',
+          body: {},
+          idempotent: true,
+        }),
+      onSuccess: () => {
+        invalidateEntitlements();
+        invalidateChannels();
+        toast.success('Channels enabled — connect your first channel below.');
+      },
+      onError: (error) => toastEngineError(error, 'Could not enable Channels'),
+    });
+  }
 
 export interface CreateChannelInput {
   platform: string;

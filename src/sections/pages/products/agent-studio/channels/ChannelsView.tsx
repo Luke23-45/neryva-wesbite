@@ -29,6 +29,7 @@ import { useAssistants } from '@hooks/studio/useAssistants';
 import { canSetup, setupDeniedCopy } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { PlatformIcon } from './platformIcons';
+import { ChannelsEntitlementGate } from './ChannelsEntitlementGate';
 
 /**
  * Serve plane (customer-setup-review.md G1) — where published agents meet
@@ -188,6 +189,11 @@ export function ChannelsView() {
           <Link to={returnTo}>Back now →</Link>
         </ReturnBanner>
       )}
+
+      {/* Workspace-level prerequisite: without the Channels product the
+          engine refuses every create with `channels are not entitled`.
+          The gate renders nothing once enabled (or while unknown). */}
+      <ChannelsEntitlementGate />
 
       <motion.div initial="hidden" animate="visible" variants={pageItem} custom={1}>
         <Panel

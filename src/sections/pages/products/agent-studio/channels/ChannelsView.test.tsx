@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -152,9 +152,12 @@ describe('ChannelsView (C14 returnTo exit)', () => {
 describe('ConnectSection (C-1)', () => {
   it('preselects the assistant from the C14 contract', async () => {
     await routerAt('/agent-studio/channels/connect?returnTo=/agent-studio/agents/agent-1&assistantId=agent-1');
-    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    const assistantSelect = selects.find((s) => s.value === 'agent-1');
-    expect(assistantSelect?.value).toBe('agent-1');
+    // Serving assistant is a custom Dropdown (options portal to
+    // document.body on open), not a native select — open it, then read
+    // the listbox options.
+    fireEvent.click(screen.getByRole('button', { name: 'Serving assistant' }));
+    const selected = screen.getByRole('option', { selected: true });
+    expect(selected.textContent).toContain('Returns Helper');
     expect(screen.getByText(/After connecting you return to the agent/)).toBeTruthy();
   });
 
@@ -167,8 +170,11 @@ describe('ConnectSection (C-1)', () => {
     fireEvent.click(screen.getByText('Connect (starts pending)'));
     const sent = createMutate.mock.calls[0]?.[0] as { config: Record<string, unknown> };
     expect(sent.config.default_assistant_id).toBe('agent-1');
-    // C14: connect-then-return never dead-ends.
-    expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1');
+    // C14: connect-then-return never dead-ends. Async: the target agent
+    // route is outside this test router, so the commit lands a tick later.
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/agent-studio/agents/agent-1');
+    });
   });
 
   it('blocks submit while validation problems remain (byte-identical rules)', async () => {

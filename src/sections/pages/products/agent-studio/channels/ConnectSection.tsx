@@ -9,18 +9,20 @@ import { Panel } from '@components/common/ui/Panel';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
 import { pageItem } from '@styles/motion';
-import {
-  useCreateChannel,
-  validateCredentialField,
-  normalizeOriginEntry,
-  PLATFORM_CREDENTIAL_SPECS,
-  type ConnectablePlatform,
-} from '@hooks/studio/useSetupChannels';
+  import {
+    useCreateChannel,
+    useChannelsProduct,
+    validateCredentialField,
+    normalizeOriginEntry,
+    PLATFORM_CREDENTIAL_SPECS,
+    type ConnectablePlatform,
+  } from '@hooks/studio/useSetupChannels';
 import { useAssistants } from '@hooks/studio/useAssistants';
 import { canSetup } from '@lib/engine/capabilities';
 import { useOrg } from '@/Context/OrgContext';
 import { useDirtyGuard } from '@/sections/pages/products/agent-studio/StudioShell/useDirtyGuard';
-import { SectionBackRow } from './SectionBackRow';
+  import { SectionBackRow } from './SectionBackRow';
+  import { ChannelsEntitlementGate } from './ChannelsEntitlementGate';
 import { PlatformIcon } from './platformIcons';
 import { Dropdown } from '@components/common/ui/Dropdown';
 
@@ -77,6 +79,7 @@ export function ConnectSection() {
   const canGovern = canSetup(role, 'setup:govern');
 
   const create = useCreateChannel();
+  const channelsProduct = useChannelsProduct();
   const assistants = useAssistants();
   const [platform, setPlatform] = useState<ConnectablePlatform>('web');
   const [displayName, setDisplayName] = useState('');
@@ -94,14 +97,22 @@ export function ConnectSection() {
     headingRef.current?.focus({ preventScroll: true });
   }, []);
 
-  // Dirty guard: block navigation while the form has unsent content.
+  // Dirty guard: block navigation while the form has unsent content. A
+  // successful submit disarms it synchronously (ref, read at block time)
+  // BEFORE navigating — otherwise the guard would interrogate the user
+  // about "unsent" content that was just sent. Render-scoped state cannot
+  // do this without racing the blocker's closure.
   const dirty =
     displayName.trim() !== '' ||
     Object.values(credentialValues).some((v) => v !== '') ||
     assistantId !== (incomingAssistantId ?? '') ||
     origins.trim() !== '' ||
     greeting.trim() !== '';
-  const { dialog: dirtyDialog } = useDirtyGuard(dirty, 'You have an unsent channel connection. Leaving now discards it.');
+  const sentRef = useRef(false);
+  const { dialog: dirtyDialog } = useDirtyGuard(
+    () => dirty && !sentRef.current,
+    'You have an unsent channel connection. Leaving now discards it.',
+  );
 
   // Non-govern users land here directly — bounce to the list (server gates too).
   useEffect(() => {
@@ -112,6 +123,22 @@ export function ConnectSection() {
 
   if (!canGovern) {
     return null;
+  }
+
+  // Workspace-level prerequisite: without the Channels product the engine
+  // refuses the create below with `channels are not entitled`. Show the
+  // enable panel instead of a form that can only 403 — no dead ends, no
+  // cryptic errors. While the entitlement read is pending/failed the form
+  // renders as today (the backend remains the enforcer).
+  if (channelsProduct.state === 'missing' || channelsProduct.state === 'blocked') {
+    return (
+      <ViewShell>
+        <SectionBackRow to="/agent-studio/channels">
+          <span aria-hidden="true">‹</span> Channels
+        </SectionBackRow>
+        <ChannelsEntitlementGate />
+      </ViewShell>
+    );
   }
 
   // H5: entries are normalized to scheme://host[:port] — a pasted path
@@ -155,6 +182,7 @@ export function ConnectSection() {
       { platform, displayName: displayName.trim(), credentials, config },
       {
         onSuccess: () => {
+          sentRef.current = true;
           toast.success('Channel connected as pending — verify it, then set up the webhook.');
           if (returnTo) {
             navigate({ to: returnTo });
