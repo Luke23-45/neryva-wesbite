@@ -76,6 +76,7 @@ export function AgentsView() {
   // immediate for typing; the query goes out debounced. Any filter change
   // restarts from page one (a cursor from another filter is meaningless).
   const [debouncedQ, setDebouncedQ] = useState('');
+  const [cursors, setCursors] = useState<(AssistantPageCursor | null)[]>([null]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQ(search);
@@ -83,7 +84,6 @@ export function AgentsView() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
-  const [cursors, setCursors] = useState<(AssistantPageCursor | null)[]>([null]);
   const cursor = cursors[cursors.length - 1] ?? null;
   const page = useAssistantsPage({ sort, q: debouncedQ, cursor });
 
@@ -127,7 +127,10 @@ export function AgentsView() {
                 />
               </ToolbarGroup>
               <ToolbarGroup>
-                <ActionButton size="sm" onClick={() => navigate({ to: '/agent-studio/agents/new' })}>
+                <ActionButton
+                  size="sm"
+                  onClick={() => navigate({ to: '/agent-studio/agents/new', search: { edit: undefined } })}
+                >
                   <Plus size={14} strokeWidth={2} />
                   New agent
                 </ActionButton>

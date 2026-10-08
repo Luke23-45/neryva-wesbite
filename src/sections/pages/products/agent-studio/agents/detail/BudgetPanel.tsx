@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router';
-import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
@@ -17,40 +16,9 @@ import {
   gradeBudget,
   type BudgetCapKey,
 } from '@/sections/pages/products/agent-studio/builder/lib/budget-model';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
+import { EmptyNote, LOADING_POLICY_COPY, SpecItem, SpecList, Whisper } from './primitives';
 
 const CAP_KEYS: BudgetCapKey[] = ['max_cost_cents', 'max_total_tokens', 'max_tool_calls', 'max_model_calls', 'wall_clock_seconds'];
-
-const BudgetList = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const BudgetItem = styled.li`
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
-`;
-
-const Whisper = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
-`;
 
 /**
  * Read-only budget panel on the agent detail page (C09 PLAN §6, approved mock
@@ -93,11 +61,10 @@ export function BudgetPanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Budget"
-      subtitle="Cost and time guardrails for every run. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="Cost and time guardrails for every run."
     >
       {!definition ? (
-        <EmptyNote>Loading the policy…</EmptyNote>
+        <EmptyNote>{LOADING_POLICY_COPY}</EmptyNote>
       ) : (
         <>
           <p style={{ margin: '0 0 8px' }}>
@@ -105,39 +72,39 @@ export function BudgetPanel({ agentId }: { agentId: string }) {
               {grade.subtitle}
             </StatusPill>
           </p>
-          <BudgetList>
+          <SpecList>
             {CAP_KEYS.map((key) => {
               const described = describeCap(key, budget[key]);
               const loud = key === 'max_cost_cents' && !capped;
               return (
-                <BudgetItem key={key}>
+                <SpecItem key={key}>
                   <StatusPill tone={loud ? 'warning' : 'success'} dot={false}>
                     {CAP_LABELS[key]}
                   </StatusPill>
                   <span>
                     {described.state}{described.whisper !== '' ? ` — ${described.whisper}` : ''}
                   </span>
-                </BudgetItem>
+                </SpecItem>
               );
             })}
-          </BudgetList>
+          </SpecList>
           <Whisper>{ESTIMATE_COPY}</Whisper>
-          <BudgetList>
+          <SpecList>
             {allowed.length === 0 ? (
-              <BudgetItem>
+              <SpecItem>
                 <span>Pick a model in Brain — estimates need a priced model, never a fake $0.</span>
-              </BudgetItem>
+              </SpecItem>
             ) : (
               allowed.map((ref) => {
                 const cost = costsByRef.get(ref);
                 if (!cost) {
                   return (
-                    <BudgetItem key={ref}>
+                    <SpecItem key={ref}>
                       <StatusPill tone="neutral" dot={false}>
                         {ref}
                       </StatusPill>
                       <span>{costs.isPending ? 'loading prices…' : 'unpriced'}</span>
-                    </BudgetItem>
+                    </SpecItem>
                   );
                 }
                 const cached = cachedPriceLine({
@@ -156,7 +123,7 @@ export function BudgetPanel({ agentId }: { agentId: string }) {
                       })
                     : null;
                 return (
-                  <BudgetItem key={ref}>
+                  <SpecItem key={ref}>
                     <StatusPill tone="info" dot={false}>
                       {ref}
                     </StatusPill>
@@ -166,11 +133,11 @@ export function BudgetPanel({ agentId }: { agentId: string }) {
                       {cost.costMicrosPer1kOutput !== null ? formatRatePer1k(cost.costMicrosPer1kOutput) : 'unpriced'}
                       {estimate ? ` → ${formatEstimate(estimate.micros)} ${estimateScaleNote}` : ''}
                     </span>
-                  </BudgetItem>
+                  </SpecItem>
                 );
               })
             )}
-          </BudgetList>
+          </SpecList>
           <Whisper>{FAIL_CLOSED_COPY}</Whisper>
           <Whisper>{PUBLISH_COPY}</Whisper>
           <Whisper>

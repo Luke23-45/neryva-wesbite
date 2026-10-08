@@ -434,6 +434,12 @@ export const agentStudioAgentsIndexRoute = createRoute({
   component: AgentStudioAgentsPage,
 });
 
+// The detail page is five intent-grouped tabs (1.23). The tab is local
+// state, not a search param on purpose: declaring `validateSearch` on this
+// route makes TanStack require `search` on every sibling/child in the
+// branch (/agents/new, /$agentId/build, …) and that regression is not worth
+// linkable tabs. Deep-linkable tabs need validateSearch across the whole
+// /agent-studio branch first.
 export const agentStudioAgentDetailRoute = createRoute({
   getParentRoute: () => agentStudioAgentsRoute,
   path: '/$agentId',
@@ -471,17 +477,17 @@ export const agentStudioAgentRollbackRoute = createRoute({
 
 // Builder entry (BUILD_PLAN.md §B): static segment wins over the
 // `/$agentId` dynamic sibling, so /new never resolves as an id.
-export const agentStudioAgentsNewRoute = createRoute({
-  getParentRoute: () => agentStudioAgentsRoute,
-  path: '/new',
-  validateSearch: (search: Record<string, unknown>) => ({
-    // Edit-through-create: ?edit=<assistantId> reopens this page
-    // prefilled with the agent's identity; saving updates (PATCH)
-    // instead of creating. Absent = blank creation.
-    edit: typeof search.edit === 'string' ? search.edit : undefined,
-  }),
-  component: AgentStudioAgentBuilderNewPage,
-});
+  export const agentStudioAgentsNewRoute = createRoute({
+    getParentRoute: () => agentStudioAgentsRoute,
+    path: '/new',
+    validateSearch: (search: Record<string, unknown>) => ({
+      // Edit-through-create: ?edit=<assistantId> reopens this page
+      // prefilled with the agent's identity; saving updates (PATCH)
+      // instead of creating. Absent = blank creation.
+      edit: typeof search.edit === 'string' ? search.edit : undefined,
+    }),
+    component: AgentStudioAgentBuilderNewPage,
+  });
 
 export const agentStudioAgentBuildRoute = createRoute({
   getParentRoute: () => agentStudioAgentsRoute,

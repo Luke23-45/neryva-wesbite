@@ -314,6 +314,25 @@ export const Dropdown = forwardRef<HTMLElement, DropdownProps>(function Dropdown
     [enabledIndices],
   );
 
+  // Initial highlight on open, derived during render rather than in the
+  // layout effect: whenever `open` flips on, the highlight resets to the
+  // current selection (select variant) or the first enabled item. The
+  // effect re-derived this on every dep change while open, which could
+  // snap the highlight back out from under keyboard navigation — the open
+  // transition is the only moment this should ever apply.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      const selectedIdx = isSelect
+        ? flat.findIndex((f) => f.item.value === value && !f.item.disabled)
+        : -1;
+      setHighlighted(selectedIdx >= 0 ? selectedIdx : (enabledIndices[0] ?? null));
+    } else {
+      setHighlighted(null);
+    }
+  }
+
   // -- refs ------------------------------------------------------------------
   const triggerRef = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -367,15 +386,11 @@ export const Dropdown = forwardRef<HTMLElement, DropdownProps>(function Dropdown
     [flat, selectProps, props, close],
   );
 
-  // Position + focus on open; listeners while open.
+  // Position + focus on open; listeners while open. The initial highlight
+  // is set during render (see the open-transition block above).
   useLayoutEffect(() => {
     if (!open) return;
     reposition();
-    // Initial highlight: current selection (select) or first enabled item.
-    const selectedIdx = isSelect
-      ? flat.findIndex((f) => f.item.value === value && !f.item.disabled)
-      : -1;
-    setHighlighted(selectedIdx >= 0 ? selectedIdx : (enabledIndices[0] ?? null));
     listRef.current?.focus();
 
     const onPointerDown = (e: PointerEvent) => {
@@ -398,7 +413,7 @@ export const Dropdown = forwardRef<HTMLElement, DropdownProps>(function Dropdown
       window.removeEventListener('scroll', onScrollOrResize, true);
       window.removeEventListener('resize', onScrollOrResize);
     };
-  }, [open, reposition, close, isSelect, flat, value, enabledIndices]);
+  }, [open, reposition, close]);
 
   // Return focus to the trigger when requested (Escape / activation).
   useEffect(() => {

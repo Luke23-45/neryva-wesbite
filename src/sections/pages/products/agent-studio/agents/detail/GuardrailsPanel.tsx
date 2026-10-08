@@ -1,5 +1,3 @@
-import { Link } from '@tanstack/react-router';
-import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
@@ -10,39 +8,8 @@ import {
   PII_NON_RETRO_COPY,
   type PolicyDirection,
 } from '@/sections/pages/products/agent-studio/builder/lib/guardrails-model';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
 
-const GuardList = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const GuardItem = styled.li`
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
-`;
-
-const Whisper = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
-`;
-
+import { EmptyNote, LOADING_POLICY_COPY, SpecItem, SpecList, Whisper } from './primitives';
 /**
  * Read-only guardrails panel on the agent detail page (C07 PLAN §6, approved
  * mock `design_guardrails_blocks_dark.svg`): mode badge, per-direction rows
@@ -61,11 +28,10 @@ export function GuardrailsPanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Guardrails"
-      subtitle="What may never pass through, in or out. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="What may never pass through, in or out."
     >
       {!definition ? (
-        <EmptyNote>Loading the policy…</EmptyNote>
+        <EmptyNote>{LOADING_POLICY_COPY}</EmptyNote>
       ) : (
         <GuardRows
           input={definition.guardrails.input_policy}
@@ -100,28 +66,28 @@ export function GuardRows({
           {mode === 'logging' ? 'Logging — screening verdicts recorded; deny topics still refused' : 'Blocking'}
         </StatusPill>
       </p>
-      <GuardList>
+      <SpecList>
         {rows.map(({ direction, raw }) => {
           const name = displayPolicyName(raw, direction);
           const resolved = resolvePolicyBehavior(raw, mode);
           return (
-            <GuardItem key={direction}>
+            <SpecItem key={direction}>
               <StatusPill tone={resolved.behavior === 'disabled' ? 'warning' : 'success'} dot={false}>
                 {direction}
               </StatusPill>
               <span>
                 {name} — {resolved.consequence}
               </span>
-            </GuardItem>
+            </SpecItem>
           );
         })}
-        <GuardItem>
+        <SpecItem>
           <StatusPill tone={pii ? 'success' : 'warning'} dot={false}>
             PII
           </StatusPill>
           <span>{pii ? 'redaction on' : 'redaction off — identifiers reach storage and the provider'}</span>
-        </GuardItem>
-      </GuardList>
+        </SpecItem>
+      </SpecList>
       <Whisper>{PII_NON_RETRO_COPY}</Whisper>
     </>
   );

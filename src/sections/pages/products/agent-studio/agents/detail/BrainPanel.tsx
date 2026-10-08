@@ -10,7 +10,7 @@ import { costLabel, useModelAvailability, useModelCosts } from '@hooks/studio/us
 import { useProviderCredentials } from '@hooks/studio/useSetupProviders';
 import { useOrg } from '@/Context/OrgContext';
 import { matchPreset, humanizeReason } from '@/sections/pages/products/agent-studio/builder/lib/brain-model';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
+import { EmptyNote, Tile, TileGrid, TileKey, TileValue, Whisper } from './primitives';
 
 const ChainTrack = styled.div`
   display: flex;
@@ -34,7 +34,7 @@ const ChainNode = styled.div<{ $excluded?: boolean }>`
 
 const ChainName = styled.div`
   font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 650;
+  font-weight: 600;
   color: ${({ theme }) => theme.app.text.primary};
   display: flex;
   align-items: center;
@@ -53,33 +53,6 @@ const ChainArrow = styled.div`
   font-size: 16px;
 `;
 
-const TileGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-`;
-
-const Tile = styled.div`
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 8px 10px;
-`;
-
-const TileKey = styled.div`
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.app.text.ghost};
-`;
-
-const TileValue = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.primary};
-  margin-top: 2px;
-`;
-
 const CredList = styled.div`
   display: flex;
   flex-direction: column;
@@ -94,19 +67,6 @@ const CredRow = styled.div`
   font-size: ${({ theme }) => theme.app.type.caption};
   color: ${({ theme }) => theme.app.text.secondary};
   flex-wrap: wrap;
-`;
-
-const SectionNote = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
 `;
 
 /**
@@ -149,8 +109,7 @@ export function BrainPanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Brain — model policy"
-      subtitle="What serves this agent, in what order, at what cost. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="Model order, sampling, and cost per run."
     >
       {!definition || allowed.length === 0 ? (
         <EmptyNote>No model picked yet — open the builder to choose one. Saving without a picked model is refused.</EmptyNote>
@@ -173,11 +132,11 @@ export function BrainPanel({ agentId }: { agentId: string }) {
               );
             })}
           </ChainTrack>
-          <SectionNote>
+          <Whisper>
             Fallback serves availability in listed order — never a silent downgrade.
             {definition.model_policy.fallback_enabled ? ' Fallback is armed.' : ' Fallback is off.'}
             {versionLabel ? ` · ${versionLabel}` : ''}
-          </SectionNote>
+          </Whisper>
 
           <TileGrid>
             <Tile>
@@ -228,10 +187,10 @@ export function BrainPanel({ agentId }: { agentId: string }) {
               );
             })}
           </CredList>
-          <SectionNote>
+          <Whisper>
             Keys rotate and revoke in My Providers — this panel never touches sealed material.{' '}
             <Link to="/agent-studio/providers/my-providers">Manage in Providers →</Link>
-          </SectionNote>
+          </Whisper>
         </>
       )}
     </Panel>

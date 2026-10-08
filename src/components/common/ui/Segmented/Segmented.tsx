@@ -5,6 +5,8 @@ import { spring } from '@styles/motion';
 export type SegmentedOption<T extends string> = {
   value: T;
   label: ReactNode;
+  /** Set when the control drives a tabpanel — the panel is aria-labelledby this. */
+  id?: string;
 };
 
 type Props<T extends string> = {
@@ -48,6 +50,7 @@ export function Segmented<T extends string>({
         return (
           <SegButton
             key={opt.value}
+            id={opt.id}
             type="button"
             role="tab"
             aria-selected={active}

@@ -26,7 +26,6 @@ import {
 } from '../../builder/lib/publish-model';
 import {
   ActionCluster,
-  EmptyNote,
   VersionActions,
   VersionId,
   VersionList,
@@ -35,21 +34,9 @@ import {
   VersionRow,
   CurrentTag,
 } from '../AgentDetailView.styles';
+import { EmptyNote, formatTimestamp, STATUS_TONE } from './primitives';
 
-// Engine version statuses are SCREAMING (DRAFT/PUBLISHED/RETIRED/…) —
-// moved with the panel (was local to AgentDetailView).
-const statusTone: Record<string, 'success' | 'warning' | 'neutral'> = {
-  PUBLISHED: 'success',
-  DRAFT: 'neutral',
-  VALID: 'neutral',
-  VALIDATING: 'neutral',
-  RETIRED: 'neutral',
-  ROLLED_BACK: 'neutral',
-  live: 'success',
-  draft: 'neutral',
-  new: 'neutral',
-  disabled: 'warning',
-};
+const statusTone = STATUS_TONE;
 
 // ─── Versions panel actions (import + rollback are routed sections now) ───
 
@@ -167,7 +154,7 @@ export function VersionsPanel({ agentId, activeVersionId, highlightVersionId, on
                       {isActive && <CurrentTag>active</CurrentTag>}
                     </VersionId>
                     <VersionMeta>
-                      {version.createdAt ? version.createdAt.slice(0, 16).replace('T', ' ') : ''}
+                      {formatTimestamp(version.createdAt)}
                       {version.publishedBy ? ` · ${members.nameOf(version.publishedBy)}` : ''}
                       {version.hash ? ` · ${version.hash.slice(0, 12)}` : ''}
                     </VersionMeta>

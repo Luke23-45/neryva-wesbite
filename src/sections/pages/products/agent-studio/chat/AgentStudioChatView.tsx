@@ -432,7 +432,7 @@ export function AgentStudioChatView() {
                       <NotFoundButton
                         $primary
                         type="button"
-                        onClick={() => navigate({ to: '/agent-studio/agents/new' })}
+                        onClick={() => navigate({ to: '/agent-studio/agents/new', search: { edit: undefined } })}
                       >
                         Create your first agent
                       </NotFoundButton>

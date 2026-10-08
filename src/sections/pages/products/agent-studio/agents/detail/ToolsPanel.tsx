@@ -4,7 +4,6 @@ import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
 import { BUILT_IN_TOOLS, useToolCatalog } from '@hooks/studio/useSetupTools';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
 import {
   approvalMode,
   isBuiltinTool,
@@ -12,6 +11,7 @@ import {
   SKIP_COPY,
 } from '@/sections/pages/products/agent-studio/builder/lib/tools-model';
 
+import { EmptyNote, Tile, TileGrid, TileKey, TileValue, Whisper } from './primitives';
 const EntryList = styled.div`
   display: flex;
   flex-direction: column;
@@ -32,46 +32,6 @@ const EntryName = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.primary};
-`;
-
-const TileGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-`;
-
-const Tile = styled.div`
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 8px 10px;
-`;
-
-const TileKey = styled.div`
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.app.text.ghost};
-`;
-
-const TileValue = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.primary};
-  margin-top: 2px;
-`;
-
-const SectionNote = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
 `;
 
 /** Per-entry remediation for pins that refuse publish (mirrors the builder). */
@@ -103,8 +63,7 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Tools — bound capabilities"
-      subtitle="What this agent may call, and whether each pin is servable. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="What this agent may call, and whether each pin is servable."
     >
       {entries.length === 0 ? (
         <EmptyNote>No bound tools — {SKIP_COPY}</EmptyNote>
@@ -166,11 +125,11 @@ export function ToolsPanel({ agentId }: { agentId: string }) {
             </Tile>
           </TileGrid>
 
-          <SectionNote>
+          <Whisper>
             Approval modes are authorize-time verdicts (entry or catalog row, whichever requires).
             Pins resolve against the live catalog — stale pins refuse publish.{' '}
             <Link to="/agent-studio/tools">Open Tools library →</Link>
-          </SectionNote>
+          </Whisper>
         </>
       )}
     </Panel>

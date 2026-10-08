@@ -9,6 +9,7 @@ import { Panel } from '@components/common/ui/Panel';
 import { SearchField } from '@components/common/ui/SearchField';
 import { TextInput } from '@components/common/ui/TextInput';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { Checkbox } from '@components/common/ui/Checkbox';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import { pageItem } from '@styles/motion';
@@ -280,16 +281,17 @@ export function CloneSection() {
             <WarnBox>
               {ORIGIN_COPY.cloneUntouched}
               <WarnRow>
-                <input
-                  type="checkbox"
-                  onChange={(e) => {
-                    if (e.target.checked) {
+                <Checkbox
+                  checked={false}
+                  onChange={(next) => {
+                    if (next) {
                       dismissCloneWarning();
                       setShowWarning(false);
                     }
                   }}
-                />
-                {ORIGIN_COPY.cloneNoWarnAgain}
+                >
+                  {ORIGIN_COPY.cloneNoWarnAgain}
+                </Checkbox>
               </WarnRow>
             </WarnBox>
           )}

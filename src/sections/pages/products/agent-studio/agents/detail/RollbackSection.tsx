@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { ViewShell, ViewHeader, ViewHeaderRow, ViewTitle, ViewSubtitle } from '@components/common/ui/ViewLayout';
 import { Panel } from '@components/common/ui/Panel';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { Checkbox } from '@components/common/ui/Checkbox';
 import { pageItem } from '@styles/motion';
 import {
   useAssistant,
@@ -19,7 +20,7 @@ import {
   classifyPublishRefusal,
   type PublishRefusalKind,
 } from '../../builder/lib/publish-model';
-import { EmptyNote } from '../AgentDetailView.styles';
+import { EmptyNote } from './primitives';
 import { SectionBackRow } from '../SectionBackRow';
 import { Dropdown } from '@components/common/ui/Dropdown';
 
@@ -234,12 +235,12 @@ export function RollbackSection() {
                 {PUBLISH_COPY.rollbackCreatesNew} {PUBLISH_COPY.rollbackNoTouch}
               </CopyLine>
               {readiness.needsAcknowledge && (
-                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, marginTop: 10 }}>
-                  <input type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} style={{ marginTop: 3 }} />
-                  <span>
-                    {PUBLISH_COPY.degradedAck} Restoring pins that no longer resolve ships them anyway, explicitly.
-                  </span>
-                </label>
+                <div style={{ marginTop: 12 }}>
+                  <Checkbox checked={acknowledge} onChange={setAcknowledge}>
+                    {PUBLISH_COPY.degradedAck} Restoring pins that no longer resolve ships them anyway,
+                    explicitly.
+                  </Checkbox>
+                </div>
               )}
               {refusal && (
                 <div role="alert" style={{ marginTop: 10, fontSize: 13, lineHeight: 1.55 }}>

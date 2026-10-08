@@ -32,6 +32,11 @@ export function parseMemoryScope(raw: unknown): MemoryScope {
   return raw === 'conversation' || raw === 'organization' || raw === 'assistant' || raw === 'none' ? raw : 'user';
 }
 
+/** Display form of a scope. Was a private helper in MemoryPanel and a second copy here. */
+export function memoryScopeLabel(scope: MemoryScope): string {
+  return scope.charAt(0).toUpperCase() + scope.slice(1);
+}
+
 export type ConsumerScope = 'user' | 'none' | 'conversation' | 'org' | 'assistant';
 
 /** Console displays `org`; the wire carries `organization` (agent-payload mapping). */

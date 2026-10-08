@@ -171,20 +171,21 @@ export function BlockNewSection() {
           <div style={{ marginTop: 12 }}>
             <TextInput id="block-reason" label="Reason (mandatory, audited)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why this block exists" error={reason.trim() ? (reasonProblem ?? undefined) : undefined} />
           </div>
-          <FieldLabel style={{ marginTop: 12 }}>
-            Expires at (optional — lifts automatically, no worker; empty = permanent)
-            <input
+          <div style={{ marginTop: 12 }}>
+            <TextInput
+              id="block-expires"
               type="datetime-local"
+              label="Expires at (optional)"
+              hint="Lifts automatically, no worker. Empty = permanent."
               value={expiresAt}
               min={minExpiry}
+              error={expiryProblem ?? undefined}
               onChange={(e) => {
                 setExpiresAt(e.target.value);
                 setPermanentArmed(false);
               }}
-              style={{ display: 'block', width: '100%', marginTop: 4 }}
             />
-          </FieldLabel>
-          {expiryProblem && <p style={{ fontSize: 12, color: '#f87171' }}>{expiryProblem}</p>}
+          </div>
           <ActionsRow>
             <ActionButton variant="secondary" onClick={() => navigate(detailTo)}>
               Cancel

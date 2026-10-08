@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router';
-import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { useAssistantDefinition } from '@hooks/studio/useAgentAuthoring';
@@ -12,38 +11,7 @@ import {
   describeTtl,
   parseMemoryScope,
 } from '@/sections/pages/products/agent-studio/builder/lib/memory-model';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
-
-const MemoryList = styled.ul`
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const MemoryItem = styled.li`
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.secondary};
-  line-height: 1.55;
-`;
-
-const Whisper = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
-`;
+import { EmptyNote, LOADING_POLICY_COPY, SpecItem, SpecList, Whisper } from './primitives';
 
 /**
  * Read-only memory panel on the agent detail page (C08 PLAN §6, approved mock
@@ -62,21 +30,20 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Memory"
-      subtitle="What this agent remembers, and for how long. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="What this agent remembers, and for how long."
     >
       {!definition ? (
-        <EmptyNote>Loading the policy…</EmptyNote>
+        <EmptyNote>{LOADING_POLICY_COPY}</EmptyNote>
       ) : (
         <>
-          <MemoryList>
-            <MemoryItem>
+          <SpecList>
+            <SpecItem>
               <StatusPill tone={definition.context_policy.memory_scope === 'none' ? 'neutral' : 'success'} dot={false}>
                 {scopeLabel(parseMemoryScope(definition.context_policy.memory_scope))}
               </StatusPill>
               <span>{SCOPE_CONSEQUENCES[parseMemoryScope(definition.context_policy.memory_scope)]}</span>
-            </MemoryItem>
-            <MemoryItem>
+            </SpecItem>
+            <SpecItem>
               <StatusPill tone="info" dot={false}>
                 History {definition.context_policy.history_limit}
               </StatusPill>
@@ -86,8 +53,8 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
                   : 'Recent thread kept verbatim.'}{' '}
                 {COMPACTION_COPY}
               </span>
-            </MemoryItem>
-            <MemoryItem>
+            </SpecItem>
+            <SpecItem>
               <StatusPill tone="info" dot={false}>
                 Org defaults
               </StatusPill>
@@ -96,8 +63,8 @@ export function MemoryPanel({ agentId }: { agentId: string }) {
                   ? `Scrub ${policy.policy.scrub} — ${scrubShort(policy.policy.scrub)}. Default TTL ${describeTtl(policy.policy.ttlSeconds)}.`
                   : 'Loading org defaults…'}
               </span>
-            </MemoryItem>
-          </MemoryList>
+            </SpecItem>
+          </SpecList>
           <Whisper>
             Thread memories live on their conversation — the{' '}
             {/* A4-23: the assistant tab is reachable via ?scope=assistant&scope_id=<agentId>. */}

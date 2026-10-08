@@ -86,6 +86,8 @@ describe('BudgetPanel', () => {
   it('deep-links to measured spend and the builder instead of duplicating', async () => {
     await shell();
     expect(screen.getByText(/Open Usage \(measured\)/).getAttribute('href')).toMatch(/usage/);
-    expect(screen.getByText(/Edit in builder/).getAttribute('href')).toMatch(/build/);
+    // 1.23: the builder entry belongs to the Configuration tab header,
+    // not to each mirror panel.
+    expect(screen.queryByText(/Edit in builder/)).toBeNull();
   });
 });

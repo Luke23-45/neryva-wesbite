@@ -115,7 +115,10 @@ export function AgentsOverviewView() {
             Fleet health across your agents — updated live from the same reads as the list.
           </ViewSubtitle>
         </ViewHeader>
-        <ActionButton size="sm" onClick={() => navigate({ to: '/agent-studio/agents/new' })}>
+        <ActionButton
+          size="sm"
+          onClick={() => navigate({ to: '/agent-studio/agents/new', search: { edit: undefined } })}
+        >
           <Plus size={14} strokeWidth={2} />
           New agent
         </ActionButton>

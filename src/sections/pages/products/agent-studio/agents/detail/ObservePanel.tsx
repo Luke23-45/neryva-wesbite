@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { Panel } from '@components/common/ui/Panel';
 import { Dropdown } from '@components/common/ui/Dropdown';
+import { TextInput } from '@components/common/ui/TextInput';
 import { QueryView } from '@components/common/ui/AsyncStates';
 import {
   DataTable,
@@ -128,10 +129,16 @@ export function ObservePanel({ assistantId }: { assistantId: string }) {
           onChange={setKind}
           items={ROLLUP_KINDS.map((value) => ({ value, label: value }))}
         />
-        <label style={{ fontSize: 13 }}>
-          Days (1–365)
-          <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(e.target.value)} style={{ display: 'block', marginTop: 4, width: 100 }} />
-        </label>
+        <div style={{ width: 120 }}>
+          <TextInput
+            type="number"
+            min={1}
+            max={365}
+            label="Days (1–365)"
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+          />
+        </div>
       </Controls>
       <QueryView
         query={rollups}

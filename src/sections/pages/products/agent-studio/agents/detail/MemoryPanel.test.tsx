@@ -79,6 +79,8 @@ describe('MemoryPanel', () => {
   it('never displays the stored-but-unread summary flag', async () => {
     await shell();
     expect(screen.queryByText(/summariz/i)).toBeNull();
-    expect(screen.getByText(/Edit in builder/).getAttribute('href')).toMatch(/build/);
+    // 1.23: the builder entry belongs to the Configuration tab header,
+    // not to each mirror panel.
+    expect(screen.queryByText(/Edit in builder/)).toBeNull();
   });
 });

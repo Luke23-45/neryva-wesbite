@@ -305,20 +305,19 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
                         }),
                       ]}
                     />
-                    <label style={{ width: 120, fontSize: 13 }}>
-                      Weight
-                      <input
+                    <div style={{ width: 120 }}>
+                      <TextInput
                         type="number"
                         min={1}
+                        label="Weight"
                         value={Number.isInteger(variant.weight) ? variant.weight : ''}
                         onChange={(e) => {
                           const next = [...editing];
                           next[i] = { ...next[i], weight: Math.max(0, Math.round(Number(e.target.value) || 0)) };
                           setVariants(next);
                         }}
-                        style={{ display: 'block', width: '100%', marginTop: 4 }}
                       />
-                    </label>
+                    </div>
                     <ActionButton
                       variant="ghost"
                       size="sm"
@@ -383,14 +382,18 @@ export function OperatePanel({ agentId, versions, disabledAt, disabledReason }: 
           </div>
         )}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <label style={{ fontSize: 13 }}>
-            Environment
-            <input value={releaseEnv} onChange={(e) => setReleaseEnv(e.target.value)} placeholder="production" style={{ display: 'block', marginTop: 4 }} />
-          </label>
-          <label style={{ fontSize: 13 }}>
-            Channel
-            <input value={releaseChannel} onChange={(e) => setReleaseChannel(e.target.value)} placeholder="default" style={{ display: 'block', marginTop: 4 }} />
-          </label>
+          <TextInput
+            label="Environment"
+            value={releaseEnv}
+            onChange={(e) => setReleaseEnv(e.target.value)}
+            placeholder="production"
+          />
+          <TextInput
+            label="Channel"
+            value={releaseChannel}
+            onChange={(e) => setReleaseChannel(e.target.value)}
+            placeholder="default"
+          />
           <Dropdown
             variant="select"
             label="Version"

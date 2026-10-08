@@ -4,7 +4,6 @@ import { Panel } from '@components/common/ui/Panel';
 import { StatusPill } from '@components/common/ui/StatusPill';
 import { useAssistantDefinition, useKnowledgeHealth } from '@hooks/studio/useAgentAuthoring';
 import { useDocuments } from '@hooks/studio/useSetupKnowledge';
-import { buildAgentBuildPath } from '@/sections/pages/products/agent-studio/builder/lib/slot-model';
 import {
   coverageLabel,
   documentStateLabel,
@@ -13,6 +12,7 @@ import {
   SKIP_COPY,
 } from '@/sections/pages/products/agent-studio/builder/lib/knowledge-model';
 
+import { EmptyNote, Tile, TileGrid, TileKey, TileValue, Whisper } from './primitives';
 const PinList = styled.div`
   display: flex;
   flex-direction: column;
@@ -33,46 +33,6 @@ const PinSlug = styled.span`
   font-size: ${({ theme }) => theme.app.type.body};
   font-weight: 600;
   color: ${({ theme }) => theme.app.text.primary};
-`;
-
-const TileGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-`;
-
-const Tile = styled.div`
-  border-radius: 10px;
-  border: 1px solid ${({ theme }) => theme.app.border.default};
-  background: ${({ theme }) => theme.app.surface.subtle};
-  padding: 8px 10px;
-`;
-
-const TileKey = styled.div`
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: ${({ theme }) => theme.app.text.ghost};
-`;
-
-const TileValue = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  font-weight: 600;
-  color: ${({ theme }) => theme.app.text.primary};
-  margin-top: 2px;
-`;
-
-const SectionNote = styled.div`
-  margin-top: 10px;
-  font-size: ${({ theme }) => theme.app.type.caption};
-  color: ${({ theme }) => theme.app.text.ghost};
-  line-height: 1.55;
-`;
-
-const EmptyNote = styled.div`
-  font-size: ${({ theme }) => theme.app.type.body};
-  color: ${({ theme }) => theme.app.text.muted};
-  line-height: 1.6;
 `;
 
 /**
@@ -97,8 +57,7 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
   return (
     <Panel
       title="Knowledge — pinned sources"
-      subtitle="What this agent may retrieve, and whether each pin is servable. Edits live in the builder."
-      action={<Link to={buildAgentBuildPath(agentId)}>Edit in builder →</Link>}
+      subtitle="What this agent may retrieve, and whether each pin is servable."
     >
       {pins.length === 0 ? (
         <EmptyNote>
@@ -159,10 +118,10 @@ export function KnowledgePanel({ agentId }: { agentId: string }) {
             </Tile>
           </TileGrid>
 
-          <SectionNote>
+          <Whisper>
             Pin health reads the ACTIVE version — draft pins resolve to exact versions at publish.{' '}
             <Link to="/agent-studio/knowledge">Open Knowledge library →</Link>
-          </SectionNote>
+          </Whisper>
         </>
       )}
     </Panel>

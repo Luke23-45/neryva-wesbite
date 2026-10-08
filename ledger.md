@@ -128,7 +128,7 @@ top to bottom; shells come before the pages they frame.
 | 1.1 | Studio shell: sidebar, topbar, search, notifications popover, account menu, mobile drawer | `/agent-studio` chrome | DONE |
 | 1.2 | Chat workspace (header, messages, composer) | `/chat` | DONE |
 | 1.3 | Dashboard | `/dashboard` | DONE |
-| 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | DONE |
+| 1.4 | Agents + agent detail | `/agents`, `/agents/$agentId` | DONE — superseded by 1.23 (page accreted 6 feature commits after sign-off; see 1.23) |
 | 1.5 | Conversations | `/conversations` | DONE |
 | 1.6 | Activity | `/activity` | DONE |
 | 1.7 | Integrations + webhooks | `/integrations`, `/integrations/webhooks` | DONE |
@@ -147,6 +147,7 @@ top to bottom; shells come before the pages they frame.
 | 1.20 | Settings: Billing + Upgrade modal | `/settings/billing` | DONE |
 | 1.21 | Settings: Security | `/settings/security` | DONE |
 | 1.22 | Settings: API keys | `/settings/api-keys` | DONE |
+| 1.23 | Agent detail re-audit + restructure. 1.4 was signed off at `8dfff35` (2026-08-23) and then took six feature commits (`fe1785e`, `60ce8a9`, `d9c9201`, `d5fcd2d`, `fff5d14`, `3192fd8`) that each appended one more equal-weight `Panel` with no re-audit — the page degraded into a 17-card wall. Scope: fix the `KpiGrid` single-cell misuse, renumber the duplicated `custom` stagger indices, extract the 6× duplicated panel primitives (`Mono`/`Muted`/`EmptyNote`/`Whisper`/`Tile*`/`SpecList`) plus one `STATUS_TONE` + one `formatVersionLabel` + one `formatTimestamp`, restructure into five intent-grouped tabs (Overview / Configuration / Versions / Test / Operate) with one `Edit in builder` action, single-fact ownership via a summary strip that deep-links into the owning tab, and merge the Status/Operate/Observe/Trail quartet under one Operate surface. **Also: kit gaps closed** — added `Checkbox` (there was none; three acknowledgement gates were raw `<input type=checkbox>`), `ActionButtonLink` (promoted from a private TeamsView copy), and `SegmentedOption.id` for `aria-labelledby`; swapped every raw `<input>` on the agents surface for `TextInput`/`Checkbox` and removed the magic `#f87171` in `BlockNewSection` | `/agents/$agentId` | WIP — structure + kit landed; follow-ups: (a) tab is local state, not a search param — deep-linkable tabs need `validateSearch` across the whole `/agent-studio` branch first; (b) the disabled/degraded banner logic is still computed in two places (`OperateHeader` + `OperatePanel`) — extract a `useAgentHealthBanner` hook so an alert has one owner; (c) **18 files outside `agents/` still hold raw `<input>`/`<select>`/`<textarea>`** (`providers/`, `knowledge/`, `channels/`, `activity/`, `settings/`, `evaluations/`, `compliance/`, `chat/`, `builder/inspector/`) — sweep them onto the kit; (d) `Dropdown.tsx:378` has a `set-state-in-effect` error and is the suspected cause of the 2 pre-existing `AgentSections` failures; (e) no browser screenshot pass yet against the §4 loop's SIMULATE/REVIEW steps |
 
 ### Phase 2 — Deployment app (`/deployment`)
 

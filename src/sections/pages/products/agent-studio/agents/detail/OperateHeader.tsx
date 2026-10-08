@@ -20,25 +20,14 @@ import {
   pickOperateBanner,
 } from '../../builder/lib/operate-model';
 import { buildAgentBuildPath } from '../../builder/lib/slot-model';
+import { Callout, Mono, Muted } from './primitives';
 
 /**
  * Operate header (C15) — live state first, history second. Active-version
  * card, draft card with builder re-entry, lineage strip, the single
  * most-severe banner, per-assistant channels, spend link-outs, compromise
- * line. Read-only: every lever lives in Operate below (Day-1 lock).
+ * line. Read-only: every lever lives on the Operate tab (Day-1 lock).
  */
-
-const Banner = styled.div<{ $tone: 'warning' | 'error' | 'info' }>`
-  border: 1px solid
-    ${({ $tone, theme }) =>
-      $tone === 'error' ? theme.app.status.error.border : $tone === 'warning' ? theme.app.status.warning.border : theme.app.status.info.border};
-  background: ${({ $tone, theme }) =>
-    $tone === 'error' ? theme.app.status.error.bg : $tone === 'warning' ? theme.app.status.warning.bg : theme.app.status.info.bg};
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-bottom: 12px;
-`;
 
 const Cards = styled.div`
   display: grid;
@@ -67,15 +56,6 @@ const CardLabel = styled.div`
   margin-bottom: 4px;
 `;
 
-const Mono = styled.span`
-  font-family: ${({ theme }) => theme.typography.fonts.mono};
-  font-size: 12px;
-`;
-
-const Muted = styled.span`
-  opacity: 0.6;
-`;
-
 const Lineage = styled.div`
   font-size: 12px;
   color: ${({ theme }) => theme.app.text.secondary};
@@ -94,12 +74,6 @@ const RowLink = styled.button`
   text-underline-offset: 2px;
 `;
 
-function scrollToId(id: string) {
-  // jsdom has no scrollIntoView — guard so tests exercise the copy.
-  const el = document.getElementById(id);
-  el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-}
-
 const FIRST_BLOCKER_SLOT: Record<string, string> = {
   shape: 'purpose',
   models: 'brain',
@@ -115,6 +89,12 @@ const CHANNEL_TONE: Record<string, 'success' | 'info' | 'warning' | 'neutral'> =
   suspended: 'warning',
 };
 
+/**
+ * Live state (ledger 1.23) — lives on the Overview tab, directly under the
+ * "At a glance" strip, because it answers "what is serving right now" and
+ * that is the first question about an agent. Every lever it used to point
+ * at with a DOM-id scroll now hands the caller a tab switch instead.
+ */
 export function OperateHeader({
   agentId,
   versions,
@@ -123,6 +103,8 @@ export function OperateHeader({
   degradedReason,
   disabledAt,
   disabledReason,
+  onOpenOperate,
+  onOpenObserve,
 }: {
   agentId: string;
   versions: AgentVersion[];
@@ -131,6 +113,10 @@ export function OperateHeader({
   degradedReason: string | null;
   disabledAt: string | null;
   disabledReason: string | null;
+  /** Switch to the Operate tab (owner/admin only). */
+  onOpenOperate?: () => void;
+  /** Switch to the Operate tab, scrolled to the metrics section. */
+  onOpenObserve?: () => void;
 }) {
   const { role } = useOrg();
   const rollout = useRollout(agentId);
@@ -208,24 +194,24 @@ export function OperateHeader({
           : 'checking gates…';
 
   return (
-    <Panel title="Status" subtitle="What is live, what is draft, and where it came from. Levers live in Operate below.">
+    <Panel title="Status" subtitle="What is live, what is draft, and where it came from.">
       {banner && (
-        <Banner $tone={banner.tone} role={banner.tone === 'error' ? 'alert' : 'status'}>
+        <Callout $tone={banner.tone} role={banner.tone === 'error' ? 'alert' : 'status'}>
           <strong>{banner.title}</strong>
           <div style={{ marginTop: 2 }}>{banner.detail}</div>
           <div style={{ marginTop: 6, fontSize: 12 }}>
             {banner.id === 'degraded' ? (
               <Link to="/agent-studio/knowledge">Map the pins →</Link>
             ) : banner.id === 'paused' || banner.id === 'disabled' ? (
-              <RowLink type="button" onClick={() => scrollToId('operate-panel')}>
-                Open Operate below →
+              <RowLink type="button" onClick={() => onOpenOperate?.()}>
+                Open Operate →
               </RowLink>
             ) : banner.id === 'shadow' ? (
               <Link to="/agent-studio/evaluations" search={{ returnTo: undefined }}>Open Evaluations →</Link>
             ) : null}{' '}
             <Link to="/platform/audit">Recorded in Audit ›</Link>
           </div>
-        </Banner>
+        </Callout>
       )}
 
       <Cards>
@@ -329,20 +315,20 @@ export function OperateHeader({
       </Card>
 
       {compromised.length > 0 && (
-        <Banner $tone="error" role="alert">
+        <Callout $tone="error" role="alert">
           <strong>Compromised credential on a pinned provider: {compromised.map((c) => c.provider).join(', ')}.</strong>
           <div style={{ marginTop: 2 }}>
             Rotate or revoke before trusting serves. <Link to="/agent-studio/models">Manage in Models →</Link>
           </div>
-        </Banner>
+        </Callout>
       )}
 
       <div style={{ fontSize: 12 }}>
         <Muted>Spend is measured, never duplicated here — </Muted>
         <Link to="/agent-studio/usage">Usage →</Link>
         <Muted> · </Muted>
-        <RowLink type="button" onClick={() => scrollToId('observe-panel')}>
-          Rollups in Observe ↓
+        <RowLink type="button" onClick={() => onOpenObserve?.()}>
+          Metrics in Operate →
         </RowLink>
       </div>
     </Panel>

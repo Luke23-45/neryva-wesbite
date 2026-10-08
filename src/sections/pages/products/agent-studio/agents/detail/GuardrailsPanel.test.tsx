@@ -72,7 +72,9 @@ describe('GuardrailsPanel', () => {
 
   it('deep-links out instead of editing (read-only contract)', async () => {
     await shell();
-    expect(screen.getByText(/Edit in builder/).getAttribute('href')).toMatch(/build/);
+    // 1.23: the builder entry belongs to the Configuration tab header,
+    // not to each mirror panel.
+    expect(screen.queryByText(/Edit in builder/)).toBeNull();
     expect(screen.getByText(/past runs keep/)).toBeTruthy();
   });
 });

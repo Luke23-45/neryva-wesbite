@@ -5,6 +5,7 @@ import { Rocket } from 'lucide-react';
 import { Panel } from '@components/common/ui/Panel';
 import { Dropdown } from '@components/common/ui/Dropdown';
 import { ActionButton } from '@components/common/ui/ActionButton';
+import { Checkbox } from '@components/common/ui/Checkbox';
 import { ConfirmDialog } from '@components/common/ui/ConfirmDialog';
 import {
   usePublishReadiness,
@@ -34,6 +35,10 @@ import { ReadinessRows } from '@/sections/pages/products/agent-studio/builder/in
 
 const Muted = styled.span`
   opacity: 0.6;
+`;
+
+const AckRow = styled.div`
+  margin-top: ${({ theme }) => theme.spacing.s3};
 `;
 
 const Mono = styled.span`
@@ -207,12 +212,12 @@ export function PublishPanel({
         {readiness.evalRunning && <Notice>An evaluation is running — the gates re-read when it lands.</Notice>}
 
         {readiness.needsAcknowledge && (
-          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, marginTop: 10 }}>
-            <input type="checkbox" checked={acknowledge} onChange={(e) => setAcknowledge(e.target.checked)} style={{ marginTop: 3 }} />
-            <span>
-              {PUBLISH_COPY.degradedAck} <Mono>assistant.publish_degraded_acknowledged</Mono>. {PUBLISH_COPY.degradedLifecycle}
-            </span>
-          </label>
+          <AckRow>
+            <Checkbox checked={acknowledge} onChange={setAcknowledge}>
+              {PUBLISH_COPY.degradedAck} <Mono>assistant.publish_degraded_acknowledged</Mono>.{' '}
+              {PUBLISH_COPY.degradedLifecycle}
+            </Checkbox>
+          </AckRow>
         )}
 
         {!canPublish ? (

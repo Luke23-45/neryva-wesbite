@@ -176,7 +176,7 @@ describe('OperateHeader', () => {
     state.rollout = { state: 'paused', pausedReason: 'operator', pausedBy: 'u1', pausedAt: '2026-09-12T09:02:00Z', variants: [{ version_id: 'v6', weight: 100 }] };
     await shell();
     expect(screen.getByText(/Paused by Amara/)).toBeTruthy();
-    expect(screen.getByText('Open Operate below →')).toBeTruthy();
+    expect(screen.getByText('Open Operate →')).toBeTruthy();
   });
 
   it('resumes the draft in builder at the first blocker slot', async () => {
