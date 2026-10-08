@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -323,10 +323,12 @@ describe('block: validation parity with the modal', () => {
 
   it('offers the closed block-target vocabulary', async () => {
     await routerAt(BLOCK_PATH);
-    const select = screen.getByLabelText('Target type') as HTMLSelectElement;
-    const options = within(select).getAllByRole('option').map((o) => (o as HTMLOptionElement).value);
-    expect(options).toEqual([...BLOCK_TARGETS]);
-    expect(select.value).toBe('assistant');
+    // Target type is a custom Dropdown (options portal to document.body on
+    // open), not a native select — open it, then read the listbox options.
+    fireEvent.click(screen.getByRole('button', { name: 'Target type' }));
+    const options = screen.getAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual([...BLOCK_TARGETS]);
+    expect(screen.getByRole('option', { selected: true }).textContent).toBe('assistant');
   });
 
   it('keeps Set block disabled until the reason is present', async () => {
@@ -396,11 +398,14 @@ describe('block: validation parity with the modal', () => {
 describe('rollback section', () => {
   it('lists rollback candidates newest-first, excluding the live version and drafts', async () => {
     await routerAt(ROLLBACK_PATH);
-    const select = screen.getByLabelText('Restore') as HTMLSelectElement;
-    const options = within(select).getAllByRole('option');
-    expect(options.map((o) => (o as HTMLOptionElement).value)).toEqual(['v2', 'v1']);
+    // Restore is a custom Dropdown (options portal to document.body on
+    // open), not a native select — open it, then read the listbox options.
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(2);
     expect(options[0].textContent).toContain('v2');
     expect(options[0].textContent).toContain('2026-09-11 10:00');
+    expect(options[1].textContent).toContain('v1');
   });
 
   it('shows the empty note and no danger button when there is nothing to roll back to', async () => {
