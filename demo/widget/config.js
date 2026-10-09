@@ -10,6 +10,6 @@
  * this demo exercises the exact production path a customer install uses.
  */
 window.NERYVA_DEMO = {
-  ENGINE_URL: 'http://127.0.0.1:3001',
-  PUBLIC_KEY: 'nk_live_REPLACE_ME',
+  ENGINE_URL: 'https://neryva.tailaa834f.ts.net/engine',
+  PUBLIC_KEY: 'nk_live_KX7NG1abxDwmnj1zSIqZNUqV',
 };
