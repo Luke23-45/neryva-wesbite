@@ -79,5 +79,10 @@ describe('UsageView', () => {
   it('shows unused queue empty state', () => {
     render(<ThemeProvider theme={theme}><UsageView /></ThemeProvider>);
     expect(screen.getByText('No unused documents')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Every ready document was retrieved or cited in the last 30 days — pinned to a scope — or uploaded within the last 30 days.',
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -361,7 +361,7 @@ export function UsageView() {
               <EmptyState
                 icon={<FileText size={24} />}
                 title="No unused documents"
-                description="Every ready document was retrieved or cited recently — or is pinned to a scope."
+                description={`Every ready document was retrieved or cited in the last ${data.windowDays} days — pinned to a scope — or uploaded within the last ${data.windowDays} days.`}
               />
             ) : (
               <>
