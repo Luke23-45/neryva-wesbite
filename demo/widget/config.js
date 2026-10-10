@@ -13,6 +13,6 @@ window.NERYVA_DEMO = {
   // Direct-engine tunnel (bypasses the vite dev proxy, which answers CORS
   // preflights itself instead of forwarding them — dev-only artifact;
   // production edges route straight to the engine).
-  ENGINE_URL: 'https://8a4c94e15d93423b-27-34-72-172.serveousercontent.com',
+  ENGINE_URL: 'https://0b21d30af2147ba9-27-34-72-172.serveousercontent.com',
   PUBLIC_KEY: 'nk_live_KX7NG1abxDwmnj1zSIqZNUqV',
 };
